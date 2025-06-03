@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 
 namespace ProjectVagabond
 {
@@ -16,7 +17,7 @@ namespace ProjectVagabond
             noiseCache = new Dictionary<NoiseMapType, Dictionary<string, float>>();
             perlinGenerators = new Dictionary<NoiseMapType, SeededPerlin>();
         
-            InitializeDefaultLayers(masterSeed);
+            InitializeDefaultLayers(Environment.TickCount*RandomNumberGenerator.GetInt32(0, masterSeed));
         }
 
         private void InitializeDefaultLayers(int masterSeed)

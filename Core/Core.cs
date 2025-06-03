@@ -5,7 +5,7 @@ using System;
 
 namespace ProjectVagabond
 {
-    public class Game1 : Game
+    public class Core : Game
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
@@ -16,15 +16,15 @@ namespace ProjectVagabond
         private DisplayRenderer _displayRenderer;
         private MovementSystem _movementSystem;
 
-        public Game1()
+        public Core()
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
     
-            // Set window size to accommodate the layout
-            _graphics.PreferredBackBufferWidth = 1200;
-            _graphics.PreferredBackBufferHeight = 800;
+            
+            _graphics.PreferredBackBufferWidth = 1200;// Set window size wdith to accommodate the layout
+            _graphics.PreferredBackBufferHeight = 800;// Set window size height to accommodate the layout
         }
 
         protected override void Initialize()
@@ -62,8 +62,7 @@ namespace ProjectVagabond
 
             _inputHandler.Update();
             
-            // Process any completed commands
-            if (_inputHandler.HasNewCommand)
+            if (_inputHandler.HasNewCommand)// Process any completed commands
             {
                 string command = _inputHandler.GetCommand();
                 _commandProcessor.ProcessCommand(command, _gameState, _movementSystem);

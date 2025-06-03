@@ -1,5 +1,4 @@
-﻿using ProjectVagabond;
-using System;
+﻿using System;
 
 namespace ProjectVagabond
 {
@@ -8,7 +7,7 @@ namespace ProjectVagabond
         [STAThread]
         static void Main()
         {
-            using (var game = new Game1())
+            using (var game = new Core())
                 game.Run();
         }
     }
