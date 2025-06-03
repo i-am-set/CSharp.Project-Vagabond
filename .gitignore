@@ -1,0 +1,31 @@
+# Build artifacts
+bin/
+obj/
+
+# MonoGame content pipeline
+*.xnb
+*.mgcb.cache
+Content/bin/
+Content/obj/
+
+# Visual Studio Code files
+.vscode/
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# OS generated files
+*.DS_Store
+Thumbs.db
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# NuGet
+packages/

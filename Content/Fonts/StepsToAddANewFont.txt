@@ -1,0 +1,33 @@
+﻿
+Steps to Add a New .ttf Font to a MonoGame Project Using the MGCB Editor:
+
+1. Put the new .ttf file into the content/fonts directory.
+
+2. Open Content.mgcb.
+
+3. Right-click "Content" in the editor, select Add > Existing Folder, and click the "Fonts" folder.
+
+4. Right-click the fonts folder in the editor, select Add > New Item, and add a "SpriteFont Description (.spritefont)" with a name matching the .ttf file you added.
+
+5. Open the new .spritefont file in a text editor and replace its content with the following code:
+   <?xml version="1.0" encoding="utf-8"?>
+   <XnaContent xmlns:Graphics="Microsoft.Xna.Framework.Content.Pipeline.Graphics">
+     <Asset Type="Graphics:FontDescription">
+       <FontName>XXX</FontName>
+       <Size>12</Size>
+       <Spacing>0</Spacing>
+       <UseKerning>true</UseKerning>
+       <Style>Regular</Style>
+       <DefaultCharacter>*</DefaultCharacter>
+       <CharacterRegions>
+         <CharacterRegion>
+           <Start>&#32;</Start>
+           <End>&#126;</End>
+         </CharacterRegion>
+       </CharacterRegions>
+     </Asset>
+   </XnaContent>
+
+6. Replace "XXX" in "FontName" in the text editor with that same ttf name (DONT ADD EXTENSION).
+
+7. Lastly, in the MGCB editor, click the .ttf file and in properties, change build action to "Copy".
