@@ -512,7 +512,7 @@ namespace ProjectVagabond
                     int distance = Math.Abs(x - 4) + Math.Abs(y - 4);
                     if (distance <= 3)
                     {
-                        colorData[y * 8 + x] = Color.Red;
+                        colorData[y * 8 + x] = _playerColor;
                     }
                     else
                     {
@@ -538,7 +538,7 @@ namespace ProjectVagabond
                     int distance = (x - 4) * (x - 4) + (y - 4) * (y - 4);
                     if (distance <= 4)
                     {
-                        colorData[y * 8 + x] = Color.Yellow;
+                        colorData[y * 8 + x] = _pathColor;
                     }
                     else
                     {
@@ -563,7 +563,7 @@ namespace ProjectVagabond
                 {
                     if (x == y || x == (7 - y))
                     {
-                        colorData[y * 8 + x] = Color.Orange;
+                        colorData[y * 8 + x] = _pathEndColor;
                     }
                     else
                     {
