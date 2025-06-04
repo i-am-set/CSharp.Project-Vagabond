@@ -15,9 +15,9 @@ namespace ProjectVagabond
         private SpriteFont _font;
         
         // Map settings
-        private const int VIEW_SIZE = 16; // Size of visible area
+        private const int VIEW_SIZE = 32; // Size of visible area
+        private const int CELL_SIZE = 10; // Size of each grid cell in pixels
         private const int FONT_SIZE = 12;
-        private const int CELL_SIZE = 20;  // Size of each grid cell in pixels
         private const float NOISE_SCALE = 0.2f; // Scale factor for noise generation
         
         // Game state
@@ -112,13 +112,13 @@ namespace ProjectVagabond
             _commands = new Dictionary<string, Action<string[]>>();
             
             _commands["help"] = (args) => {
-                AddToHistory("Available commands:");
-                AddToHistory("  help - Show this help message");
-                AddToHistory("  look - Look around current area");
-                AddToHistory("  up/down/left/right [count] - Queue movement");
-                AddToHistory("  submit - Execute queued path");
-                AddToHistory("  clear - Clear pending path");
-                AddToHistory("  pos - Show current position");
+                AddOutputToHistory("Available commands:");
+                AddOutputToHistory("  help - Show this help message");
+                AddOutputToHistory("  look - Look around current area");
+                AddOutputToHistory("  up/down/left/right <count> - Queue movement");
+                AddOutputToHistory("  submit - Execute queued path");
+                AddOutputToHistory("  clear - Clear pending path");
+                AddOutputToHistory("  pos - Show current position");
             };
             
             _commands["look"] = (args) => {
@@ -126,9 +126,9 @@ namespace ProjectVagabond
                 int y = (int)_playerWorldPos.Y;
                 float noise = GetNoiseAt(x, y);
                 string terrain = GetTerrainDescription(noise);
-                AddToHistory($"You are standing on {terrain}.");
-                AddToHistory($"Position: ({x}, {y})");
-                AddToHistory($"Terrain value: {noise:F2}");
+                AddOutputToHistory($"You are standing on {terrain}.");
+                AddOutputToHistory($"Position: ({x}, {y})");
+                AddOutputToHistory($"Terrain value: {noise:F2}");
             };
             
             _commands["up"] = (args) => QueueMovement(new Vector2(0, -1), args);
@@ -141,15 +141,15 @@ namespace ProjectVagabond
                 {
                     _isExecutingPath = true;
                     _currentPathIndex = 0;
-                    AddToHistory($"Executing path with {_pendingPath.Count} steps...");
+                    AddOutputToHistory($"Executing path with {_pendingPath.Count} steps...");
                 }
                 else if (_isExecutingPath)
                 {
-                    AddToHistory("Already executing a path.");
+                    AddOutputToHistory("Already executing a path.");
                 }
                 else
                 {
-                    AddToHistory("No path queued.");
+                    AddOutputToHistory("No path queued.");
                 }
             };
             
@@ -157,20 +157,20 @@ namespace ProjectVagabond
                 if (!_isExecutingPath)
                 {
                     _pendingPath.Clear();
-                    AddToHistory("Pending path cleared.");
+                    AddOutputToHistory("Pending path cleared.");
                 }
                 else
                 {
-                    AddToHistory("Cannot clear path while executing.");
+                    AddOutputToHistory("Cannot clear path while executing.");
                 }
             };
             
             _commands["pos"] = (args) => {
-                AddToHistory($"Current position: ({(int)_playerWorldPos.X}, {(int)_playerWorldPos.Y})");
-                AddToHistory($"Pending path steps: {_pendingPath.Count}");
+                AddOutputToHistory($"Current position: ({(int)_playerWorldPos.X}, {(int)_playerWorldPos.Y})");
+                AddOutputToHistory($"Pending path steps: {_pendingPath.Count}");
                 if (_isExecutingPath)
                 {
-                    AddToHistory($"Executing path: step {_currentPathIndex + 1}/{_pendingPath.Count}");
+                    AddOutputToHistory($"Executing path: step {_currentPathIndex + 1}/{_pendingPath.Count}");
                 }
             };
         }
@@ -179,7 +179,7 @@ namespace ProjectVagabond
         {
             if (_isExecutingPath)
             {
-                AddToHistory("Cannot queue movements while executing a path.");
+                AddOutputToHistory("Cannot queue movements while executing a path.");
                 return;
             }
 
@@ -438,7 +438,7 @@ namespace ProjectVagabond
             }
             catch
             {
-                _hillSprite = CreateColoredTexture(8, 8, Color.Brown);
+                _hillSprite = CreateColoredTexture(8, 8, Color.DarkGray);
             }
             
             try
@@ -794,13 +794,15 @@ namespace ProjectVagabond
         
         private void DrawGridElement(GridElement element)
         {
-            // Calculate centered position within the cell for 8x8 sprites
-            Vector2 centeredPos = new Vector2(
-                element.Position.X + (CELL_SIZE - 8) / 2,
-                element.Position.Y + (CELL_SIZE - 8) / 2
+            // Scale sprites to fill the entire cell with no gaps
+            Rectangle destRect = new Rectangle(
+                (int)element.Position.X,
+                (int)element.Position.Y,
+                CELL_SIZE,
+                CELL_SIZE
             );
-            
-            _spriteBatch.Draw(element.Texture, centeredPos, element.Color);
+    
+            _spriteBatch.Draw(element.Texture, destRect, element.Color);
         }
 
         private char GetTerrainSymbol(float noise)
