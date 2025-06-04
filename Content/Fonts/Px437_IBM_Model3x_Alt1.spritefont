@@ -6,12 +6,33 @@
     <Spacing>0</Spacing>
     <UseKerning>true</UseKerning>
     <Style>Regular</Style>
-    <DefaultCharacter>*</DefaultCharacter>
-    <CharacterRegions>
-      <CharacterRegion>
-        <Start>&#32;</Start>
-        <End>&#126;</End>
-      </CharacterRegion>
-    </CharacterRegions>
+    <DefaultCharacter>?</DefaultCharacter>
+	  <CharacterRegions>
+		  <!-- Basic ASCII -->
+		  <CharacterRegion>
+			  <Start>&#x0020;</Start>
+			  <End>&#x007E;</End>
+		  </CharacterRegion>
+		  <!-- CP437 Symbols -->
+		  <CharacterRegion>
+			  <Start>&#x00A0;</Start>
+			  <End>&#x00FF;</End>
+		  </CharacterRegion>
+		  <CharacterRegion>
+			  <Start>&#x2500;</Start>
+			  <!-- Box Drawing -->
+			  <End>&#x257F;</End>
+		  </CharacterRegion>
+		  <CharacterRegion>
+			  <Start>&#x2580;</Start>
+			  <!-- Block Elements -->
+			  <End>&#x259F;</End>
+		  </CharacterRegion>
+		  <CharacterRegion>
+			  <Start>&#x2190;</Start>
+			  <!-- Arrows -->
+			  <End>&#x21FF;</End>
+		  </CharacterRegion>
+	  </CharacterRegions>
   </Asset>
 </XnaContent>

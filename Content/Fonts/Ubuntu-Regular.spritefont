@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<XnaContent xmlns:Graphics="Microsoft.Xna.Framework.Content.Pipeline.Graphics">
+	<Asset Type="Graphics:FontDescription">
+		<FontName>Ubuntu-Regular</FontName>
+		<Size>8</Size>
+		<Spacing>0</Spacing>
+		<UseKerning>true</UseKerning>
+		<Style>Regular</Style>
+		<DefaultCharacter>?</DefaultCharacter>
+		<CharacterRegions>
+			<!-- Basic Latin -->
+			<CharacterRegion>
+				<Start>32</Start>
+				<End>126</End>
+			</CharacterRegion>
+			<!-- Latin-1 Supplement -->
+			<CharacterRegion>
+				<Start>160</Start>
+				<End>255</End>
+			</CharacterRegion>
+			<!-- Latin Extended-A -->
+			<CharacterRegion>
+				<Start>256</Start>
+				<End>383</End>
+			</CharacterRegion>
+			<!-- Box Drawing -->
+			<CharacterRegion>
+				<Start>9472</Start>
+				<End>9599</End>
+			</CharacterRegion>
+			<!-- Block Elements -->
+			<CharacterRegion>
+				<Start>9600</Start>
+				<End>9631</End>
+			</CharacterRegion>
+			<!-- Miscellaneous Symbols -->
+			<CharacterRegion>
+				<Start>9728</Start>
+				<End>9983</End>
+			</CharacterRegion>
+			<!-- Currency Symbols -->
+			<CharacterRegion>
+				<Start>8352</Start>
+				<End>8399</End>
+			</CharacterRegion>
+			<!-- Mathematical Operators -->
+			<CharacterRegion>
+				<Start>8704</Start>
+				<End>8959</End>
+			</CharacterRegion>
+		</CharacterRegions>
+	</Asset>
+</XnaContent>

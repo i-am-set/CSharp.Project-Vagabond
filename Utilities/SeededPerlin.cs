@@ -74,7 +74,7 @@ namespace ProjectVagabond
             return height switch
             {
                 < waterLevel => '░',
-                < flatlandsLevel => '.',
+                < flatlandsLevel => '·',
                 < hillsLevel => '^',
                 < mountainsLevel => 'n',
                 _ => 'A'

@@ -13,6 +13,13 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Fonts/Px437_IBM_BIOS.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Fonts/Px437_IBM_BIOS.spritefont
+
 #begin Fonts/Px437_IBM_Model3x_Alt1.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
@@ -20,6 +27,10 @@
 /processorParam:TextureFormat=Compressed
 /build:Fonts/Px437_IBM_Model3x_Alt1.spritefont
 
-#begin Fonts/Px437_IBM_Model3x_Alt1.ttf
-/copy:Fonts/Px437_IBM_Model3x_Alt1.ttf
+#begin Fonts/Ubuntu-Regular.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Fonts/Ubuntu-Regular.spritefont
 
