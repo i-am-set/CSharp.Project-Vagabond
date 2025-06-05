@@ -19,12 +19,12 @@ namespace ProjectVagabond
         private SpriteFont _font;
 
         // Map settings
-        private const int VIEW_SIZE = 32; // Size of visible area
-        private const int CELL_SIZE = 10; // Size of each grid cell in pixels
+        private const int GRID_SIZE = 32;
+        private const int GRID_CELL_SIZE = 8;
         private const int FONT_SIZE = 12;
         private const int TERMINAL_LINE_SPACING = 12;
         private const int PROMPT_LINE_SPACING = 16;
-        private const float NOISE_SCALE = 0.2f; // Scale factor for noise generation
+        private const float NOISE_SCALE = 0.2f;
         private const int DEFAULT_TERMINAL_WIDTH = 700;
 
         // Game state
@@ -36,9 +36,10 @@ namespace ProjectVagabond
         private List<string> _inputHistory = new List<string>();
         private List<ColoredLine> _wrappedHistory = new List<ColoredLine>();
         private KeyboardState _previousKeyboardState;
-        private List<Vector2> _pendingPath = new List<Vector2>(); // Path preview
+        private List<Vector2> _pendingPathPreview = new List<Vector2>();
         private float _moveTimer = 0f;
-        private const float MOVE_DELAY = 0.2f; // Seconds between moves
+        private const float MOVE_DELAY_SECONDS = 0.5f;
+        private const int MAX_SINGLE_MOVE_LIMIT = 20;
         private bool _isExecutingPath = false;
         private int _currentPathIndex = 0;
         private bool _isFreeMoveMode = false;
@@ -49,9 +50,9 @@ namespace ProjectVagabond
         private string _clipboard = "";
         private bool _controlPressed = false;
         private float _backspaceTimer = 0f;
-        private float _backspaceDelay = 0.3f; // Initial delay
-        private const float MIN_BACKSPACE_DELAY = 0.02f; // Fastest backspace speed
-        private const float BACKSPACE_ACCELERATION = 0.95f; // How quickly backspace accelerates
+        private float _backspaceInitialDelay = 0.3f;
+        private const float MIN_BACKSPACE_DELAY = 0.02f;
+        private const float BACKSPACE_ACCELERATION = 0.25f;
         private bool _backspaceHeld = false;
         private int _cursorPosition; // For future cursor support
         private List<string> _commandHistory = new List<string>();
@@ -113,8 +114,7 @@ namespace ProjectVagabond
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            // Set window size to accommodate UI
-            _graphics.PreferredBackBufferWidth = 1200;
+            _graphics.PreferredBackBufferWidth = 1200; // Set window size
             _graphics.PreferredBackBufferHeight = 800;
         }
 
@@ -122,13 +122,12 @@ namespace ProjectVagabond
         {
             _playerWorldPos = new Vector2(0, 0); // Start at world origin
 
-            // Initialize noise generator
-            _noise = new FastNoiseLite();
+            _noise = new FastNoiseLite(); // Initialize noise generator
             _noise.SetNoiseType(FastNoiseLite.NoiseType.Perlin);
             _noise.SetSeed(RandomNumberGenerator.GetInt32(0, 99999));
             _noise.SetFrequency(NOISE_SCALE);
 
-            InitializeCommands();
+            InitializeCommands(); // Initialize the commands
 
             base.Initialize();
         }
@@ -164,28 +163,11 @@ namespace ProjectVagabond
             _commands["left"] = (args) => QueueMovement(new Vector2(-1, 0), args);
             _commands["right"] = (args) => QueueMovement(new Vector2(1, 0), args);
 
-            //_commands["submit"] = (args) => {
-            //    if (_pendingPath.Count > 0 && !_isExecutingPath)
-            //    {
-            //        _isExecutingPath = true;
-            //        _currentPathIndex = 0;
-            //        AddOutputToHistory($"Executing path with {_pendingPath.Count} steps...");
-            //    }
-            //    else if (_isExecutingPath)
-            //    {
-            //        AddOutputToHistory("Already executing a path.");
-            //    }
-            //    else
-            //    {
-            //        AddOutputToHistory("No path queued.");
-            //    }
-            //};
-
             _commands["clear"] = (args) =>
             {
                 if (!_isExecutingPath)
                 {
-                    _pendingPath.Clear();
+                    _pendingPathPreview.Clear();
                     AddOutputToHistory("Pending path cleared.");
                 }
                 else
@@ -197,10 +179,10 @@ namespace ProjectVagabond
             _commands["pos"] = (args) =>
             {
                 AddOutputToHistory($"Current position: ({(int)_playerWorldPos.X}, {(int)_playerWorldPos.Y})");
-                AddOutputToHistory($"Pending path steps: {_pendingPath.Count}");
+                AddOutputToHistory($"Pending path steps: {_pendingPathPreview.Count}");
                 if (_isExecutingPath)
                 {
-                    AddOutputToHistory($"Executing path: step {_currentPathIndex + 1}/{_pendingPath.Count}");
+                    AddOutputToHistory($"Executing path: step {_currentPathIndex + 1}/{_pendingPathPreview.Count}");
                 }
             };
 
@@ -232,23 +214,21 @@ namespace ProjectVagabond
             int count = 1;
             if (args.Length > 1 && int.TryParse(args[1], out int parsedCount))
             {
-                count = Math.Max(1, Math.Min(20, parsedCount)); // Limit to reasonable range
+                count = Math.Max(1, Math.Min(MAX_SINGLE_MOVE_LIMIT, parsedCount));
             }
-
-            // Check for backtracking from the end of the path
-            Vector2 oppositeDirection = -direction;
+            
+            Vector2 oppositeDirection = -direction; // Check for backtracking from the end of the path
             int removedSteps = 0;
 
-            // Remove steps from the end that match the opposite direction
-            while (_pendingPath.Count > 0 && removedSteps < count)
+            while (_pendingPathPreview.Count > 0 && removedSteps < count) // Remove steps from the end that match the opposite direction
             {
-                Vector2 lastStep = _pendingPath.Last();
-                Vector2 prevPos = _pendingPath.Count > 1 ? _pendingPath[_pendingPath.Count - 2] : _playerWorldPos;
+                Vector2 lastStep = _pendingPathPreview.Last();
+                Vector2 prevPos = _pendingPathPreview.Count > 1 ? _pendingPathPreview[_pendingPathPreview.Count - 2] : _playerWorldPos;
                 Vector2 lastDirection = lastStep - prevPos;
 
                 if (lastDirection == oppositeDirection)
                 {
-                    _pendingPath.RemoveAt(_pendingPath.Count - 1);
+                    _pendingPathPreview.RemoveAt(_pendingPathPreview.Count - 1);
                     removedSteps++;
                 }
                 else
@@ -256,17 +236,16 @@ namespace ProjectVagabond
                     break;
                 }
             }
-
-            // Add remaining forward steps
-            int remainingSteps = count - removedSteps;
+            
+            int remainingSteps = count - removedSteps; // Add remaining forward steps
             if (remainingSteps > 0)
             {
-                Vector2 currentPos = _pendingPath.Count > 0 ? _pendingPath.Last() : _playerWorldPos;
+                Vector2 currentPos = _pendingPathPreview.Count > 0 ? _pendingPathPreview.Last() : _playerWorldPos;
 
                 for (int i = 0; i < remainingSteps; i++)
                 {
                     currentPos += direction;
-                    _pendingPath.Add(currentPos);
+                    _pendingPathPreview.Add(currentPos);
                 }
             }
 
@@ -283,8 +262,7 @@ namespace ProjectVagabond
         private float GetNoiseAt(int x, int y)
         {
             float noiseValue = _noise.GetNoise(x, y);
-            // Clamp to 0-1 range
-            return (noiseValue + 1f) / 2f;
+            return (noiseValue + 1f) / 2f; // Clamp to 0-1 range
         }
 
         private string GetTerrainDescription(float noise)
@@ -299,20 +277,17 @@ namespace ProjectVagabond
         private void AddToHistory(string message, Color? baseColor = null)
         {
             _inputHistory.Add(message);
-
-            // Parse colored message
-            var coloredLine = ParseColoredText(message, baseColor);
+            
+            var coloredLine = ParseColoredText(message, baseColor); // Parse colored message
             coloredLine.LineNumber = _nextLineNumber++;
 
-            // Wrap the colored line
-            var wrappedLines = WrapColoredText(coloredLine, GetTerminalWidthInChars());
+            var wrappedLines = WrapColoredText(coloredLine, GetTerminalWidthInChars()); // Wrap the colored line
             foreach (var line in wrappedLines)
             {
                 _wrappedHistory.Add(line);
             }
 
-            // Limit total wrapped lines
-            while (_wrappedHistory.Count > MAX_HISTORY_LINES)
+            while (_wrappedHistory.Count > MAX_HISTORY_LINES) // Limit total wrapped lines
             {
                 _wrappedHistory.RemoveAt(0);
             }
@@ -338,24 +313,25 @@ namespace ProjectVagabond
             {
                 if (text[i] == '[')
                 {
-                    // Add current text segment
                     if (currentText.Length > 0)
                     {
                         line.Segments.Add(new ColoredText(currentText, currentColor));
                         currentText = "";
                     }
 
-                    // Find the closing bracket
                     int closeIndex = text.IndexOf(']', i);
                     if (closeIndex != -1)
                     {
                         string colorTag = text.Substring(i + 1, closeIndex - i - 1);
                         i = closeIndex;
 
-                        // Parse color
                         if (colorTag == "/")
                         {
-                            currentColor = _terminalTextColor; // Reset to default
+                            currentColor = _terminalTextColor;
+                        }
+                        else if (colorTag == "/o")
+                        {
+                            currentColor = Color.Gray;
                         }
                         else
                         {
@@ -373,7 +349,6 @@ namespace ProjectVagabond
                 }
             }
 
-            // Add final segment
             if (currentText.Length > 0)
             {
                 line.Segments.Add(new ColoredText(currentText, currentColor));
@@ -384,9 +359,9 @@ namespace ProjectVagabond
 
         private Color ParseColor(string colorName)
         {
-            // First check the hardcoded common colors for performance
             switch (colorName.ToLower())
             {
+                case "khaki": return Color.Khaki;
                 case "red": return Color.Red;
                 case "green": return Color.Green;
                 case "blue": return Color.Blue;
@@ -395,12 +370,12 @@ namespace ProjectVagabond
                 case "magenta": return Color.Magenta;
                 case "white": return Color.White;
                 case "orange": return Color.Orange;
-                case "gray": return Color.Gray;
-                case "grey": return Color.Gray; // Common alternate spelling
+                case "gray":
+                case "grey": return Color.Gray;
             }
     
-            // If not found in common colors, use reflection to find XNA color
-            try
+            
+            try // If not found in predefined colors, use reflection to find XNA color
             {
                 var colorProperty = typeof(Color).GetProperty(colorName, 
                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase);
@@ -415,7 +390,6 @@ namespace ProjectVagabond
                 // If reflection fails, fall back to default
             }
     
-            // Return default color if not found
             return _terminalTextColor;
         }
 
@@ -423,21 +397,18 @@ namespace ProjectVagabond
         {
             var wrappedLines = new List<ColoredLine>();
     
-            // First, check if any segment contains newlines
             var processedSegments = new List<ColoredText>();
     
             foreach (var segment in line.Segments)
             {
                 if (segment.Text.Contains('\n'))
                 {
-                    // Split segment by newlines
-                    string[] lines = segment.Text.Split('\n');
+                    string[] lines = segment.Text.Split('\n'); // Split segment by newlines
                     for (int i = 0; i < lines.Length; i++)
                     {
                         processedSegments.Add(new ColoredText(lines[i], segment.Color));
                 
-                        // Add a special marker for line breaks (except for the last line)
-                        if (i < lines.Length - 1)
+                        if (i < lines.Length - 1) // Add a special marker for line breaks (except for the last line)
                         {
                             processedSegments.Add(new ColoredText("\n", segment.Color));
                         }
@@ -449,8 +420,7 @@ namespace ProjectVagabond
                 }
             }
     
-            // Now process the segments, creating new lines when we encounter \n markers
-            var currentLine = new ColoredLine { LineNumber = line.LineNumber };
+            var currentLine = new ColoredLine { LineNumber = line.LineNumber }; // Now process the segments, creating new lines when we encounter \n markers
             var currentWords = new List<string>();
             var currentColors = new List<Color>();
             int currentLineWidth = 0;
@@ -459,8 +429,7 @@ namespace ProjectVagabond
             {
                 if (segment.Text == "\n")
                 {
-                    // Finish current line and start new one
-                    if (currentWords.Count > 0 || wrappedLines.Count == 0)
+                    if (currentWords.Count > 0 || wrappedLines.Count == 0) // Finish current line and start new one
                     {
                         var finishedLine = CombineColoredSegments(currentWords, currentColors);
                         finishedLine.LineNumber = wrappedLines.Count == 0 ? line.LineNumber : 0;
@@ -471,13 +440,11 @@ namespace ProjectVagabond
                         currentLineWidth = 0;
                     }
             
-                    // Start new line
-                    currentLine = new ColoredLine { LineNumber = line.LineNumber };
+                    currentLine = new ColoredLine { LineNumber = line.LineNumber }; // Start new line
                     continue;
                 }
         
-                // Process normal text segment (rest of the original logic)
-                var words = segment.Text.Split(' ', StringSplitOptions.None);
+                var words = segment.Text.Split(' ', StringSplitOptions.None); // Process normal text segment
 
                 for (int wordIndex = 0; wordIndex < words.Length; wordIndex++)
                 {
@@ -583,7 +550,6 @@ namespace ProjectVagabond
             {
                 if (i > 0 && colors[i] != currentColor)
                 {
-                    // Color changed - add current segment and start new one
                     if (currentText.Length > 0)
                     {
                         line.Segments.Add(new ColoredText(currentText.ToString(), currentColor));
@@ -595,7 +561,6 @@ namespace ProjectVagabond
                 currentText.Append(words[i]);
             }
     
-            // Add final segment
             if (currentText.Length > 0)
             {
                 line.Segments.Add(new ColoredText(currentText.ToString(), currentColor));
@@ -617,7 +582,6 @@ namespace ProjectVagabond
                 throw new Exception("Please add a SpriteFont called 'Px437_IBM_BIOS' to your Content/Fonts folder");
             }
 
-            // Load sprite textures - try to load from Content, create fallback if not found
             try
             {
                 _waterSprite = Content.Load<Texture2D>("Sprites/water");
@@ -708,8 +672,7 @@ namespace ProjectVagabond
             var texture = new Texture2D(GraphicsDevice, 8, 8);
             var colorData = new Color[64];
 
-            // Create a simple diamond shape for player
-            for (int y = 0; y < 8; y++)
+            for (int y = 0; y < 8; y++) // Create a simple diamond shape for player
             {
                 for (int x = 0; x < 8; x++)
                 {
@@ -734,8 +697,7 @@ namespace ProjectVagabond
             var texture = new Texture2D(GraphicsDevice, 8, 8);
             var colorData = new Color[64];
 
-            // Create a simple dot for path
-            for (int y = 0; y < 8; y++)
+            for (int y = 0; y < 8; y++) // Create a simple dot for path
             {
                 for (int x = 0; x < 8; x++)
                 {
@@ -760,8 +722,7 @@ namespace ProjectVagabond
             var texture = new Texture2D(GraphicsDevice, 8, 8);
             var colorData = new Color[64];
 
-            // Create an X shape for path end
-            for (int y = 0; y < 8; y++)
+            for (int y = 0; y < 8; y++) // Create an X shape for path end
             {
                 for (int x = 0; x < 8; x++)
                 {
@@ -785,7 +746,7 @@ namespace ProjectVagabond
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
                 Exit();
 
-            HandleInput(gameTime); // Pass gameTime here
+            HandleInput(gameTime);
             UpdateMovement(gameTime);
 
             base.Update(gameTime);
@@ -796,13 +757,10 @@ namespace ProjectVagabond
             KeyboardState currentKeyboardState = Keyboard.GetState();
             Keys[] pressedKeys = currentKeyboardState.GetPressedKeys();
 
-            // Check for control key
-            _controlPressed = currentKeyboardState.IsKeyDown(Keys.LeftControl) || 
-                             currentKeyboardState.IsKeyDown(Keys.RightControl);
+            _controlPressed = currentKeyboardState.IsKeyDown(Keys.LeftControl) || currentKeyboardState.IsKeyDown(Keys.RightControl); // Check for control key
 
             if (_isFreeMoveMode)
             {
-                // Handle freemove mode input
                 foreach (Keys key in pressedKeys)
                 {
                     if (!_previousKeyboardState.IsKeyDown(key) && !_processedKeys.Contains(key))
@@ -828,11 +786,11 @@ namespace ProjectVagabond
                                 QueueMovement(new Vector2(1, 0), new string[] { "right", "1" });
                                 break;
                             case Keys.Enter:
-                                if (_pendingPath.Count > 0 && !_isExecutingPath)
+                                if (_pendingPathPreview.Count > 0 && !_isExecutingPath)
                                 {
                                     _isExecutingPath = true;
                                     _currentPathIndex = 0;
-                                    AddOutputToHistory($"Executing path of [teal]{_pendingPath.Count}[gray] move(s)...");
+                                    AddOutputToHistory($"Executing path of [teal]{_pendingPathPreview.Count}[gray] move(s)...");
                                 }
                                 else if (_isExecutingPath)
                                 {
@@ -852,8 +810,7 @@ namespace ProjectVagabond
                     }
                 }
 
-                // Clear processed keys that are no longer pressed
-                _processedKeys.RemoveWhere(key => !currentKeyboardState.IsKeyDown(key));
+                _processedKeys.RemoveWhere(key => !currentKeyboardState.IsKeyDown(key)); // Clear processed keys that are no longer pressed
             }
             else
             {
@@ -865,28 +822,25 @@ namespace ProjectVagabond
                         if (key == Keys.Enter)
                         {
                             _showingSuggestions = false;
-                            if (string.IsNullOrEmpty(_currentInput.Trim()) && _pendingPath.Count > 0 && !_isExecutingPath)
+                            if (string.IsNullOrEmpty(_currentInput.Trim()) && _pendingPathPreview.Count > 0 && !_isExecutingPath)
                             {
                                 _isExecutingPath = true;
                                 _currentPathIndex = 0;
-                                AddOutputToHistory($"Executing path with {_pendingPath.Count} steps...");
+                                AddOutputToHistory($"Executing path with {_pendingPathPreview.Count} steps...");
                             }
                             else
                             {
-                                // Save command to history if it's not empty
-                                if (!string.IsNullOrEmpty(_currentInput.Trim()))
+                                if (!string.IsNullOrEmpty(_currentInput.Trim())) // Save command to history if it's not empty
                                 {
                                     _commandHistory.Add(_currentInput.Trim());
-                                    // Keep history to reasonable size
-                                    if (_commandHistory.Count > 50)
+                                    if (_commandHistory.Count > 50) // Keep history to reasonable size
                                     {
                                         _commandHistory.RemoveAt(0);
                                     }
                                 }
                                 ProcessCommand(_currentInput.Trim().ToLower());
                 
-                                // Reset history navigation
-                                _commandHistoryIndex = -1;
+                                _commandHistoryIndex = -1;// Reset history navigation
                                 _currentEditingCommand = "";
                             }
                             _currentInput = "";
@@ -911,15 +865,15 @@ namespace ProjectVagabond
                         }
                         else if (key == Keys.Up)
                         {
-                            NavigateCommandHistory(1); // Go to previous (older) command
+                            NavigateCommandHistory(1);
                         }
                         else if (key == Keys.Down)
                         {
-                            NavigateCommandHistory(-1); // Go to next (newer) command
+                            NavigateCommandHistory(-1);
                         }
-                        else if (key == Keys.Escape && _pendingPath.Count > 0 && !_isExecutingPath)
+                        else if (key == Keys.Escape && _pendingPathPreview.Count > 0 && !_isExecutingPath)
                         {
-                            _pendingPath.Clear();
+                            _pendingPathPreview.Clear();
                             AddOutputToHistory("Pending path cleared.");
                         }
                         else if (_controlPressed)
@@ -932,12 +886,11 @@ namespace ProjectVagabond
                             UpdateAutoCompleteSuggestions();
                             _backspaceHeld = true;
                             _backspaceTimer = 0f;
-                            _backspaceDelay = 0.3f;
+                            _backspaceInitialDelay = 0.3f;
                         }
                         else if (key == Keys.Delete)
                         {
-                            // Delete character at cursor (for future cursor implementation)
-                            if (_cursorPosition < _currentInput.Length)
+                            if (_cursorPosition < _currentInput.Length) // Delete character at cursor (for future cursor implementation)
                             {
                                 _currentInput = _currentInput.Remove(_cursorPosition, 1);
                             }
@@ -966,21 +919,19 @@ namespace ProjectVagabond
                         }
                         else
                         {
-                            // Handle regular character input
                             HandleCharacterInput(key);
                         }
                     }
                 }
 
-                // Handle held backspace with acceleration
-                if (_backspaceHeld && currentKeyboardState.IsKeyDown(Keys.Back))
+                if (_backspaceHeld && currentKeyboardState.IsKeyDown(Keys.Back)) // Handle held backspace with acceleration
                 {
                     _backspaceTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    if (_backspaceTimer >= _backspaceDelay)
+                    if (_backspaceTimer >= _backspaceInitialDelay)
                     {
                         HandleBackspace();
                         _backspaceTimer = 0f;
-                        _backspaceDelay = Math.Max(MIN_BACKSPACE_DELAY, _backspaceDelay * BACKSPACE_ACCELERATION);
+                        _backspaceInitialDelay = Math.Max(MIN_BACKSPACE_DELAY, _backspaceInitialDelay * BACKSPACE_ACCELERATION);
                     }
                 }
                 else if (_backspaceHeld)
@@ -1015,7 +966,7 @@ namespace ProjectVagabond
                     }
                     break;
             
-                case Keys.A: // Select All / Clear (without saving to clipboard)
+                case Keys.A: // Clear
                     if (!string.IsNullOrEmpty(_currentInput))
                     {
                         _currentInput = "";
@@ -1023,8 +974,6 @@ namespace ProjectVagabond
                         AddOutputToHistory("Input cleared   (CTRL + A)");
                     }
                     break;
-            
-                // Removed Ctrl+Z case
             }
         }
 
@@ -1032,35 +981,29 @@ namespace ProjectVagabond
         {
             if (_commandHistory.Count == 0) return;
 
-            // If we're not currently browsing history, save what the user was typing
-            if (_commandHistoryIndex == -1)
+            if (_commandHistoryIndex == -1) // If we're not currently browsing history, save what the user was typing
             {
                 _currentEditingCommand = _currentInput;
             }
 
-            // Calculate new index
-            int newIndex = _commandHistoryIndex + direction;
+            int newIndex = _commandHistoryIndex + direction; // Calculate new index
 
             if (newIndex < -1)
             {
-                // Already at the beginning, don't go further
-                return;
+                return; // Already at the beginning, don't go further
             }
             else if (newIndex >= _commandHistory.Count)
             {
-                // Already at the end, don't go further
-                return;
+                return; // Already at the end, don't go further
             }
             else if (newIndex == -1)
             {
-                // Back to current editing (what user was typing before browsing)
-                _currentInput = _currentEditingCommand;
+                _currentInput = _currentEditingCommand; // Back to current editing (what user was typing before browsing)
                 _commandHistoryIndex = -1;
             }
             else
             {
-                // Navigate to specific history entry
-                _commandHistoryIndex = newIndex;
+                _commandHistoryIndex = newIndex; // Navigate to specific history entry
                 _currentInput = _commandHistory[_commandHistory.Count - 1 - _commandHistoryIndex];
             }
 
@@ -1116,23 +1059,22 @@ namespace ProjectVagabond
 
         private void UpdateMovement(GameTime gameTime)
         {
-            if (_isExecutingPath && _pendingPath.Count > 0)
+            if (_isExecutingPath && _pendingPathPreview.Count > 0)
             {
                 _moveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-                if (_moveTimer >= MOVE_DELAY)
+                if (_moveTimer >= MOVE_DELAY_SECONDS)
                 {
-                    if (_currentPathIndex < _pendingPath.Count)
+                    if (_currentPathIndex < _pendingPathPreview.Count)
                     {
-                        _playerWorldPos = _pendingPath[_currentPathIndex];
+                        _playerWorldPos = _pendingPathPreview[_currentPathIndex];
                         _currentPathIndex++;
                         _moveTimer = 0f;
 
-                        // Check if we've completed the path
-                        if (_currentPathIndex >= _pendingPath.Count)
+                        if (_currentPathIndex >= _pendingPathPreview.Count) // Check if we've completed the path
                         {
                             _isExecutingPath = false;
-                            _pendingPath.Clear();
+                            _pendingPathPreview.Clear();
                             _currentPathIndex = 0;
                             AddOutputToHistory("Path execution completed.");
                         }
@@ -1159,27 +1101,27 @@ namespace ProjectVagabond
         {
             int mapStartX = 50;
             int mapStartY = 50;
-            int mapWidth = VIEW_SIZE * CELL_SIZE + 10;
-            int mapHeight = VIEW_SIZE * CELL_SIZE + 30;
+            int mapWidth = GRID_SIZE * GRID_CELL_SIZE + 10;
+            int mapHeight = GRID_SIZE * GRID_CELL_SIZE + 30;
 
-            // Draw map border
+            // Draw map border //
             var pixel = new Texture2D(GraphicsDevice, 1, 1);
             pixel.SetData(new[] { Color.White });
 
-            // Border rectangle
+            // Border rectangle //
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, mapWidth, 2), Color.White); // Top
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY + mapHeight - 27, mapWidth, 2), Color.White); // Bottom
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, 2, mapHeight), Color.White); // Left
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX + mapWidth - 7, mapStartY - 25, 2, mapHeight), Color.White); // Right
 
-            // Draw map title
+            // Draw map title //
             _spriteBatch.DrawString(_font, $"Map View - Pos: ({(int)_playerWorldPos.X}, {(int)_playerWorldPos.Y})",
                 new Vector2(mapStartX, mapStartY - 20), Color.White);
 
-            // Generate grid elements
+            // Generate grid elements //
             var gridElements = GenerateMapGridElements(mapStartX, mapStartY);
 
-            // Draw each grid element
+            // Draw each grid element //
             foreach (var element in gridElements)
             {
                 DrawGridElement(element);
@@ -1190,13 +1132,12 @@ namespace ProjectVagabond
         {
             var elements = new List<GridElement>();
 
-            // Calculate visible area centered on player
-            int startX = (int)_playerWorldPos.X - VIEW_SIZE / 2;
-            int startY = (int)_playerWorldPos.Y - VIEW_SIZE / 2;
+            int startX = (int)_playerWorldPos.X - GRID_SIZE / 2;
+            int startY = (int)_playerWorldPos.Y - GRID_SIZE / 2;
 
-            for (int y = 0; y < VIEW_SIZE; y++)
+            for (int y = 0; y < GRID_SIZE; y++)
             {
-                for (int x = 0; x < VIEW_SIZE; x++)
+                for (int x = 0; x < GRID_SIZE; x++)
                 {
                     int worldX = startX + x;
                     int worldY = startY + y;
@@ -1205,24 +1146,22 @@ namespace ProjectVagabond
                     Texture2D texture = GetTerrainTexture(noise);
                     Color color = GetTerrainColor(noise);
 
-                    // Check if this is the player position
-                    bool isPlayer = (worldX == (int)_playerWorldPos.X && worldY == (int)_playerWorldPos.Y);
+                    bool isPlayer = (worldX == (int)_playerWorldPos.X && worldY == (int)_playerWorldPos.Y); // Check if this is the player position
 
-                    // Check if this is part of the pending path
-                    bool isPath = false;
+                    bool isPath = false; // Check if this is part of the pending path
                     bool isPathEnd = false;
                     Vector2 worldPos = new Vector2(worldX, worldY);
 
-                    if (_pendingPath.Contains(worldPos))
+                    if (_pendingPathPreview.Contains(worldPos))
                     {
                         isPath = true;
-                        isPathEnd = worldPos == _pendingPath.Last();
+                        isPathEnd = worldPos == _pendingPathPreview.Last();
                     }
 
                     if (isPlayer)
                     {
                         texture = _playerSprite;
-                        color = Color.White; // Use white to preserve sprite colors
+                        color = Color.White;
                     }
                     else if (isPathEnd)
                     {
@@ -1235,11 +1174,7 @@ namespace ProjectVagabond
                         color = Color.White;
                     }
 
-                    // Calculate grid position (centered in cell)
-                    Vector2 gridPos = new Vector2(
-                        mapStartX + x * CELL_SIZE,
-                        mapStartY + y * CELL_SIZE
-                    );
+                    Vector2 gridPos = new Vector2(mapStartX + x * GRID_CELL_SIZE, mapStartY + y * GRID_CELL_SIZE);
 
                     elements.Add(new GridElement(texture, color, gridPos));
                 }
@@ -1259,25 +1194,14 @@ namespace ProjectVagabond
 
         private void DrawGridElement(GridElement element)
         {
-            // Scale sprites to fill the entire cell with no gaps
             Rectangle destRect = new Rectangle(
                 (int)element.Position.X,
                 (int)element.Position.Y,
-                CELL_SIZE,
-                CELL_SIZE
+                GRID_CELL_SIZE,
+                GRID_CELL_SIZE
             );
 
             _spriteBatch.Draw(element.Texture, destRect, element.Color);
-        }
-
-        private char GetTerrainSymbol(float noise)
-        {
-            // Legacy method - kept for compatibility but no longer used
-            if (noise < waterLevel) return '░';
-            if (noise < flatlandsLevel) return '∙';
-            if (noise < hillsLevel) return '^';
-            if (noise < mountainsLevel) return 'n';
-            return 'A';
         }
 
         private Color GetTerrainColor(float noise)
@@ -1296,23 +1220,23 @@ namespace ProjectVagabond
             int terminalWidth = DEFAULT_TERMINAL_WIDTH;
             int terminalHeight = 600;
 
-            // Create pixel texture for drawing rectangles
+            // Create pixel texture for drawing rectangles //
             var pixel = new Texture2D(GraphicsDevice, 1, 1);
             pixel.SetData(new[] { Color.White });
 
-            // Draw terminal background
+            // Draw terminal background //
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, terminalHeight + 30), _terminalBg);
 
-            // Draw terminal border with thicker lines (2 pixels thick)
+            // Draw terminal border with thicker lines (2 pixels thick) //
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, 2), Color.White); // Top
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY + terminalHeight + 3, terminalWidth + 10, 2), Color.White); // Bottom
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, 2, terminalHeight + 30), Color.White); // Left
             _spriteBatch.Draw(pixel, new Rectangle(terminalX + terminalWidth + 3, terminalY - 25, 2, terminalHeight + 30), Color.White); // Right
 
-            // Draw terminal title
+            // Draw terminal title //
             _spriteBatch.DrawString(_font, "Terminal Output", new Vector2(terminalX, terminalY - 20), _terminalTextColor);
 
-            // Draw wrapped command history (bottom-up with scrolling)
+            // Draw wrapped command history //
             int maxVisibleLines = (terminalHeight - 40) / TERMINAL_LINE_SPACING; // Reduced from 80 to 40
             int totalLines = _wrappedHistory.Count;
             int startIndex = Math.Max(0, totalLines - maxVisibleLines - _scrollOffset);
@@ -1330,7 +1254,6 @@ namespace ProjectVagabond
                     x += _font.MeasureString(segment.Text).X;
                 }
     
-                // Add this after the foreach loop:
                 if (_wrappedHistory[i].LineNumber > 0) // Only show numbers for actual content lines
                 {
                     string lineNumText = _wrappedHistory[i].LineNumber.ToString();
@@ -1339,7 +1262,7 @@ namespace ProjectVagabond
                 }
             }
 
-            // Draw scroll indicator only when there's content that can be scrolled
+            // Draw scroll indicator only when there's content that can be scrolled //
             bool canScrollUp = _scrollOffset > 0;
             bool canScrollDown = _wrappedHistory.Count > maxVisibleLines;
 
@@ -1359,23 +1282,23 @@ namespace ProjectVagabond
                 _spriteBatch.DrawString(_font, scrollIndicator, new Vector2(terminalX, scrollY), Color.Gold);
             }
 
-            // Draw separator line above input with thicker line (2 pixels thick)
+            // Draw separator line above input with thicker line (2 pixels thick) //
             int inputLineY = terminalY + terminalHeight - 20;
             int separatorY = inputLineY - 5;
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX, separatorY, 690, 2), Color.Gray);
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX, separatorY, 750, 2), Color.White);
 
-            // Then draw the input line
+            // Draw the input line //
             string inputDisplay = $"> {_currentInput}_";
             string wrappedInput = WrapText(inputDisplay, GetTerminalWidthInChars());
             _spriteBatch.DrawString(_font, wrappedInput, new Vector2(terminalX, inputLineY), Color.Khaki);
 
-            // Draw autocomplete suggestions
+            // Draw autocomplete suggestions //
             if (_showingSuggestions && _autoCompleteSuggestions.Count > 0)
             {
                 int suggestionY = inputLineY - 20;
                 int visibleSuggestions = Math.Min(_autoCompleteSuggestions.Count, 5);
     
-                // Calculate background dimensions
+                // Calculate background dimensions //
                 int maxSuggestionWidth = 0;
                 for (int i = 0; i < visibleSuggestions; i++)
                 {
@@ -1385,18 +1308,18 @@ namespace ProjectVagabond
                     maxSuggestionWidth = Math.Max(maxSuggestionWidth, textWidth);
                 }
     
-                // Draw background rectangle
+                // Draw background rectangle //
                 int backgroundHeight = visibleSuggestions * FONT_SIZE;
                 int backgroundY = suggestionY - (visibleSuggestions - 1) * FONT_SIZE;
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, backgroundHeight), Color.Black);
     
-                // Draw border around suggestions
+                // Draw border around suggestions //
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, 1), Color.Gray); // Top
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), Color.Gray); // Bottom
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, 1, backgroundHeight), Color.Gray); // Left
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), Color.Gray); // Right
     
-                // Draw suggestions
+                // Draw suggestions //
                 for (int i = 0; i < visibleSuggestions; i++)
                 {
                     Color suggestionColor = (i == _selectedSuggestionIndex) ? Color.Khaki : Color.Gray;
@@ -1406,17 +1329,17 @@ namespace ProjectVagabond
                 }
             }
 
-            // Draw status line OUTSIDE terminal (below it)
+            // Draw status line OUTSIDE terminal (below it) //
             int statusY = terminalY + terminalHeight + 15;
-            string statusText = $"Path: {_pendingPath.Count} steps";
+            string statusText = $"Path: {_pendingPathPreview.Count} steps";
             if (_isExecutingPath)
             {
-                statusText += $" | Executing: {_currentPathIndex + 1}/{_pendingPath.Count}";
+                statusText += $" | Executing: {_currentPathIndex + 1}/{_pendingPathPreview.Count}";
             }
             string wrappedStatus = WrapText(statusText, GetTerminalWidthInChars());
             _spriteBatch.DrawString(_font, wrappedStatus, new Vector2(terminalX, statusY), Color.Gray);
 
-            // Draw prompt line OUTSIDE terminal (below status)
+            // Draw prompt line OUTSIDE terminal (below status) //
             int promptY = statusY + (wrappedStatus.Split('\n').Length * TERMINAL_LINE_SPACING) + 10;
             string promptText = GetPromptText();
             if (!string.IsNullOrEmpty(promptText))
@@ -1444,9 +1367,9 @@ namespace ProjectVagabond
             {
                 return "[khaki]You are FREE MOVING!\n[gold]Use (W/A/S/D) to queue moves.\nPress ENTER to confirm, ESC to cancel: ";
             }
-            else if (_pendingPath.Count > 0 && !_isExecutingPath)
+            else if (_pendingPathPreview.Count > 0 && !_isExecutingPath)
             {
-                return $"[khaki]Previewing path...\n[gold]Pending {_pendingPath.Count} queued movements...\nPress ENTER to confirm, ESC to cancel: ";
+                return $"[khaki]Previewing path...\n[gold]Pending {_pendingPathPreview.Count} queued movements...\nPress ENTER to confirm, ESC to cancel: ";
                 
             }
             return "";
@@ -1459,20 +1382,17 @@ namespace ProjectVagabond
 
             var finalLines = new List<string>();
     
-            // First split by existing newlines
-            string[] existingLines = text.Split('\n');
+            string[] existingLines = text.Split('\n'); // First split by existing newlines
     
             foreach (string line in existingLines)
             {
                 if (line.Length <= maxCharsPerLine)
                 {
-                    // Line doesn't need wrapping
-                    finalLines.Add(line);
+                    finalLines.Add(line); // Line doesn't need wrapping
                 }
                 else
                 {
-                    // Line needs wrapping
-                    var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries); // Line needs wrapping
                     var currentLine = new StringBuilder();
 
                     foreach (string word in words)
@@ -1530,8 +1450,7 @@ namespace ProjectVagabond
         {
             AddOutputToHistory("[gray]Displaying all XNA Framework colors:");
     
-            // Get all static Color properties using reflection
-            var colorProperties = typeof(Color).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            var colorProperties = typeof(Color).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) // Get all static Color properties using reflection
                 .Where(p => p.PropertyType == typeof(Color))
                 .OrderBy(p => p.Name);
     
@@ -1540,8 +1459,7 @@ namespace ProjectVagabond
                 string colorName = property.Name;
                 Color color = (Color)property.GetValue(null);
         
-                // Format as [colorname]ColorName[/] to use the color system
-                AddToHistory($"[{colorName.ToLower()}]{colorName}[/]", Color.Gray);
+                AddToHistory($"[{colorName.ToLower()}]{colorName}[/]", Color.Gray); // Format as [colorname]ColorName[/] to use the color system
             }
     
             AddOutputToHistory($"[gray]Total colors displayed: {colorProperties.Count()}");
@@ -1571,8 +1489,6 @@ namespace ProjectVagabond
         }
     }
 
-
-    // Enhanced Perlin noise implementation
     public class FastNoiseLite
     {
         private int _seed;
@@ -1587,7 +1503,6 @@ namespace ProjectVagabond
         
         public float GetNoise(float x, float y)
         {
-            // Enhanced noise function with better distribution
             float noise1 = (float)(Math.Sin(x * _frequency + _seed) * Math.Cos(y * _frequency + _seed));
             float noise2 = (float)(Math.Sin(x * _frequency * 2 + _seed * 2) * Math.Cos(y * _frequency * 2 + _seed * 2)) * 0.5f;
             float noise3 = (float)(Math.Sin(x * _frequency * 4 + _seed * 3) * Math.Cos(y * _frequency * 4 + _seed * 3)) * 0.25f;
