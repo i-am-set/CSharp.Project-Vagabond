@@ -6,7 +6,9 @@ namespace ProjectVagabond
     {
         public string Text { get; set; }
         public Color Color { get; set; }
-    
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
         public ColoredText(string text, Color color)
         {
             Text = text;

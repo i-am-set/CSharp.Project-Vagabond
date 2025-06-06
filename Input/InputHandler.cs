@@ -23,10 +23,14 @@ namespace ProjectVagabond
 
         public string CurrentInput => _currentInput;
 
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- // 
+
         public void SetCurrentInput(String input)
         {
             _currentInput = input;
         }
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public void HandleInput(GameTime gameTime)
         {
@@ -251,7 +255,35 @@ namespace ProjectVagabond
                     }
                     break;
             }
+        
+
+        private void HandleBackspace()
+        {
+            if (_currentInput.Length > 0)
+            {
+                _currentInput = _currentInput.Substring(0, _currentInput.Length - 1);
+                _cursorPosition = Math.Max(0, _cursorPosition - 1);
+            }
         }
+
+        private void HandleCharacterInput(Keys key)
+        {
+            string keyString = key.ToString();
+            if (keyString.Length == 1)
+            {
+                _currentInput += keyString.ToLower();
+                _cursorPosition++;
+            }
+            else if (keyString.StartsWith("D") && keyString.Length == 2)
+            {
+                _currentInput += keyString.Substring(1);
+                _cursorPosition++;
+            }
+
+            Core.CurrentAutoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
+        }
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         private void NavigateCommandHistory(int direction)
         {
@@ -284,32 +316,6 @@ namespace ProjectVagabond
             }
 
             _cursorPosition = _currentInput.Length;
-        }
-
-        private void HandleBackspace()
-        {
-            if (_currentInput.Length > 0)
-            {
-                _currentInput = _currentInput.Substring(0, _currentInput.Length - 1);
-                _cursorPosition = Math.Max(0, _cursorPosition - 1);
-            }
-        }
-
-        private void HandleCharacterInput(Keys key)
-        {
-            string keyString = key.ToString();
-            if (keyString.Length == 1)
-            {
-                _currentInput += keyString.ToLower();
-                _cursorPosition++;
-            }
-            else if (keyString.StartsWith("D") && keyString.Length == 2)
-            {
-                _currentInput += keyString.Substring(1);
-                _cursorPosition++;
-            }
-
-            Core.CurrentAutoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
         }
 
         private void ProcessCommand(string input)

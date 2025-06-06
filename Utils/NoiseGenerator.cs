@@ -13,11 +13,15 @@ namespace ProjectVagabond
         private NoiseType _noiseType = NoiseType.Perlin;
         
         public enum NoiseType { Perlin }
-        
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
         public void SetSeed(int seed) { _seed = seed; }
         public void SetFrequency(float frequency) { _frequency = frequency; }
         public void SetNoiseType(NoiseType noiseType) { _noiseType = noiseType; }
-        
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
         public float GetNoise(float x, float y)
         {
             float noise1 = (float)(Math.Sin(x * _frequency + _seed) * Math.Cos(y * _frequency + _seed));

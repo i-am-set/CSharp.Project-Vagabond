@@ -9,10 +9,7 @@ namespace ProjectVagabond
     {
         private GameState _gameState = Core.CurrentGameState;
 
-        public MapRenderer()
-        {
-            
-        }
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public void DrawMap()
         {
@@ -113,6 +110,8 @@ namespace ProjectVagabond
 
             Global.Instance.CurrentSpriteBatch.Draw(element.Texture, destRect, element.Color);
         }
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         private Texture2D GetTerrainTexture(float noise)
         {

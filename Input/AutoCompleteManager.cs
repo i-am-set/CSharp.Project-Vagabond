@@ -13,6 +13,8 @@ namespace ProjectVagabond
         public int SelectedAutoCompleteSuggestionIndex => _selectedAutoCompleteSuggestionIndex;
         public bool ShowingAutoCompleteSuggestions => _showingAutoCompleteSuggestions;
 
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
         public void ToggleShowingAutoCompleteSuggestions(bool toggle)
         {
             _showingAutoCompleteSuggestions = toggle;
@@ -22,6 +24,8 @@ namespace ProjectVagabond
         {
             _selectedAutoCompleteSuggestionIndex = index;
         }
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public void UpdateAutoCompleteSuggestions(string currentInput)
         {

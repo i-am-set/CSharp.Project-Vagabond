@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 
-// TODO: Change the grid to 5x5 images instead of 8x8
 // TODO: Make "freeMove" disable when path is dont executing.
 // TODO: Allow for the player to cancel movement while executing using ESCAPE
 // TODO: Make terminal scroll down to the bottom when command is input
@@ -11,8 +10,10 @@ namespace ProjectVagabond
 {
     public class Core : Game
     {
+        // Singleton logic //
         public static Core Instance { get; private set; }
 
+        // Class references //
         private static readonly GameState _gameState = new();
         private static readonly SpriteManager _spriteManager = new();
         private static readonly TextureFactory _textureFactory = new();
@@ -31,6 +32,8 @@ namespace ProjectVagabond
         public static CommandProcessor CurrentCommandProcessor => _commandProcessor;
         public static InputHandler CurrentInputHandler => _inputHandler;
 
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
         public Core()
         {
             Global.Instance.CurrentGraphics = new GraphicsDeviceManager(this);
@@ -40,6 +43,8 @@ namespace ProjectVagabond
             Global.Instance.CurrentGraphics.PreferredBackBufferWidth = 1200; // Set window size
             Global.Instance.CurrentGraphics.PreferredBackBufferHeight = 800;
         }
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         protected override void Initialize()
         {
@@ -66,9 +71,6 @@ namespace ProjectVagabond
 
         protected override void Update(GameTime gameTime)
         {
-            if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed) // Hack: Not really kosher
-                Exit();
-
             _inputHandler.HandleInput(gameTime);
             _gameState.UpdateMovement(gameTime);
 
@@ -88,6 +90,8 @@ namespace ProjectVagabond
 
             base.Draw(gameTime);
         }
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public void ExitApplication()
         {

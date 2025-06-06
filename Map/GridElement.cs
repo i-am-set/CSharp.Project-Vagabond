@@ -9,6 +9,8 @@ namespace ProjectVagabond
         public Color Color;
         public Vector2 Position;
 
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
         public GridElement(Texture2D texture, Color color, Vector2 position)
         {
             Texture = texture;

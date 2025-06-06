@@ -28,6 +28,8 @@ namespace ProjectVagabond
         public Texture2D PathSprite => _pathSprite;
         public Texture2D PathEndSprite => _pathEndSprite;
 
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
         public void LoadSpriteContent()
         {
             try
