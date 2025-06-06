@@ -34,7 +34,7 @@ namespace ProjectVagabond
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX + mapWidth - 7, mapStartY - 25, 2, mapHeight), Color.White); // Right
 
             // Draw map title //
-            _spriteBatch.DrawString(Global.Instance.DefaultFont, $"Map View - Pos: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})",
+            _spriteBatch.DrawString(Global.Instance.DefaultFont, $"Pos: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})",
                 new Vector2(mapStartX, mapStartY - 20), Color.White);
 
             // Generate grid elements //

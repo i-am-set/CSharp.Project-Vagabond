@@ -6,6 +6,7 @@ using System;
 // TODO: Change the grid to 5x5 images instead of 8x8
 // TODO: Make "freeMove" disable when path is dont executing.
 // TODO: Allow for the player to cancel movement while executing using ESCAPE
+// TODO: Make terminal scroll down to the bottom when command is input
 namespace ProjectVagabond
 {
     public class Core : Game

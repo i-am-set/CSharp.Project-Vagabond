@@ -472,11 +472,11 @@ namespace ProjectVagabond
         {
             if (Core.CurrentGameState.IsFreeMoveMode)
             {
-                return "[khaki]You are FREE MOVING!\n[gold]Use (W/A/S/D) to queue moves.\nPress ENTER to confirm, ESC to cancel: ";
+                return "[coral]Free moving...\n[orangered]Use (W/A/S/D) to queue moves.\nPress [brown]ENTER[orangered] to confirm, [brown]ESC[orangered] to cancel: ";
             }
             else if (Core.CurrentGameState.PendingPathPreview.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
             {
-                return $"[khaki]Previewing path...\n[gold]Pending {Core.CurrentGameState.PendingPathPreview.Count} queued movements...\nPress ENTER to confirm, ESC to cancel: ";
+                return $"[khaki]Previewing path...\n[gold]Pending {Core.CurrentGameState.PendingPathPreview.Count} queued movements...\nPress [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel: ";
                 
             }
             return "";
