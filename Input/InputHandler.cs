@@ -1,0 +1,336 @@
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
+using System;
+using System.Collections.Generic;
+
+namespace ProjectVagabond
+{
+    public class InputHandler
+    {
+        private string _currentInput = "";
+        private KeyboardState _previousKeyboardState;
+        private HashSet<Keys> _processedKeys = new HashSet<Keys>();
+        private bool _controlPressed = false;
+        private float _backspaceTimer = 0f;
+        private float _backspaceInitialDelay = 0.3f;
+        private bool _backspaceHeld = false;
+        private int _cursorPosition;
+        private string _clipboard = "";
+
+        private List<string> _commandHistory = new List<string>();
+        private int _commandHistoryIndex = -1;
+        private string _currentEditingCommand = "";
+
+        public string CurrentInput => _currentInput;
+
+        public void SetCurrentInput(String input)
+        {
+            _currentInput = input;
+        }
+
+        public void HandleInput(GameTime gameTime)
+        {
+            KeyboardState currentKeyboardState = Keyboard.GetState();
+            Keys[] pressedKeys = currentKeyboardState.GetPressedKeys();
+
+            _controlPressed = currentKeyboardState.IsKeyDown(Keys.LeftControl) || currentKeyboardState.IsKeyDown(Keys.RightControl); // Check for control key
+
+            if (Core.CurrentGameState.IsFreeMoveMode)
+            {
+                foreach (Keys key in pressedKeys)
+                {
+                    if (!_previousKeyboardState.IsKeyDown(key) && !_processedKeys.Contains(key))
+                    {
+                        _processedKeys.Add(key);
+
+                        switch (key)
+                        {
+                            case Keys.W:
+                            case Keys.Up:
+                                Core.CurrentGameState.QueueMovement(new Vector2(0, -1), new string[] { "up", "1" });
+                                break;
+                            case Keys.S:
+                            case Keys.Down:
+                                Core.CurrentGameState.QueueMovement(new Vector2(0, 1), new string[] { "down", "1" });
+                                break;
+                            case Keys.A:
+                            case Keys.Left:
+                                Core.CurrentGameState.QueueMovement(new Vector2(-1, 0), new string[] { "left", "1" });
+                                break;
+                            case Keys.D:
+                            case Keys.Right:
+                                Core.CurrentGameState.QueueMovement(new Vector2(1, 0), new string[] { "right", "1" });
+                                break;
+                            case Keys.Enter:
+                                if (Core.CurrentGameState.PendingPathPreview.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+                                {
+                                    Core.CurrentGameState.ToggleExecutingPath(true);
+                                    Core.CurrentGameState.SetCurrentPathIndex(0);
+                                    Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing path of [teal]{Core.CurrentGameState.PendingPathPreview.Count}[gray] move(s)...");
+                                }
+                                else if (Core.CurrentGameState.IsExecutingPath)
+                                {
+                                    Core.CurrentTerminalRenderer.AddOutputToHistory("[dimgray]Already executing a path.");
+                                }
+                                else
+                                {
+                                    Core.CurrentTerminalRenderer.AddOutputToHistory("[dimgray]No path queued.");
+                                }
+                                break;
+                            case Keys.Escape:
+                                Core.CurrentGameState.ToggleIsFreeMoveMode(false);
+                                _processedKeys.Clear();
+                                Core.CurrentTerminalRenderer.AddOutputToHistory("[gold]Free move disabled.");
+                                break;
+                        }
+                    }
+                }
+
+                _processedKeys.RemoveWhere(key => !currentKeyboardState.IsKeyDown(key)); // Clear processed keys that are no longer pressed
+            }
+            else
+            {
+                // Handle enhanced text input
+                foreach (Keys key in pressedKeys)
+                {
+                    if (!_previousKeyboardState.IsKeyDown(key))
+                    {
+                        if (key == Keys.Enter)
+                        {
+                            Core.CurrentAutoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
+                            if (string.IsNullOrEmpty(_currentInput.Trim()) && Core.CurrentGameState.PendingPathPreview.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+                            {
+                                Core.CurrentGameState.ToggleExecutingPath(true);
+                                Core.CurrentGameState.SetCurrentPathIndex(0);
+                                Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing path with {Core.CurrentGameState.PendingPathPreview.Count} steps...");
+                            }
+                            else
+                            {
+                                if (!string.IsNullOrEmpty(_currentInput.Trim())) // Save command to history if it's not empty
+                                {
+                                    _commandHistory.Add(_currentInput.Trim());
+                                    if (_commandHistory.Count > 50) // Keep history to reasonable size
+                                    {
+                                        _commandHistory.RemoveAt(0);
+                                    }
+                                }
+                                ProcessCommand(_currentInput.Trim().ToLower());
+                
+                                _commandHistoryIndex = -1;// Reset history navigation
+                                _currentEditingCommand = "";
+                            }
+                            _currentInput = "";
+                            _cursorPosition = 0;
+                        }
+                        else if (key == Keys.Tab)
+                        {
+                            if (Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions && Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex >= 0)
+                            {
+                                _currentInput = Core.CurrentAutoCompleteManager.AutoCompleteSuggestions[Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex];
+                                _cursorPosition = _currentInput.Length;
+                                Core.CurrentAutoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
+                            }
+                        }
+                        else if (key == Keys.Up && Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions)
+                        {
+                            Core.CurrentAutoCompleteManager.SetSelectedAutoCompleteSuggestionIndex(Math.Min(Core.CurrentAutoCompleteManager.AutoCompleteSuggestions.Count - 1, Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex + 1));
+                        }
+                        else if (key == Keys.Down && Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions)
+                        {
+                            Core.CurrentAutoCompleteManager.SetSelectedAutoCompleteSuggestionIndex(Math.Max(0, Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex - 1));
+                        }
+                        else if (key == Keys.Up)
+                        {
+                            NavigateCommandHistory(1);
+                        }
+                        else if (key == Keys.Down)
+                        {
+                            NavigateCommandHistory(-1);
+                        }
+                        else if (key == Keys.Escape && Core.CurrentGameState.PendingPathPreview.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+                        {
+                            Core.CurrentGameState.PendingPathPreview.Clear();
+                            Core.CurrentTerminalRenderer.AddOutputToHistory("Pending path cleared.");
+                        }
+                        else if (_controlPressed)
+                        {
+                            HandleControlCommands(key);
+                        }
+                        else if (key == Keys.Back)
+                        {
+                            HandleBackspace();
+                            Core.CurrentAutoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
+                            _backspaceHeld = true;
+                            _backspaceTimer = 0f;
+                            _backspaceInitialDelay = 0.3f;
+                        }
+                        else if (key == Keys.Delete)
+                        {
+                            if (_cursorPosition < _currentInput.Length) // Delete character at cursor (for future cursor implementation)
+                            {
+                                _currentInput = _currentInput.Remove(_cursorPosition, 1);
+                            }
+                        }
+                        else if (key == Keys.Home)
+                        {
+                            _cursorPosition = 0;
+                        }
+                        else if (key == Keys.End)
+                        {
+                            _cursorPosition = _currentInput.Length;
+                        }
+                        else if (key == Keys.Space)
+                        {
+                            _currentInput += " ";
+                            _cursorPosition++;
+                        }
+                        else if (key == Keys.PageUp)
+                        {
+                            int maxVisibleLines = (Global.TERMINAL_HEIGHT - 80) / Global.FONT_SIZE;
+                            Core.CurrentTerminalRenderer.SetScrollOffset(Math.Min(Core.CurrentTerminalRenderer.ScrollOffset + 5, Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - maxVisibleLines)));
+                        }
+                        else if (key == Keys.PageDown)
+                        {
+                            Core.CurrentTerminalRenderer.SetScrollOffset(Math.Max(Core.CurrentTerminalRenderer.ScrollOffset - 5, 0));
+                        }
+                        else
+                        {
+                            HandleCharacterInput(key);
+                        }
+                    }
+                }
+
+                if (_backspaceHeld && currentKeyboardState.IsKeyDown(Keys.Back)) // Handle held backspace with acceleration
+                {
+                    _backspaceTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    if (_backspaceTimer >= _backspaceInitialDelay)
+                    {
+                        HandleBackspace();
+                        _backspaceTimer = 0f;
+                        _backspaceInitialDelay = Math.Max(Global.MIN_BACKSPACE_DELAY, _backspaceInitialDelay * Global.BACKSPACE_ACCELERATION);
+                    }
+                }
+                else if (_backspaceHeld)
+                {
+                    _backspaceHeld = false;
+                }
+            }
+
+            _previousKeyboardState = currentKeyboardState;
+        }
+
+        private void HandleControlCommands(Keys key)
+        {
+            switch (key)
+            {
+                case Keys.X: // Cut
+                    if (!string.IsNullOrEmpty(_currentInput))
+                    {
+                        _clipboard = _currentInput;
+                        _currentInput = "";
+                        _cursorPosition = 0;
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Cut text to clipboard: '{_clipboard}'   (CTRL + X)");
+                    }
+                    break;
+            
+                case Keys.V: // Paste
+                    if (!string.IsNullOrEmpty(_clipboard))
+                    {
+                        _currentInput += _clipboard;
+                        _cursorPosition = _currentInput.Length;
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Pasted from clipboard: '{_clipboard}'   (CTRL + V)");
+                    }
+                    break;
+            
+                case Keys.A: // Clear
+                    if (!string.IsNullOrEmpty(_currentInput))
+                    {
+                        _currentInput = "";
+                        _cursorPosition = 0;
+                        Core.CurrentTerminalRenderer.AddOutputToHistory("Input cleared   (CTRL + A)");
+                    }
+                    break;
+            }
+        }
+
+        private void NavigateCommandHistory(int direction)
+        {
+            if (_commandHistory.Count == 0) return;
+
+            if (_commandHistoryIndex == -1) // If we're not currently browsing history, save what the user was typing
+            {
+                _currentEditingCommand = _currentInput;
+            }
+
+            int newIndex = _commandHistoryIndex + direction; // Calculate new index
+
+            if (newIndex < -1)
+            {
+                return; // Already at the beginning, don't go further
+            }
+            else if (newIndex >= _commandHistory.Count)
+            {
+                return; // Already at the end, don't go further
+            }
+            else if (newIndex == -1)
+            {
+                _currentInput = _currentEditingCommand; // Back to current editing (what user was typing before browsing)
+                _commandHistoryIndex = -1;
+            }
+            else
+            {
+                _commandHistoryIndex = newIndex; // Navigate to specific history entry
+                _currentInput = _commandHistory[_commandHistory.Count - 1 - _commandHistoryIndex];
+            }
+
+            _cursorPosition = _currentInput.Length;
+        }
+
+        private void HandleBackspace()
+        {
+            if (_currentInput.Length > 0)
+            {
+                _currentInput = _currentInput.Substring(0, _currentInput.Length - 1);
+                _cursorPosition = Math.Max(0, _cursorPosition - 1);
+            }
+        }
+
+        private void HandleCharacterInput(Keys key)
+        {
+            string keyString = key.ToString();
+            if (keyString.Length == 1)
+            {
+                _currentInput += keyString.ToLower();
+                _cursorPosition++;
+            }
+            else if (keyString.StartsWith("D") && keyString.Length == 2)
+            {
+                _currentInput += keyString.Substring(1);
+                _cursorPosition++;
+            }
+
+            Core.CurrentAutoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
+        }
+
+        private void ProcessCommand(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return;
+
+            Core.CurrentTerminalRenderer.AddToHistory($"> {input}");
+
+            string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return;
+
+            string command = parts[0];
+
+            if (Core.CurrentCommandProcessor.Commands.ContainsKey(command))
+            {
+                Core.CurrentCommandProcessor.Commands[command](parts);
+            }
+            else
+            {
+                Core.CurrentTerminalRenderer.AddOutputToHistory($"Unknown command: '{command}'. Type 'help' for available commands.");
+            }
+        }
+    }
+}
