@@ -47,7 +47,7 @@ namespace ProjectVagabond
             }
             catch
             {
-                _flatlandSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Green);
+                _flatlandSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.White);
             }
 
             try
@@ -56,7 +56,7 @@ namespace ProjectVagabond
             }
             catch
             {
-                _hillSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.DarkGray);
+                _hillSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.White);
             }
 
             try
@@ -65,7 +65,7 @@ namespace ProjectVagabond
             }
             catch
             {
-                _mountainSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Gray);
+                _mountainSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.White);
             }
 
             try

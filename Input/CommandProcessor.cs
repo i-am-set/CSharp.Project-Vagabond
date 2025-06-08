@@ -33,7 +33,7 @@ namespace ProjectVagabond
 
         private void AddHelpLineToHistory(string message)
         {
-            Core.CurrentTerminalRenderer.AddToHistory(message, Color.Violet);
+            Core.CurrentTerminalRenderer.AddToHistory(message, Global.Instance.palette_LightPurple);
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -45,7 +45,7 @@ namespace ProjectVagabond
             _commands["help"] = (args) =>
             {
                 AddToHistory(" ");
-                AddToHistory("Available commands:", Color.Plum);
+                AddToHistory("Available commands:", Global.Instance.palette_DarkPurple);
                 AddHelpLineToHistory(" up/down/left/right <count> [gray]- Queue movement");
                 AddHelpLineToHistory(" look [gray]- Look around current area");
                 AddHelpLineToHistory(" move [gray]- Queue movement with W/A/S/D or arrow keys");
@@ -115,7 +115,7 @@ namespace ProjectVagabond
                 string colorName = property.Name;
                 Color color = (Color)property.GetValue(null);
         
-                AddToHistory($"[{colorName.ToLower()}]{colorName}[/]", Color.Gray); // Format as [colorname]ColorName[/] to use the color system
+                AddToHistory($"[{colorName.ToLower()}]{colorName}[/]", Global.Instance.OutputTextColor); // Format as [colorname]ColorName[/] to use the color system
             }
     
             AddOutputToHistory($"[gray]Total colors displayed: {colorProperties.Count()}");

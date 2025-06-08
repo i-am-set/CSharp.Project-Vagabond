@@ -25,14 +25,14 @@ namespace ProjectVagabond
             pixel.SetData(new[] { Color.White });
 
             // Border rectangle //
-            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, mapWidth, 2), Color.White); // Top
-            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY + mapHeight - 27, mapWidth, 2), Color.White); // Bottom
-            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, 2, mapHeight), Color.White); // Left
-            _spriteBatch.Draw(pixel, new Rectangle(mapStartX + mapWidth - 7, mapStartY - 25, 2, mapHeight), Color.White); // Right
+            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, mapWidth, 2), Global.Instance.palette_White); // Top
+            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY + mapHeight - 27, mapWidth, 2), Global.Instance.palette_White); // Bottom
+            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, 2, mapHeight), Global.Instance.palette_White); // Left
+            _spriteBatch.Draw(pixel, new Rectangle(mapStartX + mapWidth - 7, mapStartY - 25, 2, mapHeight), Global.Instance.palette_White); // Right
 
             // Draw map title //
             _spriteBatch.DrawString(Global.Instance.DefaultFont, $"Pos: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})",
-                new Vector2(mapStartX, mapStartY - 20), Color.White);
+                new Vector2(mapStartX, mapStartY - 20), Global.Instance.TextColor);
 
             // Generate grid elements //
             var gridElements = GenerateMapGridElements(mapStartX, mapStartY);

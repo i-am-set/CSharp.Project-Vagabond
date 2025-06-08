@@ -51,7 +51,7 @@ namespace ProjectVagabond
 
         public void AddOutputToHistory(string output)
         {
-            AddToHistory(output, Color.Gray);
+            AddToHistory(output, Global.Instance.OutputTextColor);
         }
 
         public void ClearHistory()
@@ -83,13 +83,13 @@ namespace ProjectVagabond
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, terminalHeight + 30), Global.Instance.TerminalBg);
 
             // Draw terminal border with thicker lines (2 pixels thick) //
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, 2), Color.White); // Top
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY + terminalHeight + 3, terminalWidth + 10, 2), Color.White); // Bottom
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, 2, terminalHeight + 30), Color.White); // Left
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX + terminalWidth + 3, terminalY - 25, 2, terminalHeight + 30), Color.White); // Right
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, 2), Global.Instance.palette_White); // Top
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY + terminalHeight + 3, terminalWidth + 10, 2), Global.Instance.palette_White); // Bottom
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, 2, terminalHeight + 30), Global.Instance.palette_White); // Left
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX + terminalWidth + 3, terminalY - 25, 2, terminalHeight + 30), Global.Instance.palette_White); // Right
 
             // Draw terminal title //
-            _spriteBatch.DrawString(_defaultFont, "Terminal Output", new Vector2(terminalX, terminalY - 20), Global.Instance.TerminalTextColor);
+            _spriteBatch.DrawString(_defaultFont, "Terminal Output", new Vector2(terminalX, terminalY - 20), Global.Instance.TextColor);
 
             // Draw wrapped command history //
             int maxVisibleLines = (terminalHeight - 40) / Global.TERMINAL_LINE_SPACING; // Reduced from 80 to 40
@@ -113,7 +113,7 @@ namespace ProjectVagabond
                 {
                     string lineNumText = _wrappedHistory[i].LineNumber.ToString();
                     float lineNumX = terminalX + 710; // Position outside terminal, to the right
-                    _spriteBatch.DrawString(_defaultFont, lineNumText, new Vector2(lineNumX, y), Color.DimGray);
+                    _spriteBatch.DrawString(_defaultFont, lineNumText, new Vector2(lineNumX, y), Global.Instance.palette_DarkGray);
                 }
             }
 
@@ -136,7 +136,7 @@ namespace ProjectVagabond
             // Draw separator line above input with thicker line (2 pixels thick) //
             int inputLineY = terminalY + terminalHeight - 20;
             int separatorY = inputLineY - 5;
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX-5, separatorY, 710, 2), Color.White);
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX-5, separatorY, 710, 2), Global.Instance.palette_White);
 
             // Draw the input line //
             string inputDisplay = $"> {Core.CurrentInputHandler.CurrentInput}_";
@@ -162,18 +162,18 @@ namespace ProjectVagabond
                 // Draw background rectangle //
                 int backgroundHeight = visibleSuggestions * Global.FONT_SIZE;
                 int backgroundY = suggestionY - (visibleSuggestions - 1) * Global.FONT_SIZE;
-                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, backgroundHeight), Color.Black);
+                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, backgroundHeight), Global.Instance.palette_Black);
     
                 // Draw border around suggestions //
-                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, 1), Color.Gray); // Top
-                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), Color.Gray); // Bottom
-                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, 1, backgroundHeight), Color.Gray); // Left
-                _spriteBatch.Draw(pixel, new Rectangle(terminalX + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), Color.Gray); // Right
+                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, 1), Global.Instance.palette_LightGray); // Top
+                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), Global.Instance.palette_LightGray); // Bottom
+                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, 1, backgroundHeight), Global.Instance.palette_LightGray); // Left
+                _spriteBatch.Draw(pixel, new Rectangle(terminalX + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), Global.Instance.palette_LightGray); // Right
     
                 // Draw suggestions //
                 for (int i = 0; i < visibleSuggestions; i++)
                 {
-                    Color suggestionColor = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? Color.Khaki : Color.Gray;
+                    Color suggestionColor = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? Color.Khaki : Global.Instance.palette_LightGray;
                     string prefix = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? " >" : "  ";
                     _spriteBatch.DrawString(_defaultFont, prefix + Core.CurrentAutoCompleteManager.AutoCompleteSuggestions[i], 
                         new Vector2(terminalX + 2, suggestionY - i * Global.FONT_SIZE), suggestionColor);
@@ -188,7 +188,7 @@ namespace ProjectVagabond
                 statusText += $" | Executing: {Core.CurrentGameState.CurrentPathIndex + 1}/{Core.CurrentGameState.PendingPathPreview.Count}";
             }
             string wrappedStatus = WrapText(statusText, GetTerminalWidthInChars());
-            _spriteBatch.DrawString(_defaultFont, wrappedStatus, new Vector2(terminalX, statusY), Color.Gray);
+            _spriteBatch.DrawString(_defaultFont, wrappedStatus, new Vector2(terminalX, statusY), Global.Instance.palette_LightGray);
 
             // Draw prompt line OUTSIDE terminal (below status) //
             int promptY = statusY + (wrappedStatus.Split('\n').Length * Global.TERMINAL_LINE_SPACING) + 10;
@@ -231,7 +231,7 @@ namespace ProjectVagabond
         private ColoredLine ParseColoredText(string text, Color? baseColor = null)
         {
             var line = new ColoredLine();
-            var currentColor = baseColor ?? Global.Instance.TerminalTextColor;
+            var currentColor = baseColor ?? Global.Instance.TextColor;
             var currentText = "";
 
             for (int i = 0; i < text.Length; i++)
@@ -252,11 +252,11 @@ namespace ProjectVagabond
 
                         if (colorTag == "/")
                         {
-                            currentColor = Global.Instance.TerminalTextColor;
+                            currentColor = Global.Instance.TextColor;
                         }
                         else if (colorTag == "/o")
                         {
-                            currentColor = Color.Gray;
+                            currentColor = Global.Instance.OutputTextColor;
                         }
                         else
                         {
@@ -286,6 +286,25 @@ namespace ProjectVagabond
         {
             switch (colorName.ToLower())
             {
+                case "palette_black": return Global.Instance.palette_Black;
+                case "palette_darkgray": return Global.Instance.palette_DarkGray;
+                case "palette_gray": return Global.Instance.palette_Gray;
+                case "palette_lightgray": return Global.Instance.palette_LightGray;
+                case "palette_white": return Global.Instance.palette_White;
+                case "palette_teal": return Global.Instance.palette_Teal;
+                case "palette_lightblue": return Global.Instance.palette_LightBlue;
+                case "palette_darkblue": return Global.Instance.palette_DarkBlue;
+                case "palette_darkgreen": return Global.Instance.palette_DarkGreen;
+                case "palette_lightgreen": return Global.Instance.palette_LightGreen;
+                case "palette_lightyellow": return Global.Instance.palette_LightYellow;
+                case "palette_yellow": return Global.Instance.palette_Yellow;
+                case "palette_orange": return Global.Instance.palette_Orange;
+                case "palette_red": return Global.Instance.palette_Red;
+                case "palette_darkpurple": return Global.Instance.palette_DarkPurple;
+                case "palette_lightpurple": return Global.Instance.palette_LightPurple;
+                case "palette_pink": return Global.Instance.palette_Pink;
+                case "palette_brightwhite": return Global.Instance.palette_BrightWhite;
+
                 case "khaki": return Color.Khaki;
                 case "red": return Color.Red;
                 case "green": return Color.Green;
@@ -315,7 +334,7 @@ namespace ProjectVagabond
                 // If reflection fails, fall back to default
             }
     
-            return Global.Instance.TerminalTextColor;
+            return Global.Instance.TextColor;
         }
 
         private List<ColoredLine> WrapColoredText(ColoredLine line, int maxWidth)

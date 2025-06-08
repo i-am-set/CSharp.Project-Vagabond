@@ -119,7 +119,7 @@ namespace ProjectVagabond
             }
             else
             {
-                Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued {count} move(s) [dimgray]{args[0].ToUpper()}");
+                Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued {count} move(s) {args[0].ToLower()}");
             }
         }
 

@@ -77,9 +77,10 @@ namespace ProjectVagabond
         
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.Black);
+            GraphicsDevice.Clear(Global.Instance.GameBg);
 
             Global.Instance.CurrentSpriteBatch.Begin();
+
 
             _mapRenderer.DrawMap();
             _terminalRenderer.DrawTerminal();

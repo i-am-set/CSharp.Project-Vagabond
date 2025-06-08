@@ -116,11 +116,11 @@ namespace ProjectVagabond
                                 }
                                 else if (Core.CurrentGameState.IsExecutingPath)
                                 {
-                                    Core.CurrentTerminalRenderer.AddOutputToHistory("[dimgray]Already executing a path.");
+                                    Core.CurrentTerminalRenderer.AddOutputToHistory("Already executing a path.");
                                 }
                                 else
                                 {
-                                    Core.CurrentTerminalRenderer.AddOutputToHistory("[dimgray]No path queued.");
+                                    Core.CurrentTerminalRenderer.AddOutputToHistory("No path queued.");
                                 }
                                 break;
                             // ESCAPE case removed from here since it's now handled globally above
