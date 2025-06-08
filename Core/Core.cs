@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 
-// TODO: Make terminal scroll down to the bottom when command is input
+// TODO: impliment programmer art for the map elements
 namespace ProjectVagabond
 {
     public class Core : Game
