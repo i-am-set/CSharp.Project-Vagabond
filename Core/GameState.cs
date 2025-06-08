@@ -29,7 +29,7 @@ namespace ProjectVagabond
         public GameState()
         {
             _playerWorldPos = new Vector2(0, 0); // Start at world origin
-            
+
             int masterSeed = RandomNumberGenerator.GetInt32(1, 99999) + Environment.TickCount;
             _noiseManager = new NoiseMapManager(masterSeed);
         }
@@ -67,6 +67,15 @@ namespace ProjectVagabond
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
+        public bool IsPositionPassable(Vector2 position)
+        {
+            var mapData = GetMapDataAt((int)position.X, (int)position.Y);
+            string terrainType = mapData.TerrainType;
+
+            // Water and peaks are impassable obstacles
+            return terrainType != "WATER" && terrainType != "PEAKS";
+        }
+
         public void QueueMovement(Vector2 direction, string[] args)
         {
             if (_isExecutingPath)
@@ -80,7 +89,7 @@ namespace ProjectVagabond
             {
                 count = Math.Max(1, Math.Min(Global.MAX_SINGLE_MOVE_LIMIT, parsedCount));
             }
-            
+
             Vector2 oppositeDirection = -direction; // Check for backtracking from the end of the path
             int removedSteps = 0;
 
@@ -100,26 +109,48 @@ namespace ProjectVagabond
                     break;
                 }
             }
-            
+
             int remainingSteps = count - removedSteps; // Add remaining forward steps
             if (remainingSteps > 0)
             {
                 Vector2 currentPos = _pendingPathPreview.Count > 0 ? _pendingPathPreview.Last() : _playerWorldPos;
+                int validSteps = 0;
 
                 for (int i = 0; i < remainingSteps; i++)
                 {
-                    currentPos += direction;
+                    Vector2 nextPos = currentPos + direction;
+
+                    if (!IsPositionPassable(nextPos))
+                    {
+                        var mapData = GetMapDataAt((int)nextPos.X, (int)nextPos.Y);
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[crimson]Cannot move here... terrain is impassable! ({mapData.TerrainType.ToLower()})");
+                        break;
+                    }
+
+                    currentPos = nextPos;
                     _pendingPathPreview.Add(currentPos);
+                    validSteps++;
+                }
+
+                if (validSteps > 0)
+                {
+                    if (removedSteps > 0)
+                    {
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[teal]Backtracked {removedSteps} time(s), added {validSteps} move(s)");
+                    }
+                    else
+                    {
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued {validSteps} move(s) {args[0].ToLower()}");
+                    }
+                }
+                else if (removedSteps > 0)
+                {
+                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[teal]Backtracked {removedSteps} time(s)");
                 }
             }
-
-            if (removedSteps > 0)
+            else if (removedSteps > 0)
             {
-                Core.CurrentTerminalRenderer.AddOutputToHistory($"[teal]Backtracked {removedSteps} time(s), added {remainingSteps} move(s)");
-            }
-            else
-            {
-                Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued {count} move(s) {args[0].ToLower()}");
+                Core.CurrentTerminalRenderer.AddOutputToHistory($"[teal]Backtracked {removedSteps} time(s)");
             }
         }
 
@@ -133,7 +164,17 @@ namespace ProjectVagabond
                 {
                     if (_currentPathIndex < _pendingPathPreview.Count)
                     {
-                        _playerWorldPos = _pendingPathPreview[_currentPathIndex];
+                        Vector2 nextPosition = _pendingPathPreview[_currentPathIndex];
+
+                        if (!IsPositionPassable(nextPosition))
+                        {
+                            var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
+                            Core.CurrentTerminalRenderer.AddOutputToHistory($"[crimson]Path blocked at ({(int)nextPosition.X}, {(int)nextPosition.Y}) - {mapData.TerrainType.ToLower()} is impassable!");
+                            CancelPathExecution();
+                            return;
+                        }
+
+                        _playerWorldPos = nextPosition;
                         _currentPathIndex++;
                         _moveTimer = 0f;
 
