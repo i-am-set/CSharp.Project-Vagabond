@@ -71,15 +71,7 @@ namespace ProjectVagabond
 
             _commands["clear"] = (args) =>
             {
-                if (!_gameState.IsExecutingPath)
-                {
-                    _gameState.ClearPendingPathPreview();
-                    AddOutputToHistory("Pending path cleared.");
-                }
-                else
-                {
-                    AddOutputToHistory("Cannot clear path while executing.");
-                }
+                Core.CurrentTerminalRenderer.ClearHistory();
             };
 
             _commands["pos"] = (args) =>
@@ -95,7 +87,6 @@ namespace ProjectVagabond
             _commands["move"] = (args) =>
             {
                 _gameState.ToggleIsFreeMoveMode(true);
-                AddOutputToHistory("[gold]Free move enabled.");
             };
 
             _commands["debugallcolors"] = (args) =>

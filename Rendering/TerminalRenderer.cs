@@ -54,6 +54,15 @@ namespace ProjectVagabond
             AddToHistory(output, Color.Gray);
         }
 
+        public void ClearHistory()
+        {
+            _inputHistory.Clear();
+            _wrappedHistory.Clear();
+            _scrollOffset = 0;
+            _nextLineNumber = 1;
+        }
+
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public void DrawTerminal()
@@ -114,14 +123,10 @@ namespace ProjectVagabond
 
             if (canScrollUp || canScrollDown)
             {
-                string scrollIndicator;
+                string scrollIndicator = "";
                 if (_scrollOffset > 0)
                 {
-                    scrollIndicator = $"(PgUp/PgDn to scroll) ^ Scrolled up {_scrollOffset} lines";
-                }
-                else
-                {
-                    scrollIndicator = "(PgUp/PgDn to scroll)";
+                    scrollIndicator = $"^ Scrolled up {_scrollOffset} lines";
                 }
     
                 int scrollY = terminalY + (endIndex - startIndex) * Global.TERMINAL_LINE_SPACING + 5;

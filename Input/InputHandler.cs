@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using ProjectVagabond;
 using System;
 using System.Collections.Generic;
 
@@ -9,8 +10,10 @@ namespace ProjectVagabond
     {
         private string _currentInput = "";
         private KeyboardState _previousKeyboardState;
+        private MouseState _previousMouseState; // Add mouse state tracking
         private HashSet<Keys> _processedKeys = new HashSet<Keys>();
         private bool _controlPressed = false;
+        private bool _shiftPressed = false; // Add shift state tracking
         private float _backspaceTimer = 0f;
         private float _backspaceInitialDelay = 0.3f;
         private bool _backspaceHeld = false;
@@ -35,9 +38,48 @@ namespace ProjectVagabond
         public void HandleInput(GameTime gameTime)
         {
             KeyboardState currentKeyboardState = Keyboard.GetState();
+            MouseState currentMouseState = Mouse.GetState(); // Get current mouse state
             Keys[] pressedKeys = currentKeyboardState.GetPressedKeys();
 
             _controlPressed = currentKeyboardState.IsKeyDown(Keys.LeftControl) || currentKeyboardState.IsKeyDown(Keys.RightControl); // Check for control key
+            _shiftPressed = currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift); // Check for shift key
+
+            if (currentMouseState.ScrollWheelValue != _previousMouseState.ScrollWheelValue)
+            {
+                int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
+                int scrollLines = scrollDelta > 0 ? 3 : -3;
+                
+                int maxVisibleLines = (Global.TERMINAL_HEIGHT - 80) / Global.FONT_SIZE;
+                int currentOffset = Core.CurrentTerminalRenderer.ScrollOffset;
+                int maxOffset = Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - maxVisibleLines);
+                
+                if (scrollDelta > 0) // Scrolling up
+                {
+                    Core.CurrentTerminalRenderer.SetScrollOffset(Math.Min(currentOffset + Math.Abs(scrollLines), maxOffset));
+                }
+                else // Scrolling down
+                {
+                    Core.CurrentTerminalRenderer.SetScrollOffset(Math.Max(currentOffset - Math.Abs(scrollLines), 0));
+                }
+            }
+
+            if (!_previousKeyboardState.IsKeyDown(Keys.Escape) && currentKeyboardState.IsKeyDown(Keys.Escape))
+            {
+                if (Core.CurrentGameState.IsExecutingPath)
+                {
+                    Core.CurrentGameState.CancelPathExecution();
+                }
+                else if (Core.CurrentGameState.IsFreeMoveMode)
+                {
+                    Core.CurrentGameState.ToggleIsFreeMoveMode(false);
+                    _processedKeys.Clear();
+                }
+                else if (Core.CurrentGameState.PendingPathPreview.Count > 0)
+                {
+                    Core.CurrentGameState.PendingPathPreview.Clear();
+                    Core.CurrentTerminalRenderer.AddOutputToHistory("Pending path cleared.");
+                }
+            }
 
             if (Core.CurrentGameState.IsFreeMoveMode)
             {
@@ -81,11 +123,7 @@ namespace ProjectVagabond
                                     Core.CurrentTerminalRenderer.AddOutputToHistory("[dimgray]No path queued.");
                                 }
                                 break;
-                            case Keys.Escape:
-                                Core.CurrentGameState.ToggleIsFreeMoveMode(false);
-                                _processedKeys.Clear();
-                                Core.CurrentTerminalRenderer.AddOutputToHistory("[gold]Free move disabled.");
-                                break;
+                            // ESCAPE case removed from here since it's now handled globally above
                         }
                     }
                 }
@@ -151,14 +189,14 @@ namespace ProjectVagabond
                         {
                             NavigateCommandHistory(-1);
                         }
-                        else if (key == Keys.Escape && Core.CurrentGameState.PendingPathPreview.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
-                        {
-                            Core.CurrentGameState.PendingPathPreview.Clear();
-                            Core.CurrentTerminalRenderer.AddOutputToHistory("Pending path cleared.");
-                        }
+                        // Removed the ESCAPE handling from here since it's now handled globally above
                         else if (_controlPressed)
                         {
                             HandleControlCommands(key);
+                        }
+                        else if (_shiftPressed)
+                        {
+                            HandleShiftCommands(key);
                         }
                         else if (key == Keys.Back)
                         {
@@ -221,6 +259,7 @@ namespace ProjectVagabond
             }
 
             _previousKeyboardState = currentKeyboardState;
+            _previousMouseState = currentMouseState;
         }
 
         private void HandleControlCommands(Keys key)
@@ -236,7 +275,7 @@ namespace ProjectVagabond
                         Core.CurrentTerminalRenderer.AddOutputToHistory($"Cut text to clipboard: '{_clipboard}'   (CTRL + X)");
                     }
                     break;
-            
+
                 case Keys.V: // Paste
                     if (!string.IsNullOrEmpty(_clipboard))
                     {
@@ -245,7 +284,7 @@ namespace ProjectVagabond
                         Core.CurrentTerminalRenderer.AddOutputToHistory($"Pasted from clipboard: '{_clipboard}'   (CTRL + V)");
                     }
                     break;
-            
+
                 case Keys.A: // Clear
                     if (!string.IsNullOrEmpty(_currentInput))
                     {
@@ -254,7 +293,33 @@ namespace ProjectVagabond
                         Core.CurrentTerminalRenderer.AddOutputToHistory("Input cleared   (CTRL + A)");
                     }
                     break;
+
+                case Keys.U: // Scroll up (CTRL + U)
+                    {
+                        int maxVisibleLines = (Global.TERMINAL_HEIGHT - 80) / Global.FONT_SIZE;
+                        Core.CurrentTerminalRenderer.SetScrollOffset(Math.Min(Core.CurrentTerminalRenderer.ScrollOffset + 5, Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - maxVisibleLines)));
+                    }
+                    break;
+
+                case Keys.D: // Scroll down (CTRL + D)
+                    {
+                        Core.CurrentTerminalRenderer.SetScrollOffset(Math.Max(Core.CurrentTerminalRenderer.ScrollOffset - 5, 0));
+                    }
+                    break;
             }
+        }
+
+        private void HandleShiftCommands(Keys key)
+        {
+            switch (key)
+            {
+                case Keys.Up:
+                    {
+                        // filler
+                    }
+                    break;
+            }
+        }
         
 
         private void HandleBackspace()
@@ -306,7 +371,7 @@ namespace ProjectVagabond
             }
             else if (newIndex == -1)
             {
-                _currentInput = _currentEditingCommand; // Back to current editing (what user was typing before browsing)
+                _currentInput = _currentEditingCommand; // Back to current editing (what user was typing before browsing history)
                 _commandHistoryIndex = -1;
             }
             else

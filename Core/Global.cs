@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 
 namespace ProjectVagabond
 {
@@ -15,7 +16,7 @@ namespace ProjectVagabond
 
         // Map settings Global
         public const int GRID_SIZE = 32;
-        public const int GRID_CELL_SIZE = 8;
+        public const int GRID_CELL_SIZE = 10;
         public const int FONT_SIZE = 12;
         public const int TERMINAL_LINE_SPACING = 12;
         public const int PROMPT_LINE_SPACING = 16;
@@ -23,7 +24,7 @@ namespace ProjectVagabond
         public const int DEFAULT_TERMINAL_WIDTH = 700;
 
         // Input system Global
-        public const float MOVE_DELAY_SECONDS = 0.5f;
+        public const float MOVE_DELAY_SECONDS = 0.25f;
         public const int MAX_SINGLE_MOVE_LIMIT = 20;
         public const int MAX_HISTORY_LINES = 200;
         public const int TERMINAL_HEIGHT = 600;
@@ -38,6 +39,9 @@ namespace ProjectVagabond
         public SpriteFont DefaultFont { get; set; }
         public GraphicsDeviceManager CurrentGraphics;
         public SpriteBatch CurrentSpriteBatch;
+
+        // Input values
+        public int previousScrollValue = Mouse.GetState().ScrollWheelValue;
 
         // Terrain levels
         public float WaterLevel { get; set; } = 0.3f;

@@ -10,7 +10,7 @@ namespace ProjectVagabond
     public class GameState
     {
         private Vector2 _playerWorldPos;
-        private FastNoiseLite _noise;
+        private NoiseMapManager _noiseManager;
         private List<Vector2> _pendingPathPreview = new List<Vector2>();
         private float _moveTimer = 0f;
         private bool _isExecutingPath = false;
@@ -22,17 +22,16 @@ namespace ProjectVagabond
         public bool IsExecutingPath => _isExecutingPath;
         public bool IsFreeMoveMode => _isFreeMoveMode;
         public int CurrentPathIndex => _currentPathIndex;
+        public NoiseMapManager NoiseManager => _noiseManager;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public GameState()
         {
             _playerWorldPos = new Vector2(0, 0); // Start at world origin
-
-            _noise = new FastNoiseLite();
-            _noise.SetNoiseType(FastNoiseLite.NoiseType.Perlin);
-            _noise.SetSeed(RandomNumberGenerator.GetInt32(0, 99999));
-            _noise.SetFrequency(Global.NOISE_SCALE);
+            
+            int masterSeed = RandomNumberGenerator.GetInt32(1, 99999) + Environment.TickCount;
+            _noiseManager = new NoiseMapManager(masterSeed);
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -50,6 +49,15 @@ namespace ProjectVagabond
         public void ToggleIsFreeMoveMode(bool toggle)
         {
             _isFreeMoveMode = toggle;
+
+            if (toggle)
+            {
+                Core.CurrentTerminalRenderer.AddOutputToHistory("[gold]Free move enabled.");
+            }
+            else
+            {
+                Core.CurrentTerminalRenderer.AddOutputToHistory("[gold]Free move disabled.");
+            }
         }
 
         public void SetCurrentPathIndex(int index)
@@ -134,6 +142,7 @@ namespace ProjectVagabond
                             _isExecutingPath = false;
                             _pendingPathPreview.Clear();
                             _currentPathIndex = 0;
+                            ToggleExecutingPath(false);
                             Core.CurrentTerminalRenderer.AddOutputToHistory("Path execution completed.");
                         }
                     }
@@ -141,12 +150,29 @@ namespace ProjectVagabond
             }
         }
 
+        public void CancelPathExecution()
+        {
+            if (_isExecutingPath)
+            {
+                _isExecutingPath = false;
+                _pendingPathPreview.Clear();
+                _currentPathIndex = 0;
+                ToggleExecutingPath(false);
+                ToggleIsFreeMoveMode(false);
+                Core.CurrentTerminalRenderer.AddOutputToHistory("[crimson]Path execution cancelled.");
+            }
+        }
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+        public MapData GetMapDataAt(int x, int y)
+        {
+            return _noiseManager.GetMapData(x, y);
+        }
 
         public float GetNoiseAt(int x, int y)
         {
-            float noiseValue = _noise.GetNoise(x, y);
-            return (noiseValue + 1f) / 2f; // Clamp to 0-1 range
+            return _noiseManager.GetNoiseValue(NoiseMapType.TerrainHeight, x, y);
         }
 
         public string GetTerrainDescription(float noise)
@@ -158,6 +184,12 @@ namespace ProjectVagabond
             return "peaks";
         }
 
+        public string GetTerrainDescription(int x, int y)
+        {
+            var mapData = GetMapDataAt(x, y);
+            return mapData.TerrainType.ToLower();
+        }
+
         public Texture2D GetTerrainTexture(float noise)
         {
             if (noise < Global.Instance.WaterLevel) return Core.CurrentSpriteManager.WaterSprite;
@@ -165,6 +197,12 @@ namespace ProjectVagabond
             if (noise < Global.Instance.HillsLevel) return Core.CurrentSpriteManager.HillSprite;
             if (noise < Global.Instance.MountainsLevel) return Core.CurrentSpriteManager.MountainSprite;
             return Core.CurrentSpriteManager.PeakSprite;
+        }
+
+        public Texture2D GetTerrainTexture(int x, int y)
+        {
+            float noise = GetNoiseAt(x, y);
+            return GetTerrainTexture(noise);
         }
     }
 }
