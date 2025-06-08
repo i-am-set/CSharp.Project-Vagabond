@@ -38,7 +38,7 @@ namespace ProjectVagabond
             }
             catch
             {
-                _waterSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Blue);
+                _waterSprite = Core.CurrentTextureFactory.CreateWaterTexture();
             }
 
             try

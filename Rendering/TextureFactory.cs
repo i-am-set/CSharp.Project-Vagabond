@@ -23,6 +23,34 @@ namespace ProjectVagabond
             return texture;
         }
 
+        public Texture2D CreateWaterTexture()
+        {
+            var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
+            var colorData = new Color[64];
+
+            // Define a simple wave pattern using sine-like curves
+            for (int y = 0; y < 8; y++)
+            {
+                for (int x = 0; x < 8; x++)
+                {
+                    // Create a wave pattern using a simple formula
+                    bool isWave = (int)(2 * Math.Sin((x + y) * Math.PI / 4)) == y - 4;
+
+                    if (isWave)
+                    {
+                        colorData[y * 8 + x] = new Color(0, 100, 255); // Bright blue wave crest
+                    }
+                    else
+                    {
+                        colorData[y * 8 + x] = new Color(0, 50, 150); // Darker blue water
+                    }
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
+
         public Texture2D CreatePlayerTexture()
         {
             var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
