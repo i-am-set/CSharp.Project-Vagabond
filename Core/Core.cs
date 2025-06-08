@@ -3,8 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 
-// TODO: Make "freeMove" disable when path is dont executing.
-// TODO: Allow for the player to cancel movement while executing using ESCAPE
 // TODO: Make terminal scroll down to the bottom when command is input
 namespace ProjectVagabond
 {

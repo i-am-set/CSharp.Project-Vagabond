@@ -402,6 +402,8 @@ namespace ProjectVagabond
             {
                 Core.CurrentTerminalRenderer.AddOutputToHistory($"Unknown command: '{command}'. Type 'help' for available commands.");
             }
+
+            Core.CurrentTerminalRenderer.SetScrollOffset(0);
         }
     }
 }
