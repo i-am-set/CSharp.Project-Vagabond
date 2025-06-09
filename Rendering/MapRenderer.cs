@@ -17,7 +17,7 @@ namespace ProjectVagabond
 
             int mapStartX = 50;
             int mapStartY = 50;
-            int mapWidth = Global.GRID_SIZE * Global.GRID_CELL_SIZE + 10;
+            int mapWidth = Global.MAP_WIDTH;
             int mapHeight = Global.GRID_SIZE * Global.GRID_CELL_SIZE + 30;
 
             // Draw map border //

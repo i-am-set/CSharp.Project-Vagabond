@@ -33,11 +33,16 @@ namespace ProjectVagabond
         // Map settings Global
         public const int GRID_SIZE = 32;
         public const int GRID_CELL_SIZE = 10;
+        public const int MAP_WIDTH = GRID_SIZE * GRID_CELL_SIZE + 10;
         public const int FONT_SIZE = 12;
         public const int TERMINAL_LINE_SPACING = 12;
         public const int PROMPT_LINE_SPACING = 16;
         public const float NOISE_SCALE = 0.2f;
         public const int DEFAULT_TERMINAL_WIDTH = 700;
+
+        // Player stats Global
+        public const int MAX_MAX_HEALTH_ENERGY = 48;
+        public const int MIN_MAX_HEALTH_ENERGY = 1;
 
         // Input system Global
         public const float MOVE_DELAY_SECONDS = 0.25f;

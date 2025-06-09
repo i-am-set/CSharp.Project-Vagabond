@@ -1,5 +1,121 @@
-Brawn
-Agility
-Tenacity
-Intelligence
-Charm
+CRPG STAT SYSTEM DESIGN REFERENCE
+––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––
+
+OVERVIEW
+This is a living design reference for a five-stat CRPG system. Copy, paste, and expand as your project evolves.
+
+STATS
+Each character has five core attributes:
+
+1. Strength (STR)
+   • Raw physical power
+   • Influences: melee damage, carry capacity, obstacle-breaking
+   • Example:
+     HeavyAttackDamage = BaseWeaponDamage * (1 + STR/100)
+
+2. Agility (AGI)
+   • Speed, reflexes, coordination
+   • Influences: attack speed, dodge chance, stealth, ranged accuracy
+   • Example:
+     DodgeChance = AGI / (AGI + EnemyAccuracy)
+
+3. Tenacity (TEN)
+   • Endurance, resilience, grit
+   • Influences: hit points, bleed/poison resistance, CC reduction
+   • Example:
+     CC_DurationMultiplier = 1 - (TEN / 200)
+
+4. Intelligence (INT)
+   • Mental acuity, learning, magical aptitude
+   • Influences: spell power, mana/energy pool, skill XP gain
+   • Example:
+     SpellPower = BaseSpellPower * (1 + INT/120)
+
+5. Charm (CHR)
+   • Social skill, charisma, presence
+   • Influences: dialogue options, prices, faction reputation
+   • Example:
+     PriceModifier = 1 - (CHR / 200)
+
+DERIVED ATTRIBUTES
+
+// Health & Energy, capped at 140 late-game ceiling
+BaseHP            = 1
+HealthPerTEN      = TEN/2
+EquipmentHPBonus  = sum of all HP bonuses from gear
+
+MaxHP             = min( (STR/2) + (TEN*2) + ((LVL / 2) * (TEN / 2)) + EquipmentHPBonus, 48 )
+
+BaseEP            = 5
+EnergyPerAGI      = AGI/2
+EquipmentEPBonus  = sum of all EP bonuses from gear
+
+MaxEP             = min( baseEP + Floor(AGI/2), 48 )
+
+// Other derived
+Accuracy          = (AGI * 0.8) + (INT * 0.2)
+Evasion           = AGI + (TEN / 2)
+CritChance        = (AGI / 150) + (STR / 300)
+ManaRegenRate     = INT / 50
+StaminaPool       = TEN / 2
+
+SKILL CHECKS & DIFFICULTY
+SkillRoll         = Stat + SkillLevel + RNG(1–20)
+DifficultyThresholds:
+  Easy     = 10
+  Moderate = 15
+  Hard     = 20
+  VeryHard = 25+
+
+COMBAT INTERACTIONS
+TurnOrder         = sort by AGI (tie → random)
+BaseAP            = 100
+ActionAPCost      = varies per action (e.g. sprint=30, heavy swing=40)
+APCostModifier    = 1 - (AGI / 200)
+FinalAPCost       = ActionAPCost * APCostModifier
+DamageReduction   = TEN * 0.1
+
+PROGRESSION & GROWTH
+OnLevelUp:
+  • Grant 3–5 stat points OR
+  • Choose a predefined build (Brute, Rogue, Mage, Diplomat, Tank)
+StatSoftCap:
+  • Above 50 in any stat → each additional point yields 0.75× benefit
+TemporaryBuffs:
+  • Potions/spells/equipment can grant +X to stats for limited time
+
+GEAR & EQUIPMENT
+StatRequirements:
+  • Weapon/armor may require minimum STR or AGI
+StatBonuses:
+  • Gear can add flat or % bonuses to any core stat
+SetEffects:
+  • Full set bonuses (e.g. +10 CHR, +5% XP gain)
+
+NPC & FACTION SYSTEMS
+Reputation:
+  • Modified by CHR during interactions
+Companions:
+  • Have their own stats; assist in checks
+FactionRanks:
+  • Unlockable via CHR-based persuasion or quest lines
+
+LOOT & TREASURE
+QualityTiers:
+  • Common → Legendary influences stat bonuses
+RandomizedStats:
+  • Loot may roll extra bonuses to any core stat
+
+EXTENSIONS & FUTURE IDEAS
+• New stats: Luck, Perception, Willpower
+• Sub-stats: ThrowingAccuracy (from AGI), SpellResistance (TEN+INT)
+• Specializations: passive abilities at stat thresholds (e.g. IronGrip @ STR≥30)
+• Synergies: combine stats for unique buffs (e.g. Fortitude = STR+TEN)
+• DynamicScaling: enemy levels adjust to player’s average stat level
+
+NOTES
+• Keep all balance formulas in a separate spreadsheet.
+• Log every formula change in a changelog.
+• Play-test frequently to catch balance issues early.
+
+––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––––

@@ -4,10 +4,9 @@ using Microsoft.Xna.Framework.Input;
 using System;
 
 // TODO: impliment programmer art for the map elements
-// TODO: impliment stat system like special
 // TODO: generate different noise maps to generate different map things
 // TODO: add a way to generate different map elements based on the noise map
-// TODO: add health and energy mechanics
+// TODO: add health and energy mechanics 50%/100% (allow the values to be changed with methods)
 namespace ProjectVagabond
 {
     public class Core : Game
@@ -24,6 +23,7 @@ namespace ProjectVagabond
         private static readonly TerminalRenderer _terminalRenderer = new();
         private static readonly AutoCompleteManager _autoCompleteManager = new();
         private static readonly CommandProcessor _commandProcessor = new();
+        private static readonly StatsRenderer _statsRenderer = new();
 
         // Public references //
         public static GameState CurrentGameState => _gameState;
@@ -33,6 +33,7 @@ namespace ProjectVagabond
         public static TerminalRenderer CurrentTerminalRenderer => _terminalRenderer;
         public static CommandProcessor CurrentCommandProcessor => _commandProcessor;
         public static InputHandler CurrentInputHandler => _inputHandler;
+        public static StatsRenderer CurrentStatsRenderer => _statsRenderer;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -75,6 +76,7 @@ namespace ProjectVagabond
         {
             _inputHandler.HandleInput(gameTime);
             _gameState.UpdateMovement(gameTime);
+            _statsRenderer.Update(gameTime);
 
             base.Update(gameTime);
         }
@@ -88,6 +90,7 @@ namespace ProjectVagabond
 
             _mapRenderer.DrawMap();
             _terminalRenderer.DrawTerminal();
+            _statsRenderer.DrawStats();
 
             Global.Instance.CurrentSpriteBatch.End();
 

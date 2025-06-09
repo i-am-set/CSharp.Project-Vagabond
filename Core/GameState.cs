@@ -11,6 +11,7 @@ namespace ProjectVagabond
     {
         private Vector2 _playerWorldPos;
         private NoiseMapManager _noiseManager;
+        private PlayerStats _playerStats;
         private List<Vector2> _pendingPathPreview = new List<Vector2>();
         private float _moveTimer = 0f;
         private bool _isExecutingPath = false;
@@ -23,6 +24,7 @@ namespace ProjectVagabond
         public bool IsFreeMoveMode => _isFreeMoveMode;
         public int CurrentPathIndex => _currentPathIndex;
         public NoiseMapManager NoiseManager => _noiseManager;
+        public PlayerStats PlayerStats => _playerStats;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -32,6 +34,7 @@ namespace ProjectVagabond
 
             int masterSeed = RandomNumberGenerator.GetInt32(1, 99999) + Environment.TickCount;
             _noiseManager = new NoiseMapManager(masterSeed);
+            _playerStats = new PlayerStats(5, 5, 5, 5, 5);
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

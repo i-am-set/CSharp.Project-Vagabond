@@ -138,13 +138,15 @@ namespace ProjectVagabond
 
         private void RecalculateSecondaryStats()
         {
-            // Health Points = Base(50) + (Tenacity * 10) + (Strength * 5)
+            // Health Points
             int oldMaxHP = _maxHealthPoints;
-            _maxHealthPoints = 50 + (_tenacity * 10) + (_strength * 5);
+            int _calculatedHealthPoints = (int)Math.Floor((_strength*0.5f)+(2*_tenacity)+ ((1*0.5f)*((_tenacity*0.5f))));
+            _maxHealthPoints = Math.Min(_calculatedHealthPoints, Global.MAX_MAX_HEALTH_ENERGY);
 
-            // Energy Points = Base(40) + (Tenacity * 8) + (Agility * 6) + (Intelligence * 4)
+            // Energy Points
             int oldMaxEP = _maxEnergyPoints;
-            _maxEnergyPoints = 40 + (_tenacity * 8) + (_agility * 6) + (_intelligence * 4);
+            int _calculatedEnergyPoints = 5 + (int)Math.Floor(_agility*0.5f);
+            _maxEnergyPoints = Math.Min(_calculatedEnergyPoints, Global.MAX_MAX_HEALTH_ENERGY);
 
             // Move Speed = Base(1.0) + (Agility * 0.1) - (Weight factor)
             float weightFactor = Math.Max(0f, (_weight - 70f) * 0.01f); // Penalty for being over 70kg
