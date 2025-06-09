@@ -1,5 +1,5 @@
-Brawn: (Strength)
-Finesse: (Agility | Dexterity)
-Resolve (Endurance | Constitution)
-Intelligence (..)
-Charm (Charisma)
+Brawn
+Finesse
+Resolve
+Intelligence
+Charm
