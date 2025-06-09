@@ -1,5 +1,5 @@
 Brawn
-Finesse
-Resolve/Tenacity
+Agility
+Tenacity
 Intelligence
 Charm

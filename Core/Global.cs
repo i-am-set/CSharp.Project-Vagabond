@@ -51,12 +51,15 @@ namespace ProjectVagabond
         // INSTANCE VARIABLES
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         
-        // Core varaibles
+        // Core variables
         public SpriteFont DefaultFont { get; set; }
         public GraphicsDeviceManager CurrentGraphics;
         public SpriteBatch CurrentSpriteBatch;
 
-        // Input values
+        // Settings variables
+        public bool UseImperialUnits { get; set; } = false;
+
+        // Input variables
         public int previousScrollValue = Mouse.GetState().ScrollWheelValue;
 
         // Terrain levels
