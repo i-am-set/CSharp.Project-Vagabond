@@ -4,6 +4,10 @@ using Microsoft.Xna.Framework.Input;
 using System;
 
 // TODO: impliment programmer art for the map elements
+// TODO: impliment stat system like special
+// TODO: generate different noise maps to generate different map things
+// TODO: add a way to generate different map elements based on the noise map
+// TODO: add health and energy mechanics
 namespace ProjectVagabond
 {
     public class Core : Game
