@@ -66,6 +66,8 @@ namespace ProjectVagabond
 
                     bool isPath = false; // Check if this is part of the pending path
                     bool isPathEnd = false;
+                    bool isShortRest = false;
+                    bool isLongRest = false;
                     Vector2 worldPos = new Vector2(worldX, worldY);
 
                     if (_gameState.PendingPathPreview.Contains(worldPos))
@@ -77,17 +79,27 @@ namespace ProjectVagabond
                     if (isPlayer)
                     {
                         texture = Core.CurrentSpriteManager.PlayerSprite;
-                        color = Color.White;
+                        color = Global.Instance.PlayerColor;
                     }
                     else if (isPathEnd)
                     {
                         texture = Core.CurrentSpriteManager.PathEndSprite;
-                        color = Color.White;
+                        color = Global.Instance.PathEndColor;
                     }
                     else if (isPath)
                     {
                         texture = Core.CurrentSpriteManager.PathSprite;
-                        color = Color.White;
+                        color = Global.Instance.PathColor;
+                    }
+                    else if (isShortRest)
+                    {
+                        texture = Core.CurrentSpriteManager.ShortRestSprite;
+                        color = Global.Instance.ShortRestColor;
+                    }
+                    else if (isLongRest)
+                    {
+                        texture = Core.CurrentSpriteManager.LongRestSprite;
+                        color = Global.Instance.LongRestColor;
                     }
 
                     Vector2 gridPos = new Vector2(mapStartX + x * Global.GRID_CELL_SIZE, mapStartY + y * Global.GRID_CELL_SIZE);

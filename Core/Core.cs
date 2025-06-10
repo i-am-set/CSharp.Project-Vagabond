@@ -3,10 +3,12 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 
-// TODO: impliment programmer art for the map elements
 // TODO: generate different noise maps to generate different map things
 // TODO: add a way to generate different map elements based on the noise map
-// TODO: add health and energy mechanics 50%/100% (allow the values to be changed with methods)
+// TODO: make it so freemove is disabled when player stops moving
+// TODO: make it so "rest" pitstop can be made in a previewed path
+// TODO: make it so "rest" pitstop calculates new usable energy from pitstop
+// TODO: make it so pitstops are generated as the player free moves and runs out of energy
 namespace ProjectVagabond
 {
     public class Core : Game

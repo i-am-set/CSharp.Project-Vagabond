@@ -17,6 +17,8 @@ namespace ProjectVagabond
             PlayerColor = palette_Red;
             PathColor = palette_Yellow;
             PathEndColor = palette_Orange;
+            ShortRestColor = palette_LightPurple;
+            LongRestColor = palette_LightPurple;
             GameBg = palette_Black;
             TerminalBg = palette_Black;
             MapBg = palette_Black;
@@ -101,6 +103,8 @@ namespace ProjectVagabond
         public Color PlayerColor { get; private set; }
         public Color PathColor { get; private set; }
         public Color PathEndColor { get; private set; }
+        public Color ShortRestColor { get; private set; }
+        public Color LongRestColor { get; private set; }
         public Color GameBg { get; private set; }
         public Color TerminalBg { get; private set; }
         public Color MapBg { get; private set; }

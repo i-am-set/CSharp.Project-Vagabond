@@ -10,7 +10,7 @@ namespace ProjectVagabond
         private readonly GameState _gameState = Core.CurrentGameState;
         private Dictionary<string, Action<string[]>> _commands;
 
-        public  Dictionary<string, Action<string[]>> Commands => _commands;
+        public Dictionary<string, Action<string[]>> Commands => _commands;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -94,6 +94,22 @@ namespace ProjectVagabond
                 DebugAllColors();
             };
 
+            _commands["rest"] = (args) =>
+            {
+                if (_gameState.IsExecutingPath)
+                {
+                    AddOutputToHistory("[crimson]You cannot rest while executing a path.");
+                    return;
+                }
+                if (_gameState.PendingPathPreview.Count > 0)
+                {
+                    AddOutputToHistory("[crimson]You must clear your pending path before resting.");
+                    return;
+                }
+                Core.CurrentGameState.PlayerStats.Rest(RestType.ShortRest);
+                AddOutputToHistory("[palette_lightgreen]You took a short rest.");
+            };
+
             _commands["exit"] = (args) =>
             {
                 Core.Instance.ExitApplication();
@@ -105,19 +121,19 @@ namespace ProjectVagabond
         private void DebugAllColors()
         {
             AddOutputToHistory("[gray]Displaying all XNA Framework colors:");
-    
+
             var colorProperties = typeof(Color).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) // Get all static Color properties using reflection
                 .Where(p => p.PropertyType == typeof(Color))
                 .OrderBy(p => p.Name);
-    
+
             foreach (var property in colorProperties)
             {
                 string colorName = property.Name;
                 Color color = (Color)property.GetValue(null);
-        
+
                 AddToHistory($"[{colorName.ToLower()}]{colorName}[/]", Global.Instance.OutputTextColor); // Format as [colorname]ColorName[/] to use the color system
             }
-    
+
             AddOutputToHistory($"[gray]Total colors displayed: {colorProperties.Count()}");
         }
     }

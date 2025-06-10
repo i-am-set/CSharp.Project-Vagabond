@@ -18,6 +18,8 @@ namespace ProjectVagabond
         private Texture2D _playerSprite;
         private Texture2D _pathSprite;
         private Texture2D _pathEndSprite;
+        private Texture2D _shortRestSprite;
+        private Texture2D _longRestSprite;
 
         public Texture2D WaterSprite => _waterSprite;
         public Texture2D FlatlandSprite => _flatlandSprite;
@@ -27,6 +29,8 @@ namespace ProjectVagabond
         public Texture2D PlayerSprite => _playerSprite;
         public Texture2D PathSprite => _pathSprite;
         public Texture2D PathEndSprite => _pathEndSprite;
+        public Texture2D ShortRestSprite => _shortRestSprite;
+        public Texture2D LongRestSprite => _longRestSprite;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -102,6 +106,26 @@ namespace ProjectVagabond
             catch
             {
                 _pathEndSprite = Core.CurrentTextureFactory.CreatePathEndTexture();
+            }
+
+            try
+            {
+                _shortRestSprite = Core.Instance.Content.Load<Texture2D>("Sprites/shortRest");
+            }
+            catch (Exception)
+            {
+
+                _shortRestSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.White);
+            }
+
+            try
+            {
+                _longRestSprite = Core.Instance.Content.Load<Texture2D>("Sprites/longRest");
+            }
+            catch (Exception)
+            {
+
+                _longRestSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.White);
             }
         }
     }

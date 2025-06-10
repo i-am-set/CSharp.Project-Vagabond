@@ -25,6 +25,7 @@ namespace ProjectVagabond
         public int CurrentPathIndex => _currentPathIndex;
         public NoiseMapManager NoiseManager => _noiseManager;
         public PlayerStats PlayerStats => _playerStats;
+        public int PendingPathEnergyCost => CalculatePathEnergyCost(_pendingPathPreview);
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -79,6 +80,32 @@ namespace ProjectVagabond
             return terrainType != "WATER" && terrainType != "PEAKS";
         }
 
+        public int GetMovementEnergyCost(Vector2 position)
+        {
+            var mapData = GetMapDataAt((int)position.X, (int)position.Y);
+            string terrainType = mapData.TerrainType;
+
+            return terrainType switch
+            {
+                "FLATLANDS" => 1,
+                "HILLS" => 2,
+                "MOUNTAINS" => 3,
+                "WATER" => 0, // Impassable, but no cost if somehow reached
+                "PEAKS" => 0, // Impassable, but no cost if somehow reached
+                _ => 1 // Default to flatlands cost
+            };
+        }
+
+        public int CalculatePathEnergyCost(List<Vector2> path)
+        {
+            int totalCost = 0;
+            foreach (var position in path)
+            {
+                totalCost += GetMovementEnergyCost(position);
+            }
+            return totalCost;
+        }
+
         public void QueueMovement(Vector2 direction, string[] args)
         {
             if (_isExecutingPath)
@@ -126,7 +153,19 @@ namespace ProjectVagabond
                     if (!IsPositionPassable(nextPos))
                     {
                         var mapData = GetMapDataAt((int)nextPos.X, (int)nextPos.Y);
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[crimson]Cannot move here... terrain is impassable! ({mapData.TerrainType.ToLower()})");
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[crimson]Cannot move here... terrain is impassable! <{mapData.TerrainType.ToLower()}>");
+                        break;
+                    }
+
+                    // Create a temporary path including this new position to check energy cost
+                    var tempPath = new List<Vector2>(_pendingPathPreview) { nextPos };
+                    int totalEnergyCost = CalculatePathEnergyCost(tempPath);
+
+                    if (totalEnergyCost > _playerStats.CurrentEnergyPoints)
+                    {
+                        var mapData = GetMapDataAt((int)nextPos.X, (int)nextPos.Y);
+                        int stepCost = GetMovementEnergyCost(nextPos);
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[crimson]Cannot move here... Not enough energy! <{mapData.TerrainType.ToLower()} costs {stepCost}>");
                         break;
                     }
 
@@ -137,23 +176,26 @@ namespace ProjectVagabond
 
                 if (validSteps > 0)
                 {
+                    int pathCost = CalculatePathEnergyCost(_pendingPathPreview);
                     if (removedSteps > 0)
                     {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[teal]Backtracked {removedSteps} time(s), added {validSteps} move(s)");
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[teal]Backtracked {removedSteps} time(s), added {validSteps} move(s) (Path cost: {pathCost} energy)");
                     }
                     else
                     {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued {validSteps} move(s) {args[0].ToLower()}");
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued {validSteps} move(s) {args[0].ToLower()} (Path cost: {pathCost} energy)");
                     }
                 }
                 else if (removedSteps > 0)
                 {
-                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[teal]Backtracked {removedSteps} time(s)");
+                    int pathCost = CalculatePathEnergyCost(_pendingPathPreview);
+                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[teal]Backtracked {removedSteps} time(s) (Path cost: {pathCost} energy)");
                 }
             }
             else if (removedSteps > 0)
             {
-                Core.CurrentTerminalRenderer.AddOutputToHistory($"[teal]Backtracked {removedSteps} time(s)");
+                int pathCost = CalculatePathEnergyCost(_pendingPathPreview);
+                Core.CurrentTerminalRenderer.AddOutputToHistory($"[teal]Backtracked {removedSteps} time(s) (Path cost: {pathCost} energy)");
             }
         }
 
@@ -177,7 +219,23 @@ namespace ProjectVagabond
                             return;
                         }
 
+                        // Check if player has enough energy for this step
+                        int energyCost = GetMovementEnergyCost(nextPosition);
+                        if (!_playerStats.CanExertEnergy(energyCost))
+                        {
+                            var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
+                            Core.CurrentTerminalRenderer.AddOutputToHistory($"[crimson]Not enough energy to continue! Need {energyCost} for {mapData.TerrainType.ToLower()}, have {_playerStats.CurrentEnergyPoints}");
+                            CancelPathExecution();
+                            return;
+                        }
+
+                        // Execute the move
                         _playerWorldPos = nextPosition;
+                        _playerStats.ExertEnergy(energyCost);
+
+                        var currentMapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[darkgray]Moved to ({(int)nextPosition.X}, {(int)nextPosition.Y}) - {currentMapData.TerrainType.ToLower()} (-{energyCost} energy, {_playerStats.CurrentEnergyPoints} remaining)");
+
                         _currentPathIndex++;
                         _moveTimer = 0f;
 
