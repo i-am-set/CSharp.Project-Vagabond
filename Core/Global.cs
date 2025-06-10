@@ -47,7 +47,7 @@ namespace ProjectVagabond
         public const int MIN_MAX_HEALTH_ENERGY = 1;
 
         // Input system Global
-        public const float MOVE_DELAY_SECONDS = 0.25f;
+        public const float MOVE_DELAY_SECONDS = 0.5f;
         public const int MAX_SINGLE_MOVE_LIMIT = 20;
         public const int MAX_HISTORY_LINES = 200;
         public const int TERMINAL_HEIGHT = 600;

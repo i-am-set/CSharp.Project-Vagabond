@@ -47,6 +47,7 @@ namespace ProjectVagabond
 
         public void ToggleExecutingPath(bool toggle)
         {
+            ToggleIsFreeMoveMode(false);
             _isExecutingPath = toggle;
         }
 
@@ -76,7 +77,6 @@ namespace ProjectVagabond
             var mapData = GetMapDataAt((int)position.X, (int)position.Y);
             string terrainType = mapData.TerrainType;
 
-            // Water and peaks are impassable obstacles
             return terrainType != "WATER" && terrainType != "PEAKS";
         }
 
@@ -90,8 +90,8 @@ namespace ProjectVagabond
                 "FLATLANDS" => 1,
                 "HILLS" => 2,
                 "MOUNTAINS" => 3,
-                "WATER" => 0, // Impassable, but no cost if somehow reached
-                "PEAKS" => 0, // Impassable, but no cost if somehow reached
+                "WATER" => 1, // Impassable, but no cost if somehow reached
+                "PEAKS" => 1, // Impassable, but no cost if somehow reached
                 _ => 1 // Default to flatlands cost
             };
         }
@@ -165,7 +165,7 @@ namespace ProjectVagabond
                     {
                         var mapData = GetMapDataAt((int)nextPos.X, (int)nextPos.Y);
                         int stepCost = GetMovementEnergyCost(nextPos);
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[crimson]Cannot move here... Not enough energy! <{mapData.TerrainType.ToLower()} costs {stepCost}>");
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[crimson]Cannot move here... Not enough energy! <Requires {stepCost} EP>");
                         break;
                     }
 
@@ -239,7 +239,7 @@ namespace ProjectVagabond
                         _currentPathIndex++;
                         _moveTimer = 0f;
 
-                        if (_currentPathIndex >= _pendingPathPreview.Count) // Check if we've completed the path
+                        if (_currentPathIndex >= _pendingPathPreview.Count) // Check if path was completed
                         {
                             _isExecutingPath = false;
                             _pendingPathPreview.Clear();
