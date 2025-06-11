@@ -66,100 +66,59 @@ namespace ProjectVagabond
             var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
             pixel.SetData(new[] { Color.White });
 
-            // Draw label
             string labelText = "EP";
             spriteBatch.DrawString(Global.Instance.DefaultFont, labelText, position, Global.Instance.TextColor);
 
-            // Calculate bar position (right after text)
             Vector2 textSize = Global.Instance.DefaultFont.MeasureString(labelText);
             int barX = (int)(position.X + textSize.X + 5);
             int barY = (int)(position.Y + 3);
-
-            // Bar width: each value is 3 pixels wide + 3 pixel gap = 6 pixels per value, minus the final gap
             int barWidth = (stats.MaxEnergyPoints * 6) - 3;
 
-            // Draw bar background
             Rectangle barBg = new Rectangle(barX - 2, barY - 2, barWidth + 4, 10);
             spriteBatch.Draw(pixel, barBg, Global.Instance.palette_DarkGray);
 
-            // Check if there's a pending path and get the energy cost
-            int pendingEnergyCost = _gameState.PendingPathEnergyCost;
-            int energyAfterPath = stats.CurrentEnergyPoints - pendingEnergyCost;
-            bool hasPendingPath = _gameState.PendingPathPreview.Count > 0;
+            // --- REFACTORED: Energy bar preview logic ---
+            int currentEnergy = stats.CurrentEnergyPoints;
+            int maxEnergy = stats.MaxEnergyPoints;
+            bool hasPendingActions = _gameState.PendingActions.Count > 0;
 
-            // Draw alternating pattern bar
-            if (stats.MaxEnergyPoints > 0)
+            // Step 1: Draw the base bar (current energy in green, empty in gray)
+            for (int i = 0; i < maxEnergy; i++)
             {
-                if (hasPendingPath)
+                int segmentX = barX + i * 6;
+                Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
+                if (i < currentEnergy)
+                    spriteBatch.Draw(pixel, segmentRect, Global.Instance.palette_LightGreen);
+                else
+                    spriteBatch.Draw(pixel, segmentRect, Color.Lerp(Global.Instance.palette_DarkGray, Global.Instance.palette_LightGreen, 0.3f));
+            }
+
+            // Step 2: If previewing, overlay the predicted changes
+            if (hasPendingActions)
+            {
+                int finalEnergy = _gameState.PendingQueueSimulationResult.finalEnergy;
+                if (finalEnergy < currentEnergy)
                 {
-                    // Calculate energy costs for the path
-                    int totalPathCost = _gameState.PendingPathEnergyCost;
-                    int executedSteps = _gameState.CurrentPathIndex;
-
-                    // Calculate energy consumed by executed steps
-                    int energyConsumedSoFar = 0;
-                    for (int step = 0; step < executedSteps && step < _gameState.PendingPathPreview.Count; step++)
-                    {
-                        var stepPos = _gameState.PendingPathPreview[step];
-                        energyConsumedSoFar += _gameState.GetMovementEnergyCost(stepPos);
-                    }
-
-                    // Calculate remaining pending energy cost
-                    int remainingPendingCost = totalPathCost - energyConsumedSoFar;
-
-                    // The "original" energy before any path execution
-                    int originalEnergy = stats.CurrentEnergyPoints + energyConsumedSoFar;
-                    int energyAfterFullPath = originalEnergy - totalPathCost;
-
-                    // Draw 3-pixel wide segments with 3-pixel gaps
-                    for (int i = 0; i < stats.MaxEnergyPoints; i++)
+                    // Draw the cost in yellow over the green part
+                    for (int i = finalEnergy; i < currentEnergy; i++)
                     {
                         int segmentX = barX + i * 6;
                         Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
-
-                        if (i < energyAfterFullPath)
-                        {
-                            // Energy that will remain after the complete path - show in normal green
-                            spriteBatch.Draw(pixel, segmentRect, Global.Instance.palette_LightGreen);
-                        }
-                        else if (i < energyAfterFullPath + remainingPendingCost)
-                        {
-                            // Remaining pending energy cost - show in yellow
-                            spriteBatch.Draw(pixel, segmentRect, Global.Instance.palette_Yellow);
-                        }
-                        else if (i < stats.CurrentEnergyPoints)
-                        {
-                            // Current available energy (not part of pending cost) - show in green
-                            spriteBatch.Draw(pixel, segmentRect, Global.Instance.palette_LightGreen);
-                        }
-                        else
-                        {
-                            // Empty energy - show dimmed
-                            spriteBatch.Draw(pixel, segmentRect, Color.Lerp(Global.Instance.palette_DarkGray, Global.Instance.palette_LightGreen, 0.3f));
-                        }
+                        spriteBatch.Draw(pixel, segmentRect, Global.Instance.palette_Yellow);
                     }
                 }
-                else
+                else if (finalEnergy > currentEnergy)
                 {
-                    // No pending path - normal display
-                    for (int i = 0; i < stats.MaxEnergyPoints; i++)
+                    // Draw the gain in teal over the empty/gray part
+                    for (int i = currentEnergy; i < finalEnergy; i++)
                     {
                         int segmentX = barX + i * 6;
                         Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
-
-                        if (i < stats.CurrentEnergyPoints)
-                        {
-                            spriteBatch.Draw(pixel, segmentRect, Global.Instance.palette_LightGreen);
-                        }
-                        else
-                        {
-                            spriteBatch.Draw(pixel, segmentRect, Color.Lerp(Global.Instance.palette_DarkGray, Global.Instance.palette_LightGreen, 0.3f));
-                        }
+                        spriteBatch.Draw(pixel, segmentRect, Global.Instance.palette_Teal);
                     }
                 }
             }
 
-            // Return the bounds of the entire bar area (including label) for hover detection
             return new Rectangle((int)position.X, (int)position.Y, (int)textSize.X + 5 + barWidth, 12);
         }
 
@@ -210,14 +169,7 @@ namespace ProjectVagabond
             if (_gameState.PlayerStats == null) return;
 
             var stats = _gameState.PlayerStats;
-
-#if DEBUG
-            if (_hpBarBounds.Contains(mousePosition) || _epBarBounds.Contains(mousePosition))
-            {
-                System.Diagnostics.Debug.WriteLine($"Hovering! Mouse: {mousePosition}");
-            }
-#endif
-
+            
             // Check HP bar hover
             if (_hpBarBounds.Contains(mousePosition))
             {
@@ -228,54 +180,12 @@ namespace ProjectVagabond
             // Check EP bar hover
             else if (_epBarBounds.Contains(mousePosition))
             {
-                // Show different tooltip text based on whether there's a pending path
-                if (_gameState.PendingPathPreview.Count > 0)
+                // --- REFACTORED: Tooltip for new action queue ---
+                if (_gameState.PendingActions.Count > 0)
                 {
-                    int totalPathCost = _gameState.PendingPathEnergyCost;
-
-                    int executedSteps = _gameState.CurrentPathIndex;
-
-
-
-                    // Calculate energy consumed by executed steps
-
-                    int energyConsumedSoFar = 0;
-
-                    for (int step = 0; step < executedSteps && step < _gameState.PendingPathPreview.Count; step++)
-
-                    {
-
-                        var stepPos = _gameState.PendingPathPreview[step];
-
-                        energyConsumedSoFar += _gameState.GetMovementEnergyCost(stepPos);
-
-                    }
-
-
-
-                    int remainingPendingCost = totalPathCost - energyConsumedSoFar;
-
-                    int originalEnergy = stats.CurrentEnergyPoints + energyConsumedSoFar;
-
-                    int finalEnergy = originalEnergy - totalPathCost;
-
-
-
-                    if (_gameState.IsExecutingPath)
-
-                    {
-
-                        _tooltipText = $"{stats.CurrentEnergyPoints}/{stats.MaxEnergyPoints} <{remainingPendingCost} remaining>";
-
-                    }
-
-                    else
-
-                    {
-
-                        _tooltipText = $"{stats.CurrentEnergyPoints}/{stats.MaxEnergyPoints} <{remainingPendingCost} pending>";
-
-                    }
+                    var simResult = _gameState.PendingQueueSimulationResult;
+                    int finalEnergy = simResult.finalEnergy;
+                    _tooltipText = $"{stats.CurrentEnergyPoints}/{stats.MaxEnergyPoints} -> {finalEnergy}/{stats.MaxEnergyPoints}";
                 }
                 else
                 {

@@ -42,15 +42,18 @@ namespace ProjectVagabond
         {
             _commands = new Dictionary<string, Action<string[]>>();
 
+            // --- REFACTORED: Updated help text for new commands ---
             _commands["help"] = (args) =>
             {
                 AddToHistory(" ");
                 AddToHistory("Available commands:", Global.Instance.palette_DarkPurple);
-                AddHelpLineToHistory(" up/down/left/right <count> [gray]- Queue movement");
-                AddHelpLineToHistory(" look [gray]- Look around current area");
-                AddHelpLineToHistory(" move [gray]- Queue movement with W/A/S/D or arrow keys");
-                AddHelpLineToHistory(" clear [gray]- Clear pending path");
-                AddHelpLineToHistory(" pos [gray]- Show current position");
+                AddHelpLineToHistory(" up/down/left/right <count> [gray]- Queue movement.");
+                AddHelpLineToHistory(" rest [short|long] [gray]- Queue a rest action at the current location.");
+                AddHelpLineToHistory(" look [gray]- Look around current area.");
+                AddHelpLineToHistory(" move [gray]- Enable free-move mode with W/A/S/D or arrow keys.");
+                AddHelpLineToHistory(" clear [gray]- Clear all pending actions.");
+                AddHelpLineToHistory(" pos [gray]- Show current position and pending action queue status.");
+                AddHelpLineToHistory(" exit [gray]- Exit the game.");
             };
 
             _commands["look"] = (args) =>
@@ -69,18 +72,28 @@ namespace ProjectVagabond
             _commands["left"] = (args) => _gameState.QueueMovement(new Vector2(-1, 0), args);
             _commands["right"] = (args) => _gameState.QueueMovement(new Vector2(1, 0), args);
 
+            // --- REFACTORED: 'clear' now clears the action queue ---
             _commands["clear"] = (args) =>
             {
-                Core.CurrentTerminalRenderer.ClearHistory();
+                if (_gameState.PendingActions.Count > 0)
+                {
+                    _gameState.ClearPendingActions();
+                    AddOutputToHistory("Pending actions cleared.");
+                }
+                else
+                {
+                    AddOutputToHistory("No pending actions to clear.");
+                }
             };
 
+            // --- REFACTORED: 'pos' now reports on the action queue ---
             _commands["pos"] = (args) =>
             {
                 AddOutputToHistory($"Current position: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})");
-                AddOutputToHistory($"Pending path steps: {_gameState.PendingPathPreview.Count}");
+                AddOutputToHistory($"Pending actions in queue: {_gameState.PendingActions.Count}");
                 if (_gameState.IsExecutingPath)
                 {
-                    AddOutputToHistory($"Executing path: step {_gameState.CurrentPathIndex + 1}/{_gameState.PendingPathPreview.Count}");
+                    AddOutputToHistory($"Executing queue: action {_gameState.CurrentPathIndex + 1}/{_gameState.PendingActions.Count}");
                 }
             };
 
@@ -94,20 +107,10 @@ namespace ProjectVagabond
                 DebugAllColors();
             };
 
+            // --- REFACTORED: 'rest' now queues the action instead of executing it immediately ---
             _commands["rest"] = (args) =>
             {
-                if (_gameState.IsExecutingPath)
-                {
-                    AddOutputToHistory("[crimson]You cannot rest while executing a path.");
-                    return;
-                }
-                if (_gameState.PendingPathPreview.Count > 0)
-                {
-                    AddOutputToHistory("[crimson]You must clear your pending path before resting.");
-                    return;
-                }
-                Core.CurrentGameState.PlayerStats.Rest(RestType.ShortRest);
-                AddOutputToHistory("[palette_lightgreen]You took a short rest.");
+                _gameState.QueueRest(args);
             };
 
             _commands["exit"] = (args) =>
@@ -122,7 +125,7 @@ namespace ProjectVagabond
         {
             AddOutputToHistory("[gray]Displaying all XNA Framework colors:");
 
-            var colorProperties = typeof(Color).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static) // Get all static Color properties using reflection
+            var colorProperties = typeof(Color).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
                 .Where(p => p.PropertyType == typeof(Color))
                 .OrderBy(p => p.Name);
 
@@ -131,7 +134,7 @@ namespace ProjectVagabond
                 string colorName = property.Name;
                 Color color = (Color)property.GetValue(null);
 
-                AddToHistory($"[{colorName.ToLower()}]{colorName}[/]", Global.Instance.OutputTextColor); // Format as [colorname]ColorName[/] to use the color system
+                AddToHistory($"[{colorName.ToLower()}]{colorName}[/]", Global.Instance.OutputTextColor);
             }
 
             AddOutputToHistory($"[gray]Total colors displayed: {colorProperties.Count()}");

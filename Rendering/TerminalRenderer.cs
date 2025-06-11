@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace ProjectVagabond
@@ -29,16 +30,16 @@ namespace ProjectVagabond
         {
             _inputHistory.Add(message);
             
-            var coloredLine = ParseColoredText(message, baseColor); // Parse colored message
+            var coloredLine = ParseColoredText(message, baseColor);
             coloredLine.LineNumber = _nextLineNumber++;
 
-            var wrappedLines = WrapColoredText(coloredLine, GetTerminalWidthInChars()); // Wrap the colored line
+            var wrappedLines = WrapColoredText(coloredLine, GetTerminalWidthInChars());
             foreach (var line in wrappedLines)
             {
                 _wrappedHistory.Add(line);
             }
 
-            while (_wrappedHistory.Count > Global.MAX_HISTORY_LINES) // Limit total wrapped lines
+            while (_wrappedHistory.Count > Global.MAX_HISTORY_LINES)
             {
                 _wrappedHistory.RemoveAt(0);
             }
@@ -75,24 +76,19 @@ namespace ProjectVagabond
             int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
             int terminalHeight = 600;
 
-            // Create pixel texture for drawing rectangles //
             var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
             pixel.SetData(new[] { Color.White });
 
-            // Draw terminal background //
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, terminalHeight + 30), Global.Instance.TerminalBg);
 
-            // Draw terminal border with thicker lines (2 pixels thick) //
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, 2), Global.Instance.palette_White); // Top
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY + terminalHeight + 3, terminalWidth + 10, 2), Global.Instance.palette_White); // Bottom
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, 2, terminalHeight + 30), Global.Instance.palette_White); // Left
             _spriteBatch.Draw(pixel, new Rectangle(terminalX + terminalWidth + 3, terminalY - 25, 2, terminalHeight + 30), Global.Instance.palette_White); // Right
 
-            // Draw terminal title //
             _spriteBatch.DrawString(_defaultFont, "Terminal Output", new Vector2(terminalX, terminalY - 20), Global.Instance.TextColor);
 
-            // Draw wrapped command history //
-            int maxVisibleLines = (terminalHeight - 40) / Global.TERMINAL_LINE_SPACING; // Reduced from 80 to 40
+            int maxVisibleLines = (terminalHeight - 40) / Global.TERMINAL_LINE_SPACING;
             int totalLines = _wrappedHistory.Count;
             int startIndex = Math.Max(0, totalLines - maxVisibleLines - _scrollOffset);
             int endIndex = Math.Min(totalLines, startIndex + maxVisibleLines);
@@ -109,15 +105,14 @@ namespace ProjectVagabond
                     x += _defaultFont.MeasureString(segment.Text).X;
                 }
     
-                if (_wrappedHistory[i].LineNumber > 0) // Only show numbers for actual content lines
+                if (_wrappedHistory[i].LineNumber > 0)
                 {
                     string lineNumText = _wrappedHistory[i].LineNumber.ToString();
-                    float lineNumX = terminalX + 710; // Position outside terminal, to the right
+                    float lineNumX = terminalX + 710;
                     _spriteBatch.DrawString(_defaultFont, lineNumText, new Vector2(lineNumX, y), Global.Instance.palette_DarkGray);
                 }
             }
 
-            // Draw scroll indicator only when there's content that can be scrolled //
             bool canScrollUp = _scrollOffset > 0;
             bool canScrollDown = _wrappedHistory.Count > maxVisibleLines;
 
@@ -133,23 +128,19 @@ namespace ProjectVagabond
                 _spriteBatch.DrawString(_defaultFont, scrollIndicator, new Vector2(terminalX, scrollY), Color.Gold);
             }
 
-            // Draw separator line above input with thicker line (2 pixels thick) //
             int inputLineY = terminalY + terminalHeight - 20;
             int separatorY = inputLineY - 5;
             _spriteBatch.Draw(pixel, new Rectangle(terminalX-5, separatorY, 710, 2), Global.Instance.palette_White);
 
-            // Draw the input line //
             string inputDisplay = $"> {Core.CurrentInputHandler.CurrentInput}_";
             string wrappedInput = WrapText(inputDisplay, GetTerminalWidthInChars());
             _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY), Color.Khaki);
 
-            // Draw autocomplete suggestions //
             if (Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions && Core.CurrentAutoCompleteManager.AutoCompleteSuggestions.Count > 0)
             {
                 int suggestionY = inputLineY - 20;
                 int visibleSuggestions = Math.Min(Core.CurrentAutoCompleteManager.AutoCompleteSuggestions.Count, 5);
     
-                // Calculate background dimensions //
                 int maxSuggestionWidth = 0;
                 for (int i = 0; i < visibleSuggestions; i++)
                 {
@@ -159,18 +150,15 @@ namespace ProjectVagabond
                     maxSuggestionWidth = Math.Max(maxSuggestionWidth, textWidth);
                 }
     
-                // Draw background rectangle //
                 int backgroundHeight = visibleSuggestions * Global.FONT_SIZE;
                 int backgroundY = suggestionY - (visibleSuggestions - 1) * Global.FONT_SIZE;
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, backgroundHeight), Global.Instance.palette_Black);
     
-                // Draw border around suggestions //
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, 1), Global.Instance.palette_LightGray); // Top
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), Global.Instance.palette_LightGray); // Bottom
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, 1, backgroundHeight), Global.Instance.palette_LightGray); // Left
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), Global.Instance.palette_LightGray); // Right
     
-                // Draw suggestions //
                 for (int i = 0; i < visibleSuggestions; i++)
                 {
                     Color suggestionColor = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? Color.Khaki : Global.Instance.palette_LightGray;
@@ -180,17 +168,17 @@ namespace ProjectVagabond
                 }
             }
 
-            // Draw status line OUTSIDE terminal (below it) //
+            // --- REFACTORED: Status line now uses PendingActions ---
             int statusY = terminalY + terminalHeight + 15;
-            string statusText = $"Path: {Core.CurrentGameState.PendingPathPreview.Count} steps";
+            string statusText = $"Actions Queued: {Core.CurrentGameState.PendingActions.Count}";
             if (Core.CurrentGameState.IsExecutingPath)
             {
-                statusText += $" | Executing: {Core.CurrentGameState.CurrentPathIndex + 1}/{Core.CurrentGameState.PendingPathPreview.Count}";
+                statusText += $" | Executing: {Core.CurrentGameState.CurrentPathIndex + 1}/{Core.CurrentGameState.PendingActions.Count}";
             }
             string wrappedStatus = WrapText(statusText, GetTerminalWidthInChars());
             _spriteBatch.DrawString(_defaultFont, wrappedStatus, new Vector2(terminalX, statusY), Global.Instance.palette_LightGray);
 
-            // Draw prompt line OUTSIDE terminal (below status) //
+            // --- REFACTORED: Prompt line uses new GetPromptText logic ---
             int promptY = statusY + (wrappedStatus.Split('\n').Length * Global.TERMINAL_LINE_SPACING) + 10;
             string promptText = GetPromptText();
             if (!string.IsNullOrEmpty(promptText))
@@ -212,16 +200,35 @@ namespace ProjectVagabond
             }
         }
 
+        // --- REFACTORED: Prompt text is now more detailed and uses the action queue ---
         private string GetPromptText()
         {
             if (Core.CurrentGameState.IsFreeMoveMode)
             {
-                return "[skyblue]Free moving...\n[deepskyblue]Use [royalblue](W/A/S/D)[deepskyblue] to queue moves.\nPress [royalblue]ENTER[deepskyblue] to confirm, [royalblue]ESC[deepskyblue] to cancel: ";
+                return "[skyblue]Free moving...\n[deepskyblue]Use [royalblue](W/A/S/D)[deepskyblue] to queue moves.\nPress [royalblue]ENTER[deepskyblue] to confirm, [royalblue]ESC[deepskyblue] to cancel.";
             }
-            else if (Core.CurrentGameState.PendingPathPreview.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+            else if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
             {
-                return $"[khaki]Previewing path...\n[gold]Pending [orange]{Core.CurrentGameState.PendingPathPreview.Count}[gold] queued movements...\nPress [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel: ";
+                // Count different action types for a more detailed prompt
+                int moveCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.Move);
+                int restCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.ShortRest || a.Type == ActionType.LongRest);
                 
+                var simResult = Core.CurrentGameState.PendingQueueSimulationResult;
+                string finalEnergyText = $"Final EP: {simResult.finalEnergy}/{Core.CurrentGameState.PlayerStats.MaxEnergyPoints}";
+
+                // Build the prompt string
+                var promptBuilder = new StringBuilder();
+                promptBuilder.AppendLine("[khaki]Previewing action queue...");
+
+                var details = new List<string>();
+                if (moveCount > 0) details.Add($"[orange]{moveCount}[gold] move(s)");
+                if (restCount > 0) details.Add($"[green]{restCount}[gold] rest(s)");
+                
+                promptBuilder.AppendLine($"[gold]Pending {string.Join(", ", details)}.");
+                promptBuilder.AppendLine($"[teal]{finalEnergyText}");
+                promptBuilder.Append("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel.");
+
+                return promptBuilder.ToString();
             }
             return "";
         }
@@ -319,7 +326,7 @@ namespace ProjectVagabond
             }
     
             
-            try // If not found in predefined colors, use reflection to find XNA color
+            try
             {
                 var colorProperty = typeof(Color).GetProperty(colorName, 
                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase);
@@ -331,7 +338,7 @@ namespace ProjectVagabond
             }
             catch
             {
-                // If reflection fails, fall back to default
+                // Fallback
             }
     
             return Global.Instance.TextColor;
@@ -347,12 +354,12 @@ namespace ProjectVagabond
             {
                 if (segment.Text.Contains('\n'))
                 {
-                    string[] lines = segment.Text.Split('\n'); // Split segment by newlines
+                    string[] lines = segment.Text.Split('\n');
                     for (int i = 0; i < lines.Length; i++)
                     {
                         processedSegments.Add(new ColoredText(lines[i], segment.Color));
                 
-                        if (i < lines.Length - 1) // Add a special marker for line breaks (except for the last line)
+                        if (i < lines.Length - 1)
                         {
                             processedSegments.Add(new ColoredText("\n", segment.Color));
                         }
@@ -364,7 +371,7 @@ namespace ProjectVagabond
                 }
             }
     
-            var currentLine = new ColoredLine { LineNumber = line.LineNumber }; // Now process the segments, creating new lines when we encounter \n markers
+            var currentLine = new ColoredLine { LineNumber = line.LineNumber };
             var currentWords = new List<string>();
             var currentColors = new List<Color>();
             int currentLineWidth = 0;
@@ -373,7 +380,7 @@ namespace ProjectVagabond
             {
                 if (segment.Text == "\n")
                 {
-                    if (currentWords.Count > 0 || wrappedLines.Count == 0) // Finish current line and start new one
+                    if (currentWords.Count > 0 || wrappedLines.Count == 0)
                     {
                         var finishedLine = CombineColoredSegments(currentWords, currentColors);
                         finishedLine.LineNumber = wrappedLines.Count == 0 ? line.LineNumber : 0;
@@ -384,11 +391,11 @@ namespace ProjectVagabond
                         currentLineWidth = 0;
                     }
             
-                    currentLine = new ColoredLine { LineNumber = line.LineNumber }; // Start new line
+                    currentLine = new ColoredLine { LineNumber = line.LineNumber };
                     continue;
                 }
         
-                var words = segment.Text.Split(' ', StringSplitOptions.None); // Process normal text segment
+                var words = segment.Text.Split(' ', StringSplitOptions.None);
 
                 for (int wordIndex = 0; wordIndex < words.Length; wordIndex++)
                 {
@@ -520,17 +527,17 @@ namespace ProjectVagabond
 
             var finalLines = new List<string>();
     
-            string[] existingLines = text.Split('\n'); // First split by existing newlines
+            string[] existingLines = text.Split('\n');
     
             foreach (string line in existingLines)
             {
                 if (line.Length <= maxCharsPerLine)
                 {
-                    finalLines.Add(line); // Line doesn't need wrapping
+                    finalLines.Add(line);
                 }
                 else
                 {
-                    var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries); // Line needs wrapping
+                    var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
                     var currentLine = new StringBuilder();
 
                     foreach (string word in words)
@@ -579,9 +586,9 @@ namespace ProjectVagabond
 
         private int GetTerminalWidthInChars()
         {
-            int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH; // Your terminal pixel width
-            float charWidth = Global.Instance.DefaultFont.MeasureString("W").X; // Use a wide character for measurement
-            return (int)(terminalWidth / charWidth) - 2; // Subtract 2 for padding
+            int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
+            float charWidth = Global.Instance.DefaultFont.MeasureString("W").X;
+            return (int)(terminalWidth / charWidth) - 2;
         }
     }
 }

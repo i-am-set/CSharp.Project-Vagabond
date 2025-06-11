@@ -74,10 +74,10 @@ namespace ProjectVagabond
                     Core.CurrentGameState.ToggleIsFreeMoveMode(false);
                     _processedKeys.Clear();
                 }
-                else if (Core.CurrentGameState.PendingPathPreview.Count > 0)
+                else if (Core.CurrentGameState.PendingActions.Count > 0) // --- MODIFIED
                 {
-                    Core.CurrentGameState.PendingPathPreview.Clear();
-                    Core.CurrentTerminalRenderer.AddOutputToHistory("Pending path cleared.");
+                    Core.CurrentGameState.ClearPendingActions(); // --- MODIFIED
+                    Core.CurrentTerminalRenderer.AddOutputToHistory("Pending actions cleared.");
                 }
             }
 
@@ -108,27 +108,26 @@ namespace ProjectVagabond
                                 Core.CurrentGameState.QueueMovement(new Vector2(1, 0), new string[] { "right", "1" });
                                 break;
                             case Keys.Enter:
-                                if (Core.CurrentGameState.PendingPathPreview.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+                                if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath) // --- MODIFIED
                                 {
                                     Core.CurrentGameState.ToggleExecutingPath(true);
                                     Core.CurrentGameState.SetCurrentPathIndex(0);
-                                    Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing path of [teal]{Core.CurrentGameState.PendingPathPreview.Count}[gray] move(s)...");
+                                    Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of [teal]{Core.CurrentGameState.PendingActions.Count}[gray] action(s)..."); // --- MODIFIED
                                 }
                                 else if (Core.CurrentGameState.IsExecutingPath)
                                 {
-                                    Core.CurrentTerminalRenderer.AddOutputToHistory("Already executing a path.");
+                                    Core.CurrentTerminalRenderer.AddOutputToHistory("Already executing an action queue.");
                                 }
                                 else
                                 {
-                                    Core.CurrentTerminalRenderer.AddOutputToHistory("No path queued.");
+                                    Core.CurrentTerminalRenderer.AddOutputToHistory("No actions queued.");
                                 }
                                 break;
-                            // ESCAPE case removed from here since it's now handled globally above
                         }
                     }
                 }
 
-                _processedKeys.RemoveWhere(key => !currentKeyboardState.IsKeyDown(key)); // Clear processed keys that are no longer pressed
+                _processedKeys.RemoveWhere(key => !currentKeyboardState.IsKeyDown(key));
             }
             else
             {
@@ -140,11 +139,11 @@ namespace ProjectVagabond
                         if (key == Keys.Enter)
                         {
                             Core.CurrentAutoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
-                            if (string.IsNullOrEmpty(_currentInput.Trim()) && Core.CurrentGameState.PendingPathPreview.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+                            if (string.IsNullOrEmpty(_currentInput.Trim()) && Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath) // --- MODIFIED
                             {
                                 Core.CurrentGameState.ToggleExecutingPath(true);
                                 Core.CurrentGameState.SetCurrentPathIndex(0);
-                                Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing path with {Core.CurrentGameState.PendingPathPreview.Count} steps...");
+                                Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue with {Core.CurrentGameState.PendingActions.Count} actions..."); // --- MODIFIED
                             }
                             else
                             {
@@ -152,6 +151,7 @@ namespace ProjectVagabond
                                 {
                                     _commandHistory.Add(_currentInput.Trim());
                                     if (_commandHistory.Count > 50) // Keep history to reasonable size
+                                    {
                                     {
                                         _commandHistory.RemoveAt(0);
                                     }
@@ -189,7 +189,6 @@ namespace ProjectVagabond
                         {
                             NavigateCommandHistory(-1);
                         }
-                        // Removed the ESCAPE handling from here since it's now handled globally above
                         else if (_controlPressed)
                         {
                             HandleControlCommands(key);
@@ -208,7 +207,7 @@ namespace ProjectVagabond
                         }
                         else if (key == Keys.Delete)
                         {
-                            if (_cursorPosition < _currentInput.Length) // Delete character at cursor (for future cursor implementation)
+                            if (_cursorPosition < _currentInput.Length)
                             {
                                 _currentInput = _currentInput.Remove(_cursorPosition, 1);
                             }

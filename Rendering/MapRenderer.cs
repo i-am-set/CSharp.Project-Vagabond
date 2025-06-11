@@ -62,36 +62,53 @@ namespace ProjectVagabond
                     Texture2D texture = GetTerrainTexture(noise);
                     Color color = GetTerrainColor(noise);
 
-                    bool isPlayer = (worldX == (int)_gameState.PlayerWorldPos.X && worldY == (int)_gameState.PlayerWorldPos.Y); // Check if this is the player position
+                    bool isPlayer = (worldX == (int)_gameState.PlayerWorldPos.X && worldY == (int)_gameState.PlayerWorldPos.Y);
 
-                    bool isPath = false; // Check if this is part of the pending path
+                    // Check action queue for rendering
+                    bool isPath = false;
                     bool isPathEnd = false;
                     bool isShortRest = false;
                     bool isLongRest = false;
                     Vector2 worldPos = new Vector2(worldX, worldY);
 
-                    if (_gameState.PendingPathPreview.Contains(worldPos))
+                    // Find all actions at this position to handle overlaps (e.g., move then rest on same tile)
+                    var actionsAtPos = _gameState.PendingActions.Where(a => a.Position == worldPos).ToList();
+                    if (actionsAtPos.Any())
                     {
-                        isPath = true;
-                        isPathEnd = worldPos == _gameState.PendingPathPreview.Last();
+                        // Prioritize rendering rests over path markers if they share a tile
+                        if (actionsAtPos.Any(a => a.Type == ActionType.ShortRest)) isShortRest = true;
+                        if (actionsAtPos.Any(a => a.Type == ActionType.LongRest)) isLongRest = true;
+                        
+                        if (actionsAtPos.Any(a => a.Type == ActionType.Move))
+                        {
+                            isPath = true;
+                            // The end of the path is the position of the very last move action in the entire queue
+                            var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a.Type == ActionType.Move);
+                            if (lastMoveAction != null && lastMoveAction.Position == worldPos)
+                            {
+                                isPathEnd = true;
+                            }
+                        }
                     }
-
+                    
                     if (isPlayer)
                     {
                         texture = Core.CurrentSpriteManager.PlayerSprite;
                         color = Global.Instance.PlayerColor;
                     }
-                    else if (isPathEnd)
+                    else if (isPathEnd && !isShortRest && !isLongRest) // Don't draw path end if a rest is here
                     {
                         texture = Core.CurrentSpriteManager.PathEndSprite;
                         color = Global.Instance.PathEndColor;
                     }
-                    else if (isPath)
+                    else if (isPath && !isShortRest && !isLongRest) // Don't draw path if a rest is here
                     {
                         texture = Core.CurrentSpriteManager.PathSprite;
                         color = Global.Instance.PathColor;
                     }
-                    else if (isShortRest)
+                    
+                    // Rests are drawn on top of path markers if they share a tile
+                    if (isShortRest)
                     {
                         texture = Core.CurrentSpriteManager.ShortRestSprite;
                         color = Global.Instance.ShortRestColor;
