@@ -9,6 +9,8 @@ using System;
 // TODO: impliment the commands needed to run or walk and add to help
 // TODO: world time mechanic
 // TODO: player customization; backgrounds, stats, bodyfat, muscle (both of which effect stat spread as well as gives buffs and needs at their extremes)
+// TODO: make queued rest energy blue or something like that
+// TODO: indicate the amount of time it takes to perform an action in the prompt
 namespace ProjectVagabond
 {
     public class Core : Game
@@ -26,6 +28,7 @@ namespace ProjectVagabond
         private static readonly AutoCompleteManager _autoCompleteManager = new();
         private static readonly CommandProcessor _commandProcessor = new();
         private static readonly StatsRenderer _statsRenderer = new();
+        private static readonly WorldClockManager _worldClockManager = new();
 
         // Public references //
         public static GameState CurrentGameState => _gameState;
@@ -36,6 +39,7 @@ namespace ProjectVagabond
         public static CommandProcessor CurrentCommandProcessor => _commandProcessor;
         public static InputHandler CurrentInputHandler => _inputHandler;
         public static StatsRenderer CurrentStatsRenderer => _statsRenderer;
+        public static WorldClockManager CurrentWorldClockManager => _worldClockManager;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 

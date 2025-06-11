@@ -18,6 +18,8 @@ namespace ProjectVagabond
         private int _carryCapacity;
         private int _mentalResistance;
         private int _socialInfluence;
+        private int _shortRestDuration = 30; // minutes
+        private int _longRestDuration = 60*8;
 
         // Current values
         private int _currentHealthPoints;
@@ -51,6 +53,8 @@ namespace ProjectVagabond
         public int CarryCapacity => _carryCapacity;
         public int MentalResistance => _mentalResistance;
         public int SocialInfluence => _socialInfluence;
+        public int ShortRestDuration => _shortRestDuration; // in minutes
+        public int LongRestDuration => _longRestDuration; // in minutes
 
         // Current values (read-only)
         public int CurrentHealthPoints => _currentHealthPoints;

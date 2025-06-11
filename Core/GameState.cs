@@ -54,7 +54,7 @@ namespace ProjectVagabond
         public int CurrentPathIndex => _currentPathIndex;
         public NoiseMapManager NoiseManager => _noiseManager;
         public PlayerStats PlayerStats => _playerStats;
-        public (int finalEnergy, bool possible) PendingQueueSimulationResult => SimulateActionQueueEnergy();
+        public (int finalEnergy, bool possible, int minutesPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         
@@ -131,11 +131,33 @@ namespace ProjectVagabond
             return 0;
         }
 
-        public (int finalEnergy, bool possible) SimulateActionQueueEnergy(List<PendingAction> customQueue = null)
+        public int GetMinutesPassedDuringMovement(ActionType actionType, string terrainType)
+        {
+            int timePassed= 0;
+            timePassed = terrainType switch
+            {
+                "FLATLANDS" => 2,
+                "HILLS" => 4,
+                "MOUNTAINS" => 10,
+                _ => 2
+            };
+
+            timePassed = actionType switch
+            {
+                ActionType.Move => timePassed,
+                ActionType.RunMove => (int)Math.Floor(timePassed * 0.5f),
+                _ => timePassed
+            };
+
+            return timePassed;
+        }
+
+        public (int finalEnergy, bool possible, int minutesPassed) SimulateActionQueueEnergy(List<PendingAction> customQueue = null)
         {
             var queueToSimulate = customQueue ?? _pendingActions;
             int currentEnergy = _playerStats.CurrentEnergyPoints;
             int maxEnergy = _playerStats.MaxEnergyPoints;
+            int minutesPassed = 0;
 
             foreach (var action in queueToSimulate)
             {
@@ -143,23 +165,28 @@ namespace ProjectVagabond
                 {
                     case ActionType.Move:
                     case ActionType.RunMove:
+                        minutesPassed += GetMinutesPassedDuringMovement(action.Type, GetTerrainDescription((int)action.Position.X, (int)action.Position.Y)); // HACK: finish this logic
                         int cost = GetMovementEnergyCost(action);
                         if (currentEnergy < cost)
                         {
-                            return (currentEnergy, false);
+                            return (currentEnergy, false, minutesPassed);
                         }
                         currentEnergy -= cost;
                         break;
                     case ActionType.ShortRest:
                         currentEnergy += (int)Math.Floor((double)maxEnergy * 0.8f);
                         currentEnergy = Math.Min(currentEnergy, maxEnergy);
+
+                        minutesPassed = _playerStats.ShortRestDuration;
                         break;
                     case ActionType.LongRest:
                         currentEnergy = maxEnergy;
+
+                        minutesPassed = _playerStats.LongRestDuration;
                         break;
                 }
             }
-            return (currentEnergy, true);
+            return (currentEnergy, true, minutesPassed);
         }
 
         public void QueueRest(string[] args)
@@ -337,9 +364,9 @@ namespace ProjectVagabond
                             case ActionType.Move:
                             case ActionType.RunMove:
                                 Vector2 nextPosition = nextAction.Position;
+                                var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
                                 if (!IsPositionPassable(nextPosition))
                                 {
-                                    var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
                                     Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot move here... terrain is impassable! <{mapData.TerrainType.ToLower()}>  {(int)nextPosition.X}, {(int)nextPosition.Y}");
                                     CancelPathExecution();
                                     return;
@@ -348,17 +375,18 @@ namespace ProjectVagabond
                                 int energyCost = GetMovementEnergyCost(nextAction);
                                 if (!_playerStats.CanExertEnergy(energyCost))
                                 {
-                                    var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
                                     Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to continue! Need {energyCost} for {mapData.TerrainType.ToLower()}, have {_playerStats.CurrentEnergyPoints}");
                                     CancelPathExecution();
                                     return;
                                 }
 
+                                int minutesPassed = GetMinutesPassedDuringMovement(nextAction.Type, mapData.TerrainType);
                                 _playerWorldPos = nextPosition;
                                 _playerStats.ExertEnergy(energyCost);
                                 var currentMapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
                                 string moveType = nextAction.Type == ActionType.RunMove ? "Ran" : "Walked";
-                                Core.CurrentTerminalRenderer.AddOutputToHistory($"{moveType} to [khaki]{currentMapData.TerrainType.ToLower()}[/o] <{(int)nextPosition.X}, {(int)nextPosition.Y}>");
+                                Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through [gold]{currentMapData.TerrainType.ToLower()}[khaki] in {minutesPassed} minutes.[/o] <{(int)nextPosition.X}, {(int)nextPosition.Y}>");
+                                Core.CurrentWorldClockManager.PassTime(minutes: minutesPassed);
                                 break;
 
                             case ActionType.ShortRest:
@@ -366,6 +394,15 @@ namespace ProjectVagabond
                                 _playerStats.Rest(nextAction.ActionRestType.Value);
                                 string restType = nextAction.ActionRestType.Value == RestType.ShortRest ? "short" : "long";
                                 Core.CurrentTerminalRenderer.AddOutputToHistory($"[green]Completed {restType.ToLower()} rest. Energy is now {_playerStats.CurrentEnergyPoints}.");
+
+                                if (nextAction.ActionRestType.Value == RestType.ShortRest)
+                                {
+                                    Core.CurrentWorldClockManager.PassTime(minutes: _playerStats.ShortRestDuration);
+                                }
+                                else
+                                {
+                                    Core.CurrentWorldClockManager.PassTime(minutes: _playerStats.LongRestDuration);
+                                }
                                 break;
                         }
 

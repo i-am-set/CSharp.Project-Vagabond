@@ -215,6 +215,7 @@ namespace ProjectVagabond
                 
                 var simResult = Core.CurrentGameState.PendingQueueSimulationResult;
                 string finalEnergyText = $"Final EP: {simResult.finalEnergy}/{Core.CurrentGameState.PlayerStats.MaxEnergyPoints}";
+                string finalMinutesPassed = $"Duration: {simResult.minutesPassed} minutes";
 
                 // Build the prompt string
                 var promptBuilder = new StringBuilder();
@@ -226,6 +227,7 @@ namespace ProjectVagabond
                 
                 promptBuilder.AppendLine($"[gold]Pending {string.Join(", ", details)}.");
                 promptBuilder.AppendLine($"[gold]{finalEnergyText}");
+                promptBuilder.AppendLine($"[gold]{finalMinutesPassed}");
                 promptBuilder.Append("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel.");
 
                 return promptBuilder.ToString();
