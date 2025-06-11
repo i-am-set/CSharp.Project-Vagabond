@@ -17,9 +17,13 @@ namespace ProjectVagabond
         private Texture2D _peakSprite;
         private Texture2D _playerSprite;
         private Texture2D _pathSprite;
+        private Texture2D _runPathSprite;
         private Texture2D _pathEndSprite;
         private Texture2D _shortRestSprite;
         private Texture2D _longRestSprite;
+        private Texture2D _warningMarkSprite;
+        private Texture2D _emptySprite;
+        private Texture2D _speedMarkSprite;
 
         public Texture2D WaterSprite => _waterSprite;
         public Texture2D FlatlandSprite => _flatlandSprite;
@@ -28,9 +32,13 @@ namespace ProjectVagabond
         public Texture2D PeakSprite => _peakSprite;
         public Texture2D PlayerSprite => _playerSprite;
         public Texture2D PathSprite => _pathSprite;
+        public Texture2D RunPathSprite => _runPathSprite;
         public Texture2D PathEndSprite => _pathEndSprite;
         public Texture2D ShortRestSprite => _shortRestSprite;
         public Texture2D LongRestSprite => _longRestSprite;
+        public Texture2D WarningMarkSprite => _warningMarkSprite;
+        public Texture2D EmptySprite => _emptySprite;
+        public Texture2D SpeedMarkSprite => _speedMarkSprite;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -101,6 +109,16 @@ namespace ProjectVagabond
 
             try
             {
+                _runPathSprite = Core.Instance.Content.Load<Texture2D>("Sprites/runPathEnd");
+            }
+            catch (Exception)
+            {
+
+                _runPathSprite = Core.CurrentTextureFactory.CreateRunPathTexture();
+            }
+
+            try
+            {
                 _pathEndSprite = Core.Instance.Content.Load<Texture2D>("Sprites/pathEnd");
             }
             catch
@@ -115,7 +133,7 @@ namespace ProjectVagabond
             catch (Exception)
             {
 
-                _shortRestSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.White);
+                _shortRestSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
             }
 
             try
@@ -125,7 +143,36 @@ namespace ProjectVagabond
             catch (Exception)
             {
 
-                _longRestSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.White);
+                _longRestSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
+            }
+
+            try
+            {
+                _warningMarkSprite = Core.Instance.Content.Load<Texture2D>("Sprites/warningMark");
+            }
+            catch (Exception)
+            {
+
+                _warningMarkSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
+            }
+
+            try
+            {
+                _emptySprite = Core.CurrentTextureFactory.CreateEmptyTexture();
+            }
+            catch (Exception)
+            {
+
+                _emptySprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
+            }
+
+            try
+            {
+                _speedMarkSprite = Core.Instance.Content.Load<Texture2D>("Sprites/speedMark");
+            }
+            catch (Exception)
+            {
+                _speedMarkSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
             }
         }
     }

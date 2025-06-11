@@ -16,7 +16,8 @@ namespace ProjectVagabond
             MountainColor = palette_Gray;
             PlayerColor = palette_Red;
             PathColor = palette_Yellow;
-            PathEndColor = palette_Orange;
+            RunPathColor = palette_Orange;
+            PathEndColor = palette_Red;
             ShortRestColor = palette_LightPurple;
             LongRestColor = palette_LightPurple;
             GameBg = palette_Black;
@@ -102,6 +103,7 @@ namespace ProjectVagabond
         public Color MountainColor { get; private set; }
         public Color PlayerColor { get; private set; }
         public Color PathColor { get; private set; }
+        public Color RunPathColor { get; private set; }
         public Color PathEndColor { get; private set; }
         public Color ShortRestColor { get; private set; }
         public Color LongRestColor { get; private set; }

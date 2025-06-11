@@ -21,38 +21,27 @@ namespace ProjectVagabond
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        private void AddToHistory(string message, Color? baseColor = null)
-        {
-            Core.CurrentTerminalRenderer.AddToHistory(message, baseColor);
-        }
-
-        private void AddOutputToHistory(string message)
-        {
-            Core.CurrentTerminalRenderer.AddOutputToHistory(message);
-        }
-
-        private void AddHelpLineToHistory(string message)
-        {
-            Core.CurrentTerminalRenderer.AddToHistory(message, Global.Instance.palette_LightPurple);
-        }
-
+        private void AddToHistory(string message, Color? baseColor = null) => Core.CurrentTerminalRenderer.AddToHistory(message, baseColor);
+        private void AddOutputToHistory(string message) => Core.CurrentTerminalRenderer.AddOutputToHistory(message);
+        private void AddHelpLineToHistory(string message) => Core.CurrentTerminalRenderer.AddToHistory(message, Global.Instance.palette_LightPurple);
+        
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
+        
         private void InitializeCommands()
         {
             _commands = new Dictionary<string, Action<string[]>>();
 
-            // --- REFACTORED: Updated help text for new commands ---
             _commands["help"] = (args) =>
             {
                 AddToHistory(" ");
                 AddToHistory("Available commands:", Global.Instance.palette_DarkPurple);
-                AddHelpLineToHistory(" up/down/left/right <count> [gray]- Queue movement.");
-                AddHelpLineToHistory(" rest [short|long] [gray]- Queue a rest action at the current location.");
+                AddHelpLineToHistory(" up/down/left/right <count> [gray]- Queue a run (costs energy).");
+                // AddHelpLineToHistory(" walk <dir> <count> [gray]- Queue a walk (no energy cost).");
+                AddHelpLineToHistory(" rest [short|long] [gray]- Queue a rest action.");
                 AddHelpLineToHistory(" look [gray]- Look around current area.");
-                AddHelpLineToHistory(" move [gray]- Enable free-move mode with W/A/S/D or arrow keys.");
+                AddHelpLineToHistory(" move [gray]- Enable free-move mode (runs by default).");
                 AddHelpLineToHistory(" clear [gray]- Clear all pending actions.");
-                AddHelpLineToHistory(" pos [gray]- Show current position and pending action queue status.");
+                AddHelpLineToHistory(" pos [gray]- Show current position and queue status.");
                 AddHelpLineToHistory(" exit [gray]- Exit the game.");
             };
 
@@ -67,12 +56,11 @@ namespace ProjectVagabond
                 AddOutputToHistory($"Terrain value: {noise:F2}");
             };
 
-            _commands["up"] = (args) => _gameState.QueueMovement(new Vector2(0, -1), args);
-            _commands["down"] = (args) => _gameState.QueueMovement(new Vector2(0, 1), args);
-            _commands["left"] = (args) => _gameState.QueueMovement(new Vector2(-1, 0), args);
-            _commands["right"] = (args) => _gameState.QueueMovement(new Vector2(1, 0), args);
+            _commands["up"] = (args) => _gameState.QueueWalkMovement(new Vector2(0, -1), args);
+            _commands["down"] = (args) => _gameState.QueueWalkMovement(new Vector2(0, 1), args);
+            _commands["left"] = (args) => _gameState.QueueWalkMovement(new Vector2(-1, 0), args);
+            _commands["right"] = (args) => _gameState.QueueWalkMovement(new Vector2(1, 0), args);
 
-            // --- REFACTORED: 'clear' now clears the action queue ---
             _commands["clear"] = (args) =>
             {
                 if (_gameState.PendingActions.Count > 0)
@@ -86,7 +74,6 @@ namespace ProjectVagabond
                 }
             };
 
-            // --- REFACTORED: 'pos' now reports on the action queue ---
             _commands["pos"] = (args) =>
             {
                 AddOutputToHistory($"Current position: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})");
@@ -107,7 +94,6 @@ namespace ProjectVagabond
                 DebugAllColors();
             };
 
-            // --- REFACTORED: 'rest' now queues the action instead of executing it immediately ---
             _commands["rest"] = (args) =>
             {
                 _gameState.QueueRest(args);

@@ -81,12 +81,36 @@ namespace ProjectVagabond
             var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
             var colorData = new Color[64];
 
-            for (int y = 0; y < 8; y++) // Create a simple dot for path
+            for (int y = 0; y < 8; y++)
             {
                 for (int x = 0; x < 8; x++)
                 {
-                    int distance = (x - 4) * (x - 4) + (y - 4) * (y - 4);
-                    if (distance <= 4)
+                    if ((x == 3 || x == 4) && (y == 3 || y == 4))
+                    {
+                        colorData[y * 8 + x] = Color.White;
+                    }
+                    else
+                    {
+                        colorData[y * 8 + x] = Color.Transparent;
+                    }
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
+
+
+        public Texture2D CreateRunPathTexture()
+        {
+            var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
+            var colorData = new Color[64];
+
+            for (int y = 0; y < 8; y++)
+            {
+                for (int x = 0; x < 8; x++)
+                {
+                    if (x >= 2 && x <= 5 && y >= 2 && y <= 5)
                     {
                         colorData[y * 8 + x] = Color.White;
                     }
@@ -118,6 +142,23 @@ namespace ProjectVagabond
                     {
                         colorData[y * 8 + x] = Color.Transparent;
                     }
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
+
+        public Texture2D CreateEmptyTexture()
+        {
+            var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
+            var colorData = new Color[64];
+
+            for (int y = 0; y < 8; y++)
+            {
+                for (int x = 0; x < 8; x++)
+                {
+                    colorData[y * 8 + x] = Color.Transparent;
                 }
             }
 

@@ -60,7 +60,9 @@ namespace ProjectVagabond
 
                     float noise = _gameState.GetNoiseAt(worldX, worldY);
                     Texture2D texture = GetTerrainTexture(noise);
+                    Texture2D secondaryTexture = Core.CurrentSpriteManager.EmptySprite;
                     Color color = GetTerrainColor(noise);
+                    Color secondaryColor = Color.White;
 
                     bool isPlayer = (worldX == (int)_gameState.PlayerWorldPos.X && worldY == (int)_gameState.PlayerWorldPos.Y);
 
@@ -69,21 +71,26 @@ namespace ProjectVagabond
                     bool isPathEnd = false;
                     bool isShortRest = false;
                     bool isLongRest = false;
+                    bool isRunning = false;
                     Vector2 worldPos = new Vector2(worldX, worldY);
 
                     // Find all actions at this position to handle overlaps (e.g., move then rest on same tile)
                     var actionsAtPos = _gameState.PendingActions.Where(a => a.Position == worldPos).ToList();
                     if (actionsAtPos.Any())
                     {
-                        // Prioritize rendering rests over path markers if they share a tile
                         if (actionsAtPos.Any(a => a.Type == ActionType.ShortRest)) isShortRest = true;
                         if (actionsAtPos.Any(a => a.Type == ActionType.LongRest)) isLongRest = true;
+                        if (actionsAtPos.Any(a => a.Type == ActionType.RunMove)) isRunning = true;
                         
-                        if (actionsAtPos.Any(a => a.Type == ActionType.Move))
+                        if (actionsAtPos.Any(a => a.Type == ActionType.Move || a.Type == ActionType.RunMove))
                         {
+                            if (actionsAtPos.Any(a => a.Type == ActionType.RunMove))
+                            {
+                                isRunning = true;
+                            }
+
                             isPath = true;
-                            // The end of the path is the position of the very last move action in the entire queue
-                            var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a.Type == ActionType.Move);
+                            var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a.Type == ActionType.Move || a.Type == ActionType.RunMove);
                             if (lastMoveAction != null && lastMoveAction.Position == worldPos)
                             {
                                 isPathEnd = true;
@@ -96,18 +103,20 @@ namespace ProjectVagabond
                         texture = Core.CurrentSpriteManager.PlayerSprite;
                         color = Global.Instance.PlayerColor;
                     }
-                    else if (isPathEnd && !isShortRest && !isLongRest) // Don't draw path end if a rest is here
-                    {
-                        texture = Core.CurrentSpriteManager.PathEndSprite;
-                        color = Global.Instance.PathEndColor;
-                    }
                     else if (isPath && !isShortRest && !isLongRest) // Don't draw path if a rest is here
                     {
-                        texture = Core.CurrentSpriteManager.PathSprite;
-                        color = Global.Instance.PathColor;
+                        if (!isRunning)
+                        {
+                            texture = Core.CurrentSpriteManager.PathSprite;
+                            color = isPathEnd ? Global.Instance.PathEndColor : Global.Instance.PathColor;
+                        }
+                        else
+                        {
+                            texture = Core.CurrentSpriteManager.RunPathSprite;
+                            color = isPathEnd ? Global.Instance.PathEndColor : Global.Instance.RunPathColor;
+                        }
                     }
                     
-                    // Rests are drawn on top of path markers if they share a tile
                     if (isShortRest)
                     {
                         texture = Core.CurrentSpriteManager.ShortRestSprite;
@@ -122,6 +131,7 @@ namespace ProjectVagabond
                     Vector2 gridPos = new Vector2(mapStartX + x * Global.GRID_CELL_SIZE, mapStartY + y * Global.GRID_CELL_SIZE);
 
                     elements.Add(new GridElement(texture, color, gridPos));
+                    elements.Add(new GridElement(secondaryTexture, secondaryColor, gridPos));
                 }
             }
 

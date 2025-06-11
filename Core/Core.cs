@@ -5,9 +5,10 @@ using System;
 
 // TODO: generate different noise maps to generate different map things
 // TODO: add a way to generate different map elements based on the noise map
-// TODO: make it so "rest" pitstop can be made in a previewed path
-// TODO: make it so "rest" pitstop calculates new usable energy from pitstop
-// TODO: make it so pitstops are generated as the player free moves and runs out of energy
+// TODO: make the map generation more complex, e.g. add rivers, lakes, etc.
+// TODO: impliment the commands needed to run or walk and add to help
+// TODO: world time mechanic
+// TODO: player customization; backgrounds, stats, bodyfat, muscle (both of which effect stat spread as well as gives buffs and needs at their extremes)
 namespace ProjectVagabond
 {
     public class Core : Game

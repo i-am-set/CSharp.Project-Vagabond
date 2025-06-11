@@ -205,7 +205,7 @@ namespace ProjectVagabond
         {
             if (Core.CurrentGameState.IsFreeMoveMode)
             {
-                return "[skyblue]Free moving...\n[deepskyblue]Use [royalblue](W/A/S/D)[deepskyblue] to queue moves.\nPress [royalblue]ENTER[deepskyblue] to confirm, [royalblue]ESC[deepskyblue] to cancel.";
+                return "[skyblue]Free moving...\n[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves.\nUse [royalblue]SHIFT[deepskyblue] to run.\nPress [royalblue]ENTER[deepskyblue] to confirm, [royalblue]ESC[deepskyblue] to cancel.";
             }
             else if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
             {
@@ -225,7 +225,7 @@ namespace ProjectVagabond
                 if (restCount > 0) details.Add($"[green]{restCount}[gold] rest(s)");
                 
                 promptBuilder.AppendLine($"[gold]Pending {string.Join(", ", details)}.");
-                promptBuilder.AppendLine($"[teal]{finalEnergyText}");
+                promptBuilder.AppendLine($"[gold]{finalEnergyText}");
                 promptBuilder.Append("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel.");
 
                 return promptBuilder.ToString();
@@ -293,6 +293,9 @@ namespace ProjectVagabond
         {
             switch (colorName.ToLower())
             {
+                case "error": return Color.Crimson;
+                case "undo": return Color.DarkTurquoise;
+
                 case "palette_black": return Global.Instance.palette_Black;
                 case "palette_darkgray": return Global.Instance.palette_DarkGray;
                 case "palette_gray": return Global.Instance.palette_Gray;

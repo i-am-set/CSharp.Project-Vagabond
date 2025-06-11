@@ -10,39 +10,35 @@ namespace ProjectVagabond
     {
         private string _currentInput = "";
         private KeyboardState _previousKeyboardState;
-        private MouseState _previousMouseState; // Add mouse state tracking
+        private MouseState _previousMouseState;
         private HashSet<Keys> _processedKeys = new HashSet<Keys>();
         private bool _controlPressed = false;
-        private bool _shiftPressed = false; // Add shift state tracking
+        private bool _shiftPressed = false;
         private float _backspaceTimer = 0f;
         private float _backspaceInitialDelay = 0.3f;
         private bool _backspaceHeld = false;
         private int _cursorPosition;
         private string _clipboard = "";
-
         private List<string> _commandHistory = new List<string>();
         private int _commandHistoryIndex = -1;
         private string _currentEditingCommand = "";
 
         public string CurrentInput => _currentInput;
 
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- // 
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public void SetCurrentInput(String input)
-        {
-            _currentInput = input;
-        }
+        public void SetCurrentInput(String input) => _currentInput = input;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public void HandleInput(GameTime gameTime)
         {
             KeyboardState currentKeyboardState = Keyboard.GetState();
-            MouseState currentMouseState = Mouse.GetState(); // Get current mouse state
+            MouseState currentMouseState = Mouse.GetState();
             Keys[] pressedKeys = currentKeyboardState.GetPressedKeys();
 
-            _controlPressed = currentKeyboardState.IsKeyDown(Keys.LeftControl) || currentKeyboardState.IsKeyDown(Keys.RightControl); // Check for control key
-            _shiftPressed = currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift); // Check for shift key
+            _controlPressed = currentKeyboardState.IsKeyDown(Keys.LeftControl) || currentKeyboardState.IsKeyDown(Keys.RightControl);
+            _shiftPressed = currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift);
 
             if (currentMouseState.ScrollWheelValue != _previousMouseState.ScrollWheelValue)
             {
@@ -53,11 +49,11 @@ namespace ProjectVagabond
                 int currentOffset = Core.CurrentTerminalRenderer.ScrollOffset;
                 int maxOffset = Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - maxVisibleLines);
                 
-                if (scrollDelta > 0) // Scrolling up
+                if (scrollDelta > 0) // scrolling up
                 {
                     Core.CurrentTerminalRenderer.SetScrollOffset(Math.Min(currentOffset + Math.Abs(scrollLines), maxOffset));
                 }
-                else // Scrolling down
+                else // scrolling down
                 {
                     Core.CurrentTerminalRenderer.SetScrollOffset(Math.Max(currentOffset - Math.Abs(scrollLines), 0));
                 }
@@ -74,9 +70,9 @@ namespace ProjectVagabond
                     Core.CurrentGameState.ToggleIsFreeMoveMode(false);
                     _processedKeys.Clear();
                 }
-                else if (Core.CurrentGameState.PendingActions.Count > 0) // --- MODIFIED
+                else if (Core.CurrentGameState.PendingActions.Count > 0)
                 {
-                    Core.CurrentGameState.ClearPendingActions(); // --- MODIFIED
+                    Core.CurrentGameState.ClearPendingActions();
                     Core.CurrentTerminalRenderer.AddOutputToHistory("Pending actions cleared.");
                 }
             }
@@ -89,40 +85,79 @@ namespace ProjectVagabond
                     {
                         _processedKeys.Add(key);
 
-                        switch (key)
+                        if (!_shiftPressed)
+                            switch (key)
+                            {
+                                case Keys.W:
+                                case Keys.Up:
+                                    Core.CurrentGameState.QueueWalkMovement(new Vector2(0, -1), new string[] { "up", "1" });
+                                    break;
+                                case Keys.S:
+                                case Keys.Down:
+                                    Core.CurrentGameState.QueueWalkMovement(new Vector2(0, 1), new string[] { "down", "1" });
+                                    break;
+                                case Keys.A:
+                                case Keys.Left:
+                                    Core.CurrentGameState.QueueWalkMovement(new Vector2(-1, 0), new string[] { "left", "1" });
+                                    break;
+                                case Keys.D:
+                                case Keys.Right:
+                                    Core.CurrentGameState.QueueWalkMovement(new Vector2(1, 0), new string[] { "right", "1" });
+                                    break;
+                                case Keys.Enter:
+                                    if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+                                    {
+                                        Core.CurrentGameState.ToggleExecutingPath(true);
+                                        Core.CurrentGameState.SetCurrentPathIndex(0);
+                                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of [undo]{Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
+                                    }
+                                    else if (Core.CurrentGameState.IsExecutingPath)
+                                    {
+                                        Core.CurrentTerminalRenderer.AddOutputToHistory("Already executing an action queue.");
+                                    }
+                                    else
+                                    {
+                                        Core.CurrentTerminalRenderer.AddOutputToHistory("No actions queued.");
+                                    }
+                                    break;
+                            }
+                        else
                         {
-                            case Keys.W:
-                            case Keys.Up:
-                                Core.CurrentGameState.QueueMovement(new Vector2(0, -1), new string[] { "up", "1" });
-                                break;
-                            case Keys.S:
-                            case Keys.Down:
-                                Core.CurrentGameState.QueueMovement(new Vector2(0, 1), new string[] { "down", "1" });
-                                break;
-                            case Keys.A:
-                            case Keys.Left:
-                                Core.CurrentGameState.QueueMovement(new Vector2(-1, 0), new string[] { "left", "1" });
-                                break;
-                            case Keys.D:
-                            case Keys.Right:
-                                Core.CurrentGameState.QueueMovement(new Vector2(1, 0), new string[] { "right", "1" });
-                                break;
-                            case Keys.Enter:
-                                if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath) // --- MODIFIED
-                                {
-                                    Core.CurrentGameState.ToggleExecutingPath(true);
-                                    Core.CurrentGameState.SetCurrentPathIndex(0);
-                                    Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of [teal]{Core.CurrentGameState.PendingActions.Count}[gray] action(s)..."); // --- MODIFIED
-                                }
-                                else if (Core.CurrentGameState.IsExecutingPath)
-                                {
-                                    Core.CurrentTerminalRenderer.AddOutputToHistory("Already executing an action queue.");
-                                }
-                                else
-                                {
-                                    Core.CurrentTerminalRenderer.AddOutputToHistory("No actions queued.");
-                                }
-                                break;
+                            switch (key)
+                            {
+                                case Keys.W:
+                                case Keys.Up:
+                                    Core.CurrentGameState.QueueRunMovement(new Vector2(0, -1), new string[] { "up", "1" });
+                                    break;
+                                case Keys.S:
+                                case Keys.Down:
+                                    Core.CurrentGameState.QueueRunMovement(new Vector2(0, 1), new string[] { "down", "1" });
+                                    break;
+                                case Keys.A:
+                                case Keys.Left:
+                                    Core.CurrentGameState.QueueRunMovement(new Vector2(-1, 0), new string[] { "left", "1" });
+                                    break;
+                                case Keys.D:
+                                case Keys.Right:
+                                    Core.CurrentGameState.QueueRunMovement(new Vector2(1, 0), new string[] { "right", "1" });
+                                    break;
+                                case Keys.Enter:
+                                    if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+                                    {
+                                        Core.CurrentGameState.ToggleExecutingPath(true);
+                                        Core.CurrentGameState.SetCurrentPathIndex(0);
+                                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of [undo]{Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
+                                    }
+                                    else if (Core.CurrentGameState.IsExecutingPath)
+                                    {
+                                        Core.CurrentTerminalRenderer.AddOutputToHistory("Already executing an action queue.");
+                                    }
+                                    else
+                                    {
+                                        Core.CurrentTerminalRenderer.AddOutputToHistory("No actions queued.");
+                                    }
+                                    break;
+                            }
                         }
                     }
                 }
@@ -139,26 +174,25 @@ namespace ProjectVagabond
                         if (key == Keys.Enter)
                         {
                             Core.CurrentAutoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
-                            if (string.IsNullOrEmpty(_currentInput.Trim()) && Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath) // --- MODIFIED
+                            if (string.IsNullOrEmpty(_currentInput.Trim()) && Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
                             {
                                 Core.CurrentGameState.ToggleExecutingPath(true);
                                 Core.CurrentGameState.SetCurrentPathIndex(0);
-                                Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue with {Core.CurrentGameState.PendingActions.Count} actions..."); // --- MODIFIED
+                                Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue with {Core.CurrentGameState.PendingActions.Count} actions...");
                             }
                             else
                             {
                                 if (!string.IsNullOrEmpty(_currentInput.Trim())) // Save command to history if it's not empty
                                 {
                                     _commandHistory.Add(_currentInput.Trim());
-                                    if (_commandHistory.Count > 50) // Keep history to reasonable size
-                                    {
+                                    if (_commandHistory.Count > 50)
                                     {
                                         _commandHistory.RemoveAt(0);
                                     }
                                 }
                                 ProcessCommand(_currentInput.Trim().ToLower());
                 
-                                _commandHistoryIndex = -1;// Reset history navigation
+                                _commandHistoryIndex = -1;
                                 _currentEditingCommand = "";
                             }
                             _currentInput = "";
@@ -320,7 +354,6 @@ namespace ProjectVagabond
             }
         }
         
-
         private void HandleBackspace()
         {
             if (_currentInput.Length > 0)
