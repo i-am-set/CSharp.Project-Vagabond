@@ -203,19 +203,20 @@ namespace ProjectVagabond
         // --- REFACTORED: Prompt text is now more detailed and uses the action queue ---
         private string GetPromptText()
         {
-            //"[skyblue]Free moving...\n[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves.\nUse [royalblue]SHIFT[deepskyblue] to run.\nPress [royalblue]ENTER[deepskyblue] to confirm, [royalblue]ESC[deepskyblue] to cancel.";
             // Count different action types for a more detailed prompt
             int moveCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.Move);
             int restCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.ShortRest || a.Type == ActionType.LongRest);
                 
             var simResult = Core.CurrentGameState.PendingQueueSimulationResult;
-            string finalEnergyText = $"Final EP: {simResult.finalEnergy}/{Core.CurrentGameState.PlayerStats.MaxEnergyPoints}";
-            string finalMinutesPassed = $"Duration: {simResult.minutesPassed} minutes";
+            WorldClockManager worldClockManager = Core.CurrentWorldClockManager;
+            int minutesPassed = simResult.minutesPassed;
+            string finalETA = $"{worldClockManager.GetCalculatedNewTime(worldClockManager.CurrentTime, minutesPassed)}";
+            string formatedTimeFromMinuts = $"{worldClockManager.GetFormattedTimeFromMinutesShortHand(minutesPassed)}";
 
             var promptBuilder = new StringBuilder();
             if (Core.CurrentGameState.IsFreeMoveMode && Core.CurrentGameState.PendingActions.Count <= 0)
             {
-                promptBuilder.AppendLine("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>");
+                promptBuilder.AppendLine("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves and [royalblue]SHIFT[deepskyblue] to run>");
                 promptBuilder.AppendLine("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel.");
 
                 return promptBuilder.ToString();
@@ -237,8 +238,8 @@ namespace ProjectVagabond
                 if (restCount > 0) details.Add($"[green]{restCount}[gold] rest(s)");
                 
                 promptBuilder.AppendLine($"[gold]Pending {string.Join(", ", details)}.");
-                promptBuilder.AppendLine($"[gold]{finalEnergyText}");
-                promptBuilder.AppendLine($"[gold]{finalMinutesPassed}");
+                promptBuilder.AppendLine($"[gold]ETA: [orange]{finalETA}");
+                promptBuilder.AppendLine($"[palette_Gray]{formatedTimeFromMinuts}");
 
                 return promptBuilder.ToString();
             }
@@ -307,6 +308,7 @@ namespace ProjectVagabond
             {
                 case "error": return Color.Crimson;
                 case "undo": return Color.DarkTurquoise;
+                case "debug": return Color.Chartreuse;
 
                 case "palette_black": return Global.Instance.palette_Black;
                 case "palette_darkgray": return Global.Instance.palette_DarkGray;

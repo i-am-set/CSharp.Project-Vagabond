@@ -424,15 +424,15 @@ namespace ProjectVagabond
             string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) return;
 
-            string command = parts[0];
+            string commandName = parts[0];
 
-            if (Core.CurrentCommandProcessor.Commands.ContainsKey(command))
+            if (Core.CurrentCommandProcessor.Commands.TryGetValue(commandName, out var command))
             {
-                Core.CurrentCommandProcessor.Commands[command](parts);
+                command.Action(parts);
             }
             else
             {
-                Core.CurrentTerminalRenderer.AddOutputToHistory($"Unknown command: '{command}'. Type 'help' for available commands.");
+                Core.CurrentTerminalRenderer.AddOutputToHistory($"Unknown command: '{commandName}'. Type 'help' for available commands.");
             }
 
             Core.CurrentTerminalRenderer.SetScrollOffset(0);

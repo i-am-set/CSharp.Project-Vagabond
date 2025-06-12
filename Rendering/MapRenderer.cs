@@ -36,7 +36,7 @@ namespace ProjectVagabond
                 new Vector2(mapStartX, mapStartY - 20), Global.Instance.TextColor);
 
             // Draw the current date and time ---
-            string timeText = Core.CurrentWorldClockManager.GetTimeString();
+            string timeText = Core.CurrentWorldClockManager.CurrentTime;
             Vector2 timeTextSize = Global.Instance.DefaultFont.MeasureString(timeText);
             Vector2 timeTextPos = new Vector2(mapStartX + mapWidth - timeTextSize.X - 15, mapStartY - 20);
             _spriteBatch.DrawString(Global.Instance.DefaultFont, timeText, timeTextPos, Global.Instance.TextColor);

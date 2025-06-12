@@ -66,6 +66,7 @@ namespace ProjectVagabond
 
         // Settings variables
         public bool UseImperialUnits { get; set; } = false;
+        public bool Use24HourClock { get; set; } = false;
 
         // Input variables
         public int previousScrollValue = Mouse.GetState().ScrollWheelValue;
