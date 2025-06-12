@@ -99,6 +99,11 @@ namespace ProjectVagabond
                 _gameState.QueueRest(args);
             };
 
+            _commands["debug"] = (args) =>
+            {
+                Core.Instance.ScreenShake(intensity: 4.0f, duration: 2.2f);
+            };
+
             _commands["exit"] = (args) =>
             {
                 Core.Instance.ExitApplication();

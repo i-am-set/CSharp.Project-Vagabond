@@ -11,7 +11,8 @@ using System;
 // TODO: player customization; backgrounds, stats, bodyfat, muscle (both of which effect stat spread as well as gives buffs and needs at their extremes)
 // TODO: make queued rest energy blue or something like that
 // TODO: indicate the amount of time it takes to perform an action in the prompt
-// TODO: look into screenshake and haptics
+// TODO: Ctrl-Z undo previous path queued
+// TODO: display ETA in prompt
 namespace ProjectVagabond
 {
     public class Core : Game
@@ -30,6 +31,7 @@ namespace ProjectVagabond
         private static readonly CommandProcessor _commandProcessor = new();
         private static readonly StatsRenderer _statsRenderer = new();
         private static readonly WorldClockManager _worldClockManager = new();
+        private static readonly ScreenShakeManager _screenShakeManager = new();
 
         // Public references //
         public static GameState CurrentGameState => _gameState;
@@ -41,6 +43,7 @@ namespace ProjectVagabond
         public static InputHandler CurrentInputHandler => _inputHandler;
         public static StatsRenderer CurrentStatsRenderer => _statsRenderer;
         public static WorldClockManager CurrentWorldClockManager => _worldClockManager;
+        public static ScreenShakeManager CurrentScreenShakeManager => _screenShakeManager;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -84,6 +87,7 @@ namespace ProjectVagabond
             _inputHandler.HandleInput(gameTime);
             _gameState.UpdateMovement(gameTime);
             _statsRenderer.Update(gameTime);
+            _screenShakeManager.Update(gameTime);
 
             base.Update(gameTime);
         }
@@ -92,8 +96,9 @@ namespace ProjectVagabond
         {
             GraphicsDevice.Clear(Global.Instance.GameBg);
 
-            Global.Instance.CurrentSpriteBatch.Begin();
+            Matrix shakeMatrix = _screenShakeManager.GetShakeMatrix();
 
+            Global.Instance.CurrentSpriteBatch.Begin(transformMatrix: shakeMatrix);
 
             _mapRenderer.DrawMap();
             _terminalRenderer.DrawTerminal();
@@ -109,6 +114,11 @@ namespace ProjectVagabond
         public void ExitApplication()
         {
             Exit();
+        }
+
+        public void ScreenShake(float intensity, float duration)
+        {
+            CurrentScreenShakeManager.TriggerShake(intensity, duration);
         }
     }
 }

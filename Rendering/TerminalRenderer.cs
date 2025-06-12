@@ -203,23 +203,34 @@ namespace ProjectVagabond
         // --- REFACTORED: Prompt text is now more detailed and uses the action queue ---
         private string GetPromptText()
         {
-            if (Core.CurrentGameState.IsFreeMoveMode)
+            //"[skyblue]Free moving...\n[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves.\nUse [royalblue]SHIFT[deepskyblue] to run.\nPress [royalblue]ENTER[deepskyblue] to confirm, [royalblue]ESC[deepskyblue] to cancel.";
+            // Count different action types for a more detailed prompt
+            int moveCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.Move);
+            int restCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.ShortRest || a.Type == ActionType.LongRest);
+                
+            var simResult = Core.CurrentGameState.PendingQueueSimulationResult;
+            string finalEnergyText = $"Final EP: {simResult.finalEnergy}/{Core.CurrentGameState.PlayerStats.MaxEnergyPoints}";
+            string finalMinutesPassed = $"Duration: {simResult.minutesPassed} minutes";
+
+            var promptBuilder = new StringBuilder();
+            if (Core.CurrentGameState.IsFreeMoveMode && Core.CurrentGameState.PendingActions.Count <= 0)
             {
-                return "[skyblue]Free moving...\n[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves.\nUse [royalblue]SHIFT[deepskyblue] to run.\nPress [royalblue]ENTER[deepskyblue] to confirm, [royalblue]ESC[deepskyblue] to cancel.";
+                promptBuilder.AppendLine("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>");
+                promptBuilder.AppendLine("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel.");
+
+                return promptBuilder.ToString();
             }
             else if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
             {
-                // Count different action types for a more detailed prompt
-                int moveCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.Move);
-                int restCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.ShortRest || a.Type == ActionType.LongRest);
-                
-                var simResult = Core.CurrentGameState.PendingQueueSimulationResult;
-                string finalEnergyText = $"Final EP: {simResult.finalEnergy}/{Core.CurrentGameState.PlayerStats.MaxEnergyPoints}";
-                string finalMinutesPassed = $"Duration: {simResult.minutesPassed} minutes";
-
-                // Build the prompt string
-                var promptBuilder = new StringBuilder();
-                promptBuilder.AppendLine("[khaki]Previewing action queue...");
+                if (Core.CurrentGameState.IsFreeMoveMode)
+                {
+                    promptBuilder.AppendLine("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>");
+                }
+                else
+                {
+                    promptBuilder.AppendLine("[khaki]Previewing action queue...");
+                }
+                promptBuilder.AppendLine("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel.");
 
                 var details = new List<string>();
                 if (moveCount > 0) details.Add($"[orange]{moveCount}[gold] move(s)");
@@ -228,7 +239,6 @@ namespace ProjectVagabond
                 promptBuilder.AppendLine($"[gold]Pending {string.Join(", ", details)}.");
                 promptBuilder.AppendLine($"[gold]{finalEnergyText}");
                 promptBuilder.AppendLine($"[gold]{finalMinutesPassed}");
-                promptBuilder.Append("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel.");
 
                 return promptBuilder.ToString();
             }
