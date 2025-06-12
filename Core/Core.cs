@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
@@ -11,6 +11,7 @@ using System;
 // TODO: player customization; backgrounds, stats, bodyfat, muscle (both of which effect stat spread as well as gives buffs and needs at their extremes)
 // TODO: make queued rest energy blue or something like that
 // TODO: indicate the amount of time it takes to perform an action in the prompt
+// TODO: look into screenshake and haptics
 namespace ProjectVagabond
 {
     public class Core : Game
