@@ -35,11 +35,13 @@ namespace ProjectVagabond
             _spriteBatch.DrawString(Global.Instance.DefaultFont, posText,
                 new Vector2(mapStartX, mapStartY - 20), Global.Instance.TextColor);
 
-            // --- ADDED: Draw the current date and time ---
+            // Draw the current date and time ---
+            var simResult = Core.CurrentGameState.PendingQueueSimulationResult;
             string timeText = Core.CurrentWorldClockManager.GetTimeString();
+            string pendingTimeText = " +"+simResult.minutesPassed.ToString();
             Vector2 timeTextSize = Global.Instance.DefaultFont.MeasureString(timeText);
             Vector2 timeTextPos = new Vector2(mapStartX + mapWidth - timeTextSize.X - 15, mapStartY - 20);
-            _spriteBatch.DrawString(Global.Instance.DefaultFont, timeText, timeTextPos, Global.Instance.TextColor);
+            _spriteBatch.DrawString(Global.Instance.DefaultFont, timeText + pendingTimeText, timeTextPos, Global.Instance.TextColor);
 
             // Generate grid elements //
             var gridElements = GenerateMapGridElements(mapStartX, mapStartY);

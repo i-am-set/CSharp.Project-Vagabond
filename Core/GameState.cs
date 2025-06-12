@@ -134,7 +134,7 @@ namespace ProjectVagabond
         public int GetMinutesPassedDuringMovement(ActionType actionType, string terrainType)
         {
             int timePassed= 0;
-            timePassed = terrainType switch
+            timePassed = terrainType.ToUpper() switch
             {
                 "FLATLANDS" => 2,
                 "HILLS" => 4,
@@ -165,7 +165,7 @@ namespace ProjectVagabond
                 {
                     case ActionType.Move:
                     case ActionType.RunMove:
-                        minutesPassed += GetMinutesPassedDuringMovement(action.Type, GetTerrainDescription((int)action.Position.X, (int)action.Position.Y)); // HACK: finish this logic
+                        minutesPassed += GetMinutesPassedDuringMovement(action.Type, GetTerrainDescription((int)action.Position.X, (int)action.Position.Y));
                         int cost = GetMovementEnergyCost(action);
                         if (currentEnergy < cost)
                         {
