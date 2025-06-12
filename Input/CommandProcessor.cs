@@ -153,9 +153,9 @@ namespace ProjectVagabond
             {
                 _gameState.QueueRest(args);
             },
-            "rest <short|long> [gray]- Queue a rest action.",
+            "rest <short|long|full> [gray]- Queue a rest action.",
             (args) => {
-                if (args.Length == 0) return new List<string> { "short", "long" };
+                if (args.Length == 0) return new List<string> { "short", "long", "full" };
                 return new List<string>();
             });
 

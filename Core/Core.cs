@@ -8,10 +8,8 @@ using System;
 // TODO: make the map generation more complex, e.g. add rivers, lakes, etc.
 // TODO: world time mechanic
 // TODO: player customization; backgrounds, stats, bodyfat, muscle (both of which effect stat spread as well as gives buffs and needs at their extremes)
-// TODO: make queued rest energy blue or something like that
 // TODO: Ctrl-Z undo previous path queued
-// TODO: display ETA in prompt
-// TODO: make short rest take less time, long rest take way less time, and sleep/"full" rest to take the 8 hours that long rest takes, but make it random between 6 and 11 hours
+// TODO: Make resting take random time (full rest between 6 and 11 hours)
 namespace ProjectVagabond
 {
     public class Core : Game

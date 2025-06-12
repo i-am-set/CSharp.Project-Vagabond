@@ -168,7 +168,6 @@ namespace ProjectVagabond
                 }
             }
 
-            // --- REFACTORED: Status line now uses PendingActions ---
             int statusY = terminalY + terminalHeight + 15;
             string statusText = $"Actions Queued: {Core.CurrentGameState.PendingActions.Count}";
             if (Core.CurrentGameState.IsExecutingPath)
@@ -178,7 +177,6 @@ namespace ProjectVagabond
             string wrappedStatus = WrapText(statusText, GetTerminalWidthInChars());
             _spriteBatch.DrawString(_defaultFont, wrappedStatus, new Vector2(terminalX, statusY), Global.Instance.palette_LightGray);
 
-            // --- REFACTORED: Prompt line uses new GetPromptText logic ---
             int promptY = statusY + (wrappedStatus.Split('\n').Length * Global.TERMINAL_LINE_SPACING) + 10;
             string promptText = GetPromptText();
             if (!string.IsNullOrEmpty(promptText))
@@ -200,7 +198,6 @@ namespace ProjectVagabond
             }
         }
 
-        // --- REFACTORED: Prompt text is now more detailed and uses the action queue ---
         private string GetPromptText()
         {
             // Count different action types for a more detailed prompt
@@ -309,6 +306,7 @@ namespace ProjectVagabond
                 case "error": return Color.Crimson;
                 case "undo": return Color.DarkTurquoise;
                 case "debug": return Color.Chartreuse;
+                case "rest": return Color.LightGreen;
 
                 case "palette_black": return Global.Instance.palette_Black;
                 case "palette_darkgray": return Global.Instance.palette_DarkGray;

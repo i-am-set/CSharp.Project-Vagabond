@@ -136,7 +136,9 @@ namespace ProjectVagabond
                     OnSeasonChanged?.Invoke();
                 }
             }
-            
+
+            Core.CurrentTerminalRenderer.AddOutputToHistory($"[dimgray]{totalMinutesToAdd} minutes passed");
+
             // Notify listeners that time has changed
             OnTimeChanged?.Invoke();
         }

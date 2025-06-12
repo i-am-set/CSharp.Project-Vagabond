@@ -12,7 +12,8 @@ namespace ProjectVagabond
         WalkMove,
         RunMove,
         ShortRest,
-        LongRest
+        LongRest,
+        FullRest
     }
 
     public class PendingAction
@@ -30,7 +31,10 @@ namespace ProjectVagabond
 
         public PendingAction(RestType restType, Vector2 position)
         {
-            Type = restType == RestType.ShortRest ? ActionType.ShortRest : ActionType.LongRest;
+            if (restType == RestType.ShortRest) Type = ActionType.ShortRest;
+            else if (restType == RestType.LongRest) Type = ActionType.LongRest;
+            else if (restType == RestType.FullRest) Type = ActionType.FullRest;
+
             Position = position;
             this.ActionRestType = restType;
         }
@@ -158,7 +162,7 @@ namespace ProjectVagabond
         public (int finalEnergy, bool possible, int minutesPassed) SimulateActionQueueEnergy(List<PendingAction> customQueue = null)
         {
             var queueToSimulate = customQueue ?? _pendingActions;
-            int currentEnergy = _playerStats.CurrentEnergyPoints;
+            int finalEnergy = _playerStats.CurrentEnergyPoints;
             int maxEnergy = _playerStats.MaxEnergyPoints;
             int minutesPassed = 0;
 
@@ -170,26 +174,33 @@ namespace ProjectVagabond
                     case ActionType.RunMove:
                         minutesPassed += GetMinutesPassedDuringMovement(action.Type, GetTerrainDescription((int)action.Position.X, (int)action.Position.Y));
                         int cost = GetMovementEnergyCost(action);
-                        if (currentEnergy < cost)
+                        if (finalEnergy < cost)
                         {
-                            return (currentEnergy, false, minutesPassed);
+                            return (finalEnergy, false, minutesPassed);
                         }
-                        currentEnergy -= cost;
+                        finalEnergy -= cost;
                         break;
                     case ActionType.ShortRest:
-                        currentEnergy += (int)Math.Floor((double)maxEnergy * 0.8f);
-                        currentEnergy = Math.Min(currentEnergy, maxEnergy);
+                        finalEnergy += _playerStats.ShortRestEnergyRestored;
+                        finalEnergy = Math.Min(finalEnergy, maxEnergy);
 
                         minutesPassed += _playerStats.ShortRestDuration;
                         break;
                     case ActionType.LongRest:
-                        currentEnergy = maxEnergy;
+                        finalEnergy += _playerStats.LongRestEnergyRestored;
+                        finalEnergy = Math.Min(finalEnergy, maxEnergy);
 
                         minutesPassed += _playerStats.LongRestDuration;
                         break;
+                    case ActionType.FullRest:
+                        finalEnergy += _playerStats.FullRestEnergyRestored;
+                        finalEnergy = Math.Min(finalEnergy, maxEnergy);
+
+                        minutesPassed += _playerStats.FullRestDuration;
+                        break;
                 }
             }
-            return (currentEnergy, true, minutesPassed);
+            return (finalEnergy, true, minutesPassed);
         }
 
         public void QueueRest(string[] args)
@@ -201,16 +212,26 @@ namespace ProjectVagabond
             }
 
             RestType restType = RestType.ShortRest;
-            if (args.Length > 1 && args[1].ToLower() == "long")
+            if (args.Length > 1)
             {
-                restType = RestType.LongRest;
+                if (args[1].ToLower() == "short")
+                {
+                    restType = RestType.ShortRest;
+                }
+                else if (args[1].ToLower() == "long")
+                {
+                    restType = RestType.LongRest;
+                }
+                else if (args[1].ToLower() == "full")
+                {
+                    restType = RestType.FullRest;
+                }
             }
 
             Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
             _pendingActions.Add(new PendingAction(restType, restPosition));
 
-            int finalEnergy = SimulateActionQueueEnergy().finalEnergy;
-            Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {restType.ToString().ToLower()} rest.");
+            Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {args[1].ToLower()} rest.");
         }
         
         private void QueueMovementInternal(Vector2 direction, string[] args, bool isRunning)
@@ -360,13 +381,11 @@ namespace ProjectVagabond
             }
         }
 
-        // --- NEW: Public method for running (energy cost) ---
         public void QueueRunMovement(Vector2 direction, string[] args)
         {
             QueueMovementInternal(direction, args, true);
         }
 
-        // --- NEW: Public method for walking (zero energy cost) ---
         public void QueueWalkMovement(Vector2 direction, string[] args)
         {
             QueueMovementInternal(direction, args, false);
@@ -410,25 +429,30 @@ namespace ProjectVagabond
                                 _playerStats.ExertEnergy(energyCost);
                                 var currentMapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
                                 string moveType = nextAction.Type == ActionType.RunMove ? "Ran" : "Walked";
-                                Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through [gold]{currentMapData.TerrainType.ToLower()}[khaki] in {minutesPassed} minutes.[/o] <{(int)nextPosition.X}, {(int)nextPosition.Y}>");
+                                Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through [gold]{currentMapData.TerrainType.ToLower()}[khaki].[/o] <{(int)nextPosition.X}, {(int)nextPosition.Y}>");
                                 Core.CurrentWorldClockManager.PassTime(minutes: minutesPassed);
                                 break;
 
                             case ActionType.ShortRest:
                             case ActionType.LongRest:
+                            case ActionType.FullRest:
                                 _playerStats.Rest(nextAction.ActionRestType.Value);
                                 string restType = nextAction.ActionRestType.Value == RestType.ShortRest ? "short" : "long";
-                                Core.CurrentTerminalRenderer.AddOutputToHistory($"[green]Completed {restType.ToLower()} rest. Energy is now {_playerStats.CurrentEnergyPoints}.");
+                                Core.CurrentTerminalRenderer.AddOutputToHistory($"[rest]Completed {restType.ToLower()} rest. Energy is now {_playerStats.CurrentEnergyPoints}/{_playerStats.MaxEnergyPoints}.");
 
                                 if (nextAction.ActionRestType.Value == RestType.ShortRest)
                                 {
                                     Core.CurrentWorldClockManager.PassTime(minutes: _playerStats.ShortRestDuration);
                                 }
-                                else
+                                else if (nextAction.ActionRestType.Value == RestType.LongRest)
                                 {
                                     Core.CurrentWorldClockManager.PassTime(minutes: _playerStats.LongRestDuration);
                                 }
-                                break;
+                                else if (nextAction.ActionRestType.Value == RestType.FullRest)
+                                {
+                                    Core.CurrentWorldClockManager.PassTime(hours: _playerStats.FullRestDuration);
+                                }
+                                    break;
                         }
 
                         _currentPathIndex++;

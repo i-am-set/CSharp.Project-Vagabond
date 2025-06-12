@@ -19,8 +19,9 @@ namespace ProjectVagabond
         private int _carryCapacity;
         private int _mentalResistance;
         private int _socialInfluence;
-        private int _shortRestDuration = 30; // minutes
-        private int _longRestDuration = 60*8;
+        private int _shortRestDuration = 10; // minutes
+        private int _longRestDuration = 60;
+        private int _fullRestDuration = 60*8;
 
         // Current values
         private int _currentHealthPoints;
@@ -57,6 +58,10 @@ namespace ProjectVagabond
         public int SocialInfluence => _socialInfluence;
         public int ShortRestDuration => _shortRestDuration; // in minutes
         public int LongRestDuration => _longRestDuration; // in minutes
+        public int FullRestDuration => _fullRestDuration; // in minutes
+        public int ShortRestEnergyRestored => (int)Math.Floor((double)_maxEnergyPoints*0.8f);
+        public int LongRestEnergyRestored => _maxEnergyPoints;
+        public int FullRestEnergyRestored => _maxEnergyPoints;
 
         // Current values (read-only)
         public int CurrentHealthPoints => _currentHealthPoints;
@@ -83,7 +88,7 @@ namespace ProjectVagabond
             SetMainStats(strength, agility, tenacity, intelligence, charm);
             
             // Set default character info
-            _weight = 70f; // Always stored in kg internally
+            _weight = 70f;
             _age = 25;
             _background = "Wanderer";
             
@@ -278,13 +283,13 @@ namespace ProjectVagabond
             {
                 case RestType.ShortRest:
                     // Short rest: restore some energy, minor health
-                    RestoreEnergy((int)Math.Floor((double)_maxEnergyPoints*0.8f));
+                    RestoreEnergy(ShortRestEnergyRestored);
                     Heal((int)Math.Ceiling(_maxHealthPoints*0.25f));
                     break;
 
                 case RestType.LongRest:
                     // Long rest: restore most energy, moderate health
-                    RestoreEnergy(_maxEnergyPoints);
+                    RestoreEnergy(LongRestEnergyRestored);
                     Heal((int)Math.Ceiling(_maxHealthPoints * 0.5f));
                     break;
 
@@ -298,7 +303,7 @@ namespace ProjectVagabond
         public void RestoreToFull()
         {
             SetHealth(_maxHealthPoints);
-            SetEnergy(_maxEnergyPoints);
+            SetEnergy(FullRestEnergyRestored);
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

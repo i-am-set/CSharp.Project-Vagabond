@@ -77,7 +77,6 @@ namespace ProjectVagabond
             Rectangle barBg = new Rectangle(barX - 2, barY - 2, barWidth + 4, 10);
             spriteBatch.Draw(pixel, barBg, Global.Instance.palette_DarkGray);
 
-            // --- REFACTORED: Energy bar preview logic ---
             int currentEnergy = stats.CurrentEnergyPoints;
             int maxEnergy = stats.MaxEnergyPoints;
             bool hasPendingActions = _gameState.PendingActions.Count > 0;
@@ -180,7 +179,6 @@ namespace ProjectVagabond
             // Check EP bar hover
             else if (_epBarBounds.Contains(mousePosition))
             {
-                // --- REFACTORED: Tooltip for new action queue ---
                 if (_gameState.PendingActions.Count > 0)
                 {
                     var simResult = _gameState.PendingQueueSimulationResult;
