@@ -29,7 +29,7 @@ namespace ProjectVagabond
         private static readonly CommandProcessor _commandProcessor = new();
         private static readonly StatsRenderer _statsRenderer = new();
         private static readonly WorldClockManager _worldClockManager = new();
-        private static readonly ScreenShakeManager _screenShakeManager = new();
+        private static readonly HapticsManager _hapticsManager = new();
 
         // Public references //
         public static GameState CurrentGameState => _gameState;
@@ -41,7 +41,7 @@ namespace ProjectVagabond
         public static InputHandler CurrentInputHandler => _inputHandler;
         public static StatsRenderer CurrentStatsRenderer => _statsRenderer;
         public static WorldClockManager CurrentWorldClockManager => _worldClockManager;
-        public static ScreenShakeManager CurrentScreenShakeManager => _screenShakeManager;
+        public static HapticsManager CurrentHapticsManager => _hapticsManager;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -85,7 +85,7 @@ namespace ProjectVagabond
             _inputHandler.HandleInput(gameTime);
             _gameState.UpdateMovement(gameTime);
             _statsRenderer.Update(gameTime);
-            _screenShakeManager.Update(gameTime);
+            _hapticsManager.Update(gameTime);
 
             base.Update(gameTime);
         }
@@ -94,7 +94,7 @@ namespace ProjectVagabond
         {
             GraphicsDevice.Clear(Global.Instance.GameBg);
 
-            Matrix shakeMatrix = _screenShakeManager.GetShakeMatrix();
+            Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
 
             Global.Instance.CurrentSpriteBatch.Begin(transformMatrix: shakeMatrix);
 
@@ -109,14 +109,29 @@ namespace ProjectVagabond
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public void ExitApplication()
-        {
-            Exit();
-        }
+        public void ExitApplication() => Exit();
 
-        public void ScreenShake(float intensity, float duration)
-        {
-            CurrentScreenShakeManager.TriggerShake(intensity, duration);
-        }
+        public static void ScreenShake(float intensity, float duration) =>
+            _hapticsManager.TriggerShake(intensity, duration);
+
+        public static void ScreenHop(float intensity, float duration) =>
+            _hapticsManager.TriggerHop(intensity, duration);
+
+        public static void ScreenPulse(float intensity, float duration) =>
+            _hapticsManager.TriggerPulse(intensity, duration);
+
+        public static void ScreenWobble(float intensity, float duration, float frequency = 5f) =>
+            _hapticsManager.TriggerWobble(intensity, duration, frequency);
+
+        public static void ScreenDrift(Vector2 direction, float intensity, float duration) =>
+            _hapticsManager.TriggerDrift(direction, intensity, duration);
+
+        public static void ScreenBounce(Vector2 direction, float intensity, float duration) =>
+            _hapticsManager.TriggerBounce(direction, intensity, duration);
+
+        public static void ScreenRandomHop(float intensity, float duration) =>
+            _hapticsManager.TriggerRandomHop(intensity, duration);
+
+        public static void StopAllHaptics() => _hapticsManager.StopAll();
     }
 }

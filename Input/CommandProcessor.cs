@@ -162,12 +162,13 @@ namespace ProjectVagabond
             _commands["debug"] = new Command("debug", (args) =>
             {
                 AddToHistory("[debug]This is a debug command for testing purposes.");
-                Core.Instance.ScreenShake(intensity: 4.0f, duration: 2.2f);
+                Core.ScreenShake(intensity: 4.0f, duration: 2.2f);
             }, "debug - Generic debug command");
 
             _commands["debug2"] = new Command("debug2", (args) =>
             {
                 AddToHistory("[debug]This is a second debug command for testing purposes.");
+                Core.ScreenWobble(intensity: 4.0f, duration: 0.2f);
             }, "debug - Generic debug command 2");
 
             _commands["exit"] = new Command("exit", (args) =>

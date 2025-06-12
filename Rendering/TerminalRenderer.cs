@@ -277,7 +277,7 @@ namespace ProjectVagabond
                         }
                         else
                         {
-                            if (colorTag == "error") Core.Instance.ScreenShake(2, 0.25f);
+                            if (colorTag == "error") Core.ScreenShake(2, 0.25f);
                             currentColor = ParseColor(colorTag);
                         }
                     }
