@@ -69,7 +69,7 @@ namespace ProjectVagabond
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public void ClearPendingActions()
+        public void CancelPendingActions()
         {
             _pendingActions.Clear();
         }
@@ -229,20 +229,42 @@ namespace ProjectVagabond
 
             while (_pendingActions.Count > 0 && removedSteps < count)
             {
-                PendingAction lastAction = _pendingActions.Last();
-                if (lastAction.Type != ActionType.Move && lastAction.Type != ActionType.RunMove) break;
+                // Find the index of the last movement action (Move or RunMove).
+                int lastMoveIndex = -1;
+                for (int i = _pendingActions.Count - 1; i >= 0; i--)
+                {
+                    var action = _pendingActions[i];
+                    if (action.Type == ActionType.Move || action.Type == ActionType.RunMove)
+                    {
+                        lastMoveIndex = i;
+                        break;
+                    }
+                }
 
-                Vector2 lastStep = lastAction.Position;
-                Vector2 prevPos = _pendingActions.Count > 1 ? _pendingActions[_pendingActions.Count - 2].Position : _playerWorldPos;
-                Vector2 lastDirection = lastStep - prevPos;
+                // If there are no moves to backtrack, exit the loop.
+                if (lastMoveIndex == -1)
+                {
+                    break;
+                }
 
+                PendingAction lastMoveAction = _pendingActions[lastMoveIndex];
+        
+                // Determine the position before this move to calculate its direction.
+                Vector2 prevPos = (lastMoveIndex > 0) ? _pendingActions[lastMoveIndex - 1].Position : _playerWorldPos;
+
+                Vector2 lastDirection = lastMoveAction.Position - prevPos;
+
+                // Check if the last move was in the opposite direction of the new move.
                 if (lastDirection == oppositeDirection)
                 {
-                    _pendingActions.RemoveAt(_pendingActions.Count - 1);
+                    // Backtrack: Remove the move and any subsequent rests.
+                    int actionsToRemoveCount = _pendingActions.Count - lastMoveIndex;
+                    _pendingActions.RemoveRange(lastMoveIndex, actionsToRemoveCount);
                     removedSteps++;
                 }
                 else
                 {
+                    // The last move was not a backtrack, so stop.
                     break;
                 }
             }
@@ -263,7 +285,7 @@ namespace ProjectVagabond
                         Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot move here... terrain is impassable! <{mapData.TerrainType.ToLower()}>");
                         break;
                     }
-                    
+            
                     var nextAction = new PendingAction(nextPos, isRunning);
                     var tempQueue = new List<PendingAction>(_pendingActions) { nextAction };
                     var simulationResult = SimulateActionQueueEnergy(tempQueue);
@@ -274,7 +296,7 @@ namespace ProjectVagabond
                         {
                             Core.CurrentTerminalRenderer.AddOutputToHistory("[gold]Not enough energy. Auto-queuing a short rest.");
                             Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
-                            
+                    
                             var tempQueueWithRest = new List<PendingAction>(_pendingActions);
                             tempQueueWithRest.Add(new PendingAction(RestType.ShortRest, restPosition));
                             tempQueueWithRest.Add(nextAction);

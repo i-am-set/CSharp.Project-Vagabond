@@ -61,16 +61,16 @@ namespace ProjectVagabond
             _commands["left"] = (args) => _gameState.QueueWalkMovement(new Vector2(-1, 0), args);
             _commands["right"] = (args) => _gameState.QueueWalkMovement(new Vector2(1, 0), args);
 
-            _commands["clear"] = (args) =>
+            _commands["cancel"] = (args) =>
             {
                 if (_gameState.PendingActions.Count > 0)
                 {
-                    _gameState.ClearPendingActions();
-                    AddOutputToHistory("Pending actions cleared.");
+                    _gameState.CancelPendingActions();
+                    AddOutputToHistory("Pending actions canceled.");
                 }
                 else
                 {
-                    AddOutputToHistory("No pending actions to clear.");
+                    AddOutputToHistory("No pending actions to cancel.");
                 }
             };
 
