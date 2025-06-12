@@ -89,7 +89,7 @@ namespace ProjectVagabond
                         if (actionsAtPos.Any(a => a.Type == ActionType.LongRest)) isLongRest = true;
                         if (actionsAtPos.Any(a => a.Type == ActionType.RunMove)) isRunning = true;
                         
-                        if (actionsAtPos.Any(a => a.Type == ActionType.Move || a.Type == ActionType.RunMove))
+                        if (actionsAtPos.Any(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove))
                         {
                             if (actionsAtPos.Any(a => a.Type == ActionType.RunMove))
                             {
@@ -97,7 +97,7 @@ namespace ProjectVagabond
                             }
 
                             isPath = true;
-                            var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a.Type == ActionType.Move || a.Type == ActionType.RunMove);
+                            var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
                             if (lastMoveAction != null && lastMoveAction.Position == worldPos)
                             {
                                 isPathEnd = true;

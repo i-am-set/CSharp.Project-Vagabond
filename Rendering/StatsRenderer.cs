@@ -51,7 +51,7 @@ namespace ProjectVagabond
 
             // Secondary stats in compact format
             currentY += 16;
-            string secondaryStats = $"Spd:{stats.MoveSpeed:F1} Car:{stats.CarryCapacity} Men:{stats.MentalResistance} Soc:{stats.SocialInfluence}";
+            string secondaryStats = $"Spd:{stats.WalkSpeed:F1} Car:{stats.CarryCapacity} Men:{stats.MentalResistance} Soc:{stats.SocialInfluence}";
             _spriteBatch.DrawString(Global.Instance.DefaultFont, secondaryStats, new Vector2(baseX, currentY), Global.Instance.palette_LightGray);
 
             // Draw tooltip if needed

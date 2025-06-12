@@ -204,19 +204,19 @@ namespace ProjectVagabond
         private string GetPromptText()
         {
             // Count different action types for a more detailed prompt
-            int moveCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.Move);
+            int moveCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
             int restCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.ShortRest || a.Type == ActionType.LongRest);
                 
             var simResult = Core.CurrentGameState.PendingQueueSimulationResult;
             WorldClockManager worldClockManager = Core.CurrentWorldClockManager;
             int minutesPassed = simResult.minutesPassed;
             string finalETA = $"{worldClockManager.GetCalculatedNewTime(worldClockManager.CurrentTime, minutesPassed)}";
-            string formatedTimeFromMinuts = $"{worldClockManager.GetFormattedTimeFromMinutesShortHand(minutesPassed)}";
+            string formatedTimeFromMinutes = $"{worldClockManager.GetFormattedTimeFromMinutesShortHand(minutesPassed)}";
 
             var promptBuilder = new StringBuilder();
             if (Core.CurrentGameState.IsFreeMoveMode && Core.CurrentGameState.PendingActions.Count <= 0)
             {
-                promptBuilder.AppendLine("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves and [royalblue]SHIFT[deepskyblue] to run>");
+                promptBuilder.AppendLine("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>");
                 promptBuilder.AppendLine("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel.");
 
                 return promptBuilder.ToString();
@@ -238,8 +238,8 @@ namespace ProjectVagabond
                 if (restCount > 0) details.Add($"[green]{restCount}[gold] rest(s)");
                 
                 promptBuilder.AppendLine($"[gold]Pending {string.Join(", ", details)}.");
-                promptBuilder.AppendLine($"[gold]ETA: [orange]{finalETA}");
-                promptBuilder.AppendLine($"[palette_Gray]{formatedTimeFromMinuts}");
+                promptBuilder.AppendLine($"[gold]Arrival Time: [orange]{finalETA}");
+                promptBuilder.AppendLine($"[palette_Gray]{formatedTimeFromMinutes}");
 
                 return promptBuilder.ToString();
             }

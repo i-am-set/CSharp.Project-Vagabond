@@ -9,7 +9,7 @@ namespace ProjectVagabond
 {
     public enum ActionType
     {
-        Move,
+        WalkMove,
         RunMove,
         ShortRest,
         LongRest
@@ -23,7 +23,7 @@ namespace ProjectVagabond
 
         public PendingAction(Vector2 position, bool isRunning = true)
         {
-            Type = isRunning ? ActionType.RunMove : ActionType.Move;
+            Type = isRunning ? ActionType.RunMove : ActionType.WalkMove;
             Position = position;
             ActionRestType = null;
         }
@@ -64,7 +64,7 @@ namespace ProjectVagabond
 
             int masterSeed = RandomNumberGenerator.GetInt32(1, 99999) + Environment.TickCount;
             _noiseManager = new NoiseMapManager(masterSeed);
-            _playerStats = new PlayerStats(5, 5, 5, 5, 5);
+            _playerStats = new PlayerStats(5, 10, 5, 5, 5);
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -109,7 +109,7 @@ namespace ProjectVagabond
 
         public int GetMovementEnergyCost(PendingAction action)
         {
-            if (action.Type == ActionType.Move)
+            if (action.Type == ActionType.WalkMove)
             {
                 return 0;
             }
@@ -134,20 +134,23 @@ namespace ProjectVagabond
         public int GetMinutesPassedDuringMovement(ActionType actionType, string terrainType)
         {
             int timePassed= 0;
-            timePassed = terrainType.ToUpper() switch
-            {
-                "FLATLANDS" => 2,
-                "HILLS" => 4,
-                "MOUNTAINS" => 10,
-                _ => 2
-            };
 
-            timePassed = actionType switch
+            timePassed += actionType switch
             {
-                ActionType.Move => timePassed,
-                ActionType.RunMove => (int)Math.Floor(timePassed * 0.5f),
+                ActionType.WalkMove => (int)Math.Ceiling(6/_playerStats.WalkSpeed),
+                ActionType.RunMove => (int)Math.Ceiling(6/_playerStats.RunSpeed),
                 _ => timePassed
             };
+
+            timePassed += terrainType.ToUpper() switch
+            {
+                "FLATLANDS" => 0,
+                "HILLS" => (int)Math.Ceiling(timePassed*0.5f),
+                "MOUNTAINS" => timePassed+5,
+                _ => 0
+            };
+
+            
 
             return timePassed;
         }
@@ -163,7 +166,7 @@ namespace ProjectVagabond
             {
                 switch (action.Type)
                 {
-                    case ActionType.Move:
+                    case ActionType.WalkMove:
                     case ActionType.RunMove:
                         minutesPassed += GetMinutesPassedDuringMovement(action.Type, GetTerrainDescription((int)action.Position.X, (int)action.Position.Y));
                         int cost = GetMovementEnergyCost(action);
@@ -177,12 +180,12 @@ namespace ProjectVagabond
                         currentEnergy += (int)Math.Floor((double)maxEnergy * 0.8f);
                         currentEnergy = Math.Min(currentEnergy, maxEnergy);
 
-                        minutesPassed = _playerStats.ShortRestDuration;
+                        minutesPassed += _playerStats.ShortRestDuration;
                         break;
                     case ActionType.LongRest:
                         currentEnergy = maxEnergy;
 
-                        minutesPassed = _playerStats.LongRestDuration;
+                        minutesPassed += _playerStats.LongRestDuration;
                         break;
                 }
             }
@@ -234,7 +237,7 @@ namespace ProjectVagabond
                 for (int i = _pendingActions.Count - 1; i >= 0; i--)
                 {
                     var action = _pendingActions[i];
-                    if (action.Type == ActionType.Move || action.Type == ActionType.RunMove)
+                    if (action.Type == ActionType.WalkMove || action.Type == ActionType.RunMove)
                     {
                         lastMoveIndex = i;
                         break;
@@ -383,7 +386,7 @@ namespace ProjectVagabond
 
                         switch (nextAction.Type)
                         {
-                            case ActionType.Move:
+                            case ActionType.WalkMove:
                             case ActionType.RunMove:
                                 Vector2 nextPosition = nextAction.Position;
                                 var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);

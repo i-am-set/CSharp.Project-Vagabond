@@ -14,7 +14,8 @@ namespace ProjectVagabond
         // Secondary stats (calculated from main stats)
         private int _maxHealthPoints;
         private int _maxEnergyPoints;
-        private float _moveSpeed;
+        private float _walkSpeed;
+        private float _runSpeed;
         private int _carryCapacity;
         private int _mentalResistance;
         private int _socialInfluence;
@@ -49,7 +50,8 @@ namespace ProjectVagabond
         // Secondary stats (read-only)
         public int MaxHealthPoints => _maxHealthPoints;
         public int MaxEnergyPoints => _maxEnergyPoints;
-        public float MoveSpeed => _moveSpeed;
+        public float WalkSpeed => _walkSpeed;
+        public float RunSpeed => _runSpeed;
         public int CarryCapacity => _carryCapacity;
         public int MentalResistance => _mentalResistance;
         public int SocialInfluence => _socialInfluence;
@@ -152,9 +154,10 @@ namespace ProjectVagabond
             int _calculatedEnergyPoints = 5 + (int)Math.Floor(_agility*0.5f);
             _maxEnergyPoints = Math.Min(_calculatedEnergyPoints, Global.MAX_MAX_HEALTH_ENERGY);
 
-            // Move Speed = Base(1.0) + (Agility * 0.1) - (Weight factor)
+            // Move Speed 
             float weightFactor = Math.Max(0f, (_weight - 70f) * 0.01f); // Penalty for being over 70kg
-            _moveSpeed = Math.Max(0.1f, 1.0f + (_agility * 0.1f) - weightFactor);
+            _walkSpeed = Math.Max(0.1f, 1.0f + (_agility * 0.1f) - weightFactor);
+            _runSpeed = _walkSpeed * 3f;
 
             // Carry Capacity = Base(20) + (Strength * 8) + (Tenacity * 3)
             _carryCapacity = 20 + (_strength * 8) + (_tenacity * 3);

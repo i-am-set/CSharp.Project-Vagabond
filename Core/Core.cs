@@ -11,6 +11,7 @@ using System;
 // TODO: make queued rest energy blue or something like that
 // TODO: Ctrl-Z undo previous path queued
 // TODO: display ETA in prompt
+// TODO: make short rest take less time, long rest take way less time, and sleep/"full" rest to take the 8 hours that long rest takes, but make it random between 6 and 11 hours
 namespace ProjectVagabond
 {
     public class Core : Game
