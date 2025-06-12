@@ -10,6 +10,7 @@ using System;
 // TODO: player customization; backgrounds, stats, bodyfat, muscle (both of which effect stat spread as well as gives buffs and needs at their extremes)
 // TODO: Ctrl-Z undo previous path queued
 // TODO: Make resting take random time (full rest between 6 and 11 hours)
+// TODO: Add menu state machine (terminal/map, dialogue, combat, settings, mainmenu)
 namespace ProjectVagabond
 {
     public class Core : Game

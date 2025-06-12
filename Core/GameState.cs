@@ -68,7 +68,7 @@ namespace ProjectVagabond
 
             int masterSeed = RandomNumberGenerator.GetInt32(1, 99999) + Environment.TickCount;
             _noiseManager = new NoiseMapManager(masterSeed);
-            _playerStats = new PlayerStats(5, 10, 5, 5, 5);
+            _playerStats = new PlayerStats(5, 5, 5, 5, 5);
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -90,11 +90,11 @@ namespace ProjectVagabond
 
             if (toggle)
             {
-                Core.CurrentTerminalRenderer.AddOutputToHistory("[gold]Free move enabled.");
+                Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Free move enabled.");
             }
             else
             {
-                Core.CurrentTerminalRenderer.AddOutputToHistory("[gold]Free move disabled.");
+                Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Free move disabled.");
             }
         }
 
@@ -318,7 +318,7 @@ namespace ProjectVagabond
                     {
                         if (_isFreeMoveMode)
                         {
-                            Core.CurrentTerminalRenderer.AddOutputToHistory("[gold]Not enough energy. Auto-queuing a short rest.");
+                            Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Not enough energy. Auto-queuing a short rest.");
                             Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
                     
                             var tempQueueWithRest = new List<PendingAction>(_pendingActions);
@@ -480,7 +480,7 @@ namespace ProjectVagabond
                 _currentPathIndex = 0;
                 ToggleExecutingPath(false);
                 ToggleIsFreeMoveMode(false);
-                Core.CurrentTerminalRenderer.AddOutputToHistory("[error]Action queue cancelled.");
+                Core.CurrentTerminalRenderer.AddOutputToHistory("[cancel]Action queue cancelled.");
             }
         }
 

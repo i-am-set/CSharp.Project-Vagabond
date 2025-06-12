@@ -277,6 +277,7 @@ namespace ProjectVagabond
                         }
                         else
                         {
+                            if (colorTag == "error") Core.Instance.ScreenShake(2, 0.25f);
                             currentColor = ParseColor(colorTag);
                         }
                     }
@@ -305,6 +306,8 @@ namespace ProjectVagabond
             {
                 case "error": return Color.Crimson;
                 case "undo": return Color.DarkTurquoise;
+                case "cancel": return Color.Orange;
+                case "warning": return Color.Gold;
                 case "debug": return Color.Chartreuse;
                 case "rest": return Color.LightGreen;
 
