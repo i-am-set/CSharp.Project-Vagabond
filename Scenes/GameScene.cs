@@ -1,6 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 
-namespace ProjectVagabond
+namespace ProjectVagabond.Scenes
 {
     /// <summary>
     /// Enum to identify each distinct game scene.

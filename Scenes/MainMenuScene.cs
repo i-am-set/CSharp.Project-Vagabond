@@ -16,9 +16,9 @@ namespace ProjectVagabond.Scenes
         {
             int screenWidth = Global.Instance.CurrentGraphics.PreferredBackBufferWidth;
             int buttonWidth = 200;
-            int buttonHeight = 50;
+            int buttonHeight = 25;
 
-            var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 300, buttonWidth, buttonHeight), "Play Game");
+            var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 300, buttonWidth, buttonHeight), "Play");
             playButton.OnClick += () => Core.CurrentSceneManager.ChangeScene(GameSceneState.TerminalMap);
 
             var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 360, buttonWidth, buttonHeight), "Settings");
@@ -82,9 +82,9 @@ namespace ProjectVagabond.Scenes
                 pixel.SetData(new[] { Color.White });
 
                 // Draw Title
-                string title = "Project Vagabond";
+                string title = ".";
                 Vector2 titleSize = font.MeasureString(title) * 2f;
-                spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 150), Global.Instance.palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 150), Global.Instance.palette_BrightWhite, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
                 // Draw buttons
                 foreach (var button in _buttons)
@@ -101,7 +101,7 @@ namespace ProjectVagabond.Scenes
             spriteBatch.End();
         }
 
-        private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
+        private static void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
         {
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);

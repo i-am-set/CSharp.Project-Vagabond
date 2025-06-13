@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond.Scenes;
 using System.Collections.Generic;
 
 namespace ProjectVagabond

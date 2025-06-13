@@ -12,7 +12,7 @@ namespace ProjectVagabond.UI
         public bool IsEnabled { get; set; } = true;
         public bool IsHovered { get; private set; }
         public event Action OnClick;
-
+        
         private MouseState _previousMouseState;
 
         public Button(Rectangle bounds, string text)
@@ -29,9 +29,13 @@ namespace ProjectVagabond.UI
                 return;
             }
 
+            // Single hover calculation per frame
             IsHovered = Bounds.Contains(currentMouseState.Position);
 
-            if (IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+            // Handle click detection
+            if (IsHovered && 
+                currentMouseState.LeftButton == ButtonState.Pressed && 
+                _previousMouseState.LeftButton == ButtonState.Released)
             {
                 OnClick?.Invoke();
             }
@@ -49,9 +53,10 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, SpriteFont font, Texture2D pixel)
         {
+            // Determine colors based on state
             Color bgColor;
             Color textColor = Global.Instance.palette_BrightWhite;
-
+            
             if (!IsEnabled)
             {
                 bgColor = Global.Instance.palette_DarkGray;
@@ -66,15 +71,17 @@ namespace ProjectVagabond.UI
                 bgColor = Global.Instance.palette_Gray;
             }
 
+            // Draw background
             spriteBatch.Draw(pixel, Bounds, bgColor);
-
+            
+            // Draw text (centered)
             Vector2 textSize = font.MeasureString(Text);
-            Vector2 textPosition = new Vector2(
-                (int)(Bounds.X + (Bounds.Width - textSize.X) / 2),
-                (int)(Bounds.Y + (Bounds.Height - textSize.Y) / 2)
+            Vector2 textPos = new Vector2(
+                Bounds.X + (Bounds.Width - textSize.X) * 0.5f,
+                Bounds.Y + (Bounds.Height - textSize.Y) * 0.5f
             );
-
-            spriteBatch.DrawString(font, Text, textPosition, textColor);
+            
+            spriteBatch.DrawString(font, Text, textPos, textColor);
         }
     }
 }
