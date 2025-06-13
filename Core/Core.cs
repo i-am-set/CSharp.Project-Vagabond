@@ -11,6 +11,7 @@ using System;
 // TODO: Ctrl-Z undo previous path queued
 // TODO: Make resting take random time (full rest between 6 and 11 hours)
 // TODO: Add menu state machine (terminal/map, dialogue, combat, settings, mainmenu)
+// TODO: Make short rest only heal 1 health
 namespace ProjectVagabond
 {
     public class Core : Game
