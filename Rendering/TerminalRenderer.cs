@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace ProjectVagabond
 {
@@ -75,7 +76,7 @@ namespace ProjectVagabond
             int terminalX = 400;
             int terminalY = 50;
             int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
-            int terminalHeight = 600;
+            int terminalHeight = Global.DEFAULT_TERMINAL_HEIGHT;
 
             var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
             pixel.SetData(new[] { Color.White });
@@ -135,7 +136,7 @@ namespace ProjectVagabond
 
             string inputDisplay = $"> {Core.CurrentInputHandler.CurrentInput}_";
             string wrappedInput = WrapText(inputDisplay, GetTerminalWidthInChars());
-            _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY), Color.Khaki);
+            _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY), Color.Khaki, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
             if (Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions && Core.CurrentAutoCompleteManager.AutoCompleteSuggestions.Count > 0)
             {

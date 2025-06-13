@@ -53,21 +53,22 @@ namespace ProjectVagabond
 
         public Texture2D CreatePlayerTexture()
         {
-            var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
-            var colorData = new Color[64];
+            int size = 10;
+            var texture = new Texture2D(Core.Instance.GraphicsDevice, size, size);
+            var colorData = new Color[size * size];
 
-            for (int y = 0; y < 8; y++) // Create a simple diamond shape for player
+            for (int y = 0; y < size; y++) // Create a simple diamond shape for player
             {
-                for (int x = 0; x < 8; x++)
+                for (int x = 0; x < size; x++)
                 {
-                    int distance = Math.Abs(x - 4) + Math.Abs(y - 4);
-                    if (distance <= 3)
+                    int distance = Math.Abs(x - size / 2) + Math.Abs(y - size / 2);
+                    if (distance <= 4) // Adjusted for 10x10
                     {
-                        colorData[y * 8 + x] = Color.White;
+                        colorData[y * size + x] = Color.White;
                     }
                     else
                     {
-                        colorData[y * 8 + x] = Color.Transparent;
+                        colorData[y * size + x] = Color.Transparent;
                     }
                 }
             }

@@ -31,20 +31,6 @@
 /processor:BitmapFontProcessor
 /build:Fonts/Px437_IBM_BIOS.fnt
 
-#begin Fonts/Px437_IBM_Model3x_Alt1.spritefont
-/importer:FontDescriptionImporter
-/processor:FontDescriptionProcessor
-/processorParam:PremultiplyAlpha=True
-/processorParam:TextureFormat=Compressed
-/build:Fonts/Px437_IBM_Model3x_Alt1.spritefont
-
-#begin Fonts/Ubuntu-Regular.spritefont
-/importer:FontDescriptionImporter
-/processor:FontDescriptionProcessor
-/processorParam:PremultiplyAlpha=True
-/processorParam:TextureFormat=Compressed
-/build:Fonts/Ubuntu-Regular.spritefont
-
 #begin Sprites/flatland.png
 /importer:TextureImporter
 /processor:TextureProcessor

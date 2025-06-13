@@ -76,7 +76,7 @@ namespace ProjectVagabond
             Instance = this;
 
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
-
+            
             // Scene initialization
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());

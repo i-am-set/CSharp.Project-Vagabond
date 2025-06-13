@@ -47,6 +47,7 @@ namespace ProjectVagabond
         public const int PROMPT_LINE_SPACING = 16;
         public const float NOISE_SCALE = 0.2f;
         public const int DEFAULT_TERMINAL_WIDTH = 700;
+        public const int DEFAULT_TERMINAL_HEIGHT = 500;
 
         // Player stats Global
         public const int MAX_MAX_HEALTH_ENERGY = 48;
