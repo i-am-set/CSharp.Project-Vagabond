@@ -33,7 +33,8 @@ namespace ProjectVagabond
         private static readonly StatsRenderer _statsRenderer = new();
         private static readonly WorldClockManager _worldClockManager = new();
         private static readonly HapticsManager _hapticsManager = new();
-        private static readonly SceneManager _sceneManager = new(); // Add SceneManager
+        private static readonly SceneManager _sceneManager = new();
+        public static readonly GameSettings _settings = new();
 
         // Public references //
         public static GameState CurrentGameState => _gameState;
@@ -47,7 +48,8 @@ namespace ProjectVagabond
         public static StatsRenderer CurrentStatsRenderer => _statsRenderer;
         public static WorldClockManager CurrentWorldClockManager => _worldClockManager;
         public static HapticsManager CurrentHapticsManager => _hapticsManager;
-        public static SceneManager CurrentSceneManager => _sceneManager; // Add public accessor
+        public static SceneManager CurrentSceneManager => _sceneManager;
+        public static GameSettings Settings => _settings;
 
         // New: Render target for fixed aspect ratio
         private RenderTarget2D _renderTarget;
@@ -76,6 +78,9 @@ namespace ProjectVagabond
             Instance = this;
 
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
+
+            Settings.ApplyGraphicsSettings(Global.Instance.CurrentGraphics, this);
+            Settings.ApplyGameSettings();
             
             // Scene initialization
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
@@ -120,6 +125,17 @@ namespace ProjectVagabond
 
         protected override void Update(GameTime gameTime)
         {
+            if (Settings.IsFrameLimiterEnabled)
+            {
+                IsFixedTimeStep = true;
+                TargetElapsedTime = TimeSpan.FromSeconds(1.0 / Settings.TargetFramerate);
+            }
+            else
+            {
+                IsFixedTimeStep = false;
+            }
+            Global.Instance.CurrentGraphics.SynchronizeWithVerticalRetrace = Settings.IsVsync;
+
             // Delegate update to the current scene
             _sceneManager.Update(gameTime);
             base.Update(gameTime);
@@ -191,7 +207,7 @@ namespace ProjectVagabond
             graphics.PreferredBackBufferHeight = height;
             graphics.ApplyChanges();
 
-            Core.Instance.OnResize(null, null);
+            Instance.OnResize(null, null);
         }
 
         public void ExitApplication() => Exit();

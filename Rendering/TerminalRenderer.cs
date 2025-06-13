@@ -130,13 +130,13 @@ namespace ProjectVagabond
                 _spriteBatch.DrawString(_defaultFont, scrollIndicator, new Vector2(terminalX, scrollY), Color.Gold);
             }
 
-            int inputLineY = terminalY + terminalHeight - 20;
+            int inputLineY = terminalY + terminalHeight - 10;
             int separatorY = inputLineY - 5;
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX-5, separatorY, 710, 2), Global.Instance.palette_White);
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX-5, separatorY, Global.DEFAULT_TERMINAL_WIDTH+10, 2), Global.Instance.palette_White);
 
             string inputDisplay = $"> {Core.CurrentInputHandler.CurrentInput}_";
             string wrappedInput = WrapText(inputDisplay, GetTerminalWidthInChars());
-            _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY), Color.Khaki, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+            _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY+1), Color.Khaki, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
             if (Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions && Core.CurrentAutoCompleteManager.AutoCompleteSuggestions.Count > 0)
             {
