@@ -209,12 +209,7 @@ namespace ProjectVagabond
                 }
                 try
                 {
-                    var graphics = Global.Instance.CurrentGraphics;
-                    graphics.PreferredBackBufferWidth = width;
-                    graphics.PreferredBackBufferHeight = height;
-                    graphics.ApplyChanges();
-
-                    Core.Instance.OnResize(null, null);
+                    Core.ResizeWindow(width, height);
 
                     Core.CurrentTerminalRenderer.AddOutputToHistory($"[green]Window resolution set to {width}x{height}.");
                 }

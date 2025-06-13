@@ -65,7 +65,7 @@ namespace ProjectVagabond
             // Set window size to the virtual resolution and allow resizing
             Global.Instance.CurrentGraphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
             Global.Instance.CurrentGraphics.PreferredBackBufferHeight = Global.VIRTUAL_HEIGHT;
-            Window.AllowUserResizing = true;
+            Window.AllowUserResizing = false;
             Window.ClientSizeChanged += OnResize;
         }
 
@@ -182,6 +182,16 @@ namespace ProjectVagabond
         public static Vector2 TransformMouse(Point screenPoint)
         {
             return Vector2.Transform(screenPoint.ToVector2(), _mouseTransformMatrix);
+        }
+
+        public static void ResizeWindow(int width, int height)
+        {
+            var graphics = Global.Instance.CurrentGraphics;
+            graphics.PreferredBackBufferWidth = width;
+            graphics.PreferredBackBufferHeight = height;
+            graphics.ApplyChanges();
+
+            Core.Instance.OnResize(null, null);
         }
 
         public void ExitApplication() => Exit();
