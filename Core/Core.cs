@@ -11,6 +11,7 @@ using System;
 // TODO: Ctrl-Z undo previous path queued
 // TODO: Make resting take random time (full rest between 6 and 11 hours)
 // TODO: Add menu state machine (terminal/map, dialogue, combat, settings, mainmenu)
+// TODO: Wait command: (wait 3 hours 2 minutes)
 
 namespace ProjectVagabond
 {
