@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
+using ProjectVagabond.Scenes; // Add this using statement
 using System;
 
 // TODO: generate different noise maps to generate different map things
@@ -11,9 +11,6 @@ using System;
 // TODO: Ctrl-Z undo previous path queued
 // TODO: Make resting take random time (full rest between 6 and 11 hours)
 // TODO: Add menu state machine (terminal/map, dialogue, combat, settings, mainmenu)
-// TODO: Make short rest only heal 1 health
-
-In this C# monogame project, I want to add a menu state machine (terminal/map, dialogue, combat, settings, mainmenu). Right now the only rendered screen is the terminal/map screen, but I want a modular system that can open different "scenes" by just rendering and handling different stuff based on the state of a state machine. The terminal/map scene is the one thats already implimented, but I want the ability, through a method, to change the scene to a dialogue screen (just set up the basic ui template, ill do the stuff that happens in the scene), combat screen (same for dialogue, just put ui elements as place holders), settings (simple settings menu that can be navigated with w/a/s/d and the arrow keys with enter as the way to apply the settings and esc to exit the settings or use the mouse to just press the ui buttons [if a setting is just a bool, have it use left and right to change its value]), and lastly the mainmenu whihc should be the opening state and has a "play game" "settings" and "exit" button that can be navigated with buttons like the settings or use a mouse like he settings
 
 namespace ProjectVagabond
 {
@@ -34,9 +31,11 @@ namespace ProjectVagabond
         private static readonly StatsRenderer _statsRenderer = new();
         private static readonly WorldClockManager _worldClockManager = new();
         private static readonly HapticsManager _hapticsManager = new();
+        private static readonly SceneManager _sceneManager = new(); // Add SceneManager
 
         // Public references //
         public static GameState CurrentGameState => _gameState;
+        public static MapRenderer CurrentMapRenderer => _mapRenderer;
         public static SpriteManager CurrentSpriteManager => _spriteManager;
         public static TextureFactory CurrentTextureFactory => _textureFactory;
         public static AutoCompleteManager CurrentAutoCompleteManager => _autoCompleteManager;
@@ -46,6 +45,7 @@ namespace ProjectVagabond
         public static StatsRenderer CurrentStatsRenderer => _statsRenderer;
         public static WorldClockManager CurrentWorldClockManager => _worldClockManager;
         public static HapticsManager CurrentHapticsManager => _hapticsManager;
+        public static SceneManager CurrentSceneManager => _sceneManager; // Add public accessor
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -65,6 +65,13 @@ namespace ProjectVagabond
         {
             Instance = this;
 
+            // Scene initialization
+            _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
+            _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());
+            _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
+            _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
+            _sceneManager.AddScene(GameSceneState.Combat, new CombatScene());
+
             base.Initialize();
         }
 
@@ -82,31 +89,24 @@ namespace ProjectVagabond
             }
 
             _spriteManager.LoadSpriteContent();
+
+            // Set initial scene
+            _sceneManager.ChangeScene(GameSceneState.MainMenu);
         }
 
         protected override void Update(GameTime gameTime)
         {
-            _inputHandler.HandleInput(gameTime);
-            _gameState.UpdateMovement(gameTime);
-            _statsRenderer.Update(gameTime);
-            _hapticsManager.Update(gameTime);
-
+            // Delegate update to the current scene
+            _sceneManager.Update(gameTime);
             base.Update(gameTime);
         }
-        
+
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Global.Instance.GameBg);
 
-            Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
-
-            Global.Instance.CurrentSpriteBatch.Begin(transformMatrix: shakeMatrix);
-
-            _mapRenderer.DrawMap();
-            _terminalRenderer.DrawTerminal();
-            _statsRenderer.DrawStats();
-
-            Global.Instance.CurrentSpriteBatch.End();
+            // Delegate draw to the current scene
+            _sceneManager.Draw(gameTime);
 
             base.Draw(gameTime);
         }

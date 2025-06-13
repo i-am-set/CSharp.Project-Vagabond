@@ -284,7 +284,7 @@ namespace ProjectVagabond
                 case RestType.ShortRest:
                     // Short rest: restore some energy, minor health
                     RestoreEnergy(ShortRestEnergyRestored);
-                    Heal((int)Math.Ceiling(_maxHealthPoints*0.25f));
+                    Heal(1);
                     break;
 
                 case RestType.LongRest:

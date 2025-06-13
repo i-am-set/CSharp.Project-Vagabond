@@ -171,6 +171,21 @@ namespace ProjectVagabond
                 Core.ScreenWobble(intensity: 4.0f, duration: 0.2f);
             }, "debug - Generic debug command 2");
 
+            _commands["debugsettings"] = new Command("settings", (args) =>
+            {
+                Core.CurrentSceneManager.ChangeScene(GameSceneState.Settings);
+            }, "settings [gray]- Open the settings menu.");
+
+            _commands["debugdialogue_test"] = new Command("dialogue_test", (args) =>
+            {
+                Core.CurrentSceneManager.ChangeScene(GameSceneState.Dialogue);
+            }, "dialogue_test - Shows the placeholder dialogue screen.");
+
+            _commands["debugcombat_test"] = new Command("combat_test", (args) =>
+            {
+                Core.CurrentSceneManager.ChangeScene(GameSceneState.Combat);
+            }, "combat_test - Shows the placeholder combat screen.");
+
             _commands["exit"] = new Command("exit", (args) =>
             {
                 Core.Instance.ExitApplication();
