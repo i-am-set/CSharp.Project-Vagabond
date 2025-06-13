@@ -12,6 +12,9 @@ using System;
 // TODO: Make resting take random time (full rest between 6 and 11 hours)
 // TODO: Add menu state machine (terminal/map, dialogue, combat, settings, mainmenu)
 // TODO: Make short rest only heal 1 health
+
+In this C# monogame project, I want to add a menu state machine (terminal/map, dialogue, combat, settings, mainmenu). Right now the only rendered screen is the terminal/map screen, but I want a modular system that can open different "scenes" by just rendering and handling different stuff based on the state of a state machine. The terminal/map scene is the one thats already implimented, but I want the ability, through a method, to change the scene to a dialogue screen (just set up the basic ui template, ill do the stuff that happens in the scene), combat screen (same for dialogue, just put ui elements as place holders), settings (simple settings menu that can be navigated with w/a/s/d and the arrow keys with enter as the way to apply the settings and esc to exit the settings or use the mouse to just press the ui buttons [if a setting is just a bool, have it use left and right to change its value]), and lastly the mainmenu whihc should be the opening state and has a "play game" "settings" and "exit" button that can be navigated with buttons like the settings or use a mouse like he settings
+
 namespace ProjectVagabond
 {
     public class Core : Game
