@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using System.Collections.Generic;
 
@@ -76,7 +77,7 @@ namespace ProjectVagabond.Scenes
             var font = Global.Instance.DefaultFont;
             int screenWidth = Global.Instance.CurrentGraphics.PreferredBackBufferWidth;
 
-            spriteBatch.Begin();
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
             using (var pixel = new Texture2D(spriteBatch.GraphicsDevice, 1, 1))
             {
                 pixel.SetData(new[] { Color.White });
@@ -84,7 +85,7 @@ namespace ProjectVagabond.Scenes
                 // Draw Title
                 string title = ".";
                 Vector2 titleSize = font.MeasureString(title) * 2f;
-                spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 150), Global.Instance.palette_BrightWhite, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+                spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 150), Global.Instance.palette_BrightWhite, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
                 // Draw buttons
                 foreach (var button in _buttons)

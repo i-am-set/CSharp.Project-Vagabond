@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond;
 using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
@@ -175,17 +176,55 @@ namespace ProjectVagabond
             _commands["debugsettings"] = new Command("settings", (args) =>
             {
                 Core.CurrentSceneManager.ChangeScene(GameSceneState.Settings);
-            }, "settings [gray]- Open the settings menu.");
+            }, "debugsettings [gray]- Open the settings menu.");
 
             _commands["debugdialogue_test"] = new Command("dialogue_test", (args) =>
             {
                 Core.CurrentSceneManager.ChangeScene(GameSceneState.Dialogue);
-            }, "dialogue_test - Shows the placeholder dialogue screen.");
+            }, "debugdialogue_test - Shows the placeholder dialogue screen.");
 
             _commands["debugcombat_test"] = new Command("combat_test", (args) =>
             {
                 Core.CurrentSceneManager.ChangeScene(GameSceneState.Combat);
-            }, "combat_test - Shows the placeholder combat screen.");
+            }, "debugcombat_test - Shows the placeholder combat screen.");
+
+            _commands["debugsetresolution"] = new Command("setresolution", (args) =>
+            {
+                if (args.Length != 3)
+                {
+                    Core.CurrentTerminalRenderer.AddOutputToHistory("[error]Invalid arguments. Usage: setres <width> <height>");
+                    return;
+                }
+                if (!int.TryParse(args[1], out int width) || !int.TryParse(args[2], out int height))
+                {
+                    Core.CurrentTerminalRenderer.AddOutputToHistory("[error]Width and height must be valid integers.");
+                    return;
+                }
+                const int minWidth = 800;
+                const int minHeight = 600;
+                if (width < minWidth || height < minHeight)
+                {
+                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Minimum resolution is {minWidth}x{minHeight}.");
+                    return;
+                }
+                try
+                {
+                    var graphics = Global.Instance.CurrentGraphics;
+                    graphics.PreferredBackBufferWidth = width;
+                    graphics.PreferredBackBufferHeight = height;
+                    graphics.ApplyChanges();
+
+                    Core.Instance.OnResize(null, null);
+
+                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[green]Window resolution set to {width}x{height}.");
+                }
+                catch (Exception ex)
+                {
+                    // Catch potential errors from the graphics device
+                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Failed to set resolution: {ex.Message}");
+                    // It's good practice to revert to a safe resolution if it fails, but for now, an error is sufficient.
+                }
+            }, "debugsetresolution <width> <height> [gray]- Set the game resolution.");
 
             _commands["exit"] = new Command("exit", (args) =>
             {

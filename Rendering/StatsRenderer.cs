@@ -1,6 +1,7 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using System;
 
 namespace ProjectVagabond
@@ -162,22 +163,23 @@ namespace ProjectVagabond
 
         private void CheckTooltipHover()
         {
-            Point mousePosition = _currentMouseState.Position;
+            // Transform mouse coordinates from screen space to virtual space
+            Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
             _showTooltip = false;
 
             if (_gameState.PlayerStats == null) return;
 
             var stats = _gameState.PlayerStats;
             
-            // Check HP bar hover
-            if (_hpBarBounds.Contains(mousePosition))
+            // Check HP bar hover using virtual coordinates
+            if (_hpBarBounds.Contains(virtualMousePos))
             {
                 _tooltipText = $"{stats.CurrentHealthPoints}/{stats.MaxHealthPoints}";
-                _tooltipPosition = new Vector2(mousePosition.X + 10, mousePosition.Y - 20);
+                _tooltipPosition = new Vector2(virtualMousePos.X + 10, virtualMousePos.Y - 20);
                 _showTooltip = true;
             }
-            // Check EP bar hover
-            else if (_epBarBounds.Contains(mousePosition))
+            // Check EP bar hover using virtual coordinates
+            else if (_epBarBounds.Contains(virtualMousePos))
             {
                 if (_gameState.PendingActions.Count > 0)
                 {
@@ -189,7 +191,7 @@ namespace ProjectVagabond
                 {
                     _tooltipText = $"{stats.CurrentEnergyPoints}/{stats.MaxEnergyPoints}";
                 }
-                _tooltipPosition = new Vector2(mousePosition.X + 10, mousePosition.Y - 20);
+                _tooltipPosition = new Vector2(virtualMousePos.X + 10, virtualMousePos.Y - 20);
                 _showTooltip = true;
             }
         }

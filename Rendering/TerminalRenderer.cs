@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.BitmapFonts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,7 +70,7 @@ namespace ProjectVagabond
         public void DrawTerminal()
         {
             SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
-            SpriteFont _defaultFont = Global.Instance.DefaultFont;
+            BitmapFont _defaultFont = Global.Instance.DefaultFont;
 
             int terminalX = 400;
             int terminalY = 50;
@@ -102,7 +103,7 @@ namespace ProjectVagabond
                 foreach (var segment in _wrappedHistory[i].Segments)
                 {
                     _spriteBatch.DrawString(_defaultFont, segment.Text, new Vector2(x, y), segment.Color);
-                    x += _defaultFont.MeasureString(segment.Text).X;
+                    x += _defaultFont.MeasureString(segment.Text).Width;
                 }
     
                 if (_wrappedHistory[i].LineNumber > 0)
@@ -146,7 +147,7 @@ namespace ProjectVagabond
                 {
                     string prefix = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? " >" : "  ";
                     string fullText = prefix + Core.CurrentAutoCompleteManager.AutoCompleteSuggestions[i];
-                    int textWidth = (int)_defaultFont.MeasureString(fullText).X;
+                    int textWidth = (int)_defaultFont.MeasureString(fullText).Width;
                     maxSuggestionWidth = Math.Max(maxSuggestionWidth, textWidth);
                 }
     
@@ -192,7 +193,7 @@ namespace ProjectVagabond
                     foreach (var segment in wrappedPromptLines[i].Segments)
                     {
                         _spriteBatch.DrawString(_defaultFont, segment.Text, new Vector2(x, y), segment.Color);
-                        x += _defaultFont.MeasureString(segment.Text).X;
+                        x += _defaultFont.MeasureString(segment.Text).Width;
                     }
                 }
             }
@@ -605,7 +606,7 @@ namespace ProjectVagabond
         private int GetTerminalWidthInChars()
         {
             int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
-            float charWidth = Global.Instance.DefaultFont.MeasureString("W").X;
+            float charWidth = Global.Instance.DefaultFont.MeasureString("W").Width;
             return (int)(terminalWidth / charWidth) - 2;
         }
     }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 
 namespace ProjectVagabond.Scenes
 {
@@ -21,7 +22,7 @@ namespace ProjectVagabond.Scenes
             int screenWidth = Global.Instance.CurrentGraphics.PreferredBackBufferWidth;
             int screenHeight = Global.Instance.CurrentGraphics.PreferredBackBufferHeight;
 
-            spriteBatch.Begin();
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
             string text = "This is a placeholder combat screen.\nPress ESC to return.";
             Vector2 textSize = font.MeasureString(text);

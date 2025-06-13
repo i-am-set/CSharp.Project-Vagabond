@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Scenes; // Add this using statement
 using System;
 
@@ -48,6 +49,11 @@ namespace ProjectVagabond
         public static HapticsManager CurrentHapticsManager => _hapticsManager;
         public static SceneManager CurrentSceneManager => _sceneManager; // Add public accessor
 
+        // New: Render target for fixed aspect ratio
+        private RenderTarget2D _renderTarget;
+        private Rectangle _finalRenderRectangle;
+        private static Matrix _mouseTransformMatrix;
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public Core()
@@ -56,8 +62,11 @@ namespace ProjectVagabond
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            Global.Instance.CurrentGraphics.PreferredBackBufferWidth = 1200; // Set window size
-            Global.Instance.CurrentGraphics.PreferredBackBufferHeight = 800;
+            // Set window size to the virtual resolution and allow resizing
+            Global.Instance.CurrentGraphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
+            Global.Instance.CurrentGraphics.PreferredBackBufferHeight = Global.VIRTUAL_HEIGHT;
+            Window.AllowUserResizing = true;
+            Window.ClientSizeChanged += OnResize;
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -66,12 +75,17 @@ namespace ProjectVagabond
         {
             Instance = this;
 
+            GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
+
             // Scene initialization
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
             _sceneManager.AddScene(GameSceneState.Combat, new CombatScene());
+
+            // Initial calculation for the render rectangle and mouse matrix
+            OnResize(null, null);
 
             base.Initialize();
         }
@@ -80,13 +94,22 @@ namespace ProjectVagabond
         {
             Global.Instance.CurrentSpriteBatch = new SpriteBatch(GraphicsDevice);
 
+            // Create the render target with the virtual resolution
+            _renderTarget = new RenderTarget2D(
+                GraphicsDevice,
+                Global.VIRTUAL_WIDTH,
+                Global.VIRTUAL_HEIGHT,
+                false,
+                GraphicsDevice.PresentationParameters.BackBufferFormat,
+                DepthFormat.Depth24);
+
             try
             {
-                Global.Instance.DefaultFont = Content.Load<SpriteFont>("Fonts/Px437_IBM_BIOS");
+                Global.Instance.DefaultFont = Content.Load<BitmapFont>("Fonts/Px437_IBM_BIOS");
             }
             catch
             {
-                throw new Exception("Please add a SpriteFont to your Content/Fonts folder");
+                throw new Exception("Please add a BitmapFont to your Content/Fonts folder");
             }
 
             _spriteManager.LoadSpriteContent();
@@ -104,15 +127,62 @@ namespace ProjectVagabond
 
         protected override void Draw(GameTime gameTime)
         {
+            // --- Pass 1: Render the entire scene to the RenderTarget ---
+            GraphicsDevice.SetRenderTarget(_renderTarget);
             GraphicsDevice.Clear(Global.Instance.GameBg);
 
-            // Delegate draw to the current scene
+            // Delegate draw to the current scene, which will now draw on the _renderTarget
             _sceneManager.Draw(gameTime);
+
+            // --- Pass 2: Render the RenderTarget to the screen (back buffer) ---
+            GraphicsDevice.SetRenderTarget(null);
+            // Clear the back buffer to create the letterbox/pillarbox effect
+            GraphicsDevice.Clear(Color.Black);
+
+            Global.Instance.CurrentSpriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            // Draw the finalized scene, scaled to fit the window
+            Global.Instance.CurrentSpriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
+            Global.Instance.CurrentSpriteBatch.End();
 
             base.Draw(gameTime);
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+        /// <summary>
+        /// Recalculates the rendering scale and position when the window is resized.
+        /// </summary>
+        public void OnResize(object sender, EventArgs e)
+        {
+            if (GraphicsDevice == null) return;
+
+            var screenWidth = GraphicsDevice.PresentationParameters.BackBufferWidth;
+            var screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
+
+            // Calculate the scale to fit the virtual resolution within the new window size
+            float scaleX = (float)screenWidth / Global.VIRTUAL_WIDTH;
+            float scaleY = (float)screenHeight / Global.VIRTUAL_HEIGHT;
+            float scale = Math.Min(scaleX, scaleY);
+
+            // Calculate the dimensions and position of the scaled render target
+            int destWidth = (int)(Global.VIRTUAL_WIDTH * scale);
+            int destHeight = (int)(Global.VIRTUAL_HEIGHT * scale);
+            int destX = (screenWidth - destWidth) / 2;
+            int destY = (screenHeight - destHeight) / 2;
+
+            _finalRenderRectangle = new Rectangle(destX, destY, destWidth, destHeight);
+
+            // Create a matrix to transform mouse coordinates from screen space to virtual space
+            _mouseTransformMatrix = Matrix.Invert(Matrix.CreateTranslation(destX, destY, 0) * Matrix.CreateScale(scale));
+        }
+
+        /// <summary>
+        /// Transforms mouse coordinates from screen space to virtual game space.
+        /// </summary>
+        public static Vector2 TransformMouse(Point screenPoint)
+        {
+            return Vector2.Transform(screenPoint.ToVector2(), _mouseTransformMatrix);
+        }
 
         public void ExitApplication() => Exit();
 

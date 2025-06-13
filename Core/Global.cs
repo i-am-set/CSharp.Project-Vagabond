@@ -1,6 +1,7 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 
 namespace ProjectVagabond
@@ -33,6 +34,10 @@ namespace ProjectVagabond
         // CONSTANTS
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
+        // New: Virtual resolution for fixed aspect ratio rendering
+        public const int VIRTUAL_WIDTH = 1280;
+        public const int VIRTUAL_HEIGHT = 720;
+
         // Map settings Global
         public const int GRID_SIZE = 32;
         public const int GRID_CELL_SIZE = 10;
@@ -60,7 +65,7 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         
         // Core variables
-        public SpriteFont DefaultFont { get; set; }
+        public BitmapFont DefaultFont { get; set; }
         public GraphicsDeviceManager CurrentGraphics;
         public SpriteBatch CurrentSpriteBatch;
 

@@ -1,6 +1,7 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using System;
 
 namespace ProjectVagabond.UI
@@ -29,8 +30,11 @@ namespace ProjectVagabond.UI
                 return;
             }
 
-            // Single hover calculation per frame
-            IsHovered = Bounds.Contains(currentMouseState.Position);
+            // Transform mouse coordinates from screen space to virtual space
+            Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+
+            // Single hover calculation per frame using virtual coordinates
+            IsHovered = Bounds.Contains(virtualMousePos);
 
             // Handle click detection
             if (IsHovered && 
@@ -51,7 +55,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, SpriteFont font, Texture2D pixel)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, Texture2D pixel)
         {
             // Determine colors based on state
             Color bgColor;
@@ -81,7 +85,7 @@ namespace ProjectVagabond.UI
                 Bounds.Y + (Bounds.Height - textSize.Y) * 0.5f
             );
             
-            spriteBatch.DrawString(font, Text, textPos, textColor);
+            spriteBatch.DrawString(font, Text, textPos, textColor, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
         }
     }
 }

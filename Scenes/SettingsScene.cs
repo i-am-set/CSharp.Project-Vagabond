@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using System.Collections.Generic;
 using System.Linq;
@@ -136,7 +137,7 @@ namespace ProjectVagabond.Scenes
             var font = Global.Instance.DefaultFont;
             int screenWidth = Global.Instance.CurrentGraphics.PreferredBackBufferWidth;
 
-            spriteBatch.Begin();
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             using (var pixel = new Texture2D(spriteBatch.GraphicsDevice, 1, 1))
             {
                 pixel.SetData(new[] { Color.White });

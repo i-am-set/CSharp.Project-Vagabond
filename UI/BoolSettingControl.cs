@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using System;
 
 namespace ProjectVagabond.UI
@@ -43,7 +44,7 @@ namespace ProjectVagabond.UI
             _currentValue = _savedValue;
         }
 
-        public void Draw(SpriteBatch spriteBatch, SpriteFont font, Texture2D pixel, Vector2 position, bool isSelected)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, Texture2D pixel, Vector2 position, bool isSelected)
         {
             Color labelColor = isSelected ? Global.Instance.palette_Yellow : Global.Instance.palette_BrightWhite;
             spriteBatch.DrawString(font, Label, position, labelColor);

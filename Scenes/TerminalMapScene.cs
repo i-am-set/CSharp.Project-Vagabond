@@ -17,7 +17,7 @@ namespace ProjectVagabond.Scenes
         {
             Matrix shakeMatrix = Core.CurrentHapticsManager.GetHapticsMatrix();
 
-            Global.Instance.CurrentSpriteBatch.Begin(transformMatrix: shakeMatrix);
+            Global.Instance.CurrentSpriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: shakeMatrix);
 
             Core.CurrentMapRenderer.DrawMap();
             Core.CurrentTerminalRenderer.DrawTerminal();
