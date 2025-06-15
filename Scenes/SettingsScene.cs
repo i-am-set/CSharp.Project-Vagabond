@@ -237,58 +237,55 @@ namespace ProjectVagabond.Scenes
             int screenWidth = Global.VIRTUAL_WIDTH;
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            using (var pixel = new Texture2D(spriteBatch.GraphicsDevice, 1, 1))
+            Core.Pixel.SetData(new[] { Color.White });
+
+            string title = "Settings";
+            Vector2 titleSize = font.MeasureString(title) * 2f;
+            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 50), Global.Instance.palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
+
+            Vector2 currentPos = new Vector2(0, 150);
+            for (int i = 0; i < _uiElements.Count; i++)
             {
-                pixel.SetData(new[] { Color.White });
+                var item = _uiElements[i];
+                bool isSelected = (i == _selectedIndex);
+                currentPos.X = (screenWidth - 450) / 2;
 
-                string title = "Settings";
-                Vector2 titleSize = font.MeasureString(title) * 2f;
-                spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 50), Global.Instance.palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
-
-                Vector2 currentPos = new Vector2(0, 150);
-                for (int i = 0; i < _uiElements.Count; i++)
+                // Draw highlight for keyboard-selected item
+                if (isSelected)
                 {
-                    var item = _uiElements[i];
-                    bool isSelected = (i == _selectedIndex);
-                    currentPos.X = (screenWidth - 450) / 2;
+                    float itemHeight = 40;
+                    if (item is Button) itemHeight = 50;
+                    else if (item is string) itemHeight = 0; // Don't highlight headers
 
-                    // Draw highlight for keyboard-selected item
-                    if (isSelected)
+                    if (itemHeight > 0)
                     {
-                        float itemHeight = 40;
-                        if (item is Button) itemHeight = 50;
-                        else if (item is string) itemHeight = 0; // Don't highlight headers
-
-                        if (itemHeight > 0)
-                        {
-                            var highlightRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y - 5, 460, (int)itemHeight);
-                            DrawRectangleBorder(spriteBatch, pixel, highlightRect, 2, Global.Instance.palette_Yellow);
-                        }
-                    }
-
-                    if (item is ISettingControl setting)
-                    {
-                        setting.Draw(spriteBatch, currentPos, isSelected);
-                        currentPos.Y += 40;
-                    }
-                    else if (item is Button button)
-                    {
-                        button.Bounds = new Rectangle((screenWidth - button.Bounds.Width) / 2, (int)currentPos.Y, button.Bounds.Width, button.Bounds.Height);
-                        button.Draw(spriteBatch, font, pixel);
-                        currentPos.Y += 55;
-                    }
-                    else if (item is string header)
-                    {
-                        spriteBatch.DrawString(font, header, new Vector2(screenWidth / 2 - font.MeasureString(header).Width / 2, currentPos.Y), Global.Instance.palette_LightGray);
-                        currentPos.Y += 45;
+                        var highlightRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y - 5, 460, (int)itemHeight);
+                        DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 2, Global.Instance.palette_Yellow);
                     }
                 }
 
-                if (_confirmationTimer > 0)
+                if (item is ISettingControl setting)
                 {
-                    Vector2 msgSize = font.MeasureString(_confirmationMessage);
-                    spriteBatch.DrawString(font, _confirmationMessage, new Vector2(screenWidth / 2 - msgSize.X / 2, Global.VIRTUAL_HEIGHT - 50), Global.Instance.palette_Teal);
+                    setting.Draw(spriteBatch, currentPos, isSelected);
+                    currentPos.Y += 40;
                 }
+                else if (item is Button button)
+                {
+                    button.Bounds = new Rectangle((screenWidth - button.Bounds.Width) / 2, (int)currentPos.Y, button.Bounds.Width, button.Bounds.Height);
+                    button.Draw(spriteBatch, font);
+                    currentPos.Y += 55;
+                }
+                else if (item is string header)
+                {
+                    spriteBatch.DrawString(font, header, new Vector2(screenWidth / 2 - font.MeasureString(header).Width / 2, currentPos.Y), Global.Instance.palette_LightGray);
+                    currentPos.Y += 45;
+                }
+            }
+
+            if (_confirmationTimer > 0)
+            {
+                Vector2 msgSize = font.MeasureString(_confirmationMessage);
+                spriteBatch.DrawString(font, _confirmationMessage, new Vector2(screenWidth / 2 - msgSize.X / 2, Global.VIRTUAL_HEIGHT - 50), Global.Instance.palette_Teal);
             }
             spriteBatch.End();
         }

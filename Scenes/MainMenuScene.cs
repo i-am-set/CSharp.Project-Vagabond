@@ -78,27 +78,24 @@ namespace ProjectVagabond.Scenes
             int screenWidth = Global.Instance.CurrentGraphics.PreferredBackBufferWidth;
 
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
-            using (var pixel = new Texture2D(spriteBatch.GraphicsDevice, 1, 1))
+            Core.Pixel.SetData(new[] { Color.White });
+
+            // Draw Title
+            string title = ".";
+            Vector2 titleSize = font.MeasureString(title) * 2f;
+            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 150), Global.Instance.palette_BrightWhite, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+
+            // Draw buttons
+            foreach (var button in _buttons)
             {
-                pixel.SetData(new[] { Color.White });
-
-                // Draw Title
-                string title = ".";
-                Vector2 titleSize = font.MeasureString(title) * 2f;
-                spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 150), Global.Instance.palette_BrightWhite, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
-
-                // Draw buttons
-                foreach (var button in _buttons)
-                {
-                    button.Draw(spriteBatch, font, pixel);
-                }
-
-                // Draw keyboard selection highlight
-                var selectedButton = _buttons[_selectedButtonIndex];
-                Rectangle highlightRect = selectedButton.Bounds;
-                highlightRect.Inflate(4, 4);
-                DrawRectangleBorder(spriteBatch, pixel, highlightRect, 2, Global.Instance.palette_Yellow);
+                button.Draw(spriteBatch, font);
             }
+
+            // Draw keyboard selection highlight
+            var selectedButton = _buttons[_selectedButtonIndex];
+            Rectangle highlightRect = selectedButton.Bounds;
+            highlightRect.Inflate(4, 4);
+            DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 2, Global.Instance.palette_Yellow);
             spriteBatch.End();
         }
 

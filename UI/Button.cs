@@ -55,7 +55,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, Texture2D pixel)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font)
         {
             // Determine colors based on state
             Color bgColor;
@@ -76,7 +76,7 @@ namespace ProjectVagabond.UI
             }
 
             // Draw background
-            spriteBatch.Draw(pixel, Bounds, bgColor);
+            spriteBatch.Draw(Core.Pixel, Bounds, bgColor);
             
             // Draw text (centered)
             Vector2 textSize = font.MeasureString(Text);

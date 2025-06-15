@@ -50,11 +50,13 @@ namespace ProjectVagabond
         public static HapticsManager CurrentHapticsManager => _hapticsManager;
         public static SceneManager CurrentSceneManager => _sceneManager;
         public static GameSettings Settings => _settings;
+        public static Texture2D Pixel => _pixel;
 
         // New: Render target for fixed aspect ratio
         private RenderTarget2D _renderTarget;
         private Rectangle _finalRenderRectangle;
         private static Matrix _mouseTransformMatrix;
+        private static Texture2D _pixel;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -81,7 +83,9 @@ namespace ProjectVagabond
 
             Settings.ApplyGraphicsSettings(Global.Instance.CurrentGraphics, this);
             Settings.ApplyGameSettings();
-            
+
+            _pixel = new Texture2D(GraphicsDevice, 1, 1);
+
             // Scene initialization
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());
