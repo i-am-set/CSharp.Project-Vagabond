@@ -17,15 +17,15 @@ namespace ProjectVagabond.Scenes
         {
             int screenWidth = Global.Instance.CurrentGraphics.PreferredBackBufferWidth;
             int buttonWidth = 200;
-            int buttonHeight = 25;
+            int buttonHeight = 20;
 
             var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 300, buttonWidth, buttonHeight), "Play");
             playButton.OnClick += () => Core.CurrentSceneManager.ChangeScene(GameSceneState.TerminalMap);
 
-            var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 360, buttonWidth, buttonHeight), "Settings");
+            var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 320, buttonWidth, buttonHeight), "Settings");
             settingsButton.OnClick += () => Core.CurrentSceneManager.ChangeScene(GameSceneState.Settings);
 
-            var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 420, buttonWidth, buttonHeight), "Exit");
+            var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 340, buttonWidth, buttonHeight), "Exit");
             exitButton.OnClick += () => Core.Instance.ExitApplication();
 
             _buttons.Add(playButton);
@@ -91,10 +91,21 @@ namespace ProjectVagabond.Scenes
                 button.Draw(spriteBatch, font);
             }
 
-            // Draw keyboard selection highlight
+            // Draw keyboard selection highlight based on text size
             var selectedButton = _buttons[_selectedButtonIndex];
-            Rectangle highlightRect = selectedButton.Bounds;
-            highlightRect.Inflate(4, 4);
+            Vector2 textSize = font.MeasureString(selectedButton.Text);
+
+            // Add some padding around the text (adjust these values as needed)
+            int horizontalPadding = 8;
+            int verticalPadding = 4;
+
+            // Calculate highlight rectangle centered on the button's position
+            Rectangle highlightRect = new Rectangle(
+                (int)(selectedButton.Bounds.X + (selectedButton.Bounds.Width - textSize.X) * 0.5f - horizontalPadding),
+                (int)(selectedButton.Bounds.Y + (selectedButton.Bounds.Height - textSize.Y) * 0.5f - verticalPadding),
+                (int)(textSize.X + horizontalPadding * 2),
+                (int)(textSize.Y + verticalPadding * 2)
+            );
             DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 2, Global.Instance.palette_Yellow);
             spriteBatch.End();
         }

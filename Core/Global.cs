@@ -35,8 +35,8 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         // New: Virtual resolution for fixed aspect ratio rendering
-        public const int VIRTUAL_WIDTH = 1280;
-        public const int VIRTUAL_HEIGHT = 720;
+        public const int VIRTUAL_WIDTH = 960;
+        public const int VIRTUAL_HEIGHT = 540;
 
         // Map settings Global
         public const int GRID_SIZE = 32;

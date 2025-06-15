@@ -63,16 +63,17 @@ namespace ProjectVagabond.UI
             
             if (!IsEnabled)
             {
-                bgColor = Global.Instance.palette_DarkGray;
+                bgColor = Color.Transparent;
                 textColor = Global.Instance.palette_Gray;
             }
             else if (IsHovered)
             {
-                bgColor = Global.Instance.palette_LightGray;
+                bgColor = Color.Transparent;
+                textColor = Global.Instance.palette_LightYellow;
             }
             else
             {
-                bgColor = Global.Instance.palette_Gray;
+                bgColor = Color.Transparent;
             }
 
             // Draw background

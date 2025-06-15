@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using System;
@@ -11,7 +12,7 @@ namespace ProjectVagabond.Scenes
 {
     public class SettingsScene : GameScene
     {
-        private List<object> _uiElements = new(); // Can contain ISettingControl, Button, or string for headers
+        private List<object> _uiElements = new();
         private int _selectedIndex = 0;
         private string _confirmationMessage = "";
         private float _confirmationTimer = 0f;
@@ -46,6 +47,7 @@ namespace ProjectVagabond.Scenes
             _uiElements.Add("Graphics");
             var resolutions = new List<KeyValuePair<string, Point>>
             {
+                new("960 x 540", new Point(960, 540)),
                 new("1280 x 720", new Point(1280, 720)),
                 new("1366 x 768", new Point(1366, 768)),
                 new("1600 x 900", new Point(1600, 900)),
@@ -63,14 +65,13 @@ namespace ProjectVagabond.Scenes
 
             // --- Controls ---
             _uiElements.Add("Controls");
-            _uiElements.Add("(Not Implemented)");
 
             // --- Action Buttons ---
-            var applyButton = new Button(new Rectangle(0, 0, 250, 40), "Apply");
+            var applyButton = new Button(new Rectangle(0, 0, 250, 20), "Apply");
             applyButton.OnClick += ApplySettings;
             _uiElements.Add(applyButton);
 
-            var backButton = new Button(new Rectangle(0, 0, 250, 40), "Back");
+            var backButton = new Button(new Rectangle(0, 0, 250, 20), "Back");
             backButton.OnClick += BackToPreviousScene;
             _uiElements.Add(backButton);
 
@@ -144,11 +145,47 @@ namespace ProjectVagabond.Scenes
             // This now dynamically adds/removes the control instead of rebuilding
             UpdateFramerateControl();
 
+            // --- Mouse hover detection for selection ---
+            Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+            Vector2 currentPos = new Vector2(0, 50); // Match the Draw method starting position
+
+            for (int i = 0; i < _uiElements.Count; i++)
+            {
+                var item = _uiElements[i];
+                currentPos.X = (Global.VIRTUAL_WIDTH - 450) / 2;
+
+                if (item is ISettingControl setting)
+                {
+                    // Create hover rectangle for setting control (match Draw method positioning)
+                    var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y + 5, 460, 20);
+                    if (hoverRect.Contains(virtualMousePos))
+                    {
+                        _selectedIndex = i;
+                    }
+                    currentPos.Y += 20; // Match Draw method increment
+                }
+                else if (item is Button button)
+                {
+                    // Create hover rectangle for button
+                    var buttonRect = new Rectangle((Global.VIRTUAL_WIDTH - button.Bounds.Width) / 2, (int)currentPos.Y, button.Bounds.Width, button.Bounds.Height);
+                    if (buttonRect.Contains(virtualMousePos))
+                    {
+                        _selectedIndex = i;
+                    }
+                    currentPos.Y += 25; // Match Draw method increment
+                }
+                else if (item is string)
+                {
+                    currentPos.Y += 5; // Match Draw method increment for headers
+                    currentPos.Y += 20; // Match the additional increment after drawing divider
+                }
+            }
+
             HandleKeyboardInput(currentKeyboardState);
 
             // --- Update all UI elements ---
             // The individual controls' Update methods handle their own mouse logic.
-            Vector2 currentPos = new Vector2(0, 150);
+            currentPos = new Vector2(0, 150);
             for (int i = 0; i < _uiElements.Count; i++)
             {
                 var item = _uiElements[i];
@@ -203,7 +240,7 @@ namespace ProjectVagabond.Scenes
                 {
                     if (KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState)) setting.HandleInput(Keys.Left);
                     if (KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState)) setting.HandleInput(Keys.Right);
-                    if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState)) setting.HandleInput(Keys.Enter);
+                    if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState) && IsDirty()) ApplySettings();
                 }
                 else if (selectedItem is Button button)
                 {
@@ -235,15 +272,17 @@ namespace ProjectVagabond.Scenes
             var spriteBatch = Global.Instance.CurrentSpriteBatch;
             var font = Global.Instance.DefaultFont;
             int screenWidth = Global.VIRTUAL_WIDTH;
+            int screenHeight = Global.VIRTUAL_HEIGHT;
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             Core.Pixel.SetData(new[] { Color.White });
 
             string title = "Settings";
             Vector2 titleSize = font.MeasureString(title) * 2f;
-            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 50), Global.Instance.palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
+            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 10), Global.Instance.palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
 
-            Vector2 currentPos = new Vector2(0, 150);
+            Vector2 currentPos = new Vector2(0, 50);
+            Vector2 buttonPos = new Vector2(0, 65);
             for (int i = 0; i < _uiElements.Count; i++)
             {
                 var item = _uiElements[i];
@@ -253,32 +292,35 @@ namespace ProjectVagabond.Scenes
                 // Draw highlight for keyboard-selected item
                 if (isSelected)
                 {
-                    float itemHeight = 40;
-                    if (item is Button) itemHeight = 50;
+                    float itemHeight = 20;
+                    if (item is Button) itemHeight = 20;
                     else if (item is string) itemHeight = 0; // Don't highlight headers
 
                     if (itemHeight > 0)
                     {
-                        var highlightRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y - 5, 460, (int)itemHeight);
+                        var highlightRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, (int)itemHeight);
                         DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 2, Global.Instance.palette_Yellow);
                     }
                 }
 
                 if (item is ISettingControl setting)
                 {
-                    setting.Draw(spriteBatch, currentPos, isSelected);
-                    currentPos.Y += 40;
+                    setting.Draw(spriteBatch, new Vector2(currentPos.X, currentPos.Y + 5), isSelected);
+                    currentPos.Y += 20;
                 }
                 else if (item is Button button)
                 {
                     button.Bounds = new Rectangle((screenWidth - button.Bounds.Width) / 2, (int)currentPos.Y, button.Bounds.Width, button.Bounds.Height);
                     button.Draw(spriteBatch, font);
-                    currentPos.Y += 55;
+                    currentPos.Y += 25;
                 }
                 else if (item is string header)
                 {
+                    currentPos.Y += 5;
                     spriteBatch.DrawString(font, header, new Vector2(screenWidth / 2 - font.MeasureString(header).Width / 2, currentPos.Y), Global.Instance.palette_LightGray);
-                    currentPos.Y += 45;
+                    var dividerRect = new Rectangle(screenWidth / 2 - 180, (int)currentPos.Y + 10, 360, 1);
+                    spriteBatch.Draw(Core.Pixel, dividerRect, Global.Instance.palette_Gray);
+                    currentPos.Y += 20;
                 }
             }
 

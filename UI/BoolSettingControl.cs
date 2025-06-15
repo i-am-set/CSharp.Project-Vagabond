@@ -34,7 +34,7 @@ namespace ProjectVagabond.UI
 
         public void HandleInput(Keys key)
         {
-            if (key == Keys.Left || key == Keys.Right || key == Keys.Enter)
+            if (key == Keys.Left || key == Keys.Right)
             {
                 ToggleValue();
             }
