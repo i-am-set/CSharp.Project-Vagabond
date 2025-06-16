@@ -39,8 +39,7 @@ namespace ProjectVagabond
                 AddToHistory("Available commands:", Color.Magenta);
                 foreach (var cmd in _commands.Values)
                 {
-                    // Don't show help for the help command itself, or for debug commands
-                    if (cmd.Name == "help" || cmd.Name.StartsWith("debug")) continue;
+                    if (cmd.Name == "help" || cmd.Name.StartsWith("debug")) continue; // Don't show help for the help command itself, or for debug commands
                     if (!string.IsNullOrEmpty(cmd.HelpText))
                     {
                         AddHelpLineToHistory(cmd.HelpText);
@@ -215,9 +214,8 @@ namespace ProjectVagabond
                 }
                 catch (Exception ex)
                 {
-                    // Catch potential errors from the graphics device
                     Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Failed to set resolution: {ex.Message}");
-                    // It's good practice to revert to a safe resolution if it fails, but for now, an error is sufficient.
+                    Core.ResizeWindow(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
                 }
             }, "debugsetresolution <width> <height> [gray]- Set the game resolution.");
 

@@ -11,7 +11,6 @@ using System;
 // TODO: player customization; backgrounds, stats, bodyfat, muscle (both of which effect stat spread as well as gives buffs and needs at their extremes)
 // TODO: Ctrl-Z undo previous path queued
 // TODO: Make resting take random time (full rest between 6 and 11 hours)
-// TODO: Add menu state machine (terminal/map, dialogue, combat, settings, mainmenu)
 // TODO: Wait command: (wait 3 hours 2 minutes)
 
 namespace ProjectVagabond
@@ -36,6 +35,12 @@ namespace ProjectVagabond
         private static readonly SceneManager _sceneManager = new();
         public static readonly GameSettings _settings = new();
 
+        // Misc //
+        private RenderTarget2D _renderTarget;
+        private Rectangle _finalRenderRectangle;
+        private static Matrix _mouseTransformMatrix;
+        private static Texture2D _pixel;
+
         // Public references //
         public static GameState CurrentGameState => _gameState;
         public static MapRenderer CurrentMapRenderer => _mapRenderer;
@@ -52,12 +57,6 @@ namespace ProjectVagabond
         public static GameSettings Settings => _settings;
         public static Texture2D Pixel => _pixel;
 
-        // New: Render target for fixed aspect ratio
-        private RenderTarget2D _renderTarget;
-        private Rectangle _finalRenderRectangle;
-        private static Matrix _mouseTransformMatrix;
-        private static Texture2D _pixel;
-
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public Core()
@@ -66,7 +65,6 @@ namespace ProjectVagabond
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            // Set window size to the virtual resolution and allow resizing
             Global.Instance.CurrentGraphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
             Global.Instance.CurrentGraphics.PreferredBackBufferHeight = Global.VIRTUAL_HEIGHT;
             Window.AllowUserResizing = false;
@@ -86,14 +84,12 @@ namespace ProjectVagabond
 
             _pixel = new Texture2D(GraphicsDevice, 1, 1);
 
-            // Scene initialization
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
             _sceneManager.AddScene(GameSceneState.Combat, new CombatScene());
 
-            // Initial calculation for the render rectangle and mouse matrix
             OnResize(null, null);
 
             base.Initialize();
@@ -103,7 +99,6 @@ namespace ProjectVagabond
         {
             Global.Instance.CurrentSpriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // Create the render target with the virtual resolution
             _renderTarget = new RenderTarget2D(
                 GraphicsDevice,
                 Global.VIRTUAL_WIDTH,
@@ -123,7 +118,6 @@ namespace ProjectVagabond
 
             _spriteManager.LoadSpriteContent();
 
-            // Set initial scene
             _sceneManager.ChangeScene(GameSceneState.MainMenu);
         }
 
@@ -140,27 +134,21 @@ namespace ProjectVagabond
             }
             Global.Instance.CurrentGraphics.SynchronizeWithVerticalRetrace = Settings.IsVsync;
 
-            // Delegate update to the current scene
             _sceneManager.Update(gameTime);
             base.Update(gameTime);
         }
 
         protected override void Draw(GameTime gameTime)
         {
-            // --- Pass 1: Render the entire scene to the RenderTarget ---
             GraphicsDevice.SetRenderTarget(_renderTarget);
             GraphicsDevice.Clear(Global.Instance.GameBg);
 
-            // Delegate draw to the current scene, which will now draw on the _renderTarget
             _sceneManager.Draw(gameTime);
 
-            // --- Pass 2: Render the RenderTarget to the screen (back buffer) ---
             GraphicsDevice.SetRenderTarget(null);
-            // Clear the back buffer to create the letterbox/pillarbox effect
             GraphicsDevice.Clear(Color.Black);
 
             Global.Instance.CurrentSpriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            // Draw the finalized scene, scaled to fit the window
             Global.Instance.CurrentSpriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
             Global.Instance.CurrentSpriteBatch.End();
 
@@ -179,12 +167,10 @@ namespace ProjectVagabond
             var screenWidth = GraphicsDevice.PresentationParameters.BackBufferWidth;
             var screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
 
-            // Calculate the scale to fit the virtual resolution within the new window size
             float scaleX = (float)screenWidth / Global.VIRTUAL_WIDTH;
             float scaleY = (float)screenHeight / Global.VIRTUAL_HEIGHT;
             float scale = Math.Min(scaleX, scaleY);
 
-            // Calculate the dimensions and position of the scaled render target
             int destWidth = (int)(Global.VIRTUAL_WIDTH * scale);
             int destHeight = (int)(Global.VIRTUAL_HEIGHT * scale);
             int destX = (screenWidth - destWidth) / 2;
@@ -192,18 +178,22 @@ namespace ProjectVagabond
 
             _finalRenderRectangle = new Rectangle(destX, destY, destWidth, destHeight);
 
-            // Create a matrix to transform mouse coordinates from screen space to virtual space
             _mouseTransformMatrix = Matrix.Invert(Matrix.CreateTranslation(destX, destY, 0) * Matrix.CreateScale(scale));
         }
 
         /// <summary>
-        /// Transforms mouse coordinates from screen space to virtual game space.
+        /// Transforms mouse coordinates from screen space to 'virtual' game space.
         /// </summary>
         public static Vector2 TransformMouse(Point screenPoint)
         {
             return Vector2.Transform(screenPoint.ToVector2(), _mouseTransformMatrix);
         }
 
+        /// <summary>
+        /// Helper method to resize the game window.
+        /// </summary>
+        /// <param name="width"></param>
+        /// <param name="height"></param>
         public static void ResizeWindow(int width, int height)
         {
             var graphics = Global.Instance.CurrentGraphics;
@@ -214,6 +204,9 @@ namespace ProjectVagabond
             Instance.OnResize(null, null);
         }
 
+        /// <summary>
+        /// Helper method to exit the application.
+        /// </summary>
         public void ExitApplication() => Exit();
 
         public static void ScreenShake(float intensity, float duration) =>

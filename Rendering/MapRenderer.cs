@@ -74,7 +74,6 @@ namespace ProjectVagabond
 
                     bool isPlayer = (worldX == (int)_gameState.PlayerWorldPos.X && worldY == (int)_gameState.PlayerWorldPos.Y);
 
-                    // Check action queue for rendering
                     bool isPath = false;
                     bool isPathEnd = false;
                     bool isShortRest = false;
@@ -82,8 +81,7 @@ namespace ProjectVagabond
                     bool isRunning = false;
                     Vector2 worldPos = new Vector2(worldX, worldY);
 
-                    // Find all actions at this position to handle overlaps (e.g., move then rest on same tile)
-                    var actionsAtPos = _gameState.PendingActions.Where(a => a.Position == worldPos).ToList();
+                    var actionsAtPos = _gameState.PendingActions.Where(a => a.Position == worldPos).ToList(); // Find all actions at this position to handle overlaps (e.g., move then rest on same tile)
                     if (actionsAtPos.Any())
                     {
                         if (actionsAtPos.Any(a => a.Type == ActionType.ShortRest)) isShortRest = true;

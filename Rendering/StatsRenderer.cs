@@ -12,7 +12,6 @@ namespace ProjectVagabond
         private MouseState _previousMouseState;
         private MouseState _currentMouseState;
 
-        // Tooltip state
         private string _tooltipText = "";
         private Vector2 _tooltipPosition;
         private bool _showTooltip = false;
@@ -24,7 +23,6 @@ namespace ProjectVagabond
             _previousMouseState = _currentMouseState;
             _currentMouseState = Mouse.GetState();
 
-            // Check for tooltip display
             CheckTooltipHover();
         }
 
@@ -35,7 +33,6 @@ namespace ProjectVagabond
             SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
             var stats = _gameState.PlayerStats;
 
-            // Base positioning - adjust these values to move the entire stats display
             int baseX = 50;
             int baseY = 50 + Global.GRID_SIZE * Global.GRID_CELL_SIZE + 10; // Closer to map
 
@@ -82,8 +79,7 @@ namespace ProjectVagabond
             int maxEnergy = stats.MaxEnergyPoints;
             bool hasPendingActions = _gameState.PendingActions.Count > 0;
 
-            // Step 1: Draw the base bar (current energy in green, empty in gray)
-            for (int i = 0; i < maxEnergy; i++)
+            for (int i = 0; i < maxEnergy; i++) // Draw the base bar (current energy in green, empty in gray)
             {
                 int segmentX = barX + i * 6;
                 Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
@@ -93,14 +89,12 @@ namespace ProjectVagabond
                     spriteBatch.Draw(pixel, segmentRect, Color.Lerp(Global.Instance.Palette_DarkGray, Global.Instance.Palette_LightGreen, 0.3f));
             }
 
-            // Step 2: If previewing, overlay the predicted changes
-            if (hasPendingActions)
+            if (hasPendingActions) // If previewing, overlay the predicted changes
             {
                 int finalEnergy = _gameState.PendingQueueSimulationResult.finalEnergy;
                 if (finalEnergy < currentEnergy)
                 {
-                    // Draw the cost in yellow over the green part
-                    for (int i = finalEnergy; i < currentEnergy; i++)
+                    for (int i = finalEnergy; i < currentEnergy; i++) // Draw the cost in yellow over the green part
                     {
                         int segmentX = barX + i * 6;
                         Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
@@ -109,8 +103,7 @@ namespace ProjectVagabond
                 }
                 else if (finalEnergy > currentEnergy)
                 {
-                    // Draw the gain in teal over the empty/gray part
-                    for (int i = currentEnergy; i < finalEnergy; i++)
+                    for (int i = currentEnergy; i < finalEnergy; i++) // Draw the gain in teal over the empty/gray part
                     {
                         int segmentX = barX + i * 6;
                         Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
@@ -163,7 +156,6 @@ namespace ProjectVagabond
 
         private void CheckTooltipHover()
         {
-            // Transform mouse coordinates from screen space to virtual space
             Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
             _showTooltip = false;
 
@@ -171,15 +163,13 @@ namespace ProjectVagabond
 
             var stats = _gameState.PlayerStats;
             
-            // Check HP bar hover using virtual coordinates
-            if (_hpBarBounds.Contains(virtualMousePos))
+            if (_hpBarBounds.Contains(virtualMousePos)) // Check HP bar hover using virtual coordinates
             {
                 _tooltipText = $"{stats.CurrentHealthPoints}/{stats.MaxHealthPoints}";
                 _tooltipPosition = new Vector2(virtualMousePos.X + 10, virtualMousePos.Y - 20);
                 _showTooltip = true;
             }
-            // Check EP bar hover using virtual coordinates
-            else if (_epBarBounds.Contains(virtualMousePos))
+            else if (_epBarBounds.Contains(virtualMousePos)) // Check EP bar hover using virtual coordinates
             {
                 if (_gameState.PendingActions.Count > 0)
                 {
@@ -203,28 +193,23 @@ namespace ProjectVagabond
             var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
             pixel.SetData(new[] { Color.White });
 
-            // Measure tooltip text
             Vector2 textSize = Global.Instance.DefaultFont.MeasureString(_tooltipText);
 
-            // Create tooltip background with padding
-            Rectangle tooltipBg = new Rectangle(
+            Rectangle tooltipBg = new Rectangle( // Create tooltip background with padding
                 (int)_tooltipPosition.X - 4,
                 (int)_tooltipPosition.Y - 2,
                 (int)textSize.X + 8,
                 (int)textSize.Y + 4
             );
 
-            // Draw tooltip background (dark with slight transparency)
-            spriteBatch.Draw(pixel, tooltipBg, Color.Black * 0.8f);
+            spriteBatch.Draw(pixel, tooltipBg, Color.Black * 0.8f); // Draw tooltip background
 
-            // Draw tooltip border
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), Color.White);
+            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), Color.White); // Draw tooltip border
             spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), Color.White);
             spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), Color.White);
             spriteBatch.Draw(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), Color.White);
 
-            // Draw tooltip text
-            spriteBatch.DrawString(Global.Instance.DefaultFont, _tooltipText, _tooltipPosition, Color.White);
+            spriteBatch.DrawString(Global.Instance.DefaultFont, _tooltipText, _tooltipPosition, Color.White); // Draw tooltip text
         }
     }
 }

@@ -17,12 +17,11 @@ namespace ProjectVagabond
         public bool UseImperialUnits { get; set; }
         public bool Use24HourClock { get; set; }
 
-        // Controls (Placeholder for future implementation)
+        // Controls
         // ...
 
         public GameSettings()
         {
-            // Set default values
             Resolution = new Point(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             IsFullscreen = false;
             IsVsync = true;
@@ -38,19 +37,16 @@ namespace ProjectVagabond
         /// </summary>
         public void ApplyGraphicsSettings(GraphicsDeviceManager gdm, Core game)
         {
-            // 1. Apply settings that affect the Game object directly (the update loop)
             game.IsFixedTimeStep = IsFrameLimiterEnabled;
             if (IsFrameLimiterEnabled)
             {
                 game.TargetElapsedTime = TimeSpan.FromSeconds(1.0 / TargetFramerate);
             }
 
-            // 2. Set all desired properties on the GraphicsDeviceManager
             gdm.SynchronizeWithVerticalRetrace = IsVsync;
             gdm.IsFullScreen = IsFullscreen;
             Core.ResizeWindow(Resolution.X, Resolution.Y);
 
-            // 3. Apply all changes at once.
             gdm.ApplyChanges();
         }
 

@@ -33,16 +33,15 @@ namespace ProjectVagabond
             {
                 for (int x = 0; x < 8; x++)
                 {
-                    // Create a wave pattern using a simple formula
                     bool isWave = (int)(2 * Math.Sin((x + y) * Math.PI / 4)) == y - 4;
 
                     if (isWave)
                     {
-                        colorData[y * 8 + x] = new Color(0, 100, 255); // Bright blue wave crest
+                        colorData[y * 8 + x] = new Color(0, 100, 255);
                     }
                     else
                     {
-                        colorData[y * 8 + x] = new Color(0, 50, 150); // Darker blue water
+                        colorData[y * 8 + x] = new Color(0, 50, 150);
                     }
                 }
             }
@@ -62,7 +61,7 @@ namespace ProjectVagabond
                 for (int x = 0; x < size; x++)
                 {
                     int distance = Math.Abs(x - size / 2) + Math.Abs(y - size / 2);
-                    if (distance <= 4) // Adjusted for 10x10
+                    if (distance <= 4)
                     {
                         colorData[y * size + x] = Color.White;
                     }

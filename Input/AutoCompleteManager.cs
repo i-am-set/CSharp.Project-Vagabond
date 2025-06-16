@@ -50,7 +50,7 @@ namespace ProjectVagabond
             string commandName = parts[0].ToLower();
             bool isCompleteCommand = Core.CurrentCommandProcessor.Commands.ContainsKey(commandName);
 
-            // We suggest ARGUMENTS if:
+            // Suggest ARGUMENTS if:
             // 1. The first word is a complete command AND...
             // 2. ...the user has typed more than one word (e.g., "run u")
             // 3. ...OR there is a space after the command (e.g., "run ")

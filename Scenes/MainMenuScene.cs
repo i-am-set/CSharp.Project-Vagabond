@@ -12,6 +12,9 @@ namespace ProjectVagabond.Scenes
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = 0;
         private KeyboardState _previousKeyboardState;
+        
+        private float _inputDelay = 0.1f; // 1.0f would be a 1 second delay
+        private float _currentInputDelay = 0f;
 
         public override void Initialize()
         {
@@ -33,12 +36,22 @@ namespace ProjectVagabond.Scenes
             _buttons.Add(exitButton);
         }
 
+        public override void Enter()
+        {
+            base.Enter();
+            _currentInputDelay = _inputDelay;
+        }
+
         public override void Update(GameTime gameTime)
         {
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
 
-            // Mouse input
+            if (_currentInputDelay > 0)
+            {
+                _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+
             for (int i = 0; i < _buttons.Count; i++)
             {
                 _buttons[i].Update(currentMouseState);
@@ -48,25 +61,23 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Keyboard input
-            if (currentKeyboardState.IsKeyDown(Keys.Down) && !_previousKeyboardState.IsKeyDown(Keys.Down))
+            if (_currentInputDelay <= 0)
             {
-                _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
-                // Move the mouse only when the selection changes
-                Mouse.SetPosition(_buttons[_selectedButtonIndex].Bounds.Center.X, _buttons[_selectedButtonIndex].Bounds.Center.Y);
+                if (currentKeyboardState.IsKeyDown(Keys.Down) && !_previousKeyboardState.IsKeyDown(Keys.Down))
+                {
+                    _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
+                    Mouse.SetPosition(_buttons[_selectedButtonIndex].Bounds.Center.X, _buttons[_selectedButtonIndex].Bounds.Center.Y);
+                }
+                if (currentKeyboardState.IsKeyDown(Keys.Up) && !_previousKeyboardState.IsKeyDown(Keys.Up))
+                {
+                    _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
+                    Mouse.SetPosition(_buttons[_selectedButtonIndex].Bounds.Center.X, _buttons[_selectedButtonIndex].Bounds.Center.Y);
+                }
+                if (currentKeyboardState.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
+                {
+                    _buttons[_selectedButtonIndex].TriggerClick();
+                }
             }
-            if (currentKeyboardState.IsKeyDown(Keys.Up) && !_previousKeyboardState.IsKeyDown(Keys.Up))
-            {
-                _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
-                // Move the mouse only when the selection changes
-                Mouse.SetPosition(_buttons[_selectedButtonIndex].Bounds.Center.X, _buttons[_selectedButtonIndex].Bounds.Center.Y);
-            }
-            if (currentKeyboardState.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
-            {
-                _buttons[_selectedButtonIndex].TriggerClick();
-            }
-
-            // The problematic loop has been removed.
 
             _previousKeyboardState = currentKeyboardState;
         }
@@ -80,33 +91,28 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
             Core.Pixel.SetData(new[] { Color.White });
 
-            // Draw Title
             string title = ".";
             Vector2 titleSize = font.MeasureString(title) * 2f;
             spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 150), Global.Instance.Palette_BrightWhite, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
-            // Draw buttons
             foreach (var button in _buttons)
             {
                 button.Draw(spriteBatch, font);
             }
 
-            // Draw keyboard selection highlight based on text size
             var selectedButton = _buttons[_selectedButtonIndex];
             Vector2 textSize = font.MeasureString(selectedButton.Text);
 
-            // Add some padding around the text (adjust these values as needed)
             int horizontalPadding = 8;
             int verticalPadding = 4;
 
-            // Calculate highlight rectangle centered on the button's position
             Rectangle highlightRect = new Rectangle(
                 (int)(selectedButton.Bounds.X + (selectedButton.Bounds.Width - textSize.X) * 0.5f - horizontalPadding),
                 (int)(selectedButton.Bounds.Y + (selectedButton.Bounds.Height - textSize.Y) * 0.5f - verticalPadding),
                 (int)(textSize.X + horizontalPadding * 2),
                 (int)(textSize.Y + verticalPadding * 2)
             );
-            DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 2, Global.Instance.OptionHoverColor);
+            DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
             spriteBatch.End();
         }
 

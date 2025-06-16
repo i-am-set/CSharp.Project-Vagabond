@@ -166,7 +166,6 @@ namespace ProjectVagabond
             }
             else
             {
-                // Handle enhanced text input
                 foreach (Keys key in pressedKeys)
                 {
                     if (!_previousKeyboardState.IsKeyDown(key))

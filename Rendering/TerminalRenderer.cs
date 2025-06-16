@@ -202,7 +202,6 @@ namespace ProjectVagabond
 
         private string GetPromptText()
         {
-            // Count different action types for a more detailed prompt
             int moveCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
             int restCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.ShortRest || a.Type == ActionType.LongRest);
                 
@@ -358,7 +357,7 @@ namespace ProjectVagabond
             }
             catch
             {
-                // Fallback
+                // bruh
             }
     
             return Global.Instance.TextColor;

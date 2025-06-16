@@ -25,7 +25,7 @@ namespace ProjectVagabond
             TerminalBg = Palette_Black;
             MapBg = Palette_Black;
             TextColor = Color.White;
-            OptionHoverColor = Color.Red;
+            OptionHoverColor = Palette_Red;
             OutputTextColor = Color.Gray;
         }
 
@@ -35,7 +35,7 @@ namespace ProjectVagabond
         // CONSTANTS
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        // New: Virtual resolution for fixed aspect ratio rendering
+        // Virtual resolution for fixed aspect ratio rendering
         public const int VIRTUAL_WIDTH = 960;
         public const int VIRTUAL_HEIGHT = 540;
 
