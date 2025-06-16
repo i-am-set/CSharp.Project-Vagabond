@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -17,6 +17,7 @@ namespace ProjectVagabond.Scenes
         private string _confirmationMessage = "";
         private float _confirmationTimer = 0f;
 
+        private bool _keyboardNavigatedLastFrame = false;
         private KeyboardState _previousKeyboardState;
         private MouseState _previousMouseState;
 
@@ -48,6 +49,9 @@ namespace ProjectVagabond.Scenes
 
             BuildInitialUI();
             _selectedIndex = FindNextSelectable(-1, 1);
+            _previousMouseState = Mouse.GetState();
+            _previousKeyboardState = Keyboard.GetState();
+            Core.Instance.IsMouseVisible = true;
         }
 
         private void BuildInitialUI()
@@ -224,6 +228,15 @@ namespace ProjectVagabond.Scenes
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
 
+            if (_keyboardNavigatedLastFrame)
+            {
+                _keyboardNavigatedLastFrame = false;
+            }
+            else if (currentMouseState.Position != _previousMouseState.Position)
+            {
+                Core.Instance.IsMouseVisible = true;
+            }
+
             if (_confirmationTimer > 0)
             {
                 _confirmationTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -290,15 +303,23 @@ namespace ProjectVagabond.Scenes
 
         private void HandleKeyboardInput(KeyboardState currentKeyboardState)
         {
+            bool selectionChanged = false;
             if (KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState))
             {
                 _selectedIndex = FindNextSelectable(_selectedIndex, 1);
-                MoveMouseToSelected();
+                selectionChanged = true;
             }
             if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState))
             {
                 _selectedIndex = FindNextSelectable(_selectedIndex, -1);
+                selectionChanged = true;
+            }
+
+            if (selectionChanged)
+            {
                 MoveMouseToSelected();
+                Core.Instance.IsMouseVisible = false;
+                _keyboardNavigatedLastFrame = true;
             }
 
             if (_selectedIndex >= 0 && _selectedIndex < _uiElements.Count)

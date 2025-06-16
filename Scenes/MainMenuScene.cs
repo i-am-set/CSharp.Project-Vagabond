@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -12,6 +12,8 @@ namespace ProjectVagabond.Scenes
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = 0;
         private KeyboardState _previousKeyboardState;
+        private MouseState _previousMouseState;
+        private bool _keyboardNavigatedLastFrame = false;
         
         private float _inputDelay = 0.1f; // 1.0f would be a 1 second delay
         private float _currentInputDelay = 0f;
@@ -40,12 +42,23 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             _currentInputDelay = _inputDelay;
+            _previousMouseState = Mouse.GetState();
+            Core.Instance.IsMouseVisible = true;
         }
 
         public override void Update(GameTime gameTime)
         {
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
+
+            if (_keyboardNavigatedLastFrame)
+            {
+                _keyboardNavigatedLastFrame = false;
+            }
+            else if (currentMouseState.Position != _previousMouseState.Position)
+            {
+                Core.Instance.IsMouseVisible = true;
+            }
 
             if (_currentInputDelay > 0)
             {
@@ -63,16 +76,25 @@ namespace ProjectVagabond.Scenes
 
             if (_currentInputDelay <= 0)
             {
+                bool selectionChanged = false;
                 if (currentKeyboardState.IsKeyDown(Keys.Down) && !_previousKeyboardState.IsKeyDown(Keys.Down))
                 {
                     _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
-                    Mouse.SetPosition(_buttons[_selectedButtonIndex].Bounds.Center.X, _buttons[_selectedButtonIndex].Bounds.Center.Y);
+                    selectionChanged = true;
                 }
                 if (currentKeyboardState.IsKeyDown(Keys.Up) && !_previousKeyboardState.IsKeyDown(Keys.Up))
                 {
                     _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
-                    Mouse.SetPosition(_buttons[_selectedButtonIndex].Bounds.Center.X, _buttons[_selectedButtonIndex].Bounds.Center.Y);
+                    selectionChanged = true;
                 }
+
+                if (selectionChanged)
+                {
+                    Mouse.SetPosition(_buttons[_selectedButtonIndex].Bounds.Center.X, _buttons[_selectedButtonIndex].Bounds.Center.Y);
+                    Core.Instance.IsMouseVisible = false;
+                    _keyboardNavigatedLastFrame = true;
+                }
+
                 if (currentKeyboardState.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
                 {
                     _buttons[_selectedButtonIndex].TriggerClick();
@@ -80,6 +102,7 @@ namespace ProjectVagabond.Scenes
             }
 
             _previousKeyboardState = currentKeyboardState;
+            _previousMouseState = currentMouseState;
         }
 
         public override void Draw(GameTime gameTime)
