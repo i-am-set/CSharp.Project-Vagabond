@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -20,7 +20,7 @@ namespace ProjectVagabond.Scenes
 
         public override void Initialize()
         {
-            int screenWidth = Global.Instance.CurrentGraphics.PreferredBackBufferWidth;
+            int screenWidth = Global.VIRTUAL_WIDTH; // Use virtual width for positioning
             int buttonWidth = 200;
             int buttonHeight = 20;
 
@@ -65,14 +65,12 @@ namespace ProjectVagabond.Scenes
                 _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
 
-            bool isMouseHoveringAButton = false;
             for (int i = 0; i < _buttons.Count; i++)
             {
                 _buttons[i].Update(currentMouseState);
                 if (_buttons[i].IsHovered)
                 {
                     _selectedButtonIndex = i;
-                    isMouseHoveringAButton = true;
                 }
             }
 
@@ -83,35 +81,25 @@ namespace ProjectVagabond.Scenes
 
                 if (upPressed || downPressed)
                 {
-                    if (isMouseHoveringAButton)
+                    if (upPressed)
                     {
-                        if (downPressed)
-                        {
-                            _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
-                        }
-                        if (upPressed)
-                        {
-                            _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
-                        }
+                        _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
                     }
-                    Mouse.SetPosition(_buttons[_selectedButtonIndex].Bounds.Center.X, _buttons[_selectedButtonIndex].Bounds.Center.Y);
+                    else // downPressed
+                    {
+                        _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
+                    }
+
+                    Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
+                    Mouse.SetPosition(screenPos.X, screenPos.Y);
+                    
                     Core.Instance.IsMouseVisible = false;
                     _keyboardNavigatedLastFrame = true;
                 }
 
-                // Handle Enter key press
                 if (currentKeyboardState.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
                 {
-                    if (_buttons[_selectedButtonIndex].IsHovered)
-                    {
-                        _buttons[_selectedButtonIndex].TriggerClick();
-                    }
-                    else
-                    {
-                        Mouse.SetPosition(_buttons[_selectedButtonIndex].Bounds.Center.X, _buttons[_selectedButtonIndex].Bounds.Center.Y);
-                        Core.Instance.IsMouseVisible = false;
-                        _keyboardNavigatedLastFrame = true;
-                    }
+                    _buttons[_selectedButtonIndex].TriggerClick();
                 }
             }
 
@@ -123,7 +111,7 @@ namespace ProjectVagabond.Scenes
         {
             var spriteBatch = Global.Instance.CurrentSpriteBatch;
             var font = Global.Instance.DefaultFont;
-            int screenWidth = Global.Instance.CurrentGraphics.PreferredBackBufferWidth;
+            int screenWidth = Global.VIRTUAL_WIDTH;
 
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
             Core.Pixel.SetData(new[] { Color.White });
