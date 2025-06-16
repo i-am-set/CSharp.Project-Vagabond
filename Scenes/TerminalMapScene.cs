@@ -5,6 +5,12 @@ namespace ProjectVagabond.Scenes
 {
     public class TerminalMapScene : GameScene
     {
+        public override void Enter()
+        {
+            base.Enter();
+            Core.Instance.IsMouseVisible = true;
+        }
+
         public override void Update(GameTime gameTime)
         {
             Core.CurrentInputHandler.HandleInput(gameTime);

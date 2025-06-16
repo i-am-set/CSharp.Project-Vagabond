@@ -24,13 +24,13 @@ namespace ProjectVagabond.Scenes
             int buttonWidth = 200;
             int buttonHeight = 20;
 
-            var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 300, buttonWidth, buttonHeight), "Play");
+            var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 260, buttonWidth, buttonHeight), "Play");
             playButton.OnClick += () => Core.CurrentSceneManager.ChangeScene(GameSceneState.TerminalMap);
 
-            var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 320, buttonWidth, buttonHeight), "Settings");
+            var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 280, buttonWidth, buttonHeight), "Settings");
             settingsButton.OnClick += () => Core.CurrentSceneManager.ChangeScene(GameSceneState.Settings);
 
-            var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 340, buttonWidth, buttonHeight), "Exit");
+            var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 300, buttonWidth, buttonHeight), "Exit");
             exitButton.OnClick += () => Core.Instance.ExitApplication();
 
             _buttons.Add(playButton);
@@ -65,36 +65,41 @@ namespace ProjectVagabond.Scenes
                 _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
 
+            bool isMouseHoveringAButton = false;
             for (int i = 0; i < _buttons.Count; i++)
             {
                 _buttons[i].Update(currentMouseState);
                 if (_buttons[i].IsHovered)
                 {
                     _selectedButtonIndex = i;
+                    isMouseHoveringAButton = true;
                 }
             }
 
             if (_currentInputDelay <= 0)
             {
-                bool selectionChanged = false;
-                if (currentKeyboardState.IsKeyDown(Keys.Down) && !_previousKeyboardState.IsKeyDown(Keys.Down))
-                {
-                    _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
-                    selectionChanged = true;
-                }
-                if (currentKeyboardState.IsKeyDown(Keys.Up) && !_previousKeyboardState.IsKeyDown(Keys.Up))
-                {
-                    _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
-                    selectionChanged = true;
-                }
+                bool upPressed = currentKeyboardState.IsKeyDown(Keys.Up) && !_previousKeyboardState.IsKeyDown(Keys.Up);
+                bool downPressed = currentKeyboardState.IsKeyDown(Keys.Down) && !_previousKeyboardState.IsKeyDown(Keys.Down);
 
-                if (selectionChanged)
+                if (upPressed || downPressed)
                 {
+                    if (isMouseHoveringAButton)
+                    {
+                        if (downPressed)
+                        {
+                            _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
+                        }
+                        if (upPressed)
+                        {
+                            _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
+                        }
+                    }
                     Mouse.SetPosition(_buttons[_selectedButtonIndex].Bounds.Center.X, _buttons[_selectedButtonIndex].Bounds.Center.Y);
                     Core.Instance.IsMouseVisible = false;
                     _keyboardNavigatedLastFrame = true;
                 }
 
+                // Handle Enter key press
                 if (currentKeyboardState.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
                 {
                     if (_buttons[_selectedButtonIndex].IsHovered)
