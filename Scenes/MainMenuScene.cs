@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -97,7 +97,16 @@ namespace ProjectVagabond.Scenes
 
                 if (currentKeyboardState.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
                 {
-                    _buttons[_selectedButtonIndex].TriggerClick();
+                    if (_buttons[_selectedButtonIndex].IsHovered)
+                    {
+                        _buttons[_selectedButtonIndex].TriggerClick();
+                    }
+                    else
+                    {
+                        Mouse.SetPosition(_buttons[_selectedButtonIndex].Bounds.Center.X, _buttons[_selectedButtonIndex].Bounds.Center.Y);
+                        Core.Instance.IsMouseVisible = false;
+                        _keyboardNavigatedLastFrame = true;
+                    }
                 }
             }
 

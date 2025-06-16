@@ -190,6 +190,17 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Transforms coordinates from 'virtual' game space to screen space.
+        /// </summary>
+        public static Point TransformVirtualToScreen(Point virtualPoint)
+        {
+            // We need the inverse of _mouseTransformMatrix to go from virtual to screen.
+            var toScreenMatrix = Matrix.Invert(_mouseTransformMatrix);
+            var screenVector = Vector2.Transform(virtualPoint.ToVector2(), toScreenMatrix);
+            return new Point((int)screenVector.X, (int)screenVector.Y);
+        }
+
+        /// <summary>
         /// Helper method to resize the game window.
         /// </summary>
         /// <param name="width"></param>

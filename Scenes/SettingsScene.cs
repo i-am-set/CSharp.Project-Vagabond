@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -14,6 +14,7 @@ namespace ProjectVagabond.Scenes
     {
         private List<object> _uiElements = new();
         private int _selectedIndex = 0;
+        private int _hoveredIndex = -1; // NEW: Tracks the element currently under the mouse
         private string _confirmationMessage = "";
         private float _confirmationTimer = 0f;
 
@@ -174,9 +175,6 @@ namespace ProjectVagabond.Scenes
 
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
 
-        /// <summary>
-        /// NEW: Moves the mouse cursor to the center of the selected UI element, similar to MainMenuScene
-        /// </summary>
         private void MoveMouseToSelected()
         {
             if (_selectedIndex < 0 || _selectedIndex >= _uiElements.Count) return;
@@ -194,16 +192,15 @@ namespace ProjectVagabond.Scenes
 
                     if (item is ISettingControl)
                     {
-                        mousePos = new Point((int)currentPos.X + 230, (int)currentPos.Y + 15);
+                        mousePos = new Point((int)currentPos.X + 230, (int)currentPos.Y + 10);
                     }
                     else if (item is Button button)
                     {
                         mousePos = new Point(Global.VIRTUAL_WIDTH / 2, (int)currentPos.Y + 10);
                     }
 
-                    Vector2 screenPos = Core.TransformMouse(mousePos);
-                    int currentMousePosX = (int)Core.TransformMouse(new Point(Mouse.GetState().X, 0)).X;
-                    Mouse.SetPosition(currentMousePosX, (int)screenPos.Y);
+                    Point screenPos = Core.TransformVirtualToScreen(mousePos);
+                    Mouse.SetPosition(screenPos.X, screenPos.Y);
                     break;
                 }
 
@@ -227,6 +224,7 @@ namespace ProjectVagabond.Scenes
         {
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
+            _hoveredIndex = -1;
 
             if (_keyboardNavigatedLastFrame)
             {
@@ -261,6 +259,7 @@ namespace ProjectVagabond.Scenes
                     if (hoverRect.Contains(virtualMousePos))
                     {
                         _selectedIndex = i;
+                        _hoveredIndex = i;
                     }
                     
                     setting.Update(drawPosition, isSelected, currentMouseState, _previousMouseState);
@@ -274,6 +273,7 @@ namespace ProjectVagabond.Scenes
                     if (button.Bounds.Contains(virtualMousePos))
                     {
                         _selectedIndex = i;
+                        _hoveredIndex = i;
                     }
                     
                     button.Update(currentMouseState);
@@ -329,30 +329,53 @@ namespace ProjectVagabond.Scenes
                 {
                     if (KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState)) setting.HandleInput(Keys.Left);
                     if (KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState)) setting.HandleInput(Keys.Right);
-                    if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState) && IsDirty()) ApplySettings();
+                    
+                    if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
+                    {
+                        if (_selectedIndex == _hoveredIndex && IsDirty())
+                        {
+                            ApplySettings();
+                        }
+                    }
                 }
                 else if (selectedItem is Button button)
                 {
-                    if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState)) button.TriggerClick();
+                    if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
+                    {
+                        if (button.IsHovered)
+                        {
+                            button.TriggerClick();
+                        }
+                    }
                 }
             }
         }
 
         private int FindNextSelectable(int currentIndex, int direction)
         {
-            int newIndex = currentIndex;
+            int searchIndex = currentIndex;
+
             for (int i = 0; i < _uiElements.Count; i++)
             {
-                newIndex += direction;
-                if (newIndex < 0 || newIndex >= _uiElements.Count)
+                searchIndex += direction;
+
+                if (searchIndex >= _uiElements.Count)
                 {
-                    return currentIndex;
+                    searchIndex = 0;
                 }
-                if (_uiElements[newIndex] is ISettingControl || _uiElements[newIndex] is Button)
+                else if (searchIndex < 0)
                 {
-                    return newIndex;
+                    searchIndex = _uiElements.Count - 1;
+                }
+
+                var item = _uiElements[searchIndex];
+
+                if (item is ISettingControl || (item is Button button && button.IsEnabled))
+                {
+                    return searchIndex;
                 }
             }
+
             return currentIndex;
         }
 
