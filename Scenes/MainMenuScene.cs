@@ -124,18 +124,23 @@ namespace ProjectVagabond.Scenes
             }
 
             var selectedButton = _buttons[_selectedButtonIndex];
-            Vector2 textSize = font.MeasureString(selectedButton.Text);
 
-            int horizontalPadding = 8;
-            int verticalPadding = 4;
+            if (selectedButton.IsHovered || _keyboardNavigatedLastFrame)
+            {
+                Vector2 textSize = font.MeasureString(selectedButton.Text);
 
-            Rectangle highlightRect = new Rectangle(
-                (int)(selectedButton.Bounds.X + (selectedButton.Bounds.Width - textSize.X) * 0.5f - horizontalPadding),
-                (int)(selectedButton.Bounds.Y + (selectedButton.Bounds.Height - textSize.Y) * 0.5f - verticalPadding),
-                (int)(textSize.X + horizontalPadding * 2),
-                (int)(textSize.Y + verticalPadding * 2)
-            );
-            DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
+                int horizontalPadding = 8;
+                int verticalPadding = 4;
+
+                Rectangle highlightRect = new Rectangle(
+                    (int)(selectedButton.Bounds.X + (selectedButton.Bounds.Width - textSize.X) * 0.5f - horizontalPadding),
+                    (int)(selectedButton.Bounds.Y + (selectedButton.Bounds.Height - textSize.Y) * 0.5f - verticalPadding),
+                    (int)(textSize.X + horizontalPadding * 2),
+                    (int)(textSize.Y + verticalPadding * 2)
+                );
+                DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
+            }
+            
             spriteBatch.End();
         }
 

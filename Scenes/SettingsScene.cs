@@ -361,6 +361,7 @@ namespace ProjectVagabond.Scenes
             var spriteBatch = Global.Instance.CurrentSpriteBatch;
             var font = Global.Instance.DefaultFont;
             int screenWidth = Global.VIRTUAL_WIDTH;
+            var virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             Core.Pixel.SetData(new[] { Color.White });
@@ -378,14 +379,28 @@ namespace ProjectVagabond.Scenes
 
                 if (isSelected)
                 {
-                    float itemHeight = 20;
-                    if (item is Button) itemHeight = 20;
-                    else if (item is string) itemHeight = 0;
-
-                    if (itemHeight > 0)
+                    bool isHovered = false;
+                    if (item is ISettingControl)
                     {
-                        var highlightRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, (int)itemHeight);
-                        DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
+                        var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, 20);
+                        isHovered = hoverRect.Contains(virtualMousePos);
+                    }
+                    else if (item is Button button)
+                    {
+                        isHovered = button.IsHovered;
+                    }
+
+                    if (isHovered || _keyboardNavigatedLastFrame)
+                    {
+                        float itemHeight = 20;
+                        if (item is Button) itemHeight = 20;
+                        else if (item is string) itemHeight = 0;
+
+                        if (itemHeight > 0)
+                        {
+                            var highlightRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, (int)itemHeight);
+                            DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
+                        }
                     }
                 }
 
