@@ -15,6 +15,7 @@ namespace ProjectVagabond.UI
 
         private T _currentValue;
         private T _savedValue;
+        private readonly Func<T> _getter;
         private readonly Action<T> _setter;
         private readonly List<KeyValuePair<string, T>> _options;
         private int _currentIndex;
@@ -28,6 +29,7 @@ namespace ProjectVagabond.UI
         {
             Label = label;
             _options = options;
+            _getter = getter;
             _setter = setter;
             _savedValue = getter();
             _currentValue = _savedValue;
@@ -77,13 +79,19 @@ namespace ProjectVagabond.UI
 
         public void Apply()
         {
-            // This method's main job now is to re
             _savedValue = _currentValue;
         }
 
         public void Revert()
         {
             _currentValue = _savedValue;
+            _currentIndex = _options.FindIndex(o => o.Value.Equals(_currentValue));
+            if (_currentIndex == -1) _currentIndex = 0;
+        }
+
+        public void RefreshValue()
+        {
+            _currentValue = _getter();
             _currentIndex = _options.FindIndex(o => o.Value.Equals(_currentValue));
             if (_currentIndex == -1) _currentIndex = 0;
         }

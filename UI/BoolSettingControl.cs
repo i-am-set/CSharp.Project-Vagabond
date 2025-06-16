@@ -13,6 +13,7 @@ namespace ProjectVagabond.UI
 
         private bool _currentValue;
         private bool _savedValue;
+        private readonly Func<bool> _getter;
         private readonly Action<bool> _onApply;
 
         private Rectangle _leftArrowRect;
@@ -23,6 +24,7 @@ namespace ProjectVagabond.UI
         public BoolSettingControl(string label, Func<bool> getter, Action<bool> onApply)
         {
             Label = label;
+            _getter = getter;
             _savedValue = getter();
             _currentValue = _savedValue;
             _onApply = onApply;
@@ -66,6 +68,11 @@ namespace ProjectVagabond.UI
         public void Revert()
         {
             _currentValue = _savedValue;
+        }
+
+        public void RefreshValue()
+        {
+            _currentValue = _getter();
         }
 
         public void Draw(SpriteBatch spriteBatch, Vector2 position, bool isSelected)

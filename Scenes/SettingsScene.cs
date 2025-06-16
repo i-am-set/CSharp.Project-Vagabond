@@ -21,6 +21,7 @@ namespace ProjectVagabond.Scenes
         private MouseState _previousMouseState;
 
         private GameSettings _tempSettings;
+        private List<KeyValuePair<string, Point>> _resolutions;
 
         public override void Enter()
         {
@@ -35,6 +36,16 @@ namespace ProjectVagabond.Scenes
                 Use24HourClock = Core.Settings.Use24HourClock
             };
 
+            // Initialize the resolutions list
+            _resolutions = new List<KeyValuePair<string, Point>>
+            {
+                new("960 x 540", new Point(960, 540)),
+                new("1280 x 720", new Point(1280, 720)),
+                new("1366 x 768", new Point(1366, 768)),
+                new("1600 x 900", new Point(1600, 900)),
+                new("1920 x 1080", new Point(1920, 1080)),
+            };
+
             BuildInitialUI();
             _selectedIndex = FindNextSelectable(-1, 1);
         }
@@ -45,16 +56,17 @@ namespace ProjectVagabond.Scenes
 
             // Graphics Settings //
             _uiElements.Add("Graphics");
-            var resolutions = new List<KeyValuePair<string, Point>>
-            {
-                new("960 x 540", new Point(960, 540)),
-                new("1280 x 720", new Point(1280, 720)),
-                new("1366 x 768", new Point(1366, 768)),
-                new("1600 x 900", new Point(1600, 900)),
-                new("1920 x 1080", new Point(1920, 1080)),
-            };
-            _uiElements.Add(new OptionSettingControl<Point>("Resolution", resolutions, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v));
-            _uiElements.Add(new BoolSettingControl("Fullscreen", () => _tempSettings.IsFullscreen, v => _tempSettings.IsFullscreen = v));
+            
+            _uiElements.Add(new OptionSettingControl<Point>("Resolution", _resolutions, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v));
+            
+            _uiElements.Add(new BoolSettingControl("Fullscreen", () => _tempSettings.IsFullscreen, v => {
+                _tempSettings.IsFullscreen = v;
+                if (v) // When enabling fullscreen
+                {
+                    SetResolutionToNearestNative();
+                }
+            }));
+            
             _uiElements.Add(new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v));
             _uiElements.Add(new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v));
 
@@ -78,10 +90,37 @@ namespace ProjectVagabond.Scenes
             UpdateFramerateControl();
         }
 
-        /// <summary>
-        /// FIX: Dynamically adds or removes the Target Framerate control without rebuilding the whole UI.
-        /// This preserves the "dirty" state of other controls.
-        /// </summary>
+        private void SetResolutionToNearestNative()
+        {
+            var nativeResolution = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+            Point nativePoint = new Point(nativeResolution.Width, nativeResolution.Height);
+            
+            Point closestResolution = _resolutions[0].Value;
+            double minDistance = double.MaxValue;
+            
+            foreach (var resolution in _resolutions)
+            {
+                double distance = Math.Sqrt(
+                    Math.Pow(resolution.Value.X - nativePoint.X, 2) + 
+                    Math.Pow(resolution.Value.Y - nativePoint.Y, 2)
+                );
+                
+                if (distance < minDistance)
+                {
+                    minDistance = distance;
+                    closestResolution = resolution.Value;
+                }
+            }
+            
+            _tempSettings.Resolution = closestResolution;
+            
+            var resolutionControl = _uiElements.OfType<ISettingControl>().FirstOrDefault(c => c.Label == "Resolution");
+            if (resolutionControl != null)
+            {
+                resolutionControl.RefreshValue();
+            }
+        }
+
         private void UpdateFramerateControl()
         {
             var framerateControl = _uiElements.OfType<ISettingControl>().FirstOrDefault(c => c.Label == "Target Framerate");

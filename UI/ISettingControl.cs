@@ -14,5 +14,6 @@ namespace ProjectVagabond.UI
         void HandleInput(Keys key);
         void Apply();
         void Revert();
+        void RefreshValue();
     }
 }
