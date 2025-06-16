@@ -15,7 +15,10 @@ namespace ProjectVagabond.UI
         private bool _savedValue;
         private readonly Action<bool> _onApply;
 
-        private Rectangle _clickableArea;
+        private Rectangle _leftArrowRect;
+        private Rectangle _rightArrowRect;
+        private bool _isLeftArrowHovered;
+        private bool _isRightArrowHovered;
 
         public BoolSettingControl(string label, Func<bool> getter, Action<bool> onApply)
         {
@@ -28,7 +31,6 @@ namespace ProjectVagabond.UI
         private void ToggleValue()
         {
             _currentValue = !_currentValue;
-            // CRITICAL FIX: Immediately invoke the action to update the temporary settings object.
             _onApply?.Invoke(_currentValue);
         }
 
@@ -42,10 +44,14 @@ namespace ProjectVagabond.UI
 
         public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState)
         {
+            Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+
+            _isLeftArrowHovered = _leftArrowRect.Contains(virtualMousePos);
+            _isRightArrowHovered = _rightArrowRect.Contains(virtualMousePos);
+
             if (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
             {
-                Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-                if (_clickableArea.Contains(virtualMousePos))
+                if (_isLeftArrowHovered || _isRightArrowHovered)
                 {
                     ToggleValue();
                 }
@@ -54,8 +60,6 @@ namespace ProjectVagabond.UI
 
         public void Apply()
         {
-            // This method's main job now is to reset the "dirty" state.
-            // The actual setting application happens immediately on change.
             _savedValue = _currentValue;
         }
 
@@ -70,14 +74,53 @@ namespace ProjectVagabond.UI
             Color labelColor = isSelected ? Global.Instance.OptionHoverColor : Global.Instance.Palette_BrightWhite;
             spriteBatch.DrawString(font, Label, position, labelColor);
 
-            string valueText = _currentValue ? "< ON  >" : "< OFF >";
-            Vector2 valuePosition = new Vector2(position.X + 280, position.Y);
-            Color valueColor = IsDirty ? Global.Instance.Palette_Teal : Global.Instance.Palette_BrightWhite;
-            spriteBatch.DrawString(font, valueText, valuePosition, valueColor);
+            const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
+            Vector2 valueAreaPosition = new Vector2(position.X + 280, position.Y);
 
-            // Define clickable area for the update loop
-            Vector2 valueSize = font.MeasureString(valueText);
-            _clickableArea = new Rectangle((int)valuePosition.X, (int)valuePosition.Y, (int)valueSize.X, (int)valueSize.Y);
+            string leftArrowText = "<";
+            string valueText = _currentValue ? "ON" : "OFF";
+            string rightArrowText = ">";
+
+            Color baseValueColor = IsDirty ? Global.Instance.Palette_Teal : Global.Instance.Palette_BrightWhite;
+            Color leftArrowColor = _isLeftArrowHovered ? Global.Instance.OptionHoverColor : baseValueColor;
+            Color rightArrowColor = _isRightArrowHovered ? Global.Instance.OptionHoverColor : baseValueColor;
+
+            Vector2 leftArrowSize = font.MeasureString(leftArrowText);
+            Vector2 valueTextSize = font.MeasureString(valueText);
+            Vector2 rightArrowSize = font.MeasureString(rightArrowText);
+
+            // Left arrow
+            Vector2 leftArrowPos = valueAreaPosition;
+            spriteBatch.DrawString(font, leftArrowText, leftArrowPos, leftArrowColor);
+
+            // Right arrow
+            Vector2 rightArrowPos = new Vector2(valueAreaPosition.X + valueDisplayWidth - rightArrowSize.X, valueAreaPosition.Y);
+            spriteBatch.DrawString(font, rightArrowText, rightArrowPos, rightArrowColor);
+
+            // Value text
+            float spaceBetweenArrows = rightArrowPos.X - (leftArrowPos.X + leftArrowSize.X);
+            float textX = leftArrowPos.X + leftArrowSize.X + (spaceBetweenArrows - valueTextSize.X) * 0.5f;
+            Vector2 textPos = new Vector2(textX, valueAreaPosition.Y);
+            spriteBatch.DrawString(font, valueText, textPos, baseValueColor);
+
+            int padding = 5;
+            float arrowVisualHeight = font.LineHeight;
+
+            // Left Arrow Click Box
+            _leftArrowRect = new Rectangle(
+                (int)leftArrowPos.X - padding,
+                (int)leftArrowPos.Y - padding,
+                (int)leftArrowSize.X + (padding * 2),
+                (int)arrowVisualHeight + (padding * 2)
+            );
+
+            // Right Arrow Click Box
+            _rightArrowRect = new Rectangle(
+                (int)rightArrowPos.X - padding,
+                (int)rightArrowPos.Y - padding,
+                (int)rightArrowSize.X + (padding * 2),
+                (int)arrowVisualHeight + (padding * 2)
+            );
         }
     }
 }

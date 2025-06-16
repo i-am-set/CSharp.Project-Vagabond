@@ -21,6 +21,8 @@ namespace ProjectVagabond.UI
 
         private Rectangle _leftArrowRect;
         private Rectangle _rightArrowRect;
+        private bool _isLeftArrowHovered;
+        private bool _isRightArrowHovered;
 
         public OptionSettingControl(string label, List<KeyValuePair<string, T>> options, Func<T> getter, Action<T> setter)
         {
@@ -37,7 +39,6 @@ namespace ProjectVagabond.UI
         {
             _currentIndex = (_currentIndex + 1) % _options.Count;
             _currentValue = _options[_currentIndex].Value;
-            // CRITICAL FIX: Immediately invoke the action to update the temporary settings object.
             _setter?.Invoke(_currentValue);
         }
 
@@ -45,7 +46,6 @@ namespace ProjectVagabond.UI
         {
             _currentIndex = (_currentIndex - 1 + _options.Count) % _options.Count;
             _currentValue = _options[_currentIndex].Value;
-            // CRITICAL FIX: Immediately invoke the action to update the temporary settings object.
             _setter?.Invoke(_currentValue);
         }
 
@@ -57,14 +57,18 @@ namespace ProjectVagabond.UI
 
         public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState)
         {
+            Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+
+            _isLeftArrowHovered = _leftArrowRect.Contains(virtualMousePos);
+            _isRightArrowHovered = _rightArrowRect.Contains(virtualMousePos);
+
             if (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
             {
-                Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-                if (_leftArrowRect.Contains(virtualMousePos))
+                if (_isLeftArrowHovered)
                 {
                     Decrement();
                 }
-                else if (_rightArrowRect.Contains(virtualMousePos))
+                else if (_isRightArrowHovered)
                 {
                     Increment();
                 }
@@ -73,8 +77,7 @@ namespace ProjectVagabond.UI
 
         public void Apply()
         {
-            // This method's main job now is to reset the "dirty" state.
-            // The actual setting application happens immediately on change.
+            // This method's main job now is to re
             _savedValue = _currentValue;
         }
 
@@ -91,30 +94,52 @@ namespace ProjectVagabond.UI
             Color labelColor = isSelected ? Global.Instance.OptionHoverColor : Global.Instance.Palette_BrightWhite;
             spriteBatch.DrawString(font, Label, position, labelColor);
 
-            string valueText = $"< {_options[_currentIndex].Key} >";
-            Vector2 valuePosition = new Vector2(position.X + 280, position.Y);
-            Color valueColor = IsDirty ? Global.Instance.Palette_Teal : Global.Instance.Palette_BrightWhite;
-            spriteBatch.DrawString(font, valueText, valuePosition, valueColor);
+            const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
+            Vector2 valueAreaPosition = new Vector2(position.X + 280, position.Y);
 
-            // Define clickable areas for the update loop
-            Vector2 valueSize = font.MeasureString(valueText);
-            int padding = 10; // This is the extra clickable space around the arrow text. Adjust as needed.
-            int arrowWidth = 15; // The original visual width of the arrow text like "< "
+            string leftArrowText = "<";
+            string valueText = _options[_currentIndex].Key;
+            string rightArrowText = ">";
+
+            Color baseValueColor = IsDirty ? Global.Instance.Palette_Teal : Global.Instance.Palette_BrightWhite;
+            Color leftArrowColor = _isLeftArrowHovered ? Global.Instance.OptionHoverColor : baseValueColor;
+            Color rightArrowColor = _isRightArrowHovered ? Global.Instance.OptionHoverColor : baseValueColor;
+
+            Vector2 leftArrowSize = font.MeasureString(leftArrowText);
+            Vector2 valueTextSize = font.MeasureString(valueText);
+            Vector2 rightArrowSize = font.MeasureString(rightArrowText);
+
+            // Left arrow
+            Vector2 leftArrowPos = valueAreaPosition;
+            spriteBatch.DrawString(font, leftArrowText, leftArrowPos, leftArrowColor);
+
+            // Right arrow
+            Vector2 rightArrowPos = new Vector2(valueAreaPosition.X + valueDisplayWidth - rightArrowSize.X, valueAreaPosition.Y);
+            spriteBatch.DrawString(font, rightArrowText, rightArrowPos, rightArrowColor);
+
+            // Value text
+            float spaceBetweenArrows = rightArrowPos.X - (leftArrowPos.X + leftArrowSize.X);
+            float textX = leftArrowPos.X + leftArrowSize.X + (spaceBetweenArrows - valueTextSize.X) * 0.5f;
+            Vector2 textPos = new Vector2(textX, valueAreaPosition.Y);
+            spriteBatch.DrawString(font, valueText, textPos, baseValueColor);
+
+            int padding = 5;
+            float arrowVisualHeight = font.LineHeight;
 
             // Left Arrow Click Box
             _leftArrowRect = new Rectangle(
-                (int)valuePosition.X - padding, 
-                (int)valuePosition.Y - padding, 
-                arrowWidth + (padding * 2), 
-                (int)valueSize.Y + (padding * 2)
+                (int)leftArrowPos.X - padding,
+                (int)leftArrowPos.Y - padding,
+                (int)leftArrowSize.X + (padding * 2),
+                (int)arrowVisualHeight + (padding * 2)
             );
 
             // Right Arrow Click Box
             _rightArrowRect = new Rectangle(
-                (int)(valuePosition.X + valueSize.X - arrowWidth) - padding, 
-                (int)valuePosition.Y - padding, 
-                arrowWidth + (padding * 2), 
-                (int)valueSize.Y + (padding * 2)
+                (int)rightArrowPos.X - padding,
+                (int)rightArrowPos.Y - padding,
+                (int)rightArrowSize.X + (padding * 2),
+                (int)arrowVisualHeight + (padding * 2)
             );
         }
     }

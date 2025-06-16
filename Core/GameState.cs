@@ -429,7 +429,7 @@ namespace ProjectVagabond
                                 _playerStats.ExertEnergy(energyCost);
                                 var currentMapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
                                 string moveType = nextAction.Type == ActionType.RunMove ? "Ran" : "Walked";
-                                Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through [gold]{currentMapData.TerrainType.ToLower()}[khaki].[/o] <{(int)nextPosition.X}, {(int)nextPosition.Y}>");
+                                Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through[gold] {currentMapData.TerrainType.ToLower()}[khaki].[/o] <{(int)nextPosition.X}, {(int)nextPosition.Y}>");
                                 Core.CurrentWorldClockManager.PassTime(minutes: minutesPassed);
                                 break;
 

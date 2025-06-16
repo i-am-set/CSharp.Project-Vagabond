@@ -90,7 +90,11 @@ namespace ProjectVagabond
 
             _spriteBatch.DrawString(_defaultFont, "Terminal Output", new Vector2(terminalX, terminalY - 20), Global.Instance.TextColor);
 
-            int maxVisibleLines = (terminalHeight - 40) / Global.TERMINAL_LINE_SPACING;
+            int inputLineY = terminalY + terminalHeight - 10;
+            int separatorY = inputLineY - 5;
+            int outputAreaHeight = separatorY - terminalY + 10;
+            
+            int maxVisibleLines = outputAreaHeight / Global.TERMINAL_LINE_SPACING;
             int totalLines = _wrappedHistory.Count;
             int startIndex = Math.Max(0, totalLines - maxVisibleLines - _scrollOffset);
             int endIndex = Math.Min(totalLines, startIndex + maxVisibleLines);
@@ -130,8 +134,6 @@ namespace ProjectVagabond
                 _spriteBatch.DrawString(_defaultFont, scrollIndicator, new Vector2(terminalX, scrollY), Color.Gold);
             }
 
-            int inputLineY = terminalY + terminalHeight - 10;
-            int separatorY = inputLineY - 5;
             _spriteBatch.Draw(pixel, new Rectangle(terminalX-5, separatorY, Global.DEFAULT_TERMINAL_WIDTH+10, 2), Global.Instance.Palette_White);
 
             string inputDisplay = $"> {Core.CurrentInputHandler.CurrentInput}_";
@@ -179,7 +181,7 @@ namespace ProjectVagabond
             string wrappedStatus = WrapText(statusText, GetTerminalWidthInChars());
             _spriteBatch.DrawString(_defaultFont, wrappedStatus, new Vector2(terminalX, statusY), Global.Instance.Palette_LightGray);
 
-            int promptY = statusY + (wrappedStatus.Split('\n').Length * Global.TERMINAL_LINE_SPACING) + 10;
+            int promptY = statusY + (wrappedStatus.Split('\n').Length * Global.TERMINAL_LINE_SPACING) + 5;
             string promptText = GetPromptText();
             if (!string.IsNullOrEmpty(promptText))
             {
@@ -200,7 +202,7 @@ namespace ProjectVagabond
             }
         }
 
-        private string GetPromptText()
+        private static string GetPromptText()
         {
             int moveCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
             int restCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.ShortRest || a.Type == ActionType.LongRest);
@@ -214,8 +216,8 @@ namespace ProjectVagabond
             var promptBuilder = new StringBuilder();
             if (Core.CurrentGameState.IsFreeMoveMode && Core.CurrentGameState.PendingActions.Count <= 0)
             {
-                promptBuilder.AppendLine("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>");
-                promptBuilder.AppendLine("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel.");
+                promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
+                promptBuilder.Append("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel\n");
 
                 return promptBuilder.ToString();
             }
@@ -223,21 +225,21 @@ namespace ProjectVagabond
             {
                 if (Core.CurrentGameState.IsFreeMoveMode)
                 {
-                    promptBuilder.AppendLine("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>");
+                    promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
                 }
                 else
                 {
                     promptBuilder.Append("[khaki]Previewing action queue...\n");
                 }
-                promptBuilder.AppendLine("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel.");
+                promptBuilder.Append("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel\n");
 
                 var details = new List<string>();
                 if (moveCount > 0) details.Add($"[orange]{moveCount}[gold] move(s)");
                 if (restCount > 0) details.Add($"[green]{restCount}[gold] rest(s)");
                 
-                promptBuilder.AppendLine($"[gold]Pending {string.Join(", ", details)}.");
-                promptBuilder.AppendLine($"[gold]Arrival Time: [orange]{finalETA}");
-                promptBuilder.AppendLine($"[Palette_Gray]{formatedTimeFromMinutes}");
+                promptBuilder.Append($"[gold]Pending {string.Join(", ", details)}\n");
+                promptBuilder.Append($"[gold]Arrival Time: [orange]{finalETA}\n");
+                promptBuilder.Append($"[Palette_Gray]{formatedTimeFromMinutes}\n");
 
                 return promptBuilder.ToString();
             }
@@ -312,24 +314,24 @@ namespace ProjectVagabond
                 case "debug": return Color.Chartreuse;
                 case "rest": return Color.LightGreen;
 
-                case "Palette_Black": return Global.Instance.Palette_Black;
-                case "Palette_DarkGray": return Global.Instance.Palette_DarkGray;
-                case "Palette_Gray": return Global.Instance.Palette_Gray;
-                case "Palette_LightGray": return Global.Instance.Palette_LightGray;
-                case "Palette_White": return Global.Instance.Palette_White;
-                case "Palette_Teal": return Global.Instance.Palette_Teal;
-                case "Palette_LightBlue": return Global.Instance.Palette_LightBlue;
-                case "Palette_DarkBlue": return Global.Instance.Palette_DarkBlue;
-                case "Palette_DarkGreen": return Global.Instance.Palette_DarkGreen;
-                case "Palette_LightGreen": return Global.Instance.Palette_LightGreen;
-                case "Palette_LightYellow": return Global.Instance.Palette_LightYellow;
-                case "Palette_Yellow": return Global.Instance.Palette_Yellow;
-                case "Palette_Orange": return Global.Instance.Palette_Orange;
-                case "Palette_Red": return Global.Instance.Palette_Red;
-                case "Palette_DarkPurple": return Global.Instance.Palette_DarkPurple;
-                case "Palette_LightPurple": return Global.Instance.Palette_LightPurple;
-                case "Palette_Pink": return Global.Instance.Palette_Pink;
-                case "Palette_BrightWhite": return Global.Instance.Palette_BrightWhite;
+                case "palette_black": return Global.Instance.Palette_Black;
+                case "palette_darkgray": return Global.Instance.Palette_DarkGray;
+                case "palette_gray": return Global.Instance.Palette_Gray;
+                case "palette_lightgray": return Global.Instance.Palette_LightGray;
+                case "palette_white": return Global.Instance.Palette_White;
+                case "palette_teal": return Global.Instance.Palette_Teal;
+                case "palette_lightblue": return Global.Instance.Palette_LightBlue;
+                case "palette_darkblue": return Global.Instance.Palette_DarkBlue;
+                case "palette_darkgreen": return Global.Instance.Palette_DarkGreen;
+                case "palette_lightgreen": return Global.Instance.Palette_LightGreen;
+                case "palette_lightyellow": return Global.Instance.Palette_LightYellow;
+                case "palette_yellow": return Global.Instance.Palette_Yellow;
+                case "palette_orange": return Global.Instance.Palette_Orange;
+                case "palette_red": return Global.Instance.Palette_Red;
+                case "palette_darkpurple": return Global.Instance.Palette_DarkPurple;
+                case "palette_lightpurple": return Global.Instance.Palette_LightPurple;
+                case "palette_pink": return Global.Instance.Palette_Pink;
+                case "palette_brightwhite": return Global.Instance.Palette_BrightWhite;
 
                 case "khaki": return Color.Khaki;
                 case "red": return Color.Red;

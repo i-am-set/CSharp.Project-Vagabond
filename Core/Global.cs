@@ -48,7 +48,7 @@ namespace ProjectVagabond
         public const int PROMPT_LINE_SPACING = 16;
         public const float NOISE_SCALE = 0.2f;
         public const int DEFAULT_TERMINAL_WIDTH = 540;
-        public const int DEFAULT_TERMINAL_HEIGHT = 350;
+        public const int DEFAULT_TERMINAL_HEIGHT = 338;
 
         // Player stats Global
         public const int MAX_MAX_HEALTH_ENERGY = 48;
@@ -62,10 +62,13 @@ namespace ProjectVagabond
         public const float MIN_BACKSPACE_DELAY = 0.02f;
         public const float BACKSPACE_ACCELERATION = 0.25f;
 
+        // UI settings Global
+        public const float VALUE_DISPLAY_WIDTH = 110f;
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        
+
         // Core variables
         public BitmapFont DefaultFont { get; set; }
         public GraphicsDeviceManager CurrentGraphics;
