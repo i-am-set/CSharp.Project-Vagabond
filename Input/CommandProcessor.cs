@@ -50,7 +50,7 @@ namespace ProjectVagabond
             _commands["clear"] = new Command("clear", (args) =>
             {
                 Core.CurrentTerminalRenderer.ClearHistory();
-                AddOutputToHistory("Terminal history cleared.");
+                AddOutputToHistory("TERMINAL CLEARED");
             }, "clear [gray]- Clear the terminal history.");
 
             _commands["look"] = new Command("look", (args) =>

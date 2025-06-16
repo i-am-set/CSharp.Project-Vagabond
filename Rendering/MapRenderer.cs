@@ -16,7 +16,7 @@ namespace ProjectVagabond
         {
             SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
 
-            int mapStartX = 50;
+            int mapStartX = 35;
             int mapStartY = 50;
             int mapWidth = Global.MAP_WIDTH;
             int mapHeight = Global.GRID_SIZE * Global.GRID_CELL_SIZE + 30;

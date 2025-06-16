@@ -260,7 +260,7 @@ namespace ProjectVagabond
 
         /// <summary>
         /// Converts total minutes into a shorthand formatted string.
-        /// Format: "Xd/Yh/Zm" where only non-zero values are shown.
+        /// Format: "Xd/Yhr/Zmin" where only non-zero values are shown.
         /// Example: 90 minutes = "1h 30m", 1500 minutes = "1d 1h 0m"
         /// </summary>
         /// <param name="totalMinutes">Total minutes to convert</param>
@@ -280,10 +280,10 @@ namespace ProjectVagabond
                 parts.Add($"{days}d");
     
             if (hours > 0 || days > 0)
-                parts.Add($"{hours}h");
+                parts.Add($"{hours}hr");
     
             if (minutes > 0)
-                parts.Add($"{minutes}m");
+                parts.Add($"{minutes}min");
     
             return string.Join(" ", parts);
         }

@@ -30,6 +30,38 @@ namespace ProjectVagabond
 
         public void AddToHistory(string message, Color? baseColor = null)
         {
+            if (_nextLineNumber > 999)
+            {
+                int desiredLinesToKeep = GetMaxVisibleLines();
+                int startIndex = Math.Max(0, _wrappedHistory.Count - desiredLinesToKeep);
+
+                while (startIndex > 0 && _wrappedHistory[startIndex].LineNumber == 0)
+                {
+                    startIndex--;
+                }
+
+                var keptLines = _wrappedHistory.GetRange(startIndex, _wrappedHistory.Count - startIndex);
+
+                _wrappedHistory.Clear();
+                _scrollOffset = 0;
+
+                var truncationMessage = ParseColoredText("--- HISTORY TRUNCATED ---", Global.Instance.Palette_Gray);
+                truncationMessage.LineNumber = 1;
+                _wrappedHistory.Add(truncationMessage);
+
+                _wrappedHistory.AddRange(keptLines);
+
+                int currentLineNum = 2;
+                for (int i = 1; i < _wrappedHistory.Count; i++)
+                {
+                    if (_wrappedHistory[i].LineNumber > 0)
+                    {
+                        _wrappedHistory[i].LineNumber = currentLineNum++;
+                    }
+                }
+                _nextLineNumber = currentLineNum;
+            }
+
             _inputHistory.Add(message);
             
             var coloredLine = ParseColoredText(message, baseColor);
@@ -73,7 +105,7 @@ namespace ProjectVagabond
             SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
             BitmapFont _defaultFont = Global.Instance.DefaultFont;
 
-            int terminalX = 400;
+            int terminalX = 375;
             int terminalY = 50;
             int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
             int terminalHeight = Global.DEFAULT_TERMINAL_HEIGHT;
@@ -90,11 +122,10 @@ namespace ProjectVagabond
 
             _spriteBatch.DrawString(_defaultFont, "Terminal Output", new Vector2(terminalX, terminalY - 20), Global.Instance.TextColor);
 
-            int inputLineY = terminalY + terminalHeight - 10;
-            int separatorY = inputLineY - 5;
-            int outputAreaHeight = separatorY - terminalY + 10;
-            
-            int maxVisibleLines = outputAreaHeight / Global.TERMINAL_LINE_SPACING;
+            int inputLineY = GetInputLineY();
+            int separatorY = GetSeparatorY();
+
+            int maxVisibleLines = GetMaxVisibleLines();
             int totalLines = _wrappedHistory.Count;
             int startIndex = Math.Max(0, totalLines - maxVisibleLines - _scrollOffset);
             int endIndex = Math.Min(totalLines, startIndex + maxVisibleLines);
@@ -114,7 +145,7 @@ namespace ProjectVagabond
                 if (_wrappedHistory[i].LineNumber > 0)
                 {
                     string lineNumText = _wrappedHistory[i].LineNumber.ToString();
-                    float lineNumX = terminalX + 710;
+                    float lineNumX = terminalX + 550;
                     _spriteBatch.DrawString(_defaultFont, lineNumText, new Vector2(lineNumX, y), Global.Instance.Palette_DarkGray);
                 }
             }
@@ -130,7 +161,7 @@ namespace ProjectVagabond
                     scrollIndicator = $"^ Scrolled up {_scrollOffset} lines";
                 }
     
-                int scrollY = terminalY + (endIndex - startIndex) * Global.TERMINAL_LINE_SPACING + 5;
+                int scrollY = terminalY - 35;
                 _spriteBatch.DrawString(_defaultFont, scrollIndicator, new Vector2(terminalX, scrollY), Color.Gold);
             }
 
@@ -610,6 +641,36 @@ namespace ProjectVagabond
             int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
             float charWidth = Global.Instance.DefaultFont.MeasureString("W").Width;
             return (int)(terminalWidth / charWidth) - 2;
+        }
+
+        private int GetTerminalY()
+        {
+            return 50;
+        }
+
+        private int GetTerminalHeight()
+        {
+            return Global.DEFAULT_TERMINAL_HEIGHT;
+        }
+
+        private int GetInputLineY()
+        {
+            return GetTerminalY() + GetTerminalHeight() - 10;
+        }
+
+        private int GetSeparatorY()
+        {
+            return GetInputLineY() - 5;
+        }
+
+        private int GetOutputAreaHeight()
+        {
+            return GetSeparatorY() - GetTerminalY() + 10;
+        }
+
+        public int GetMaxVisibleLines()
+        {
+            return GetOutputAreaHeight() / Global.TERMINAL_LINE_SPACING;
         }
     }
 }
