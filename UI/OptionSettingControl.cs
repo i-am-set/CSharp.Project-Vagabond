@@ -88,12 +88,12 @@ namespace ProjectVagabond.UI
         public void Draw(SpriteBatch spriteBatch, Vector2 position, bool isSelected)
         {
             var font = Global.Instance.DefaultFont;
-            Color labelColor = isSelected ? Global.Instance.palette_Yellow : Global.Instance.palette_BrightWhite;
+            Color labelColor = isSelected ? Global.Instance.OptionHoverColor : Global.Instance.Palette_BrightWhite;
             spriteBatch.DrawString(font, Label, position, labelColor);
 
             string valueText = $"< {_options[_currentIndex].Key} >";
             Vector2 valuePosition = new Vector2(position.X + 280, position.Y);
-            Color valueColor = IsDirty ? Global.Instance.palette_Teal : Global.Instance.palette_BrightWhite;
+            Color valueColor = IsDirty ? Global.Instance.Palette_Teal : Global.Instance.Palette_BrightWhite;
             spriteBatch.DrawString(font, valueText, valuePosition, valueColor);
 
             // Define clickable areas for the update loop

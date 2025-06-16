@@ -44,7 +44,7 @@ namespace ProjectVagabond
             // Health bar
             currentY = baseY;
             _hpBarBounds = DrawSimpleStatBar(_spriteBatch, "HP", stats.CurrentHealthPoints, stats.MaxHealthPoints,
-                new Vector2(baseX, currentY), Global.Instance.palette_Red, Global.Instance.palette_DarkGray, Global.MAP_WIDTH - baseX);
+                new Vector2(baseX, currentY), Global.Instance.Palette_Red, Global.Instance.Palette_DarkGray, Global.MAP_WIDTH - baseX);
 
             // Energy bar with pending preview
             currentY += 14;
@@ -53,7 +53,7 @@ namespace ProjectVagabond
             // Secondary stats in compact format
             currentY += 16;
             string secondaryStats = $"Spd:{stats.WalkSpeed:F1} Car:{stats.CarryCapacity} Men:{stats.MentalResistance} Soc:{stats.SocialInfluence}";
-            _spriteBatch.DrawString(Global.Instance.DefaultFont, secondaryStats, new Vector2(baseX, currentY), Global.Instance.palette_LightGray);
+            _spriteBatch.DrawString(Global.Instance.DefaultFont, secondaryStats, new Vector2(baseX, currentY), Global.Instance.Palette_LightGray);
 
             // Draw tooltip if needed
             if (_showTooltip)
@@ -76,7 +76,7 @@ namespace ProjectVagabond
             int barWidth = (stats.MaxEnergyPoints * 6) - 3;
 
             Rectangle barBg = new Rectangle(barX - 2, barY - 2, barWidth + 4, 10);
-            spriteBatch.Draw(pixel, barBg, Global.Instance.palette_DarkGray);
+            spriteBatch.Draw(pixel, barBg, Global.Instance.Palette_DarkGray);
 
             int currentEnergy = stats.CurrentEnergyPoints;
             int maxEnergy = stats.MaxEnergyPoints;
@@ -88,9 +88,9 @@ namespace ProjectVagabond
                 int segmentX = barX + i * 6;
                 Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
                 if (i < currentEnergy)
-                    spriteBatch.Draw(pixel, segmentRect, Global.Instance.palette_LightGreen);
+                    spriteBatch.Draw(pixel, segmentRect, Global.Instance.Palette_LightGreen);
                 else
-                    spriteBatch.Draw(pixel, segmentRect, Color.Lerp(Global.Instance.palette_DarkGray, Global.Instance.palette_LightGreen, 0.3f));
+                    spriteBatch.Draw(pixel, segmentRect, Color.Lerp(Global.Instance.Palette_DarkGray, Global.Instance.Palette_LightGreen, 0.3f));
             }
 
             // Step 2: If previewing, overlay the predicted changes
@@ -104,7 +104,7 @@ namespace ProjectVagabond
                     {
                         int segmentX = barX + i * 6;
                         Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
-                        spriteBatch.Draw(pixel, segmentRect, Global.Instance.palette_Yellow);
+                        spriteBatch.Draw(pixel, segmentRect, Global.Instance.Palette_Yellow);
                     }
                 }
                 else if (finalEnergy > currentEnergy)
@@ -114,7 +114,7 @@ namespace ProjectVagabond
                     {
                         int segmentX = barX + i * 6;
                         Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
-                        spriteBatch.Draw(pixel, segmentRect, Global.Instance.palette_Teal);
+                        spriteBatch.Draw(pixel, segmentRect, Global.Instance.Palette_Teal);
                     }
                 }
             }

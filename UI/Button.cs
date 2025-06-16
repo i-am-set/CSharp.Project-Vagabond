@@ -59,17 +59,17 @@ namespace ProjectVagabond.UI
         {
             // Determine colors based on state
             Color bgColor;
-            Color textColor = Global.Instance.palette_BrightWhite;
+            Color textColor = Global.Instance.Palette_BrightWhite;
             
             if (!IsEnabled)
             {
                 bgColor = Color.Transparent;
-                textColor = Global.Instance.palette_Gray;
+                textColor = Global.Instance.Palette_Gray;
             }
             else if (IsHovered)
             {
                 bgColor = Color.Transparent;
-                textColor = Global.Instance.palette_LightYellow;
+                textColor = Global.Instance.OptionHoverColor;
             }
             else
             {

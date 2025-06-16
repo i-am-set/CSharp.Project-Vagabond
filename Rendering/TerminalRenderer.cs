@@ -83,10 +83,10 @@ namespace ProjectVagabond
 
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, terminalHeight + 30), Global.Instance.TerminalBg);
 
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, 2), Global.Instance.palette_White); // Top
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY + terminalHeight + 3, terminalWidth + 10, 2), Global.Instance.palette_White); // Bottom
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, 2, terminalHeight + 30), Global.Instance.palette_White); // Left
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX + terminalWidth + 3, terminalY - 25, 2, terminalHeight + 30), Global.Instance.palette_White); // Right
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, 2), Global.Instance.Palette_White); // Top
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY + terminalHeight + 3, terminalWidth + 10, 2), Global.Instance.Palette_White); // Bottom
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, 2, terminalHeight + 30), Global.Instance.Palette_White); // Left
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX + terminalWidth + 3, terminalY - 25, 2, terminalHeight + 30), Global.Instance.Palette_White); // Right
 
             _spriteBatch.DrawString(_defaultFont, "Terminal Output", new Vector2(terminalX, terminalY - 20), Global.Instance.TextColor);
 
@@ -111,7 +111,7 @@ namespace ProjectVagabond
                 {
                     string lineNumText = _wrappedHistory[i].LineNumber.ToString();
                     float lineNumX = terminalX + 710;
-                    _spriteBatch.DrawString(_defaultFont, lineNumText, new Vector2(lineNumX, y), Global.Instance.palette_DarkGray);
+                    _spriteBatch.DrawString(_defaultFont, lineNumText, new Vector2(lineNumX, y), Global.Instance.Palette_DarkGray);
                 }
             }
 
@@ -132,7 +132,7 @@ namespace ProjectVagabond
 
             int inputLineY = terminalY + terminalHeight - 10;
             int separatorY = inputLineY - 5;
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX-5, separatorY, Global.DEFAULT_TERMINAL_WIDTH+10, 2), Global.Instance.palette_White);
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX-5, separatorY, Global.DEFAULT_TERMINAL_WIDTH+10, 2), Global.Instance.Palette_White);
 
             string inputDisplay = $"> {Core.CurrentInputHandler.CurrentInput}_";
             string wrappedInput = WrapText(inputDisplay, GetTerminalWidthInChars());
@@ -154,16 +154,16 @@ namespace ProjectVagabond
     
                 int backgroundHeight = visibleSuggestions * Global.FONT_SIZE;
                 int backgroundY = suggestionY - (visibleSuggestions - 1) * Global.FONT_SIZE;
-                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, backgroundHeight), Global.Instance.palette_Black);
+                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, backgroundHeight), Global.Instance.Palette_Black);
     
-                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, 1), Global.Instance.palette_LightGray); // Top
-                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), Global.Instance.palette_LightGray); // Bottom
-                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, 1, backgroundHeight), Global.Instance.palette_LightGray); // Left
-                _spriteBatch.Draw(pixel, new Rectangle(terminalX + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), Global.Instance.palette_LightGray); // Right
+                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, 1), Global.Instance.Palette_LightGray); // Top
+                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), Global.Instance.Palette_LightGray); // Bottom
+                _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, 1, backgroundHeight), Global.Instance.Palette_LightGray); // Left
+                _spriteBatch.Draw(pixel, new Rectangle(terminalX + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), Global.Instance.Palette_LightGray); // Right
     
                 for (int i = 0; i < visibleSuggestions; i++)
                 {
-                    Color suggestionColor = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? Color.Khaki : Global.Instance.palette_LightGray;
+                    Color suggestionColor = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? Color.Khaki : Global.Instance.Palette_LightGray;
                     string prefix = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? " >" : "  ";
                     _spriteBatch.DrawString(_defaultFont, prefix + Core.CurrentAutoCompleteManager.AutoCompleteSuggestions[i], 
                         new Vector2(terminalX + 2, suggestionY - i * Global.FONT_SIZE), suggestionColor);
@@ -177,7 +177,7 @@ namespace ProjectVagabond
                 statusText += $" | Executing: {Core.CurrentGameState.CurrentPathIndex + 1}/{Core.CurrentGameState.PendingActions.Count}";
             }
             string wrappedStatus = WrapText(statusText, GetTerminalWidthInChars());
-            _spriteBatch.DrawString(_defaultFont, wrappedStatus, new Vector2(terminalX, statusY), Global.Instance.palette_LightGray);
+            _spriteBatch.DrawString(_defaultFont, wrappedStatus, new Vector2(terminalX, statusY), Global.Instance.Palette_LightGray);
 
             int promptY = statusY + (wrappedStatus.Split('\n').Length * Global.TERMINAL_LINE_SPACING) + 10;
             string promptText = GetPromptText();
@@ -228,7 +228,7 @@ namespace ProjectVagabond
                 }
                 else
                 {
-                    promptBuilder.AppendLine("[khaki]Previewing action queue...");
+                    promptBuilder.Append("[khaki]Previewing action queue...\n");
                 }
                 promptBuilder.AppendLine("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel.");
 
@@ -238,7 +238,7 @@ namespace ProjectVagabond
                 
                 promptBuilder.AppendLine($"[gold]Pending {string.Join(", ", details)}.");
                 promptBuilder.AppendLine($"[gold]Arrival Time: [orange]{finalETA}");
-                promptBuilder.AppendLine($"[palette_Gray]{formatedTimeFromMinutes}");
+                promptBuilder.AppendLine($"[Palette_Gray]{formatedTimeFromMinutes}");
 
                 return promptBuilder.ToString();
             }
@@ -313,24 +313,24 @@ namespace ProjectVagabond
                 case "debug": return Color.Chartreuse;
                 case "rest": return Color.LightGreen;
 
-                case "palette_black": return Global.Instance.palette_Black;
-                case "palette_darkgray": return Global.Instance.palette_DarkGray;
-                case "palette_gray": return Global.Instance.palette_Gray;
-                case "palette_lightgray": return Global.Instance.palette_LightGray;
-                case "palette_white": return Global.Instance.palette_White;
-                case "palette_teal": return Global.Instance.palette_Teal;
-                case "palette_lightblue": return Global.Instance.palette_LightBlue;
-                case "palette_darkblue": return Global.Instance.palette_DarkBlue;
-                case "palette_darkgreen": return Global.Instance.palette_DarkGreen;
-                case "palette_lightgreen": return Global.Instance.palette_LightGreen;
-                case "palette_lightyellow": return Global.Instance.palette_LightYellow;
-                case "palette_yellow": return Global.Instance.palette_Yellow;
-                case "palette_orange": return Global.Instance.palette_Orange;
-                case "palette_red": return Global.Instance.palette_Red;
-                case "palette_darkpurple": return Global.Instance.palette_DarkPurple;
-                case "palette_lightpurple": return Global.Instance.palette_LightPurple;
-                case "palette_pink": return Global.Instance.palette_Pink;
-                case "palette_brightwhite": return Global.Instance.palette_BrightWhite;
+                case "Palette_Black": return Global.Instance.Palette_Black;
+                case "Palette_DarkGray": return Global.Instance.Palette_DarkGray;
+                case "Palette_Gray": return Global.Instance.Palette_Gray;
+                case "Palette_LightGray": return Global.Instance.Palette_LightGray;
+                case "Palette_White": return Global.Instance.Palette_White;
+                case "Palette_Teal": return Global.Instance.Palette_Teal;
+                case "Palette_LightBlue": return Global.Instance.Palette_LightBlue;
+                case "Palette_DarkBlue": return Global.Instance.Palette_DarkBlue;
+                case "Palette_DarkGreen": return Global.Instance.Palette_DarkGreen;
+                case "Palette_LightGreen": return Global.Instance.Palette_LightGreen;
+                case "Palette_LightYellow": return Global.Instance.Palette_LightYellow;
+                case "Palette_Yellow": return Global.Instance.Palette_Yellow;
+                case "Palette_Orange": return Global.Instance.Palette_Orange;
+                case "Palette_Red": return Global.Instance.Palette_Red;
+                case "Palette_DarkPurple": return Global.Instance.Palette_DarkPurple;
+                case "Palette_LightPurple": return Global.Instance.Palette_LightPurple;
+                case "Palette_Pink": return Global.Instance.Palette_Pink;
+                case "Palette_BrightWhite": return Global.Instance.Palette_BrightWhite;
 
                 case "khaki": return Color.Khaki;
                 case "red": return Color.Red;

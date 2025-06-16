@@ -25,7 +25,7 @@ namespace ProjectVagabond
 
         private void AddToHistory(string message, Color? baseColor = null) => Core.CurrentTerminalRenderer.AddToHistory(message, baseColor);
         private void AddOutputToHistory(string message) => Core.CurrentTerminalRenderer.AddOutputToHistory(message);
-        private void AddHelpLineToHistory(string message) => Core.CurrentTerminalRenderer.AddToHistory(message, Global.Instance.palette_LightPurple);
+        private void AddHelpLineToHistory(string message) => Core.CurrentTerminalRenderer.AddToHistory(message, Global.Instance.Palette_LightPurple);
         
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         

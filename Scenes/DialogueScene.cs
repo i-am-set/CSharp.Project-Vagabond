@@ -32,12 +32,12 @@ namespace ProjectVagabond.Scenes
                 pixel.SetData(new[] { Color.White });
 
                 Rectangle dialogueBox = new Rectangle(100, screenHeight - 250, screenWidth - 200, 200);
-                spriteBatch.Draw(pixel, dialogueBox, Global.Instance.palette_Black * 0.8f);
+                spriteBatch.Draw(pixel, dialogueBox, Global.Instance.Palette_Black * 0.8f);
 
                 string text = "This is a placeholder dialogue screen.\nPress ESC to return.";
                 Vector2 textSize = font.MeasureString(text);
                 Vector2 textPos = new Vector2(dialogueBox.X + (dialogueBox.Width - textSize.X) / 2, dialogueBox.Y + (dialogueBox.Height - textSize.Y) / 2);
-                spriteBatch.DrawString(font, text, textPos, Global.Instance.palette_BrightWhite);
+                spriteBatch.DrawString(font, text, textPos, Global.Instance.Palette_BrightWhite);
             }
 
             spriteBatch.End();

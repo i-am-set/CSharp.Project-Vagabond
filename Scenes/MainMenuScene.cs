@@ -83,7 +83,7 @@ namespace ProjectVagabond.Scenes
             // Draw Title
             string title = ".";
             Vector2 titleSize = font.MeasureString(title) * 2f;
-            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 150), Global.Instance.palette_BrightWhite, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 150), Global.Instance.Palette_BrightWhite, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
             // Draw buttons
             foreach (var button in _buttons)
@@ -106,7 +106,7 @@ namespace ProjectVagabond.Scenes
                 (int)(textSize.X + horizontalPadding * 2),
                 (int)(textSize.Y + verticalPadding * 2)
             );
-            DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 2, Global.Instance.palette_Yellow);
+            DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 2, Global.Instance.OptionHoverColor);
             spriteBatch.End();
         }
 

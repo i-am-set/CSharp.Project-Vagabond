@@ -132,6 +132,59 @@ namespace ProjectVagabond.Scenes
 
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
 
+        /// <summary>
+        /// NEW: Moves the mouse cursor to the center of the selected UI element, similar to MainMenuScene
+        /// </summary>
+        private void MoveMouseToSelected()
+        {
+            if (_selectedIndex < 0 || _selectedIndex >= _uiElements.Count) return;
+
+            Vector2 currentPos = new Vector2(0, 50);
+
+            for (int i = 0; i <= _selectedIndex; i++)
+            {
+                var item = _uiElements[i];
+                currentPos.X = (Global.VIRTUAL_WIDTH - 450) / 2;
+
+                if (i == _selectedIndex)
+                {
+                    Point mousePos = Point.Zero;
+
+                    if (item is ISettingControl)
+                    {
+                        // Center the mouse on the setting control
+                        mousePos = new Point((int)currentPos.X + 230, (int)currentPos.Y + 15);
+                    }
+                    else if (item is Button button)
+                    {
+                        // Center the mouse on the button
+                        mousePos = new Point(Global.VIRTUAL_WIDTH / 2, (int)currentPos.Y + 10);
+                    }
+
+                    // Transform from virtual coordinates to screen coordinates
+                    Vector2 screenPos = Core.TransformMouse(mousePos);
+                    int currentMousePosX = (int)Core.TransformMouse(new Point(Mouse.GetState().X, 0)).X;
+                    Mouse.SetPosition(currentMousePosX, (int)screenPos.Y);
+                    break;
+                }
+
+                // Increment position to match the drawing logic
+                if (item is ISettingControl)
+                {
+                    currentPos.Y += 20;
+                }
+                else if (item is Button)
+                {
+                    currentPos.Y += 25;
+                }
+                else if (item is string)
+                {
+                    currentPos.Y += 5;
+                    currentPos.Y += 20;
+                }
+            }
+        }
+
         public override void Update(GameTime gameTime)
         {
             var currentKeyboardState = Keyboard.GetState();
@@ -226,10 +279,14 @@ namespace ProjectVagabond.Scenes
             if (KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState))
             {
                 _selectedIndex = FindNextSelectable(_selectedIndex, 1);
+                // NEW: Move mouse to selected item when using keyboard navigation
+                MoveMouseToSelected();
             }
             if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState))
             {
                 _selectedIndex = FindNextSelectable(_selectedIndex, -1);
+                // NEW: Move mouse to selected item when using keyboard navigation
+                MoveMouseToSelected();
             }
 
             // Only process input if the selected index is valid
@@ -272,14 +329,13 @@ namespace ProjectVagabond.Scenes
             var spriteBatch = Global.Instance.CurrentSpriteBatch;
             var font = Global.Instance.DefaultFont;
             int screenWidth = Global.VIRTUAL_WIDTH;
-            int screenHeight = Global.VIRTUAL_HEIGHT;
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             Core.Pixel.SetData(new[] { Color.White });
 
             string title = "Settings";
             Vector2 titleSize = font.MeasureString(title) * 2f;
-            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 10), Global.Instance.palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
+            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 10), Global.Instance.Palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
 
             Vector2 currentPos = new Vector2(0, 50);
             Vector2 buttonPos = new Vector2(0, 65);
@@ -299,7 +355,7 @@ namespace ProjectVagabond.Scenes
                     if (itemHeight > 0)
                     {
                         var highlightRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, (int)itemHeight);
-                        DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 2, Global.Instance.palette_Yellow);
+                        DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
                     }
                 }
 
@@ -317,9 +373,9 @@ namespace ProjectVagabond.Scenes
                 else if (item is string header)
                 {
                     currentPos.Y += 5;
-                    spriteBatch.DrawString(font, header, new Vector2(screenWidth / 2 - font.MeasureString(header).Width / 2, currentPos.Y), Global.Instance.palette_LightGray);
+                    spriteBatch.DrawString(font, header, new Vector2(screenWidth / 2 - font.MeasureString(header).Width / 2, currentPos.Y), Global.Instance.Palette_LightGray);
                     var dividerRect = new Rectangle(screenWidth / 2 - 180, (int)currentPos.Y + 10, 360, 1);
-                    spriteBatch.Draw(Core.Pixel, dividerRect, Global.Instance.palette_Gray);
+                    spriteBatch.Draw(Core.Pixel, dividerRect, Global.Instance.Palette_Gray);
                     currentPos.Y += 20;
                 }
             }
@@ -327,7 +383,7 @@ namespace ProjectVagabond.Scenes
             if (_confirmationTimer > 0)
             {
                 Vector2 msgSize = font.MeasureString(_confirmationMessage);
-                spriteBatch.DrawString(font, _confirmationMessage, new Vector2(screenWidth / 2 - msgSize.X / 2, Global.VIRTUAL_HEIGHT - 50), Global.Instance.palette_Teal);
+                spriteBatch.DrawString(font, _confirmationMessage, new Vector2(screenWidth / 2 - msgSize.X / 2, Global.VIRTUAL_HEIGHT - 50), Global.Instance.OptionHoverColor);
             }
             spriteBatch.End();
         }
