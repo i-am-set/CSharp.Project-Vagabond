@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -171,6 +171,15 @@ namespace ProjectVagabond.Scenes
                 );
                 DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
             }
+
+            // Draw the version number in the bottom-left corner
+            string versionText = $"v{Global.GAME_VERSION}";
+            float padding = 5f;
+            var versionPosition = new Vector2(
+                padding,
+                Global.VIRTUAL_HEIGHT - font.LineHeight - padding
+            );
+            spriteBatch.DrawString(font, versionText, versionPosition, Global.Instance.OutputTextColor);
             
             spriteBatch.End();
         }

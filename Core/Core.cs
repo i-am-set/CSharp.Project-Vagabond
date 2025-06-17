@@ -13,6 +13,7 @@ using System;
 // TODO: Make resting take random time (full rest between 6 and 11 hours)
 // TODO: Wait command: (wait 3 hours 2 minutes)
 // TODO: Mouse to map interaction (highlight hovered square with tooltip showing details)
+// TODO: Allow for appdata to save settings
 
 namespace ProjectVagabond
 {

@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -34,6 +34,9 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // CONSTANTS
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+        // Game version
+        public const string GAME_VERSION = "0.1.0";
 
         // Virtual resolution for fixed aspect ratio rendering
         public const int VIRTUAL_WIDTH = 960;

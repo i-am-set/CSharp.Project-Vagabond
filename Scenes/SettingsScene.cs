@@ -73,7 +73,7 @@ namespace ProjectVagabond.Scenes
             _previousKeyboardState = Keyboard.GetState();
             Core.Instance.IsMouseVisible = true;
 
-            _currentInputDelay = _inputDelay; // ADDED: Start the input delay timer
+            _currentInputDelay = _inputDelay;
         }
 
         private void BuildInitialUI()
@@ -95,13 +95,7 @@ namespace ProjectVagabond.Scenes
             }).ToList();
             _uiElements.Add(new OptionSettingControl<Point>("Resolution", resolutionDisplayList, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v));
 
-            _uiElements.Add(new BoolSettingControl("Fullscreen", () => _tempSettings.IsFullscreen, v => {
-                _tempSettings.IsFullscreen = v;
-                if (v) // When enabling fullscreen
-                {
-                    SetResolutionToNearestNative();
-                }
-            }));
+            _uiElements.Add(new BoolSettingControl("Fullscreen", () => _tempSettings.IsFullscreen, v => { _tempSettings.IsFullscreen = v; if (v) SetResolutionToNearestNative(); }));
             
             _uiElements.Add(new BoolSettingControl("Smaller UI", () => _tempSettings.SmallerUi, v => _tempSettings.SmallerUi = v));
 
@@ -187,7 +181,7 @@ namespace ProjectVagabond.Scenes
             Core.Settings.IsVsync = _tempSettings.IsVsync;
             Core.Settings.IsFrameLimiterEnabled = _tempSettings.IsFrameLimiterEnabled;
             Core.Settings.TargetFramerate = _tempSettings.TargetFramerate;
-            Core.Settings.SmallerUi = _tempSettings.SmallerUi; // ADDED
+            Core.Settings.SmallerUi = _tempSettings.SmallerUi;
             Core.Settings.UseImperialUnits = _tempSettings.UseImperialUnits;
             Core.Settings.Use24HourClock = _tempSettings.Use24HourClock;
 
@@ -198,6 +192,7 @@ namespace ProjectVagabond.Scenes
 
             _confirmationMessage = "Settings Applied!";
             _confirmationTimer = 5f;
+            MoveMouseToSelected();
         }
 
         private static void BackToPreviousScene()
