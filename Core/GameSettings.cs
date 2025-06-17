@@ -12,6 +12,7 @@ namespace ProjectVagabond
         public bool IsVsync { get; set; }
         public bool IsFrameLimiterEnabled { get; set; }
         public int TargetFramerate { get; set; }
+        public bool SmallerUi { get; set; }
 
         // Game Settings
         public bool UseImperialUnits { get; set; }
@@ -27,6 +28,7 @@ namespace ProjectVagabond
             IsVsync = true;
             IsFrameLimiterEnabled = true;
             TargetFramerate = 60;
+            SmallerUi = false;
             UseImperialUnits = Global.Instance.UseImperialUnits;
             Use24HourClock = Global.Instance.Use24HourClock;
         }

@@ -41,6 +41,7 @@ namespace ProjectVagabond
         private Rectangle _finalRenderRectangle;
         private static Matrix _mouseTransformMatrix;
         private static Texture2D _pixel;
+        private bool _useLinearSampling;
 
         // Public references //
         public static GameState CurrentGameState => _gameState;
@@ -147,9 +148,11 @@ namespace ProjectVagabond
             _sceneManager.Draw(gameTime);
 
             GraphicsDevice.SetRenderTarget(null);
-            GraphicsDevice.Clear(Color.Black);
+            GraphicsDevice.Clear(Global.Instance.GameBg);
 
-            Global.Instance.CurrentSpriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
+
+            Global.Instance.CurrentSpriteBatch.Begin(samplerState: finalSamplerState);
             Global.Instance.CurrentSpriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
             Global.Instance.CurrentSpriteBatch.End();
 
@@ -160,6 +163,8 @@ namespace ProjectVagabond
 
         /// <summary>
         /// Recalculates the rendering scale and position when the window is resized.
+        /// If the window is smaller than the virtual resolution, it scales down to fit.
+        /// Otherwise, it uses integer scaling for a crisp, pixel-perfect look.
         /// </summary>
         public void OnResize(object sender, EventArgs e)
         {
@@ -170,16 +175,32 @@ namespace ProjectVagabond
 
             float scaleX = (float)screenWidth / Global.VIRTUAL_WIDTH;
             float scaleY = (float)screenHeight / Global.VIRTUAL_HEIGHT;
-            float scale = Math.Min(scaleX, scaleY);
 
-            int destWidth = (int)(Global.VIRTUAL_WIDTH * scale);
-            int destHeight = (int)(Global.VIRTUAL_HEIGHT * scale);
+            float finalScale;
+
+            if (screenWidth < Global.VIRTUAL_WIDTH || screenHeight < Global.VIRTUAL_HEIGHT)
+            {
+                finalScale = Math.Min(scaleX, scaleY);
+                _useLinearSampling = true;
+            }
+            else
+            {
+                int integerScale = (int)Math.Min(scaleX, scaleY);
+                if (Settings.SmallerUi) integerScale--;
+                finalScale = Math.Max(1, integerScale);
+                _useLinearSampling = false;
+            }
+
+            int destWidth = (int)(Global.VIRTUAL_WIDTH * finalScale);
+            int destHeight = (int)(Global.VIRTUAL_HEIGHT * finalScale);
+
             int destX = (screenWidth - destWidth) / 2;
             int destY = (screenHeight - destHeight) / 2;
 
             _finalRenderRectangle = new Rectangle(destX, destY, destWidth, destHeight);
 
-            _mouseTransformMatrix = Matrix.Invert(Matrix.CreateTranslation(destX, destY, 0) * Matrix.CreateScale(scale));
+            _mouseTransformMatrix = Matrix.CreateTranslation(-destX, -destY, 0) *
+                                      Matrix.CreateScale(1.0f / finalScale);
         }
 
         /// <summary>
@@ -226,6 +247,8 @@ namespace ProjectVagabond
 
         public static void ScreenHop(float intensity, float duration) =>
             _hapticsManager.TriggerHop(intensity, duration);
+
+
 
         public static void ScreenPulse(float intensity, float duration) =>
             _hapticsManager.TriggerPulse(intensity, duration);

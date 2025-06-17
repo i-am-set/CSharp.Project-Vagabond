@@ -103,7 +103,7 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawString(font, Label, position, labelColor);
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
-            Vector2 valueAreaPosition = new Vector2(position.X + 280, position.Y);
+            Vector2 valueAreaPosition = new Vector2(position.X + 340, position.Y);
 
             string leftArrowText = "<";
             string valueText = _options[_currentIndex].Key;

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -39,19 +39,33 @@ namespace ProjectVagabond.Scenes
                 IsVsync = Core.Settings.IsVsync,
                 IsFrameLimiterEnabled = Core.Settings.IsFrameLimiterEnabled,
                 TargetFramerate = Core.Settings.TargetFramerate,
+                SmallerUi = Core.Settings.SmallerUi, // ADDED
                 UseImperialUnits = Core.Settings.UseImperialUnits,
                 Use24HourClock = Core.Settings.Use24HourClock
             };
 
-            // Initialize the resolutions list
             _resolutions = new List<KeyValuePair<string, Point>>
             {
-                new("960 x 540", new Point(960, 540)),
-                new("1280 x 720", new Point(1280, 720)),
-                new("1366 x 768", new Point(1366, 768)),
-                new("1600 x 900", new Point(1600, 900)),
-                new("1920 x 1080", new Point(1920, 1080)),
+                new("800 x 600 (4:3)", new Point(800, 600)),
+                new("960 x 540 (16:9)", new Point(960, 540)),
+                new("1024 x 768 (4:3)", new Point(1024, 768)),
+                new("1280 x 720 (16:9)", new Point(1280, 720)),
+                new("1280 x 800 (16:10)", new Point(1280, 800)),
+                new("1440 x 900 (16:10)", new Point(1440, 900)),
+                new("1600 x 900 (16:9)", new Point(1600, 900)),
+                new("1680 x 1050 (16:10)", new Point(1680, 1050)),
+                new("1920 x 1080 (16:9)", new Point(1920, 1080)),
+                new("1920 x 1200 (16:10)", new Point(1920, 1200)),
+                new("2560 x 1080 (21:9)", new Point(2560, 1080)),
+                new("2560 x 1440 (16:9)", new Point(2560, 1440)),
+                new("3440 x 1440 (21:9)", new Point(3440, 1440)),
+                new("3840 x 2160 (4K)", new Point(3840, 2160)),
             };
+
+            Point currentActualResolution = _tempSettings.Resolution;
+            _tempSettings.Resolution = _resolutions
+                .OrderBy(res => Math.Pow(res.Value.X - currentActualResolution.X, 2) + Math.Pow(res.Value.Y - currentActualResolution.Y, 2))
+                .First().Value;
 
             BuildInitialUI();
             _selectedIndex = FindNextSelectable(-1, 1);
@@ -69,7 +83,17 @@ namespace ProjectVagabond.Scenes
             // Graphics Settings //
             _uiElements.Add("Graphics");
 
-            _uiElements.Add(new OptionSettingControl<Point>("Resolution", _resolutions, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v));
+            var resolutionDisplayList = _resolutions.Select(kvp =>
+            {
+                string display = kvp.Key;
+                int aspectIndex = display.IndexOf(" (");
+                if (aspectIndex != -1)
+                {
+                    display = display.Substring(0, aspectIndex);
+                }
+                return new KeyValuePair<string, Point>(display, kvp.Value);
+            }).ToList();
+            _uiElements.Add(new OptionSettingControl<Point>("Resolution", resolutionDisplayList, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v));
 
             _uiElements.Add(new BoolSettingControl("Fullscreen", () => _tempSettings.IsFullscreen, v => {
                 _tempSettings.IsFullscreen = v;
@@ -78,6 +102,8 @@ namespace ProjectVagabond.Scenes
                     SetResolutionToNearestNative();
                 }
             }));
+            
+            _uiElements.Add(new BoolSettingControl("Smaller UI", () => _tempSettings.SmallerUi, v => _tempSettings.SmallerUi = v));
 
             _uiElements.Add(new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v));
             _uiElements.Add(new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v));
@@ -161,6 +187,7 @@ namespace ProjectVagabond.Scenes
             Core.Settings.IsVsync = _tempSettings.IsVsync;
             Core.Settings.IsFrameLimiterEnabled = _tempSettings.IsFrameLimiterEnabled;
             Core.Settings.TargetFramerate = _tempSettings.TargetFramerate;
+            Core.Settings.SmallerUi = _tempSettings.SmallerUi; // ADDED
             Core.Settings.UseImperialUnits = _tempSettings.UseImperialUnits;
             Core.Settings.Use24HourClock = _tempSettings.Use24HourClock;
 
@@ -451,6 +478,26 @@ namespace ProjectVagabond.Scenes
                 if (item is ISettingControl setting)
                 {
                     setting.Draw(spriteBatch, new Vector2(currentPos.X, currentPos.Y + 5), isSelected);
+
+                    if (setting.Label == "Resolution")
+                    {
+                        var originalEntry = _resolutions.FirstOrDefault(r => r.Value == _tempSettings.Resolution);
+                        if (originalEntry.Key != null)
+                        {
+                            string fullText = originalEntry.Key;
+                            int aspectIndex = fullText.IndexOf(" (");
+                            if (aspectIndex != -1)
+                            {
+                                string aspectRatio = fullText.Substring(aspectIndex).Trim();
+
+                                float drawX = currentPos.X + 455 + 5;
+                                float drawY = currentPos.Y + 5;
+
+                                spriteBatch.DrawString(font, aspectRatio, new Vector2(drawX, drawY), Global.Instance.Palette_DarkGray);
+                            }
+                        }
+                    }
+
                     currentPos.Y += 20;
                 }
                 else if (item is Button button)
