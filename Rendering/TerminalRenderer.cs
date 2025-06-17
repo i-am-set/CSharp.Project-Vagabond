@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace ProjectVagabond
@@ -67,7 +68,7 @@ namespace ProjectVagabond
             var coloredLine = ParseColoredText(message, baseColor);
             coloredLine.LineNumber = _nextLineNumber++;
 
-            var wrappedLines = WrapColoredText(coloredLine, GetTerminalWidthInChars());
+            var wrappedLines = WrapColoredText(coloredLine, GetTerminalContentWidthInPixels());
             foreach (var line in wrappedLines)
             {
                 _wrappedHistory.Add(line);
@@ -168,7 +169,7 @@ namespace ProjectVagabond
             _spriteBatch.Draw(pixel, new Rectangle(terminalX-5, separatorY, Global.DEFAULT_TERMINAL_WIDTH+10, 2), Global.Instance.Palette_White);
 
             string inputDisplay = $"> {Core.CurrentInputHandler.CurrentInput}_";
-            string wrappedInput = WrapText(inputDisplay, GetTerminalWidthInChars());
+            string wrappedInput = WrapText(inputDisplay, GetTerminalContentWidthInPixels());
             _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY+1), Color.Khaki, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
             if (Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions && Core.CurrentAutoCompleteManager.AutoCompleteSuggestions.Count > 0)
@@ -209,7 +210,7 @@ namespace ProjectVagabond
             {
                 statusText += $" | Executing: {Core.CurrentGameState.CurrentPathIndex + 1}/{Core.CurrentGameState.PendingActions.Count}";
             }
-            string wrappedStatus = WrapText(statusText, GetTerminalWidthInChars());
+            string wrappedStatus = WrapText(statusText, GetTerminalContentWidthInPixels());
             _spriteBatch.DrawString(_defaultFont, wrappedStatus, new Vector2(terminalX, statusY), Global.Instance.Palette_LightGray);
 
             int promptY = statusY + (wrappedStatus.Split('\n').Length * Global.TERMINAL_LINE_SPACING) + 5;
@@ -217,7 +218,7 @@ namespace ProjectVagabond
             if (!string.IsNullOrEmpty(promptText))
             {
                 var coloredPrompt = ParseColoredText(promptText, Color.Khaki);
-                var wrappedPromptLines = WrapColoredText(coloredPrompt, GetTerminalWidthInChars());
+                var wrappedPromptLines = WrapColoredText(coloredPrompt, GetTerminalContentWidthInPixels());
     
                 for (int i = 0; i < wrappedPromptLines.Count; i++)
                 {
@@ -248,7 +249,7 @@ namespace ProjectVagabond
             if (Core.CurrentGameState.IsFreeMoveMode && Core.CurrentGameState.PendingActions.Count <= 0)
             {
                 promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
-                promptBuilder.Append("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel\n");
+                promptBuilder.Append("[gold]Press[orange] ENTER[gold] to confirm, [orange]ESC[gold] to cancel\n");
 
                 return promptBuilder.ToString();
             }
@@ -262,14 +263,14 @@ namespace ProjectVagabond
                 {
                     promptBuilder.Append("[khaki]Previewing action queue...\n");
                 }
-                promptBuilder.Append("[gold]Press [orange]ENTER[gold] to confirm, [orange]ESC[gold] to cancel\n");
+                promptBuilder.Append("[gold]Press[orange] ENTER[gold] to confirm,[orange] ESC[gold] to cancel\n");
 
                 var details = new List<string>();
                 if (moveCount > 0) details.Add($"[orange]{moveCount}[gold] move(s)");
                 if (restCount > 0) details.Add($"[green]{restCount}[gold] rest(s)");
                 
-                promptBuilder.Append($"[gold]Pending {string.Join(", ", details)}\n");
-                promptBuilder.Append($"[gold]Arrival Time: [orange]{finalETA}\n");
+                promptBuilder.Append($"[gold]Pending[orange] {string.Join(", ", details)}\n");
+                promptBuilder.Append($"[gold]Arrival Time:[orange] {finalETA}\n");
                 promptBuilder.Append($"[Palette_Gray]{formatedTimeFromMinutes}\n");
 
                 return promptBuilder.ToString();
@@ -396,233 +397,189 @@ namespace ProjectVagabond
             return Global.Instance.TextColor;
         }
 
-        private List<ColoredLine> WrapColoredText(ColoredLine line, int maxWidth)
+        private List<ColoredLine> WrapColoredText(ColoredLine line, float maxWidthInPixels)
         {
             var wrappedLines = new List<ColoredLine>();
-    
-            var processedSegments = new List<ColoredText>();
-    
-            foreach (var segment in line.Segments)
+            var font = Global.Instance.DefaultFont;
+
+            var currentLine = new ColoredLine { LineNumber = line.LineNumber };
+            float currentLineWidth = 0f;
+
+            Action finishLine = () =>
             {
-                if (segment.Text.Contains('\n'))
+                if (currentLine.Segments.Any())
                 {
-                    string[] lines = segment.Text.Split('\n');
-                    for (int i = 0; i < lines.Length; i++)
+                    wrappedLines.Add(currentLine);
+                }
+                currentLine = new ColoredLine { LineNumber = 0 };
+                currentLineWidth = 0f;
+            };
+
+            void AddTokenToLine(string token, Color color)
+            {
+                float tokenWidth = font.MeasureString(token).Width;
+                bool isWhitespace = string.IsNullOrWhiteSpace(token);
+
+                if (!isWhitespace && currentLineWidth > 0 && currentLineWidth + tokenWidth > maxWidthInPixels)
+                {
+                    finishLine();
+                }
+
+                if (!isWhitespace && tokenWidth > maxWidthInPixels)
+                {
+                    if (currentLineWidth > 0) finishLine();
+
+                    string remainingToken = token;
+                    while (remainingToken.Length > 0)
                     {
-                        processedSegments.Add(new ColoredText(lines[i], segment.Color));
-                
-                        if (i < lines.Length - 1)
+                        int charsThatFit = 0;
+                        for (int i = 1; i <= remainingToken.Length; i++)
                         {
-                            processedSegments.Add(new ColoredText("\n", segment.Color));
+                            if (font.MeasureString(remainingToken.Substring(0, i)).Width > maxWidthInPixels)
+                            {
+                                break;
+                            }
+                            charsThatFit = i;
                         }
+                        if (charsThatFit == 0 && remainingToken.Length > 0) charsThatFit = 1;
+
+                        string part = remainingToken.Substring(0, charsThatFit);
+                        remainingToken = remainingToken.Substring(charsThatFit);
+
+                        var newLine = new ColoredLine { LineNumber = 0 };
+                        newLine.Segments.Add(new ColoredText(part, color));
+                        wrappedLines.Add(newLine);
                     }
+                    currentLineWidth = 0;
+                    return;
+                }
+
+                if (currentLine.Segments.Count > 0 && currentLine.Segments.Last().Color == color)
+                {
+                    currentLine.Segments.Last().Text += token;
                 }
                 else
                 {
-                    processedSegments.Add(segment);
+                    currentLine.Segments.Add(new ColoredText(token, color));
                 }
+                currentLineWidth += tokenWidth;
             }
-    
-            var currentLine = new ColoredLine { LineNumber = line.LineNumber };
-            var currentWords = new List<string>();
-            var currentColors = new List<Color>();
-            int currentLineWidth = 0;
 
-            foreach (var segment in processedSegments)
+            foreach (var segment in line.Segments)
             {
-                if (segment.Text == "\n")
+                string text = segment.Text;
+                Color color = segment.Color;
+
+                var tokens = Regex.Split(text, @"(\s+)");
+
+                foreach (var token in tokens)
                 {
-                    if (currentWords.Count > 0 || wrappedLines.Count == 0)
+                    if (string.IsNullOrEmpty(token)) continue;
+
+                    if (token.Contains('\n'))
                     {
-                        var finishedLine = CombineColoredSegments(currentWords, currentColors);
-                        finishedLine.LineNumber = wrappedLines.Count == 0 ? line.LineNumber : 0;
-                        wrappedLines.Add(finishedLine);
-                
-                        currentWords.Clear();
-                        currentColors.Clear();
-                        currentLineWidth = 0;
-                    }
-            
-                    currentLine = new ColoredLine { LineNumber = line.LineNumber };
-                    continue;
-                }
-        
-                var words = segment.Text.Split(' ', StringSplitOptions.None);
-
-                for (int wordIndex = 0; wordIndex < words.Length; wordIndex++)
-                {
-                    string word = words[wordIndex];
-                    bool needsSpace = currentWords.Count > 0 && wordIndex > 0;
-
-                    if (wordIndex == 0 && segment.Text.StartsWith(" "))
-                    {
-                        int leadingSpaces = 0;
-                        for (int j = 0; j < segment.Text.Length && segment.Text[j] == ' '; j++)
+                        string[] subTokens = token.Split('\n');
+                        for (int i = 0; i < subTokens.Length; i++)
                         {
-                            leadingSpaces++;
-                        }
-
-                        if (leadingSpaces > 0 && currentWords.Count == 0)
-                        {
-                            currentWords.Add(new string(' ', leadingSpaces));
-                            currentColors.Add(segment.Color);
-                            currentLineWidth += leadingSpaces;
-                        }
-                    }
-
-                    int wordWidth = word.Length + (needsSpace ? 1 : 0);
-
-                    if (currentLineWidth + wordWidth <= maxWidth || currentLineWidth == 0)
-                    {
-                        if (needsSpace)
-                        {
-                            currentWords.Add(" ");
-                            currentColors.Add(segment.Color);
-                            currentLineWidth += 1;
-                        }
-
-                        if (word.Length > 0)
-                        {
-                            currentWords.Add(word);
-                            currentColors.Add(segment.Color);
-                            currentLineWidth += word.Length;
-                        }
-                    }
-                    else
-                    {
-                        if (currentWords.Count > 0)
-                        {
-                            var combinedLine = CombineColoredSegments(currentWords, currentColors);
-                            combinedLine.LineNumber = line.LineNumber;
-                            wrappedLines.Add(combinedLine);
-
-                            currentWords.Clear();
-                            currentColors.Clear();
-                            currentLineWidth = 0;
-                        }
-
-                        if (word.Length > maxWidth)
-                        {
-                            for (int i = 0; i < word.Length; i += maxWidth)
+                            string subToken = subTokens[i].Replace("\r", "");
+                            if (!string.IsNullOrEmpty(subToken))
                             {
-                                int remainingChars = word.Length - i;
-                                int charsToTake = Math.Min(maxWidth, remainingChars);
-                                string wordPart = word.Substring(i, charsToTake);
+                                AddTokenToLine(subToken, color);
+                            }
 
-                                var longWordLine = new ColoredLine { LineNumber = line.LineNumber };
-                                longWordLine.Segments.Add(new ColoredText(wordPart, segment.Color));
-                                wrappedLines.Add(longWordLine);
+                            if (i < subTokens.Length - 1)
+                            {
+                                finishLine();
                             }
                         }
-                        else
-                        {
-                            currentWords.Add(word);
-                            currentColors.Add(segment.Color);
-                            currentLineWidth = word.Length;
-                        }
+                        continue;
                     }
+                    
+                    AddTokenToLine(token, color);
                 }
             }
 
-            if (currentWords.Count > 0)
+            if (currentLine.Segments.Any())
             {
-                var finalLine = CombineColoredSegments(currentWords, currentColors);
-                finalLine.LineNumber = wrappedLines.Count == 0 ? line.LineNumber : 0;
-                wrappedLines.Add(finalLine);
+                wrappedLines.Add(currentLine);
             }
 
-            if (wrappedLines.Count == 0)
+            if (!wrappedLines.Any())
             {
                 wrappedLines.Add(new ColoredLine { LineNumber = line.LineNumber });
+            }
+            else
+            {
+                wrappedLines[0].LineNumber = line.LineNumber;
             }
 
             return wrappedLines;
         }
 
-        private ColoredLine CombineColoredSegments(List<string> words, List<Color> colors)
-        {
-            var line = new ColoredLine();
-    
-            if (words.Count == 0)
-                return line;
-    
-            var currentText = new StringBuilder();
-            Color currentColor = colors[0];
-    
-            for (int i = 0; i < words.Count; i++)
-            {
-                if (i > 0 && colors[i] != currentColor)
-                {
-                    if (currentText.Length > 0)
-                    {
-                        line.Segments.Add(new ColoredText(currentText.ToString(), currentColor));
-                        currentText.Clear();
-                    }
-                    currentColor = colors[i];
-                }
-        
-                currentText.Append(words[i]);
-            }
-    
-            if (currentText.Length > 0)
-            {
-                line.Segments.Add(new ColoredText(currentText.ToString(), currentColor));
-            }
-    
-            return line;
-        }
-
-        private string WrapText(string text, int maxCharsPerLine)
+        private string WrapText(string text, float maxWidthInPixels)
         {
             if (string.IsNullOrEmpty(text))
                 return text;
 
+            var font = Global.Instance.DefaultFont;
             var finalLines = new List<string>();
-    
             string[] existingLines = text.Split('\n');
-    
+
             foreach (string line in existingLines)
             {
-                if (line.Length <= maxCharsPerLine)
+                if (font.MeasureString(line).Width <= maxWidthInPixels)
                 {
                     finalLines.Add(line);
                 }
                 else
                 {
-                    var words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                    var words = Regex.Split(line, @"(\s+)").Where(s => !string.IsNullOrEmpty(s)).ToArray();
                     var currentLine = new StringBuilder();
+                    float currentLineWidth = 0f;
 
                     foreach (string word in words)
                     {
-                        string testLine = currentLine.Length > 0 ? currentLine + " " + word : word;
-        
-                        if (testLine.Length <= maxCharsPerLine)
+                        float wordWidth = font.MeasureString(word).Width;
+                        bool isSpace = string.IsNullOrWhiteSpace(word);
+
+                        if (!isSpace && currentLine.Length > 0 && currentLineWidth + wordWidth > maxWidthInPixels)
                         {
-                            if (currentLine.Length > 0)
-                                currentLine.Append(' ');
-                            currentLine.Append(word);
+                            finalLines.Add(currentLine.ToString());
+                            currentLine.Clear();
+                            currentLineWidth = 0;
                         }
-                        else
+
+                        if (!isSpace && wordWidth > maxWidthInPixels)
                         {
                             if (currentLine.Length > 0)
                             {
                                 finalLines.Add(currentLine.ToString());
                                 currentLine.Clear();
                             }
-            
-                            if (word.Length > maxCharsPerLine)
+
+                            string remainingWord = word;
+                            while (remainingWord.Length > 0)
                             {
-                                for (int i = 0; i < word.Length; i += maxCharsPerLine)
+                                int charsThatFit = 0;
+                                for (int i = 1; i <= remainingWord.Length; i++)
                                 {
-                                    int remainingChars = word.Length - i;
-                                    int charsToTake = Math.Min(maxCharsPerLine, remainingChars);
-                                    finalLines.Add(word.Substring(i, charsToTake));
+                                    if (font.MeasureString(remainingWord.Substring(0, i)).Width > maxWidthInPixels)
+                                    {
+                                        break;
+                                    }
+                                    charsThatFit = i;
                                 }
+                                if (charsThatFit == 0 && remainingWord.Length > 0) charsThatFit = 1;
+
+                                finalLines.Add(remainingWord.Substring(0, charsThatFit));
+                                remainingWord = remainingWord.Substring(charsThatFit);
                             }
-                            else
-                            {
-                                currentLine.Append(word);
-                            }
+                            currentLineWidth = 0;
+                        }
+                        else
+                        {
+                            currentLine.Append(word);
+                            currentLineWidth += wordWidth;
                         }
                     }
 
@@ -636,11 +593,11 @@ namespace ProjectVagabond
             return string.Join("\n", finalLines);
         }
 
-        private int GetTerminalWidthInChars()
+        private float GetTerminalContentWidthInPixels()
         {
             int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
             float charWidth = Global.Instance.DefaultFont.MeasureString("W").Width;
-            return (int)(terminalWidth / charWidth) - 2;
+            return terminalWidth - (2 * charWidth);
         }
 
         private int GetTerminalY()

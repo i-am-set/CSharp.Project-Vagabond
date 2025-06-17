@@ -20,17 +20,17 @@ namespace ProjectVagabond.Scenes
 
         public override void Initialize()
         {
-            int screenWidth = Global.VIRTUAL_WIDTH; // Use virtual width for positioning
+            int screenWidth = Global.VIRTUAL_WIDTH;
             int buttonWidth = 200;
             int buttonHeight = 20;
 
-            var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 260, buttonWidth, buttonHeight), "Play");
+            var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 260, buttonWidth, buttonHeight), "PLAY");
             playButton.OnClick += () => Core.CurrentSceneManager.ChangeScene(GameSceneState.TerminalMap);
 
-            var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 280, buttonWidth, buttonHeight), "Settings");
+            var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 280, buttonWidth, buttonHeight), "SETTINGS");
             settingsButton.OnClick += () => Core.CurrentSceneManager.ChangeScene(GameSceneState.Settings);
 
-            var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 300, buttonWidth, buttonHeight), "Exit");
+            var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 300, buttonWidth, buttonHeight), "EXIT");
             exitButton.OnClick += () => Core.Instance.ExitApplication();
 
             _buttons.Add(playButton);
@@ -81,25 +81,56 @@ namespace ProjectVagabond.Scenes
 
                 if (upPressed || downPressed)
                 {
-                    if (upPressed)
-                    {
-                        _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
-                    }
-                    else // downPressed
-                    {
-                        _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
-                    }
+                    var selectedButton = _buttons[_selectedButtonIndex];
+                    if (selectedButton.IsHovered)
+                        {
+                            if (upPressed)
+                        {
+                            _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
+                        }
+                        else // downPressed
+                        {
+                            _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
+                        }
 
-                    Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
-                    Mouse.SetPosition(screenPos.X, screenPos.Y);
+                        Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
+                        Mouse.SetPosition(screenPos.X, screenPos.Y);
                     
-                    Core.Instance.IsMouseVisible = false;
-                    _keyboardNavigatedLastFrame = true;
+                        Core.Instance.IsMouseVisible = false;
+                        _keyboardNavigatedLastFrame = true;
+                        }
+                    else
+                    {
+                        Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
+                        Mouse.SetPosition(screenPos.X, screenPos.Y);
+
+                        Core.Instance.IsMouseVisible = false;
+                        _keyboardNavigatedLastFrame = true;
+                    }
                 }
 
                 if (currentKeyboardState.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
                 {
-                    _buttons[_selectedButtonIndex].TriggerClick();
+                    var selectedButton = _buttons[_selectedButtonIndex];
+                    if (selectedButton.IsHovered)
+                    {
+                        selectedButton.TriggerClick();
+                    }
+                    else
+                    {
+                        Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
+                        Mouse.SetPosition(screenPos.X, screenPos.Y);
+
+                        Core.Instance.IsMouseVisible = false;
+                        _keyboardNavigatedLastFrame = true;
+                    }
+                }
+
+                if (currentKeyboardState.IsKeyDown(Keys.Escape))
+                {
+                    Mouse.SetPosition(0, 0);
+
+                    Core.Instance.IsMouseVisible = true;
                 }
             }
 

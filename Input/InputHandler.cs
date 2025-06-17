@@ -109,7 +109,7 @@ namespace ProjectVagabond
                                     {
                                         Core.CurrentGameState.ToggleExecutingPath(true);
                                         Core.CurrentGameState.SetCurrentPathIndex(0);
-                                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of [undo]{Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
+                                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
                                     }
                                     else if (Core.CurrentGameState.IsExecutingPath)
                                     {
@@ -146,7 +146,7 @@ namespace ProjectVagabond
                                     {
                                         Core.CurrentGameState.ToggleExecutingPath(true);
                                         Core.CurrentGameState.SetCurrentPathIndex(0);
-                                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of [undo]{Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
+                                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
                                     }
                                     else if (Core.CurrentGameState.IsExecutingPath)
                                     {
