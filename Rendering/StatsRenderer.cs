@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -9,21 +9,15 @@ namespace ProjectVagabond
     public class StatsRenderer
     {
         private GameState _gameState = Core.CurrentGameState;
-        private MouseState _previousMouseState;
         private MouseState _currentMouseState;
 
-        private string _tooltipText = "";
-        private Vector2 _tooltipPosition;
-        private bool _showTooltip = false;
         private Rectangle _hpBarBounds;
         private Rectangle _epBarBounds;
 
         public void Update(GameTime gameTime)
         {
-            _previousMouseState = _currentMouseState;
             _currentMouseState = Mouse.GetState();
-
-            CheckTooltipHover();
+            HandleTooltips();
         }
 
         public void DrawStats()
@@ -51,18 +45,11 @@ namespace ProjectVagabond
             currentY += 16;
             string secondaryStats = $"Spd:{stats.WalkSpeed:F1} Car:{stats.CarryCapacity} Men:{stats.MentalResistance} Soc:{stats.SocialInfluence}";
             _spriteBatch.DrawString(Global.Instance.DefaultFont, secondaryStats, new Vector2(baseX, currentY), Global.Instance.Palette_LightGray);
-
-            // Draw tooltip if needed
-            if (_showTooltip)
-            {
-                DrawTooltip(_spriteBatch);
-            }
         }
 
         private Rectangle DrawEnergyBarWithPreview(SpriteBatch spriteBatch, PlayerStats stats, Vector2 position, int width)
         {
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
-            pixel.SetData(new[] { Color.White });
+            var pixel = Core.Pixel;
 
             string labelText = "EP";
             spriteBatch.DrawString(Global.Instance.DefaultFont, labelText, position, Global.Instance.TextColor);
@@ -117,8 +104,7 @@ namespace ProjectVagabond
 
         private Rectangle DrawSimpleStatBar(SpriteBatch spriteBatch, string label, int current, int max, Vector2 position, Color fillColor, Color bgColor, int width)
         {
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
-            pixel.SetData(new[] { Color.White });
+            var pixel = Core.Pixel;
 
             string labelText = $"{label}"; // Draw label first
             spriteBatch.DrawString(Global.Instance.DefaultFont, labelText, position, Global.Instance.TextColor);
@@ -154,62 +140,42 @@ namespace ProjectVagabond
             return new Rectangle((int)position.X, (int)position.Y, (int)textSize.X + 5 + barWidth, 12); // Return the bounds of the entire bar area (including label) for hover detection
         }
 
-        private void CheckTooltipHover()
+        private void HandleTooltips()
         {
-            Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
-            _showTooltip = false;
-
             if (_gameState.PlayerStats == null) return;
+
+            Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
+            bool isHovering = false;
 
             var stats = _gameState.PlayerStats;
             
-            if (_hpBarBounds.Contains(virtualMousePos)) // Check HP bar hover using virtual coordinates
+            if (_hpBarBounds.Contains(virtualMousePos))
             {
-                _tooltipText = $"{stats.CurrentHealthPoints}/{stats.MaxHealthPoints}";
-                _tooltipPosition = new Vector2(virtualMousePos.X + 10, virtualMousePos.Y - 20);
-                _showTooltip = true;
+                string tooltipText = $"{stats.CurrentHealthPoints}/{stats.MaxHealthPoints}";
+                Core.CurrentTooltipManager.Request(this, tooltipText, virtualMousePos);
+                isHovering = true;
             }
-            else if (_epBarBounds.Contains(virtualMousePos)) // Check EP bar hover using virtual coordinates
+            else if (_epBarBounds.Contains(virtualMousePos))
             {
+                string tooltipText;
                 if (_gameState.PendingActions.Count > 0)
                 {
                     var simResult = _gameState.PendingQueueSimulationResult;
                     int finalEnergy = simResult.finalEnergy;
-                    _tooltipText = $"{stats.CurrentEnergyPoints}/{stats.MaxEnergyPoints} -> {finalEnergy}/{stats.MaxEnergyPoints}";
+                    tooltipText = $"{stats.CurrentEnergyPoints}/{stats.MaxEnergyPoints} -> {finalEnergy}/{stats.MaxEnergyPoints}";
                 }
                 else
                 {
-                    _tooltipText = $"{stats.CurrentEnergyPoints}/{stats.MaxEnergyPoints}";
+                    tooltipText = $"{stats.CurrentEnergyPoints}/{stats.MaxEnergyPoints}";
                 }
-                _tooltipPosition = new Vector2(virtualMousePos.X + 10, virtualMousePos.Y - 20);
-                _showTooltip = true;
+                Core.CurrentTooltipManager.Request(this, tooltipText, virtualMousePos);
+                isHovering = true;
             }
-        }
 
-        private void DrawTooltip(SpriteBatch spriteBatch)
-        {
-            if (string.IsNullOrEmpty(_tooltipText)) return;
-
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
-            pixel.SetData(new[] { Color.White });
-
-            Vector2 textSize = Global.Instance.DefaultFont.MeasureString(_tooltipText);
-
-            Rectangle tooltipBg = new Rectangle( // Create tooltip background with padding
-                (int)_tooltipPosition.X - 4,
-                (int)_tooltipPosition.Y - 2,
-                (int)textSize.X + 8,
-                (int)textSize.Y + 4
-            );
-
-            spriteBatch.Draw(pixel, tooltipBg, Global.Instance.ToolTipBGColor * 0.8f); // Draw tooltip background
-
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), Global.Instance.ToolTipBorderColor); // Draw tooltip border
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), Global.Instance.ToolTipBorderColor);
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), Global.Instance.ToolTipBorderColor);
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), Global.Instance.ToolTipBorderColor);
-
-            spriteBatch.DrawString(Global.Instance.DefaultFont, _tooltipText, _tooltipPosition, Global.Instance.ToolTipTextColor); // Draw tooltip text
+            if (!isHovering)
+            {
+                Core.CurrentTooltipManager.CancelRequest(this);
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -12,24 +12,20 @@ namespace ProjectVagabond
     public class MapRenderer
     {
         private GameState _gameState = Core.CurrentGameState;
-
         private Vector2? _hoveredGridWorldPos;
-        private float _hoverTimer;
-        private const float HOVER_TIME_FOR_TOOLTIP = 0.5f;
-        private bool _showTooltip;
-        private string _tooltipText;
-        private Vector2 _tooltipPosition;
         private Rectangle _mapGridBounds;
         private MouseState _currentMouseState;
-
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public void Update(GameTime gameTime)
         {
             _currentMouseState = Mouse.GetState();
-            Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
+            HandleTooltips();
+        }
 
-            Vector2? currentHoveredWorldPos = null;
+        private void HandleTooltips()
+        {
+            Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
+            _hoveredGridWorldPos = null; // Reset hover position each frame
 
             if (_mapGridBounds.Contains(virtualMousePos))
             {
@@ -40,44 +36,27 @@ namespace ProjectVagabond
                 {
                     int startX = (int)_gameState.PlayerWorldPos.X - Global.GRID_SIZE / 2;
                     int startY = (int)_gameState.PlayerWorldPos.Y - Global.GRID_SIZE / 2;
-                    currentHoveredWorldPos = new Vector2(startX + gridX, startY + gridY);
+                    _hoveredGridWorldPos = new Vector2(startX + gridX, startY + gridY);
                 }
             }
 
-            if (currentHoveredWorldPos.HasValue)
+            if (_hoveredGridWorldPos.HasValue)
             {
-                if (currentHoveredWorldPos.Equals(_hoveredGridWorldPos))
-                {
-                    _hoverTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    if (_hoverTimer >= HOVER_TIME_FOR_TOOLTIP && !_showTooltip)
-                    {
-                        _showTooltip = true;
-                        int worldX = (int)currentHoveredWorldPos.Value.X;
-                        int worldY = (int)currentHoveredWorldPos.Value.Y;
-                        float noise = _gameState.GetNoiseAt(worldX, worldY);
-                        string terrainName = GetTerrainName(noise);
+                int worldX = (int)_hoveredGridWorldPos.Value.X;
+                int worldY = (int)_hoveredGridWorldPos.Value.Y;
+                float noise = _gameState.GetNoiseAt(worldX, worldY);
+                string terrainName = GetTerrainName(noise);
 
-                        var stringBuilder = new StringBuilder();
-                        stringBuilder.Append($"Pos: ({worldX}, {worldY})\n");
-                        stringBuilder.Append($"Terrain: {terrainName}\n");
-                        stringBuilder.Append($"Noise: {noise:F2}");
+                var stringBuilder = new StringBuilder();
+                stringBuilder.Append($"Pos: ({worldX}, {worldY})\n");
+                stringBuilder.Append($"Terrain: {terrainName}\n");
+                stringBuilder.Append($"Noise: {noise:F2}");
 
-                        _tooltipText = stringBuilder.ToString();
-                        _tooltipPosition = new Vector2(virtualMousePos.X + 15, virtualMousePos.Y);
-                    }
-                }
-                else
-                {
-                    _hoveredGridWorldPos = currentHoveredWorldPos;
-                    _hoverTimer = 0f;
-                    _showTooltip = false;
-                }
+                Core.CurrentTooltipManager.Request(this, stringBuilder.ToString(), virtualMousePos);
             }
             else
             {
-                _hoveredGridWorldPos = null;
-                _hoverTimer = 0f;
-                _showTooltip = false;
+                Core.CurrentTooltipManager.CancelRequest(this);
             }
         }
 
@@ -90,40 +69,30 @@ namespace ProjectVagabond
             int mapWidth = Global.MAP_WIDTH;
             int mapHeight = Global.GRID_SIZE * Global.GRID_CELL_SIZE + 30;
 
-            // Define map grid area for hover detection //
             _mapGridBounds = new Rectangle(mapStartX, mapStartY, Global.GRID_SIZE * Global.GRID_CELL_SIZE, Global.GRID_SIZE * Global.GRID_CELL_SIZE);
 
-            // Draw map border //
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
-            pixel.SetData(new[] { Color.White });
+            var pixel = Core.Pixel;
 
-            // Border rectangle //
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, mapWidth, 2), Global.Instance.Palette_White); // Top
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY + mapHeight - 27, mapWidth, 2), Global.Instance.Palette_White); // Bottom
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, 2, mapHeight), Global.Instance.Palette_White); // Left
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX + mapWidth - 7, mapStartY - 25, 2, mapHeight), Global.Instance.Palette_White); // Right
 
-            // Draw map title //
             string posText = $"Pos: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})";
-            _spriteBatch.DrawString(Global.Instance.DefaultFont, posText,
-                new Vector2(mapStartX, mapStartY - 20), Global.Instance.TextColor);
+            _spriteBatch.DrawString(Global.Instance.DefaultFont, posText, new Vector2(mapStartX, mapStartY - 20), Global.Instance.TextColor);
 
-            // Draw the current date and time //
             string timeText = Core.CurrentWorldClockManager.CurrentTime;
             Vector2 timeTextSize = Global.Instance.DefaultFont.MeasureString(timeText);
             Vector2 timeTextPos = new Vector2(mapStartX + mapWidth - timeTextSize.X - 15, mapStartY - 20);
             _spriteBatch.DrawString(Global.Instance.DefaultFont, timeText, timeTextPos, Global.Instance.TextColor);
 
-            // Generate grid elements //
             var gridElements = GenerateMapGridElements(mapStartX, mapStartY);
 
-            // Draw each grid element //
             foreach (var element in gridElements)
             {
                 DrawGridElement(element);
             }
 
-            // Draw hover indicator //
             if (_hoveredGridWorldPos.HasValue)
             {
                 int startX = (int)_gameState.PlayerWorldPos.X - Global.GRID_SIZE / 2;
@@ -148,12 +117,6 @@ namespace ProjectVagabond
                     Texture2D texture = Core.CurrentSpriteManager.MapHoverMarkerSprite;
                     _spriteBatch.Draw(texture, indicatorRect, Global.Instance.Palette_Red);
                 }
-            }
-
-            // Draw tooltip if needed //
-            if (_showTooltip)
-            {
-                DrawTooltip(_spriteBatch);
             }
         }
 
@@ -262,59 +225,6 @@ namespace ProjectVagabond
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
-        private void DrawTooltip(SpriteBatch spriteBatch)
-        {
-            if (string.IsNullOrEmpty(_tooltipText)) return;
-
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
-            pixel.SetData(new[] { Color.White });
-
-            Vector2 textSize = Global.Instance.DefaultFont.MeasureString(_tooltipText);
-
-            const int paddingX = 8;
-            const int paddingY = 4;
-            float tooltipWidth = textSize.X + paddingX;
-            float tooltipHeight = textSize.Y + paddingY;
-
-            Vector2 finalTopLeftPosition;
-
-            if (_tooltipPosition.Y > _mapGridBounds.Y + _mapGridBounds.Height / 2)
-            {
-                finalTopLeftPosition = new Vector2(
-                    _tooltipPosition.X,
-                    _tooltipPosition.Y - tooltipHeight - 5
-                );
-            }
-            else
-            {
-                finalTopLeftPosition = new Vector2(
-                    _tooltipPosition.X,
-                    _tooltipPosition.Y + 15
-                );
-            }
-
-            Rectangle tooltipBg = new Rectangle(
-                (int)finalTopLeftPosition.X,
-                (int)finalTopLeftPosition.Y,
-                (int)tooltipWidth,
-                (int)tooltipHeight
-            );
-
-            Vector2 textPosition = new Vector2(
-                finalTopLeftPosition.X + (paddingX / 2),
-                finalTopLeftPosition.Y + (paddingY / 2)
-            );
-
-            spriteBatch.Draw(pixel, tooltipBg, Global.Instance.ToolTipBGColor * 0.8f);
-
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), Global.Instance.ToolTipBorderColor);
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), Global.Instance.ToolTipBorderColor);
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), Global.Instance.ToolTipBorderColor);
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), Global.Instance.ToolTipBorderColor);
-
-            spriteBatch.DrawString(Global.Instance.DefaultFont, _tooltipText, textPosition, Global.Instance.ToolTipTextColor);
-        }
 
         private string GetTerrainName(float noise)
         {
