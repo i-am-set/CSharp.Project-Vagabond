@@ -36,7 +36,6 @@ namespace ProjectVagabond
         private static readonly HapticsManager _hapticsManager = new();
         private static readonly SceneManager _sceneManager = new();
         public static readonly GameSettings _settings = new();
-        private static readonly TooltipManager _tooltipManager = new();
 
         // Misc //
         private RenderTarget2D _renderTarget;
@@ -60,7 +59,6 @@ namespace ProjectVagabond
         public static SceneManager CurrentSceneManager => _sceneManager;
         public static GameSettings Settings => _settings;
         public static Texture2D Pixel => _pixel;
-        public static TooltipManager CurrentTooltipManager => _tooltipManager;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -88,7 +86,6 @@ namespace ProjectVagabond
             Settings.ApplyGameSettings();
 
             _pixel = new Texture2D(GraphicsDevice, 1, 1);
-            _pixel.SetData(new[] { Color.White });
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());
