@@ -10,6 +10,7 @@ namespace ProjectVagabond
 {
     public class SpriteManager
     {
+        private Texture2D _logoSprite;
         private Texture2D _waterSprite;
         private Texture2D _flatlandSprite;
         private Texture2D _hillSprite;
@@ -25,6 +26,7 @@ namespace ProjectVagabond
         private Texture2D _emptySprite;
         private Texture2D _speedMarkSprite;
 
+        public Texture2D LogoSprite => _logoSprite;
         public Texture2D WaterSprite => _waterSprite;
         public Texture2D FlatlandSprite => _flatlandSprite;
         public Texture2D HillSprite => _hillSprite;
@@ -44,6 +46,14 @@ namespace ProjectVagabond
 
         public void LoadSpriteContent()
         {
+            try
+            {
+                _logoSprite = Core.Instance.Content.Load<Texture2D>("Sprites/logo");
+            }
+            catch
+            {
+                _speedMarkSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
+            }
             try
             {
                 _waterSprite = Core.Instance.Content.Load<Texture2D>("Sprites/water");

@@ -116,9 +116,7 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
             Core.Pixel.SetData(new[] { Color.White });
 
-            string title = ".";
-            Vector2 titleSize = font.MeasureString(title) * 2f;
-            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 150), Global.Instance.Palette_BrightWhite, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+            spriteBatch.Draw(Core.CurrentSpriteManager.LogoSprite, new Vector2(screenWidth / 2 - Core.CurrentSpriteManager.LogoSprite.Width / 2, 150), Color.White);
 
             foreach (var button in _buttons)
             {

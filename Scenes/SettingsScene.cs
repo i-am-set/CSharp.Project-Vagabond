@@ -17,6 +17,11 @@ namespace ProjectVagabond.Scenes
         private int _hoveredIndex = -1; // NEW: Tracks the element currently under the mouse
         private string _confirmationMessage = "";
         private float _confirmationTimer = 0f;
+        private int _settingsStartY = 105;
+
+        // ADDED: Input delay to prevent click-through from previous scene
+        private float _inputDelay = 0.1f;
+        private float _currentInputDelay = 0f;
 
         private bool _keyboardNavigatedLastFrame = false;
         private KeyboardState _previousKeyboardState;
@@ -53,6 +58,8 @@ namespace ProjectVagabond.Scenes
             _previousMouseState = Mouse.GetState();
             _previousKeyboardState = Keyboard.GetState();
             Core.Instance.IsMouseVisible = true;
+
+            _currentInputDelay = _inputDelay; // ADDED: Start the input delay timer
         }
 
         private void BuildInitialUI()
@@ -61,9 +68,9 @@ namespace ProjectVagabond.Scenes
 
             // Graphics Settings //
             _uiElements.Add("Graphics");
-            
+
             _uiElements.Add(new OptionSettingControl<Point>("Resolution", _resolutions, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v));
-            
+
             _uiElements.Add(new BoolSettingControl("Fullscreen", () => _tempSettings.IsFullscreen, v => {
                 _tempSettings.IsFullscreen = v;
                 if (v) // When enabling fullscreen
@@ -71,7 +78,7 @@ namespace ProjectVagabond.Scenes
                     SetResolutionToNearestNative();
                 }
             }));
-            
+
             _uiElements.Add(new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v));
             _uiElements.Add(new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v));
 
@@ -99,26 +106,26 @@ namespace ProjectVagabond.Scenes
         {
             var nativeResolution = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
             Point nativePoint = new Point(nativeResolution.Width, nativeResolution.Height);
-            
+
             Point closestResolution = _resolutions[0].Value;
             double minDistance = double.MaxValue;
-            
+
             foreach (var resolution in _resolutions)
             {
                 double distance = Math.Sqrt(
-                    Math.Pow(resolution.Value.X - nativePoint.X, 2) + 
+                    Math.Pow(resolution.Value.X - nativePoint.X, 2) +
                     Math.Pow(resolution.Value.Y - nativePoint.Y, 2)
                 );
-                
+
                 if (distance < minDistance)
                 {
                     minDistance = distance;
                     closestResolution = resolution.Value;
                 }
             }
-            
+
             _tempSettings.Resolution = closestResolution;
-            
+
             var resolutionControl = _uiElements.OfType<ISettingControl>().FirstOrDefault(c => c.Label == "Resolution");
             if (resolutionControl != null)
             {
@@ -179,7 +186,7 @@ namespace ProjectVagabond.Scenes
         {
             if (_selectedIndex < 0 || _selectedIndex >= _uiElements.Count) return;
 
-            Vector2 currentPos = new Vector2(0, 50);
+            Vector2 currentPos = new Vector2(0, _settingsStartY);
 
             for (int i = 0; i <= _selectedIndex; i++)
             {
@@ -226,6 +233,11 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             _hoveredIndex = -1;
 
+            if (_currentInputDelay > 0)
+            {
+                _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+
             if (_keyboardNavigatedLastFrame)
             {
                 _keyboardNavigatedLastFrame = false;
@@ -243,7 +255,7 @@ namespace ProjectVagabond.Scenes
             UpdateFramerateControl();
 
             Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-            Vector2 currentPos = new Vector2(0, 50);
+            Vector2 currentPos = new Vector2(0, _settingsStartY);
 
             for (int i = 0; i < _uiElements.Count; i++)
             {
@@ -254,30 +266,36 @@ namespace ProjectVagabond.Scenes
                 if (item is ISettingControl setting)
                 {
                     Vector2 drawPosition = new Vector2(currentPos.X, currentPos.Y + 5);
-                    
+
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, 20);
                     if (hoverRect.Contains(virtualMousePos))
                     {
                         _selectedIndex = i;
                         _hoveredIndex = i;
                     }
-                    
-                    setting.Update(drawPosition, isSelected, currentMouseState, _previousMouseState);
-                    
+
+                    if (_currentInputDelay <= 0)
+                    {
+                        setting.Update(drawPosition, isSelected, currentMouseState, _previousMouseState);
+                    }
+
                     currentPos.Y += 20;
                 }
                 else if (item is Button button)
                 {
                     button.Bounds = new Rectangle((Global.VIRTUAL_WIDTH - button.Bounds.Width) / 2, (int)currentPos.Y, button.Bounds.Width, button.Bounds.Height);
-                    
+
                     if (button.Bounds.Contains(virtualMousePos))
                     {
                         _selectedIndex = i;
                         _hoveredIndex = i;
                     }
-                    
-                    button.Update(currentMouseState);
-                    
+
+                    if (_currentInputDelay <= 0)
+                    {
+                        button.Update(currentMouseState);
+                    }
+
                     currentPos.Y += 25;
                 }
                 else if (item is string)
@@ -287,12 +305,15 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            HandleKeyboardInput(currentKeyboardState);
+            if (_currentInputDelay <= 0)
+            {
+                HandleKeyboardInput(currentKeyboardState);
+            }
 
             var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Apply");
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
 
-            if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+            if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
             {
                 BackToPreviousScene();
             }
@@ -329,7 +350,7 @@ namespace ProjectVagabond.Scenes
                 {
                     if (KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState)) setting.HandleInput(Keys.Left);
                     if (KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState)) setting.HandleInput(Keys.Right);
-                    
+
                     if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
                     {
                         if (_selectedIndex == _hoveredIndex && IsDirty())
@@ -391,9 +412,9 @@ namespace ProjectVagabond.Scenes
 
             string title = "Settings";
             Vector2 titleSize = font.MeasureString(title) * 2f;
-            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 10), Global.Instance.Palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
+            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 75), Global.Instance.Palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
 
-            Vector2 currentPos = new Vector2(0, 50);
+            Vector2 currentPos = new Vector2(0, _settingsStartY);
             for (int i = 0; i < _uiElements.Count; i++)
             {
                 var item = _uiElements[i];
