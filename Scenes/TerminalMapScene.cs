@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace ProjectVagabond.Scenes
@@ -14,6 +14,7 @@ namespace ProjectVagabond.Scenes
         public override void Update(GameTime gameTime)
         {
             Core.CurrentInputHandler.HandleInput(gameTime);
+            Core.CurrentMapRenderer.Update(gameTime);
             Core.CurrentGameState.UpdateMovement(gameTime);
             Core.CurrentStatsRenderer.Update(gameTime);
             Core.CurrentHapticsManager.Update(gameTime);
@@ -25,8 +26,8 @@ namespace ProjectVagabond.Scenes
 
             Global.Instance.CurrentSpriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: shakeMatrix);
 
-            Core.CurrentMapRenderer.DrawMap();
             Core.CurrentTerminalRenderer.DrawTerminal();
+            Core.CurrentMapRenderer.DrawMap();
             Core.CurrentStatsRenderer.DrawStats();
 
             Global.Instance.CurrentSpriteBatch.End();

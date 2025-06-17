@@ -149,6 +149,85 @@ namespace ProjectVagabond
             return texture;
         }
 
+        public Texture2D CreateSmallXTexture()
+        {
+            const int size = 10;
+            const int margin = 3;
+            var texture = new Texture2D(Core.Instance.GraphicsDevice, size, size);
+            var colorData = new Color[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    // check if (x,y) is inside the inner square
+                    bool inInner = x >= margin && x < (size - margin)
+                                && y >= margin && y < (size - margin);
+
+                    if (inInner)
+                    {
+                        // rebase to [0..innerSize-1]
+                        int xi = x - margin;
+                        int yi = y - margin;
+                        int innerSize = size - 2 * margin;  
+
+                        // draw the two diagonals of the inner square
+                        if (xi == yi || xi == (innerSize - 1) - yi)
+                            colorData[y * size + x] = Color.White;
+                        else
+                            colorData[y * size + x] = Color.Transparent;
+                    }
+                    else
+                    {
+                        colorData[y * size + x] = Color.Transparent;
+                    }
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
+
+        public Texture2D CreateSelectionSquareTexture()
+        {
+            const int size = 10;
+            const int centerGap = 4;                // how many pixels to leave blank at the center of each side
+            int start = (size - centerGap) / 2;     // for size=10, start=4
+            int end = start + centerGap;            // end=6 (so pixels 4 and 5 are skipped)
+
+            var texture = new Texture2D(Core.Instance.GraphicsDevice, size, size);
+            var colorData = new Color[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    bool draw = false;
+
+                    // Top edge, except the center gap
+                    if (y == 0 && (x < start || x >= end))
+                        draw = true;
+
+                    // Bottom edge, except the center gap
+                    if (y == size - 1 && (x < start || x >= end))
+                        draw = true;
+
+                    // Left edge, except the center gap
+                    if (x == 0 && (y < start || y >= end))
+                        draw = true;
+
+                    // Right edge, except the center gap
+                    if (x == size - 1 && (y < start || y >= end))
+                        draw = true;
+
+                    colorData[y * size + x] = draw ? Color.White : Color.Transparent;
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
+
         public Texture2D CreateEmptyTexture()
         {
             var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);

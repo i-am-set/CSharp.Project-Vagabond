@@ -25,6 +25,7 @@ namespace ProjectVagabond
         private Texture2D _warningMarkSprite;
         private Texture2D _emptySprite;
         private Texture2D _speedMarkSprite;
+        private Texture2D _mapHoverMarkerSprite;
 
         public Texture2D LogoSprite => _logoSprite;
         public Texture2D WaterSprite => _waterSprite;
@@ -41,6 +42,7 @@ namespace ProjectVagabond
         public Texture2D WarningMarkSprite => _warningMarkSprite;
         public Texture2D EmptySprite => _emptySprite;
         public Texture2D SpeedMarkSprite => _speedMarkSprite;
+        public Texture2D MapHoverMarkerSprite => _mapHoverMarkerSprite;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -183,6 +185,15 @@ namespace ProjectVagabond
             catch (Exception)
             {
                 _speedMarkSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
+            }
+
+            try
+            {
+                _mapHoverMarkerSprite = Core.CurrentTextureFactory.CreateSelectionSquareTexture();
+            }
+            catch (Exception)
+            {
+                _mapHoverMarkerSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
             }
         }
     }

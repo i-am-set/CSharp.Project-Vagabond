@@ -202,14 +202,14 @@ namespace ProjectVagabond
                 (int)textSize.Y + 4
             );
 
-            spriteBatch.Draw(pixel, tooltipBg, Color.Black * 0.8f); // Draw tooltip background
+            spriteBatch.Draw(pixel, tooltipBg, Global.Instance.ToolTipBGColor * 0.8f); // Draw tooltip background
 
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), Color.White); // Draw tooltip border
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), Color.White);
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), Color.White);
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), Color.White);
+            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), Global.Instance.ToolTipBorderColor); // Draw tooltip border
+            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), Global.Instance.ToolTipBorderColor);
+            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), Global.Instance.ToolTipBorderColor);
+            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), Global.Instance.ToolTipBorderColor);
 
-            spriteBatch.DrawString(Global.Instance.DefaultFont, _tooltipText, _tooltipPosition, Color.White); // Draw tooltip text
+            spriteBatch.DrawString(Global.Instance.DefaultFont, _tooltipText, _tooltipPosition, Global.Instance.ToolTipTextColor); // Draw tooltip text
         }
     }
 }

@@ -27,6 +27,9 @@ namespace ProjectVagabond
             TextColor = Color.White;
             OptionHoverColor = Palette_Red;
             OutputTextColor = Color.Gray;
+            ToolTipBGColor = Color.Black;
+            ToolTipTextColor = Color.White;
+            ToolTipBorderColor = Color.White;
         }
 
         public static Global Instance => _instance;
@@ -127,5 +130,8 @@ namespace ProjectVagabond
         public Color TextColor { get; private set; }
         public Color OptionHoverColor { get; private set; }
         public Color OutputTextColor { get; private set; }
+        public Color ToolTipBGColor { get; private set; }
+        public Color ToolTipTextColor { get; private set; }
+        public Color ToolTipBorderColor { get; private set; }
     }
 }

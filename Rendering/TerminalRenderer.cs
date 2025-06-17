@@ -249,7 +249,7 @@ namespace ProjectVagabond
             if (Core.CurrentGameState.IsFreeMoveMode && Core.CurrentGameState.PendingActions.Count <= 0)
             {
                 promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
-                promptBuilder.Append("[gold]Press[orange] ENTER[gold] to confirm, [orange]ESC[gold] to cancel\n");
+                promptBuilder.Append("[gold]Press[orange] ENTER[gold] to confirm,[orange] ESC[gold] to cancel\n");
 
                 return promptBuilder.ToString();
             }
