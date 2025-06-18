@@ -28,7 +28,6 @@ namespace ProjectVagabond.Scenes
         private MouseState _previousMouseState;
 
         private GameSettings _tempSettings;
-        private List<KeyValuePair<string, Point>> _resolutions;
 
         public override void Enter()
         {
@@ -44,26 +43,10 @@ namespace ProjectVagabond.Scenes
                 Use24HourClock = Core.Settings.Use24HourClock
             };
 
-            _resolutions = new List<KeyValuePair<string, Point>>
-            {
-                new("800 x 600 (4:3)", new Point(800, 600)),
-                new("960 x 540 (16:9)", new Point(960, 540)),
-                new("1024 x 768 (4:3)", new Point(1024, 768)),
-                new("1280 x 720 (16:9)", new Point(1280, 720)),
-                new("1280 x 800 (16:10)", new Point(1280, 800)),
-                new("1440 x 900 (16:10)", new Point(1440, 900)),
-                new("1600 x 900 (16:9)", new Point(1600, 900)),
-                new("1680 x 1050 (16:10)", new Point(1680, 1050)),
-                new("1920 x 1080 (16:9)", new Point(1920, 1080)),
-                new("1920 x 1200 (16:10)", new Point(1920, 1200)),
-                new("2560 x 1080 (21:9)", new Point(2560, 1080)),
-                new("2560 x 1440 (16:9)", new Point(2560, 1440)),
-                new("3440 x 1440 (21:9)", new Point(3440, 1440)),
-                new("3840 x 2160 (4K)", new Point(3840, 2160)),
-            };
+            var resolutions = SettingsManager.GetResolutions();
 
             Point currentActualResolution = _tempSettings.Resolution;
-            _tempSettings.Resolution = _resolutions
+            _tempSettings.Resolution = resolutions
                 .OrderBy(res => Math.Pow(res.Value.X - currentActualResolution.X, 2) + Math.Pow(res.Value.Y - currentActualResolution.Y, 2))
                 .First().Value;
 
@@ -83,7 +66,8 @@ namespace ProjectVagabond.Scenes
             // Graphics Settings //
             _uiElements.Add("Graphics");
 
-            var resolutionDisplayList = _resolutions.Select(kvp =>
+            var resolutions = SettingsManager.GetResolutions();
+            var resolutionDisplayList = resolutions.Select(kvp =>
             {
                 string display = kvp.Key;
                 int aspectIndex = display.IndexOf(" (");
@@ -119,6 +103,10 @@ namespace ProjectVagabond.Scenes
             backButton.OnClick += BackToPreviousScene;
             _uiElements.Add(backButton);
 
+            var resetButton = new Button(new Rectangle(0, 0, 250, 20), "Reset to Default");
+            resetButton.OnClick += ResetSettingsToDefault;
+            _uiElements.Add(resetButton);
+
             UpdateFramerateControl();
         }
 
@@ -126,11 +114,12 @@ namespace ProjectVagabond.Scenes
         {
             var nativeResolution = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
             Point nativePoint = new Point(nativeResolution.Width, nativeResolution.Height);
+            var resolutions = SettingsManager.GetResolutions();
 
-            Point closestResolution = _resolutions[0].Value;
+            Point closestResolution = resolutions[0].Value;
             double minDistance = double.MaxValue;
 
-            foreach (var resolution in _resolutions)
+            foreach (var resolution in resolutions)
             {
                 double distance = Math.Sqrt(
                     Math.Pow(resolution.Value.X - nativePoint.X, 2) +
@@ -188,11 +177,38 @@ namespace ProjectVagabond.Scenes
             Core.Settings.ApplyGraphicsSettings(Global.Instance.CurrentGraphics, Core.Instance);
             Core.Settings.ApplyGameSettings();
 
+            SettingsManager.SaveSettings(Core.Settings);
+
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.Apply();
 
             _confirmationMessage = "Settings Applied!";
             _confirmationTimer = 5f;
             MoveMouseToSelected();
+        }
+
+        private void ResetSettingsToDefault()
+        {
+            // Create a new default settings object
+            _tempSettings = new GameSettings();
+
+            // Snap its resolution to the closest available option
+            _tempSettings.Resolution = SettingsManager.FindClosestResolution(_tempSettings.Resolution);
+
+            // Refresh all UI controls to show the new default values
+            foreach (var item in _uiElements.OfType<ISettingControl>())
+            {
+                item.RefreshValue();
+            }
+
+            // The framerate control might need to be re-added/removed
+            UpdateFramerateControl();
+
+            // Immediately apply and save these new default settings
+            ApplySettings();
+
+            // Update confirmation message
+            _confirmationMessage = "Settings Reset to Default!";
+            _confirmationTimer = 5f;
         }
 
         private static void BackToPreviousScene()
@@ -476,7 +492,8 @@ namespace ProjectVagabond.Scenes
 
                     if (setting.Label == "Resolution")
                     {
-                        var originalEntry = _resolutions.FirstOrDefault(r => r.Value == _tempSettings.Resolution);
+                        var resolutions = SettingsManager.GetResolutions();
+                        var originalEntry = resolutions.FirstOrDefault(r => r.Value == _tempSettings.Resolution);
                         if (originalEntry.Key != null)
                         {
                             string fullText = originalEntry.Key;

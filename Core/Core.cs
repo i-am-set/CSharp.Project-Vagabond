@@ -35,7 +35,7 @@ namespace ProjectVagabond
         private static readonly WorldClockManager _worldClockManager = new();
         private static readonly HapticsManager _hapticsManager = new();
         private static readonly SceneManager _sceneManager = new();
-        public static readonly GameSettings _settings = new();
+        public static readonly GameSettings _settings = SettingsManager.LoadSettings();
 
         // Misc //
         private RenderTarget2D _renderTarget;
