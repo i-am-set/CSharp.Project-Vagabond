@@ -9,6 +9,8 @@ namespace ProjectVagabond.UI
     {
         string Label { get; }
         bool IsDirty { get; }
+        string GetCurrentValueAsString();
+        string GetSavedValueAsString();
         void Draw(SpriteBatch spriteBatch, Vector2 position, bool isSelected);
         void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState);
         void HandleInput(Keys key);

@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
+using System;
 using System.Collections.Generic;
 
 namespace ProjectVagabond.Scenes
@@ -15,11 +16,15 @@ namespace ProjectVagabond.Scenes
         private MouseState _previousMouseState;
         private bool _keyboardNavigatedLastFrame = false;
         
-        private float _inputDelay = 0.1f; // 1.0f would be a 1 second delay
+        private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
+
+        private ConfirmationDialog _confirmationDialog;
 
         public override void Initialize()
         {
+            _confirmationDialog = new ConfirmationDialog();
+
             int screenWidth = Global.VIRTUAL_WIDTH;
             int buttonWidth = 200;
             int buttonHeight = 20;
@@ -31,11 +36,23 @@ namespace ProjectVagabond.Scenes
             settingsButton.OnClick += () => Core.CurrentSceneManager.ChangeScene(GameSceneState.Settings);
 
             var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 300, buttonWidth, buttonHeight), "EXIT");
-            exitButton.OnClick += () => Core.Instance.ExitApplication();
+            exitButton.OnClick += ConfirmExit;
 
             _buttons.Add(playButton);
             _buttons.Add(settingsButton);
             _buttons.Add(exitButton);
+        }
+
+        private void ConfirmExit()
+        {
+            _confirmationDialog.Show(
+                "Are you sure you want to exit?",
+                new List<Tuple<string, Action>>
+                {
+                    Tuple.Create("YES", new Action(() => Core.Instance.ExitApplication())),
+                    Tuple.Create("NO", new Action(() => _confirmationDialog.Hide()))
+                }
+            );
         }
 
         public override void Enter()
@@ -48,6 +65,12 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
+            if (_confirmationDialog.IsActive)
+            {
+                _confirmationDialog.Update(gameTime);
+                return;
+            }
+
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
 
@@ -128,9 +151,7 @@ namespace ProjectVagabond.Scenes
 
                 if (currentKeyboardState.IsKeyDown(Keys.Escape))
                 {
-                    Mouse.SetPosition(0, 0);
-
-                    Core.Instance.IsMouseVisible = true;
+                    ConfirmExit();
                 }
             }
 
@@ -172,7 +193,6 @@ namespace ProjectVagabond.Scenes
                 DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
             }
 
-            // Draw the version number in the bottom-left corner
             string versionText = $"v{Global.GAME_VERSION}";
             float padding = 5f;
             var versionPosition = new Vector2(
@@ -182,6 +202,11 @@ namespace ProjectVagabond.Scenes
             spriteBatch.DrawString(font, versionText, versionPosition, Global.Instance.Palette_Gray, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
             
             spriteBatch.End();
+
+            if (_confirmationDialog.IsActive)
+            {
+                _confirmationDialog.Draw(gameTime);
+            }
         }
 
         private static void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)

@@ -1,0 +1,283 @@
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace ProjectVagabond.UI
+{
+    public class ConfirmationDialog
+    {
+        public bool IsActive { get; private set; }
+
+        private string _prompt;
+        private List<string> _details;
+        private List<Button> _buttons;
+        private int _selectedButtonIndex;
+
+        private Rectangle _dialogBounds;
+        private readonly Rectangle _overlayBounds;
+
+        private KeyboardState _previousKeyboardState;
+        private MouseState _previousMouseState;
+        private bool _keyboardNavigatedLastFrame;
+
+        private float _inputDelay = 0.1f;
+        private float _currentInputDelay = 0f;
+
+        public ConfirmationDialog()
+        {
+            _buttons = new List<Button>();
+            _details = new List<string>();
+            _overlayBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+        }
+
+        public void Show(string prompt, List<Tuple<string, Action>> buttonActions, List<string> details = null)
+        {
+            _prompt = prompt;
+            _details = details ?? new List<string>();
+            _buttons.Clear();
+
+            IsActive = true;
+            _selectedButtonIndex = 0;
+            _keyboardNavigatedLastFrame = false;
+            _currentInputDelay = _inputDelay;
+            _previousKeyboardState = Keyboard.GetState();
+            _previousMouseState = Mouse.GetState();
+            Core.Instance.IsMouseVisible = true;
+
+            var font = Global.Instance.DefaultFont;
+            float dialogWidth = 450;
+            float currentHeight = 20; // Top padding
+
+            var wrappedPrompt = WrapText(font, _prompt, dialogWidth - 40);
+            currentHeight += wrappedPrompt.Count * font.LineHeight;
+            currentHeight += 10;
+
+            if (_details.Any())
+            {
+                currentHeight += 10; // Padding before details
+                foreach (var detail in _details)
+                {
+                    var wrappedDetail = WrapText(font, detail, dialogWidth - 60);
+                    currentHeight += wrappedDetail.Count * (font.LineHeight - 2);
+                }
+                currentHeight += 15;
+            }
+
+            float buttonAreaHeight = buttonActions.Count * 25;
+            currentHeight += buttonAreaHeight;
+            currentHeight += 10;
+
+            _dialogBounds = new Rectangle(
+                (Global.VIRTUAL_WIDTH - (int)dialogWidth) / 2,
+                (Global.VIRTUAL_HEIGHT - (int)currentHeight) / 2,
+                (int)dialogWidth,
+                (int)currentHeight
+            );
+
+            int buttonWidth = 180;
+            int buttonHeight = 20;
+            float buttonY = _dialogBounds.Bottom - buttonAreaHeight - 15;
+
+            foreach (var (text, action) in buttonActions)
+            {
+                var button = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth / 2, (int)buttonY, buttonWidth, buttonHeight), text);
+                button.OnClick += action;
+                _buttons.Add(button);
+                buttonY += 25;
+            }
+        }
+
+        public void Hide()
+        {
+            IsActive = false;
+        }
+
+        public void Update(GameTime gameTime)
+        {
+            if (!IsActive) return;
+
+            if (_currentInputDelay > 0)
+            {
+                _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+
+            var currentMouseState = Mouse.GetState();
+            var currentKeyboardState = Keyboard.GetState();
+
+            if (_keyboardNavigatedLastFrame)
+            {
+                _keyboardNavigatedLastFrame = false;
+            }
+            else if (currentMouseState.Position != _previousMouseState.Position)
+            {
+                Core.Instance.IsMouseVisible = true;
+            }
+
+            for (int i = 0; i < _buttons.Count; i++)
+            {
+                _buttons[i].Update(currentMouseState);
+                if (_buttons[i].IsHovered)
+                {
+                    _selectedButtonIndex = i;
+                }
+            }
+
+            if (_currentInputDelay <= 0 && _buttons.Any())
+            {
+                bool upPressed = KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState);
+                bool downPressed = KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState);
+
+                if (upPressed || downPressed)
+                {
+                    var selectedButton = _buttons[_selectedButtonIndex];
+                    if (selectedButton.IsHovered)
+                    {
+                        if (upPressed)
+                        {
+                            _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
+                        }
+                        else // downPressed
+                        {
+                            _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
+                        }
+                        Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
+                        Mouse.SetPosition(screenPos.X, screenPos.Y);
+                    }
+                    else
+                    {
+                        Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
+                        Mouse.SetPosition(screenPos.X, screenPos.Y);
+                    }
+                    
+                    Core.Instance.IsMouseVisible = false;
+                    _keyboardNavigatedLastFrame = true;
+                }
+
+                if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
+                {
+                    var selectedButton = _buttons[_selectedButtonIndex];
+                    if (selectedButton.IsHovered)
+                    {
+                        selectedButton.TriggerClick();
+                    }
+                    else
+                    {
+                        Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
+                        Mouse.SetPosition(screenPos.X, screenPos.Y);
+                        Core.Instance.IsMouseVisible = false;
+                        _keyboardNavigatedLastFrame = true;
+                    }
+                }
+            }
+
+            _previousMouseState = currentMouseState;
+            _previousKeyboardState = currentKeyboardState;
+        }
+
+        public void Draw(GameTime gameTime)
+        {
+            if (!IsActive) return;
+
+            var spriteBatch = Global.Instance.CurrentSpriteBatch;
+            var font = Global.Instance.DefaultFont;
+            var pixel = Core.Pixel;
+
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+            spriteBatch.Draw(pixel, _overlayBounds, Color.Black * 0.7f);
+            spriteBatch.Draw(pixel, _dialogBounds, Global.Instance.Palette_DarkGray);
+            DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, Global.Instance.Palette_LightGray);
+
+            float currentY = _dialogBounds.Y + 20;
+
+            var wrappedPrompt = WrapText(font, _prompt, _dialogBounds.Width - 40);
+            foreach (var line in wrappedPrompt)
+            {
+                var promptSize = font.MeasureString(line);
+                spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.Center.X - promptSize.Width / 2, currentY), Global.Instance.Palette_BrightWhite);
+                currentY += font.LineHeight;
+            }
+
+            if (_details.Any())
+            {
+                currentY += 10;
+                var dividerRect = new Rectangle(_dialogBounds.X + 20, (int)currentY, _dialogBounds.Width - 40, 1);
+                spriteBatch.Draw(pixel, dividerRect, Global.Instance.Palette_Gray);
+                currentY += 10;
+
+                foreach (var detail in _details)
+                {
+                    var wrappedDetail = WrapText(font, detail, _dialogBounds.Width - 60);
+                    foreach(var line in wrappedDetail)
+                    {
+                        spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.X + 30, currentY), Global.Instance.Palette_White);
+                        currentY += font.LineHeight - 2;
+                    }
+                }
+            }
+
+            foreach (var button in _buttons)
+            {
+                button.Draw(spriteBatch, font);
+            }
+
+            if (_buttons.Any())
+            {
+                var selectedButton = _buttons[_selectedButtonIndex];
+                if (selectedButton.IsHovered || _keyboardNavigatedLastFrame)
+                {
+                    Vector2 textSize = font.MeasureString(selectedButton.Text);
+                    int horizontalPadding = 8;
+                    int verticalPadding = 4;
+                    Rectangle highlightRect = new Rectangle(
+                        (int)(selectedButton.Bounds.X + (selectedButton.Bounds.Width - textSize.X) * 0.5f - horizontalPadding),
+                        (int)(selectedButton.Bounds.Y + (selectedButton.Bounds.Height - textSize.Y) * 0.5f - verticalPadding),
+                        (int)(textSize.X + horizontalPadding * 2),
+                        (int)(textSize.Y + verticalPadding * 2)
+                    );
+                    DrawRectangleBorder(spriteBatch, pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
+                }
+            }
+
+            spriteBatch.End();
+        }
+
+        private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
+
+        private static void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
+        {
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
+        }
+
+        private List<string> WrapText(BitmapFont font, string text, float maxLineWidth)
+        {
+            var lines = new List<string>();
+            if (string.IsNullOrEmpty(text)) return lines;
+
+            var words = text.Split(' ');
+            var currentLine = "";
+            foreach (var word in words)
+            {
+                var testLine = string.IsNullOrEmpty(currentLine) ? word : $"{currentLine} {word}";
+                if (font.MeasureString(testLine).Width > maxLineWidth)
+                {
+                    lines.Add(currentLine);
+                    currentLine = word;
+                }
+                else
+                {
+                    currentLine = testLine;
+                }
+            }
+            lines.Add(currentLine);
+            return lines;
+        }
+    }
+}

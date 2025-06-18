@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -9,11 +9,12 @@ namespace ProjectVagabond.UI
     public class Button
     {
         public Rectangle Bounds { get; set; }
-        public string Text { get; set; }
+        public string Text { get; }
         public bool IsEnabled { get; set; } = true;
         public bool IsHovered { get; private set; }
+
         public event Action OnClick;
-        
+
         private MouseState _previousMouseState;
 
         public Button(Rectangle bounds, string text)
@@ -30,18 +31,12 @@ namespace ProjectVagabond.UI
                 return;
             }
 
-            // Transform mouse coordinates from screen space to virtual space
             Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-
-            // Single hover calculation per frame using virtual coordinates
             IsHovered = Bounds.Contains(virtualMousePos);
 
-            // Handle click detection
-            if (IsHovered && 
-                currentMouseState.LeftButton == ButtonState.Pressed && 
-                _previousMouseState.LeftButton == ButtonState.Released)
+            if (IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
-                OnClick?.Invoke();
+                TriggerClick();
             }
 
             _previousMouseState = currentMouseState;
@@ -55,38 +50,32 @@ namespace ProjectVagabond.UI
             }
         }
 
+        /// <summary>
+        /// Draws the button.
+        /// </summary>
         public void Draw(SpriteBatch spriteBatch, BitmapFont font)
         {
-            // Determine colors based on state
-            Color bgColor;
-            Color textColor = Global.Instance.Palette_BrightWhite;
-            
+            Draw(spriteBatch, font, false);
+        }
+
+        /// <summary>
+        /// Draws the button, allowing hover state to be forced for keyboard navigation.
+        /// </summary>
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, bool forceHover)
+        {
+            Color textColor = (IsHovered || forceHover) ? Global.Instance.OptionHoverColor : Global.Instance.Palette_BrightWhite;
             if (!IsEnabled)
             {
-                bgColor = Color.Transparent;
                 textColor = Global.Instance.Palette_Gray;
             }
-            else if (IsHovered)
-            {
-                bgColor = Color.Transparent;
-                textColor = Global.Instance.OptionHoverColor;
-            }
-            else
-            {
-                bgColor = Color.Transparent;
-            }
 
-            // Draw background
-            spriteBatch.Draw(Core.Pixel, Bounds, bgColor);
-            
-            // Draw text (centered)
             Vector2 textSize = font.MeasureString(Text);
-            Vector2 textPos = new Vector2(
-                Bounds.X + (Bounds.Width - textSize.X) * 0.5f,
-                Bounds.Y + (Bounds.Height - textSize.Y) * 0.5f
+            Vector2 textPosition = new Vector2(
+                Bounds.X + (Bounds.Width - textSize.X) / 2,
+                Bounds.Y + (Bounds.Height - textSize.Y) / 2
             );
-            
-            spriteBatch.DrawString(font, Text, textPos, textColor, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+
+            spriteBatch.DrawString(font, Text, textPosition, textColor);
         }
     }
 }

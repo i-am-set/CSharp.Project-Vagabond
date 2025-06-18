@@ -51,6 +51,14 @@ namespace ProjectVagabond.UI
             _setter?.Invoke(_currentValue);
         }
 
+        private string GetValueAsString(T value)
+        {
+            var option = _options.FirstOrDefault(o => o.Value.Equals(value));
+            return option.Key ?? "N/A";
+        }
+        public string GetCurrentValueAsString() => GetValueAsString(_currentValue);
+        public string GetSavedValueAsString() => GetValueAsString(_savedValue);
+
         public void HandleInput(Keys key)
         {
             if (key == Keys.Left) Decrement();

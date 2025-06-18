@@ -36,6 +36,9 @@ namespace ProjectVagabond.UI
             _onApply?.Invoke(_currentValue);
         }
 
+        public string GetCurrentValueAsString() => _currentValue ? "ON" : "OFF";
+        public string GetSavedValueAsString() => _savedValue ? "ON" : "OFF";
+
         public void HandleInput(Keys key)
         {
             if (key == Keys.Left || key == Keys.Right)
