@@ -179,7 +179,7 @@ namespace ProjectVagabond.Scenes
                 padding,
                 Global.VIRTUAL_HEIGHT - font.LineHeight - padding
             );
-            spriteBatch.DrawString(font, versionText, versionPosition, Global.Instance.OutputTextColor);
+            spriteBatch.DrawString(font, versionText, versionPosition, Global.Instance.Palette_Gray, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
             
             spriteBatch.End();
         }
