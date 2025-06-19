@@ -24,6 +24,7 @@ namespace ProjectVagabond.Scenes
         private float _currentInputDelay = 0f;
 
         private KeyboardState _previousKeyboardState;
+        private MouseState _previousMouseState; 
 
         private GameSettings _tempSettings;
         private ConfirmationDialog _confirmationDialog;
@@ -50,6 +51,7 @@ namespace ProjectVagabond.Scenes
             BuildInitialUI();
             _selectedIndex = FindNextSelectable(-1, 1);
             _previousKeyboardState = Keyboard.GetState();
+            _previousMouseState = Mouse.GetState();
 
             _currentInputDelay = _inputDelay;
 
@@ -217,8 +219,8 @@ namespace ProjectVagabond.Scenes
                 "Apply the following changes?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("YES", new Action(() => { ExecuteApplySettings(); _confirmationDialog.Hide(); })),
-                    Tuple.Create("NO", new Action(() => _confirmationDialog.Hide()))
+                    Tuple.Create("NO", new Action(() => _confirmationDialog.Hide())),
+                    Tuple.Create("YES", new Action(() => { ExecuteApplySettings(); _confirmationDialog.Hide(); }))
                 },
                 details
             );
@@ -292,9 +294,9 @@ namespace ProjectVagabond.Scenes
                     "You have unsaved changes.",
                     new List<Tuple<string, Action>>
                     {
+                        Tuple.Create("CANCEL", new Action(() => _confirmationDialog.Hide())),
                         Tuple.Create("APPLY", new Action(() => { ExecuteApplySettings(); Core.CurrentSceneManager.ChangeScene(GameSceneState.MainMenu); })),
-                        Tuple.Create("DISCARD", new Action(() => { RevertChanges(); Core.CurrentSceneManager.ChangeScene(GameSceneState.MainMenu); })),
-                        Tuple.Create("CANCEL", new Action(() => _confirmationDialog.Hide()))
+                        Tuple.Create("DISCARD", new Action(() => { RevertChanges(); Core.CurrentSceneManager.ChangeScene(GameSceneState.MainMenu); }))
                     }
                 );
             }
@@ -362,7 +364,7 @@ namespace ProjectVagabond.Scenes
                 {
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, 20);
                     if (hoverRect.Contains(virtualMousePos)) { _selectedIndex = i; _hoveredIndex = i; }
-                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 5), isSelected, currentMouseState, previousMouseState);
+                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 5), isSelected, currentMouseState, _previousMouseState);
                     currentPos.Y += 20;
                 }
                 else if (item is Button button)
@@ -385,6 +387,7 @@ namespace ProjectVagabond.Scenes
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) AttemptToGoBack();
 
             _previousKeyboardState = currentKeyboardState;
+            _previousMouseState = currentMouseState;
         }
 
         private void HandleKeyboardInput(KeyboardState currentKeyboardState)

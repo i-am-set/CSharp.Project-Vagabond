@@ -71,7 +71,7 @@ namespace ProjectVagabond.UI
                 foreach (var detail in _details)
                 {
                     var wrappedDetail = WrapText(font, detail, dialogWidth - 60);
-                    currentHeight += wrappedDetail.Count * (font.LineHeight - 2);
+                    currentHeight += wrappedDetail.Count * (font.LineHeight + Global.APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING);
                 }
                 currentHeight += 15;
             }
@@ -214,7 +214,22 @@ namespace ProjectVagabond.UI
 
                 if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
                 {
-                    _buttons[_selectedButtonIndex].TriggerClick();
+                    bool isButtonHighlighted = _buttons[_selectedButtonIndex].IsHovered || _keyboardNavigatedLastFrame;
+
+                    if (isButtonHighlighted)
+                    {
+                        _buttons[_selectedButtonIndex].TriggerClick();
+                    }
+                    else
+                    {
+                        _selectedButtonIndex = 0;
+                        
+                        Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
+                        Mouse.SetPosition(screenPos.X, screenPos.Y);
+
+                        _keyboardNavigatedLastFrame = true;
+                        Core.Instance.IsMouseVisible = false;
+                    }
                 }
             }
 
@@ -259,7 +274,7 @@ namespace ProjectVagabond.UI
                     foreach(var line in wrappedDetail)
                     {
                         spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.X + 30, currentY), Global.Instance.Palette_White);
-                        currentY += font.LineHeight - 2;
+                        currentY += font.LineHeight + Global.APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING;
                     }
                 }
             }

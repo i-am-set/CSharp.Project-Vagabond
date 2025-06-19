@@ -70,6 +70,7 @@ namespace ProjectVagabond
 
         // UI settings Global
         public const float VALUE_DISPLAY_WIDTH = 110f;
+        public const int APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING = 5;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES

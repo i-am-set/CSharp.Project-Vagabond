@@ -62,6 +62,18 @@ namespace ProjectVagabond.Scenes
             _selectedButtonIndex = 0;
             PositionMouseOnFirstSelectable();
 
+            var firstButtonBounds = GetFirstSelectableElementBounds();
+            if (firstButtonBounds.HasValue)
+            {
+                Point screenPos = Core.TransformVirtualToScreen(firstButtonBounds.Value.Center);
+                var fakeMouseState = new MouseState(screenPos.X, screenPos.Y, 0, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
+                
+                foreach (var button in _buttons)
+                {
+                    button.Update(fakeMouseState);
+                }
+            }
+
             if (firstTimeOpened) { Mouse.SetPosition(0, 0); Core.Instance.IsMouseVisible = false; }
             firstTimeOpened = false;
         }
