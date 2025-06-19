@@ -219,7 +219,7 @@ namespace ProjectVagabond.Scenes
                 "Apply the following changes?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("NO", new Action(() => _confirmationDialog.Hide())),
+                    Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide())),
                     Tuple.Create("YES", new Action(() => { ExecuteApplySettings(); _confirmationDialog.Hide(); }))
                 },
                 details
@@ -294,7 +294,7 @@ namespace ProjectVagabond.Scenes
                     "You have unsaved changes.",
                     new List<Tuple<string, Action>>
                     {
-                        Tuple.Create("CANCEL", new Action(() => _confirmationDialog.Hide())),
+                        Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide())),
                         Tuple.Create("APPLY", new Action(() => { ExecuteApplySettings(); Core.CurrentSceneManager.ChangeScene(GameSceneState.MainMenu); })),
                         Tuple.Create("DISCARD", new Action(() => { RevertChanges(); Core.CurrentSceneManager.ChangeScene(GameSceneState.MainMenu); }))
                     }

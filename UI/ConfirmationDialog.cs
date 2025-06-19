@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -106,8 +106,11 @@ namespace ProjectVagabond.UI
                 int interButtonGap = 24;
                 float buttonY = buttonAreaTopY + (buttonAreaHeight - buttonHeight) / 2f;
 
-                var (text1, action1) = buttonActions[0];
-                var (text2, action2) = buttonActions[1];
+                var (taggedText1, action1) = buttonActions[0];
+                var (taggedText2, action2) = buttonActions[1];
+
+                var (text1, color1) = ParseButtonTextAndColor(taggedText1);
+                var (text2, color2) = ParseButtonTextAndColor(taggedText2);
 
                 float width1 = font.MeasureString(text1).Width + textHorizontalPadding;
                 float width2 = font.MeasureString(text2).Width + textHorizontalPadding;
@@ -115,11 +118,17 @@ namespace ProjectVagabond.UI
                 float totalGroupWidth = width1 + interButtonGap + width2;
                 float startX = _dialogBounds.Center.X - totalGroupWidth / 2;
 
-                var button1 = new Button(new Rectangle((int)startX, (int)buttonY, (int)width1, buttonHeight), text1);
+                var button1 = new Button(new Rectangle((int)startX, (int)buttonY, (int)width1, buttonHeight), text1)
+                {
+                    CustomTextColor = color1
+                };
                 button1.OnClick += action1;
                 _buttons.Add(button1);
 
-                var button2 = new Button(new Rectangle((int)(startX + width1 + interButtonGap), (int)buttonY, (int)width2, buttonHeight), text2);
+                var button2 = new Button(new Rectangle((int)(startX + width1 + interButtonGap), (int)buttonY, (int)width2, buttonHeight), text2)
+                {
+                    CustomTextColor = color2
+                };
                 button2.OnClick += action2;
                 _buttons.Add(button2);
             }
@@ -127,10 +136,14 @@ namespace ProjectVagabond.UI
             {
                 int buttonWidth = 180;
                 float currentButtonY = buttonAreaTopY;
-                foreach (var (text, action) in buttonActions)
+                foreach (var (taggedText, action) in buttonActions)
                 {
+                    var (text, color) = ParseButtonTextAndColor(taggedText);
                     float buttonY = currentButtonY + (25 - buttonHeight) / 2f;
-                    var button = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth / 2, (int)buttonY, buttonWidth, buttonHeight), text);
+                    var button = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth / 2, (int)buttonY, buttonWidth, buttonHeight), text)
+                    {
+                        CustomTextColor = color
+                    };
                     button.OnClick += action;
                     _buttons.Add(button);
                     currentButtonY += 25;
@@ -313,6 +326,32 @@ namespace ProjectVagabond.UI
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
+        }
+        
+        private (string text, Color? color) ParseButtonTextAndColor(string taggedText)
+        {
+            if (taggedText.StartsWith("[") && taggedText.Contains("]"))
+            {
+                int closingBracketIndex = taggedText.IndexOf(']');
+                if (closingBracketIndex == -1) return (taggedText, null);
+
+                string colorName = taggedText.Substring(1, closingBracketIndex - 1).ToLowerInvariant();
+                string text = taggedText.Substring(closingBracketIndex + 1);
+
+                Color color;
+                switch (colorName)
+                {
+                    case "red": color = Global.Instance.Palette_Red; break;
+                    case "green": color = Global.Instance.Palette_LightGreen; break;
+                    case "yellow": color = Global.Instance.Palette_Yellow; break;
+                    case "gray": color = Global.Instance.Palette_LightGray; break;
+                    case "grey": color = Global.Instance.Palette_LightGray; break;
+                    default:
+                        return (taggedText, null);
+                }
+                return (text, color);
+            }
+            return (taggedText, null);
         }
 
         private List<string> WrapText(BitmapFont font, string text, float maxLineWidth)

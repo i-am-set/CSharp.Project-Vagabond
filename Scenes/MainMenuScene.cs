@@ -47,8 +47,8 @@ namespace ProjectVagabond.Scenes
                 "Are you sure you want to exit?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("YES", new Action(() => Core.Instance.ExitApplication())),
-                    Tuple.Create("NO", new Action(() => _confirmationDialog.Hide()))
+                    Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide())),
+                    Tuple.Create("YES", new Action(() => Core.Instance.ExitApplication()))
                 }
             );
         }

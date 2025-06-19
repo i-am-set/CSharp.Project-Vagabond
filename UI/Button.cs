@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -10,6 +10,7 @@ namespace ProjectVagabond.UI
     {
         public Rectangle Bounds { get; set; }
         public string Text { get; }
+        public Color? CustomTextColor { get; set; } // New property for custom text color
         public bool IsEnabled { get; set; } = true;
         public bool IsHovered { get; private set; }
 
@@ -21,6 +22,7 @@ namespace ProjectVagabond.UI
         {
             Bounds = bounds;
             Text = text;
+            CustomTextColor = null;
         }
 
         public void Update(MouseState currentMouseState)
@@ -63,10 +65,28 @@ namespace ProjectVagabond.UI
         /// </summary>
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, bool forceHover)
         {
-            Color textColor = (IsHovered || forceHover) ? Global.Instance.OptionHoverColor : Global.Instance.Palette_BrightWhite;
+            Color textColor;
+
             if (!IsEnabled)
             {
                 textColor = Global.Instance.Palette_Gray;
+            }
+            else
+            {
+                if (IsHovered || forceHover)
+                {
+                    textColor = Global.Instance.OptionHoverColor;
+                } else
+                {
+                    if (CustomTextColor.HasValue)
+                    {
+                        textColor = CustomTextColor.Value;
+                    }
+                    else
+                    {
+                        textColor = Global.Instance.Palette_BrightWhite;
+                    }
+                }
             }
 
             Vector2 textSize = font.MeasureString(Text);
