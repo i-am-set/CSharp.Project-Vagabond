@@ -58,7 +58,7 @@ namespace ProjectVagabond.Scenes
             base.Enter();
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
-            
+    
             _selectedButtonIndex = 0;
             PositionMouseOnFirstSelectable();
 
@@ -67,10 +67,10 @@ namespace ProjectVagabond.Scenes
             {
                 Point screenPos = Core.TransformVirtualToScreen(firstButtonBounds.Value.Center);
                 var fakeMouseState = new MouseState(screenPos.X, screenPos.Y, 0, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
-                
+        
                 foreach (var button in _buttons)
                 {
-                    button.Update(fakeMouseState);
+                    button.UpdateHoverState(fakeMouseState);
                 }
             }
 

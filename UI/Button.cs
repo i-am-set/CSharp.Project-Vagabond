@@ -44,6 +44,23 @@ namespace ProjectVagabond.UI
             _previousMouseState = currentMouseState;
         }
 
+        /// <summary>
+        /// Updates only the hover state of the button without processing clicks or changing the previous mouse state.
+        /// This is useful for initialization without triggering unwanted clicks.
+        /// Can be seen in the MainMenuScene where buttons are initialized with a fake mouse state as of 2:46pm 6/19/2025.
+        /// </summary>
+        public void UpdateHoverState(MouseState currentMouseState)
+        {
+            if (!IsEnabled)
+            {
+                IsHovered = false;
+                return;
+            }
+
+            Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+            IsHovered = Bounds.Contains(virtualMousePos);
+        }
+
         public void TriggerClick()
         {
             if (IsEnabled)
