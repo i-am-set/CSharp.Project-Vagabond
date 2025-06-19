@@ -27,6 +27,8 @@ namespace ProjectVagabond.UI
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
 
+        private bool _isHorizontalLayout;
+
         public ConfirmationDialog()
         {
             _buttons = new List<Button>();
@@ -39,6 +41,7 @@ namespace ProjectVagabond.UI
             _prompt = prompt;
             _details = details ?? new List<string>();
             _buttons.Clear();
+            _isHorizontalLayout = false;
 
             IsActive = true;
             _selectedButtonIndex = 0;
@@ -67,7 +70,17 @@ namespace ProjectVagabond.UI
                 currentHeight += 15;
             }
 
-            float buttonAreaHeight = buttonActions.Count * 25;
+            _isHorizontalLayout = buttonActions.Count == 2;
+
+            float buttonAreaHeight;
+            if (_isHorizontalLayout)
+            {
+                buttonAreaHeight = 25;
+            }
+            else
+            {
+                buttonAreaHeight = buttonActions.Count * 25;
+            }
             currentHeight += buttonAreaHeight;
             currentHeight += 10;
 
@@ -78,16 +91,44 @@ namespace ProjectVagabond.UI
                 (int)currentHeight
             );
 
-            int buttonWidth = 180;
             int buttonHeight = 20;
-            float buttonY = _dialogBounds.Bottom - buttonAreaHeight - 15;
+            float buttonAreaTopY = _dialogBounds.Bottom - buttonAreaHeight - 10;
 
-            foreach (var (text, action) in buttonActions)
+            if (_isHorizontalLayout)
             {
-                var button = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth / 2, (int)buttonY, buttonWidth, buttonHeight), text);
-                button.OnClick += action;
-                _buttons.Add(button);
-                buttonY += 25;
+                int textHorizontalPadding = 32;
+                int interButtonGap = 24;
+                float buttonY = buttonAreaTopY + (buttonAreaHeight - buttonHeight) / 2f;
+
+                var (text1, action1) = buttonActions[0];
+                var (text2, action2) = buttonActions[1];
+
+                float width1 = font.MeasureString(text1).Width + textHorizontalPadding;
+                float width2 = font.MeasureString(text2).Width + textHorizontalPadding;
+
+                float totalGroupWidth = width1 + interButtonGap + width2;
+                float startX = _dialogBounds.Center.X - totalGroupWidth / 2;
+
+                var button1 = new Button(new Rectangle((int)startX, (int)buttonY, (int)width1, buttonHeight), text1);
+                button1.OnClick += action1;
+                _buttons.Add(button1);
+
+                var button2 = new Button(new Rectangle((int)(startX + width1 + interButtonGap), (int)buttonY, (int)width2, buttonHeight), text2);
+                button2.OnClick += action2;
+                _buttons.Add(button2);
+            }
+            else // Vertical layout
+            {
+                int buttonWidth = 180;
+                float currentButtonY = buttonAreaTopY;
+                foreach (var (text, action) in buttonActions)
+                {
+                    float buttonY = currentButtonY + (25 - buttonHeight) / 2f;
+                    var button = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth / 2, (int)buttonY, buttonWidth, buttonHeight), text);
+                    button.OnClick += action;
+                    _buttons.Add(button);
+                    currentButtonY += 25;
+                }
             }
         }
 
@@ -130,47 +171,44 @@ namespace ProjectVagabond.UI
             {
                 bool upPressed = KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState);
                 bool downPressed = KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState);
+                bool leftPressed = KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState);
+                bool rightPressed = KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState);
 
-                if (upPressed || downPressed)
+                if (upPressed || downPressed || leftPressed || rightPressed)
                 {
-                    var selectedButton = _buttons[_selectedButtonIndex];
-                    if (selectedButton.IsHovered)
+                    Core.Instance.IsMouseVisible = false;
+                    _keyboardNavigatedLastFrame = true;
+
+                    if (_isHorizontalLayout)
+                    {
+                        if (leftPressed && _selectedButtonIndex > 0)
+                        {
+                            _selectedButtonIndex--;
+                        }
+                        else if (rightPressed && _selectedButtonIndex < _buttons.Count - 1)
+                        {
+                            _selectedButtonIndex++;
+                        }
+                    }
+                    else // Vertical layout
                     {
                         if (upPressed)
                         {
                             _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
                         }
-                        else // downPressed
+                        else if (downPressed)
                         {
                             _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
                         }
-                        Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
-                        Mouse.SetPosition(screenPos.X, screenPos.Y);
                     }
-                    else
-                    {
-                        Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
-                        Mouse.SetPosition(screenPos.X, screenPos.Y);
-                    }
-                    
-                    Core.Instance.IsMouseVisible = false;
-                    _keyboardNavigatedLastFrame = true;
+
+                    Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
+                    Mouse.SetPosition(screenPos.X, screenPos.Y);
                 }
 
                 if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
                 {
-                    var selectedButton = _buttons[_selectedButtonIndex];
-                    if (selectedButton.IsHovered)
-                    {
-                        selectedButton.TriggerClick();
-                    }
-                    else
-                    {
-                        Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
-                        Mouse.SetPosition(screenPos.X, screenPos.Y);
-                        Core.Instance.IsMouseVisible = false;
-                        _keyboardNavigatedLastFrame = true;
-                    }
+                    _buttons[_selectedButtonIndex].TriggerClick();
                 }
             }
 
