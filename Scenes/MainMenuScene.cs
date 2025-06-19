@@ -59,6 +59,7 @@ namespace ProjectVagabond.Scenes
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
             
+            _selectedButtonIndex = 0;
             PositionMouseOnFirstSelectable();
 
             if (firstTimeOpened) { Mouse.SetPosition(0, 0); Core.Instance.IsMouseVisible = false; }

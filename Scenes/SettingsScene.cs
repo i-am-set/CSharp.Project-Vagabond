@@ -127,6 +127,44 @@ namespace ProjectVagabond.Scenes
             _uiElements.Add(resetButton);
 
             UpdateFramerateControl();
+            LayoutUI();
+            
+            applyButton.IsEnabled = IsDirty();
+        }
+
+        /// <summary>
+        /// Calculates and sets the correct positions for all UI elements, specifically Buttons.
+        /// </summary>
+        private void LayoutUI()
+        {
+            Vector2 currentPos = new Vector2(0, _settingsStartY);
+            int screenWidth = Global.VIRTUAL_WIDTH;
+
+            foreach (var item in _uiElements)
+            {
+                if (item is Button button)
+                {
+                    button.Bounds = new Rectangle(
+                        (screenWidth - button.Bounds.Width) / 2,
+                        (int)currentPos.Y,
+                        button.Bounds.Width,
+                        button.Bounds.Height
+                    );
+                }
+
+                if (item is ISettingControl)
+                {
+                    currentPos.Y += 20;
+                }
+                else if (item is Button)
+                {
+                    currentPos.Y += 25;
+                }
+                else if (item is string)
+                {
+                    currentPos.Y += 25;
+                }
+            }
         }
 
         private void SetResolutionToNearestNative()
@@ -141,6 +179,7 @@ namespace ProjectVagabond.Scenes
         {
             var framerateControl = _uiElements.OfType<ISettingControl>().FirstOrDefault(c => c.Label == "Target Framerate");
             int limiterIndex = _uiElements.FindIndex(item => item is ISettingControl s && s.Label == "Frame Limiter");
+            bool changed = false;
 
             if (_tempSettings.IsFrameLimiterEnabled && framerateControl == null && limiterIndex != -1)
             {
@@ -151,10 +190,17 @@ namespace ProjectVagabond.Scenes
                 };
                 var newControl = new OptionSettingControl<int>("Target Framerate", framerates, () => _tempSettings.TargetFramerate, v => _tempSettings.TargetFramerate = v);
                 _uiElements.Insert(limiterIndex + 1, newControl);
+                changed = true;
             }
             else if (!_tempSettings.IsFrameLimiterEnabled && framerateControl != null)
             {
                 _uiElements.Remove(framerateControl);
+                changed = true;
+            }
+
+            if (changed)
+            {
+                LayoutUI();
             }
         }
 
@@ -321,7 +367,6 @@ namespace ProjectVagabond.Scenes
                 }
                 else if (item is Button button)
                 {
-                    button.Bounds = new Rectangle((Global.VIRTUAL_WIDTH - button.Bounds.Width) / 2, (int)currentPos.Y, button.Bounds.Width, button.Bounds.Height);
                     if (button.Bounds.Contains(virtualMousePos)) { _selectedIndex = i; _hoveredIndex = i; }
                     if (_currentInputDelay <= 0) button.Update(currentMouseState);
                     currentPos.Y += 25;
