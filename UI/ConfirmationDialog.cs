@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,8 +30,11 @@ namespace ProjectVagabond.UI
 
         private bool _isHorizontalLayout;
 
-        public ConfirmationDialog()
+        private GameScene _currentGameScene;
+
+        public ConfirmationDialog(GameScene currentGameScene)
         {
+            _currentGameScene = currentGameScene;
             _buttons = new List<Button>();
             _details = new List<string>();
             _overlayBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
@@ -38,6 +42,8 @@ namespace ProjectVagabond.UI
 
         public void Show(string prompt, List<Tuple<string, Action>> buttonActions, List<string> details = null)
         {
+            _currentGameScene?.ResetInputBlockTimer();
+
             _prompt = prompt;
             _details = details ?? new List<string>();
             _buttons.Clear();

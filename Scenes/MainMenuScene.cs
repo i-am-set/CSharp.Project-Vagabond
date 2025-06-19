@@ -13,8 +13,6 @@ namespace ProjectVagabond.Scenes
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = 0;
         private KeyboardState _previousKeyboardState;
-        private MouseState _previousMouseState;
-        private bool _keyboardNavigatedLastFrame = false;
         
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
@@ -23,7 +21,7 @@ namespace ProjectVagabond.Scenes
 
         public override void Initialize()
         {
-            _confirmationDialog = new ConfirmationDialog();
+            _confirmationDialog = new ConfirmationDialog(this);
 
             int screenWidth = Global.VIRTUAL_WIDTH;
             int buttonWidth = 200;
@@ -59,12 +57,32 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             _currentInputDelay = _inputDelay;
-            _previousMouseState = Mouse.GetState();
-            Core.Instance.IsMouseVisible = true;
+            _previousKeyboardState = Keyboard.GetState();
+            
+            PositionMouseOnFirstSelectable();
+
+            if (firstTimeOpened) { Mouse.SetPosition(0, 0); Core.Instance.IsMouseVisible = false; }
+            firstTimeOpened = false;
+        }
+
+        protected override Rectangle? GetFirstSelectableElementBounds()
+        {
+            if (_buttons.Count > 0)
+            {
+                return _buttons[0].Bounds;
+            }
+            return null;
         }
 
         public override void Update(GameTime gameTime)
         {
+            base.Update(gameTime);
+
+            if (IsInputBlocked)
+            {
+                return;
+            }
+
             if (_confirmationDialog.IsActive)
             {
                 _confirmationDialog.Update(gameTime);
@@ -73,15 +91,6 @@ namespace ProjectVagabond.Scenes
 
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
-
-            if (_keyboardNavigatedLastFrame)
-            {
-                _keyboardNavigatedLastFrame = false;
-            }
-            else if (currentMouseState.Position != _previousMouseState.Position)
-            {
-                Core.Instance.IsMouseVisible = true;
-            }
 
             if (_currentInputDelay > 0)
             {
@@ -120,7 +129,7 @@ namespace ProjectVagabond.Scenes
                         Mouse.SetPosition(screenPos.X, screenPos.Y);
                     
                         Core.Instance.IsMouseVisible = false;
-                        _keyboardNavigatedLastFrame = true;
+                        keyboardNavigatedLastFrame = true;
                         }
                     else
                     {
@@ -128,7 +137,7 @@ namespace ProjectVagabond.Scenes
                         Mouse.SetPosition(screenPos.X, screenPos.Y);
 
                         Core.Instance.IsMouseVisible = false;
-                        _keyboardNavigatedLastFrame = true;
+                        keyboardNavigatedLastFrame = true;
                     }
                 }
 
@@ -145,7 +154,7 @@ namespace ProjectVagabond.Scenes
                         Mouse.SetPosition(screenPos.X, screenPos.Y);
 
                         Core.Instance.IsMouseVisible = false;
-                        _keyboardNavigatedLastFrame = true;
+                        keyboardNavigatedLastFrame = true;
                     }
                 }
 
@@ -156,7 +165,6 @@ namespace ProjectVagabond.Scenes
             }
 
             _previousKeyboardState = currentKeyboardState;
-            _previousMouseState = currentMouseState;
         }
 
         public override void Draw(GameTime gameTime)
@@ -177,7 +185,7 @@ namespace ProjectVagabond.Scenes
 
             var selectedButton = _buttons[_selectedButtonIndex];
 
-            if (selectedButton.IsHovered || _keyboardNavigatedLastFrame)
+            if (selectedButton.IsHovered || keyboardNavigatedLastFrame)
             {
                 Vector2 textSize = font.MeasureString(selectedButton.Text);
 

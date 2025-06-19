@@ -23,16 +23,15 @@ namespace ProjectVagabond.Scenes
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
 
-        private bool _keyboardNavigatedLastFrame = false;
         private KeyboardState _previousKeyboardState;
-        private MouseState _previousMouseState;
 
         private GameSettings _tempSettings;
         private ConfirmationDialog _confirmationDialog;
 
         public override void Enter()
         {
-            _confirmationDialog = new ConfirmationDialog();
+            base.Enter();
+            _confirmationDialog = new ConfirmationDialog(this);
             _tempSettings = new GameSettings
             {
                 Resolution = Core.Settings.Resolution,
@@ -50,11 +49,43 @@ namespace ProjectVagabond.Scenes
 
             BuildInitialUI();
             _selectedIndex = FindNextSelectable(-1, 1);
-            _previousMouseState = Mouse.GetState();
             _previousKeyboardState = Keyboard.GetState();
-            Core.Instance.IsMouseVisible = true;
 
             _currentInputDelay = _inputDelay;
+
+            PositionMouseOnFirstSelectable();
+        }
+
+        protected override Rectangle? GetFirstSelectableElementBounds()
+        {
+            Vector2 currentPos = new Vector2(0, _settingsStartY);
+            currentPos.X = (Global.VIRTUAL_WIDTH - 450) / 2;
+
+            for (int i = 0; i < _uiElements.Count; i++)
+            {
+                var item = _uiElements[i];
+
+                if (item is ISettingControl || item is Button)
+                {
+                    float itemHeight = (item is ISettingControl) ? 20 : 25;
+                    return new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, (int)itemHeight);
+                }
+
+                if (item is ISettingControl)
+                {
+                    currentPos.Y += 20;
+                }
+                else if (item is Button)
+                {
+                    currentPos.Y += 25;
+                }
+                else if (item is string)
+                {
+                    currentPos.Y += 25;
+                }
+            }
+
+            return null; // No selectable elements found
         }
 
         private void BuildInitialUI()
@@ -255,8 +286,11 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
+            base.Update(gameTime);
+
             if (_confirmationDialog.IsActive)
             {
+                if (IsInputBlocked) { return; }
                 _confirmationDialog.Update(gameTime);
                 return;
             }
@@ -266,8 +300,6 @@ namespace ProjectVagabond.Scenes
             _hoveredIndex = -1;
 
             if (_currentInputDelay > 0) _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_keyboardNavigatedLastFrame) _keyboardNavigatedLastFrame = false;
-            else if (currentMouseState.Position != _previousMouseState.Position) Core.Instance.IsMouseVisible = true;
             if (_confirmationTimer > 0) _confirmationTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             UpdateFramerateControl();
@@ -284,7 +316,7 @@ namespace ProjectVagabond.Scenes
                 {
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, 20);
                     if (hoverRect.Contains(virtualMousePos)) { _selectedIndex = i; _hoveredIndex = i; }
-                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 5), isSelected, currentMouseState, _previousMouseState);
+                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 5), isSelected, currentMouseState, previousMouseState);
                     currentPos.Y += 20;
                 }
                 else if (item is Button button)
@@ -300,13 +332,14 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
+            if (IsInputBlocked) { return; }
+
             if (_currentInputDelay <= 0) HandleKeyboardInput(currentKeyboardState);
             var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Apply");
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) AttemptToGoBack();
 
             _previousKeyboardState = currentKeyboardState;
-            _previousMouseState = currentMouseState;
         }
 
         private void HandleKeyboardInput(KeyboardState currentKeyboardState)
@@ -315,7 +348,7 @@ namespace ProjectVagabond.Scenes
             if (KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState)) { _selectedIndex = FindNextSelectable(_selectedIndex, 1); selectionChanged = true; }
             if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState)) { _selectedIndex = FindNextSelectable(_selectedIndex, -1); selectionChanged = true; }
 
-            if (selectionChanged) { MoveMouseToSelected(); Core.Instance.IsMouseVisible = false; _keyboardNavigatedLastFrame = true; }
+            if (selectionChanged) { MoveMouseToSelected(); Core.Instance.IsMouseVisible = false; keyboardNavigatedLastFrame = true; }
 
             if (_selectedIndex >= 0 && _selectedIndex < _uiElements.Count)
             {
@@ -369,7 +402,7 @@ namespace ProjectVagabond.Scenes
                 {
                     bool isHovered = (item is ISettingControl s && new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, 20).Contains(virtualMousePos))
                                   || (item is Button b && b.IsHovered);
-                    if (isHovered || _keyboardNavigatedLastFrame)
+                    if (isHovered || keyboardNavigatedLastFrame)
                     {
                         float itemHeight = (item is ISettingControl) ? 20 : (item is Button) ? 20 : 0;
                         if (itemHeight > 0) DrawRectangleBorder(spriteBatch, Core.Pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, (int)itemHeight), 1, Global.Instance.OptionHoverColor);

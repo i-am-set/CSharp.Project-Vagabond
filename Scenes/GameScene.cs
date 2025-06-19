@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 
 namespace ProjectVagabond.Scenes
 {
@@ -19,17 +20,37 @@ namespace ProjectVagabond.Scenes
     /// </summary>
     public abstract class GameScene
     {
+        protected MouseState previousMouseState;
+        protected bool keyboardNavigatedLastFrame = false;
+        protected bool firstTimeOpened = true;
+
+        private const float INPUT_BLOCK_DURATION = 0.1f;
+        private float _inputBlockTimer = 0f;
+
+        /// <summary>
+        /// Returns true if the scene is currently blocking input, e.g., for a short duration after entering.
+        /// </summary>
+        protected bool IsInputBlocked => _inputBlockTimer > 0;
+
         /// <summary>
         /// Called once when the scene is first added to the SceneManager.
         /// Use for one-time setup.
         /// </summary>
-        public virtual void Initialize() { }
+        public virtual void Initialize()
+        {
+            firstTimeOpened = true;
+        }
 
         /// <summary>
         /// Called every time the scene becomes the active scene.
         /// Use for resetting state.
         /// </summary>
-        public virtual void Enter() { }
+        public virtual void Enter() 
+        {   
+            previousMouseState = Mouse.GetState();
+            Core.Instance.IsMouseVisible = false;
+            _inputBlockTimer = INPUT_BLOCK_DURATION;
+        }
 
         /// <summary>
         /// Called every time the scene is no longer the active scene.
@@ -39,11 +60,65 @@ namespace ProjectVagabond.Scenes
         /// <summary>
         /// Called every frame to update the scene's logic.
         /// </summary>
-        public abstract void Update(GameTime gameTime);
+        public virtual void Update(GameTime gameTime)
+        {
+            if (_inputBlockTimer > 0)
+            {
+                _inputBlockTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+
+            var currentMouseState = Mouse.GetState();
+
+            if (keyboardNavigatedLastFrame)
+            {
+                keyboardNavigatedLastFrame = false;
+            }
+            else if (currentMouseState.Position != previousMouseState.Position)
+            {
+                if (!IsInputBlocked)
+                {
+                    Core.Instance.IsMouseVisible = true;
+                }
+            }
+
+            previousMouseState = currentMouseState;
+        }
 
         /// <summary>
         /// Called every frame to draw the scene.
         /// </summary>
         public abstract void Draw(GameTime gameTime);
+
+        public void ResetInputBlockTimer()
+        {
+            _inputBlockTimer = INPUT_BLOCK_DURATION;
+        }
+
+        /// <summary>
+        /// When overridden in a derived class, provides the screen bounds of the first selectable UI element.
+        /// Returns null if there are no selectable elements.
+        /// </summary>
+        /// <returns>A nullable Rectangle representing the bounds of the first element.</returns>
+        protected virtual Rectangle? GetFirstSelectableElementBounds()
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Checks for a selectable element and moves the mouse to its center.
+        /// This should be called in the child's Enter() method after its UI is initialized.
+        /// </summary>
+        protected void PositionMouseOnFirstSelectable()
+        {
+            var firstElementBounds = GetFirstSelectableElementBounds();
+            if (firstElementBounds.HasValue)
+            {
+                Point screenPos = Core.TransformVirtualToScreen(firstElementBounds.Value.Center);
+                Mouse.SetPosition(screenPos.X, screenPos.Y);
+
+                Core.Instance.IsMouseVisible = false;
+                keyboardNavigatedLastFrame = true;
+            }
+        }
     }
 }
