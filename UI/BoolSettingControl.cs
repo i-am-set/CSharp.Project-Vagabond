@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -20,6 +20,7 @@ namespace ProjectVagabond.UI
         private Rectangle _rightArrowRect;
         private bool _isLeftArrowHovered;
         private bool _isRightArrowHovered;
+        private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
 
         public BoolSettingControl(string label, Func<bool> getter, Action<bool> onApply)
         {
@@ -78,14 +79,19 @@ namespace ProjectVagabond.UI
             _currentValue = _getter();
         }
 
-        public void Draw(SpriteBatch spriteBatch, Vector2 position, bool isSelected)
+        public void Draw(SpriteBatch spriteBatch, Vector2 position, bool isSelected, GameTime gameTime)
         {
             var font = Global.Instance.DefaultFont;
+            bool isActivated = isSelected;
+
+            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
+
             Color labelColor = isSelected ? Global.Instance.OptionHoverColor : Global.Instance.Palette_BrightWhite;
-            spriteBatch.DrawString(font, Label, position, labelColor);
+            spriteBatch.DrawString(font, Label, animatedPosition, labelColor);
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
-            Vector2 valueAreaPosition = new Vector2(position.X + 340, position.Y);
+            Vector2 valueAreaPosition = new Vector2(animatedPosition.X + 340, animatedPosition.Y);
 
             string leftArrowText = "<";
             string valueText = _currentValue ? "ON" : "OFF";
@@ -116,18 +122,16 @@ namespace ProjectVagabond.UI
             int padding = 5;
             float arrowVisualHeight = font.LineHeight;
 
-            // Left Arrow Click Box
             _leftArrowRect = new Rectangle(
-                (int)leftArrowPos.X - padding,
-                (int)leftArrowPos.Y - padding,
+                (int)(position.X + 340) - padding,
+                (int)position.Y - padding,
                 (int)leftArrowSize.X + (padding * 2),
                 (int)arrowVisualHeight + (padding * 2)
             );
 
-            // Right Arrow Click Box
             _rightArrowRect = new Rectangle(
-                (int)rightArrowPos.X - padding,
-                (int)rightArrowPos.Y - padding,
+                (int)(position.X + 340 + valueDisplayWidth - rightArrowSize.X) - padding,
+                (int)position.Y - padding,
                 (int)rightArrowSize.X + (padding * 2),
                 (int)arrowVisualHeight + (padding * 2)
             );

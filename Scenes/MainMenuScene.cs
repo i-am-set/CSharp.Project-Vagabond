@@ -47,8 +47,8 @@ namespace ProjectVagabond.Scenes
                 "Are you sure you want to exit?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide())),
-                    Tuple.Create("YES", new Action(() => Core.Instance.ExitApplication()))
+                    Tuple.Create("YES", new Action(() => Core.Instance.ExitApplication())),
+                    Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide()))
                 }
             );
         }
@@ -193,7 +193,7 @@ namespace ProjectVagabond.Scenes
 
             foreach (var button in _buttons)
             {
-                button.Draw(spriteBatch, font);
+                button.Draw(spriteBatch, font, gameTime);
             }
 
             var selectedButton = _buttons[_selectedButtonIndex];

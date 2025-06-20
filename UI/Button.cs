@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -17,6 +17,7 @@ namespace ProjectVagabond.UI
         public event Action OnClick;
 
         private MouseState _previousMouseState;
+        private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
 
         public Button(Rectangle bounds, string text)
         {
@@ -44,11 +45,6 @@ namespace ProjectVagabond.UI
             _previousMouseState = currentMouseState;
         }
 
-        /// <summary>
-        /// Updates only the hover state of the button without processing clicks or changing the previous mouse state.
-        /// This is useful for initialization without triggering unwanted clicks.
-        /// Can be seen in the MainMenuScene where buttons are initialized with a fake mouse state as of 2:46pm 6/19/2025.
-        /// </summary>
         public void UpdateHoverState(MouseState currentMouseState)
         {
             if (!IsEnabled)
@@ -69,20 +65,15 @@ namespace ProjectVagabond.UI
             }
         }
 
-        /// <summary>
-        /// Draws the button.
-        /// </summary>
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            Draw(spriteBatch, font, false);
+            Draw(spriteBatch, font, gameTime, false);
         }
 
-        /// <summary>
-        /// Draws the button, allowing hover state to be forced for keyboard navigation.
-        /// </summary>
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, bool forceHover)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover)
         {
             Color textColor;
+            bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             if (!IsEnabled)
             {
@@ -90,7 +81,7 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                if (IsHovered || forceHover)
+                if (isActivated)
                 {
                     textColor = Global.Instance.OptionHoverColor;
                 } else
@@ -106,9 +97,11 @@ namespace ProjectVagabond.UI
                 }
             }
 
+            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+
             Vector2 textSize = font.MeasureString(Text);
             Vector2 textPosition = new Vector2(
-                Bounds.X + (Bounds.Width - textSize.X) / 2,
+                Bounds.X + (Bounds.Width - textSize.X) / 2 + xOffset,
                 Bounds.Y + (Bounds.Height - textSize.Y) / 2
             );
 

@@ -23,6 +23,10 @@ namespace ProjectVagabond.Scenes
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
 
+        private float _titleBobTimer = 0f;
+        private const float TitleBobAmount = 3f;
+        private const float TitleBobSpeed = 2f;
+
         private KeyboardState _previousKeyboardState;
         private MouseState _previousMouseState; 
 
@@ -47,6 +51,8 @@ namespace ProjectVagabond.Scenes
 
             var resolutions = SettingsManager.GetResolutions();
             _tempSettings.Resolution = SettingsManager.FindClosestResolution(_tempSettings.Resolution);
+
+            _titleBobTimer = 0f;
 
             BuildInitialUI();
             _selectedIndex = FindNextSelectable(-1, 1);
@@ -219,8 +225,8 @@ namespace ProjectVagabond.Scenes
                 "Apply the following changes?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide())),
-                    Tuple.Create("YES", new Action(() => { ExecuteApplySettings(); _confirmationDialog.Hide(); }))
+                    Tuple.Create("YES", new Action(() => { ExecuteApplySettings(); _confirmationDialog.Hide(); })),
+                    Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide()))
                 },
                 details
             );
@@ -336,6 +342,8 @@ namespace ProjectVagabond.Scenes
         {
             base.Update(gameTime);
 
+            _titleBobTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
             if (_confirmationDialog.IsActive)
             {
                 if (IsInputBlocked) { return; }
@@ -437,7 +445,10 @@ namespace ProjectVagabond.Scenes
 
             string title = "Settings";
             Vector2 titleSize = font.MeasureString(title) * 2f;
-            spriteBatch.DrawString(font, title, new Vector2(screenWidth / 2 - titleSize.X / 2, 75), Global.Instance.Palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
+
+            float yOffset = (float)Math.Sin(_titleBobTimer * TitleBobSpeed) * TitleBobAmount;
+            Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, 75 + yOffset);
+            spriteBatch.DrawString(font, title, titlePosition, Global.Instance.Palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
 
             Vector2 currentPos = new Vector2(0, _settingsStartY);
             for (int i = 0; i < _uiElements.Count; i++)
@@ -459,7 +470,7 @@ namespace ProjectVagabond.Scenes
 
                 if (item is ISettingControl setting)
                 {
-                    setting.Draw(spriteBatch, new Vector2(currentPos.X, currentPos.Y + 5), isSelected);
+                    setting.Draw(spriteBatch, new Vector2(currentPos.X, currentPos.Y + 5), isSelected, gameTime);
                     if (setting.Label == "Resolution")
                     {
                         var originalEntry = SettingsManager.GetResolutions().FirstOrDefault(r => r.Value == _tempSettings.Resolution);
@@ -473,7 +484,7 @@ namespace ProjectVagabond.Scenes
                 }
                 else if (item is Button button)
                 {
-                    button.Draw(spriteBatch, font);
+                    button.Draw(spriteBatch, font, gameTime, isSelected);
                     currentPos.Y += 25;
                 }
                 else if (item is string header)

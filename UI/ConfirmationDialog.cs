@@ -294,7 +294,7 @@ namespace ProjectVagabond.UI
 
             foreach (var button in _buttons)
             {
-                button.Draw(spriteBatch, font);
+                button.Draw(spriteBatch, font, gameTime);
             }
 
             if (_buttons.Any())
