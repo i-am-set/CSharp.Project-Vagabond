@@ -100,6 +100,8 @@ namespace ProjectVagabond.Scenes
 
             if (IsInputBlocked)
             {
+                _previousKeyboardState = Keyboard.GetState();
+                previousMouseState = Mouse.GetState();
                 return;
             }
 
@@ -194,6 +196,7 @@ namespace ProjectVagabond.Scenes
             }
 
             _previousKeyboardState = currentKeyboardState;
+            previousMouseState = currentMouseState;
         }
 
         public override void Draw(GameTime gameTime)

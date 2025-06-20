@@ -351,9 +351,15 @@ namespace ProjectVagabond.Scenes
 
             _titleBobTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+            if (IsInputBlocked)
+            {
+                _previousKeyboardState = Keyboard.GetState();
+                previousMouseState = Mouse.GetState();
+                return;
+            }
+
             if (_confirmationDialog.IsActive)
             {
-                if (IsInputBlocked) { return; }
                 _confirmationDialog.Update(gameTime);
                 return;
             }
@@ -399,14 +405,13 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (IsInputBlocked) { return; }
-
             if (_currentInputDelay <= 0) HandleKeyboardInput(currentKeyboardState);
             var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Apply");
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) AttemptToGoBack();
 
             _previousKeyboardState = currentKeyboardState;
+            previousMouseState = currentMouseState;
         }
 
         private void HandleKeyboardInput(KeyboardState currentKeyboardState)

@@ -104,7 +104,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            previousMouseState = currentMouseState;
         }
 
         /// <summary>
