@@ -10,7 +10,7 @@ namespace ProjectVagabond.UI
     {
         public Rectangle Bounds { get; set; }
         public string Text { get; }
-        public Color? CustomTextColor { get; set; } // New property for custom text color
+        public Color? CustomTextColor { get; set; }
         public bool IsEnabled { get; set; } = true;
         public bool IsHovered { get; private set; }
 

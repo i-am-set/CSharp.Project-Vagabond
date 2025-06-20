@@ -128,6 +128,102 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/speedMark.png
 
+#begin Sprites/UI/KeyPrompts/ui_key_arrows.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/KeyPrompts/ui_key_arrows.png;Sprites/UI/KeyPrompts/ui_key_arrows
+
+#begin Sprites/UI/KeyPrompts/ui_key_blank.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/KeyPrompts/ui_key_blank.png;Sprites/UI/KeyPrompts/ui_key_blank
+
+#begin Sprites/UI/KeyPrompts/ui_key_down.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/KeyPrompts/ui_key_down.png;Sprites/UI/KeyPrompts/ui_key_down
+
+#begin Sprites/UI/KeyPrompts/ui_key_escape.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/KeyPrompts/ui_key_escape.png;Sprites/UI/KeyPrompts/ui_key_escape
+
+#begin Sprites/UI/KeyPrompts/ui_key_left.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/KeyPrompts/ui_key_left.png;Sprites/UI/KeyPrompts/ui_key_left
+
+#begin Sprites/UI/KeyPrompts/ui_key_return.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/KeyPrompts/ui_key_return.png;Sprites/UI/KeyPrompts/ui_key_return
+
+#begin Sprites/UI/KeyPrompts/ui_key_right.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/KeyPrompts/ui_key_right.png;Sprites/UI/KeyPrompts/ui_key_right
+
+#begin Sprites/UI/KeyPrompts/ui_key_up.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/KeyPrompts/ui_key_up.png;Sprites/UI/KeyPrompts/ui_key_up
+
 #begin Sprites/warningMark.png
 /importer:TextureImporter
 /processor:TextureProcessor
