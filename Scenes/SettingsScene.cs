@@ -14,7 +14,7 @@ namespace ProjectVagabond.Scenes
     public class SettingsScene : GameScene
     {
         private List<object> _uiElements = new();
-        private int _selectedIndex = 0;
+        private int _selectedIndex = -1;
         private int _hoveredIndex = -1;
         private string _confirmationMessage = "";
         private float _confirmationTimer = 0f;
@@ -28,7 +28,6 @@ namespace ProjectVagabond.Scenes
         private const float TitleBobSpeed = 2f;
 
         private KeyboardState _previousKeyboardState;
-        private MouseState _previousMouseState; 
 
         private GameSettings _tempSettings;
         private ConfirmationDialog _confirmationDialog;
@@ -55,13 +54,21 @@ namespace ProjectVagabond.Scenes
             _titleBobTimer = 0f;
 
             BuildInitialUI();
-            _selectedIndex = FindNextSelectable(-1, 1);
+
+            if (this.LastUsedInputForNav == InputDevice.Keyboard)
+            {
+                _selectedIndex = FindNextSelectable(-1, 1);
+                PositionMouseOnFirstSelectable();
+            }
+            else
+            {
+                _selectedIndex = -1;
+                _hoveredIndex = -1;
+            }
+            
             _previousKeyboardState = Keyboard.GetState();
-            _previousMouseState = Mouse.GetState();
 
             _currentInputDelay = _inputDelay;
-
-            PositionMouseOnFirstSelectable();
         }
 
         protected override Rectangle? GetFirstSelectableElementBounds()
@@ -355,6 +362,11 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             _hoveredIndex = -1;
 
+            if (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
+            {
+                Core.CurrentSceneManager.LastInputDevice = InputDevice.Mouse;
+            }
+
             if (_currentInputDelay > 0) _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_confirmationTimer > 0) _confirmationTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -372,7 +384,7 @@ namespace ProjectVagabond.Scenes
                 {
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, 20);
                     if (hoverRect.Contains(virtualMousePos)) { _selectedIndex = i; _hoveredIndex = i; }
-                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 5), isSelected, currentMouseState, _previousMouseState);
+                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 5), isSelected, currentMouseState, previousMouseState);
                     currentPos.Y += 20;
                 }
                 else if (item is Button button)
@@ -395,14 +407,13 @@ namespace ProjectVagabond.Scenes
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) AttemptToGoBack();
 
             _previousKeyboardState = currentKeyboardState;
-            _previousMouseState = currentMouseState;
         }
 
         private void HandleKeyboardInput(KeyboardState currentKeyboardState)
         {
             bool selectionChanged = false;
-            if (KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState)) { _selectedIndex = FindNextSelectable(_selectedIndex, 1); selectionChanged = true; }
-            if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState)) { _selectedIndex = FindNextSelectable(_selectedIndex, -1); selectionChanged = true; }
+            if (KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState)) { Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard; _selectedIndex = FindNextSelectable(_selectedIndex, 1); selectionChanged = true; }
+            if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState)) { Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard; _selectedIndex = FindNextSelectable(_selectedIndex, -1); selectionChanged = true; }
 
             if (selectionChanged) { MoveMouseToSelected(); Core.Instance.IsMouseVisible = false; keyboardNavigatedLastFrame = true; }
 
@@ -411,11 +422,12 @@ namespace ProjectVagabond.Scenes
                 var selectedItem = _uiElements[_selectedIndex];
                 if (selectedItem is ISettingControl setting)
                 {
-                    if (KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState)) setting.HandleInput(Keys.Left);
-                    if (KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState)) setting.HandleInput(Keys.Right);
+                    if (KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState)) { Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard; setting.HandleInput(Keys.Left); }
+                    if (KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState)) { Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard; setting.HandleInput(Keys.Right); }
                 }
                 else if (selectedItem is Button button && KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
                 {
+                    Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard;
                     button.TriggerClick();
                 }
             }

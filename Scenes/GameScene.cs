@@ -16,6 +16,15 @@ namespace ProjectVagabond.Scenes
     }
 
     /// <summary>
+    /// Defines the input device used for navigation.
+    /// </summary>
+    public enum InputDevice
+    {
+        Keyboard,
+        Mouse
+    }
+
+    /// <summary>
     /// Abstract base class for all game scenes.
     /// </summary>
     public abstract class GameScene
@@ -26,6 +35,11 @@ namespace ProjectVagabond.Scenes
 
         private const float INPUT_BLOCK_DURATION = 0.1f;
         private float _inputBlockTimer = 0f;
+
+        /// <summary>
+        /// The input device used to navigate to this scene.
+        /// </summary>
+        public InputDevice LastUsedInputForNav { get; set; } = InputDevice.Mouse;
 
         /// <summary>
         /// Returns true if the scene is currently blocking input, e.g., for a short duration after entering.
@@ -48,8 +62,17 @@ namespace ProjectVagabond.Scenes
         public virtual void Enter() 
         {   
             previousMouseState = Mouse.GetState();
-            Core.Instance.IsMouseVisible = false;
             _inputBlockTimer = INPUT_BLOCK_DURATION;
+
+            if (this.LastUsedInputForNav == InputDevice.Keyboard)
+            {
+                Core.Instance.IsMouseVisible = false;
+            }
+            else // Mouse was used to enter
+            {
+                Core.Instance.IsMouseVisible = true;
+                keyboardNavigatedLastFrame = false;
+            }
         }
 
         /// <summary>

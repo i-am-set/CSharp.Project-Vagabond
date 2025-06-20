@@ -11,7 +11,7 @@ namespace ProjectVagabond.Scenes
     public class MainMenuScene : GameScene
     {
         private readonly List<Button> _buttons = new();
-        private int _selectedButtonIndex = 0;
+        private int _selectedButtonIndex = -1;
         private KeyboardState _previousKeyboardState;
         
         private float _inputDelay = 0.1f;
@@ -59,19 +59,26 @@ namespace ProjectVagabond.Scenes
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
     
-            _selectedButtonIndex = 0;
-            PositionMouseOnFirstSelectable();
-
-            var firstButtonBounds = GetFirstSelectableElementBounds();
-            if (firstButtonBounds.HasValue)
+            if (this.LastUsedInputForNav == InputDevice.Keyboard && !firstTimeOpened)
             {
-                Point screenPos = Core.TransformVirtualToScreen(firstButtonBounds.Value.Center);
-                var fakeMouseState = new MouseState(screenPos.X, screenPos.Y, 0, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
-        
-                foreach (var button in _buttons)
+                _selectedButtonIndex = 0;
+                PositionMouseOnFirstSelectable();
+
+                var firstButtonBounds = GetFirstSelectableElementBounds();
+                if (firstButtonBounds.HasValue)
                 {
-                    button.UpdateHoverState(fakeMouseState);
+                    Point screenPos = Core.TransformVirtualToScreen(firstButtonBounds.Value.Center);
+                    var fakeMouseState = new MouseState(screenPos.X, screenPos.Y, 0, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
+            
+                    foreach (var button in _buttons)
+                    {
+                        button.UpdateHoverState(fakeMouseState);
+                    }
                 }
+            }
+            else
+            {
+                _selectedButtonIndex = -1;
             }
 
             if (firstTimeOpened) { Mouse.SetPosition(0, 0); Core.Instance.IsMouseVisible = false; }
@@ -105,6 +112,11 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
 
+            if (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
+            {
+                Core.CurrentSceneManager.LastInputDevice = InputDevice.Mouse;
+            }
+
             if (_currentInputDelay > 0)
             {
                 _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -126,6 +138,9 @@ namespace ProjectVagabond.Scenes
 
                 if (upPressed || downPressed)
                 {
+                    if (_selectedButtonIndex <= -1) { _selectedButtonIndex = 0; }
+
+                    Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard;
                     var selectedButton = _buttons[_selectedButtonIndex];
                     if (selectedButton.IsHovered)
                         {
@@ -156,6 +171,7 @@ namespace ProjectVagabond.Scenes
 
                 if (currentKeyboardState.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
                 {
+                    Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard;
                     var selectedButton = _buttons[_selectedButtonIndex];
                     if (selectedButton.IsHovered)
                     {
@@ -196,22 +212,25 @@ namespace ProjectVagabond.Scenes
                 button.Draw(spriteBatch, font, gameTime);
             }
 
-            var selectedButton = _buttons[_selectedButtonIndex];
-
-            if (selectedButton.IsHovered || keyboardNavigatedLastFrame)
+            if (_selectedButtonIndex >= 0 && _selectedButtonIndex < _buttons.Count)
             {
-                Vector2 textSize = font.MeasureString(selectedButton.Text);
+                var selectedButton = _buttons[_selectedButtonIndex];
 
-                int horizontalPadding = 8;
-                int verticalPadding = 4;
+                if (selectedButton.IsHovered || keyboardNavigatedLastFrame)
+                {
+                    Vector2 textSize = font.MeasureString(selectedButton.Text);
 
-                Rectangle highlightRect = new Rectangle(
-                    (int)(selectedButton.Bounds.X + (selectedButton.Bounds.Width - textSize.X) * 0.5f - horizontalPadding),
-                    (int)(selectedButton.Bounds.Y + (selectedButton.Bounds.Height - textSize.Y) * 0.5f - verticalPadding),
-                    (int)(textSize.X + horizontalPadding * 2),
-                    (int)(textSize.Y + verticalPadding * 2)
-                );
-                DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
+                    int horizontalPadding = 8;
+                    int verticalPadding = 4;
+
+                    Rectangle highlightRect = new Rectangle(
+                        (int)(selectedButton.Bounds.X + (selectedButton.Bounds.Width - textSize.X) * 0.5f - horizontalPadding),
+                        (int)(selectedButton.Bounds.Y + (selectedButton.Bounds.Height - textSize.Y) * 0.5f - verticalPadding),
+                        (int)(textSize.X + horizontalPadding * 2),
+                        (int)(textSize.Y + verticalPadding * 2)
+                    );
+                    DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
+                }
             }
 
             string versionText = $"v{Global.GAME_VERSION}";

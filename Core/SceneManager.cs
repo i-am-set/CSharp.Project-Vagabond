@@ -10,6 +10,11 @@ namespace ProjectVagabond
         private GameScene _currentScene;
 
         /// <summary>
+        /// The last input device used to trigger a major action, like changing a scene.
+        /// </summary>
+        public InputDevice LastInputDevice { get; set; } = InputDevice.Mouse;
+
+        /// <summary>
         /// Adds a scene to the manager and initializes it.
         /// </summary>
         public void AddScene(GameSceneState state, GameScene scene)
@@ -27,6 +32,7 @@ namespace ProjectVagabond
             {
                 _currentScene?.Exit();
                 _currentScene = newScene;
+                _currentScene.LastUsedInputForNav = this.LastInputDevice;
                 _currentScene.Enter();
             }
         }
