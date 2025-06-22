@@ -27,7 +27,7 @@ namespace ProjectVagabond
         {
             _previousMouseState = _currentMouseState;
             _currentMouseState = Mouse.GetState();
-            var keyboardState = Keyboard.GetState(); // Get keyboard state for shift-clicks
+            var keyboardState = Keyboard.GetState();
             Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
 
             bool menuWasOpen = _contextMenu.IsOpen;
@@ -86,26 +86,21 @@ namespace ProjectVagabond
 
         private void HandlePathUpdate(Vector2 targetPos, KeyboardState keyboardState)
         {
-            // Cancel path if clicking player
-            if (targetPos == _gameState.PlayerWorldPos && _gameState.PendingActions.Any())
+            if (targetPos == _gameState.PlayerWorldPos && _gameState.PendingActions.Any()) // Cancel path if clicking player
             {
                 _gameState.CancelPendingActions();
-                Core.CurrentTerminalRenderer.AddOutputToHistory("Path cancelled.");
                 _isDraggingPath = false;
                 return;
             }
 
             if (!_gameState.IsPositionPassable(targetPos)) return;
 
-            // Determine start position for pathfinding
             Vector2 startPos = (_originalPendingActionCount > 0)
                 ? _gameState.PendingActions[_originalPendingActionCount - 1].Position
                 : _gameState.PlayerWorldPos;
 
-            // Don't find a path to the same spot
             if (startPos == targetPos)
             {
-                // Clear any path segments added during this drag
                 if (_gameState.PendingActions.Count > _originalPendingActionCount)
                 {
                     _gameState.PendingActions.RemoveRange(_originalPendingActionCount, _gameState.PendingActions.Count - _originalPendingActionCount);
@@ -115,13 +110,11 @@ namespace ProjectVagabond
 
             var path = Pathfinder.FindPath(startPos, targetPos, _gameState);
 
-            // Clear any path segments added during this drag
             if (_gameState.PendingActions.Count > _originalPendingActionCount)
             {
                 _gameState.PendingActions.RemoveRange(_originalPendingActionCount, _gameState.PendingActions.Count - _originalPendingActionCount);
             }
 
-            // Add the new path segment
             if (path != null)
             {
                 bool isRunning = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
@@ -136,15 +129,12 @@ namespace ProjectVagabond
             bool isPlayerPos = targetPos == _gameState.PlayerWorldPos;
             bool pathPending = _gameState.PendingActions.Any();
 
-            // Helper action to queue a path and then a rest action.
             Action<RestType> queuePathAndRest = (restType) =>
             {
                 var startPos = _gameState.PendingActions.Any() ? _gameState.PendingActions.Last().Position : _gameState.PlayerWorldPos;
 
-                // If we are not already at the target position, find and queue a path there.
                 if (startPos != targetPos)
                 {
-                    // We'll queue a walk path to the rest location.
                     var path = Pathfinder.FindPath(startPos, targetPos, _gameState);
                     if (path != null)
                     {
@@ -153,11 +143,10 @@ namespace ProjectVagabond
                     else
                     {
                         Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot find a path to ({targetPos.X},{targetPos.Y}).");
-                        return; // Exit the OnClick action if no path is found.
+                        return;
                     }
                 }
 
-                // Now, queue the rest action itself at the target position.
                 _gameState.PendingActions.Add(new PendingAction(restType, targetPos));
                 string restTypeName = restType == RestType.ShortRest ? "short" : "long";
                 Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {restTypeName} rest at ({targetPos.X},{targetPos.Y}).");
@@ -192,7 +181,7 @@ namespace ProjectVagabond
             // Option: Reposition (Walk)
             menuItems.Add(new ContextMenuItem
             {
-                Text = "Reposition (Walk)",
+                Text = "Reposition",
                 IsVisible = () => isPassable && !isPlayerPos && pathPending,
                 OnClick = () =>
                 {
@@ -201,30 +190,32 @@ namespace ProjectVagabond
                 }
             });
 
-            // Option: Reposition (Run)
-            menuItems.Add(new ContextMenuItem
-            {
-                Text = "Reposition (Run)",
-                IsVisible = () => isPassable && !isPlayerPos && pathPending,
-                OnClick = () =>
-                {
-                    var path = Pathfinder.FindPath(_gameState.PlayerWorldPos, targetPos, _gameState);
-                    if (path != null) _gameState.QueueNewPath(path, isRunning: true);
-                }
-            });
+            //// Option: Reposition (Run)
+            //menuItems.Add(new ContextMenuItem
+            //{
+            //    Text = "Reposition (Run)",
+            //    IsVisible = () => isPassable && !isPlayerPos && pathPending,
+            //    OnClick = () =>
+            //    {
+            //        var path = Pathfinder.FindPath(_gameState.PlayerWorldPos, targetPos, _gameState);
+            //        if (path != null) _gameState.QueueNewPath(path, isRunning: true);
+            //    }
+            //});
 
             // Option: Short Rest (Updated)
             menuItems.Add(new ContextMenuItem
             {
-                Text = "Queue Short Rest",
+                Text = "Short Rest",
                 IsVisible = () => isPassable, // Can only rest on passable tiles.
                 OnClick = () => queuePathAndRest(RestType.ShortRest)
             });
 
+
+
             // Option: Long Rest (Updated)
             menuItems.Add(new ContextMenuItem
             {
-                Text = "Queue Long Rest",
+                Text = "Long Rest",
                 IsVisible = () => isPassable, // Can only rest on passable tiles.
                 OnClick = () => queuePathAndRest(RestType.LongRest)
             });
@@ -233,6 +224,7 @@ namespace ProjectVagabond
             menuItems.Add(new ContextMenuItem
             {
                 Text = "Clear Path",
+                Color = Global.Instance.Palette_Yellow,
                 IsVisible = () => pathPending, // Only show if there's a path to clear.
                 OnClick = () =>
                 {
@@ -241,24 +233,20 @@ namespace ProjectVagabond
                 }
             });
 
-            // Set the marker for the right-clicked tile
             _mapRenderer.RightClickedWorldPos = targetPos;
 
-            // Get the screen position of the tile to snap the menu to it
             Vector2? menuScreenPos = _mapRenderer.WorldToScreen(targetPos);
             Vector2 finalMenuPos;
 
             if (menuScreenPos.HasValue)
             {
-                // Snap to the bottom-right of the grid cell
-                finalMenuPos = new Vector2(
+                finalMenuPos = new Vector2(// Snap to the bottom-right of the grid cell
                     menuScreenPos.Value.X + Global.GRID_CELL_SIZE,
                     menuScreenPos.Value.Y + Global.GRID_CELL_SIZE
                 );
             }
             else
             {
-                // Fallback to the current mouse position if the tile isn't on screen
                 finalMenuPos = mousePos;
             }
 

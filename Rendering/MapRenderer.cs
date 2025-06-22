@@ -153,14 +153,15 @@ namespace ProjectVagabond
                 }
             }
 
+            // Draw Context Menu on top of everything else //
+            _contextMenu.Draw(_spriteBatch);
+
             // Draw tooltip if needed //
             if (_showTooltip)
             {
                 DrawTooltip(_spriteBatch);
             }
 
-            // Draw Context Menu on top of everything else
-            _contextMenu.Draw(_spriteBatch);
         }
 
         private List<GridElement> GenerateMapGridElements(int mapStartX, int mapStartY)

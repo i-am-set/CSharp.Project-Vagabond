@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,7 +46,6 @@ namespace ProjectVagabond
                     if (!gameState.IsPositionPassable(neighborPos) || closedList.Contains(neighborPos))
                         continue;
 
-                    // Using RunMove cost as the default for pathfinding
                     int moveCost = gameState.GetMovementEnergyCost(new PendingAction(neighborPos, isRunning: true));
                     float newGCost = currentNode.CostFromStartPoint + moveCost;
 
@@ -63,7 +63,7 @@ namespace ProjectVagabond
                     }
                 }
             }
-            return null; // No path found
+            return null;
         }
 
         private static List<Vector2> RetracePath(PathfinderNode startNode, PathfinderNode endNode)

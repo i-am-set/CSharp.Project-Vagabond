@@ -13,6 +13,7 @@ namespace ProjectVagabond
         public string Text { get; set; }
         public Action OnClick { get; set; }
         public Func<bool> IsVisible { get; set; } = () => true;
+        public Color? Color { get; set; }
     }
 
     public class ContextMenu
@@ -50,22 +51,18 @@ namespace ProjectVagabond
             bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
             bool rightClickPressed = currentMouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released;
 
-            // A click happened
             if (leftClickPressed || rightClickPressed)
             {
-                // If it was a left click inside the menu on an item, execute the item's action
                 if (leftClickPressed && _bounds.Contains(virtualMousePos) && _hoveredIndex != -1)
                 {
                     _visibleItems[_hoveredIndex].OnClick?.Invoke();
                     Hide();
                 }
-                // If it was any click outside the menu, just hide it
                 else if (!_bounds.Contains(virtualMousePos))
                 {
                     Hide();
                 }
             }
-            else // No click, just update hover
             {
                 _hoveredIndex = -1;
                 if (_bounds.Contains(virtualMousePos))
@@ -98,7 +95,17 @@ namespace ProjectVagabond
             for (int i = 0; i < _visibleItems.Count; i++)
             {
                 var item = _visibleItems[i];
-                var color = (i == _hoveredIndex) ? Global.Instance.OptionHoverColor : Global.Instance.ToolTipTextColor;
+                Color color;
+
+                if (i == _hoveredIndex)
+                {
+                    color = Global.Instance.OptionHoverColor;
+                }
+                else
+                {
+                    color = item.Color ?? Global.Instance.ToolTipTextColor;
+                }
+
                 spriteBatch.DrawString(Global.Instance.DefaultFont, item.Text, new Vector2(_bounds.X + 8, y), color);
                 y += Global.Instance.DefaultFont.LineHeight + 4;
             }

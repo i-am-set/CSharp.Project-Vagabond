@@ -83,8 +83,7 @@ namespace ProjectVagabond
         {
             if (path == null) return;
 
-            // For walking, just add the path. No energy cost, so no complex checks needed.
-            if (!isRunning)
+            if (!isRunning) // For walking, just add the path. No energy cost, so no complex checks needed.
             {
                 foreach (var pos in path)
                 {
@@ -93,8 +92,7 @@ namespace ProjectVagabond
                 return;
             }
 
-            // For running, check energy for each step, auto-queuing rests if needed.
-            foreach (var nextPos in path)
+            foreach (var nextPos in path)// For running, check energy for each step, auto-queuing rests if needed.
             {
                 var nextAction = new PendingAction(nextPos, isRunning: true);
                 var tempQueue = new List<PendingAction>(_pendingActions) { nextAction };
@@ -119,8 +117,7 @@ namespace ProjectVagabond
                 }
                 else
                 {
-                    // Enough energy, just add the action
-                    _pendingActions.Add(nextAction);
+                    _pendingActions.Add(nextAction);// Enough energy, just add the action
                 }
             }
         }
@@ -311,7 +308,6 @@ namespace ProjectVagabond
 
             while (_pendingActions.Count > 0 && removedSteps < count)
             {
-                // Find the index of the last movement action (Move or RunMove).
                 int lastMoveIndex = -1;
                 for (int i = _pendingActions.Count - 1; i >= 0; i--)
                 {
@@ -323,7 +319,6 @@ namespace ProjectVagabond
                     }
                 }
 
-                // If there are no moves to backtrack, exit the loop.
                 if (lastMoveIndex == -1)
                 {
                     break;
@@ -331,22 +326,18 @@ namespace ProjectVagabond
 
                 PendingAction lastMoveAction = _pendingActions[lastMoveIndex];
 
-                // Determine the position before this move to calculate its direction.
                 Vector2 prevPos = (lastMoveIndex > 0) ? _pendingActions[lastMoveIndex - 1].Position : _playerWorldPos;
 
                 Vector2 lastDirection = lastMoveAction.Position - prevPos;
 
-                // Check if the last move was in the opposite direction of the new move.
                 if (lastDirection == oppositeDirection)
                 {
-                    // Backtrack: Remove the move and any subsequent rests.
                     int actionsToRemoveCount = _pendingActions.Count - lastMoveIndex;
                     _pendingActions.RemoveRange(lastMoveIndex, actionsToRemoveCount);
                     removedSteps++;
                 }
                 else
                 {
-                    // The last move was not a backtrack, so stop.
                     break;
                 }
             }
