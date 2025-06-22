@@ -102,7 +102,6 @@ namespace ProjectVagabond
 
                 if (!simulationResult.possible)
                 {
-                    Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Not enough energy. Auto-queuing a short rest.");
                     Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
                     var restAction = new PendingAction(RestType.ShortRest, restPosition);
                     var tempQueueWithRest = new List<PendingAction>(_pendingActions) { restAction, nextAction };
@@ -114,7 +113,7 @@ namespace ProjectVagabond
                     }
                     else
                     {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot queue path. Not enough energy even after a rest!");
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot queue path. Not enough energy even after a short rest.");
                         return; // Stop adding the rest of the path
                     }
                 }

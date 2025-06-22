@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -29,10 +30,8 @@ namespace ProjectVagabond
             var keyboardState = Keyboard.GetState(); // Get keyboard state for shift-clicks
             Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
 
-            // Store the menu's state before updating it.
             bool menuWasOpen = _contextMenu.IsOpen;
 
-            // Update the context menu first. It might change its own state (e.g., close itself).
             _contextMenu.Update(_currentMouseState, _previousMouseState, virtualMousePos);
 
             if (menuWasOpen)
@@ -56,7 +55,6 @@ namespace ProjectVagabond
             bool leftClickReleased = _currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool rightClickPressed = _currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
 
-            // We get the hovered position from the MapRenderer
             Vector2? hoveredGridWorldPos = _mapRenderer.HoveredGridWorldPos;
 
             if (hoveredGridWorldPos.HasValue)
@@ -93,7 +91,7 @@ namespace ProjectVagabond
             {
                 _gameState.CancelPendingActions();
                 Core.CurrentTerminalRenderer.AddOutputToHistory("Path cancelled.");
-                _isDraggingPath = false; // Stop dragging
+                _isDraggingPath = false;
                 return;
             }
 
@@ -137,6 +135,33 @@ namespace ProjectVagabond
             bool isPassable = _gameState.IsPositionPassable(targetPos);
             bool isPlayerPos = targetPos == _gameState.PlayerWorldPos;
             bool pathPending = _gameState.PendingActions.Any();
+
+            // Helper action to queue a path and then a rest action.
+            Action<RestType> queuePathAndRest = (restType) =>
+            {
+                var startPos = _gameState.PendingActions.Any() ? _gameState.PendingActions.Last().Position : _gameState.PlayerWorldPos;
+
+                // If we are not already at the target position, find and queue a path there.
+                if (startPos != targetPos)
+                {
+                    // We'll queue a walk path to the rest location.
+                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState);
+                    if (path != null)
+                    {
+                        _gameState.AppendPath(path, isRunning: false);
+                    }
+                    else
+                    {
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot find a path to ({targetPos.X},{targetPos.Y}).");
+                        return; // Exit the OnClick action if no path is found.
+                    }
+                }
+
+                // Now, queue the rest action itself at the target position.
+                _gameState.PendingActions.Add(new PendingAction(restType, targetPos));
+                string restTypeName = restType == RestType.ShortRest ? "short" : "long";
+                Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {restTypeName} rest at ({targetPos.X},{targetPos.Y}).");
+            };
 
             // Option: Walk To
             menuItems.Add(new ContextMenuItem
@@ -188,18 +213,20 @@ namespace ProjectVagabond
                 }
             });
 
-            // Option: Short Rest
+            // Option: Short Rest (Updated)
             menuItems.Add(new ContextMenuItem
             {
                 Text = "Queue Short Rest",
-                OnClick = () => _gameState.PendingActions.Add(new PendingAction(RestType.ShortRest, pathPending ? _gameState.PendingActions.Last().Position : _gameState.PlayerWorldPos))
+                IsVisible = () => isPassable, // Can only rest on passable tiles.
+                OnClick = () => queuePathAndRest(RestType.ShortRest)
             });
 
-            // Option: Long Rest
+            // Option: Long Rest (Updated)
             menuItems.Add(new ContextMenuItem
             {
                 Text = "Queue Long Rest",
-                OnClick = () => _gameState.PendingActions.Add(new PendingAction(RestType.LongRest, pathPending ? _gameState.PendingActions.Last().Position : _gameState.PlayerWorldPos))
+                IsVisible = () => isPassable, // Can only rest on passable tiles.
+                OnClick = () => queuePathAndRest(RestType.LongRest)
             });
 
             // Set the marker for the right-clicked tile
