@@ -23,6 +23,7 @@ namespace ProjectVagabond
 
         public Vector2? HoveredGridWorldPos => _hoveredGridWorldPos;
         public ContextMenu MapContextMenu => _contextMenu;
+        public Vector2? RightClickedWorldPos { get; set; }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -131,21 +132,24 @@ namespace ProjectVagabond
             // Draw hover indicator //
             if (_hoveredGridWorldPos.HasValue)
             {
-                int startX = (int)_gameState.PlayerWorldPos.X - Global.GRID_SIZE / 2;
-                int startY = (int)_gameState.PlayerWorldPos.Y - Global.GRID_SIZE / 2;
-
-                int gridX = (int)_hoveredGridWorldPos.Value.X - startX;
-                int gridY = (int)_hoveredGridWorldPos.Value.Y - startY;
-
-                if (gridX >= 0 && gridX < Global.GRID_SIZE && gridY >= 0 && gridY < Global.GRID_SIZE)
+                Vector2? screenPos = WorldToScreen(_hoveredGridWorldPos.Value);
+                if (screenPos.HasValue)
                 {
-                    int screenX = _mapGridBounds.X + gridX * Global.GRID_CELL_SIZE;
-                    int screenY = _mapGridBounds.Y + gridY * Global.GRID_CELL_SIZE;
-
-                    Rectangle indicatorRect = new Rectangle(screenX, screenY, Global.GRID_CELL_SIZE, Global.GRID_CELL_SIZE);
-
+                    Rectangle indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, Global.GRID_CELL_SIZE, Global.GRID_CELL_SIZE);
                     Texture2D texture = Core.CurrentSpriteManager.MapHoverMarkerSprite;
                     _spriteBatch.Draw(texture, indicatorRect, Global.Instance.Palette_Red * 0.5f);
+                }
+            }
+
+            // Draw right-click marker //
+            if (RightClickedWorldPos.HasValue)
+            {
+                Vector2? screenPos = WorldToScreen(RightClickedWorldPos.Value);
+                if (screenPos.HasValue)
+                {
+                    Rectangle markerRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, Global.GRID_CELL_SIZE, Global.GRID_CELL_SIZE);
+                    Texture2D texture = Core.CurrentSpriteManager.MapHoverMarkerSprite;
+                    _spriteBatch.Draw(texture, markerRect, Color.LimeGreen * 0.6f);
                 }
             }
 
@@ -288,6 +292,26 @@ namespace ProjectVagabond
             spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), Global.Instance.ToolTipBorderColor);
             spriteBatch.Draw(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), Global.Instance.ToolTipBorderColor);
             spriteBatch.DrawString(Global.Instance.DefaultFont, _tooltipText, textPosition, Global.Instance.ToolTipTextColor);
+        }
+
+        public Vector2? WorldToScreen(Vector2 worldPos)
+        {
+            if (_mapGridBounds.IsEmpty) return null;
+
+            int startX = (int)_gameState.PlayerWorldPos.X - Global.GRID_SIZE / 2;
+            int startY = (int)_gameState.PlayerWorldPos.Y - Global.GRID_SIZE / 2;
+
+            int gridX = (int)worldPos.X - startX;
+            int gridY = (int)worldPos.Y - startY;
+
+            if (gridX >= 0 && gridX < Global.GRID_SIZE && gridY >= 0 && gridY < Global.GRID_SIZE)
+            {
+                int screenX = _mapGridBounds.X + gridX * Global.GRID_CELL_SIZE;
+                int screenY = _mapGridBounds.Y + gridY * Global.GRID_CELL_SIZE;
+                return new Vector2(screenX, screenY);
+            }
+
+            return null;
         }
 
         private string GetTerrainName(float noise)

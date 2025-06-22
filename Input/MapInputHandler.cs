@@ -26,15 +26,22 @@ namespace ProjectVagabond
         {
             _previousMouseState = _currentMouseState;
             _currentMouseState = Mouse.GetState();
+            var keyboardState = Keyboard.GetState(); // Get keyboard state for shift-clicks
             Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
 
             // Update the context menu first, as it might consume input
             _contextMenu.Update(_currentMouseState, _previousMouseState, virtualMousePos);
 
-            HandleMapInteraction(virtualMousePos);
+            // If the context menu is closed, clear the right-click marker
+            if (!_contextMenu.IsOpen)
+            {
+                _mapRenderer.RightClickedWorldPos = null;
+            }
+
+            HandleMapInteraction(virtualMousePos, keyboardState);
         }
 
-        private void HandleMapInteraction(Vector2 virtualMousePos)
+        private void HandleMapInteraction(Vector2 virtualMousePos, KeyboardState keyboardState)
         {
             bool leftClickPressed = _currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickHeld = _currentMouseState.LeftButton == ButtonState.Pressed;
@@ -52,11 +59,11 @@ namespace ProjectVagabond
                 {
                     _isDraggingPath = true;
                     _originalPendingActionCount = _gameState.PendingActions.Count;
-                    HandlePathUpdate(targetPos);
+                    HandlePathUpdate(targetPos, keyboardState);
                 }
                 else if (leftClickHeld && _isDraggingPath)
                 {
-                    HandlePathUpdate(targetPos);
+                    HandlePathUpdate(targetPos, keyboardState);
                 }
 
                 if (rightClickPressed)
@@ -71,7 +78,7 @@ namespace ProjectVagabond
             }
         }
 
-        private void HandlePathUpdate(Vector2 targetPos)
+        private void HandlePathUpdate(Vector2 targetPos, KeyboardState keyboardState)
         {
             // Cancel path if clicking player
             if (targetPos == _gameState.PlayerWorldPos && _gameState.PendingActions.Any())
@@ -111,7 +118,8 @@ namespace ProjectVagabond
             // Add the new path segment
             if (path != null)
             {
-                _gameState.AppendPath(path, isRunning: true);
+                bool isRunning = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
+                _gameState.AppendPath(path, isRunning: isRunning);
             }
         }
 
@@ -122,28 +130,53 @@ namespace ProjectVagabond
             bool isPlayerPos = targetPos == _gameState.PlayerWorldPos;
             bool pathPending = _gameState.PendingActions.Any();
 
-            // Option: Move To
+            // Option: Walk To
             menuItems.Add(new ContextMenuItem
             {
-                Text = "Move To",
+                Text = "Walk To",
                 IsVisible = () => isPassable && !isPlayerPos,
                 OnClick = () =>
                 {
                     var startPos = pathPending ? _gameState.PendingActions.Last().Position : _gameState.PlayerWorldPos;
                     var path = Pathfinder.FindPath(startPos, targetPos, _gameState);
-                    if (path != null) _gameState.AppendPath(path, true);
+                    if (path != null) _gameState.AppendPath(path, isRunning: false);
                 }
             });
 
-            // Option: Reposition
+            // Option: Run To
             menuItems.Add(new ContextMenuItem
             {
-                Text = "Reposition",
+                Text = "Run To",
+                IsVisible = () => isPassable && !isPlayerPos,
+                OnClick = () =>
+                {
+                    var startPos = pathPending ? _gameState.PendingActions.Last().Position : _gameState.PlayerWorldPos;
+                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState);
+                    if (path != null) _gameState.AppendPath(path, isRunning: true);
+                }
+            });
+
+            // Option: Reposition (Walk)
+            menuItems.Add(new ContextMenuItem
+            {
+                Text = "Reposition (Walk)",
                 IsVisible = () => isPassable && !isPlayerPos && pathPending,
                 OnClick = () =>
                 {
                     var path = Pathfinder.FindPath(_gameState.PlayerWorldPos, targetPos, _gameState);
-                    if (path != null) _gameState.QueueNewPath(path, true);
+                    if (path != null) _gameState.QueueNewPath(path, isRunning: false);
+                }
+            });
+
+            // Option: Reposition (Run)
+            menuItems.Add(new ContextMenuItem
+            {
+                Text = "Reposition (Run)",
+                IsVisible = () => isPassable && !isPlayerPos && pathPending,
+                OnClick = () =>
+                {
+                    var path = Pathfinder.FindPath(_gameState.PlayerWorldPos, targetPos, _gameState);
+                    if (path != null) _gameState.QueueNewPath(path, isRunning: true);
                 }
             });
 
@@ -161,7 +194,14 @@ namespace ProjectVagabond
                 OnClick = () => _gameState.PendingActions.Add(new PendingAction(RestType.LongRest, pathPending ? _gameState.PendingActions.Last().Position : _gameState.PlayerWorldPos))
             });
 
-            _contextMenu.Show(mousePos, menuItems);
+            // Set the marker for the right-clicked tile
+            _mapRenderer.RightClickedWorldPos = targetPos;
+
+            // Get the screen position of the tile to snap the menu to it
+            Vector2? menuScreenPos = _mapRenderer.WorldToScreen(targetPos);
+            Vector2 finalMenuPos = menuScreenPos ?? mousePos; // Use snapped pos, fallback to mouse pos
+
+            _contextMenu.Show(finalMenuPos, menuItems);
         }
     }
 }

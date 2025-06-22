@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -82,9 +82,56 @@ namespace ProjectVagabond
         public void AppendPath(List<Vector2> path, bool isRunning)
         {
             if (path == null) return;
-            foreach (var pos in path)
+
+            // For walking, just add the path. No energy cost, so no complex checks needed.
+            if (!isRunning)
             {
-                _pendingActions.Add(new PendingAction(pos, isRunning));
+                foreach (var pos in path)
+                {
+                    _pendingActions.Add(new PendingAction(pos, isRunning: false));
+                }
+                return;
+            }
+
+            // For running, check energy for each step, auto-queuing rests if needed and in free-move mode.
+            foreach (var nextPos in path)
+            {
+                var nextAction = new PendingAction(nextPos, isRunning: true);
+                var tempQueue = new List<PendingAction>(_pendingActions) { nextAction };
+                var simulationResult = SimulateActionQueueEnergy(tempQueue);
+
+                if (!simulationResult.possible)
+                {
+                    if (_isFreeMoveMode)
+                    {
+                        Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Not enough energy. Auto-queuing a short rest.");
+                        Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
+                        var restAction = new PendingAction(RestType.ShortRest, restPosition);
+                        var tempQueueWithRest = new List<PendingAction>(_pendingActions) { restAction, nextAction };
+
+                        if (SimulateActionQueueEnergy(tempQueueWithRest).possible)
+                        {
+                            _pendingActions.Add(restAction);
+                            _pendingActions.Add(nextAction);
+                        }
+                        else
+                        {
+                            Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot queue path. Not enough energy even after a rest!");
+                            return; // Stop adding the rest of the path
+                        }
+                    }
+                    else
+                    {
+                        int stepCost = GetMovementEnergyCost(nextAction);
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot queue path. Not enough energy! <Requires {stepCost} EP>");
+                        return; // Stop adding the rest of the path
+                    }
+                }
+                else
+                {
+                    // Enough energy, just add the action
+                    _pendingActions.Add(nextAction);
+                }
             }
         }
 
@@ -243,7 +290,8 @@ namespace ProjectVagabond
                 }
 
                 Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {args[1].ToLower()} rest.");
-            } else
+            }
+            else
             {
                 restType = RestType.ShortRest;
                 Core.CurrentTerminalRenderer.AddOutputToHistory("Queued a short rest.");
@@ -457,7 +505,8 @@ namespace ProjectVagabond
                             case ActionType.FullRest:
                                 _playerStats.Rest(nextAction.ActionRestType.Value);
                                 string restType;
-                                switch (nextAction.ActionRestType.Value){
+                                switch (nextAction.ActionRestType.Value)
+                                {
                                     case RestType.ShortRest:
                                         restType = "short";
                                         break;

@@ -24,6 +24,8 @@ namespace ProjectVagabond
         private Rectangle _bounds;
         private int _hoveredIndex = -1;
 
+        public bool IsOpen => _isOpen;
+
         public void Show(Vector2 position, List<ContextMenuItem> items)
         {
             _allItems = items;
