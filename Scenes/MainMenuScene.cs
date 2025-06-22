@@ -81,7 +81,7 @@ namespace ProjectVagabond.Scenes
                 _selectedButtonIndex = -1;
             }
 
-            if (firstTimeOpened) { Mouse.SetPosition(0, 0); Core.Instance.IsMouseVisible = false; }
+            if (firstTimeOpened) { /* do something first time mainmenu is opened in this game instance, not in the game install */ }
             firstTimeOpened = false;
         }
 

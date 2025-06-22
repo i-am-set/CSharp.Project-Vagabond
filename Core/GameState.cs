@@ -93,7 +93,7 @@ namespace ProjectVagabond
                 return;
             }
 
-            // For running, check energy for each step, auto-queuing rests if needed and in free-move mode.
+            // For running, check energy for each step, auto-queuing rests if needed.
             foreach (var nextPos in path)
             {
                 var nextAction = new PendingAction(nextPos, isRunning: true);
@@ -102,28 +102,19 @@ namespace ProjectVagabond
 
                 if (!simulationResult.possible)
                 {
-                    if (_isFreeMoveMode)
-                    {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Not enough energy. Auto-queuing a short rest.");
-                        Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
-                        var restAction = new PendingAction(RestType.ShortRest, restPosition);
-                        var tempQueueWithRest = new List<PendingAction>(_pendingActions) { restAction, nextAction };
+                    Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Not enough energy. Auto-queuing a short rest.");
+                    Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
+                    var restAction = new PendingAction(RestType.ShortRest, restPosition);
+                    var tempQueueWithRest = new List<PendingAction>(_pendingActions) { restAction, nextAction };
 
-                        if (SimulateActionQueueEnergy(tempQueueWithRest).possible)
-                        {
-                            _pendingActions.Add(restAction);
-                            _pendingActions.Add(nextAction);
-                        }
-                        else
-                        {
-                            Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot queue path. Not enough energy even after a rest!");
-                            return; // Stop adding the rest of the path
-                        }
+                    if (SimulateActionQueueEnergy(tempQueueWithRest).possible)
+                    {
+                        _pendingActions.Add(restAction);
+                        _pendingActions.Add(nextAction);
                     }
                     else
                     {
-                        int stepCost = GetMovementEnergyCost(nextAction);
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot queue path. Not enough energy! <Requires {stepCost} EP>");
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot queue path. Not enough energy even after a rest!");
                         return; // Stop adding the rest of the path
                     }
                 }
@@ -170,7 +161,8 @@ namespace ProjectVagabond
             var mapData = GetMapDataAt((int)position.X, (int)position.Y);
             string terrainType = mapData.TerrainType;
 
-            return terrainType != "WATER" && terrainType != "PEAK";
+            string upperTerrainType = terrainType.ToUpper();
+            return upperTerrainType != "WATER" && upperTerrainType != "PEAK";
         }
 
         public int GetMovementEnergyCost(PendingAction action)
