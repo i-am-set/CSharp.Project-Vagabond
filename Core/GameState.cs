@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -61,7 +61,7 @@ namespace ProjectVagabond
         public (int finalEnergy, bool possible, int minutesPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        
+
         public GameState()
         {
             _playerWorldPos = new Vector2(0, 0);
@@ -72,6 +72,21 @@ namespace ProjectVagabond
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+        public void QueueNewPath(List<Vector2> path, bool isRunning)
+        {
+            CancelPendingActions();
+            AppendPath(path, isRunning);
+        }
+
+        public void AppendPath(List<Vector2> path, bool isRunning)
+        {
+            if (path == null) return;
+            foreach (var pos in path)
+            {
+                _pendingActions.Add(new PendingAction(pos, isRunning));
+            }
+        }
 
         public void CancelPendingActions()
         {
@@ -108,7 +123,7 @@ namespace ProjectVagabond
             var mapData = GetMapDataAt((int)position.X, (int)position.Y);
             string terrainType = mapData.TerrainType;
 
-            return terrainType != "WATER" && terrainType != "PEAKS";
+            return terrainType != "WATER" && terrainType != "PEAK";
         }
 
         public int GetMovementEnergyCost(PendingAction action)
@@ -137,24 +152,24 @@ namespace ProjectVagabond
 
         public int GetMinutesPassedDuringMovement(ActionType actionType, string terrainType)
         {
-            int timePassed= 0;
+            int timePassed = 0;
 
             timePassed += actionType switch
             {
-                ActionType.WalkMove => (int)Math.Ceiling(6/_playerStats.WalkSpeed),
-                ActionType.RunMove => (int)Math.Ceiling(6/_playerStats.RunSpeed),
+                ActionType.WalkMove => (int)Math.Ceiling(6 / _playerStats.WalkSpeed),
+                ActionType.RunMove => (int)Math.Ceiling(6 / _playerStats.RunSpeed),
                 _ => timePassed
             };
 
             timePassed += terrainType.ToUpper() switch
             {
                 "FLATLANDS" => 0,
-                "HILLS" => (int)Math.Ceiling(timePassed*0.5f),
-                "MOUNTAINS" => timePassed+5,
+                "HILLS" => (int)Math.Ceiling(timePassed * 0.5f),
+                "MOUNTAINS" => timePassed + 5,
                 _ => 0
             };
 
-            
+
 
             return timePassed;
         }
@@ -233,7 +248,7 @@ namespace ProjectVagabond
 
             Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {args[1].ToLower()} rest.");
         }
-        
+
         private void QueueMovementInternal(Vector2 direction, string[] args, bool isRunning)
         {
             if (_isExecutingPath)
@@ -272,7 +287,7 @@ namespace ProjectVagabond
                 }
 
                 PendingAction lastMoveAction = _pendingActions[lastMoveIndex];
-        
+
                 // Determine the position before this move to calculate its direction.
                 Vector2 prevPos = (lastMoveIndex > 0) ? _pendingActions[lastMoveIndex - 1].Position : _playerWorldPos;
 
@@ -309,7 +324,7 @@ namespace ProjectVagabond
                         Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot move here... terrain is impassable! <{mapData.TerrainType.ToLower()}>");
                         break;
                     }
-            
+
                     var nextAction = new PendingAction(nextPos, isRunning);
                     var tempQueue = new List<PendingAction>(_pendingActions) { nextAction };
                     var simulationResult = SimulateActionQueueEnergy(tempQueue);
@@ -320,7 +335,7 @@ namespace ProjectVagabond
                         {
                             Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Not enough energy. Auto-queuing a short rest.");
                             Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
-                    
+
                             var tempQueueWithRest = new List<PendingAction>(_pendingActions);
                             tempQueueWithRest.Add(new PendingAction(RestType.ShortRest, restPosition));
                             tempQueueWithRest.Add(nextAction);
@@ -452,7 +467,7 @@ namespace ProjectVagabond
                                 {
                                     Core.CurrentWorldClockManager.PassTime(hours: _playerStats.FullRestDuration);
                                 }
-                                    break;
+                                break;
                         }
 
                         _currentPathIndex++;
