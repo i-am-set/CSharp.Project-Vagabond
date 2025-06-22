@@ -229,6 +229,18 @@ namespace ProjectVagabond
                 OnClick = () => queuePathAndRest(RestType.LongRest)
             });
 
+            // Option: Clear Path
+            menuItems.Add(new ContextMenuItem
+            {
+                Text = "Clear Path",
+                IsVisible = () => pathPending, // Only show if there's a path to clear.
+                OnClick = () =>
+                {
+                    _gameState.CancelPendingActions();
+                    Core.CurrentTerminalRenderer.AddOutputToHistory("Path cleared.");
+                }
+            });
+
             // Set the marker for the right-clicked tile
             _mapRenderer.RightClickedWorldPos = targetPos;
 
