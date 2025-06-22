@@ -27,6 +27,7 @@ namespace ProjectVagabond
         private static readonly TextureFactory _textureFactory = new();
         private static readonly InputHandler _inputHandler = new();
         private static readonly MapRenderer _mapRenderer = new();
+        private static readonly MapInputHandler _mapInputHandler = new(_mapRenderer.MapContextMenu);
         private static readonly TerminalRenderer _terminalRenderer = new();
         private static readonly AutoCompleteManager _autoCompleteManager = new();
         private static readonly CommandProcessor _commandProcessor = new();
@@ -46,6 +47,7 @@ namespace ProjectVagabond
         // Public references //
         public static GameState CurrentGameState => _gameState;
         public static MapRenderer CurrentMapRenderer => _mapRenderer;
+        public static MapInputHandler CurrentMapInputHandler => _mapInputHandler;
         public static SpriteManager CurrentSpriteManager => _spriteManager;
         public static TextureFactory CurrentTextureFactory => _textureFactory;
         public static AutoCompleteManager CurrentAutoCompleteManager => _autoCompleteManager;

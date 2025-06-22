@@ -15,6 +15,7 @@ namespace ProjectVagabond.Scenes
         {
             Core.CurrentInputHandler.HandleInput(gameTime);
             Core.CurrentMapRenderer.Update(gameTime);
+            Core.CurrentMapInputHandler.Update(gameTime);
             Core.CurrentGameState.UpdateMovement(gameTime);
             Core.CurrentStatsRenderer.Update(gameTime);
             Core.CurrentHapticsManager.Update(gameTime);

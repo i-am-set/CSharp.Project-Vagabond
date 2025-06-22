@@ -241,12 +241,16 @@ namespace ProjectVagabond
                 {
                     restType = RestType.FullRest;
                 }
+
+                Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {args[1].ToLower()} rest.");
+            } else
+            {
+                restType = RestType.ShortRest;
+                Core.CurrentTerminalRenderer.AddOutputToHistory("Queued a short rest.");
             }
 
             Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
             _pendingActions.Add(new PendingAction(restType, restPosition));
-
-            Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {args[1].ToLower()} rest.");
         }
 
         private void QueueMovementInternal(Vector2 direction, string[] args, bool isRunning)
@@ -452,7 +456,21 @@ namespace ProjectVagabond
                             case ActionType.LongRest:
                             case ActionType.FullRest:
                                 _playerStats.Rest(nextAction.ActionRestType.Value);
-                                string restType = nextAction.ActionRestType.Value == RestType.ShortRest ? "short" : "long";
+                                string restType;
+                                switch (nextAction.ActionRestType.Value){
+                                    case RestType.ShortRest:
+                                        restType = "short";
+                                        break;
+                                    case RestType.LongRest:
+                                        restType = "long";
+                                        break;
+                                    case RestType.FullRest:
+                                        restType = "full";
+                                        break;
+                                    default:
+                                        restType = "unknown";
+                                        break;
+                                }
                                 Core.CurrentTerminalRenderer.AddOutputToHistory($"[rest]Completed {restType.ToLower()} rest. Energy is now {_playerStats.CurrentEnergyPoints}/{_playerStats.MaxEnergyPoints}.");
 
                                 if (nextAction.ActionRestType.Value == RestType.ShortRest)

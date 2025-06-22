@@ -173,6 +173,8 @@ namespace ProjectVagabond.Scenes
 
                 if (currentKeyboardState.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
                 {
+                    if (_selectedButtonIndex <= -1) _selectedButtonIndex = 0;
+
                     Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard;
                     var selectedButton = _buttons[_selectedButtonIndex];
                     if (selectedButton.IsHovered)
