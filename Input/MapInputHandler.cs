@@ -29,14 +29,22 @@ namespace ProjectVagabond
             var keyboardState = Keyboard.GetState(); // Get keyboard state for shift-clicks
             Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
 
-            // Update the context menu first, as it might consume input
+            // Store the menu's state before updating it.
+            bool menuWasOpen = _contextMenu.IsOpen;
+
+            // Update the context menu first. It might change its own state (e.g., close itself).
             _contextMenu.Update(_currentMouseState, _previousMouseState, virtualMousePos);
 
-            // If the context menu is closed, clear the right-click marker
-            if (!_contextMenu.IsOpen)
+            if (menuWasOpen)
             {
-                _mapRenderer.RightClickedWorldPos = null;
+                if (!_contextMenu.IsOpen)
+                {
+                    _mapRenderer.RightClickedWorldPos = null;
+                }
+                return;
             }
+
+            _mapRenderer.RightClickedWorldPos = null;
 
             HandleMapInteraction(virtualMousePos, keyboardState);
         }

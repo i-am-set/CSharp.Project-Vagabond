@@ -162,7 +162,7 @@ namespace ProjectVagabond
             string terrainType = mapData.TerrainType;
 
             string upperTerrainType = terrainType.ToUpper();
-            return upperTerrainType != "WATER" && upperTerrainType != "PEAK";
+            return upperTerrainType != "WATER" && upperTerrainType != "PEAKS";
         }
 
         public int GetMovementEnergyCost(PendingAction action)
