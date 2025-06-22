@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -65,7 +65,7 @@ namespace ProjectVagabond.Scenes
                 _selectedIndex = -1;
                 _hoveredIndex = -1;
             }
-            
+
             _previousKeyboardState = Keyboard.GetState();
 
             _currentInputDelay = _inputDelay;
@@ -143,7 +143,7 @@ namespace ProjectVagabond.Scenes
 
             UpdateFramerateControl();
             LayoutUI();
-            
+
             applyButton.IsEnabled = IsDirty();
         }
 
@@ -268,7 +268,7 @@ namespace ProjectVagabond.Scenes
                 new List<Tuple<string, Action>>
                 {
                     Tuple.Create("YES", new Action(() => { ExecuteResetSettings(); _confirmationDialog.Hide(); })),
-                    Tuple.Create("NO", new Action(() => _confirmationDialog.Hide()))
+                    Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide()))
                 }
             );
         }
@@ -307,9 +307,9 @@ namespace ProjectVagabond.Scenes
                     "You have unsaved changes.",
                     new List<Tuple<string, Action>>
                     {
-                        Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide())),
                         Tuple.Create("APPLY", new Action(() => { ExecuteApplySettings(); Core.CurrentSceneManager.ChangeScene(GameSceneState.MainMenu); })),
-                        Tuple.Create("DISCARD", new Action(() => { RevertChanges(); Core.CurrentSceneManager.ChangeScene(GameSceneState.MainMenu); }))
+                        Tuple.Create("DISCARD", new Action(() => { RevertChanges(); Core.CurrentSceneManager.ChangeScene(GameSceneState.MainMenu); })),
+                        Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide()))
                     }
                 );
             }
@@ -368,9 +368,15 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             _hoveredIndex = -1;
 
-            if (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
+            if (currentMouseState.Position != previousMouseState.Position ||
+                (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released))
             {
                 Core.CurrentSceneManager.LastInputDevice = InputDevice.Mouse;
+            }
+
+            if (Core.CurrentSceneManager.LastInputDevice == InputDevice.Mouse)
+            {
+                _selectedIndex = -1;
             }
 
             if (_currentInputDelay > 0) _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
