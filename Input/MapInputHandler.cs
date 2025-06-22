@@ -199,7 +199,21 @@ namespace ProjectVagabond
 
             // Get the screen position of the tile to snap the menu to it
             Vector2? menuScreenPos = _mapRenderer.WorldToScreen(targetPos);
-            Vector2 finalMenuPos = menuScreenPos ?? mousePos; // Use snapped pos, fallback to mouse pos
+            Vector2 finalMenuPos;
+
+            if (menuScreenPos.HasValue)
+            {
+                // Snap to the bottom-right of the grid cell
+                finalMenuPos = new Vector2(
+                    menuScreenPos.Value.X + Global.GRID_CELL_SIZE,
+                    menuScreenPos.Value.Y + Global.GRID_CELL_SIZE
+                );
+            }
+            else
+            {
+                // Fallback to the current mouse position if the tile isn't on screen
+                finalMenuPos = mousePos;
+            }
 
             _contextMenu.Show(finalMenuPos, menuItems);
         }
