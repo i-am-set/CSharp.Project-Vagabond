@@ -137,7 +137,7 @@ namespace ProjectVagabond
                 }
             }
 
-            Core.CurrentTerminalRenderer.AddOutputToHistory($"[dimgray]{totalMinutesToAdd} minutes passed");
+            Core.CurrentTerminalRenderer.AddOutputToHistory($"[dimgray]{GetCommaFormattedTimeFromMinutes(totalMinutesToAdd)} passed");
 
             // Notify listeners that time has changed
             OnTimeChanged?.Invoke();
@@ -219,6 +219,34 @@ namespace ProjectVagabond
                 parts.Add($"Minutes: {minutes}");
     
             return string.Join(" ", parts);
+        }
+
+        /// <summary>
+        /// Converts total minutes into a human-readable string like "1 day, 2 hours, 3 minutes".
+        /// Only includes non-zero components, and handles singular/plural formatting.
+        /// </summary>
+        /// <param name="totalMinutes">Total minutes to convert</param>
+        /// <returns>Formatted string like "1 day, 2 hours, 3 minutes"</returns>
+        public string GetCommaFormattedTimeFromMinutes(int totalMinutes)
+        {
+            if (totalMinutes <= 0)
+                return "0 minutes";
+
+            int days = totalMinutes / (24 * 60);
+            int remainingMinutes = totalMinutes % (24 * 60);
+            int hours = remainingMinutes / 60;
+            int minutes = remainingMinutes % 60;
+
+            var parts = new List<string>();
+
+            if (days > 0)
+                parts.Add($"{days} {(days == 1 ? "day" : "days")}");
+            if (hours > 0)
+                parts.Add($"{hours} {(hours == 1 ? "hour" : "hours")}");
+            if (minutes > 0)
+                parts.Add($"{minutes} {(minutes == 1 ? "minute" : "minutes")}");
+
+            return string.Join(", ", parts);
         }
 
         /// <summary>

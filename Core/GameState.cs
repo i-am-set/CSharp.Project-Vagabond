@@ -514,7 +514,7 @@ namespace ProjectVagabond
                                 }
                                 else if (nextAction.ActionRestType.Value == RestType.FullRest)
                                 {
-                                    Core.CurrentWorldClockManager.PassTime(hours: _playerStats.FullRestDuration);
+                                    Core.CurrentWorldClockManager.PassTime(minutes: _playerStats.FullRestDuration);
                                 }
                                 break;
                         }

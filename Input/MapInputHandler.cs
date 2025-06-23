@@ -152,6 +152,18 @@ namespace ProjectVagabond
                 Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {restTypeName} rest at ({targetPos.X},{targetPos.Y}).");
             };
 
+            // Option: Submit Path
+            menuItems.Add(new ContextMenuItem
+            {
+                Text = "Submit Path",
+                IsVisible = () => pathPending && !_gameState.IsExecutingPath,
+                OnClick = () =>
+                {
+                    _gameState.ToggleExecutingPath(true);
+                    Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
+                }
+            });
+
             // Option: Walk To
             menuItems.Add(new ContextMenuItem
             {

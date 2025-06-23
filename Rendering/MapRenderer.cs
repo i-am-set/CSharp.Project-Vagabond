@@ -120,6 +120,9 @@ namespace ProjectVagabond
             Vector2 timeTextPos = new Vector2(mapStartX + mapWidth - timeTextSize.X - 15, mapStartY - 20);
             _spriteBatch.DrawString(Global.Instance.DefaultFont, timeText, timeTextPos, Global.Instance.TextColor);
 
+            // Draw divider line //
+            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 5, mapWidth, 2), Global.Instance.Palette_White);
+
             // Generate grid elements //
             var gridElements = GenerateMapGridElements(mapStartX, mapStartY);
 

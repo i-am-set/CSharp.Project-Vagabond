@@ -123,6 +123,8 @@ namespace ProjectVagabond
 
             _spriteBatch.DrawString(_defaultFont, "Terminal Output", new Vector2(terminalX, terminalY - 20), Global.Instance.TextColor);
 
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 5, terminalWidth + 10, 2), Global.Instance.Palette_White);
+
             int inputLineY = GetInputLineY();
             int separatorY = GetSeparatorY();
 
