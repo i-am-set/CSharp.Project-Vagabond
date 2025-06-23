@@ -40,35 +40,42 @@ namespace ProjectVagabond
         }
     }
 
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
     public class GameState
     {
-        private Vector2 _playerWorldPos;
+        private Player _player;
         private NoiseMapManager _noiseManager;
-        private PlayerStats _playerStats;
-        private List<PendingAction> _pendingActions = new List<PendingAction>();
         private float _moveTimer = 0f;
         private bool _isExecutingPath = false;
         private int _currentPathIndex = 0;
         private bool _isFreeMoveMode = false;
 
-        public Vector2 PlayerWorldPos => _playerWorldPos;
-        public List<PendingAction> PendingActions => _pendingActions;
+        private List<Entity> _worldEntities = new List<Entity>();
+        private List<Entity> _tetheredEntities = new List<Entity>();
+        private const int TETHER_RANGE = 32;
+
+        public Vector2 PlayerWorldPos => _player.WorldPosition;
+        public List<PendingAction> PendingActions => _player.ActionQueue;
         public bool IsExecutingPath => _isExecutingPath;
         public bool IsFreeMoveMode => _isFreeMoveMode;
         public int CurrentPathIndex => _currentPathIndex;
         public NoiseMapManager NoiseManager => _noiseManager;
-        public PlayerStats PlayerStats => _playerStats;
+        public PlayerStats PlayerStats => _player.Stats;
         public (int finalEnergy, bool possible, int minutesPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public GameState()
         {
-            _playerWorldPos = new Vector2(0, 0);
-
             int masterSeed = RandomNumberGenerator.GetInt32(1, 99999) + Environment.TickCount;
+
+            _player = new Player(new Vector2(0, 0));
+            _worldEntities.Add(_player);
+
             _noiseManager = new NoiseMapManager(masterSeed);
-            _playerStats = new PlayerStats(5, 5, 5, 5, 5);
+
+            UpdateTetheredEntities();
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -87,7 +94,7 @@ namespace ProjectVagabond
             {
                 foreach (var pos in path)
                 {
-                    _pendingActions.Add(new PendingAction(pos, isRunning: false));
+                    _player.ActionQueue.Add(new PendingAction(pos, isRunning: false));
                 }
                 return;
             }
@@ -95,19 +102,19 @@ namespace ProjectVagabond
             foreach (var nextPos in path)// For running, check energy for each step, auto-queuing rests if needed.
             {
                 var nextAction = new PendingAction(nextPos, isRunning: true);
-                var tempQueue = new List<PendingAction>(_pendingActions) { nextAction };
+                var tempQueue = new List<PendingAction>(_player.ActionQueue) { nextAction };
                 var simulationResult = SimulateActionQueueEnergy(tempQueue);
 
                 if (!simulationResult.possible)
                 {
-                    Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
+                    Vector2 restPosition = _player.ActionQueue.Any() ? _player.ActionQueue.Last().Position : _player.WorldPosition;
                     var restAction = new PendingAction(RestType.ShortRest, restPosition);
-                    var tempQueueWithRest = new List<PendingAction>(_pendingActions) { restAction, nextAction };
+                    var tempQueueWithRest = new List<PendingAction>(_player.ActionQueue) { restAction, nextAction };
 
                     if (SimulateActionQueueEnergy(tempQueueWithRest).possible)
                     {
-                        _pendingActions.Add(restAction);
-                        _pendingActions.Add(nextAction);
+                        _player.ActionQueue.Add(restAction);
+                        _player.ActionQueue.Add(nextAction);
                     }
                     else
                     {
@@ -117,14 +124,14 @@ namespace ProjectVagabond
                 }
                 else
                 {
-                    _pendingActions.Add(nextAction);// Enough energy, just add the action
+                    _player.ActionQueue.Add(nextAction);// Enough energy, just add the action
                 }
             }
         }
 
         public void CancelPendingActions()
         {
-            _pendingActions.Clear();
+            _player.ActionQueue.Clear();
         }
 
         public void ToggleExecutingPath(bool toggle)
@@ -191,8 +198,8 @@ namespace ProjectVagabond
 
             timePassed += actionType switch
             {
-                ActionType.WalkMove => (int)Math.Ceiling(6 / _playerStats.WalkSpeed),
-                ActionType.RunMove => (int)Math.Ceiling(6 / _playerStats.RunSpeed),
+                ActionType.WalkMove => (int)Math.Ceiling(6 / _player.Stats.WalkSpeed),
+                ActionType.RunMove => (int)Math.Ceiling(6 / _player.Stats.RunSpeed),
                 _ => timePassed
             };
 
@@ -211,9 +218,9 @@ namespace ProjectVagabond
 
         public (int finalEnergy, bool possible, int minutesPassed) SimulateActionQueueEnergy(List<PendingAction> customQueue = null)
         {
-            var queueToSimulate = customQueue ?? _pendingActions;
-            int finalEnergy = _playerStats.CurrentEnergyPoints;
-            int maxEnergy = _playerStats.MaxEnergyPoints;
+            var queueToSimulate = customQueue ?? _player.ActionQueue;
+            int finalEnergy = _player.Stats.CurrentEnergyPoints;
+            int maxEnergy = _player.Stats.MaxEnergyPoints;
             int minutesPassed = 0;
 
             foreach (var action in queueToSimulate)
@@ -231,22 +238,22 @@ namespace ProjectVagabond
                         finalEnergy -= cost;
                         break;
                     case ActionType.ShortRest:
-                        finalEnergy += _playerStats.ShortRestEnergyRestored;
+                        finalEnergy += _player.Stats.ShortRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
 
-                        minutesPassed += _playerStats.ShortRestDuration;
+                        minutesPassed += _player.Stats.ShortRestDuration;
                         break;
                     case ActionType.LongRest:
-                        finalEnergy += _playerStats.LongRestEnergyRestored;
+                        finalEnergy += _player.Stats.LongRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
 
-                        minutesPassed += _playerStats.LongRestDuration;
+                        minutesPassed += _player.Stats.LongRestDuration;
                         break;
                     case ActionType.FullRest:
-                        finalEnergy += _playerStats.FullRestEnergyRestored;
+                        finalEnergy += _player.Stats.FullRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
 
-                        minutesPassed += _playerStats.FullRestDuration;
+                        minutesPassed += _player.Stats.FullRestDuration;
                         break;
                 }
             }
@@ -285,8 +292,8 @@ namespace ProjectVagabond
                 Core.CurrentTerminalRenderer.AddOutputToHistory("Queued a short rest.");
             }
 
-            Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
-            _pendingActions.Add(new PendingAction(restType, restPosition));
+            Vector2 restPosition = _player.ActionQueue.Any() ? _player.ActionQueue.Last().Position : _player.WorldPosition;
+            _player.ActionQueue.Add(new PendingAction(restType, restPosition));
         }
 
         private void QueueMovementInternal(Vector2 direction, string[] args, bool isRunning)
@@ -306,12 +313,12 @@ namespace ProjectVagabond
             Vector2 oppositeDirection = -direction;
             int removedSteps = 0;
 
-            while (_pendingActions.Count > 0 && removedSteps < count)
+            while (_player.ActionQueue.Count > 0 && removedSteps < count)
             {
                 int lastMoveIndex = -1;
-                for (int i = _pendingActions.Count - 1; i >= 0; i--)
+                for (int i = _player.ActionQueue.Count - 1; i >= 0; i--)
                 {
-                    var action = _pendingActions[i];
+                    var action = _player.ActionQueue[i];
                     if (action.Type == ActionType.WalkMove || action.Type == ActionType.RunMove)
                     {
                         lastMoveIndex = i;
@@ -324,16 +331,16 @@ namespace ProjectVagabond
                     break;
                 }
 
-                PendingAction lastMoveAction = _pendingActions[lastMoveIndex];
+                PendingAction lastMoveAction = _player.ActionQueue[lastMoveIndex];
 
-                Vector2 prevPos = (lastMoveIndex > 0) ? _pendingActions[lastMoveIndex - 1].Position : _playerWorldPos;
+                Vector2 prevPos = (lastMoveIndex > 0) ? _player.ActionQueue[lastMoveIndex - 1].Position : _player.WorldPosition;
 
                 Vector2 lastDirection = lastMoveAction.Position - prevPos;
 
                 if (lastDirection == oppositeDirection)
                 {
-                    int actionsToRemoveCount = _pendingActions.Count - lastMoveIndex;
-                    _pendingActions.RemoveRange(lastMoveIndex, actionsToRemoveCount);
+                    int actionsToRemoveCount = _player.ActionQueue.Count - lastMoveIndex;
+                    _player.ActionQueue.RemoveRange(lastMoveIndex, actionsToRemoveCount);
                     removedSteps++;
                 }
                 else
@@ -345,7 +352,7 @@ namespace ProjectVagabond
             int remainingSteps = count - removedSteps;
             if (remainingSteps > 0)
             {
-                Vector2 currentPos = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
+                Vector2 currentPos = _player.ActionQueue.Any() ? _player.ActionQueue.Last().Position : _player.WorldPosition;
                 int validSteps = 0;
 
                 for (int i = 0; i < remainingSteps; i++)
@@ -360,7 +367,7 @@ namespace ProjectVagabond
                     }
 
                     var nextAction = new PendingAction(nextPos, isRunning);
-                    var tempQueue = new List<PendingAction>(_pendingActions) { nextAction };
+                    var tempQueue = new List<PendingAction>(_player.ActionQueue) { nextAction };
                     var simulationResult = SimulateActionQueueEnergy(tempQueue);
 
                     if (!simulationResult.possible)
@@ -368,15 +375,15 @@ namespace ProjectVagabond
                         if (_isFreeMoveMode)
                         {
                             Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Not enough energy. Auto-queuing a short rest.");
-                            Vector2 restPosition = _pendingActions.Any() ? _pendingActions.Last().Position : _playerWorldPos;
+                            Vector2 restPosition = _player.ActionQueue.Any() ? _player.ActionQueue.Last().Position : _player.WorldPosition;
 
-                            var tempQueueWithRest = new List<PendingAction>(_pendingActions);
+                            var tempQueueWithRest = new List<PendingAction>(_player.ActionQueue);
                             tempQueueWithRest.Add(new PendingAction(RestType.ShortRest, restPosition));
                             tempQueueWithRest.Add(nextAction);
 
                             if (SimulateActionQueueEnergy(tempQueueWithRest).possible)
                             {
-                                _pendingActions.Add(new PendingAction(RestType.ShortRest, restPosition));
+                                _player.ActionQueue.Add(new PendingAction(RestType.ShortRest, restPosition));
                             }
                             else
                             {
@@ -393,7 +400,7 @@ namespace ProjectVagabond
                     }
 
                     currentPos = nextPos;
-                    _pendingActions.Add(nextAction);
+                    _player.ActionQueue.Add(nextAction);
                     validSteps++;
                 }
 
@@ -442,95 +449,129 @@ namespace ProjectVagabond
 
         public void UpdateMovement(GameTime gameTime)
         {
-            if (_isExecutingPath && _pendingActions.Count > 0)
+            if (_isExecutingPath && _player.ActionQueue.Count > 0)
             {
                 _moveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
                 if (_moveTimer >= Global.MOVE_DELAY_SECONDS)
                 {
-                    if (_currentPathIndex < _pendingActions.Count)
+                    if (_currentPathIndex < _player.ActionQueue.Count)
                     {
-                        PendingAction nextAction = _pendingActions[_currentPathIndex];
+                        PendingAction nextAction = _player.ActionQueue[_currentPathIndex];
 
+                        int minutesPassed = 0;
                         switch (nextAction.Type)
                         {
                             case ActionType.WalkMove:
                             case ActionType.RunMove:
-                                Vector2 nextPosition = nextAction.Position;
-                                var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
-                                if (!IsPositionPassable(nextPosition))
-                                {
-                                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot move here... terrain is impassable! <{mapData.TerrainType.ToLower()}>  {(int)nextPosition.X}, {(int)nextPosition.Y}");
-                                    CancelPathExecution();
-                                    return;
-                                }
-
-                                int energyCost = GetMovementEnergyCost(nextAction);
-                                if (!_playerStats.CanExertEnergy(energyCost))
-                                {
-                                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to continue! Need {energyCost} for {mapData.TerrainType.ToLower()}, have {_playerStats.CurrentEnergyPoints}");
-                                    CancelPathExecution();
-                                    return;
-                                }
-
-                                int minutesPassed = GetMinutesPassedDuringMovement(nextAction.Type, mapData.TerrainType);
-                                _playerWorldPos = nextPosition;
-                                _playerStats.ExertEnergy(energyCost);
-                                var currentMapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
-                                string moveType = nextAction.Type == ActionType.RunMove ? "Ran" : "Walked";
-                                Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through[gold] {currentMapData.TerrainType.ToLower()}[khaki].[/o] <{(int)nextPosition.X}, {(int)nextPosition.Y}>");
-                                Core.CurrentWorldClockManager.PassTime(minutes: minutesPassed);
+                                var mapData = GetMapDataAt((int)nextAction.Position.X, (int)nextAction.Position.Y);
+                                minutesPassed = GetMinutesPassedDuringMovement(nextAction.Type, mapData.TerrainType);
                                 break;
-
                             case ActionType.ShortRest:
+                                minutesPassed = _player.Stats.ShortRestDuration;
+                                break;
                             case ActionType.LongRest:
+                                minutesPassed = _player.Stats.LongRestDuration;
+                                break;
                             case ActionType.FullRest:
-                                _playerStats.Rest(nextAction.ActionRestType.Value);
-                                string restType;
-                                switch (nextAction.ActionRestType.Value)
-                                {
-                                    case RestType.ShortRest:
-                                        restType = "short";
-                                        break;
-                                    case RestType.LongRest:
-                                        restType = "long";
-                                        break;
-                                    case RestType.FullRest:
-                                        restType = "full";
-                                        break;
-                                    default:
-                                        restType = "unknown";
-                                        break;
-                                }
-                                Core.CurrentTerminalRenderer.AddOutputToHistory($"[rest]Completed {restType.ToLower()} rest. Energy is now {_playerStats.CurrentEnergyPoints}/{_playerStats.MaxEnergyPoints}.");
-
-                                if (nextAction.ActionRestType.Value == RestType.ShortRest)
-                                {
-                                    Core.CurrentWorldClockManager.PassTime(minutes: _playerStats.ShortRestDuration);
-                                }
-                                else if (nextAction.ActionRestType.Value == RestType.LongRest)
-                                {
-                                    Core.CurrentWorldClockManager.PassTime(minutes: _playerStats.LongRestDuration);
-                                }
-                                else if (nextAction.ActionRestType.Value == RestType.FullRest)
-                                {
-                                    Core.CurrentWorldClockManager.PassTime(minutes: _playerStats.FullRestDuration);
-                                }
+                                minutesPassed = _player.Stats.FullRestDuration;
                                 break;
                         }
 
-                        _currentPathIndex++;
-                        _moveTimer = 0f;
+                        bool success = SimulateWorldTick(nextAction, minutesPassed);
 
-                        if (_currentPathIndex >= _pendingActions.Count)
+                        if (success)
                         {
-                            _isExecutingPath = false;
-                            _pendingActions.Clear();
-                            _currentPathIndex = 0;
-                            ToggleExecutingPath(false);
-                            Core.CurrentTerminalRenderer.AddOutputToHistory("Action queue completed.");
+                            _currentPathIndex++;
+                            _moveTimer = 0f;
+
+                            if (_currentPathIndex >= _player.ActionQueue.Count)
+                            {
+                                _isExecutingPath = false;
+                                _player.ActionQueue.Clear();
+                                _currentPathIndex = 0;
+                                ToggleExecutingPath(false);
+                                Core.CurrentTerminalRenderer.AddOutputToHistory("Action queue completed.");
+                            }
+                        }
+                        else
+                        {
+                            CancelPathExecution();
                         }
                     }
+                }
+            }
+        }
+
+        private bool SimulateWorldTick(PendingAction playerAction, int minutesPassed)
+        {
+            // Simulate Player Action //
+            switch (playerAction.Type)
+            {
+                case ActionType.WalkMove:
+                case ActionType.RunMove:
+                    Vector2 nextPosition = playerAction.Position;
+                    var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
+                    if (!IsPositionPassable(nextPosition))
+                    {
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot move here... terrain is impassable! <{mapData.TerrainType.ToLower()}>  {(int)nextPosition.X}, {(int)nextPosition.Y}");
+                        return false;
+                    }
+
+                    int energyCost = GetMovementEnergyCost(playerAction);
+                    if (!_player.Stats.CanExertEnergy(energyCost))
+                    {
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to continue! Need {energyCost} for {mapData.TerrainType.ToLower()}, have {_player.Stats.CurrentEnergyPoints}");
+                        return false;
+                    }
+
+                    _player.SetPosition(nextPosition);
+                    _player.Stats.ExertEnergy(energyCost);
+                    string moveType = playerAction.Type == ActionType.RunMove ? "Ran" : "Walked";
+                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through[gold] {mapData.TerrainType.ToLower()}[khaki].[/o] <{(int)nextPosition.X}, {(int)nextPosition.Y}>");
+                    break;
+
+                case ActionType.ShortRest:
+                case ActionType.LongRest:
+                case ActionType.FullRest:
+                    _player.Stats.Rest(playerAction.ActionRestType.Value);
+                    string restType = playerAction.ActionRestType.Value.ToString().Replace("Rest", "");
+                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[rest]Completed {restType.ToLower()} rest. Energy is now {_player.Stats.CurrentEnergyPoints}/{_player.Stats.MaxEnergyPoints}.");
+                    break;
+            }
+
+            // Simulate Tethered Entities Actions //
+            foreach (var entity in _tetheredEntities)
+            {
+                entity.Update(minutesPassed, this);
+            }
+
+            // Advance World Time //
+            Core.CurrentWorldClockManager.PassTime(minutes: minutesPassed);
+
+            // Update Tethered List //
+            UpdateTetheredEntities();
+
+            return true;
+        }
+
+        private void UpdateTetheredEntities()
+        {
+            _tetheredEntities.Clear();
+            var playerPos = _player.WorldPosition;
+            var tetherBounds = new Rectangle(
+                (int)playerPos.X - TETHER_RANGE,
+                (int)playerPos.Y - TETHER_RANGE,
+                TETHER_RANGE * 2,
+                TETHER_RANGE * 2);
+
+            foreach (var entity in _worldEntities)
+            {
+                if (entity == _player) continue;
+
+                if (tetherBounds.Contains(entity.WorldPosition))
+                {
+                    _tetheredEntities.Add(entity);
                 }
             }
         }
@@ -540,7 +581,7 @@ namespace ProjectVagabond
             if (_isExecutingPath)
             {
                 _isExecutingPath = false;
-                _pendingActions.Clear();
+                _player.ActionQueue.Clear();
                 _currentPathIndex = 0;
                 ToggleExecutingPath(false);
                 ToggleIsFreeMoveMode(false);
