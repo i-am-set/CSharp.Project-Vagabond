@@ -12,7 +12,10 @@ using System;
 // TODO: Ctrl-Z undo previous path queued
 // TODO: Make resting take random time (full rest between 6 and 11 hours)
 // TODO: Wait command: (wait 3 hours 2 minutes)
-// TODO: Make full rest (or anything saying how many minutes passed) to be translated to days/hours if needed
+// TODO: Brainstorm a way to add POIs (think rust, darkwood, the long dark, tarkov)
+// TODO: Impliment combat logic into combat scene
+// TODO: Impliment dialogue logic into dialogue scene
+
 
 namespace ProjectVagabond
 {
