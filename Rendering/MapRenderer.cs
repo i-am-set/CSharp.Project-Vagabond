@@ -140,7 +140,7 @@ namespace ProjectVagabond
                 {
                     Rectangle indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, Global.GRID_CELL_SIZE, Global.GRID_CELL_SIZE);
                     Texture2D texture = Core.CurrentSpriteManager.MapHoverMarkerSprite;
-                    _spriteBatch.Draw(texture, indicatorRect, Global.Instance.Palette_Red * 0.5f);
+                    _spriteBatch.Draw(texture, indicatorRect, Color.Lime * 0.5f);
                 }
             }
 
@@ -152,7 +152,7 @@ namespace ProjectVagabond
                 {
                     Rectangle markerRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, Global.GRID_CELL_SIZE, Global.GRID_CELL_SIZE);
                     Texture2D texture = Core.CurrentSpriteManager.MapHoverMarkerSprite;
-                    _spriteBatch.Draw(texture, markerRect, Color.LimeGreen * 0.6f);
+                    _spriteBatch.Draw(texture, markerRect, Color.Cyan * 0.6f);
                 }
             }
 

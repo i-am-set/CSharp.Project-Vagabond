@@ -1,7 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Scenes; // Add this using statement
+using ProjectVagabond.Scenes;
 using System;
 
 // TODO: generate different noise maps to generate different map things
