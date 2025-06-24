@@ -129,7 +129,7 @@ namespace ProjectVagabond
 
             _spriteManager.LoadSpriteContent();
 
-            _sceneManager.ChangeScene(GameSceneState.MainMenu);
+            _sceneManager.ChangeScene(GameSceneState.MainMenu, fade_duration: 0.5f);
         }
 
         protected override void Update(GameTime gameTime)
