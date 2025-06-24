@@ -1,6 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Scenes;
 using System.Collections.Generic;
+using MonoGame.Extended.BitmapFonts;
 
 namespace ProjectVagabond
 {
@@ -55,6 +57,26 @@ namespace ProjectVagabond
         public void DrawOverlay(GameTime gameTime)
         {
             _currentScene?.DrawOverlay(gameTime);
+
+            var spriteBatch = Global.Instance.CurrentSpriteBatch;
+            var font = Global.Instance.DefaultFont;
+            var graphics = Global.Instance.CurrentGraphics;
+
+            if (font == null || graphics == null || spriteBatch == null)
+            {
+                return;
+            }
+
+            string versionText = $"v{Global.GAME_VERSION}";
+            float padding = 5f;
+
+            var screenHeight = graphics.PreferredBackBufferHeight;
+
+            var versionPosition = new Vector2(padding, screenHeight - font.LineHeight - padding);
+
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            spriteBatch.DrawString(font, versionText, versionPosition, Global.Instance.Palette_Gray);
+            spriteBatch.End();
         }
     }
 }

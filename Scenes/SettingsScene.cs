@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -538,11 +538,6 @@ namespace ProjectVagabond.Scenes
             {
                 _confirmationDialog.DrawOverlay(gameTime);
             }
-        }
-
-        public override void DrawOverlay(GameTime gameTime)
-        {
-            // This scene doesn't have any top-level overlays, but the method is implemented for consistency with the base GameScene.
         }
 
         private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
