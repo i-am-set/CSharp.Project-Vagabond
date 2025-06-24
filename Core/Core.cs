@@ -13,11 +13,12 @@ using System;
 // TODO: Make resting take random time (full rest between 6 and 11 hours)
 // TODO: Wait command: (wait 3 hours 2 minutes)
 // TODO: Brainstorm a way to add POIs (think rust, darkwood, the long dark, tarkov)
-// TODO: Impliment combat logic into combat scene
-// TODO: Impliment dialogue logic into dialogue scene
 // TODO: Add a way to save and load the game state
 // TODO: Make it so the terminal instances otuput from the bottom of the terminal and moves up
 // TODO: Make clock ui element to make time passing more obvious
+// TODO: Impliment dialogue logic into dialogue scene
+// TODO: Impliment combat logic into combat scene
+// TODO: Finish entity implimentation
 
 
 namespace ProjectVagabond
