@@ -51,5 +51,10 @@ namespace ProjectVagabond
         {
             _currentScene?.DrawUnderlay(gameTime);
         }
+
+        public void DrawOverlay(GameTime gameTime)
+        {
+            _currentScene?.DrawOverlay(gameTime);
+        }
     }
 }

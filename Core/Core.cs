@@ -166,6 +166,8 @@ namespace ProjectVagabond
             Global.Instance.CurrentSpriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
             Global.Instance.CurrentSpriteBatch.End();
 
+            _sceneManager.DrawOverlay(gameTime);
+
             base.Draw(gameTime);
         }
 

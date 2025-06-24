@@ -147,5 +147,7 @@ namespace ProjectVagabond.Scenes
                 keyboardNavigatedLastFrame = true;
             }
         }
+
+        public virtual void DrawOverlay(GameTime gameTime) { }
     }
 }

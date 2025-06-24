@@ -540,6 +540,11 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        public override void DrawOverlay(GameTime gameTime)
+        {
+            // This scene doesn't have any top-level overlays, but the method is implemented for consistency with the base GameScene.
+        }
+
         private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
         {
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);

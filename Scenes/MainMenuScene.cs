@@ -238,20 +238,30 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            string versionText = $"v{Global.GAME_VERSION}";
-            float padding = 5f;
-            var versionPosition = new Vector2(
-                padding,
-                Global.VIRTUAL_HEIGHT - font.LineHeight - padding
-            );
-            spriteBatch.DrawString(font, versionText, versionPosition, Global.Instance.Palette_Gray, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
-
             spriteBatch.End();
 
             if (_confirmationDialog.IsActive)
             {
                 _confirmationDialog.Draw(gameTime);
             }
+        }
+
+        public override void DrawOverlay(GameTime gameTime)
+        {
+            var spriteBatch = Global.Instance.CurrentSpriteBatch;
+            var font = Global.Instance.DefaultFont;
+            var graphics = Global.Instance.CurrentGraphics;
+
+            string versionText = $"v{Global.GAME_VERSION}";
+            float padding = 5f;
+
+            var screenHeight = graphics.PreferredBackBufferHeight;
+
+            var versionPosition = new Vector2(padding, screenHeight - font.LineHeight - padding);
+
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            spriteBatch.DrawString(font, versionText, versionPosition, Global.Instance.Palette_Gray);
+            spriteBatch.End();
         }
 
         public override void DrawUnderlay(GameTime gameTime)
