@@ -59,8 +59,8 @@ namespace ProjectVagabond.Scenes
         /// Called every time the scene becomes the active scene.
         /// Use for resetting state.
         /// </summary>
-        public virtual void Enter() 
-        {   
+        public virtual void Enter()
+        {
             previousMouseState = Mouse.GetState();
             _inputBlockTimer = INPUT_BLOCK_DURATION;
 
@@ -110,6 +110,11 @@ namespace ProjectVagabond.Scenes
         /// Called every frame to draw the scene.
         /// </summary>
         public abstract void Draw(GameTime gameTime);
+
+        /// <summary>
+        /// Called every frame to draw full-screen effects underneath the main scene content.
+        /// </summary>
+        public virtual void DrawUnderlay(GameTime gameTime) { }
 
         public void ResetInputBlockTimer()
         {

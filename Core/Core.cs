@@ -151,12 +151,14 @@ namespace ProjectVagabond
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.SetRenderTarget(_renderTarget);
-            GraphicsDevice.Clear(Global.Instance.GameBg);
+            GraphicsDevice.Clear(Color.Transparent);
 
             _sceneManager.Draw(gameTime);
 
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(Global.Instance.GameBg);
+
+            _sceneManager.DrawUnderlay(gameTime);
 
             var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
 

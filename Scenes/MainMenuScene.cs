@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -13,7 +13,7 @@ namespace ProjectVagabond.Scenes
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = -1;
         private KeyboardState _previousKeyboardState;
-        
+
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
 
@@ -58,7 +58,7 @@ namespace ProjectVagabond.Scenes
             base.Enter();
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
-    
+
             if (this.LastUsedInputForNav == InputDevice.Keyboard && !firstTimeOpened)
             {
                 _selectedButtonIndex = 0;
@@ -69,7 +69,7 @@ namespace ProjectVagabond.Scenes
                 {
                     Point screenPos = Core.TransformVirtualToScreen(firstButtonBounds.Value.Center);
                     var fakeMouseState = new MouseState(screenPos.X, screenPos.Y, 0, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released, ButtonState.Released);
-            
+
                     foreach (var button in _buttons)
                     {
                         button.UpdateHoverState(fakeMouseState);
@@ -145,8 +145,8 @@ namespace ProjectVagabond.Scenes
                     Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard;
                     var selectedButton = _buttons[_selectedButtonIndex];
                     if (selectedButton.IsHovered)
-                        {
-                            if (upPressed)
+                    {
+                        if (upPressed)
                         {
                             _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
                         }
@@ -157,10 +157,10 @@ namespace ProjectVagabond.Scenes
 
                         Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
                         Mouse.SetPosition(screenPos.X, screenPos.Y);
-                    
+
                         Core.Instance.IsMouseVisible = false;
                         keyboardNavigatedLastFrame = true;
-                        }
+                    }
                     else
                     {
                         Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
@@ -245,12 +245,20 @@ namespace ProjectVagabond.Scenes
                 Global.VIRTUAL_HEIGHT - font.LineHeight - padding
             );
             spriteBatch.DrawString(font, versionText, versionPosition, Global.Instance.Palette_Gray, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
-            
+
             spriteBatch.End();
 
             if (_confirmationDialog.IsActive)
             {
                 _confirmationDialog.Draw(gameTime);
+            }
+        }
+
+        public override void DrawUnderlay(GameTime gameTime)
+        {
+            if (_confirmationDialog.IsActive)
+            {
+                _confirmationDialog.DrawOverlay(gameTime);
             }
         }
 

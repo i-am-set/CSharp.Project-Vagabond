@@ -532,6 +532,14 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        public override void DrawUnderlay(GameTime gameTime)
+        {
+            if (_confirmationDialog.IsActive)
+            {
+                _confirmationDialog.DrawOverlay(gameTime);
+            }
+        }
+
         private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
         {
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);

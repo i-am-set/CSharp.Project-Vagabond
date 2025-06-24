@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -19,7 +19,6 @@ namespace ProjectVagabond.UI
         private int _selectedButtonIndex;
 
         private Rectangle _dialogBounds;
-        private readonly Rectangle _overlayBounds;
 
         private KeyboardState _previousKeyboardState;
         private MouseState _previousMouseState;
@@ -37,7 +36,6 @@ namespace ProjectVagabond.UI
             _currentGameScene = currentGameScene;
             _buttons = new List<Button>();
             _details = new List<string>();
-            _overlayBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
         }
 
         public void Show(string prompt, List<Tuple<string, Action>> buttonActions, List<string> details = null)
@@ -236,7 +234,7 @@ namespace ProjectVagabond.UI
                     else
                     {
                         _selectedButtonIndex = 0;
-                        
+
                         Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
                         Mouse.SetPosition(screenPos.X, screenPos.Y);
 
@@ -260,7 +258,6 @@ namespace ProjectVagabond.UI
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-            spriteBatch.Draw(pixel, _overlayBounds, Color.Black * 0.7f);
             spriteBatch.Draw(pixel, _dialogBounds, Global.Instance.Palette_DarkGray);
             DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, Global.Instance.Palette_LightGray);
 
@@ -284,7 +281,7 @@ namespace ProjectVagabond.UI
                 foreach (var detail in _details)
                 {
                     var wrappedDetail = WrapText(font, detail, _dialogBounds.Width - 60);
-                    foreach(var line in wrappedDetail)
+                    foreach (var line in wrappedDetail)
                     {
                         spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.X + 30, currentY), Global.Instance.Palette_White);
                         currentY += font.LineHeight + Global.APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING;
@@ -318,6 +315,20 @@ namespace ProjectVagabond.UI
             spriteBatch.End();
         }
 
+        public void DrawOverlay(GameTime gameTime)
+        {
+            if (!IsActive) return;
+
+            var spriteBatch = Global.Instance.CurrentSpriteBatch;
+            var graphicsDevice = Global.Instance.CurrentGraphics.GraphicsDevice;
+            var pixel = Core.Pixel;
+            var screenBounds = new Rectangle(0, 0, graphicsDevice.PresentationParameters.BackBufferWidth, graphicsDevice.PresentationParameters.BackBufferHeight);
+
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            spriteBatch.Draw(pixel, screenBounds, Color.Black * 0.7f);
+            spriteBatch.End();
+        }
+
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
 
         private static void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
@@ -327,7 +338,7 @@ namespace ProjectVagabond.UI
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
         }
-        
+
         private (string text, Color? color) ParseButtonTextAndColor(string taggedText)
         {
             if (taggedText.StartsWith("[") && taggedText.Contains("]"))
