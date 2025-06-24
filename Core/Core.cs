@@ -20,7 +20,6 @@ using System;
 // TODO: Impliment combat logic into combat scene
 // TODO: Finish entity implimentation
 
-
 namespace ProjectVagabond
 {
     public class Core : Game
