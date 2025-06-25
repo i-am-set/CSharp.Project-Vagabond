@@ -109,6 +109,31 @@ namespace ProjectVagabond
 
             if (!_gameState.IsPositionPassable(targetPos)) return;
 
+            bool isAltHeld = keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt);
+
+            if (!isAltHeld)
+            {
+                int existingIndex = -1;
+                for (int i = 0; i < _originalPendingActionCount; i++)
+                {
+                    if (i < _gameState.PendingActions.Count && _gameState.PendingActions[i].Position == targetPos)
+                    {
+                        existingIndex = i;
+                        break;
+                    }
+                }
+
+                if (existingIndex != -1)
+                {
+                    int newCount = existingIndex + 1;
+                    if (_gameState.PendingActions.Count > newCount)
+                    {
+                        _gameState.PendingActions.RemoveRange(newCount, _gameState.PendingActions.Count - newCount);
+                    }
+                    _originalPendingActionCount = _gameState.PendingActions.Count;
+                }
+            }
+
             Vector2 startPos = (_originalPendingActionCount > 0)
                 ? _gameState.PendingActions[_originalPendingActionCount - 1].Position
                 : _gameState.PlayerWorldPos;
