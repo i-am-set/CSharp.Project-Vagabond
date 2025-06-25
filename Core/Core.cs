@@ -19,6 +19,7 @@ using System;
 // TODO: Impliment combat logic into combat scene
 // TODO: Finish entity implimentation
 // TODO: Make clock ui to show time passing
+// TODO: Convert display to have larger map, smaller terminal, with the terminal input being hidden unless the player presses ~ to "open console"
 
 namespace ProjectVagabond
 {

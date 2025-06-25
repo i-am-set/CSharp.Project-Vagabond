@@ -18,6 +18,10 @@ namespace ProjectVagabond
         private bool _isDraggingPath = false;
         private int _originalPendingActionCount = 0;
 
+        private float _pathUpdateTimer = 0f;
+        private const float PATH_PREVIEW_UPDATE_DELAY = 0.05f;
+        private Vector2? _lastPathTargetPosition = null;
+
         public MapInputHandler(ContextMenu contextMenu)
         {
             _contextMenu = contextMenu;
@@ -29,6 +33,8 @@ namespace ProjectVagabond
             _currentMouseState = Mouse.GetState();
             var keyboardState = Keyboard.GetState();
             Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
+
+            _pathUpdateTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             bool menuWasOpen = _contextMenu.IsOpen;
 
@@ -66,10 +72,17 @@ namespace ProjectVagabond
                     _isDraggingPath = true;
                     _originalPendingActionCount = _gameState.PendingActions.Count;
                     HandlePathUpdate(targetPos, keyboardState);
+                    _pathUpdateTimer = 0f;
+                    _lastPathTargetPosition = targetPos;
                 }
                 else if (leftClickHeld && _isDraggingPath)
                 {
-                    HandlePathUpdate(targetPos, keyboardState);
+                    if (targetPos != _lastPathTargetPosition && _pathUpdateTimer >= PATH_PREVIEW_UPDATE_DELAY)
+                    {
+                        HandlePathUpdate(targetPos, keyboardState);
+                        _pathUpdateTimer = 0f;
+                        _lastPathTargetPosition = targetPos;
+                    }
                 }
 
                 if (rightClickPressed)
@@ -81,6 +94,7 @@ namespace ProjectVagabond
             if (leftClickReleased)
             {
                 _isDraggingPath = false;
+                _lastPathTargetPosition = null;
             }
         }
 
@@ -108,7 +122,11 @@ namespace ProjectVagabond
                 return;
             }
 
-            var path = Pathfinder.FindPath(startPos, targetPos, _gameState);
+            bool isRunning = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
+            bool isCtrlHeld = keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl);
+            var mode = isCtrlHeld ? PathfindingMode.Moves : PathfindingMode.Time;
+
+            var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning, mode);
 
             if (_gameState.PendingActions.Count > _originalPendingActionCount)
             {
@@ -117,7 +135,6 @@ namespace ProjectVagabond
 
             if (path != null)
             {
-                bool isRunning = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
                 _gameState.AppendPath(path, isRunning: isRunning);
             }
         }
@@ -135,7 +152,7 @@ namespace ProjectVagabond
 
                 if (startPos != targetPos)
                 {
-                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState);
+                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time);
                     if (path != null)
                     {
                         _gameState.AppendPath(path, isRunning: false);
@@ -172,7 +189,7 @@ namespace ProjectVagabond
                 OnClick = () =>
                 {
                     var startPos = pathPending ? _gameState.PendingActions.Last().Position : _gameState.PlayerWorldPos;
-                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState);
+                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time);
                     if (path != null) _gameState.AppendPath(path, isRunning: false);
                 }
             });
@@ -185,7 +202,7 @@ namespace ProjectVagabond
                 OnClick = () =>
                 {
                     var startPos = pathPending ? _gameState.PendingActions.Last().Position : _gameState.PlayerWorldPos;
-                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState);
+                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: true, PathfindingMode.Time);
                     if (path != null) _gameState.AppendPath(path, isRunning: true);
                 }
             });
@@ -197,7 +214,7 @@ namespace ProjectVagabond
                 IsVisible = () => isPassable && !isPlayerPos && pathPending,
                 OnClick = () =>
                 {
-                    var path = Pathfinder.FindPath(_gameState.PlayerWorldPos, targetPos, _gameState);
+                    var path = Pathfinder.FindPath(_gameState.PlayerWorldPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time);
                     if (path != null) _gameState.QueueNewPath(path, isRunning: false);
                 }
             });
@@ -209,7 +226,7 @@ namespace ProjectVagabond
             //    IsVisible = () => isPassable && !isPlayerPos && pathPending,
             //    OnClick = () =>
             //    {
-            //        var path = Pathfinder.FindPath(_gameState.PlayerWorldPos, targetPos, _gameState);
+            //        var path = Pathfinder.FindPath(_gameState.PlayerWorldPos, targetPos, _gameState, isRunning: true, PathfindingMode.Time);
             //        if (path != null) _gameState.QueueNewPath(path, isRunning: true);
             //    }
             //});

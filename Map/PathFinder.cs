@@ -6,6 +6,12 @@ using System.Linq;
 
 namespace ProjectVagabond
 {
+    public enum PathfindingMode
+    {
+        Time, // Prioritizes the path that takes the least amount of in-game time
+        Moves // Prioritizes the path with the fewest number of tiles
+    }
+
     public class PathfinderNode
     {
         public Vector2 Position { get; }
@@ -22,7 +28,7 @@ namespace ProjectVagabond
 
     public static class Pathfinder
     {
-        public static List<Vector2> FindPath(Vector2 start, Vector2 end, GameState gameState)
+        public static List<Vector2> FindPath(Vector2 start, Vector2 end, GameState gameState, bool isRunning, PathfindingMode mode)
         {
             var startNode = new PathfinderNode(start);
             var endNode = new PathfinderNode(end);
@@ -58,7 +64,19 @@ namespace ProjectVagabond
                         }
                     }
 
-                    int moveCost = gameState.GetMovementEnergyCost(new PendingAction(neighborPos, isRunning: true));
+                    float moveCost;
+                    if (mode == PathfindingMode.Moves)
+                    {
+                        moveCost = 1;
+                    }
+                    else
+                    {
+                        var mapData = gameState.GetMapDataAt((int)neighborPos.X, (int)neighborPos.Y);
+                        Vector2 moveDirection = neighborPos - currentNode.Position;
+                        var actionType = isRunning ? ActionType.RunMove : ActionType.WalkMove;
+                        moveCost = gameState.GetSecondsPassedDuringMovement(actionType, mapData.TerrainType, moveDirection);
+                    }
+
                     float newGCost = currentNode.CostFromStartPoint + moveCost;
 
                     var neighborNode = openList.FirstOrDefault(n => n.Position == neighborPos);
