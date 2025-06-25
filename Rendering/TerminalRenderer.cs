@@ -130,24 +130,35 @@ namespace ProjectVagabond
 
             int maxVisibleLines = GetMaxVisibleLines();
             int totalLines = _wrappedHistory.Count;
-            int startIndex = Math.Max(0, totalLines - maxVisibleLines - _scrollOffset);
-            int endIndex = Math.Min(totalLines, startIndex + maxVisibleLines);
 
-            for (int i = startIndex; i < endIndex; i++)
+            int lastHistoryIndexToDraw = totalLines - 1 - _scrollOffset;
+
+            float lastScreenLineY = terminalY + (maxVisibleLines - 1) * Global.TERMINAL_LINE_SPACING;
+
+            for (int i = 0; i < maxVisibleLines; i++)
             {
-                int lineIndex = i - startIndex;
-                float x = terminalX;
-                float y = terminalY + lineIndex * Global.TERMINAL_LINE_SPACING;
+                int historyIndex = lastHistoryIndexToDraw - i;
 
-                foreach (var segment in _wrappedHistory[i].Segments)
+                if (historyIndex < 0)
+                    break;
+
+                float y = lastScreenLineY - i * Global.TERMINAL_LINE_SPACING;
+
+                if (y < terminalY)
+                    continue;
+
+                float x = terminalX;
+                var line = _wrappedHistory[historyIndex];
+
+                foreach (var segment in line.Segments)
                 {
                     _spriteBatch.DrawString(_defaultFont, segment.Text, new Vector2(x, y), segment.Color);
                     x += _defaultFont.MeasureString(segment.Text).Width;
                 }
 
-                if (_wrappedHistory[i].LineNumber > 0)
+                if (line.LineNumber > 0)
                 {
-                    string lineNumText = _wrappedHistory[i].LineNumber.ToString();
+                    string lineNumText = line.LineNumber.ToString();
                     float lineNumX = terminalX + 550;
                     _spriteBatch.DrawString(_defaultFont, lineNumText, new Vector2(lineNumX, y), Global.Instance.Palette_DarkGray);
                 }

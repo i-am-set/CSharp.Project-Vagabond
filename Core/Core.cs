@@ -18,7 +18,6 @@ using System;
 // TODO: Impliment dialogue logic into dialogue scene
 // TODO: Impliment combat logic into combat scene
 // TODO: Finish entity implimentation
-// TODO: make console command "up right" work
 // TODO: Make clock ui to show time passing
 
 namespace ProjectVagabond
