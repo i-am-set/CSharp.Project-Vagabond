@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace ProjectVagabond.Scenes
@@ -30,6 +30,7 @@ namespace ProjectVagabond.Scenes
             Core.CurrentTerminalRenderer.DrawTerminal();
             Core.CurrentMapRenderer.DrawMap();
             Core.CurrentStatsRenderer.DrawStats();
+            Core.CurrentClockRenderer.DrawClock(Global.Instance.CurrentSpriteBatch);
 
             Global.Instance.CurrentSpriteBatch.End();
         }

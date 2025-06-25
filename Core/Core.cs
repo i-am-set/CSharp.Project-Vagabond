@@ -39,6 +39,7 @@ namespace ProjectVagabond
         private static readonly AutoCompleteManager _autoCompleteManager = new();
         private static readonly CommandProcessor _commandProcessor = new();
         private static readonly StatsRenderer _statsRenderer = new();
+        private static readonly ClockRenderer _clockRenderer = new();
         private static readonly WorldClockManager _worldClockManager = new();
         private static readonly HapticsManager _hapticsManager = new();
         private static readonly SceneManager _sceneManager = new();
@@ -62,6 +63,7 @@ namespace ProjectVagabond
         public static CommandProcessor CurrentCommandProcessor => _commandProcessor;
         public static InputHandler CurrentInputHandler => _inputHandler;
         public static StatsRenderer CurrentStatsRenderer => _statsRenderer;
+        public static ClockRenderer CurrentClockRenderer => _clockRenderer;
         public static WorldClockManager CurrentWorldClockManager => _worldClockManager;
         public static HapticsManager CurrentHapticsManager => _hapticsManager;
         public static SceneManager CurrentSceneManager => _sceneManager;
