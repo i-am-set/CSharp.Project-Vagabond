@@ -19,6 +19,8 @@ using System;
 // TODO: Impliment dialogue logic into dialogue scene
 // TODO: Impliment combat logic into combat scene
 // TODO: Finish entity implimentation
+// TODO: Add seconds in the time generation
+// TODO: make console command up right work
 
 namespace ProjectVagabond
 {

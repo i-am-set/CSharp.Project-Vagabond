@@ -46,6 +46,18 @@ namespace ProjectVagabond
                     if (!gameState.IsPositionPassable(neighborPos) || closedList.Contains(neighborPos))
                         continue;
 
+                    // Add corner-cutting check for diagonal moves
+                    Vector2 moveDir = neighborPos - currentNode.Position;
+                    if (moveDir.X != 0 && moveDir.Y != 0) // It's a diagonal move
+                    {
+                        // Check adjacent cardinal tiles to prevent moving through corners of walls
+                        if (!gameState.IsPositionPassable(new Vector2(currentNode.Position.X + moveDir.X, currentNode.Position.Y)) ||
+                            !gameState.IsPositionPassable(new Vector2(currentNode.Position.X, currentNode.Position.Y + moveDir.Y)))
+                        {
+                            continue; // Can't cut the corner
+                        }
+                    }
+
                     int moveCost = gameState.GetMovementEnergyCost(new PendingAction(neighborPos, isRunning: true));
                     float newGCost = currentNode.CostFromStartPoint + moveCost;
 
@@ -81,10 +93,16 @@ namespace ProjectVagabond
 
         private static IEnumerable<Vector2> GetNeighbors(Vector2 pos)
         {
+            // Cardinal
             yield return new Vector2(pos.X, pos.Y - 1); // Up
             yield return new Vector2(pos.X, pos.Y + 1); // Down
             yield return new Vector2(pos.X - 1, pos.Y); // Left
             yield return new Vector2(pos.X + 1, pos.Y); // Right
+            // Diagonal
+            yield return new Vector2(pos.X - 1, pos.Y - 1); // Up-Left
+            yield return new Vector2(pos.X + 1, pos.Y - 1); // Up-Right
+            yield return new Vector2(pos.X - 1, pos.Y + 1); // Down-Left
+            yield return new Vector2(pos.X + 1, pos.Y + 1); // Down-Right
         }
 
         // Using Manhattan distance as the heuristic

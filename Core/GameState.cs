@@ -40,7 +40,7 @@ namespace ProjectVagabond
         }
     }
 
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+    // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
     public class GameState
     {
@@ -192,9 +192,16 @@ namespace ProjectVagabond
             return 0;
         }
 
-        public int GetMinutesPassedDuringMovement(ActionType actionType, string terrainType)
+        public int GetMinutesPassedDuringMovement(ActionType actionType, string terrainType, Vector2 moveDirection)
         {
             int timePassed = 0;
+            float timeMultiplier = 1.0f;
+
+            // A diagonal move has non-zero values for both X and Y components
+            if (moveDirection.X != 0 && moveDirection.Y != 0)
+            {
+                timeMultiplier = 1.5f;
+            }
 
             timePassed += actionType switch
             {
@@ -211,9 +218,7 @@ namespace ProjectVagabond
                 _ => 0
             };
 
-
-
-            return timePassed;
+            return (int)Math.Ceiling(timePassed * timeMultiplier);
         }
 
         public (int finalEnergy, bool possible, int minutesPassed) SimulateActionQueueEnergy(List<PendingAction> customQueue = null)
@@ -222,6 +227,7 @@ namespace ProjectVagabond
             int finalEnergy = _player.Stats.CurrentEnergyPoints;
             int maxEnergy = _player.Stats.MaxEnergyPoints;
             int minutesPassed = 0;
+            Vector2 lastPosition = _player.WorldPosition; // Start simulation from player's current position
 
             foreach (var action in queueToSimulate)
             {
@@ -229,31 +235,33 @@ namespace ProjectVagabond
                 {
                     case ActionType.WalkMove:
                     case ActionType.RunMove:
-                        minutesPassed += GetMinutesPassedDuringMovement(action.Type, GetTerrainDescription((int)action.Position.X, (int)action.Position.Y));
+                        Vector2 moveDirection = action.Position - lastPosition;
+                        minutesPassed += GetMinutesPassedDuringMovement(action.Type, GetTerrainDescription((int)action.Position.X, (int)action.Position.Y), moveDirection);
                         int cost = GetMovementEnergyCost(action);
                         if (finalEnergy < cost)
                         {
                             return (finalEnergy, false, minutesPassed);
                         }
                         finalEnergy -= cost;
+                        lastPosition = action.Position; // Update last position for the next move
                         break;
                     case ActionType.ShortRest:
                         finalEnergy += _player.Stats.ShortRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
-
                         minutesPassed += _player.Stats.ShortRestDuration;
+                        lastPosition = action.Position; // Rests happen at a location
                         break;
                     case ActionType.LongRest:
                         finalEnergy += _player.Stats.LongRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
-
                         minutesPassed += _player.Stats.LongRestDuration;
+                        lastPosition = action.Position;
                         break;
                     case ActionType.FullRest:
                         finalEnergy += _player.Stats.FullRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
-
                         minutesPassed += _player.Stats.FullRestDuration;
+                        lastPosition = action.Position;
                         break;
                 }
             }
@@ -465,7 +473,9 @@ namespace ProjectVagabond
                             case ActionType.WalkMove:
                             case ActionType.RunMove:
                                 var mapData = GetMapDataAt((int)nextAction.Position.X, (int)nextAction.Position.Y);
-                                minutesPassed = GetMinutesPassedDuringMovement(nextAction.Type, mapData.TerrainType);
+                                Vector2 previousPosition = (_currentPathIndex > 0) ? _player.ActionQueue[_currentPathIndex - 1].Position : _player.WorldPosition;
+                                Vector2 moveDirection = nextAction.Position - previousPosition;
+                                minutesPassed = GetMinutesPassedDuringMovement(nextAction.Type, mapData.TerrainType, moveDirection);
                                 break;
                             case ActionType.ShortRest:
                                 minutesPassed = _player.Stats.ShortRestDuration;

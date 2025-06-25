@@ -44,11 +44,11 @@ namespace ProjectVagabond
             {
                 int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
                 int scrollLines = scrollDelta > 0 ? 3 : -3;
-                
+
                 int maxVisibleLines = Core.CurrentTerminalRenderer.GetMaxVisibleLines(); // <-- FIX
                 int currentOffset = Core.CurrentTerminalRenderer.ScrollOffset;
                 int maxOffset = Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - maxVisibleLines);
-                
+
                 if (scrollDelta > 0) // scrolling up
                 {
                     Core.CurrentTerminalRenderer.SetScrollOffset(Math.Min(currentOffset + Math.Abs(scrollLines), maxOffset));
@@ -79,90 +79,56 @@ namespace ProjectVagabond
 
             if (Core.CurrentGameState.IsFreeMoveMode)
             {
-                foreach (Keys key in pressedKeys)
-                {
-                    if (!_previousKeyboardState.IsKeyDown(key) && !_processedKeys.Contains(key))
-                    {
-                        _processedKeys.Add(key);
+                // Determine direction vector from currently held keys
+                Vector2 moveDir = Vector2.Zero;
+                if (currentKeyboardState.IsKeyDown(Keys.W) || currentKeyboardState.IsKeyDown(Keys.Up)) moveDir.Y--;
+                if (currentKeyboardState.IsKeyDown(Keys.S) || currentKeyboardState.IsKeyDown(Keys.Down)) moveDir.Y++;
+                if (currentKeyboardState.IsKeyDown(Keys.A) || currentKeyboardState.IsKeyDown(Keys.Left)) moveDir.X--;
+                if (currentKeyboardState.IsKeyDown(Keys.D) || currentKeyboardState.IsKeyDown(Keys.Right)) moveDir.X++;
 
-                        if (!_shiftPressed)
-                            switch (key)
-                            {
-                                case Keys.W:
-                                case Keys.Up:
-                                    Core.CurrentGameState.QueueWalkMovement(new Vector2(0, -1), new string[] { "up", "1" });
-                                    break;
-                                case Keys.S:
-                                case Keys.Down:
-                                    Core.CurrentGameState.QueueWalkMovement(new Vector2(0, 1), new string[] { "down", "1" });
-                                    break;
-                                case Keys.A:
-                                case Keys.Left:
-                                    Core.CurrentGameState.QueueWalkMovement(new Vector2(-1, 0), new string[] { "left", "1" });
-                                    break;
-                                case Keys.D:
-                                case Keys.Right:
-                                    Core.CurrentGameState.QueueWalkMovement(new Vector2(1, 0), new string[] { "right", "1" });
-                                    break;
-                                case Keys.Enter:
-                                    if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
-                                    {
-                                        Core.CurrentGameState.ToggleExecutingPath(true);
-                                        Core.CurrentGameState.SetCurrentPathIndex(0);
-                                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
-                                    }
-                                    else if (Core.CurrentGameState.IsExecutingPath)
-                                    {
-                                        Core.CurrentTerminalRenderer.AddOutputToHistory("Already executing an action queue.");
-                                    }
-                                    else
-                                    {
-                                        Core.CurrentTerminalRenderer.AddOutputToHistory("No actions queued.");
-                                    }
-                                    break;
-                            }
-                        else
-                        {
-                            switch (key)
-                            {
-                                case Keys.W:
-                                case Keys.Up:
-                                    Core.CurrentGameState.QueueRunMovement(new Vector2(0, -1), new string[] { "up", "1" });
-                                    break;
-                                case Keys.S:
-                                case Keys.Down:
-                                    Core.CurrentGameState.QueueRunMovement(new Vector2(0, 1), new string[] { "down", "1" });
-                                    break;
-                                case Keys.A:
-                                case Keys.Left:
-                                    Core.CurrentGameState.QueueRunMovement(new Vector2(-1, 0), new string[] { "left", "1" });
-                                    break;
-                                case Keys.D:
-                                case Keys.Right:
-                                    Core.CurrentGameState.QueueRunMovement(new Vector2(1, 0), new string[] { "right", "1" });
-                                    break;
-                                case Keys.Enter:
-                                    if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
-                                    {
-                                        Core.CurrentGameState.ToggleExecutingPath(true);
-                                        Core.CurrentGameState.SetCurrentPathIndex(0);
-                                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
-                                    }
-                                    else if (Core.CurrentGameState.IsExecutingPath)
-                                    {
-                                        Core.CurrentTerminalRenderer.AddOutputToHistory("Already executing an action queue.");
-                                    }
-                                    else
-                                    {
-                                        Core.CurrentTerminalRenderer.AddOutputToHistory("No actions queued.");
-                                    }
-                                    break;
-                            }
-                        }
+                // Check if any movement key was newly pressed to trigger a single move action
+                bool newMoveKeyPressed = false;
+                Keys[] moveKeys = { Keys.W, Keys.A, Keys.S, Keys.D, Keys.Up, Keys.Down, Keys.Left, Keys.Right };
+                foreach (var key in moveKeys)
+                {
+                    if (currentKeyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key))
+                    {
+                        newMoveKeyPressed = true;
+                        break;
                     }
                 }
 
-                _processedKeys.RemoveWhere(key => !currentKeyboardState.IsKeyDown(key));
+                if (newMoveKeyPressed && moveDir != Vector2.Zero)
+                {
+                    // A move was triggered, queue it
+                    string[] args = { "move", "1" }; // Dummy args for the queueing method
+                    if (_shiftPressed)
+                    {
+                        Core.CurrentGameState.QueueRunMovement(moveDir, args);
+                    }
+                    else
+                    {
+                        Core.CurrentGameState.QueueWalkMovement(moveDir, args);
+                    }
+                }
+                else if (!_previousKeyboardState.IsKeyDown(Keys.Enter) && currentKeyboardState.IsKeyDown(Keys.Enter))
+                {
+                    // Handle Enter key separately to execute the queue
+                    if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+                    {
+                        Core.CurrentGameState.ToggleExecutingPath(true);
+                        Core.CurrentGameState.SetCurrentPathIndex(0);
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
+                    }
+                    else if (Core.CurrentGameState.IsExecutingPath)
+                    {
+                        Core.CurrentTerminalRenderer.AddOutputToHistory("Already executing an action queue.");
+                    }
+                    else
+                    {
+                        Core.CurrentTerminalRenderer.AddOutputToHistory("No actions queued.");
+                    }
+                }
             }
             else
             {
@@ -190,7 +156,7 @@ namespace ProjectVagabond
                                     }
                                 }
                                 ProcessCommand(_currentInput.Trim().ToLower());
-                
+
                                 _commandHistoryIndex = -1;
                                 _currentEditingCommand = "";
                             }
@@ -352,7 +318,7 @@ namespace ProjectVagabond
                     break;
             }
         }
-        
+
         private void HandleBackspace()
         {
             if (_currentInput.Length > 0)

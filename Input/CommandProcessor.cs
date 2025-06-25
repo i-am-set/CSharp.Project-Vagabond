@@ -26,9 +26,9 @@ namespace ProjectVagabond
         private void AddToHistory(string message, Color? baseColor = null) => Core.CurrentTerminalRenderer.AddToHistory(message, baseColor);
         private void AddOutputToHistory(string message) => Core.CurrentTerminalRenderer.AddOutputToHistory(message);
         private void AddHelpLineToHistory(string message) => Core.CurrentTerminalRenderer.AddToHistory(message, Global.Instance.Palette_LightPurple);
-        
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        
+
         private void InitializeCommands()
         {
             _commands = new Dictionary<string, Command>();
@@ -37,7 +37,7 @@ namespace ProjectVagabond
             {
                 AddToHistory(" ");
                 AddToHistory("Available commands:", Color.Magenta);
-                foreach (var cmd in _commands.Values)
+                foreach (var cmd in _commands.Values.OrderBy(c => c.Name))
                 {
                     if (cmd.Name == "help" || cmd.Name.StartsWith("debug")) continue; // Don't show help for the help command itself, or for debug commands
                     if (!string.IsNullOrEmpty(cmd.HelpText))
@@ -68,23 +68,27 @@ namespace ProjectVagabond
             {
                 if (args.Length < 2)
                 {
-                    AddOutputToHistory("[error]No run direction given (up, down, left, right).");
+                    AddOutputToHistory("[error]No run direction given (up, down, left, right, up-left, etc.).");
                     return;
                 }
                 string direction = args[1].ToLower();
                 string[] movementArgs = args.Skip(1).ToArray();
                 switch (direction)
                 {
-                    case "up": _gameState.QueueWalkMovement(new Vector2(0, -1), movementArgs); break;
-                    case "down": _gameState.QueueWalkMovement(new Vector2(0, 1), movementArgs); break;
-                    case "left": _gameState.QueueWalkMovement(new Vector2(-1, 0), movementArgs); break;
-                    case "right": _gameState.QueueWalkMovement(new Vector2(1, 0), movementArgs); break;
+                    case "up": _gameState.QueueRunMovement(new Vector2(0, -1), movementArgs); break;
+                    case "down": _gameState.QueueRunMovement(new Vector2(0, 1), movementArgs); break;
+                    case "left": _gameState.QueueRunMovement(new Vector2(-1, 0), movementArgs); break;
+                    case "right": _gameState.QueueRunMovement(new Vector2(1, 0), movementArgs); break;
+                    case "up-left": _gameState.QueueRunMovement(new Vector2(-1, -1), movementArgs); break;
+                    case "up-right": _gameState.QueueRunMovement(new Vector2(1, -1), movementArgs); break;
+                    case "down-left": _gameState.QueueRunMovement(new Vector2(-1, 1), movementArgs); break;
+                    case "down-right": _gameState.QueueRunMovement(new Vector2(1, 1), movementArgs); break;
                     default: AddOutputToHistory($"Unknown direction for run: '{direction}'."); break;
                 }
             },
             "run <dir> <count?> [gray]- Queue a run (costs energy, but quicker).",
             (args) => {
-                if (args.Length == 0) return new List<string> { "up", "down", "left", "right" };
+                if (args.Length == 0) return new List<string> { "up", "down", "left", "right", "up-left", "up-right", "down-left", "down-right" };
                 return new List<string>();
             });
 
@@ -92,7 +96,7 @@ namespace ProjectVagabond
             {
                 if (args.Length < 2)
                 {
-                    AddOutputToHistory("[error]No walk direction given (up, down, left, right).");
+                    AddOutputToHistory("[error]No walk direction given (up, down, left, right, up-left, etc.).");
                     return;
                 }
                 string direction = args[1].ToLower();
@@ -103,19 +107,27 @@ namespace ProjectVagabond
                     case "down": _gameState.QueueWalkMovement(new Vector2(0, 1), movementArgs); break;
                     case "left": _gameState.QueueWalkMovement(new Vector2(-1, 0), movementArgs); break;
                     case "right": _gameState.QueueWalkMovement(new Vector2(1, 0), movementArgs); break;
-                    default: AddOutputToHistory($"Unknown direction for run: '{direction}'."); break;
+                    case "up-left": _gameState.QueueWalkMovement(new Vector2(-1, -1), movementArgs); break;
+                    case "up-right": _gameState.QueueWalkMovement(new Vector2(1, -1), movementArgs); break;
+                    case "down-left": _gameState.QueueWalkMovement(new Vector2(-1, 1), movementArgs); break;
+                    case "down-right": _gameState.QueueWalkMovement(new Vector2(1, 1), movementArgs); break;
+                    default: AddOutputToHistory($"Unknown direction for walk: '{direction}'."); break;
                 }
             },
             "walk <dir> <count?> [gray]- Queue a walk.",
             (args) => {
-                if (args.Length == 0) return new List<string> { "up", "down", "left", "right" };
+                if (args.Length == 0) return new List<string> { "up", "down", "left", "right", "up-left", "up-right", "down-left", "down-right" };
                 return new List<string>();
             });
 
-            _commands["up"] = new Command("up", (args) => { _gameState.QueueWalkMovement(new Vector2(0, -1), args.ToArray()); }, "walk up <count?> [gray]- Queue a walk up.");
-            _commands["down"] = new Command("down", (args) => { _gameState.QueueWalkMovement(new Vector2(0, 1), args.ToArray()); }, "walk down <count?> [gray]- Queue a walk down.");
-            _commands["left"] = new Command("left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, 0), args.ToArray()); }, "walk left <count?> [gray]- Queue a walk left.");
-            _commands["right"] = new Command("right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, 0), args.ToArray()); }, "walk right <count?> [gray]- Queue a walk right.");
+            _commands["up"] = new Command("up", (args) => { _gameState.QueueWalkMovement(new Vector2(0, -1), args.ToArray()); }, "up <count?> [gray]- Queue a walk up.");
+            _commands["down"] = new Command("down", (args) => { _gameState.QueueWalkMovement(new Vector2(0, 1), args.ToArray()); }, "down <count?> [gray]- Queue a walk down.");
+            _commands["left"] = new Command("left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, 0), args.ToArray()); }, "left <count?> [gray]- Queue a walk left.");
+            _commands["right"] = new Command("right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, 0), args.ToArray()); }, "right <count?> [gray]- Queue a walk right.");
+            _commands["up-left"] = new Command("up-left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, -1), args.ToArray()); }, "up-left <count?> [gray]- Queue a walk up-left.");
+            _commands["up-right"] = new Command("up-right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, -1), args.ToArray()); }, "up-right <count?> [gray]- Queue a walk up-right.");
+            _commands["down-left"] = new Command("down-left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, 1), args.ToArray()); }, "down-left <count?> [gray]- Queue a walk down-left.");
+            _commands["down-right"] = new Command("down-right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, 1), args.ToArray()); }, "down-right <count?> [gray]- Queue a walk down-right.");
 
             _commands["cancel"] = new Command("cancel", (args) =>
             {
