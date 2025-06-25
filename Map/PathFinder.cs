@@ -30,37 +30,38 @@ namespace ProjectVagabond
     {
         public static List<Vector2> FindPath(Vector2 start, Vector2 end, GameState gameState, bool isRunning, PathfindingMode mode)
         {
-            var startNode = new PathfinderNode(start);
-            var endNode = new PathfinderNode(end);
-
-            var openList = new List<PathfinderNode> { startNode };
-            var closedList = new HashSet<Vector2>();
-
-            while (openList.Count > 0)
+            var startNode = new PathfinderNode(start)
             {
-                var currentNode = openList.OrderBy(n => n.TotalEstimatedCost).First();
-                openList.Remove(currentNode);
-                closedList.Add(currentNode.Position);
+                CostFromStartPoint = 0,
+                EstimatedCostToEndPoint = GetDistance(start, end)
+            };
 
-                if (currentNode.Position == endNode.Position)
+            var openQueue = new PriorityQueue<PathfinderNode, float>();
+            openQueue.Enqueue(startNode, startNode.TotalEstimatedCost);
+
+            var gScores = new Dictionary<Vector2, float> { { start, 0f } };
+
+            while (openQueue.Count > 0)
+            {
+                var currentNode = openQueue.Dequeue();
+
+                if (currentNode.Position == end)
                 {
                     return RetracePath(startNode, currentNode);
                 }
 
                 foreach (var neighborPos in GetNeighbors(currentNode.Position))
                 {
-                    if (!gameState.IsPositionPassable(neighborPos) || closedList.Contains(neighborPos))
+                    if (!gameState.IsPositionPassable(neighborPos))
                         continue;
 
-                    // Add corner-cutting check for diagonal moves
                     Vector2 moveDir = neighborPos - currentNode.Position;
-                    if (moveDir.X != 0 && moveDir.Y != 0) // It's a diagonal move
+                    if (moveDir.X != 0 && moveDir.Y != 0)
                     {
-                        // Check adjacent cardinal tiles to prevent moving through corners of walls
                         if (!gameState.IsPositionPassable(new Vector2(currentNode.Position.X + moveDir.X, currentNode.Position.Y)) ||
                             !gameState.IsPositionPassable(new Vector2(currentNode.Position.X, currentNode.Position.Y + moveDir.Y)))
                         {
-                            continue; // Can't cut the corner
+                            continue;
                         }
                     }
 
@@ -72,27 +73,30 @@ namespace ProjectVagabond
                     else
                     {
                         var mapData = gameState.GetMapDataAt((int)neighborPos.X, (int)neighborPos.Y);
-                        Vector2 moveDirection = neighborPos - currentNode.Position;
                         var actionType = isRunning ? ActionType.RunMove : ActionType.WalkMove;
-                        moveCost = gameState.GetSecondsPassedDuringMovement(actionType, mapData.TerrainType, moveDirection);
+                        moveCost = gameState.GetSecondsPassedDuringMovement(actionType, mapData.TerrainType, moveDir);
                     }
 
-                    float newGCost = currentNode.CostFromStartPoint + moveCost;
+                    float tentative_gScore = currentNode.CostFromStartPoint + moveCost;
 
-                    var neighborNode = openList.FirstOrDefault(n => n.Position == neighborPos);
-                    if (neighborNode == null || newGCost < neighborNode.CostFromStartPoint)
+                    float known_gScore = gScores.GetValueOrDefault(neighborPos, float.PositiveInfinity);
+
+                    if (tentative_gScore < known_gScore)
                     {
-                        if (neighborNode == null)
+                        gScores[neighborPos] = tentative_gScore;
+
+                        var neighborNode = new PathfinderNode(neighborPos)
                         {
-                            neighborNode = new PathfinderNode(neighborPos);
-                            neighborNode.EstimatedCostToEndPoint = GetDistance(neighborPos, endNode.Position);
-                            openList.Add(neighborNode);
-                        }
-                        neighborNode.CostFromStartPoint = newGCost;
-                        neighborNode.Parent = currentNode;
+                            Parent = currentNode,
+                            CostFromStartPoint = tentative_gScore,
+                            EstimatedCostToEndPoint = GetDistance(neighborPos, end)
+                        };
+
+                        openQueue.Enqueue(neighborNode, neighborNode.TotalEstimatedCost);
                     }
                 }
             }
+
             return null;
         }
 
@@ -100,7 +104,7 @@ namespace ProjectVagabond
         {
             var path = new List<Vector2>();
             var currentNode = endNode;
-            while (currentNode != startNode)
+            while (currentNode != null && currentNode.Position != startNode.Position)
             {
                 path.Add(currentNode.Position);
                 currentNode = currentNode.Parent;
@@ -123,7 +127,6 @@ namespace ProjectVagabond
             yield return new Vector2(pos.X + 1, pos.Y + 1); // Down-Right
         }
 
-        // Using Manhattan distance as the heuristic
         private static float GetDistance(Vector2 a, Vector2 b)
         {
             return Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
