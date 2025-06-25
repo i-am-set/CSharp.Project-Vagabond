@@ -45,7 +45,7 @@ namespace ProjectVagabond
                 int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
                 int scrollLines = scrollDelta > 0 ? 3 : -3;
 
-                int maxVisibleLines = Core.CurrentTerminalRenderer.GetMaxVisibleLines(); // <-- FIX
+                int maxVisibleLines = Core.CurrentTerminalRenderer.GetMaxVisibleLines();
                 int currentOffset = Core.CurrentTerminalRenderer.ScrollOffset;
                 int maxOffset = Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - maxVisibleLines);
 
@@ -79,14 +79,12 @@ namespace ProjectVagabond
 
             if (Core.CurrentGameState.IsFreeMoveMode)
             {
-                // Determine direction vector from currently held keys
                 Vector2 moveDir = Vector2.Zero;
                 if (currentKeyboardState.IsKeyDown(Keys.W) || currentKeyboardState.IsKeyDown(Keys.Up)) moveDir.Y--;
                 if (currentKeyboardState.IsKeyDown(Keys.S) || currentKeyboardState.IsKeyDown(Keys.Down)) moveDir.Y++;
                 if (currentKeyboardState.IsKeyDown(Keys.A) || currentKeyboardState.IsKeyDown(Keys.Left)) moveDir.X--;
                 if (currentKeyboardState.IsKeyDown(Keys.D) || currentKeyboardState.IsKeyDown(Keys.Right)) moveDir.X++;
 
-                // Check if any movement key was newly pressed to trigger a single move action
                 bool newMoveKeyPressed = false;
                 Keys[] moveKeys = { Keys.W, Keys.A, Keys.S, Keys.D, Keys.Up, Keys.Down, Keys.Left, Keys.Right };
                 foreach (var key in moveKeys)
@@ -100,8 +98,7 @@ namespace ProjectVagabond
 
                 if (newMoveKeyPressed && moveDir != Vector2.Zero)
                 {
-                    // A move was triggered, queue it
-                    string[] args = { "move", "1" }; // Dummy args for the queueing method
+                    string[] args = { "move", "1" };
                     if (_shiftPressed)
                     {
                         Core.CurrentGameState.QueueRunMovement(moveDir, args);
@@ -113,7 +110,6 @@ namespace ProjectVagabond
                 }
                 else if (!_previousKeyboardState.IsKeyDown(Keys.Enter) && currentKeyboardState.IsKeyDown(Keys.Enter))
                 {
-                    // Handle Enter key separately to execute the queue
                     if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
                     {
                         Core.CurrentGameState.ToggleExecutingPath(true);
@@ -147,7 +143,7 @@ namespace ProjectVagabond
                             }
                             else
                             {
-                                if (!string.IsNullOrEmpty(_currentInput.Trim())) // Save command to history if it's not empty
+                                if (!string.IsNullOrEmpty(_currentInput.Trim())) 
                                 {
                                     _commandHistory.Add(_currentInput.Trim());
                                     if (_commandHistory.Count > 50)

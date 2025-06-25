@@ -62,7 +62,7 @@ namespace ProjectVagabond
         public int CurrentPathIndex => _currentPathIndex;
         public NoiseMapManager NoiseManager => _noiseManager;
         public PlayerStats PlayerStats => _player.Stats;
-        public (int finalEnergy, bool possible, int minutesPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
+        public (int finalEnergy, bool possible, int secondsPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -192,9 +192,9 @@ namespace ProjectVagabond
             return 0;
         }
 
-        public int GetMinutesPassedDuringMovement(ActionType actionType, string terrainType, Vector2 moveDirection)
+        public int GetSecondsPassedDuringMovement(ActionType actionType, string terrainType, Vector2 moveDirection)
         {
-            int timePassed = 0;
+            float secondsPassed = 0;
             float timeMultiplier = 1.0f;
 
             // A diagonal move has non-zero values for both X and Y components
@@ -203,30 +203,30 @@ namespace ProjectVagabond
                 timeMultiplier = 1.5f;
             }
 
-            timePassed += actionType switch
+            secondsPassed += actionType switch
             {
-                ActionType.WalkMove => (int)Math.Ceiling(6 / _player.Stats.WalkSpeed),
-                ActionType.RunMove => (int)Math.Ceiling(6 / _player.Stats.RunSpeed),
-                _ => timePassed
+                ActionType.WalkMove => 360 / _player.Stats.WalkSpeed,
+                ActionType.RunMove => 360 / _player.Stats.RunSpeed,
+                _ => secondsPassed
             };
 
-            timePassed += terrainType.ToUpper() switch
+            secondsPassed += terrainType.ToUpper() switch
             {
                 "FLATLANDS" => 0,
-                "HILLS" => (int)Math.Ceiling(timePassed * 0.5f),
-                "MOUNTAINS" => timePassed + 5,
+                "HILLS" => secondsPassed * 0.5f,
+                "MOUNTAINS" => secondsPassed + 300,
                 _ => 0
             };
 
-            return (int)Math.Ceiling(timePassed * timeMultiplier);
+            return (int)Math.Ceiling(secondsPassed * timeMultiplier);
         }
 
-        public (int finalEnergy, bool possible, int minutesPassed) SimulateActionQueueEnergy(List<PendingAction> customQueue = null)
+        public (int finalEnergy, bool possible, int secondsPassed) SimulateActionQueueEnergy(List<PendingAction> customQueue = null)
         {
             var queueToSimulate = customQueue ?? _player.ActionQueue;
             int finalEnergy = _player.Stats.CurrentEnergyPoints;
             int maxEnergy = _player.Stats.MaxEnergyPoints;
-            int minutesPassed = 0;
+            int secondsPassed = 0;
             Vector2 lastPosition = _player.WorldPosition; // Start simulation from player's current position
 
             foreach (var action in queueToSimulate)
@@ -236,11 +236,11 @@ namespace ProjectVagabond
                     case ActionType.WalkMove:
                     case ActionType.RunMove:
                         Vector2 moveDirection = action.Position - lastPosition;
-                        minutesPassed += GetMinutesPassedDuringMovement(action.Type, GetTerrainDescription((int)action.Position.X, (int)action.Position.Y), moveDirection);
+                        secondsPassed += GetSecondsPassedDuringMovement(action.Type, GetTerrainDescription((int)action.Position.X, (int)action.Position.Y), moveDirection);
                         int cost = GetMovementEnergyCost(action);
                         if (finalEnergy < cost)
                         {
-                            return (finalEnergy, false, minutesPassed);
+                            return (finalEnergy, false, secondsPassed);
                         }
                         finalEnergy -= cost;
                         lastPosition = action.Position; // Update last position for the next move
@@ -248,24 +248,24 @@ namespace ProjectVagabond
                     case ActionType.ShortRest:
                         finalEnergy += _player.Stats.ShortRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
-                        minutesPassed += _player.Stats.ShortRestDuration;
+                        secondsPassed += _player.Stats.ShortRestDuration * 60;
                         lastPosition = action.Position; // Rests happen at a location
                         break;
                     case ActionType.LongRest:
                         finalEnergy += _player.Stats.LongRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
-                        minutesPassed += _player.Stats.LongRestDuration;
+                        secondsPassed += _player.Stats.LongRestDuration * 60;
                         lastPosition = action.Position;
                         break;
                     case ActionType.FullRest:
                         finalEnergy += _player.Stats.FullRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
-                        minutesPassed += _player.Stats.FullRestDuration;
+                        secondsPassed += _player.Stats.FullRestDuration * 60;
                         lastPosition = action.Position;
                         break;
                 }
             }
-            return (finalEnergy, true, minutesPassed);
+            return (finalEnergy, true, secondsPassed);
         }
 
         public void QueueRest(string[] args)
@@ -467,7 +467,7 @@ namespace ProjectVagabond
                     {
                         PendingAction nextAction = _player.ActionQueue[_currentPathIndex];
 
-                        int minutesPassed = 0;
+                        int secondsPassed = 0;
                         switch (nextAction.Type)
                         {
                             case ActionType.WalkMove:
@@ -475,20 +475,20 @@ namespace ProjectVagabond
                                 var mapData = GetMapDataAt((int)nextAction.Position.X, (int)nextAction.Position.Y);
                                 Vector2 previousPosition = (_currentPathIndex > 0) ? _player.ActionQueue[_currentPathIndex - 1].Position : _player.WorldPosition;
                                 Vector2 moveDirection = nextAction.Position - previousPosition;
-                                minutesPassed = GetMinutesPassedDuringMovement(nextAction.Type, mapData.TerrainType, moveDirection);
+                                secondsPassed = GetSecondsPassedDuringMovement(nextAction.Type, mapData.TerrainType, moveDirection);
                                 break;
                             case ActionType.ShortRest:
-                                minutesPassed = _player.Stats.ShortRestDuration;
+                                secondsPassed = _player.Stats.ShortRestDuration * 60;
                                 break;
                             case ActionType.LongRest:
-                                minutesPassed = _player.Stats.LongRestDuration;
+                                secondsPassed = _player.Stats.LongRestDuration * 60;
                                 break;
                             case ActionType.FullRest:
-                                minutesPassed = _player.Stats.FullRestDuration;
+                                secondsPassed = _player.Stats.FullRestDuration * 60;
                                 break;
                         }
 
-                        bool success = SimulateWorldTick(nextAction, minutesPassed);
+                        bool success = SimulateWorldTick(nextAction, secondsPassed);
 
                         if (success)
                         {
@@ -513,7 +513,7 @@ namespace ProjectVagabond
             }
         }
 
-        private bool SimulateWorldTick(PendingAction playerAction, int minutesPassed)
+        private bool SimulateWorldTick(PendingAction playerAction, int secondsPassed)
         {
             // Simulate Player Action //
             switch (playerAction.Type)
@@ -553,11 +553,11 @@ namespace ProjectVagabond
             // Simulate Tethered Entities Actions //
             foreach (var entity in _tetheredEntities)
             {
-                entity.Update(minutesPassed, this);
+                entity.Update(secondsPassed, this);
             }
 
             // Advance World Time //
-            Core.CurrentWorldClockManager.PassTime(minutes: minutesPassed);
+            Core.CurrentWorldClockManager.PassTime(seconds: secondsPassed);
 
             // Update Tethered List //
             UpdateTetheredEntities();

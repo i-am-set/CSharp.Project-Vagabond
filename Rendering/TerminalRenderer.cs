@@ -64,7 +64,7 @@ namespace ProjectVagabond
             }
 
             _inputHistory.Add(message);
-            
+
             var coloredLine = ParseColoredText(message, baseColor);
             coloredLine.LineNumber = _nextLineNumber++;
 
@@ -144,7 +144,7 @@ namespace ProjectVagabond
                     _spriteBatch.DrawString(_defaultFont, segment.Text, new Vector2(x, y), segment.Color);
                     x += _defaultFont.MeasureString(segment.Text).Width;
                 }
-    
+
                 if (_wrappedHistory[i].LineNumber > 0)
                 {
                     string lineNumText = _wrappedHistory[i].LineNumber.ToString();
@@ -163,22 +163,22 @@ namespace ProjectVagabond
                 {
                     scrollIndicator = $"^ Scrolled up {_scrollOffset} lines";
                 }
-    
+
                 int scrollY = terminalY - 35;
                 _spriteBatch.DrawString(_defaultFont, scrollIndicator, new Vector2(terminalX, scrollY), Color.Gold);
             }
 
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX-5, separatorY, Global.DEFAULT_TERMINAL_WIDTH+10, 2), Global.Instance.Palette_White);
+            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, separatorY, Global.DEFAULT_TERMINAL_WIDTH + 10, 2), Global.Instance.Palette_White);
 
             string inputDisplay = $"> {Core.CurrentInputHandler.CurrentInput}_";
             string wrappedInput = WrapText(inputDisplay, GetTerminalContentWidthInPixels());
-            _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY+1), Color.Khaki, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+            _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY + 1), Color.Khaki, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
             if (Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions && Core.CurrentAutoCompleteManager.AutoCompleteSuggestions.Count > 0)
             {
                 int suggestionY = inputLineY - 20;
                 int visibleSuggestions = Math.Min(Core.CurrentAutoCompleteManager.AutoCompleteSuggestions.Count, 5);
-    
+
                 int maxSuggestionWidth = 0;
                 for (int i = 0; i < visibleSuggestions; i++)
                 {
@@ -187,21 +187,21 @@ namespace ProjectVagabond
                     int textWidth = (int)_defaultFont.MeasureString(fullText).Width;
                     maxSuggestionWidth = Math.Max(maxSuggestionWidth, textWidth);
                 }
-    
+
                 int backgroundHeight = visibleSuggestions * Global.FONT_SIZE;
                 int backgroundY = suggestionY - (visibleSuggestions - 1) * Global.FONT_SIZE;
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, backgroundHeight), Global.Instance.Palette_Black);
-    
+
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, 1), Global.Instance.Palette_LightGray); // Top
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), Global.Instance.Palette_LightGray); // Bottom
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, 1, backgroundHeight), Global.Instance.Palette_LightGray); // Left
                 _spriteBatch.Draw(pixel, new Rectangle(terminalX + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), Global.Instance.Palette_LightGray); // Right
-    
+
                 for (int i = 0; i < visibleSuggestions; i++)
                 {
                     Color suggestionColor = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? Color.Khaki : Global.Instance.Palette_LightGray;
                     string prefix = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? " >" : "  ";
-                    _spriteBatch.DrawString(_defaultFont, prefix + Core.CurrentAutoCompleteManager.AutoCompleteSuggestions[i], 
+                    _spriteBatch.DrawString(_defaultFont, prefix + Core.CurrentAutoCompleteManager.AutoCompleteSuggestions[i],
                         new Vector2(terminalX + 2, suggestionY - i * Global.FONT_SIZE), suggestionColor);
                 }
             }
@@ -221,12 +221,12 @@ namespace ProjectVagabond
             {
                 var coloredPrompt = ParseColoredText(promptText, Color.Khaki);
                 var wrappedPromptLines = WrapColoredText(coloredPrompt, GetTerminalContentWidthInPixels());
-    
+
                 for (int i = 0; i < wrappedPromptLines.Count; i++)
                 {
                     float x = terminalX;
                     float y = promptY + i * Global.PROMPT_LINE_SPACING;
-        
+
                     foreach (var segment in wrappedPromptLines[i].Segments)
                     {
                         _spriteBatch.DrawString(_defaultFont, segment.Text, new Vector2(x, y), segment.Color);
@@ -240,19 +240,13 @@ namespace ProjectVagabond
         {
             int moveCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
             int restCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.ShortRest || a.Type == ActionType.LongRest);
-                
-            var simResult = Core.CurrentGameState.PendingQueueSimulationResult;
-            WorldClockManager worldClockManager = Core.CurrentWorldClockManager;
-            int minutesPassed = simResult.minutesPassed;
-            string finalETA = $"{worldClockManager.GetCalculatedNewTime(worldClockManager.CurrentTime, minutesPassed)}";
-            string formatedTimeFromMinutes = $"{worldClockManager.GetFormattedTimeFromMinutesShortHand(minutesPassed)}";
 
             var promptBuilder = new StringBuilder();
+
             if (Core.CurrentGameState.IsFreeMoveMode && Core.CurrentGameState.PendingActions.Count <= 0)
             {
                 promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
                 promptBuilder.Append("[gold]Press[orange] ENTER[gold] to confirm,[orange] ESC[gold] to cancel\n");
-
                 return promptBuilder.ToString();
             }
             else if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
@@ -270,10 +264,20 @@ namespace ProjectVagabond
                 var details = new List<string>();
                 if (moveCount > 0) details.Add($"[orange]{moveCount}[gold] move(s)");
                 if (restCount > 0) details.Add($"[green]{restCount}[gold] rest(s)");
-                
+
                 promptBuilder.Append($"[gold]Pending[orange] {string.Join(", ", details)}\n");
-                promptBuilder.Append($"[gold]Arrival Time:[orange] {finalETA}\n");
-                promptBuilder.Append($"[Palette_Gray]{formatedTimeFromMinutes}\n");
+
+                var simResult = Core.CurrentGameState.PendingQueueSimulationResult;
+                int secondsPassed = simResult.secondsPassed;
+
+                if (secondsPassed > 0)
+                {
+                    WorldClockManager worldClockManager = Core.CurrentWorldClockManager;
+                    string finalETA = worldClockManager.GetCalculatedNewTime(worldClockManager.CurrentTime, secondsPassed);
+                    finalETA = Global.Instance.Use24HourClock ? finalETA : worldClockManager.GetConverted24hToAmPm(finalETA);
+                    string formattedDuration = worldClockManager.GetFormattedTimeFromSecondsShortHand(secondsPassed);
+                    promptBuilder.Append($"[gold]Arrival Time:[orange] {finalETA} [Palette_Gray]({formattedDuration})\n");
+                }
 
                 return promptBuilder.ToString();
             }
@@ -379,13 +383,13 @@ namespace ProjectVagabond
                 case "gray":
                 case "grey": return Color.Gray;
             }
-    
-            
+
+
             try
             {
-                var colorProperty = typeof(Color).GetProperty(colorName, 
+                var colorProperty = typeof(Color).GetProperty(colorName,
                     System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.IgnoreCase);
-        
+
                 if (colorProperty != null && colorProperty.PropertyType == typeof(Color))
                 {
                     return (Color)colorProperty.GetValue(null);
@@ -395,7 +399,7 @@ namespace ProjectVagabond
             {
                 // bruh
             }
-    
+
             return Global.Instance.TextColor;
         }
 
@@ -496,7 +500,7 @@ namespace ProjectVagabond
                         }
                         continue;
                     }
-                    
+
                     AddTokenToLine(token, color);
                 }
             }
