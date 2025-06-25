@@ -19,6 +19,7 @@ namespace ProjectVagabond.Scenes
             Core.CurrentGameState.UpdateMovement(gameTime);
             Core.CurrentStatsRenderer.Update(gameTime);
             Core.CurrentHapticsManager.Update(gameTime);
+            Core.CurrentWorldClockManager.Update(gameTime);
         }
 
         public override void Draw(GameTime gameTime)

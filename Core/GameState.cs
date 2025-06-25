@@ -46,10 +46,11 @@ namespace ProjectVagabond
     {
         private Player _player;
         private NoiseMapManager _noiseManager;
-        private float _moveTimer = 0f;
         private bool _isExecutingPath = false;
         private int _currentPathIndex = 0;
         private bool _isFreeMoveMode = false;
+
+        private PendingAction _actionAwaitingExecution = null;
 
         private List<Entity> _worldEntities = new List<Entity>();
         private List<Entity> _tetheredEntities = new List<Entity>();
@@ -457,70 +458,73 @@ namespace ProjectVagabond
 
         public void UpdateMovement(GameTime gameTime)
         {
-            if (_isExecutingPath && _player.ActionQueue.Count > 0)
+            if (Core.CurrentWorldClockManager.IsInterpolatingTime)
             {
-                _moveTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                return;
+            }
 
-                if (_moveTimer >= Global.MOVE_DELAY_SECONDS)
+            if (_actionAwaitingExecution != null)
+            {
+                bool success = ApplyActionEffects(_actionAwaitingExecution);
+                _actionAwaitingExecution = null; 
+
+                if (success)
                 {
-                    if (_currentPathIndex < _player.ActionQueue.Count)
+                    _currentPathIndex++;
+                    if (_currentPathIndex >= _player.ActionQueue.Count)
                     {
-                        PendingAction nextAction = _player.ActionQueue[_currentPathIndex];
-
-                        int secondsPassed = 0;
-                        switch (nextAction.Type)
-                        {
-                            case ActionType.WalkMove:
-                            case ActionType.RunMove:
-                                var mapData = GetMapDataAt((int)nextAction.Position.X, (int)nextAction.Position.Y);
-                                Vector2 previousPosition = (_currentPathIndex > 0) ? _player.ActionQueue[_currentPathIndex - 1].Position : _player.WorldPosition;
-                                Vector2 moveDirection = nextAction.Position - previousPosition;
-                                secondsPassed = GetSecondsPassedDuringMovement(nextAction.Type, mapData.TerrainType, moveDirection);
-                                break;
-                            case ActionType.ShortRest:
-                                secondsPassed = _player.Stats.ShortRestDuration * 60;
-                                break;
-                            case ActionType.LongRest:
-                                secondsPassed = _player.Stats.LongRestDuration * 60;
-                                break;
-                            case ActionType.FullRest:
-                                secondsPassed = _player.Stats.FullRestDuration * 60;
-                                break;
-                        }
-
-                        bool success = SimulateWorldTick(nextAction, secondsPassed);
-
-                        if (success)
-                        {
-                            _currentPathIndex++;
-                            _moveTimer = 0f;
-
-                            if (_currentPathIndex >= _player.ActionQueue.Count)
-                            {
-                                _isExecutingPath = false;
-                                _player.ActionQueue.Clear();
-                                _currentPathIndex = 0;
-                                ToggleExecutingPath(false);
-                                Core.CurrentTerminalRenderer.AddOutputToHistory("Action queue completed.");
-                            }
-                        }
-                        else
-                        {
-                            CancelPathExecution();
-                        }
+                        _isExecutingPath = false;
+                        _player.ActionQueue.Clear();
+                        _currentPathIndex = 0;
+                        Core.CurrentTerminalRenderer.AddOutputToHistory("Action queue completed.");
                     }
                 }
+                else
+                {
+                    CancelPathExecution();
+                }
+                return;
+            }
+
+            if (_isExecutingPath && _currentPathIndex < _player.ActionQueue.Count)
+            {
+                PendingAction nextAction = _player.ActionQueue[_currentPathIndex];
+
+                _actionAwaitingExecution = nextAction;
+
+                int secondsPassed = CalculateSecondsForAction(nextAction);
+                Core.CurrentWorldClockManager.PassTime(seconds: secondsPassed);
             }
         }
 
-        private bool SimulateWorldTick(PendingAction playerAction, int secondsPassed)
+        private int CalculateSecondsForAction(PendingAction action)
         {
-            // Simulate Player Action //
-            switch (playerAction.Type)
+            switch (action.Type)
             {
                 case ActionType.WalkMove:
                 case ActionType.RunMove:
-                    Vector2 nextPosition = playerAction.Position;
+                    var mapData = GetMapDataAt((int)action.Position.X, (int)action.Position.Y);
+                    Vector2 previousPosition = (_currentPathIndex > 0) ? _player.ActionQueue[_currentPathIndex - 1].Position : _player.WorldPosition;
+                    Vector2 moveDirection = action.Position - previousPosition;
+                    return GetSecondsPassedDuringMovement(action.Type, mapData.TerrainType, moveDirection);
+                case ActionType.ShortRest:
+                    return _player.Stats.ShortRestDuration * 60;
+                case ActionType.LongRest:
+                    return _player.Stats.LongRestDuration * 60;
+                case ActionType.FullRest:
+                    return _player.Stats.FullRestDuration * 60;
+                default:
+                    return 0;
+            }
+        }
+
+        private bool ApplyActionEffects(PendingAction action)
+        {
+            switch (action.Type)
+            {
+                case ActionType.WalkMove:
+                case ActionType.RunMove:
+                    Vector2 nextPosition = action.Position;
                     var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
                     if (!IsPositionPassable(nextPosition))
                     {
@@ -528,7 +532,7 @@ namespace ProjectVagabond
                         return false;
                     }
 
-                    int energyCost = GetMovementEnergyCost(playerAction);
+                    int energyCost = GetMovementEnergyCost(action);
                     if (!_player.Stats.CanExertEnergy(energyCost))
                     {
                         Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to continue! Need {energyCost} for {mapData.TerrainType.ToLower()}, have {_player.Stats.CurrentEnergyPoints}");
@@ -537,31 +541,20 @@ namespace ProjectVagabond
 
                     _player.SetPosition(nextPosition);
                     _player.Stats.ExertEnergy(energyCost);
-                    string moveType = playerAction.Type == ActionType.RunMove ? "Ran" : "Walked";
+                    string moveType = action.Type == ActionType.RunMove ? "Ran" : "Walked";
                     Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through[gold] {mapData.TerrainType.ToLower()}[khaki].[/o] <{(int)nextPosition.X}, {(int)nextPosition.Y}>");
                     break;
 
                 case ActionType.ShortRest:
                 case ActionType.LongRest:
                 case ActionType.FullRest:
-                    _player.Stats.Rest(playerAction.ActionRestType.Value);
-                    string restType = playerAction.ActionRestType.Value.ToString().Replace("Rest", "");
+                    _player.Stats.Rest(action.ActionRestType.Value);
+                    string restType = action.ActionRestType.Value.ToString().Replace("Rest", "");
                     Core.CurrentTerminalRenderer.AddOutputToHistory($"[rest]Completed {restType.ToLower()} rest. Energy is now {_player.Stats.CurrentEnergyPoints}/{_player.Stats.MaxEnergyPoints}.");
                     break;
             }
 
-            // Simulate Tethered Entities Actions //
-            foreach (var entity in _tetheredEntities)
-            {
-                entity.Update(secondsPassed, this);
-            }
-
-            // Advance World Time //
-            Core.CurrentWorldClockManager.PassTime(seconds: secondsPassed);
-
-            // Update Tethered List //
             UpdateTetheredEntities();
-
             return true;
         }
 
@@ -593,8 +586,10 @@ namespace ProjectVagabond
                 _isExecutingPath = false;
                 _player.ActionQueue.Clear();
                 _currentPathIndex = 0;
+                _actionAwaitingExecution = null; // Clear any pending action
                 ToggleExecutingPath(false);
                 ToggleIsFreeMoveMode(false);
+                Core.CurrentWorldClockManager.CancelInterpolation();
                 Core.CurrentTerminalRenderer.AddOutputToHistory("[cancel]Action queue cancelled.");
             }
         }

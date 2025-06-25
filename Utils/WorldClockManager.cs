@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Xna.Framework;
 
 namespace ProjectVagabond
 {
@@ -34,9 +35,19 @@ namespace ProjectVagabond
         // Public properties to access time information //
         public int CurrentYear => _year;
         public int CurrentHour => _hour;
-        public int CurrentMinute => _minute;
+        public int CurrentMinute =>_minute;
         public int CurrentSecond => _second;
         public string CurrentTime => Global.Instance.Use24HourClock ? GetTimeString() : GetConverted24hToAmPm(GetTimeString());
+
+        // Interpolation State Fields //
+        private bool _isInterpolating = false;
+        private TimeSpan _interpolationStartTime;
+        private TimeSpan _interpolationTargetTime;
+        private float _interpolationDurationRealSeconds;
+        private float _interpolationTimer;
+        private long _totalSecondsPassedDuringInterpolation;
+
+        public bool IsInterpolatingTime => _isInterpolating;
 
         // Privte fields for season lengths //
         private const int _fallDays = 91;
@@ -62,12 +73,115 @@ namespace ProjectVagabond
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        // UPDATE & INTERPOLATION LOGIC
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+        public void Update(GameTime gameTime)
+        {
+            if (!_isInterpolating) return;
+
+            _interpolationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (_interpolationTimer >= _interpolationDurationRealSeconds)
+            {
+                // Animation Finished
+                _isInterpolating = false;
+                SetTimeFromTimeSpan(_interpolationTargetTime);
+                FinishTimePassage();
+            }
+            else
+            {
+                // Animation in Progress
+                float progress = _interpolationTimer / _interpolationDurationRealSeconds;
+                long currentTicks = (long)MathHelper.Lerp(_interpolationStartTime.Ticks, _interpolationTargetTime.Ticks, progress);
+                SetTimeFromTimeSpan(new TimeSpan(currentTicks));
+            }
+        }
+
+        /// <summary>
+        /// Kicks off the time-lapse animation. The game will wait for this to complete.
+        /// </summary>
+        public void PassTime(int days = 0, int hours = 0, int minutes = 0, int seconds = 0)
+        {
+            if (_isInterpolating) return;
+
+            _totalSecondsPassedDuringInterpolation = (long)seconds + ((long)minutes * 60) + ((long)hours * 3600) + ((long)days * 86400);
+            if (_totalSecondsPassedDuringInterpolation == 0) return;
+
+            // Store start and calculate target time
+            _interpolationStartTime = new TimeSpan(_dayOfYear - 1, _hour, _minute, _second);
+            _interpolationTargetTime = _interpolationStartTime.Add(TimeSpan.FromSeconds(_totalSecondsPassedDuringInterpolation));
+
+            // Calculate real-world animation duration with non-linear scaling
+            // A 1-minute pass takes ~1s, an 8-hour pass takes ~5s.
+            const float minDuration = 0.5f;
+            const float maxDuration = 5.0f;
+            const float scaleFactor = 0.00015f; // Adjust this to change how fast duration increases
+            _interpolationDurationRealSeconds = Math.Clamp(minDuration + (_totalSecondsPassedDuringInterpolation * scaleFactor), minDuration, maxDuration);
+
+            // Reset timer and set state
+            _interpolationTimer = 0f;
+            _isInterpolating = true;
+        }
+
+        /// <summary>
+        /// This is called when the interpolation animation is complete.
+        /// It handles event invocation and terminal messages.
+        /// </summary>
+        private void FinishTimePassage()
+        {
+            int daysPassed = (int)(_totalSecondsPassedDuringInterpolation / 86400);
+
+            if (daysPassed > 0)
+            {
+                Season previousSeason = CurrentSeason;
+                int newDayOfYear = (_dayOfYear + daysPassed);
+
+                while (newDayOfYear > 365)
+                {
+                    newDayOfYear -= 365;
+                    _year++;
+                    OnYearChanged?.Invoke();
+                }
+                _dayOfYear = newDayOfYear;
+                OnDayChanged?.Invoke();
+
+                if (CurrentSeason != previousSeason)
+                {
+                    OnSeasonChanged?.Invoke();
+                }
+            }
+
+            Core.CurrentTerminalRenderer.AddOutputToHistory($"[dimgray]{GetCommaFormattedTimeFromSeconds((int)_totalSecondsPassedDuringInterpolation)} passed");
+            OnTimeChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Helper to update the public time fields from a TimeSpan object.
+        /// </summary>
+        private void SetTimeFromTimeSpan(TimeSpan time)
+        {
+            _dayOfYear = time.Days + 1;
+            _hour = time.Hours;
+            _minute = time.Minutes;
+            _second = time.Seconds;
+        }
+
+        /// <summary>
+        /// Immediately stops any ongoing time interpolation.
+        /// </summary>
+        public void CancelInterpolation()
+        {
+            if (!_isInterpolating) return;
+
+            _isInterpolating = false;
+            SetTimeFromTimeSpan(_interpolationStartTime);
+        }
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // BASE LOGIC
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        /// <summary>
-        /// Calculates the current season based on the day of the year.
-        /// </summary>
         public Season CurrentSeason
         {
             get
@@ -79,9 +193,6 @@ namespace ProjectVagabond
             }
         }
 
-        /// <summary>
-        /// Calculates the day number within the current season (e.g., "Day 5 of Winter").
-        /// </summary>
         public int DayOfSeason
         {
             get
@@ -97,126 +208,35 @@ namespace ProjectVagabond
             }
         }
 
-        /// <summary>
-        /// Advances the game time by a specified amount of days, hours, minutes, and seconds.
-        /// </summary>
-        public void PassTime(int days = 0, int hours = 0, int minutes = 0, int seconds = 0)
-        {
-            if (days == 0 && hours == 0 && minutes == 0 && seconds == 0) return;
-
-            // Calculate total seconds to add
-            long totalSecondsToAdd = (long)seconds + ((long)minutes * 60) + ((long)hours * 3600) + ((long)days * 86400);
-            if (totalSecondsToAdd == 0) return;
-
-            // Add seconds and handle rollovers
-            _second += (int)(totalSecondsToAdd % 60);
-            long totalMinutesToAdd = totalSecondsToAdd / 60;
-            if (_second >= 60)
-            {
-                _second -= 60;
-                totalMinutesToAdd++;
-            }
-
-            // Add minutes and handle rollovers
-            _minute += (int)(totalMinutesToAdd % 60);
-            long totalHoursToAdd = totalMinutesToAdd / 60;
-            if (_minute >= 60)
-            {
-                _minute -= 60;
-                totalHoursToAdd++;
-            }
-
-            // Add hours and handle rollovers
-            _hour += (int)(totalHoursToAdd % 24);
-            int daysToAdd = (int)(totalHoursToAdd / 24);
-            if (_hour >= 24)
-            {
-                _hour -= 24;
-                daysToAdd++;
-            }
-
-            // If days have passed, invoke the day change event
-            if (daysToAdd > 0)
-            {
-                Season previousSeason = CurrentSeason;
-                _dayOfYear += daysToAdd;
-                OnDayChanged?.Invoke();
-
-                // Handle year rollovers
-                while (_dayOfYear > 365)
-                {
-                    _dayOfYear -= 365;
-                    _year++;
-                    OnYearChanged?.Invoke();
-                }
-
-                if (CurrentSeason != previousSeason)
-                {
-                    OnSeasonChanged?.Invoke();
-                }
-            }
-
-            Core.CurrentTerminalRenderer.AddOutputToHistory($"[dimgray]{GetCommaFormattedTimeFromSeconds((int)totalSecondsToAdd)} passed");
-
-            // Notify listeners that time has changed
-            OnTimeChanged?.Invoke();
-        }
-
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // HELPER METHODS
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        /// <summary>
-        /// Gets a formatted string for the current date, season, and time.
-        /// </summary>
-        /// <returns>A string like "Year 426, Day 1 of Fall - 08:00"</returns>
         public string GetDateSeasonTimeString()
         {
             return $"Year {CurrentYear}, Day {DayOfSeason} of {CurrentSeason} - {_hour:D2}:{_minute:D2}";
         }
 
-        /// <summary>
-        /// Gets a formatted string for the current date and season.
-        /// </summary>
-        /// <returns>A string like "Year 426, Day 1 of Fall"</returns>
         public string GetDateSeasonString()
         {
             return $"Year {CurrentYear}, Day {DayOfSeason} of {CurrentSeason}";
         }
 
-        /// <summary>
-        /// Gets a formatted string for the current date.
-        /// </summary>
-        /// <returns>A string like "Year 426, Day 1"</returns>
         public string GetDate()
         {
             return $"Year {CurrentYear}, Day {DayOfSeason}";
         }
 
-        /// <summary>
-        /// Gets a formatted string for the season.
-        /// </summary>
-        /// <returns>A string like "Fall"</returns>
         public string GetSeasonString()
         {
             return $"{CurrentSeason}";
         }
 
-        /// <summary>
-        /// Gets a formatted string for the time.
-        /// </summary>
-        /// <returns>A string like "08:00"</returns>
         public string GetTimeString()
         {
             return $"{_hour:D2}:{_minute:D2}";
         }
 
-        /// <summary>
-        /// Converts total seconds into a human-readable string like "1 day, 2 hours, 3 minutes, 4 seconds".
-        /// Only includes non-zero components, and handles singular/plural formatting.
-        /// </summary>
-        /// <param name="totalSeconds">Total seconds to convert</param>
-        /// <returns>Formatted string like "1 day, 2 hours, 3 minutes, 4 seconds"</returns>
         public string GetCommaFormattedTimeFromSeconds(int totalSeconds)
         {
             if (totalSeconds <= 0)
@@ -237,17 +257,10 @@ namespace ProjectVagabond
             return string.Join(", ", parts);
         }
 
-        /// <summary>
-        /// Calculates what time it will be after adding seconds to a given time.
-        /// </summary>
-        /// <param name="currentTime">Current time in "HH:MM" or "HH:MM:SS" format</param>
-        /// <param name="secondsToAdd">Number of seconds to add</param>
-        /// <returns>New time in "HH:MM" format after adding the seconds</returns>
         public string GetCalculatedNewTime(string currentTime, int secondsToAdd)
         {
             currentTime = GetConvertedTo24hTime(currentTime);
 
-            // Parse the current time
             string[] timeParts = currentTime.Split(':');
             if (timeParts.Length < 2)
                 throw new ArgumentException("Time must be in at least HH:MM format");
@@ -256,7 +269,6 @@ namespace ProjectVagabond
                 !int.TryParse(timeParts[1], out int currentMinute))
                 throw new ArgumentException("Invalid time format");
 
-            // Validate hour and minute ranges
             if (currentHour < 0 || currentHour > 23 || currentMinute < 0 || currentMinute > 59)
                 throw new ArgumentException("Invalid time component range");
 
@@ -266,13 +278,6 @@ namespace ProjectVagabond
             return $"{newTimeSpan.Hours:D2}:{newTimeSpan.Minutes:D2}";
         }
 
-        /// <summary>
-        /// Converts total minutes into a shorthand formatted string.
-        /// Format: "Xd Yhr Zmin" where larger units force smaller units to display.
-        /// Example: 1500 minutes = "1d 1hr 0min"
-        /// </summary>
-        /// <param name="totalMinutes">Total minutes to convert</param>
-        /// <returns>Formatted shorthand string</returns>
         public string GetFormattedTimeFromMinutesShortHand(int totalMinutes)
         {
             if (totalMinutes == 0) return "0min";
@@ -303,13 +308,6 @@ namespace ProjectVagabond
             return parts.Count > 0 ? string.Join(" ", parts) : "0min";
         }
 
-        /// <summary>
-        /// Converts total seconds into a shorthand formatted string.
-        /// Format: "Xd Yhr Zmin Ws" where only non-zero values are shown.
-        /// Example: 3661 seconds = "1hr 1min 1s"
-        /// </summary>
-        /// <param name="totalSeconds">Total seconds to convert</param>
-        /// <returns>Formatted shorthand string</returns>
         public string GetFormattedTimeFromSecondsShortHand(int totalSeconds)
         {
             if (totalSeconds == 0) return "0 sec";
@@ -329,11 +327,6 @@ namespace ProjectVagabond
             return parts.Count > 0 ? string.Join(" ", parts) : "0 sec";
         }
 
-        /// <summary>
-        /// Converts military time (24-hour format) to AM/PM format.
-        /// </summary>
-        /// <param name="militaryTime">24-hour in "HH:MM" or "HH:MM:SS" format</param>
-        /// <returns>Time in AM/PM format (e.g., "9:15 PM")</returns>
         public string GetConverted24hToAmPm(string militaryTime)
         {
             string[] timeParts = militaryTime.Split(':');
@@ -358,11 +351,6 @@ namespace ProjectVagabond
             return $"{displayHour}:{minute:D2} {period}";
         }
 
-        /// <summary>
-        /// Converts time to 24-hour format. If already in military format, returns as-is.
-        /// </summary>
-        /// <param name="time">Time in either "HH:MM" or "H:MM AM/PM" format (seconds are ignored)</param>
-        /// <returns>Time in military format "HH:MM"</returns>
         public string GetConvertedTo24hTime(string time)
         {
             if (string.IsNullOrWhiteSpace(time))
