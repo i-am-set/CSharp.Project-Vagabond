@@ -1,11 +1,4 @@
-﻿using Microsoft.Xna.Framework;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Security.Cryptography;
-
---- START OF FILE WorldClockManager.cs ---
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Cryptography;
@@ -453,4 +446,3 @@ namespace ProjectVagabond
         }
     }
 }
---- END OF FILE WorldClockManager.cs ---
