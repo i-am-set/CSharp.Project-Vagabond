@@ -49,6 +49,14 @@ namespace ProjectVagabond.UI
             OnSelectionChanged?.Invoke(Buttons[_selectedIndex]);
         }
 
+        public void CycleNext()
+        {
+            if (Buttons.Count == 0) return;
+
+            int nextIndex = (_selectedIndex + 1) % Buttons.Count;
+            SetSelectedIndex(nextIndex);
+        }
+
         public ToggleButton GetSelectedButton()
         {
             if (_selectedIndex >= 0 && _selectedIndex < Buttons.Count)

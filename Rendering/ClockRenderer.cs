@@ -13,29 +13,40 @@ namespace ProjectVagabond
         private const int CLOCK_SIZE = 64;
         private readonly RadioGroup _timeScaleGroup;
 
+        public RadioGroup TimeScaleGroup => _timeScaleGroup;
+
         public ClockRenderer()
         {
             _timeScaleGroup = new RadioGroup(defaultIndex: 0);
 
-            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, "1x"));
-            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, "3x"));
-            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, "5x"));
+            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{Global.Instance.TimeScaleMultiplier1}x"));
+            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{Global.Instance.TimeScaleMultiplier2}x"));
+            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{Global.Instance.TimeScaleMultiplier3}x"));
 
             _timeScaleGroup.OnSelectionChanged += HandleTimeScaleChange;
             
-            // Set initial time scale
             HandleTimeScaleChange(_timeScaleGroup.GetSelectedButton());
         }
 
-        private void HandleTimeScaleChange(ToggleButton selectedButton)
+        private static void HandleTimeScaleChange(ToggleButton selectedButton)
         {
             if (selectedButton == null) return;
-            switch (selectedButton.Text)
+
+            if (selectedButton.Text == $"{Global.Instance.TimeScaleMultiplier1}x")
             {
-                case "1x": Core.CurrentWorldClockManager.TimeScale = 1.0f; break;
-                case "3x": Core.CurrentWorldClockManager.TimeScale = 3.0f; break;
-                case "5x": Core.CurrentWorldClockManager.TimeScale = 5.0f; break;
-                default: Core.CurrentWorldClockManager.TimeScale = 1.0f; break;
+                Core.CurrentWorldClockManager.TimeScale = Global.Instance.TimeScaleMultiplier1;
+            }
+            else if (selectedButton.Text == $"{Global.Instance.TimeScaleMultiplier2}x")
+            {
+                Core.CurrentWorldClockManager.TimeScale = Global.Instance.TimeScaleMultiplier2;
+            }
+            else if (selectedButton.Text == $"{Global.Instance.TimeScaleMultiplier3}x")
+            {
+                Core.CurrentWorldClockManager.TimeScale = Global.Instance.TimeScaleMultiplier3;
+            }
+            else // Fallback
+            {
+                Core.CurrentWorldClockManager.TimeScale = 1.0f;
             }
         }
 
@@ -105,7 +116,7 @@ namespace ProjectVagabond
             // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
             int buttonWidth = 30;
             int buttonHeight = 18;
-            int buttonSpacing = 2;
+            int buttonSpacing = 0;
             float totalGroupWidth = (buttonWidth * 3) + (buttonSpacing * 2);
             Vector2 groupStartPosition = new Vector2(clockCenter.X - (totalGroupWidth / 2), _clockPosition.Y + CLOCK_SIZE + 5);
 

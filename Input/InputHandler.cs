@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using ProjectVagabond;
 using System;
@@ -148,7 +148,7 @@ namespace ProjectVagabond
                             }
                             else
                             {
-                                if (!string.IsNullOrEmpty(_currentInput.Trim()))
+                                if (!string.IsNullOrEmpty(_currentInput.Trim())) 
                                 {
                                     _commandHistory.Add(_currentInput.Trim());
                                     if (_commandHistory.Count > 50)
@@ -171,6 +171,10 @@ namespace ProjectVagabond
                                 _currentInput = Core.CurrentAutoCompleteManager.AutoCompleteSuggestions[Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex];
                                 _cursorPosition = _currentInput.Length;
                                 Core.CurrentAutoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
+                            }
+                            else
+                            {
+                                Core.CurrentClockRenderer.TimeScaleGroup.CycleNext();
                             }
                         }
                         else if (key == Keys.Up && Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions)

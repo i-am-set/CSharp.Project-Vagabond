@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -86,6 +86,11 @@ namespace ProjectVagabond
         // Settings variables
         public bool UseImperialUnits { get; set; } = false;
         public bool Use24HourClock { get; set; } = false;
+
+        // Time scale multipliers
+        public float TimeScaleMultiplier1 { get; set; } = 1.0f;
+        public float TimeScaleMultiplier2 { get; set; } = 2.0f;
+        public float TimeScaleMultiplier3 { get; set; } = 3.0f;
 
         // Input variables
         public int previousScrollValue = Mouse.GetState().ScrollWheelValue;
