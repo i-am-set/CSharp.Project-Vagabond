@@ -50,7 +50,9 @@ namespace ProjectVagabond
             // Calculate hand rotations in radians.
             // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
             float secondRotation = (second / 60f) * MathHelper.TwoPi - MathHelper.PiOver2;
-            float minuteRotation = ((minute + second / 60f) / 60f) * MathHelper.TwoPi - MathHelper.PiOver2;
+            
+            float minuteRotation = (minute / 60f) * MathHelper.TwoPi - MathHelper.PiOver2;
+
             float hourRotation = (((hour % 12) + minute / 60f) / 12f) * MathHelper.TwoPi - MathHelper.PiOver2;
 
             // Draw AM/PM text
