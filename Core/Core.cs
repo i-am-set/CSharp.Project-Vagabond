@@ -20,6 +20,7 @@ using System;
 // TODO: Finish entity implimentation
 // TODO: Make clock ui to show time passing
 // TODO: Convert display to have larger map, smaller terminal, with the terminal input being hidden unless the player presses ~ to "open console"
+// TODO: Make clock second hand move at integer postiinon not float
 
 namespace ProjectVagabond
 {
