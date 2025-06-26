@@ -128,19 +128,19 @@ namespace ProjectVagabond
             float scaleFactor;
             if (_totalSecondsPassedDuringInterpolation > ONE_DAY)
             {
-                scaleFactor = 0.00005f; // Fastest
+                scaleFactor = 0.0001f; // Fastest
             }
             else if (_totalSecondsPassedDuringInterpolation > EIGHT_HOURS)
             {
-                scaleFactor = 0.0001f;  // Faster 
+                scaleFactor = 0.0003f;  // Faster 
             }
             else if (_totalSecondsPassedDuringInterpolation > ONE_HOUR)
             {
-                scaleFactor = 0.0002f;  // Fast
+                scaleFactor = 0.0006f;  // Fast
             }
             else
             {
-                scaleFactor = 0.00045f; // Slowest (Base Speed)
+                scaleFactor = 0.00135f; // Slowest (Base Speed)
             }
 
             _interpolationDurationRealSeconds = Math.Clamp(minDuration + (_totalSecondsPassedDuringInterpolation * scaleFactor), minDuration, maxDuration);
