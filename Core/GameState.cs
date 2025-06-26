@@ -269,6 +269,7 @@ namespace ProjectVagabond
             int secondsPassed = 0;
             Vector2 lastPosition = isLocalSim ? _player.LocalPosition : _player.WorldPosition;
             bool isFirstMoveInQueue = true;
+            bool localRunCostApplied = false;
 
             foreach (var action in queueToSimulate)
             {
@@ -289,6 +290,13 @@ namespace ProjectVagabond
 
                         secondsPassed += moveDuration;
                         int cost = GetMovementEnergyCost(action, isLocalSim);
+
+                        if (isLocalSim && action.Type == ActionType.RunMove && !localRunCostApplied)
+                        {
+                            cost = 1;
+                            localRunCostApplied = true;
+                        }
+
                         if (finalEnergy < cost)
                         {
                             return (finalEnergy, false, secondsPassed);
@@ -371,6 +379,18 @@ namespace ProjectVagabond
                 count = Math.Max(1, Math.Min(Global.MAX_SINGLE_MOVE_LIMIT, parsedCount));
             }
 
+            if (isLocalMove && isRunning)
+            {
+                if (!_player.ActionQueue.Any(a => a.Type == ActionType.RunMove))
+                {
+                    if (!_player.Stats.CanExertEnergy(1))
+                    {
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to start a local run! <Requires 1 EP>");
+                        return;
+                    }
+                }
+            }
+
             Vector2 oppositeDirection = -direction;
             int removedSteps = 0;
 
@@ -446,6 +466,7 @@ namespace ProjectVagabond
                         else
                         {
                             int stepCost = GetMovementEnergyCost(nextAction, isLocalMove);
+                            if (isLocalMove && isRunning) stepCost = 1;
                             Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot move here... Not enough energy! <Requires {stepCost} EP>");
                             break;
                         }
@@ -582,32 +603,37 @@ namespace ProjectVagabond
                         return false;
                     }
 
-                    int energyCost = GetMovementEnergyCost(action, isLocalMove);
-                    if (!_player.Stats.CanExertEnergy(energyCost))
-                    {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to continue! Need {energyCost}, have {_player.Stats.CurrentEnergyPoints}");
-                        return false;
-                    }
-
-                    _player.Stats.ExertEnergy(energyCost);
                     string moveType = action.Type == ActionType.RunMove ? "Ran" : "Walked";
                     int secondsPassedForAction = CalculateSecondsForAction(action);
                     string timeString = Core.CurrentWorldClockManager.GetCommaFormattedTimeFromSeconds(secondsPassedForAction);
 
                     if (isLocalMove)
                     {
+                        if (action.Type == ActionType.RunMove)
+                        {
+                            int firstRunIndex = _player.ActionQueue.FindIndex(a => a.Type == ActionType.RunMove);
+                            if (_currentPathIndex == firstRunIndex)
+                            {
+                                _player.Stats.ExertEnergy(1);
+                            }
+                        }
                         _player.SetLocalPosition(nextPosition);
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} to local pos[/o] [dim]({timeString})");
-                        // <{(int)nextPosition.X}, {(int)nextPosition.Y}>
                     }
                     else
                     {
+                        int energyCost = GetMovementEnergyCost(action, false);
+                        if (!_player.Stats.CanExertEnergy(energyCost))
+                        {
+                            Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to continue! Need {energyCost}, have {_player.Stats.CurrentEnergyPoints}");
+                            return false;
+                        }
+                        _player.Stats.ExertEnergy(energyCost);
+
                         Vector2 oldWorldPos = _player.WorldPosition;
                         _player.SetPosition(nextPosition);
 
-                        // Update local position based on entry direction
                         Vector2 moveDir = nextPosition - oldWorldPos;
-                        Vector2 newLocalPos = new Vector2(32, 32); // Fallback
+                        Vector2 newLocalPos = new Vector2(32, 32);
                         if (moveDir.X > 0) newLocalPos.X = 0; else if (moveDir.X < 0) newLocalPos.X = 63;
                         if (moveDir.Y > 0) newLocalPos.Y = 0; else if (moveDir.Y < 0) newLocalPos.Y = 63;
                         if (moveDir.X != 0 && moveDir.Y == 0) newLocalPos.Y = 32;

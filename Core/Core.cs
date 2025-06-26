@@ -17,6 +17,9 @@ using System;
 // TODO: Impliment combat logic into combat scene
 // TODO: Finish entity implimentation
 // TODO: Convert display to have larger map, smaller terminal, with the terminal input being hidden unless the player presses ~ to "open console"
+// TODO: Make it so clicking on the map sets a path to that location, but if a path is queued and you click again, it clears the path and makes a new one to that position instead of appending; then, if control clicking, it appends to the path; and lastly if alt clicked, it does the staright line "less moves" path
+// TODO: Make 1x 2x 3x speed mods under clock
+// TODO: Fix local map running
 
 namespace ProjectVagabond
 {
