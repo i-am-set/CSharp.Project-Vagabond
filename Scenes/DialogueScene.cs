@@ -24,7 +24,7 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-            Core.CurrentMapRenderer.DrawMap();
+            Core.CurrentMapRenderer.DrawMap(gameTime);
             Core.CurrentStatsRenderer.DrawStats();
 
             using (var pixel = new Texture2D(spriteBatch.GraphicsDevice, 1, 1))

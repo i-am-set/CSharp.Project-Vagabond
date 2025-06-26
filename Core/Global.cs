@@ -30,6 +30,7 @@ namespace ProjectVagabond
             ToolTipBGColor = Color.Black;
             ToolTipTextColor = Color.White;
             ToolTipBorderColor = Color.White;
+            TerminalDarkGray = Palette_DarkGray;
         }
 
         public static Global Instance => _instance;
@@ -46,6 +47,8 @@ namespace ProjectVagabond
         public const int VIRTUAL_HEIGHT = 540;
 
         // Map settings Global
+        public const int LOCAL_GRID_SIZE = 64;
+        public const int LOCAL_GRID_CELL_SIZE = 5;
         public const int GRID_SIZE = 32;
         public const int GRID_CELL_SIZE = 10;
         public const int MAP_WIDTH = GRID_SIZE * GRID_CELL_SIZE + 10;
@@ -133,5 +136,6 @@ namespace ProjectVagabond
         public Color ToolTipBGColor { get; private set; }
         public Color ToolTipTextColor { get; private set; }
         public Color ToolTipBorderColor { get; private set; }
+        public Color TerminalDarkGray { get; set; }
     }
 }

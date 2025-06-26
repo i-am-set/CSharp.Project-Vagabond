@@ -160,7 +160,7 @@ namespace ProjectVagabond
                 {
                     string lineNumText = line.LineNumber.ToString();
                     float lineNumX = terminalX + 550;
-                    _spriteBatch.DrawString(_defaultFont, lineNumText, new Vector2(lineNumX, y), Global.Instance.Palette_DarkGray);
+                    _spriteBatch.DrawString(_defaultFont, lineNumText, new Vector2(lineNumX, y), Global.Instance.TerminalDarkGray);
                 }
             }
 
@@ -362,6 +362,7 @@ namespace ProjectVagabond
                 case "warning": return Color.Gold;
                 case "debug": return Color.Chartreuse;
                 case "rest": return Color.LightGreen;
+                case "dim": return Global.Instance.TerminalDarkGray;
 
                 case "palette_black": return Global.Instance.Palette_Black;
                 case "palette_darkgray": return Global.Instance.Palette_DarkGray;

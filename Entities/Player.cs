@@ -5,11 +5,21 @@ namespace ProjectVagabond
     public class Player : Entity
     {
         public PlayerStats Stats { get; }
+        public Vector2 LocalPosition { get; private set; }
 
         public Player(Vector2 initialPosition)
             : base("Player", EntityType.Creature, initialPosition)
         {
             Stats = new PlayerStats(5, 5, 5, 5, 5);
+            LocalPosition = new Vector2(32, 32);
+        }
+
+        public void SetLocalPosition(Vector2 newPosition)
+        {
+            LocalPosition = new Vector2(
+                MathHelper.Clamp(newPosition.X, 0, Global.LOCAL_GRID_SIZE-1),
+                MathHelper.Clamp(newPosition.Y, 0, Global.LOCAL_GRID_SIZE-1)
+            );
         }
 
         /// <summary>

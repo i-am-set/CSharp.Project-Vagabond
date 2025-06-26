@@ -29,7 +29,7 @@ namespace ProjectVagabond.Scenes
             Global.Instance.CurrentSpriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: shakeMatrix);
 
             Core.CurrentTerminalRenderer.DrawTerminal();
-            Core.CurrentMapRenderer.DrawMap();
+            Core.CurrentMapRenderer.DrawMap(gameTime);
             Core.CurrentStatsRenderer.DrawStats();
             Core.CurrentClockRenderer.DrawClock(Global.Instance.CurrentSpriteBatch);
 

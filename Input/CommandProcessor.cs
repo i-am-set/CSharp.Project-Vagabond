@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using ProjectVagabond;
 using ProjectVagabond.Scenes;
 using System;
@@ -60,7 +60,8 @@ namespace ProjectVagabond
                 float noise = _gameState.GetNoiseAt(x, y);
                 string terrain = _gameState.GetTerrainDescription(noise);
                 AddOutputToHistory($"You are standing on {terrain}.");
-                AddOutputToHistory($"Position: ({x}, {y})");
+                AddOutputToHistory($"World Position: ({x}, {y})");
+                AddOutputToHistory($"Local Position: ({(int)_gameState.PlayerLocalPos.X}, {(int)_gameState.PlayerLocalPos.Y})");
                 AddOutputToHistory($"Terrain value: {noise:F2}");
             }, "look [gray]- Look around current area.");
 
@@ -86,7 +87,7 @@ namespace ProjectVagabond
                     default: AddOutputToHistory($"Unknown direction for run: '{direction}'."); break;
                 }
             },
-            "run <dir> <count?> [gray]- Queue a run (costs energy, but quicker).",
+            "run <dir> <count?> [gray]- Queue a run.",
             (args) =>
             {
                 if (args.Length == 0) return new List<string> { "up", "down", "left", "right", "up-left", "up-right", "down-left", "down-right" };
@@ -122,98 +123,14 @@ namespace ProjectVagabond
                 return new List<string>();
             });
 
-            _commands["up"] = new Command("up", (args) =>
-            {
-                if (args.Length > 1)
-                {
-                    string secondArg = args[1].ToLower();
-                    if (secondArg == "left")
-                    {
-                        var newArgs = new List<string> { "up-left" };
-                        newArgs.AddRange(args.Skip(2));
-                        _commands["up-left"].Action(newArgs.ToArray());
-                        return;
-                    }
-                    if (secondArg == "right")
-                    {
-                        var newArgs = new List<string> { "up-right" };
-                        newArgs.AddRange(args.Skip(2));
-                        _commands["up-right"].Action(newArgs.ToArray());
-                        return;
-                    }
-                }
-                _gameState.QueueWalkMovement(new Vector2(0, -1), args);
-            }, "up <count?> [gray]- Queue a walk up.");
-            _commands["down"] = new Command("down", (args) =>
-            {
-                if (args.Length > 1)
-                {
-                    string secondArg = args[1].ToLower();
-                    if (secondArg == "left")
-                    {
-                        var newArgs = new List<string> { "down-left" };
-                        newArgs.AddRange(args.Skip(2));
-                        _commands["down-left"].Action(newArgs.ToArray());
-                        return;
-                    }
-                    if (secondArg == "right")
-                    {
-                        var newArgs = new List<string> { "down-right" };
-                        newArgs.AddRange(args.Skip(2));
-                        _commands["down-right"].Action(newArgs.ToArray());
-                        return;
-                    }
-                }
-                _gameState.QueueWalkMovement(new Vector2(0, 1), args);
-            }, "down <count?> [gray]- Queue a walk down.");
-            _commands["left"] = new Command("left", (args) =>
-            {
-                if (args.Length > 1)
-                {
-                    string secondArg = args[1].ToLower();
-                    if (secondArg == "up")
-                    {
-                        var newArgs = new List<string> { "up-left" };
-                        newArgs.AddRange(args.Skip(2));
-                        _commands["up-left"].Action(newArgs.ToArray());
-                        return;
-                    }
-                    if (secondArg == "down")
-                    {
-                        var newArgs = new List<string> { "down-left" };
-                        newArgs.AddRange(args.Skip(2));
-                        _commands["down-left"].Action(newArgs.ToArray());
-                        return;
-                    }
-                }
-                _gameState.QueueWalkMovement(new Vector2(-1, 0), args);
-            }, "left <count?> [gray]- Queue a walk left.");
-            _commands["right"] = new Command("right", (args) =>
-            {
-                if (args.Length > 1)
-                {
-                    string secondArg = args[1].ToLower();
-                    if (secondArg == "up")
-                    {
-                        var newArgs = new List<string> { "up-right" };
-                        newArgs.AddRange(args.Skip(2));
-                        _commands["up-right"].Action(newArgs.ToArray());
-                        return;
-                    }
-                    if (secondArg == "down")
-                    {
-                        var newArgs = new List<string> { "down-right" };
-                        newArgs.AddRange(args.Skip(2));
-                        _commands["down-right"].Action(newArgs.ToArray());
-                        return;
-                    }
-                }
-                _gameState.QueueWalkMovement(new Vector2(1, 0), args);
-            }, "right <count?> [gray]- Queue a walk right.");
-            _commands["up-left"] = new Command("up-left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, -1), args.ToArray()); }, "up-left <count?> [gray]- Queue a walk up-left.");
-            _commands["up-right"] = new Command("up-right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, -1), args.ToArray()); }, "up-right <count?> [gray]- Queue a walk up-right.");
-            _commands["down-left"] = new Command("down-left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, 1), args.ToArray()); }, "down-left <count?> [gray]- Queue a walk down-left.");
-            _commands["down-right"] = new Command("down-right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, 1), args.ToArray()); }, "down-right <count?> [gray]- Queue a walk down-right.");
+            _commands["up"] = new Command("up", (args) => { _gameState.QueueWalkMovement(new Vector2(0, -1), args); }, "up <count?> [gray]- Queue a walk up.");
+            _commands["down"] = new Command("down", (args) => { _gameState.QueueWalkMovement(new Vector2(0, 1), args); }, "down <count?> [gray]- Queue a walk down.");
+            _commands["left"] = new Command("left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, 0), args); }, "left <count?> [gray]- Queue a walk left.");
+            _commands["right"] = new Command("right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, 0), args); }, "right <count?> [gray]- Queue a walk right.");
+            _commands["up-left"] = new Command("up-left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, -1), args); }, "up-left <count?> [gray]- Queue a walk up-left.");
+            _commands["up-right"] = new Command("up-right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, -1), args); }, "up-right <count?> [gray]- Queue a walk up-right.");
+            _commands["down-left"] = new Command("down-left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, 1), args); }, "down-left <count?> [gray]- Queue a walk down-left.");
+            _commands["down-right"] = new Command("down-right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, 1), args); }, "down-right <count?> [gray]- Queue a walk down-right.");
 
             _commands["cancel"] = new Command("cancel", (args) =>
             {
@@ -230,7 +147,8 @@ namespace ProjectVagabond
 
             _commands["pos"] = new Command("pos", (args) =>
             {
-                AddOutputToHistory($"Current position: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})");
+                AddOutputToHistory($"World position: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})");
+                AddOutputToHistory($"Local position: ({(int)_gameState.PlayerLocalPos.X}, {(int)_gameState.PlayerLocalPos.Y})");
                 AddOutputToHistory($"Pending actions in queue: {_gameState.PendingActions.Count}");
                 if (_gameState.IsExecutingPath)
                 {
@@ -243,6 +161,11 @@ namespace ProjectVagabond
                 _gameState.ToggleIsFreeMoveMode(true);
             }, "move [gray]- Enable free-move mode (W/A/S/D to queue movement).");
 
+            _commands["map"] = new Command("map", (args) =>
+            {
+                _gameState.ToggleMapView();
+            }, "map [gray]- Toggles between World and Local map views.");
+
             _commands["debugallcolors"] = new Command("debugallcolors", (args) =>
             {
                 DebugAllColors();
@@ -250,6 +173,11 @@ namespace ProjectVagabond
 
             _commands["rest"] = new Command("rest", (args) =>
             {
+                if (_gameState.CurrentMapView == MapView.Local)
+                {
+                    AddOutputToHistory("[error]Cannot queue rests from the local map."); // HACK: fix this
+                    return;
+                }
                 _gameState.QueueRest(args);
             },
             "rest <short|long|full> [gray]- Queue a rest action.",

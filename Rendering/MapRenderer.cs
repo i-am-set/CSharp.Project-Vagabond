@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,7 +13,7 @@ namespace ProjectVagabond
     {
         private GameState _gameState = Core.CurrentGameState;
 
-        private Vector2? _hoveredGridWorldPos;
+        private Vector2? _hoveredGridPos;
         private float _hoverTimer;
         private const float HOVER_TIME_FOR_TOOLTIP = 0.5f;
         private bool _showTooltip;
@@ -20,12 +21,18 @@ namespace ProjectVagabond
         private Vector2 _tooltipPosition;
         private Rectangle _mapGridBounds;
         private ContextMenu _contextMenu = new ContextMenu();
+        private Button _toggleMapButton;
 
-        public Vector2? HoveredGridWorldPos => _hoveredGridWorldPos;
+        public Vector2? HoveredGridPos => _hoveredGridPos;
         public ContextMenu MapContextMenu => _contextMenu;
         public Vector2? RightClickedWorldPos { get; set; }
+        public Button ToggleMapButton => _toggleMapButton;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        public MapRenderer()
+        {
+            _toggleMapButton = new Button(new Rectangle(0, 0, 80, 16), "");
+        }
 
         public void Update(GameTime gameTime)
         {
@@ -35,38 +42,54 @@ namespace ProjectVagabond
         private void UpdateHover(GameTime gameTime)
         {
             Vector2 virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
-            Vector2? currentHoveredWorldPos = null;
+            Vector2? currentHoveredPos = null;
+            int cellSize = _gameState.CurrentMapView == MapView.World ? Global.GRID_CELL_SIZE : Global.LOCAL_GRID_CELL_SIZE;
+            int gridSize = _gameState.CurrentMapView == MapView.World ? Global.GRID_SIZE : Global.LOCAL_GRID_SIZE;
 
             if (_mapGridBounds.Contains(virtualMousePos))
             {
-                int gridX = (int)((virtualMousePos.X - _mapGridBounds.X) / Global.GRID_CELL_SIZE);
-                int gridY = (int)((virtualMousePos.Y - _mapGridBounds.Y) / Global.GRID_CELL_SIZE);
+                int gridX = (int)((virtualMousePos.X - _mapGridBounds.X) / cellSize);
+                int gridY = (int)((virtualMousePos.Y - _mapGridBounds.Y) / cellSize);
 
-                if (gridX >= 0 && gridX < Global.GRID_SIZE && gridY >= 0 && gridY < Global.GRID_SIZE)
+                if (gridX >= 0 && gridX < gridSize && gridY >= 0 && gridY < gridSize)
                 {
-                    int startX = (int)_gameState.PlayerWorldPos.X - Global.GRID_SIZE / 2;
-                    int startY = (int)_gameState.PlayerWorldPos.Y - Global.GRID_SIZE / 2;
-                    currentHoveredWorldPos = new Vector2(startX + gridX, startY + gridY);
+                    if (_gameState.CurrentMapView == MapView.World)
+                    {
+                        int startX = (int)_gameState.PlayerWorldPos.X - Global.GRID_SIZE / 2;
+                        int startY = (int)_gameState.PlayerWorldPos.Y - Global.GRID_SIZE / 2;
+                        currentHoveredPos = new Vector2(startX + gridX, startY + gridY);
+                    }
+                    else
+                    {
+                        currentHoveredPos = new Vector2(gridX, gridY);
+                    }
                 }
             }
 
-            if (currentHoveredWorldPos.HasValue)
+            if (currentHoveredPos.HasValue)
             {
-                if (currentHoveredWorldPos.Equals(_hoveredGridWorldPos))
+                if (currentHoveredPos.Equals(_hoveredGridPos))
                 {
                     _hoverTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                     if (_hoverTimer >= HOVER_TIME_FOR_TOOLTIP && !_showTooltip)
                     {
                         _showTooltip = true;
-                        int worldX = (int)currentHoveredWorldPos.Value.X;
-                        int worldY = (int)currentHoveredWorldPos.Value.Y;
-                        float noise = _gameState.GetNoiseAt(worldX, worldY);
-                        string terrainName = GetTerrainName(noise);
-
                         var stringBuilder = new StringBuilder();
-                        stringBuilder.Append($"Pos: ({worldX}, {worldY})\n");
-                        stringBuilder.Append($"Terrain: {terrainName}\n");
-                        stringBuilder.Append($"Noise: {noise:F2}");
+                        int posX = (int)currentHoveredPos.Value.X;
+                        int posY = (int)currentHoveredPos.Value.Y;
+
+                        if (_gameState.CurrentMapView == MapView.World)
+                        {
+                            float noise = _gameState.GetNoiseAt(posX, posY);
+                            string terrainName = GetTerrainName(noise);
+                            stringBuilder.Append($"Pos: ({posX}, {posY})\n");
+                            stringBuilder.Append($"Terrain: {terrainName}\n");
+                            stringBuilder.Append($"Noise: {noise:F2}");
+                        }
+                        else
+                        {
+                            stringBuilder.Append($"Local Pos: ({posX}, {posY})");
+                        }
 
                         _tooltipText = stringBuilder.ToString();
                         _tooltipPosition = new Vector2(virtualMousePos.X + 15, virtualMousePos.Y);
@@ -74,191 +97,245 @@ namespace ProjectVagabond
                 }
                 else
                 {
-                    _hoveredGridWorldPos = currentHoveredWorldPos;
+                    _hoveredGridPos = currentHoveredPos;
                     _hoverTimer = 0f;
                     _showTooltip = false;
                 }
             }
             else
             {
-                _hoveredGridWorldPos = null;
+                _hoveredGridPos = null;
                 _hoverTimer = 0f;
                 _showTooltip = false;
             }
         }
 
-        public void DrawMap()
+        public void DrawMap(GameTime gameTime)
+        {
+            if (_gameState.CurrentMapView == MapView.World)
+            {
+                DrawWorldMap(gameTime);
+            }
+            else
+            {
+                DrawLocalMap(gameTime);
+            }
+        }
+
+        private void DrawWorldMap(GameTime gameTime)
         {
             SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
+            int cellSize = Global.GRID_CELL_SIZE;
+            int gridSize = Global.GRID_SIZE;
 
             int mapStartX = 35;
             int mapStartY = 50;
-            int mapWidth = Global.MAP_WIDTH;
-            int mapHeight = Global.GRID_SIZE * Global.GRID_CELL_SIZE + 30;
+            int mapWidth = gridSize * cellSize + 10;
+            int mapHeight = gridSize * cellSize + 30;
 
-            // Define map grid area for hover detection //
-            _mapGridBounds = new Rectangle(mapStartX, mapStartY, Global.GRID_SIZE * Global.GRID_CELL_SIZE, Global.GRID_SIZE * Global.GRID_CELL_SIZE);
+            _mapGridBounds = new Rectangle(mapStartX, mapStartY, gridSize * cellSize, gridSize * cellSize);
 
-            // Draw map border //
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
-            pixel.SetData(new[] { Color.White });
+            DrawMapFrame(mapStartX, mapStartY, mapWidth, mapHeight, gameTime);
 
-            // Border rectangle //
+            var gridElements = GenerateWorldMapGridElements(mapStartX, mapStartY, gridSize, cellSize);
+            foreach (var element in gridElements)
+            {
+                DrawGridElement(element, cellSize);
+            }
+
+            if (_hoveredGridPos.HasValue)
+            {
+                Vector2? screenPos = MapCoordsToScreen(_hoveredGridPos.Value);
+                if (screenPos.HasValue)
+                {
+                    Rectangle indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
+                    _spriteBatch.Draw(Core.CurrentSpriteManager.MapHoverMarkerSprite, indicatorRect, Color.Lime * 0.5f);
+                }
+            }
+
+            if (RightClickedWorldPos.HasValue)
+            {
+                Vector2? screenPos = MapCoordsToScreen(RightClickedWorldPos.Value);
+                if (screenPos.HasValue)
+                {
+                    Rectangle markerRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
+                    _spriteBatch.Draw(Core.CurrentSpriteManager.MapHoverMarkerSprite, markerRect, Color.Cyan * 0.6f);
+                }
+            }
+
+            _contextMenu.Draw(_spriteBatch);
+            if (_showTooltip) DrawTooltip(_spriteBatch);
+        }
+
+        private void DrawLocalMap(GameTime gameTime)
+        {
+            SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
+            int cellSize = Global.LOCAL_GRID_CELL_SIZE;
+            int gridSize = Global.LOCAL_GRID_SIZE;
+
+            int mapStartX = 35;
+            int mapStartY = 50;
+            int mapWidth = gridSize * cellSize + 10;
+            int mapHeight = gridSize * cellSize + 30;
+
+            _mapGridBounds = new Rectangle(mapStartX, mapStartY, gridSize * cellSize, gridSize * cellSize);
+
+            DrawMapFrame(mapStartX, mapStartY, mapWidth, mapHeight, gameTime);
+
+            var gridElements = GenerateLocalMapGridElements(mapStartX, mapStartY, gridSize, cellSize);
+            foreach (var element in gridElements)
+            {
+                DrawGridElement(element, cellSize);
+            }
+
+            if (_hoveredGridPos.HasValue)
+            {
+                Vector2? screenPos = MapCoordsToScreen(_hoveredGridPos.Value);
+                if (screenPos.HasValue)
+                {
+                    Rectangle indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
+                    _spriteBatch.Draw(Core.CurrentSpriteManager.MapHoverMarkerSprite, indicatorRect, Color.Lime * 0.5f);
+                }
+            }
+
+            _contextMenu.Draw(_spriteBatch);
+            if (_showTooltip) DrawTooltip(_spriteBatch);
+        }
+
+        private void DrawMapFrame(int mapStartX, int mapStartY, int mapWidth, int mapHeight, GameTime gameTime)
+        {
+            SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
+            var pixel = Core.Pixel;
+
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, mapWidth, 2), Global.Instance.Palette_White); // Top
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY + mapHeight - 27, mapWidth, 2), Global.Instance.Palette_White); // Bottom
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, 2, mapHeight), Global.Instance.Palette_White); // Left
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX + mapWidth - 7, mapStartY - 25, 2, mapHeight), Global.Instance.Palette_White); // Right
 
-            // Draw map title //
-            string posText = $"Pos: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})";
-            _spriteBatch.DrawString(Global.Instance.DefaultFont, posText,
-                new Vector2(mapStartX, mapStartY - 20), Global.Instance.TextColor);
+            string titleText = _gameState.CurrentMapView == MapView.World
+                ? $"World Pos: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})"
+                : $"Local Map for ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})";
+            _spriteBatch.DrawString(Global.Instance.DefaultFont, titleText, new Vector2(mapStartX, mapStartY - 20), Global.Instance.TextColor);
 
-            // Draw the current date and time //
             string timeText = Core.CurrentWorldClockManager.CurrentTime;
             Vector2 timeTextSize = Global.Instance.DefaultFont.MeasureString(timeText);
             Vector2 timeTextPos = new Vector2(mapStartX + mapWidth - timeTextSize.X - 15, mapStartY - 20);
             _spriteBatch.DrawString(Global.Instance.DefaultFont, timeText, timeTextPos, Global.Instance.TextColor);
 
-            // Draw divider line //
+            _toggleMapButton.Bounds = new Rectangle((int)timeTextPos.X - 90, (int)timeTextPos.Y - 2, 80, 16);
+            _toggleMapButton.Text = _gameState.CurrentMapView == MapView.World ? "Local Map" : "World Map";
+            _toggleMapButton.Draw(_spriteBatch, Global.Instance.DefaultFont, gameTime);
+
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 5, mapWidth, 2), Global.Instance.Palette_White);
-
-            // Generate grid elements //
-            var gridElements = GenerateMapGridElements(mapStartX, mapStartY);
-
-            // Draw each grid element //
-            foreach (var element in gridElements)
-            {
-                DrawGridElement(element);
-            }
-
-            // Draw hover indicator //
-            if (_hoveredGridWorldPos.HasValue)
-            {
-                Vector2? screenPos = WorldToScreen(_hoveredGridWorldPos.Value);
-                if (screenPos.HasValue)
-                {
-                    Rectangle indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, Global.GRID_CELL_SIZE, Global.GRID_CELL_SIZE);
-                    Texture2D texture = Core.CurrentSpriteManager.MapHoverMarkerSprite;
-                    _spriteBatch.Draw(texture, indicatorRect, Color.Lime * 0.5f);
-                }
-            }
-
-            // Draw right-click marker //
-            if (RightClickedWorldPos.HasValue)
-            {
-                Vector2? screenPos = WorldToScreen(RightClickedWorldPos.Value);
-                if (screenPos.HasValue)
-                {
-                    Rectangle markerRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, Global.GRID_CELL_SIZE, Global.GRID_CELL_SIZE);
-                    Texture2D texture = Core.CurrentSpriteManager.MapHoverMarkerSprite;
-                    _spriteBatch.Draw(texture, markerRect, Color.Cyan * 0.6f);
-                }
-            }
-
-            // Draw Context Menu on top of everything else //
-            _contextMenu.Draw(_spriteBatch);
-
-            // Draw tooltip if needed //
-            if (_showTooltip)
-            {
-                DrawTooltip(_spriteBatch);
-            }
-
         }
 
-        private List<GridElement> GenerateMapGridElements(int mapStartX, int mapStartY)
+        private List<GridElement> GenerateWorldMapGridElements(int mapStartX, int mapStartY, int gridSize, int cellSize)
         {
             var elements = new List<GridElement>();
+            int startX = (int)_gameState.PlayerWorldPos.X - gridSize / 2;
+            int startY = (int)_gameState.PlayerWorldPos.Y - gridSize / 2;
 
-            int startX = (int)_gameState.PlayerWorldPos.X - Global.GRID_SIZE / 2;
-            int startY = (int)_gameState.PlayerWorldPos.Y - Global.GRID_SIZE / 2;
-
-            for (int y = 0; y < Global.GRID_SIZE; y++)
+            for (int y = 0; y < gridSize; y++)
             {
-                for (int x = 0; x < Global.GRID_SIZE; x++)
+                for (int x = 0; x < gridSize; x++)
                 {
                     int worldX = startX + x;
                     int worldY = startY + y;
+                    Vector2 worldPos = new Vector2(worldX, worldY);
 
                     float noise = _gameState.GetNoiseAt(worldX, worldY);
                     Texture2D texture = GetTerrainTexture(noise);
                     Color color = GetTerrainColor(noise);
 
-                    bool isPlayer = (worldX == (int)_gameState.PlayerWorldPos.X && worldY == (int)_gameState.PlayerWorldPos.Y);
-
-                    bool isPath = false;
-                    bool isPathEnd = false;
-                    bool isShortRest = false;
-                    bool isLongRest = false;
-                    bool isRunning = false;
-                    Vector2 worldPos = new Vector2(worldX, worldY);
-
-                    var actionsAtPos = _gameState.PendingActions.Where(a => a.Position == worldPos).ToList();
-                    if (actionsAtPos.Any())
-                    {
-                        if (actionsAtPos.Any(a => a.Type == ActionType.ShortRest)) isShortRest = true;
-                        if (actionsAtPos.Any(a => a.Type == ActionType.LongRest)) isLongRest = true;
-                        if (actionsAtPos.Any(a => a.Type == ActionType.RunMove)) isRunning = true;
-
-                        if (actionsAtPos.Any(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove))
-                        {
-                            isRunning = actionsAtPos.Any(a => a.Type == ActionType.RunMove);
-                            isPath = true;
-                            var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
-                            if (lastMoveAction != null && lastMoveAction.Position == worldPos)
-                            {
-                                isPathEnd = true;
-                            }
-                        }
-                    }
-
-                    if (isPlayer)
+                    if (worldPos == _gameState.PlayerWorldPos)
                     {
                         texture = Core.CurrentSpriteManager.PlayerSprite;
                         color = Global.Instance.PlayerColor;
                     }
-                    else if (isPath && !isShortRest && !isLongRest)
+                    else
                     {
-                        texture = isRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
-                        if (isPathEnd)
+                        var actionsAtPos = _gameState.PendingActions.Where(a => a.Position == worldPos).ToList();
+                        if (actionsAtPos.Any())
                         {
-                            color = Global.Instance.PathEndColor;
+                            if (actionsAtPos.Any(a => a.Type == ActionType.ShortRest))
+                            {
+                                texture = Core.CurrentSpriteManager.ShortRestSprite;
+                                color = Global.Instance.ShortRestColor;
+                            }
+                            else if (actionsAtPos.Any(a => a.Type == ActionType.LongRest))
+                            {
+                                texture = Core.CurrentSpriteManager.LongRestSprite;
+                                color = Global.Instance.LongRestColor;
+                            }
+                            else if (actionsAtPos.Any(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove))
+                            {
+                                bool isRunning = actionsAtPos.Any(a => a.Type == ActionType.RunMove);
+                                texture = isRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
+                                var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
+                                if (lastMoveAction != null && lastMoveAction.Position == worldPos)
+                                {
+                                    color = Global.Instance.PathEndColor;
+                                }
+                                else
+                                {
+                                    color = isRunning ? Global.Instance.RunPathColor : Global.Instance.PathColor;
+                                }
+                            }
                         }
-                        else
-                        {
-                            color = isRunning ? Global.Instance.RunPathColor : Global.Instance.PathColor;
-                        }
                     }
-
-                    if (isShortRest)
-                    {
-                        texture = Core.CurrentSpriteManager.ShortRestSprite;
-                        color = Global.Instance.ShortRestColor;
-                    }
-                    else if (isLongRest)
-                    {
-                        texture = Core.CurrentSpriteManager.LongRestSprite;
-                        color = Global.Instance.LongRestColor;
-                    }
-
-                    Vector2 gridPos = new Vector2(mapStartX + x * Global.GRID_CELL_SIZE, mapStartY + y * Global.GRID_CELL_SIZE);
+                    Vector2 gridPos = new Vector2(mapStartX + x * cellSize, mapStartY + y * cellSize);
                     elements.Add(new GridElement(texture, color, gridPos));
                 }
             }
-
             return elements;
         }
 
-        private void DrawGridElement(GridElement element)
+        private List<GridElement> GenerateLocalMapGridElements(int mapStartX, int mapStartY, int gridSize, int cellSize)
         {
-            Rectangle destRect = new Rectangle(
-                (int)element.Position.X,
-                (int)element.Position.Y,
-                Global.GRID_CELL_SIZE,
-                Global.GRID_CELL_SIZE
-            );
+            var elements = new List<GridElement>();
+            Color bgColor = Global.Instance.Palette_DarkGray;
 
+            for (int y = 0; y < gridSize; y++)
+            {
+                for (int x = 0; x < gridSize; x++)
+                {
+                    Vector2 localPos = new Vector2(x, y);
+                    Texture2D texture = Core.Pixel;
+                    Color color = bgColor;
+
+                    if (localPos == _gameState.PlayerLocalPos)
+                    {
+                        texture = Core.Pixel; // Use a solid square for player
+                        color = Global.Instance.PlayerColor;
+                    }
+                    else
+                    {
+                        var actionsAtPos = _gameState.PendingActions.Where(a => a.Position == localPos).ToList();
+                        if (actionsAtPos.Any())
+                        {
+                            bool isRunning = actionsAtPos.Any(a => a.Type == ActionType.RunMove);
+                            texture = isRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
+                            var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
+                            if (lastMoveAction != null && lastMoveAction.Position == localPos)
+                            {
+                                color = Global.Instance.PathEndColor;
+                            }
+                            else
+                            {
+                                color = isRunning ? Global.Instance.RunPathColor : Global.Instance.PathColor;
+                            }
+                        }
+                    }
+                    Vector2 gridPos = new Vector2(mapStartX + x * cellSize, mapStartY + y * cellSize);
+                    elements.Add(new GridElement(texture, color, gridPos));
+                }
+            }
+            return elements;
+        }
+
+        private void DrawGridElement(GridElement element, int cellSize)
+        {
+            Rectangle destRect = new Rectangle((int)element.Position.X, (int)element.Position.Y, cellSize, cellSize);
             Global.Instance.CurrentSpriteBatch.Draw(element.Texture, destRect, element.Color);
         }
 
@@ -266,16 +343,12 @@ namespace ProjectVagabond
         {
             if (string.IsNullOrEmpty(_tooltipText)) return;
 
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
-            pixel.SetData(new[] { Color.White });
-
+            var pixel = Core.Pixel;
             Vector2 textSize = Global.Instance.DefaultFont.MeasureString(_tooltipText);
-
             const int paddingX = 8;
             const int paddingY = 4;
             float tooltipWidth = textSize.X + paddingX;
             float tooltipHeight = textSize.Y + paddingY;
-
             Vector2 finalTopLeftPosition;
 
             if (_tooltipPosition.Y > _mapGridBounds.Y + _mapGridBounds.Height / 2)
@@ -298,21 +371,37 @@ namespace ProjectVagabond
             spriteBatch.DrawString(Global.Instance.DefaultFont, _tooltipText, textPosition, Global.Instance.ToolTipTextColor);
         }
 
-        public Vector2? WorldToScreen(Vector2 worldPos)
+        public Vector2? MapCoordsToScreen(Vector2 mapPos)
         {
             if (_mapGridBounds.IsEmpty) return null;
 
-            int startX = (int)_gameState.PlayerWorldPos.X - Global.GRID_SIZE / 2;
-            int startY = (int)_gameState.PlayerWorldPos.Y - Global.GRID_SIZE / 2;
-
-            int gridX = (int)worldPos.X - startX;
-            int gridY = (int)worldPos.Y - startY;
-
-            if (gridX >= 0 && gridX < Global.GRID_SIZE && gridY >= 0 && gridY < Global.GRID_SIZE)
+            if (_gameState.CurrentMapView == MapView.World)
             {
-                int screenX = _mapGridBounds.X + gridX * Global.GRID_CELL_SIZE;
-                int screenY = _mapGridBounds.Y + gridY * Global.GRID_CELL_SIZE;
-                return new Vector2(screenX, screenY);
+                int startX = (int)_gameState.PlayerWorldPos.X - Global.GRID_SIZE / 2;
+                int startY = (int)_gameState.PlayerWorldPos.Y - Global.GRID_SIZE / 2;
+                int gridX = (int)mapPos.X - startX;
+                int gridY = (int)mapPos.Y - startY;
+
+                if (gridX >= 0 && gridX < Global.GRID_SIZE && gridY >= 0 && gridY < Global.GRID_SIZE)
+                {
+                    int screenX = _mapGridBounds.X + gridX * Global.GRID_CELL_SIZE;
+                    int screenY = _mapGridBounds.Y + gridY * Global.GRID_CELL_SIZE;
+                    return new Vector2(screenX, screenY);
+                }
+            }
+            else // Local Map
+            {
+                int gridX = (int)mapPos.X;
+                int gridY = (int)mapPos.Y;
+                int cellSize = Global.LOCAL_GRID_CELL_SIZE;
+                int gridSize = Global.LOCAL_GRID_SIZE;
+
+                if (gridX >= 0 && gridX < gridSize && gridY >= 0 && gridY < gridSize)
+                {
+                    int screenX = _mapGridBounds.X + gridX * cellSize;
+                    int screenY = _mapGridBounds.Y + gridY * cellSize;
+                    return new Vector2(screenX, screenY);
+                }
             }
 
             return null;

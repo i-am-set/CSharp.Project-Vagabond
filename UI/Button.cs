@@ -9,7 +9,7 @@ namespace ProjectVagabond.UI
     public class Button
     {
         public Rectangle Bounds { get; set; }
-        public string Text { get; }
+        public string Text { get; set;  }
         public Color? CustomTextColor { get; set; }
         public bool IsEnabled { get; set; } = true;
         public bool IsHovered { get; private set; }

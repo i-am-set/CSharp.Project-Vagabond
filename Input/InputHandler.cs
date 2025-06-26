@@ -77,6 +77,11 @@ namespace ProjectVagabond
                 }
             }
 
+            if (!_previousKeyboardState.IsKeyDown(Keys.M) && currentKeyboardState.IsKeyDown(Keys.M))
+            {
+                Core.CurrentGameState.ToggleMapView();
+            }
+
             if (Core.CurrentGameState.IsFreeMoveMode)
             {
                 Vector2 moveDir = Vector2.Zero;
@@ -143,7 +148,7 @@ namespace ProjectVagabond
                             }
                             else
                             {
-                                if (!string.IsNullOrEmpty(_currentInput.Trim())) 
+                                if (!string.IsNullOrEmpty(_currentInput.Trim()))
                                 {
                                     _commandHistory.Add(_currentInput.Trim());
                                     if (_commandHistory.Count > 50)

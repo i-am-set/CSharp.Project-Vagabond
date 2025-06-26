@@ -28,7 +28,7 @@ namespace ProjectVagabond
 
     public static class Pathfinder
     {
-        public static List<Vector2> FindPath(Vector2 start, Vector2 end, GameState gameState, bool isRunning, PathfindingMode mode)
+        public static List<Vector2> FindPath(Vector2 start, Vector2 end, GameState gameState, bool isRunning, PathfindingMode mode, MapView mapView)
         {
             var startNode = new PathfinderNode(start)
             {
@@ -52,14 +52,14 @@ namespace ProjectVagabond
 
                 foreach (var neighborPos in GetNeighbors(currentNode.Position))
                 {
-                    if (!gameState.IsPositionPassable(neighborPos))
+                    if (!gameState.IsPositionPassable(neighborPos, mapView))
                         continue;
 
                     Vector2 moveDir = neighborPos - currentNode.Position;
                     if (moveDir.X != 0 && moveDir.Y != 0)
                     {
-                        if (!gameState.IsPositionPassable(new Vector2(currentNode.Position.X + moveDir.X, currentNode.Position.Y)) ||
-                            !gameState.IsPositionPassable(new Vector2(currentNode.Position.X, currentNode.Position.Y + moveDir.Y)))
+                        if (!gameState.IsPositionPassable(new Vector2(currentNode.Position.X + moveDir.X, currentNode.Position.Y), mapView) ||
+                            !gameState.IsPositionPassable(new Vector2(currentNode.Position.X, currentNode.Position.Y + moveDir.Y), mapView))
                         {
                             continue;
                         }
@@ -72,9 +72,9 @@ namespace ProjectVagabond
                     }
                     else
                     {
-                        var mapData = gameState.GetMapDataAt((int)neighborPos.X, (int)neighborPos.Y);
                         var actionType = isRunning ? ActionType.RunMove : ActionType.WalkMove;
-                        moveCost = gameState.GetSecondsPassedDuringMovement(actionType, mapData.TerrainType, moveDir);
+                        string terrainType = (mapView == MapView.Local) ? "LOCAL" : gameState.GetMapDataAt((int)neighborPos.X, (int)neighborPos.Y).TerrainType;
+                        moveCost = gameState.GetSecondsPassedDuringMovement(actionType, terrainType, moveDir, mapView == MapView.Local);
                     }
 
                     float tentative_gScore = currentNode.CostFromStartPoint + moveCost;

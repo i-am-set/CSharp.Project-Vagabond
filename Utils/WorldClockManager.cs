@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Xna.Framework;
@@ -152,7 +153,8 @@ namespace ProjectVagabond
                 }
             }
 
-            Core.CurrentTerminalRenderer.AddOutputToHistory($"[dimgray]{GetCommaFormattedTimeFromSeconds((int)_totalSecondsPassedDuringInterpolation)} passed");
+            //Core.CurrentTerminalRenderer.AddOutputToHistory($"[dimgray]{GetCommaFormattedTimeFromSeconds((int)_totalSecondsPassedDuringInterpolation)} passed");
+            Debug.WriteLine($"{GetCommaFormattedTimeFromSeconds((int)_totalSecondsPassedDuringInterpolation)} passed");
             OnTimeChanged?.Invoke();
         }
 
@@ -175,7 +177,19 @@ namespace ProjectVagabond
             if (!_isInterpolating) return;
 
             _isInterpolating = false;
-            SetTimeFromTimeSpan(_interpolationStartTime);
+            // Time is reverted to start state by GameState's CancelPathExecution logic
+        }
+
+        /// <summary>
+        /// Gets the progress of the current time interpolation, from 0.0 to 1.0.
+        /// </summary>
+        public float GetInterpolationProgress()
+        {
+            if (!_isInterpolating || _interpolationDurationRealSeconds <= 0)
+            {
+                return 0f;
+            }
+            return Math.Clamp(_interpolationTimer / _interpolationDurationRealSeconds, 0f, 1f);
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
