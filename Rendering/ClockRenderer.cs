@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -12,8 +12,8 @@ namespace ProjectVagabond
         private Vector2 _clockPosition;
         private const int CLOCK_SIZE = 64;
         private readonly RadioGroup _timeScaleGroup;
-
         public RadioGroup TimeScaleGroup => _timeScaleGroup;
+        private readonly ToggleButton _pausePlayButton;
 
         public ClockRenderer()
         {
@@ -24,6 +24,9 @@ namespace ProjectVagabond
             _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{Global.Instance.TimeScaleMultiplier3}x"));
 
             _timeScaleGroup.OnSelectionChanged += HandleTimeScaleChange;
+
+            _pausePlayButton = new ToggleButton(Rectangle.Empty, "||");
+            _pausePlayButton.OnClick += () => Core.CurrentGameState.TogglePause();
             
             HandleTimeScaleChange(_timeScaleGroup.GetSelectedButton());
         }
@@ -53,6 +56,7 @@ namespace ProjectVagabond
         public void Update(GameTime gameTime)
         {
             _timeScaleGroup.Update(Mouse.GetState());
+            _pausePlayButton.Update(Mouse.GetState());
         }
 
         public void DrawClock(SpriteBatch spriteBatch, GameTime gameTime)
@@ -116,21 +120,40 @@ namespace ProjectVagabond
             // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
             int buttonWidth = 30;
             int buttonHeight = 18;
-            int buttonSpacing = 0;
-            float totalGroupWidth = (buttonWidth * 3) + (buttonSpacing * 2);
-            Vector2 groupStartPosition = new Vector2(clockCenter.X - (totalGroupWidth / 2), _clockPosition.Y + CLOCK_SIZE + 5);
-
-            var buttons = _timeScaleGroup.Buttons;
-            for (int i = 0; i < buttons.Count; i++)
+            int buttonSpacing = 2;
+            
+            // Pause/Play Button
+            _pausePlayButton.IsEnabled = Core.CurrentGameState.IsExecutingPath;
+            _pausePlayButton.Text = Core.CurrentGameState.IsPaused ? "►" : "||";
+            
+            // Time Scale Buttons
+            var timeButtons = _timeScaleGroup.Buttons;
+            float totalGroupWidth = (buttonWidth * timeButtons.Count) + (buttonSpacing * (timeButtons.Count - 1));
+            
+            // Add pause button width if it's visible
+            if (_pausePlayButton.IsEnabled)
             {
-                buttons[i].Bounds = new Rectangle(
-                    (int)groupStartPosition.X + i * (buttonWidth + buttonSpacing),
-                    (int)groupStartPosition.Y,
-                    buttonWidth,
-                    buttonHeight
-                );
+                totalGroupWidth += buttonWidth + buttonSpacing;
             }
-            _timeScaleGroup.Draw(spriteBatch, font, gameTime);
+
+            Vector2 groupStartPosition = new Vector2(clockCenter.X - (totalGroupWidth / 2), _clockPosition.Y + CLOCK_SIZE + 5);
+            float currentX = groupStartPosition.X;
+
+            // Draw Pause/Play button if active
+            if (_pausePlayButton.IsEnabled)
+            {
+                _pausePlayButton.Bounds = new Rectangle((int)currentX, (int)groupStartPosition.Y, buttonWidth, buttonHeight);
+                _pausePlayButton.Draw(spriteBatch, font, gameTime);
+                currentX += buttonWidth + buttonSpacing;
+            }
+
+            // Draw Time Scale buttons
+            for (int i = 0; i < timeButtons.Count; i++)
+            {
+                timeButtons[i].Bounds = new Rectangle((int)currentX, (int)groupStartPosition.Y, buttonWidth, buttonHeight);
+                timeButtons[i].Draw(spriteBatch, font, gameTime);
+                currentX += buttonWidth + buttonSpacing;
+            }
         }
     }
 }

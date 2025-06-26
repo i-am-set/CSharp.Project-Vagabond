@@ -163,6 +163,7 @@ namespace ProjectVagabond
                 }
             }
 
+            if (_gameState.IsPaused) DrawPauseIcon(_spriteBatch);
             _contextMenu.Draw(_spriteBatch);
             if (_showTooltip) DrawTooltip(_spriteBatch);
         }
@@ -198,6 +199,7 @@ namespace ProjectVagabond
                 }
             }
 
+            if (_gameState.IsPaused) DrawPauseIcon(_spriteBatch);
             _contextMenu.Draw(_spriteBatch);
             if (_showTooltip) DrawTooltip(_spriteBatch);
         }
@@ -227,6 +229,19 @@ namespace ProjectVagabond
             _toggleMapButton.Draw(_spriteBatch, Global.Instance.DefaultFont, gameTime);
 
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 5, mapWidth, 2), Global.Instance.Palette_White);
+        }
+
+        private void DrawPauseIcon(SpriteBatch spriteBatch)
+        {
+            string pauseText = "||";
+            Vector2 scale = new Vector2(5, 5);
+            Vector2 textSize = Global.Instance.DefaultFont.MeasureString(pauseText) * scale;
+            Vector2 textPosition = new Vector2(
+                _mapGridBounds.Center.X - textSize.X / 2,
+                _mapGridBounds.Center.Y - textSize.Y / 2
+            );
+
+            spriteBatch.DrawString(Global.Instance.DefaultFont, pauseText, textPosition, Color.White * 0.7f, 0, Vector2.Zero, scale, SpriteEffects.None, 0);
         }
 
         private List<GridElement> GenerateWorldMapGridElements(int mapStartX, int mapStartY, int gridSize, int cellSize)

@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using ProjectVagabond;
 using System;
@@ -82,6 +82,11 @@ namespace ProjectVagabond
                 Core.CurrentGameState.ToggleMapView();
             }
 
+            if (Core.CurrentGameState.IsExecutingPath && !_previousKeyboardState.IsKeyDown(Keys.Space) && currentKeyboardState.IsKeyDown(Keys.Space))
+            {
+                Core.CurrentGameState.TogglePause();
+            }
+
             if (Core.CurrentGameState.IsFreeMoveMode)
             {
                 Vector2 moveDir = Vector2.Zero;
@@ -131,7 +136,7 @@ namespace ProjectVagabond
                     }
                 }
             }
-            else
+            else if (!Core.CurrentGameState.IsExecutingPath)
             {
                 foreach (Keys key in pressedKeys)
                 {
@@ -148,7 +153,7 @@ namespace ProjectVagabond
                             }
                             else
                             {
-                                if (!string.IsNullOrEmpty(_currentInput.Trim())) 
+                                if (!string.IsNullOrEmpty(_currentInput.Trim()))
                                 {
                                     _commandHistory.Add(_currentInput.Trim());
                                     if (_commandHistory.Count > 50)
@@ -224,7 +229,7 @@ namespace ProjectVagabond
                         {
                             _cursorPosition = _currentInput.Length;
                         }
-                        else if (key == Keys.Space)
+                        else if (key == Keys.Space && !string.IsNullOrEmpty(_currentInput))
                         {
                             _currentInput += " ";
                             _cursorPosition++;

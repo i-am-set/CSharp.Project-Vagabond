@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -51,6 +51,7 @@ namespace ProjectVagabond
         private bool _isExecutingPath = false;
         private int _currentPathIndex = 0;
         private bool _isFreeMoveMode = false;
+        private bool _isPaused = false;
 
         private PendingAction _actionAwaitingExecution = null;
         private MapView _pathExecutionMapView;
@@ -63,6 +64,7 @@ namespace ProjectVagabond
         public Vector2 PlayerLocalPos => _player.LocalPosition;
         public List<PendingAction> PendingActions => _player.ActionQueue;
         public bool IsExecutingPath => _isExecutingPath;
+        public bool IsPaused => _isPaused;
         public bool IsFreeMoveMode => _isFreeMoveMode;
         public int CurrentPathIndex => _currentPathIndex;
         public NoiseMapManager NoiseManager => _noiseManager;
@@ -89,9 +91,16 @@ namespace ProjectVagabond
         public void ToggleMapView()
         {
             CancelPathExecution();
-            CancelPendingActions();
             CurrentMapView = (CurrentMapView == MapView.World) ? MapView.Local : MapView.World;
             Core.CurrentTerminalRenderer.AddOutputToHistory($"[undo]Switched to {CurrentMapView} map view.");
+        }
+
+        public void TogglePause()
+        {
+            if (_isExecutingPath)
+            {
+                _isPaused = !_isPaused;
+            }
         }
 
         public void QueueNewPath(List<Vector2> path, bool isRunning)
@@ -512,6 +521,8 @@ namespace ProjectVagabond
 
         public void UpdateMovement(GameTime gameTime)
         {
+            if (_isPaused) return;
+
             if (Core.CurrentWorldClockManager.IsInterpolatingTime)
             {
                 return;
@@ -642,7 +653,6 @@ namespace ProjectVagabond
 
                         var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
                         Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through[gold] {mapData.TerrainType.ToLower()}[khaki].[/o] [dim]({timeString})");
-                        // <{(int)nextPosition.X}, {(int)nextPosition.Y}>
                     }
                     break;
 
@@ -711,6 +721,7 @@ namespace ProjectVagabond
                 }
 
                 _isExecutingPath = false;
+                _isPaused = false;
                 _player.ActionQueue.Clear();
                 _currentPathIndex = 0;
                 _actionAwaitingExecution = null;
