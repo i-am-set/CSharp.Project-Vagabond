@@ -7,20 +7,16 @@ using System;
 // TODO: generate different noise maps to generate different map things
 // TODO: add a way to generate different map elements based on the noise map
 // TODO: make the map generation more complex, e.g. add rivers, lakes, etc.
-// TODO: world time mechanic
 // TODO: player customization; backgrounds, stats, bodyfat, muscle (both of which effect stat spread as well as gives buffs and needs at their extremes)
 // TODO: Ctrl-Z undo previous path queued
 // TODO: Make resting take random time (full rest between 6 and 11 hours)
 // TODO: Wait command: (wait 3 hours 2 minutes)
 // TODO: Brainstorm a way to add POIs (think rust, darkwood, the long dark, tarkov)
 // TODO: Add a way to save and load the game state
-// TODO: Make it so the terminal instances otuput from the bottom of the terminal and moves up
 // TODO: Impliment dialogue logic into dialogue scene
 // TODO: Impliment combat logic into combat scene
 // TODO: Finish entity implimentation
-// TODO: Make clock ui to show time passing
 // TODO: Convert display to have larger map, smaller terminal, with the terminal input being hidden unless the player presses ~ to "open console"
-// TODO: Make clock second hand move at integer postiinon not float
 
 namespace ProjectVagabond
 {
