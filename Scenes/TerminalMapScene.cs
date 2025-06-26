@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace ProjectVagabond.Scenes
@@ -20,6 +20,7 @@ namespace ProjectVagabond.Scenes
             Core.CurrentStatsRenderer.Update(gameTime);
             Core.CurrentHapticsManager.Update(gameTime);
             Core.CurrentWorldClockManager.Update(gameTime);
+            Core.CurrentClockRenderer.Update(gameTime);
         }
 
         public override void Draw(GameTime gameTime)
@@ -31,7 +32,7 @@ namespace ProjectVagabond.Scenes
             Core.CurrentTerminalRenderer.DrawTerminal();
             Core.CurrentMapRenderer.DrawMap(gameTime);
             Core.CurrentStatsRenderer.DrawStats();
-            Core.CurrentClockRenderer.DrawClock(Global.Instance.CurrentSpriteBatch);
+            Core.CurrentClockRenderer.DrawClock(Global.Instance.CurrentSpriteBatch, gameTime);
 
             Global.Instance.CurrentSpriteBatch.End();
         }

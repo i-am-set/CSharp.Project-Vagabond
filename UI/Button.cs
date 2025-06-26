@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -17,7 +17,7 @@ namespace ProjectVagabond.UI
         public event Action OnClick;
 
         private MouseState _previousMouseState;
-        private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
+        protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
 
         public Button(Rectangle bounds, string text)
         {
@@ -65,12 +65,12 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             Draw(spriteBatch, font, gameTime, false);
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover)
+        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover)
         {
             Color textColor;
             bool isActivated = IsEnabled && (IsHovered || forceHover);

@@ -19,7 +19,6 @@ using System;
 // TODO: Convert display to have larger map, smaller terminal, with the terminal input being hidden unless the player presses ~ to "open console"
 // TODO: Make it so clicking on the map sets a path to that location, but if a path is queued and you click again, it clears the path and makes a new one to that position instead of appending; then, if control clicking, it appends to the path; and lastly if alt clicked, it does the staright line "less moves" path
 // TODO: Make 1x 2x 3x speed mods under clock
-// TODO: Fix local map running
 
 namespace ProjectVagabond
 {
@@ -39,8 +38,8 @@ namespace ProjectVagabond
         private static readonly AutoCompleteManager _autoCompleteManager = new();
         private static readonly CommandProcessor _commandProcessor = new();
         private static readonly StatsRenderer _statsRenderer = new();
-        private static readonly ClockRenderer _clockRenderer = new();
         private static readonly WorldClockManager _worldClockManager = new();
+        private static readonly ClockRenderer _clockRenderer = new();
         private static readonly HapticsManager _hapticsManager = new();
         private static readonly SceneManager _sceneManager = new();
         public static readonly GameSettings _settings = SettingsManager.LoadSettings();

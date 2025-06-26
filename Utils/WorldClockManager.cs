@@ -1,3 +1,10 @@
+﻿using Microsoft.Xna.Framework;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Security.Cryptography;
+
+--- START OF FILE WorldClockManager.cs ---
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -39,6 +46,7 @@ namespace ProjectVagabond
         public int CurrentMinute =>_minute;
         public int CurrentSecond => _second;
         public string CurrentTime => Global.Instance.Use24HourClock ? GetTimeString() : GetConverted24hToAmPm(GetTimeString());
+        public float TimeScale { get; set; } = 1.0f;
 
         // Interpolation State Fields //
         private bool _isInterpolating = false;
@@ -113,12 +121,42 @@ namespace ProjectVagabond
             _interpolationStartTime = new TimeSpan(_dayOfYear - 1, _hour, _minute, _second);
             _interpolationTargetTime = _interpolationStartTime.Add(TimeSpan.FromSeconds(_totalSecondsPassedDuringInterpolation));
 
-            // Calculate real-world animation duration with non-linear scaling
-            // A 1-minute pass takes ~1s, an 8-hour pass takes ~5s.
-            const float minDuration = 0.5f;
-            const float maxDuration = 5.0f;
-            const float scaleFactor = 0.00015f; // Adjust this to change how fast duration increases
+            // Tiered Animation Speed Calculation
+            const float minDuration = 0.4f;
+            const float maxDuration = 6.0f;
+
+            // Define thresholds for different time durations (in seconds)
+            const long ONE_HOUR = 3600;
+            const long EIGHT_HOURS = 28800;
+            const long ONE_DAY = 86400;
+
+            // Select a scale factor based on the total duration of the action.
+            // A smaller scale factor results in a FASTER animation for longer waits.
+            float scaleFactor;
+            if (_totalSecondsPassedDuringInterpolation > ONE_DAY)
+            {
+                scaleFactor = 0.00005f; // Fastest
+            }
+            else if (_totalSecondsPassedDuringInterpolation > EIGHT_HOURS)
+            {
+                scaleFactor = 0.0001f;  // Faster 
+            }
+            else if (_totalSecondsPassedDuringInterpolation > ONE_HOUR)
+            {
+                scaleFactor = 0.0002f;  // Fast
+            }
+            else
+            {
+                scaleFactor = 0.00045f; // Slowest (Base Speed)
+            }
+
             _interpolationDurationRealSeconds = Math.Clamp(minDuration + (_totalSecondsPassedDuringInterpolation * scaleFactor), minDuration, maxDuration);
+
+            // Apply the time scale multiplier from the UI buttons (1x, 3x, 5x)
+            if (TimeScale > 0)
+            {
+                _interpolationDurationRealSeconds /= TimeScale;
+            }
 
             // Reset timer and set state
             _interpolationTimer = 0f;
@@ -153,7 +191,6 @@ namespace ProjectVagabond
                 }
             }
 
-            //Core.CurrentTerminalRenderer.AddOutputToHistory($"[dimgray]{GetCommaFormattedTimeFromSeconds((int)_totalSecondsPassedDuringInterpolation)} passed");
             Debug.WriteLine($"{GetCommaFormattedTimeFromSeconds((int)_totalSecondsPassedDuringInterpolation)} passed");
             OnTimeChanged?.Invoke();
         }
@@ -416,3 +453,4 @@ namespace ProjectVagabond
         }
     }
 }
+--- END OF FILE WorldClockManager.cs ---
