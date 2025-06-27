@@ -67,9 +67,8 @@ namespace ProjectVagabond
                     else
                     {
                         var actionType = isRunning ? ActionType.RunMove : ActionType.WalkMove;
-                        string terrainType = (mapView == MapView.Local) ? "LOCAL" : mapData.TerrainType;
                         Vector2 moveDir = _neighborOffsets[i];
-                        moveCost = gameState.GetSecondsPassedDuringMovement(actionType, terrainType, moveDir, mapView == MapView.Local);
+                        moveCost = gameState.GetSecondsPassedDuringMovement(actionType, mapData, moveDir, mapView == MapView.Local);
                     }
 
                     float tentative_gScore = current_gScore + moveCost;

@@ -204,8 +204,7 @@ namespace ProjectVagabond
             }
 
             mapData = GetMapDataAt((int)position.X, (int)position.Y);
-            string upperTerrainType = mapData.TerrainType.ToUpper();
-            return upperTerrainType != "WATER" && upperTerrainType != "PEAKS";
+            return mapData.IsPassable;
         }
 
         public bool IsPositionPassable(Vector2 position, MapView view)
@@ -223,21 +222,13 @@ namespace ProjectVagabond
             if (action.Type == ActionType.RunMove)
             {
                 var mapData = GetMapDataAt((int)action.Position.X, (int)action.Position.Y);
-                string terrainType = mapData.TerrainType;
-
-                return terrainType switch
-                {
-                    "FLATLANDS" => 1,
-                    "HILLS" => 2,
-                    "MOUNTAINS" => 3,
-                    _ => 1
-                };
+                return mapData.EnergyCost;
             }
 
             return 0;
         }
 
-        public int GetSecondsPassedDuringMovement(ActionType actionType, string terrainType, Vector2 moveDirection, bool isLocalMove = false)
+        public int GetSecondsPassedDuringMovement(ActionType actionType, MapData mapData, Vector2 moveDirection, bool isLocalMove = false)
         {
             float secondsPassed = 0;
             float timeMultiplier = 1.0f;
@@ -261,11 +252,11 @@ namespace ProjectVagabond
             else
             {
                 secondsPassed += baseTime;
-                secondsPassed += terrainType.ToUpper() switch
+                secondsPassed += mapData.TerrainHeight switch
                 {
-                    "FLATLANDS" => 0,
-                    "HILLS" => secondsPassed * 0.5f,
-                    "MOUNTAINS" => secondsPassed + 300,
+                    var height when height < Global.Instance.FlatlandsLevel => 0, // Flatlands (and water, though we can't enter it)
+                    var height when height < Global.Instance.HillsLevel => secondsPassed * 0.5f, // Hills
+                    var height when height < Global.Instance.MountainsLevel => secondsPassed + 300, // Mountains
                     _ => 0
                 };
             }
@@ -293,9 +284,9 @@ namespace ProjectVagabond
                     case ActionType.WalkMove:
                     case ActionType.RunMove:
                         Vector2 moveDirection = action.Position - lastPosition;
-                        string terrain = isLocalSim ? "LOCAL" : GetTerrainDescription((int)action.Position.X, (int)action.Position.Y);
+                        MapData mapData = isLocalSim ? default : GetMapDataAt((int)action.Position.X, (int)action.Position.Y);
 
-                        int moveDuration = GetSecondsPassedDuringMovement(action.Type, terrain, moveDirection, isLocalSim);
+                        int moveDuration = GetSecondsPassedDuringMovement(action.Type, mapData, moveDirection, isLocalSim);
 
                         if (isFirstMoveInQueue && !isLocalSim)
                         {
@@ -574,19 +565,19 @@ namespace ProjectVagabond
                 case ActionType.WalkMove:
                 case ActionType.RunMove:
                     Vector2 previousPosition;
-                    string terrainType;
+                    MapData mapData;
                     if (isLocalMove)
                     {
                         previousPosition = (_currentPathIndex > 0) ? _player.ActionQueue[_currentPathIndex - 1].Position : _player.LocalPosition;
-                        terrainType = "LOCAL";
+                        mapData = default;
                     }
                     else
                     {
                         previousPosition = (_currentPathIndex > 0) ? _player.ActionQueue[_currentPathIndex - 1].Position : _player.WorldPosition;
-                        terrainType = GetMapDataAt((int)action.Position.X, (int)action.Position.Y).TerrainType;
+                        mapData = GetMapDataAt((int)action.Position.X, (int)action.Position.Y);
                     }
                     Vector2 moveDirection = action.Position - previousPosition;
-                    int fullDuration = GetSecondsPassedDuringMovement(action.Type, terrainType, moveDirection, isLocalMove);
+                    int fullDuration = GetSecondsPassedDuringMovement(action.Type, mapData, moveDirection, isLocalMove);
 
                     if (_currentPathIndex == 0 && !isLocalMove)
                     {

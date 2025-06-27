@@ -37,10 +37,10 @@ namespace ProjectVagabond
         public float Resources { get; set; }
         public float Difficulty { get; set; }
 
-        private float waterLevel = Global.Instance.WaterLevel;
-        private float flatlandsLevel = Global.Instance.FlatlandsLevel;
-        private float hillsLevel = Global.Instance.HillsLevel;
-        private float mountainsLevel = Global.Instance.MountainsLevel;
+        private static readonly float waterLevel = Global.Instance.WaterLevel;
+        private static readonly float flatlandsLevel = Global.Instance.FlatlandsLevel;
+        private static readonly float hillsLevel = Global.Instance.HillsLevel;
+        private static readonly float mountainsLevel = Global.Instance.MountainsLevel;
 
         public MapData()
         {
@@ -50,6 +50,8 @@ namespace ProjectVagabond
         public readonly char TerrainSymbol => GetTerrainSymbol(TerrainHeight);
         public readonly string VegetationType => GetVegetationType(Lushness, Temperature, Humidity);
         public readonly int EnergyCost => GetTerrainEnergyCost(TerrainHeight);
+        
+        public readonly bool IsPassable => TerrainHeight >= waterLevel && TerrainHeight < mountainsLevel;
 
         private readonly string GetTerrainType(float height)
         {
