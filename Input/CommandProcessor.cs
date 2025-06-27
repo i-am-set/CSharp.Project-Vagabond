@@ -137,7 +137,6 @@ namespace ProjectVagabond
                 if (_gameState.PendingActions.Count > 0)
                 {
                     _gameState.CancelPendingActions();
-                    AddOutputToHistory("Pending actions cleared.");
                 }
                 else
                 {

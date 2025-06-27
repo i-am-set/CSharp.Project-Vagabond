@@ -158,6 +158,7 @@ namespace ProjectVagabond
         public void CancelPendingActions()
         {
             _player.ActionQueue.Clear();
+            Core.CurrentTerminalRenderer.AddOutputToHistory("Pending actions cleared.");
         }
 
         public void ToggleExecutingPath(bool toggle)
@@ -652,7 +653,7 @@ namespace ProjectVagabond
                         _player.SetLocalPosition(newLocalPos);
 
                         var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through[gold] {mapData.TerrainType.ToLower()}[khaki].[/o] [dim]({timeString})");
+                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through[gold] {mapData.TerrainType.ToLower()}[khaki].[dim] ({timeString})");
                     }
                     break;
 

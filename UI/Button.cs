@@ -22,6 +22,7 @@ namespace ProjectVagabond.UI
         private MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
 
+        #nullable enable
         public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null)
         {
             if (function == null)
@@ -36,6 +37,7 @@ namespace ProjectVagabond.UI
             CustomHoverTextColor = customHoverTextColor;
             CustomDisabledTextColor = customDisabledTextColor;
         }
+        #nullable restore
 
         public void Update(MouseState currentMouseState)
         {

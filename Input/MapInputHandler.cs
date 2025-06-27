@@ -23,24 +23,50 @@ namespace ProjectVagabond
         private const float PATH_PREVIEW_UPDATE_DELAY = 0.025f;
         private Vector2? _lastPathTargetPosition = null;
 
-        public MapInputHandler(ContextMenu contextMenu)
+        public MapInputHandler(ContextMenu contextMenu, MapRenderer mapRenderer)
         {
             _contextMenu = contextMenu;
-            
+            _mapRenderer = mapRenderer;
+
+            // make sure no two buttons share the same Function
+            Dictionary<string, int> seen = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            int count = 0;
+            foreach (Button button in _mapRenderer.HeaderButtons)
+            {
+                count++;
+                var function = button.Function;
+                if (seen.TryGetValue(function, out var firstIndex))
+                {
+                    throw new InvalidOperationException(
+                        $"Duplicate button function '{function}' found at indices {firstIndex} and {count}."
+                    );
+                }
+                seen[function] = count;
+            }
+
+            // wire up each buttons OnClick and throw if we miss one
+            count = 0;
             foreach (var button in _mapRenderer.HeaderButtons)
             {
-                switch (button.Text)
+                count++;
+                switch (button.Function.ToLowerInvariant())
                 {
-                    case "GO":
+                    case "go":
                         button.OnClick += HandleGoClick;
                         break;
-                    case "STOP":
+                    case "stop":
                         button.OnClick += HandleStopClick;
                         break;
-                    case "World Map":
-                    case "Local Map":
+                    case "map":
                         button.OnClick += HandleToggleMapClick;
                         break;
+                    case "clear":
+                        button.OnClick += _gameState.CancelPendingActions;
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"ERROR! No click handler defined for button with function '{button.Function}' at index {count}."
+                        );
                 }
             }
         }
@@ -64,7 +90,8 @@ namespace ProjectVagabond
                     case "stop":
                         button.IsEnabled = _gameState.IsExecutingPath;
                         break;
-                    case "map":
+                    case "clear":
+                        button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingPath;
                         break;
                 }
                 button.Update(_currentMouseState);
@@ -90,7 +117,7 @@ namespace ProjectVagabond
         private void HandleGoClick()
         {
             _gameState.ToggleExecutingPath(true);
-            Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {_gameState.PendingActions.Count}[gray] action(s)...");
+            Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of {_gameState.PendingActions.Count} action(s)...");
         }
 
         private void HandleStopClick()
@@ -320,7 +347,6 @@ namespace ProjectVagabond
                 OnClick = () =>
                 {
                     _gameState.CancelPendingActions();
-                    Core.CurrentTerminalRenderer.AddOutputToHistory("Path cleared.");
                 }
             });
 

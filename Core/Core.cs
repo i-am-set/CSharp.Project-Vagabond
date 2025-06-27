@@ -34,7 +34,7 @@ namespace ProjectVagabond
         private static readonly TextureFactory _textureFactory = new();
         private static readonly InputHandler _inputHandler = new();
         private static readonly MapRenderer _mapRenderer = new();
-        private static readonly MapInputHandler _mapInputHandler = new(_mapRenderer.MapContextMenu);
+        private static readonly MapInputHandler _mapInputHandler = new(_mapRenderer.MapContextMenu, _mapRenderer);
         private static readonly TerminalRenderer _terminalRenderer = new();
         private static readonly AutoCompleteManager _autoCompleteManager = new();
         private static readonly CommandProcessor _commandProcessor = new();

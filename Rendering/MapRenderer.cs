@@ -6,6 +6,7 @@ using ProjectVagabond.UI;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace ProjectVagabond
 {
@@ -21,6 +22,11 @@ namespace ProjectVagabond
         private Vector2 _tooltipPosition;
         private Rectangle _mapGridBounds;
         private ContextMenu _contextMenu = new ContextMenu();
+        private string _cachedTimeText;
+        private Vector2 _timeTextPos ;
+        private int _cachedMapStartX, _cachedMapWidth;
+        private MapView _cachedMapView;
+        private Dictionary<string, Button> _buttonMap;
 
         private readonly List<Button> _headerButtons = new List<Button>();
         public IEnumerable<Button> HeaderButtons => _headerButtons;
@@ -32,9 +38,12 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         public MapRenderer()
         {
+            _headerButtons.Add(new Button(Rectangle.Empty, "Clear") { IsEnabled = false });
             _headerButtons.Add(new Button(Rectangle.Empty, "Go") { IsEnabled = false });
             _headerButtons.Add(new Button(Rectangle.Empty, "Stop") { IsEnabled = false });
             _headerButtons.Add(new Button(Rectangle.Empty, "World Map", "map"));
+
+            _buttonMap = _headerButtons.ToDictionary(b => b.Function.ToLowerInvariant(), b => b);
         }
 
         public void Update(GameTime gameTime)
@@ -210,8 +219,8 @@ namespace ProjectVagabond
         private void DrawMapFrame(int mapStartX, int mapStartY, int mapWidth, int mapHeight, GameTime gameTime)
         {
             SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
-            var pixel = Core.Pixel;
-            var font = Global.Instance.DefaultFont;
+            Texture2D pixel = Core.Pixel;
+            BitmapFont font = Global.Instance.DefaultFont;
 
             // Draw Frame //
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, mapWidth, 2), Global.Instance.Palette_White); // Top
@@ -222,41 +231,88 @@ namespace ProjectVagabond
 
             // Draw Time //
             string timeText = Core.CurrentWorldClockManager.CurrentTime;
-            Vector2 timeTextPos = new Vector2(mapStartX, mapStartY - 20);
-            _spriteBatch.DrawString(font, timeText, timeTextPos, Global.Instance.GameTextColor);
+            if (timeText != _cachedTimeText)
+            {
+                _timeTextPos = new Vector2(mapStartX, mapStartY - 20);
+                _cachedTimeText = timeText;
+            }
+            _spriteBatch.DrawString(font, _cachedTimeText, _timeTextPos, Global.Instance.GameTextColor);
 
-            // Define Button Layout //
+            bool viewChanged = _cachedMapView != _gameState.CurrentMapView;
+            if (mapStartX != _cachedMapStartX || mapWidth != _cachedMapWidth || viewChanged)
+            {
+                LayoutHeaderButtons(mapStartX, mapWidth, mapStartY);
+                _cachedMapStartX = mapStartX;
+                _cachedMapWidth = mapWidth;
+                _cachedMapView = _gameState.CurrentMapView;
+            }
+
+            foreach (var b in _headerButtons)
+            {
+                b.Draw(_spriteBatch, font, gameTime);
+            }
+        }
+
+        private void LayoutHeaderButtons(int mapStartX, int mapWidth, int mapStartY)
+        {
             const int buttonHeight = 16;
             const int buttonSpacing = 5;
-            int goStopButtonWidth = 45;
-            int toggleButtonWidth = 85;
+            const int goStopButtonWidth = 45;
+            const int toggleButtonWidth = 85;
+
             int headerContentRightEdge = mapStartX + mapWidth - 12;
             int buttonY = mapStartY - 22;
 
-            // Position and Draw Buttons by iterating through the list //
-            var toggleMapButton = _headerButtons.FirstOrDefault(b => b.Function.ToLower() == "map");
-            var stopButton = _headerButtons.FirstOrDefault(b => b.Function.ToLower() == "stop");
-            var goButton = _headerButtons.FirstOrDefault(b => b.Function.ToLower() == "go");
-
-            if (toggleMapButton != null)
+            // 1) Position the “map” toggle:
+            if (_buttonMap.TryGetValue("map", out Button toggleMapButton))
             {
-                toggleMapButton.Text = _gameState.CurrentMapView == MapView.World ? "Local Map" : "World Map";
-                toggleMapButton.Bounds = new Rectangle(headerContentRightEdge - toggleButtonWidth, buttonY, toggleButtonWidth, buttonHeight);
+                toggleMapButton.Text = 
+                    _gameState.CurrentMapView == MapView.World
+                        ? "Local Map"
+                        : "World Map";
+
+                toggleMapButton.Bounds = new Rectangle(
+                    headerContentRightEdge - toggleButtonWidth,
+                    buttonY,
+                    toggleButtonWidth,
+                    buttonHeight
+                );
             }
 
-            if (stopButton != null && toggleMapButton != null)
+            // 2) Anchor “stop” immediately to the left of “map”:
+            if (_buttonMap.TryGetValue("stop", out Button stopButton) 
+             && _buttonMap.TryGetValue("map", out toggleMapButton))
             {
-                stopButton.Bounds = new Rectangle(toggleMapButton.Bounds.X - buttonSpacing - goStopButtonWidth, buttonY, goStopButtonWidth, buttonHeight);
+                stopButton.Bounds = new Rectangle(
+                    toggleMapButton.Bounds.X - buttonSpacing - goStopButtonWidth,
+                    buttonY,
+                    goStopButtonWidth,
+                    buttonHeight
+                );
             }
 
-            if (goButton != null && stopButton != null)
+            // 3) Anchor “go” immediately to the left of “stop”:
+            if (_buttonMap.TryGetValue("go", out Button goButton) 
+             && _buttonMap.TryGetValue("stop", out stopButton))
             {
-                goButton.Bounds = new Rectangle(stopButton.Bounds.X - buttonSpacing - goStopButtonWidth, buttonY, goStopButtonWidth, buttonHeight);
+                goButton.Bounds = new Rectangle(
+                    stopButton.Bounds.X - buttonSpacing - goStopButtonWidth,
+                    buttonY,
+                    goStopButtonWidth,
+                    buttonHeight
+                );
             }
 
-            foreach (var button in _headerButtons)
+            // 4) Anchor “clear” immediately to the left of “go”:
+            if (_buttonMap.TryGetValue("clear", out Button clearButton)
+             && _buttonMap.TryGetValue("go", out goButton))
             {
-                button.Draw(_spriteBatch, font, gameTime);
+                clearButton.Bounds = new Rectangle(
+                    goButton.Bounds.X - buttonSpacing - goStopButtonWidth,
+                    buttonY,
+                    goStopButtonWidth,
+                    buttonHeight
+                );
             }
         }
 

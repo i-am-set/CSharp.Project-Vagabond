@@ -73,7 +73,6 @@ namespace ProjectVagabond
                 else if (Core.CurrentGameState.PendingActions.Count > 0)
                 {
                     Core.CurrentGameState.CancelPendingActions();
-                    Core.CurrentTerminalRenderer.AddOutputToHistory("Pending actions cleared.");
                 }
             }
 

@@ -9,10 +9,12 @@ namespace ProjectVagabond.UI
         public bool IsSelected { get; set; }
         public Color? CustomToggledTextColor { get; set; }
 
+        #nullable enable
         public ToggleButton(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, Color? customToggledTextColor = null)
             : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor) {
             CustomToggledTextColor = customToggledTextColor;
         }
+        #nullable restore
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover = false)
         {
