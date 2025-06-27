@@ -233,7 +233,7 @@ namespace ProjectVagabond
 
         private void DrawPauseIcon(SpriteBatch spriteBatch)
         {
-            string pauseText = "||";
+            string pauseText = "▐▐";
             Vector2 scale = new Vector2(5, 5);
             Vector2 textSize = Global.Instance.DefaultFont.MeasureString(pauseText) * scale;
             Vector2 textPosition = new Vector2(

@@ -77,10 +77,10 @@ namespace ProjectVagabond
                 }
             }
 
-            if (!_previousKeyboardState.IsKeyDown(Keys.M) && currentKeyboardState.IsKeyDown(Keys.M))
-            {
-                Core.CurrentGameState.ToggleMapView();
-            }
+            //if (!_previousKeyboardState.IsKeyDown(Keys.M) && currentKeyboardState.IsKeyDown(Keys.M))
+            //{
+            //    Core.CurrentGameState.ToggleMapView();
+            //}
 
             if (Core.CurrentGameState.IsExecutingPath && !_previousKeyboardState.IsKeyDown(Keys.Space) && currentKeyboardState.IsKeyDown(Keys.Space))
             {
@@ -263,6 +263,28 @@ namespace ProjectVagabond
                 else if (_backspaceHeld)
                 {
                     _backspaceHeld = false;
+                }
+            }
+            else
+            {
+                foreach (Keys key in pressedKeys)
+                {
+                    if (!_previousKeyboardState.IsKeyDown(key))
+                    {
+                        if (key == Keys.Tab)
+                        {
+                            if (Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions && Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex >= 0)
+                            {
+                                _currentInput = Core.CurrentAutoCompleteManager.AutoCompleteSuggestions[Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex];
+                                _cursorPosition = _currentInput.Length;
+                                Core.CurrentAutoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
+                            }
+                            else
+                            {
+                                Core.CurrentClockRenderer.TimeScaleGroup.CycleNext();
+                            }
+                        }
+                    }
                 }
             }
 

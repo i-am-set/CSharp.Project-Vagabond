@@ -124,7 +124,7 @@ namespace ProjectVagabond
             
             // Pause/Play Button
             _pausePlayButton.IsEnabled = Core.CurrentGameState.IsExecutingPath;
-            _pausePlayButton.Text = Core.CurrentGameState.IsPaused ? "►" : "||";
+            _pausePlayButton.Text = Core.CurrentGameState.IsPaused ? "►" : "▐▐";
             
             // Time Scale Buttons
             var timeButtons = _timeScaleGroup.Buttons;

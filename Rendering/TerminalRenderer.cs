@@ -16,6 +16,7 @@ namespace ProjectVagabond
         private List<ColoredLine> _wrappedHistory = new List<ColoredLine>();
         private int _scrollOffset = 0;
         private int _nextLineNumber = 1;
+        private Color _inputCaratColor;
 
         public int ScrollOffset => _scrollOffset;
         public List<ColoredLine> WrappedHistory => _wrappedHistory;
@@ -183,7 +184,10 @@ namespace ProjectVagabond
 
             string inputDisplay = $"> {Core.CurrentInputHandler.CurrentInput}_";
             string wrappedInput = WrapText(inputDisplay, GetTerminalContentWidthInPixels());
-            _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY + 1), Color.Khaki, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+
+            _inputCaratColor = Core.CurrentGameState.IsExecutingPath ? Global.Instance.TerminalDarkGray : Global.Instance.InputCaratColor;
+
+            _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY + 1), _inputCaratColor, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
             if (Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions && Core.CurrentAutoCompleteManager.AutoCompleteSuggestions.Count > 0)
             {

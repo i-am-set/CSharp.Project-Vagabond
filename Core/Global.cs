@@ -31,6 +31,7 @@ namespace ProjectVagabond
             ToolTipTextColor = Color.White;
             ToolTipBorderColor = Color.White;
             TerminalDarkGray = Palette_DarkGray;
+            InputCaratColor = Color.Khaki;
         }
 
         public static Global Instance => _instance;
@@ -142,5 +143,6 @@ namespace ProjectVagabond
         public Color ToolTipTextColor { get; private set; }
         public Color ToolTipBorderColor { get; private set; }
         public Color TerminalDarkGray { get; set; }
+        public Color InputCaratColor { get; set; }
     }
 }
