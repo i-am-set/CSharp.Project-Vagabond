@@ -15,18 +15,21 @@ namespace ProjectVagabond
 
         private MouseState _currentMouseState;
         private MouseState _previousMouseState;
+        private KeyboardState _previousKeyboardState;
 
         private bool _isDraggingPath = false;
+        private bool _isAppendModeDrag = false; 
         private int _originalPendingActionCount = 0;
 
         private float _pathUpdateTimer = 0f;
-        private const float PATH_PREVIEW_UPDATE_DELAY = 0.025f;
+        private const float PATH_PREVIEW_UPDATE_DELAY = 0.01f;
         private Vector2? _lastPathTargetPosition = null;
 
         public MapInputHandler(ContextMenu contextMenu, MapRenderer mapRenderer)
         {
             _contextMenu = contextMenu;
             _mapRenderer = mapRenderer;
+            _previousKeyboardState = Keyboard.GetState();
 
             // make sure no two buttons share the same Function
             Dictionary<string, int> seen = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -112,6 +115,8 @@ namespace ProjectVagabond
             _mapRenderer.RightClickedWorldPos = null;
 
             HandleMapInteraction(virtualMousePos, keyboardState);
+
+            _previousKeyboardState = keyboardState;
         }
 
         private void HandleGoClick()
@@ -146,6 +151,7 @@ namespace ProjectVagabond
                 if (leftClickPressed)
                 {
                     _isDraggingPath = true;
+                    _isAppendModeDrag = keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl);
                     _originalPendingActionCount = _gameState.PendingActions.Count;
                     HandlePathUpdate(targetPos, keyboardState);
                     _pathUpdateTimer = 0f;
@@ -153,7 +159,16 @@ namespace ProjectVagabond
                 }
                 else if (leftClickHeld && _isDraggingPath)
                 {
-                    if (targetPos != _lastPathTargetPosition && _pathUpdateTimer >= PATH_PREVIEW_UPDATE_DELAY)
+                    bool mouseMoved = targetPos != _lastPathTargetPosition;
+
+                    bool altChanged = (keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt)) !=
+                                      (_previousKeyboardState.IsKeyDown(Keys.LeftAlt) || _previousKeyboardState.IsKeyDown(Keys.RightAlt));
+                    bool shiftChanged = (keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift)) !=
+                                        (_previousKeyboardState.IsKeyDown(Keys.LeftShift) || _previousKeyboardState.IsKeyDown(Keys.RightShift));
+
+                    bool modifiersChanged = altChanged || shiftChanged;
+
+                    if ((mouseMoved && _pathUpdateTimer >= PATH_PREVIEW_UPDATE_DELAY) || modifiersChanged)
                     {
                         HandlePathUpdate(targetPos, keyboardState);
                         _pathUpdateTimer = 0f;
@@ -180,13 +195,11 @@ namespace ProjectVagabond
 
             if (!_gameState.IsPositionPassable(targetPos, _gameState.CurrentMapView)) return;
 
-            bool isCtrlHeld = keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl); // Append
-            bool isAltHeld = keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt);     // Moves mode (straight line)
-            bool isRunning = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift); // Run
-
+            bool isAltHeld = keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt);
+            bool isRunning = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
             var mode = isAltHeld ? PathfindingMode.Moves : PathfindingMode.Time;
 
-            if (isCtrlHeld)
+            if (_isAppendModeDrag) // APPEND mode (locked in at start of drag)
             {
                 if (_gameState.PendingActions.Count > _originalPendingActionCount)
                 {
@@ -197,7 +210,7 @@ namespace ProjectVagabond
                     ? _gameState.PendingActions[_originalPendingActionCount - 1].Position
                     : playerPos;
 
-                if (startPos == targetPos) return; // Don't path to the same spot
+                if (startPos == targetPos) return;
 
                 var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
                 if (path != null)
@@ -205,7 +218,7 @@ namespace ProjectVagabond
                     _gameState.AppendPath(path, isRunning: isRunning);
                 }
             }
-            else
+            else // REPOSITION mode (default)
             {
                 _gameState.PendingActions.Clear();
 
