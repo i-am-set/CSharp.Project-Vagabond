@@ -136,7 +136,7 @@ namespace ProjectVagabond
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, 2, terminalHeight + 30), Global.Instance.Palette_White); // Left
             _spriteBatch.Draw(pixel, new Rectangle(terminalX + terminalWidth + 3, terminalY - 25, 2, terminalHeight + 30), Global.Instance.Palette_White); // Right
 
-            _spriteBatch.DrawString(_defaultFont, "Terminal Output", new Vector2(terminalX, terminalY - 20), Global.Instance.TextColor);
+            _spriteBatch.DrawString(_defaultFont, "Terminal Output", new Vector2(terminalX, terminalY - 20), Global.Instance.GameTextColor);
 
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 5, terminalWidth + 10, 2), Global.Instance.Palette_White);
 
@@ -355,7 +355,7 @@ namespace ProjectVagabond
         private ColoredLine ParseColoredText(string text, Color? baseColor = null)
         {
             var line = new ColoredLine();
-            var currentColor = baseColor ?? Global.Instance.TextColor;
+            var currentColor = baseColor ?? Global.Instance.InputTextColor;
             var currentText = "";
 
             for (int i = 0; i < text.Length; i++)
@@ -376,7 +376,7 @@ namespace ProjectVagabond
 
                         if (colorTag == "/")
                         {
-                            currentColor = Global.Instance.TextColor;
+                            currentColor = Global.Instance.InputTextColor;
                         }
                         else if (colorTag == "/o")
                         {
@@ -467,7 +467,7 @@ namespace ProjectVagabond
                 // bruh
             }
 
-            return Global.Instance.TextColor;
+            return Global.Instance.GameTextColor;
         }
 
         private List<ColoredLine> WrapColoredText(ColoredLine line, float maxWidthInPixels)

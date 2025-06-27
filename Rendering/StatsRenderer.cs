@@ -65,7 +65,7 @@ namespace ProjectVagabond
             pixel.SetData(new[] { Color.White });
 
             string labelText = "EP";
-            spriteBatch.DrawString(Global.Instance.DefaultFont, labelText, position, Global.Instance.TextColor);
+            spriteBatch.DrawString(Global.Instance.DefaultFont, labelText, position, Global.Instance.GameTextColor);
 
             Vector2 textSize = Global.Instance.DefaultFont.MeasureString(labelText);
             int barX = (int)(position.X + textSize.X + 5);
@@ -121,7 +121,7 @@ namespace ProjectVagabond
             pixel.SetData(new[] { Color.White });
 
             string labelText = $"{label}"; // Draw label first
-            spriteBatch.DrawString(Global.Instance.DefaultFont, labelText, position, Global.Instance.TextColor);
+            spriteBatch.DrawString(Global.Instance.DefaultFont, labelText, position, Global.Instance.GameTextColor);
 
             Vector2 textSize = Global.Instance.DefaultFont.MeasureString(labelText); // Calculate bar position (right after text)
             int barX = (int)(position.X + textSize.X + 5);

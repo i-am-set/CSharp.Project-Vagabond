@@ -223,7 +223,7 @@ namespace ProjectVagabond
             // Draw Time //
             string timeText = Core.CurrentWorldClockManager.CurrentTime;
             Vector2 timeTextPos = new Vector2(mapStartX, mapStartY - 20);
-            _spriteBatch.DrawString(font, timeText, timeTextPos, Global.Instance.TextColor);
+            _spriteBatch.DrawString(font, timeText, timeTextPos, Global.Instance.GameTextColor);
 
             // Define Button Layout //
             const int buttonHeight = 16;

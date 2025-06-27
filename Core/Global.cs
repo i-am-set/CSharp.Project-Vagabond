@@ -24,10 +24,11 @@ namespace ProjectVagabond
             GameBg = Palette_Black;
             TerminalBg = Palette_Black;
             MapBg = Palette_Black;
-            TextColor = Palette_LightGray;
+            GameTextColor = Palette_LightGray;
             ButtonHoverColor = Palette_Red;
             ButtonDisableColor = Palette_DarkGray;
-            OutputTextColor = Palette_Gray;
+            OutputTextColor = Palette_LightGray;
+            InputTextColor = Palette_Gray;
             ToolTipBGColor = Palette_Black;
             ToolTipTextColor = Palette_BrightWhite;
             ToolTipBorderColor = Palette_BrightWhite;
@@ -137,10 +138,11 @@ namespace ProjectVagabond
         public Color GameBg { get; private set; }
         public Color TerminalBg { get; private set; }
         public Color MapBg { get; private set; }
-        public Color TextColor { get; private set; }
+        public Color GameTextColor { get; private set; }
         public Color ButtonHoverColor { get; private set; }
         public Color ButtonDisableColor { get; private set; }
         public Color OutputTextColor { get; private set; }
+        public Color InputTextColor { get; private set; }
         public Color ToolTipBGColor { get; private set; }
         public Color ToolTipTextColor { get; private set; }
         public Color ToolTipBorderColor { get; private set; }
