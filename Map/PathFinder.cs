@@ -1,8 +1,6 @@
-﻿﻿using Microsoft.Xna.Framework;
-using ProjectVagabond;
+﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -12,54 +10,50 @@ namespace ProjectVagabond
         Moves // Prioritizes the path with the fewest number of tiles
     }
 
-    public class PathfinderNode
-    {
-        public Vector2 Position { get; }
-        public PathfinderNode Parent { get; set; }
-        public float CostFromStartPoint { get; set; } // Cost from start (G)
-        public float EstimatedCostToEndPoint { get; set; } // Heuristic cost to end (H)
-        public float TotalEstimatedCost => CostFromStartPoint + EstimatedCostToEndPoint; // F = G + H
-
-        public PathfinderNode(Vector2 position)
-        {
-            Position = position;
-        }
-    }
-
     public static class Pathfinder
     {
+        private static readonly Vector2[] _neighborOffsets = new Vector2[]
+        {
+            new Vector2(0, -1), // Up
+            new Vector2(0, 1),  // Down
+            new Vector2(-1, 0), // Left
+            new Vector2(1, 0),  // Right
+            new Vector2(-1, -1),// Up-Left
+            new Vector2(1, -1), // Up-Right
+            new Vector2(-1, 1), // Down-Left
+            new Vector2(1, 1)   // Down-Right
+        };
+
         public static List<Vector2> FindPath(Vector2 start, Vector2 end, GameState gameState, bool isRunning, PathfindingMode mode, MapView mapView)
         {
-            var startNode = new PathfinderNode(start)
-            {
-                CostFromStartPoint = 0,
-                EstimatedCostToEndPoint = GetDistance(start, end)
-            };
+            var openQueue = new PriorityQueue<Vector2, float>();
+            openQueue.Enqueue(start, 0);
 
-            var openQueue = new PriorityQueue<PathfinderNode, float>();
-            openQueue.Enqueue(startNode, startNode.TotalEstimatedCost);
-
+            var cameFrom = new Dictionary<Vector2, Vector2>();
             var gScores = new Dictionary<Vector2, float> { { start, 0f } };
 
-            while (openQueue.Count > 0)
+            while (openQueue.TryDequeue(out var currentPos, out _))
             {
-                var currentNode = openQueue.Dequeue();
-
-                if (currentNode.Position == end)
+                if (currentPos == end)
                 {
-                    return RetracePath(startNode, currentNode);
+                    return RetracePath(cameFrom, currentPos);
                 }
 
-                foreach (var neighborPos in GetNeighbors(currentNode.Position))
+                float current_gScore = gScores[currentPos];
+
+                for (int i = 0; i < _neighborOffsets.Length; i++)
                 {
+                    var neighborPos = currentPos + _neighborOffsets[i];
+
                     if (!gameState.IsPositionPassable(neighborPos, mapView, out var mapData))
                         continue;
 
-                    Vector2 moveDir = neighborPos - currentNode.Position;
-                    if (moveDir.X != 0 && moveDir.Y != 0)
+                    bool isDiagonal = i >= 4;
+                    if (isDiagonal)
                     {
-                        if (!gameState.IsPositionPassable(new Vector2(currentNode.Position.X + moveDir.X, currentNode.Position.Y), mapView) ||
-                            !gameState.IsPositionPassable(new Vector2(currentNode.Position.X, currentNode.Position.Y + moveDir.Y), mapView))
+                        var neighbor1 = currentPos + new Vector2(_neighborOffsets[i].X, 0);
+                        var neighbor2 = currentPos + new Vector2(0, _neighborOffsets[i].Y);
+                        if (!gameState.IsPositionPassable(neighbor1, mapView) || !gameState.IsPositionPassable(neighbor2, mapView))
                         {
                             continue;
                         }
@@ -68,31 +62,25 @@ namespace ProjectVagabond
                     float moveCost;
                     if (mode == PathfindingMode.Moves)
                     {
-                        moveCost = 1;
+                        moveCost = isDiagonal ? 1.414f : 1f;
                     }
                     else
                     {
                         var actionType = isRunning ? ActionType.RunMove : ActionType.WalkMove;
                         string terrainType = (mapView == MapView.Local) ? "LOCAL" : mapData.TerrainType;
+                        Vector2 moveDir = _neighborOffsets[i];
                         moveCost = gameState.GetSecondsPassedDuringMovement(actionType, terrainType, moveDir, mapView == MapView.Local);
                     }
 
-                    float tentative_gScore = currentNode.CostFromStartPoint + moveCost;
-
+                    float tentative_gScore = current_gScore + moveCost;
                     float known_gScore = gScores.GetValueOrDefault(neighborPos, float.PositiveInfinity);
 
                     if (tentative_gScore < known_gScore)
                     {
+                        cameFrom[neighborPos] = currentPos;
                         gScores[neighborPos] = tentative_gScore;
-
-                        var neighborNode = new PathfinderNode(neighborPos)
-                        {
-                            Parent = currentNode,
-                            CostFromStartPoint = tentative_gScore,
-                            EstimatedCostToEndPoint = GetDistance(neighborPos, end)
-                        };
-
-                        openQueue.Enqueue(neighborNode, neighborNode.TotalEstimatedCost);
+                        float fScore = tentative_gScore + GetDistance(neighborPos, end);
+                        openQueue.Enqueue(neighborPos, fScore);
                     }
                 }
             }
@@ -100,36 +88,27 @@ namespace ProjectVagabond
             return null;
         }
 
-        private static List<Vector2> RetracePath(PathfinderNode startNode, PathfinderNode endNode)
+        private static List<Vector2> RetracePath(Dictionary<Vector2, Vector2> cameFrom, Vector2 current)
         {
-            var path = new List<Vector2>();
-            var currentNode = endNode;
-            while (currentNode != null && currentNode.Position != startNode.Position)
+            var path = new List<Vector2> { current };
+            while (cameFrom.TryGetValue(current, out current))
             {
-                path.Add(currentNode.Position);
-                currentNode = currentNode.Parent;
+                path.Add(current);
             }
+            
+            path.RemoveAt(path.Count - 1);
             path.Reverse();
             return path;
         }
 
-        private static IEnumerable<Vector2> GetNeighbors(Vector2 pos)
-        {
-            // Cardinal
-            yield return new Vector2(pos.X, pos.Y - 1); // Up
-            yield return new Vector2(pos.X, pos.Y + 1); // Down
-            yield return new Vector2(pos.X - 1, pos.Y); // Left
-            yield return new Vector2(pos.X + 1, pos.Y); // Right
-            // Diagonal
-            yield return new Vector2(pos.X - 1, pos.Y - 1); // Up-Left
-            yield return new Vector2(pos.X + 1, pos.Y - 1); // Up-Right
-            yield return new Vector2(pos.X - 1, pos.Y + 1); // Down-Left
-            yield return new Vector2(pos.X + 1, pos.Y + 1); // Down-Right
-        }
-
+        // Using Octile distance for an 8 directional grid
         private static float GetDistance(Vector2 a, Vector2 b)
         {
-            return Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y);
+            float dx = Math.Abs(a.X - b.X);
+            float dy = Math.Abs(a.Y - b.Y);
+            const float D = 1f; // Cost of cardinal move
+            const float D2 = 1.414f; // Cost of diagonal move
+            return D * (dx + dy) + (D2 - 2 * D) * Math.Min(dx, dy);
         }
     }
 }

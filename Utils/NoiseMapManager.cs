@@ -194,34 +194,40 @@ namespace ProjectVagabond
 
         public float GetNoiseValue(NoiseMapType type, float x, float y)
         {
-            if (!_layerConfigs.ContainsKey(type) || !_layerConfigs[type].Enabled)
+            if (!_layerConfigs.TryGetValue(type, out var config) || !config.Enabled)
                 return 0f;
 
-            return GenerateLayeredNoise(_layerConfigs[type], x, y);
+            return GenerateLayeredNoise(config, x, y);
         }
 
         private float GenerateLayeredNoise(NoiseLayerConfig config, float x, float y)
         {
-            if (!_perlinGenerators.ContainsKey(config.Type))
+            var configType = config.Type;
+            if (!_perlinGenerators.ContainsKey(configType))
                 return 0f;
     
-            SeededPerlin perlin = _perlinGenerators[config.Type];
+            SeededPerlin perlin = _perlinGenerators[configType];
             float totalValue = 0f;
             float totalWeight = 0f;
+            
             float amplitude = config.Amplitude;
             float frequency = config.Scale;
+            var offset = config.Offset;
+            var octaves = config.Octaves;
+            var persistence = config.Persistence;
+            var lacunarity = config.Lacunarity;
 
-            for (int octave = 0; octave < config.Octaves; octave++)
+            for (int octave = 0; octave < octaves; octave++)
             {
-                float sampleX = (x + config.Offset.X) * frequency;
-                float sampleY = (y + config.Offset.Y) * frequency;
+                float sampleX = (x + offset.X) * frequency;
+                float sampleY = (y + offset.Y) * frequency;
     
                 float octaveValue = perlin.Noise(sampleX, sampleY);
                 totalValue += octaveValue * amplitude;
                 totalWeight += amplitude;
 
-                amplitude *= config.Persistence;
-                frequency *= config.Lacunarity;
+                amplitude *= persistence;
+                frequency *= lacunarity;
             }
 
             float normalizedValue = totalValue / totalWeight;
@@ -319,7 +325,7 @@ namespace ProjectVagabond
         }
     }
 
-    // Keep the existing FastNoiseLite for backward compatibility if needed
+  // Keep the existing FastNoiseLite for backward compatibility if needed
     public class FastNoiseLite
     {
         private int _seed;
