@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using ProjectVagabond;
 using System;
 using System.Collections.Generic;
@@ -52,7 +52,7 @@ namespace ProjectVagabond
 
                 foreach (var neighborPos in GetNeighbors(currentNode.Position))
                 {
-                    if (!gameState.IsPositionPassable(neighborPos, mapView))
+                    if (!gameState.IsPositionPassable(neighborPos, mapView, out var mapData))
                         continue;
 
                     Vector2 moveDir = neighborPos - currentNode.Position;
@@ -73,7 +73,7 @@ namespace ProjectVagabond
                     else
                     {
                         var actionType = isRunning ? ActionType.RunMove : ActionType.WalkMove;
-                        string terrainType = (mapView == MapView.Local) ? "LOCAL" : gameState.GetMapDataAt((int)neighborPos.X, (int)neighborPos.Y).TerrainType;
+                        string terrainType = (mapView == MapView.Local) ? "LOCAL" : mapData.TerrainType;
                         moveCost = gameState.GetSecondsPassedDuringMovement(actionType, terrainType, moveDir, mapView == MapView.Local);
                     }
 

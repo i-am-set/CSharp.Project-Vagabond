@@ -105,16 +105,16 @@ namespace ProjectVagabond
 
     public class NoiseMapManager
     {
-        private Dictionary<NoiseMapType, NoiseLayerConfig> layerConfigs;
-        private Dictionary<NoiseMapType, Dictionary<string, float>> noiseCache;
-        private Dictionary<NoiseMapType, SeededPerlin> perlinGenerators;
-        private const int CACHE_SIZE_LIMIT = 1000;
+        private Dictionary<NoiseMapType, NoiseLayerConfig> _layerConfigs;
+        private Dictionary<Vector2, MapData> _mapDataCache;
+        private Dictionary<NoiseMapType, SeededPerlin> _perlinGenerators;
+        private const int MAP_DATA_CACHE_LIMIT = 50000;
 
         public NoiseMapManager(int masterSeed = 999)
         {
-            layerConfigs = new Dictionary<NoiseMapType, NoiseLayerConfig>();
-            noiseCache = new Dictionary<NoiseMapType, Dictionary<string, float>>();
-            perlinGenerators = new Dictionary<NoiseMapType, SeededPerlin>();
+            _layerConfigs = new Dictionary<NoiseMapType, NoiseLayerConfig>();
+            _mapDataCache = new Dictionary<Vector2, MapData>();
+            _perlinGenerators = new Dictionary<NoiseMapType, SeededPerlin>();
         
             InitializeDefaultLayers(Environment.TickCount * RandomNumberGenerator.GetInt32(1, masterSeed));
         }
@@ -187,43 +187,25 @@ namespace ProjectVagabond
 
         public void AddLayer(NoiseMapType type, NoiseLayerConfig config)
         {
-            layerConfigs[type] = config;
-            if (!noiseCache.ContainsKey(type))
-            {
-                noiseCache[type] = new Dictionary<string, float>();
-            }
+            _layerConfigs[type] = config;
         
-            perlinGenerators[type] = new SeededPerlin(config.Seed);
+            _perlinGenerators[type] = new SeededPerlin(config.Seed);
         }
 
         public float GetNoiseValue(NoiseMapType type, float x, float y)
         {
-            if (!layerConfigs.ContainsKey(type) || !layerConfigs[type].Enabled)
+            if (!_layerConfigs.ContainsKey(type) || !_layerConfigs[type].Enabled)
                 return 0f;
 
-            string cacheKey = $"{x},{y}";
-            if (noiseCache[type].ContainsKey(cacheKey))
-            {
-                return noiseCache[type][cacheKey];
-            }
-
-            float value = GenerateLayeredNoise(layerConfigs[type], x, y);
-        
-            if (noiseCache[type].Count >= CACHE_SIZE_LIMIT)
-            {
-                noiseCache[type].Clear();
-            }
-        
-            noiseCache[type][cacheKey] = value;
-            return value;
+            return GenerateLayeredNoise(_layerConfigs[type], x, y);
         }
 
         private float GenerateLayeredNoise(NoiseLayerConfig config, float x, float y)
         {
-            if (!perlinGenerators.ContainsKey(config.Type))
+            if (!_perlinGenerators.ContainsKey(config.Type))
                 return 0f;
     
-            SeededPerlin perlin = perlinGenerators[config.Type];
+            SeededPerlin perlin = _perlinGenerators[config.Type];
             float totalValue = 0f;
             float totalWeight = 0f;
             float amplitude = config.Amplitude;
@@ -249,7 +231,13 @@ namespace ProjectVagabond
 
         public MapData GetMapData(int x, int y)
         {
-            return new MapData
+            var key = new Vector2(x, y);
+            if (_mapDataCache.TryGetValue(key, out var cachedData))
+            {
+                return cachedData;
+            }
+
+            var newData = new MapData
             {
                 TerrainHeight = GetNoiseValue(NoiseMapType.TerrainHeight, x, y),
                 Lushness = GetNoiseValue(NoiseMapType.Lushness, x, y),
@@ -258,14 +246,19 @@ namespace ProjectVagabond
                 Resources = GetNoiseValue(NoiseMapType.Resources, x, y),
                 Difficulty = GetNoiseValue(NoiseMapType.Difficulty, x, y)
             };
+
+            if (_mapDataCache.Count >= MAP_DATA_CACHE_LIMIT)
+            {
+                _mapDataCache.Clear();
+            }
+
+            _mapDataCache.Add(key, newData);
+            return newData;
         }
 
         public void ClearCache()
         {
-            foreach (var cache in noiseCache.Values)
-            {
-                cache.Clear();
-            }
+            _mapDataCache.Clear();
         }
     }
 

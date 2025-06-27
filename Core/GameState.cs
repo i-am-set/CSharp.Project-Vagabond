@@ -194,18 +194,23 @@ namespace ProjectVagabond
             _currentPathIndex = index;
         }
 
-        public bool IsPositionPassable(Vector2 position, MapView view)
+        public bool IsPositionPassable(Vector2 position, MapView view, out MapData mapData)
         {
+            mapData = default;
+
             if (view == MapView.Local)
             {
                 return position.X >= 0 && position.X < Global.LOCAL_GRID_SIZE && position.Y >= 0 && position.Y < Global.LOCAL_GRID_SIZE;
             }
 
-            var mapData = GetMapDataAt((int)position.X, (int)position.Y);
-            string terrainType = mapData.TerrainType;
-
-            string upperTerrainType = terrainType.ToUpper();
+            mapData = GetMapDataAt((int)position.X, (int)position.Y);
+            string upperTerrainType = mapData.TerrainType.ToUpper();
             return upperTerrainType != "WATER" && upperTerrainType != "PEAKS";
+        }
+
+        public bool IsPositionPassable(Vector2 position, MapView view)
+        {
+            return IsPositionPassable(position, view, out _);
         }
 
         public int GetMovementEnergyCost(PendingAction action, bool isLocalMove = false)
