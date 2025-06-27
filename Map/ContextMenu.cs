@@ -82,7 +82,7 @@ namespace ProjectVagabond
         {
             if (!_isOpen) return;
 
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
+            Texture2D pixel = Core.Pixel;
             pixel.SetData(new[] { Color.White });
 
             spriteBatch.Draw(pixel, _bounds, Global.Instance.ToolTipBGColor * 0.9f);

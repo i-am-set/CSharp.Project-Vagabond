@@ -309,18 +309,19 @@ namespace ProjectVagabond
         {
             var elements = new List<GridElement>();
             Color bgColor = Global.Instance.Palette_DarkGray;
+            Texture2D pixel = Core.Pixel;
 
             for (int y = 0; y < gridSize; y++)
             {
                 for (int x = 0; x < gridSize; x++)
                 {
                     Vector2 localPos = new Vector2(x, y);
-                    Texture2D texture = Core.Pixel;
+                    Texture2D texture = pixel;
                     Color color = bgColor;
 
                     if (localPos == _gameState.PlayerLocalPos)
                     {
-                        texture = Core.Pixel; // Use a solid square for player
+                        texture = pixel; // Use a solid square for player
                         color = Global.Instance.PlayerColor;
                     }
                     else

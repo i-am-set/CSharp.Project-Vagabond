@@ -27,7 +27,7 @@ namespace ProjectVagabond.Scenes
             Core.CurrentMapRenderer.DrawMap(gameTime);
             Core.CurrentStatsRenderer.DrawStats();
 
-            using (var pixel = new Texture2D(spriteBatch.GraphicsDevice, 1, 1))
+            using (Texture2D pixel = Core.Pixel)
             {
                 pixel.SetData(new[] { Color.White });
 

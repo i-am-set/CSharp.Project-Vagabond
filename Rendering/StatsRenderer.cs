@@ -61,7 +61,7 @@ namespace ProjectVagabond
 
         private Rectangle DrawEnergyBarWithPreview(SpriteBatch spriteBatch, PlayerStats stats, Vector2 position, int width)
         {
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
+            Texture2D pixel = Core.Pixel;
             pixel.SetData(new[] { Color.White });
 
             string labelText = "EP";
@@ -117,7 +117,7 @@ namespace ProjectVagabond
 
         private Rectangle DrawSimpleStatBar(SpriteBatch spriteBatch, string label, int current, int max, Vector2 position, Color fillColor, Color bgColor, int width)
         {
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
+            Texture2D pixel = Core.Pixel;
             pixel.SetData(new[] { Color.White });
 
             string labelText = $"{label}"; // Draw label first
@@ -190,7 +190,7 @@ namespace ProjectVagabond
         {
             if (string.IsNullOrEmpty(_tooltipText)) return;
 
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
+            Texture2D pixel = Core.Pixel;
             pixel.SetData(new[] { Color.White });
 
             Vector2 textSize = Global.Instance.DefaultFont.MeasureString(_tooltipText);

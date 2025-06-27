@@ -102,7 +102,7 @@ namespace ProjectVagabond
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public void DrawTerminal()
+        public void DrawTerminal(GameTime gameTime)
         {
             SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
             BitmapFont _defaultFont = Global.Instance.DefaultFont;
@@ -112,7 +112,7 @@ namespace ProjectVagabond
             int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
             int terminalHeight = Global.DEFAULT_TERMINAL_HEIGHT;
 
-            var pixel = new Texture2D(Core.Instance.GraphicsDevice, 1, 1);
+            Texture2D pixel = Core.Pixel;
             pixel.SetData(new[] { Color.White });
 
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, terminalHeight + 30), Global.Instance.TerminalBg);
@@ -182,8 +182,18 @@ namespace ProjectVagabond
 
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, separatorY, Global.DEFAULT_TERMINAL_WIDTH + 10, 2), Global.Instance.Palette_White);
 
-            string inputDisplay = $"> {Core.CurrentInputHandler.CurrentInput}_";
-            string wrappedInput = WrapText(inputDisplay, GetTerminalContentWidthInPixels());
+            string caratUnderscore = "_";
+            if (!Core.CurrentGameState.IsExecutingPath)
+            {
+                if (gameTime.TotalGameTime.TotalSeconds % 2.0 > 1.0)
+                {
+                    caratUnderscore = "";
+                }
+            }
+
+            string inputCarat = $"> {Core.CurrentInputHandler.CurrentInput}{caratUnderscore}";
+
+            string wrappedInput = WrapText(inputCarat, GetTerminalContentWidthInPixels());
 
             _inputCaratColor = Core.CurrentGameState.IsExecutingPath ? Global.Instance.TerminalDarkGray : Global.Instance.InputCaratColor;
 
