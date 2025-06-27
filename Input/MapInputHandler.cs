@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using ProjectVagabond.UI;
 using System;
@@ -177,67 +177,45 @@ namespace ProjectVagabond
         private void HandlePathUpdate(Vector2 targetPos, KeyboardState keyboardState)
         {
             Vector2 playerPos = _gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos;
-            if (targetPos == playerPos && _gameState.PendingActions.Any())
-            {
-                _gameState.CancelPendingActions();
-                _isDraggingPath = false;
-                return;
-            }
 
             if (!_gameState.IsPositionPassable(targetPos, _gameState.CurrentMapView)) return;
 
-            bool isAltHeld = keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt);
+            bool isCtrlHeld = keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl); // Append
+            bool isAltHeld = keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt);     // Moves mode (straight line)
+            bool isRunning = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift); // Run
 
-            if (!isAltHeld)
-            {
-                int existingIndex = -1;
-                for (int i = 0; i < _originalPendingActionCount; i++)
-                {
-                    if (i < _gameState.PendingActions.Count && _gameState.PendingActions[i].Position == targetPos)
-                    {
-                        existingIndex = i;
-                        break;
-                    }
-                }
+            var mode = isAltHeld ? PathfindingMode.Moves : PathfindingMode.Time;
 
-                if (existingIndex != -1)
-                {
-                    int newCount = existingIndex + 1;
-                    if (_gameState.PendingActions.Count > newCount)
-                    {
-                        _gameState.PendingActions.RemoveRange(newCount, _gameState.PendingActions.Count - newCount);
-                    }
-                    _originalPendingActionCount = _gameState.PendingActions.Count;
-                }
-            }
-
-            Vector2 startPos = (_originalPendingActionCount > 0)
-                ? _gameState.PendingActions[_originalPendingActionCount - 1].Position
-                : playerPos;
-
-            if (startPos == targetPos)
+            if (isCtrlHeld)
             {
                 if (_gameState.PendingActions.Count > _originalPendingActionCount)
                 {
                     _gameState.PendingActions.RemoveRange(_originalPendingActionCount, _gameState.PendingActions.Count - _originalPendingActionCount);
                 }
-                return;
+
+                Vector2 startPos = (_originalPendingActionCount > 0)
+                    ? _gameState.PendingActions[_originalPendingActionCount - 1].Position
+                    : playerPos;
+
+                if (startPos == targetPos) return; // Don't path to the same spot
+
+                var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
+                if (path != null)
+                {
+                    _gameState.AppendPath(path, isRunning: isRunning);
+                }
             }
-
-            bool isRunning = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
-            bool isCtrlHeld = keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl);
-            var mode = isCtrlHeld ? PathfindingMode.Moves : PathfindingMode.Time;
-
-            var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
-
-            if (_gameState.PendingActions.Count > _originalPendingActionCount)
+            else
             {
-                _gameState.PendingActions.RemoveRange(_originalPendingActionCount, _gameState.PendingActions.Count - _originalPendingActionCount);
-            }
+                _gameState.PendingActions.Clear();
 
-            if (path != null)
-            {
-                _gameState.AppendPath(path, isRunning: isRunning);
+                if (playerPos == targetPos) return;
+
+                var path = Pathfinder.FindPath(playerPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
+                if (path != null)
+                {
+                    _gameState.AppendPath(path, isRunning: isRunning);
+                }
             }
         }
 
@@ -310,18 +288,6 @@ namespace ProjectVagabond
                     var startPos = pathPending ? _gameState.PendingActions.Last().Position : (_gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos);
                     var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: true, PathfindingMode.Time, _gameState.CurrentMapView);
                     if (path != null) _gameState.AppendPath(path, isRunning: true);
-                }
-            });
-
-            menuItems.Add(new ContextMenuItem
-            {
-                Text = "Reposition",
-                IsVisible = () => isPassable && !isPlayerPos && pathPending,
-                OnClick = () =>
-                {
-                    var startPos = _gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos;
-                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time, _gameState.CurrentMapView);
-                    if (path != null) _gameState.QueueNewPath(path, isRunning: false);
                 }
             });
 
