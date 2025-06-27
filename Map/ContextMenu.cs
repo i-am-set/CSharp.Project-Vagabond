@@ -99,7 +99,7 @@ namespace ProjectVagabond
 
                 if (i == _hoveredIndex)
                 {
-                    color = Global.Instance.OptionHoverColor;
+                    color = Global.Instance.ButtonHoverColor;
                 }
                 else
                 {

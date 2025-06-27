@@ -7,8 +7,12 @@ namespace ProjectVagabond.UI
     public class ToggleButton : Button
     {
         public bool IsSelected { get; set; }
+        public Color? CustomToggledTextColor { get; set; }
 
-        public ToggleButton(Rectangle bounds, string text) : base(bounds, text) { }
+        public ToggleButton(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, Color? customToggledTextColor = null)
+            : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor) {
+            CustomToggledTextColor = customToggledTextColor;
+        }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover = false)
         {
@@ -17,20 +21,19 @@ namespace ProjectVagabond.UI
 
             if (IsSelected)
             {
-                // A distinct color for the selected/toggled button
-                textColor = Global.Instance.Palette_Yellow;
+                textColor = CustomToggledTextColor ?? Global.Instance.Palette_Yellow;
             }
             else if (!IsEnabled)
             {
-                textColor = Global.Instance.Palette_Gray;
+                textColor = CustomDisabledTextColor ?? Global.Instance.ButtonDisableColor;
             }
             else if (isActivated)
             {
-                textColor = Global.Instance.OptionHoverColor;
+                textColor = CustomHoverTextColor ?? Global.Instance.ButtonHoverColor;
             }
             else
             {
-                textColor = CustomTextColor ?? Global.Instance.Palette_BrightWhite;
+                textColor = CustomDefaultTextColor ?? Global.Instance.Palette_BrightWhite;
             }
 
             // Animate if hovered or selected

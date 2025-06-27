@@ -114,7 +114,7 @@ namespace ProjectVagabond.UI
             float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
-            Color labelColor = isSelected ? Global.Instance.OptionHoverColor : Global.Instance.Palette_BrightWhite;
+            Color labelColor = isSelected ? Global.Instance.ButtonHoverColor : Global.Instance.Palette_BrightWhite;
             spriteBatch.DrawString(font, Label, animatedPosition, labelColor);
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
@@ -125,8 +125,8 @@ namespace ProjectVagabond.UI
             string rightArrowText = ">";
 
             Color baseValueColor = IsDirty ? Global.Instance.Palette_Teal : Global.Instance.Palette_BrightWhite;
-            Color leftArrowColor = _isLeftArrowHovered ? Global.Instance.OptionHoverColor : baseValueColor;
-            Color rightArrowColor = _isRightArrowHovered ? Global.Instance.OptionHoverColor : baseValueColor;
+            Color leftArrowColor = _isLeftArrowHovered ? Global.Instance.ButtonHoverColor : baseValueColor;
+            Color rightArrowColor = _isRightArrowHovered ? Global.Instance.ButtonHoverColor : baseValueColor;
 
             Vector2 leftArrowSize = font.MeasureString(leftArrowText);
             Vector2 valueTextSize = font.MeasureString(valueText);

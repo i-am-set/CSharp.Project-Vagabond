@@ -118,14 +118,14 @@ namespace ProjectVagabond.UI
 
                 var button1 = new Button(new Rectangle((int)startX, (int)buttonY, (int)width1, buttonHeight), text1)
                 {
-                    CustomTextColor = color1
+                    CustomDefaultTextColor = color1
                 };
                 button1.OnClick += action1;
                 _buttons.Add(button1);
 
                 var button2 = new Button(new Rectangle((int)(startX + width1 + interButtonGap), (int)buttonY, (int)width2, buttonHeight), text2)
                 {
-                    CustomTextColor = color2
+                    CustomDefaultTextColor = color2
                 };
                 button2.OnClick += action2;
                 _buttons.Add(button2);
@@ -140,7 +140,7 @@ namespace ProjectVagabond.UI
                     float buttonY = currentButtonY + (25 - buttonHeight) / 2f;
                     var button = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth / 2, (int)buttonY, buttonWidth, buttonHeight), text)
                     {
-                        CustomTextColor = color
+                        CustomDefaultTextColor = color
                     };
                     button.OnClick += action;
                     _buttons.Add(button);
@@ -308,7 +308,7 @@ namespace ProjectVagabond.UI
                         (int)(textSize.X + horizontalPadding * 2),
                         (int)(textSize.Y + verticalPadding * 2)
                     );
-                    DrawRectangleBorder(spriteBatch, pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
+                    DrawRectangleBorder(spriteBatch, pixel, highlightRect, 1, Global.Instance.ButtonHoverColor);
                 }
             }
 

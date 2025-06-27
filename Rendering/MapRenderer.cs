@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -21,27 +21,30 @@ namespace ProjectVagabond
         private Vector2 _tooltipPosition;
         private Rectangle _mapGridBounds;
         private ContextMenu _contextMenu = new ContextMenu();
-        private Button _toggleMapButton;
+
+        private readonly List<Button> _headerButtons = new List<Button>();
+        public IEnumerable<Button> HeaderButtons => _headerButtons;
 
         public Vector2? HoveredGridPos => _hoveredGridPos;
         public ContextMenu MapContextMenu => _contextMenu;
         public Vector2? RightClickedWorldPos { get; set; }
-        public Button ToggleMapButton => _toggleMapButton;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         public MapRenderer()
         {
-            _toggleMapButton = new Button(new Rectangle(0, 0, 80, 16), "");
+            _headerButtons.Add(new Button(Rectangle.Empty, "Go") { IsEnabled = false });
+            _headerButtons.Add(new Button(Rectangle.Empty, "Stop") { IsEnabled = false });
+            _headerButtons.Add(new Button(Rectangle.Empty, "World Map", "map"));
         }
 
         public void Update(GameTime gameTime)
         {
-            UpdateHover(gameTime);
+            var virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
+            UpdateHover(gameTime, virtualMousePos);
         }
 
-        private void UpdateHover(GameTime gameTime)
+        private void UpdateHover(GameTime gameTime, Vector2 virtualMousePos)
         {
-            Vector2 virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
             Vector2? currentHoveredPos = null;
             int cellSize = _gameState.CurrentMapView == MapView.World ? Global.GRID_CELL_SIZE : Global.LOCAL_GRID_CELL_SIZE;
             int gridSize = _gameState.CurrentMapView == MapView.World ? Global.GRID_SIZE : Global.LOCAL_GRID_SIZE;
@@ -208,27 +211,53 @@ namespace ProjectVagabond
         {
             SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
             var pixel = Core.Pixel;
+            var font = Global.Instance.DefaultFont;
 
+            // Draw Frame //
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, mapWidth, 2), Global.Instance.Palette_White); // Top
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY + mapHeight - 27, mapWidth, 2), Global.Instance.Palette_White); // Bottom
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, 2, mapHeight), Global.Instance.Palette_White); // Left
             _spriteBatch.Draw(pixel, new Rectangle(mapStartX + mapWidth - 7, mapStartY - 25, 2, mapHeight), Global.Instance.Palette_White); // Right
+            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 5, mapWidth, 2), Global.Instance.Palette_White); // Separator
 
-            string titleText = _gameState.CurrentMapView == MapView.World
-                ? $"World Pos: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})"
-                : $"Local Map for ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})";
-            _spriteBatch.DrawString(Global.Instance.DefaultFont, titleText, new Vector2(mapStartX, mapStartY - 20), Global.Instance.TextColor);
-
+            // Draw Time //
             string timeText = Core.CurrentWorldClockManager.CurrentTime;
-            Vector2 timeTextSize = Global.Instance.DefaultFont.MeasureString(timeText);
-            Vector2 timeTextPos = new Vector2(mapStartX + mapWidth - timeTextSize.X - 15, mapStartY - 20);
-            _spriteBatch.DrawString(Global.Instance.DefaultFont, timeText, timeTextPos, Global.Instance.TextColor);
+            Vector2 timeTextPos = new Vector2(mapStartX, mapStartY - 20);
+            _spriteBatch.DrawString(font, timeText, timeTextPos, Global.Instance.TextColor);
 
-            _toggleMapButton.Bounds = new Rectangle((int)timeTextPos.X - 90, (int)timeTextPos.Y - 2, 80, 16);
-            _toggleMapButton.Text = _gameState.CurrentMapView == MapView.World ? "Local Map" : "World Map";
-            _toggleMapButton.Draw(_spriteBatch, Global.Instance.DefaultFont, gameTime);
+            // Define Button Layout //
+            const int buttonHeight = 16;
+            const int buttonSpacing = 5;
+            int goStopButtonWidth = 45;
+            int toggleButtonWidth = 85;
+            int headerContentRightEdge = mapStartX + mapWidth - 12;
+            int buttonY = mapStartY - 22;
 
-            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 5, mapWidth, 2), Global.Instance.Palette_White);
+            // Position and Draw Buttons by iterating through the list //
+            var toggleMapButton = _headerButtons.FirstOrDefault(b => b.Function.ToLower() == "map");
+            var stopButton = _headerButtons.FirstOrDefault(b => b.Function.ToLower() == "stop");
+            var goButton = _headerButtons.FirstOrDefault(b => b.Function.ToLower() == "go");
+
+            if (toggleMapButton != null)
+            {
+                toggleMapButton.Text = _gameState.CurrentMapView == MapView.World ? "Local Map" : "World Map";
+                toggleMapButton.Bounds = new Rectangle(headerContentRightEdge - toggleButtonWidth, buttonY, toggleButtonWidth, buttonHeight);
+            }
+
+            if (stopButton != null && toggleMapButton != null)
+            {
+                stopButton.Bounds = new Rectangle(toggleMapButton.Bounds.X - buttonSpacing - goStopButtonWidth, buttonY, goStopButtonWidth, buttonHeight);
+            }
+
+            if (goButton != null && stopButton != null)
+            {
+                goButton.Bounds = new Rectangle(stopButton.Bounds.X - buttonSpacing - goStopButtonWidth, buttonY, goStopButtonWidth, buttonHeight);
+            }
+
+            foreach (var button in _headerButtons)
+            {
+                button.Draw(_spriteBatch, font, gameTime);
+            }
         }
 
         private void DrawPauseIcon(SpriteBatch spriteBatch)

@@ -487,7 +487,7 @@ namespace ProjectVagabond.Scenes
                     if (isHovered || keyboardNavigatedLastFrame)
                     {
                         float itemHeight = (item is ISettingControl) ? 20 : (item is Button) ? 20 : 0;
-                        if (itemHeight > 0) DrawRectangleBorder(spriteBatch, Core.Pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, (int)itemHeight), 1, Global.Instance.OptionHoverColor);
+                        if (itemHeight > 0) DrawRectangleBorder(spriteBatch, Core.Pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, (int)itemHeight), 1, Global.Instance.ButtonHoverColor);
                     }
                 }
 

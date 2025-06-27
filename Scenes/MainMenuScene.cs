@@ -234,7 +234,7 @@ namespace ProjectVagabond.Scenes
                         (int)(textSize.X + horizontalPadding * 2),
                         (int)(textSize.Y + verticalPadding * 2)
                     );
-                    DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.OptionHoverColor);
+                    DrawRectangleBorder(spriteBatch, Core.Pixel, highlightRect, 1, Global.Instance.ButtonHoverColor);
                 }
             }
 

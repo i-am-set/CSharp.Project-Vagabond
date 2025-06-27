@@ -10,7 +10,10 @@ namespace ProjectVagabond.UI
     {
         public Rectangle Bounds { get; set; }
         public string Text { get; set;  }
-        public Color? CustomTextColor { get; set; }
+        public string Function { get; set; }
+        public Color? CustomDefaultTextColor { get; set; }
+        public Color? CustomHoverTextColor { get; set; }
+        public Color? CustomDisabledTextColor { get; set; }
         public bool IsEnabled { get; set; } = true;
         public bool IsHovered { get; private set; }
 
@@ -19,11 +22,19 @@ namespace ProjectVagabond.UI
         private MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
 
-        public Button(Rectangle bounds, string text)
+        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null)
         {
+            if (function == null)
+            {
+                function = text;
+            }
+
             Bounds = bounds;
             Text = text;
-            CustomTextColor = null;
+            Function = function;
+            CustomDefaultTextColor = customDefaultTextColor;
+            CustomHoverTextColor = customHoverTextColor;
+            CustomDisabledTextColor = customDisabledTextColor;
         }
 
         public void Update(MouseState currentMouseState)
@@ -77,20 +88,32 @@ namespace ProjectVagabond.UI
 
             if (!IsEnabled)
             {
-                textColor = Global.Instance.Palette_Gray;
+                if (CustomDisabledTextColor.HasValue)
+                {
+                    textColor = CustomDisabledTextColor.Value;
+                } else
+                {
+                    textColor = Global.Instance.ButtonDisableColor;
+                }
             }
             else
             {
                 if (isActivated)
                 {
-                    textColor = Global.Instance.OptionHoverColor;
-                } else
-                {
-                    if (CustomTextColor.HasValue)
+                    if (CustomHoverTextColor.HasValue)
                     {
-                        textColor = CustomTextColor.Value;
+                        textColor = CustomHoverTextColor.Value;
+                    } else
+                    {
+                        textColor = Global.Instance.ButtonHoverColor;
                     }
-                    else
+                } 
+                else
+                {
+                    if (CustomDefaultTextColor.HasValue)
+                    {
+                        textColor = CustomDefaultTextColor.Value;
+                    }else
                     {
                         textColor = Global.Instance.Palette_BrightWhite;
                     }

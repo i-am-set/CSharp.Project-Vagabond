@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using System;
@@ -202,7 +202,8 @@ namespace ProjectVagabond
             string caratUnderscore = "_";
             if (!Core.CurrentGameState.IsExecutingPath)
             {
-                if (_caratBlinkTimer % 2.0f > 1.0f)
+                // Use a 1-second cycle (0.5s on, 0.5s off) for a standard blink rate.
+                if (_caratBlinkTimer % 1.0f > 0.5f)
                 {
                     caratUnderscore = "";
                 }
@@ -341,7 +342,7 @@ namespace ProjectVagabond
                     string finalETA = worldClockManager.GetCalculatedNewTime(worldClockManager.CurrentTime, secondsPassed);
                     finalETA = Global.Instance.Use24HourClock ? finalETA : worldClockManager.GetConverted24hToAmPm(finalETA);
                     string formattedDuration = worldClockManager.GetFormattedTimeFromSecondsShortHand(secondsPassed);
-                    promptBuilder.Append($"[gold]Arrival Time:[orange] {finalETA}[Palette_Gray] ({formattedDuration})\n");
+                    promptBuilder.Append($"[gold]Arrival Time:[orange] {finalETA} [Palette_Gray]({formattedDuration})\n");
                 }
 
                 return promptBuilder.ToString();

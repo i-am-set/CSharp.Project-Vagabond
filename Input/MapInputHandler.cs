@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using ProjectVagabond.UI;
 using System;
@@ -12,7 +12,6 @@ namespace ProjectVagabond
         private GameState _gameState = Core.CurrentGameState;
         private MapRenderer _mapRenderer = Core.CurrentMapRenderer;
         private ContextMenu _contextMenu;
-        private Button _toggleMapButton;
 
         private MouseState _currentMouseState;
         private MouseState _previousMouseState;
@@ -27,8 +26,23 @@ namespace ProjectVagabond
         public MapInputHandler(ContextMenu contextMenu)
         {
             _contextMenu = contextMenu;
-            _toggleMapButton = _mapRenderer.ToggleMapButton;
-            _toggleMapButton.OnClick += () => _gameState.ToggleMapView();
+            
+            foreach (var button in _mapRenderer.HeaderButtons)
+            {
+                switch (button.Text)
+                {
+                    case "GO":
+                        button.OnClick += HandleGoClick;
+                        break;
+                    case "STOP":
+                        button.OnClick += HandleStopClick;
+                        break;
+                    case "World Map":
+                    case "Local Map":
+                        button.OnClick += HandleToggleMapClick;
+                        break;
+                }
+            }
         }
 
         public void Update(GameTime gameTime)
@@ -40,7 +54,21 @@ namespace ProjectVagabond
 
             _pathUpdateTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            _toggleMapButton.Update(_currentMouseState);
+            foreach (var button in _mapRenderer.HeaderButtons)
+            {
+                switch (button.Function.ToLower())
+                {
+                    case "go":
+                        button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingPath;
+                        break;
+                    case "stop":
+                        button.IsEnabled = _gameState.IsExecutingPath;
+                        break;
+                    case "map":
+                        break;
+                }
+                button.Update(_currentMouseState);
+            }
 
             bool menuWasOpen = _contextMenu.IsOpen;
             _contextMenu.Update(_currentMouseState, _previousMouseState, virtualMousePos);
@@ -57,6 +85,22 @@ namespace ProjectVagabond
             _mapRenderer.RightClickedWorldPos = null;
 
             HandleMapInteraction(virtualMousePos, keyboardState);
+        }
+
+        private void HandleGoClick()
+        {
+            _gameState.ToggleExecutingPath(true);
+            Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {_gameState.PendingActions.Count}[gray] action(s)...");
+        }
+
+        private void HandleStopClick()
+        {
+            _gameState.CancelPathExecution();
+        }
+
+        private void HandleToggleMapClick()
+        {
+            _gameState.ToggleMapView();
         }
 
         private void HandleMapInteraction(Vector2 virtualMousePos, KeyboardState keyboardState)

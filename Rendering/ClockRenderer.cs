@@ -19,9 +19,9 @@ namespace ProjectVagabond
         {
             _timeScaleGroup = new RadioGroup(defaultIndex: 0);
 
-            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{Global.Instance.TimeScaleMultiplier1}x"));
-            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{Global.Instance.TimeScaleMultiplier2}x"));
-            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{Global.Instance.TimeScaleMultiplier3}x"));
+            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{Global.Instance.TimeScaleMultiplier1}x", customDefaultTextColor: Global.Instance.Palette_Gray, customToggledTextColor: Global.Instance.Palette_BrightWhite));
+            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{Global.Instance.TimeScaleMultiplier2}x", customDefaultTextColor: Global.Instance.Palette_Gray, customToggledTextColor: Global.Instance.Palette_BrightWhite));
+            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{Global.Instance.TimeScaleMultiplier3}x", customDefaultTextColor: Global.Instance.Palette_Gray, customToggledTextColor: Global.Instance.Palette_BrightWhite));
 
             _timeScaleGroup.OnSelectionChanged += HandleTimeScaleChange;
 
