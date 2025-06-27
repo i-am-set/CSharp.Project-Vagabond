@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using System;
@@ -18,6 +18,16 @@ namespace ProjectVagabond
         private int _nextLineNumber = 1;
         private Color _inputCaratColor;
 
+        private float _caratBlinkTimer = 0f;
+        private readonly StringBuilder _stringBuilder = new StringBuilder(256);
+
+        private List<ColoredLine> _cachedPromptLines;
+        private string _cachedWrappedStatusText;
+        private int _cachedPendingActionCount = -1;
+        private bool _cachedIsExecutingPath = false;
+        private bool _cachedIsFreeMoveMode = false;
+        private int _cachedCurrentPathIndex = -1;
+
         public int ScrollOffset => _scrollOffset;
         public List<ColoredLine> WrappedHistory => _wrappedHistory;
 
@@ -26,6 +36,11 @@ namespace ProjectVagabond
         public void SetScrollOffset(int index)
         {
             _scrollOffset = index;
+        }
+
+        public void ResetCaratBlink()
+        {
+            _caratBlinkTimer = 0f;
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -113,7 +128,6 @@ namespace ProjectVagabond
             int terminalHeight = Global.DEFAULT_TERMINAL_HEIGHT;
 
             Texture2D pixel = Core.Pixel;
-            pixel.SetData(new[] { Color.White });
 
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, terminalHeight + 30), Global.Instance.TerminalBg);
 
@@ -173,7 +187,9 @@ namespace ProjectVagabond
                 string scrollIndicator = "";
                 if (_scrollOffset > 0)
                 {
-                    scrollIndicator = $"^ Scrolled up {_scrollOffset} lines";
+                    _stringBuilder.Clear();
+                    _stringBuilder.Append("^ Scrolled up ").Append(_scrollOffset).Append(" lines");
+                    scrollIndicator = _stringBuilder.ToString();
                 }
 
                 int scrollY = terminalY - 35;
@@ -182,16 +198,19 @@ namespace ProjectVagabond
 
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, separatorY, Global.DEFAULT_TERMINAL_WIDTH + 10, 2), Global.Instance.Palette_White);
 
+            _caratBlinkTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
             string caratUnderscore = "_";
             if (!Core.CurrentGameState.IsExecutingPath)
             {
-                if (gameTime.TotalGameTime.TotalSeconds % 2.0 > 1.0)
+                if (_caratBlinkTimer % 2.0f > 1.0f)
                 {
                     caratUnderscore = "";
                 }
             }
 
-            string inputCarat = $"> {Core.CurrentInputHandler.CurrentInput}{caratUnderscore}";
+            _stringBuilder.Clear();
+            _stringBuilder.Append("> ").Append(Core.CurrentInputHandler.CurrentInput).Append(caratUnderscore);
+            string inputCarat = _stringBuilder.ToString();
 
             string wrappedInput = WrapText(inputCarat, GetTerminalContentWidthInPixels());
 
@@ -231,28 +250,49 @@ namespace ProjectVagabond
                 }
             }
 
-            int statusY = terminalY + terminalHeight + 15;
-            string statusText = $"Actions Queued: {Core.CurrentGameState.PendingActions.Count}";
-            if (Core.CurrentGameState.IsExecutingPath)
+            var gameState = Core.CurrentGameState;
+            if (gameState.PendingActions.Count != _cachedPendingActionCount ||
+                gameState.IsExecutingPath != _cachedIsExecutingPath ||
+                gameState.IsFreeMoveMode != _cachedIsFreeMoveMode ||
+                (gameState.IsExecutingPath && gameState.CurrentPathIndex != _cachedCurrentPathIndex))
             {
-                statusText += $" | Executing: {Core.CurrentGameState.CurrentPathIndex + 1}/{Core.CurrentGameState.PendingActions.Count}";
+                _cachedPendingActionCount = gameState.PendingActions.Count;
+                _cachedIsExecutingPath = gameState.IsExecutingPath;
+                _cachedIsFreeMoveMode = gameState.IsFreeMoveMode;
+                _cachedCurrentPathIndex = gameState.CurrentPathIndex;
+
+                _stringBuilder.Clear();
+                _stringBuilder.Append("Actions Queued: ").Append(gameState.PendingActions.Count);
+                if (gameState.IsExecutingPath)
+                {
+                    _stringBuilder.Append(" | Executing: ").Append(gameState.CurrentPathIndex + 1).Append("/").Append(gameState.PendingActions.Count);
+                }
+                _cachedWrappedStatusText = WrapText(_stringBuilder.ToString(), GetTerminalContentWidthInPixels());
+
+                string promptText = GetPromptText();
+                if (!string.IsNullOrEmpty(promptText))
+                {
+                    var coloredPrompt = ParseColoredText(promptText, Color.Khaki);
+                    _cachedPromptLines = WrapColoredText(coloredPrompt, GetTerminalContentWidthInPixels());
+                }
+                else
+                {
+                    _cachedPromptLines = null;
+                }
             }
-            string wrappedStatus = WrapText(statusText, GetTerminalContentWidthInPixels());
-            _spriteBatch.DrawString(_defaultFont, wrappedStatus, new Vector2(terminalX, statusY), Global.Instance.Palette_LightGray);
 
-            int promptY = statusY + (wrappedStatus.Split('\n').Length * Global.TERMINAL_LINE_SPACING) + 5;
-            string promptText = GetPromptText();
-            if (!string.IsNullOrEmpty(promptText))
+            int statusY = terminalY + terminalHeight + 15;
+            _spriteBatch.DrawString(_defaultFont, _cachedWrappedStatusText, new Vector2(terminalX, statusY), Global.Instance.Palette_LightGray);
+
+            int promptY = statusY + (_cachedWrappedStatusText.Split('\n').Length * Global.TERMINAL_LINE_SPACING) + 5;
+            if (_cachedPromptLines != null)
             {
-                var coloredPrompt = ParseColoredText(promptText, Color.Khaki);
-                var wrappedPromptLines = WrapColoredText(coloredPrompt, GetTerminalContentWidthInPixels());
-
-                for (int i = 0; i < wrappedPromptLines.Count; i++)
+                for (int i = 0; i < _cachedPromptLines.Count; i++)
                 {
                     float x = terminalX;
                     float y = promptY + i * Global.PROMPT_LINE_SPACING;
 
-                    foreach (var segment in wrappedPromptLines[i].Segments)
+                    foreach (var segment in _cachedPromptLines[i].Segments)
                     {
                         _spriteBatch.DrawString(_defaultFont, segment.Text, new Vector2(x, y), segment.Color);
                         x += _defaultFont.MeasureString(segment.Text).Width;
@@ -301,7 +341,7 @@ namespace ProjectVagabond
                     string finalETA = worldClockManager.GetCalculatedNewTime(worldClockManager.CurrentTime, secondsPassed);
                     finalETA = Global.Instance.Use24HourClock ? finalETA : worldClockManager.GetConverted24hToAmPm(finalETA);
                     string formattedDuration = worldClockManager.GetFormattedTimeFromSecondsShortHand(secondsPassed);
-                    promptBuilder.Append($"[gold]Arrival Time:[orange] {finalETA} [Palette_Gray]({formattedDuration})\n");
+                    promptBuilder.Append($"[gold]Arrival Time:[orange] {finalETA}[Palette_Gray] ({formattedDuration})\n");
                 }
 
                 return promptBuilder.ToString();

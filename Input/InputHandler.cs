@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using ProjectVagabond;
 using System;
@@ -168,6 +168,7 @@ namespace ProjectVagabond
                             }
                             _currentInput = "";
                             _cursorPosition = 0;
+                            Core.CurrentTerminalRenderer.ResetCaratBlink();
                         }
                         else if (key == Keys.Tab)
                         {
@@ -176,6 +177,7 @@ namespace ProjectVagabond
                                 _currentInput = Core.CurrentAutoCompleteManager.AutoCompleteSuggestions[Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex];
                                 _cursorPosition = _currentInput.Length;
                                 Core.CurrentAutoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
+                                Core.CurrentTerminalRenderer.ResetCaratBlink();
                             }
                             else
                             {
@@ -219,6 +221,7 @@ namespace ProjectVagabond
                             if (_cursorPosition < _currentInput.Length)
                             {
                                 _currentInput = _currentInput.Remove(_cursorPosition, 1);
+                                Core.CurrentTerminalRenderer.ResetCaratBlink();
                             }
                         }
                         else if (key == Keys.Home)
@@ -233,6 +236,7 @@ namespace ProjectVagabond
                         {
                             _currentInput += " ";
                             _cursorPosition++;
+                            Core.CurrentTerminalRenderer.ResetCaratBlink();
                         }
                         else if (key == Keys.PageUp)
                         {
@@ -303,6 +307,7 @@ namespace ProjectVagabond
                         _currentInput = "";
                         _cursorPosition = 0;
                         Core.CurrentTerminalRenderer.AddOutputToHistory($"Cut text to clipboard: '{_clipboard}'   (CTRL + X)");
+                        Core.CurrentTerminalRenderer.ResetCaratBlink();
                     }
                     break;
 
@@ -312,6 +317,7 @@ namespace ProjectVagabond
                         _currentInput += _clipboard;
                         _cursorPosition = _currentInput.Length;
                         Core.CurrentTerminalRenderer.AddOutputToHistory($"Pasted from clipboard: '{_clipboard}'   (CTRL + V)");
+                        Core.CurrentTerminalRenderer.ResetCaratBlink();
                     }
                     break;
 
@@ -321,6 +327,7 @@ namespace ProjectVagabond
                         _currentInput = "";
                         _cursorPosition = 0;
                         Core.CurrentTerminalRenderer.AddOutputToHistory("Input cleared   (CTRL + A)");
+                        Core.CurrentTerminalRenderer.ResetCaratBlink();
                     }
                     break;
 
@@ -357,6 +364,7 @@ namespace ProjectVagabond
             {
                 _currentInput = _currentInput.Substring(0, _currentInput.Length - 1);
                 _cursorPosition = Math.Max(0, _cursorPosition - 1);
+                Core.CurrentTerminalRenderer.ResetCaratBlink();
             }
         }
 
@@ -374,6 +382,7 @@ namespace ProjectVagabond
                 _cursorPosition++;
             }
 
+            Core.CurrentTerminalRenderer.ResetCaratBlink();
             Core.CurrentAutoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
         }
 
@@ -410,6 +419,7 @@ namespace ProjectVagabond
             }
 
             _cursorPosition = _currentInput.Length;
+            Core.CurrentTerminalRenderer.ResetCaratBlink();
         }
 
         private void ProcessCommand(string input)
