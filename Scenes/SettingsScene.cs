@@ -261,6 +261,21 @@ namespace ProjectVagabond.Scenes
             MoveMouseToSelected();
         }
 
+        private void RevertChanges()
+        {
+            foreach (var item in _uiElements.OfType<ISettingControl>()) item.Revert();
+            _tempSettings.Resolution = Core.Settings.Resolution;
+            _tempSettings.IsFullscreen = Core.Settings.IsFullscreen;
+            _tempSettings.IsVsync = Core.Settings.IsVsync;
+            _tempSettings.IsFrameLimiterEnabled = Core.Settings.IsFrameLimiterEnabled;
+            _tempSettings.TargetFramerate = Core.Settings.TargetFramerate;
+            _tempSettings.SmallerUi = Core.Settings.SmallerUi;
+            _tempSettings.UseImperialUnits = Core.Settings.UseImperialUnits;
+            _tempSettings.Use24HourClock = Core.Settings.Use24HourClock;
+            foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
+            UpdateFramerateControl();
+        }
+
         private void ConfirmResetSettings()
         {
             _confirmationDialog.Show(
@@ -282,21 +297,6 @@ namespace ProjectVagabond.Scenes
             ExecuteApplySettings();
             _confirmationMessage = "Settings Reset to Default!";
             _confirmationTimer = 5f;
-        }
-
-        private void RevertChanges()
-        {
-            foreach (var item in _uiElements.OfType<ISettingControl>()) item.Revert();
-            _tempSettings.Resolution = Core.Settings.Resolution;
-            _tempSettings.IsFullscreen = Core.Settings.IsFullscreen;
-            _tempSettings.IsVsync = Core.Settings.IsVsync;
-            _tempSettings.IsFrameLimiterEnabled = Core.Settings.IsFrameLimiterEnabled;
-            _tempSettings.TargetFramerate = Core.Settings.TargetFramerate;
-            _tempSettings.SmallerUi = Core.Settings.SmallerUi;
-            _tempSettings.UseImperialUnits = Core.Settings.UseImperialUnits;
-            _tempSettings.Use24HourClock = Core.Settings.Use24HourClock;
-            foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
-            UpdateFramerateControl();
         }
 
         private void AttemptToGoBack()
