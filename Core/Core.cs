@@ -42,6 +42,7 @@ namespace ProjectVagabond
         private static readonly ClockRenderer _clockRenderer = new();
         private static readonly HapticsManager _hapticsManager = new();
         private static readonly SceneManager _sceneManager = new();
+        private static readonly TooltipManager _tooltipManager = new();
         public static readonly GameSettings _settings = SettingsManager.LoadSettings();
 
         // Misc //
@@ -66,6 +67,7 @@ namespace ProjectVagabond
         public static WorldClockManager CurrentWorldClockManager => _worldClockManager;
         public static HapticsManager CurrentHapticsManager => _hapticsManager;
         public static SceneManager CurrentSceneManager => _sceneManager;
+        public static TooltipManager CurrentTooltipManager => _tooltipManager;
         public static GameSettings Settings => _settings;
         public static Texture2D Pixel => _pixel;
 
@@ -147,6 +149,7 @@ namespace ProjectVagabond
             Global.Instance.CurrentGraphics.SynchronizeWithVerticalRetrace = Settings.IsVsync;
 
             _sceneManager.Update(gameTime);
+            _tooltipManager.Update(gameTime);
             base.Update(gameTime);
         }
 
@@ -156,6 +159,10 @@ namespace ProjectVagabond
             GraphicsDevice.Clear(Color.Transparent);
 
             _sceneManager.Draw(gameTime);
+
+            Global.Instance.CurrentSpriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            _tooltipManager.Draw(Global.Instance.CurrentSpriteBatch);
+            Global.Instance.CurrentSpriteBatch.End();
 
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(Global.Instance.GameBg);
