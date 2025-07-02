@@ -9,8 +9,6 @@ namespace ProjectVagabond.UI
 {
     public class WaitDialog : Dialog
     {
-        #region Layout Configuration
-
         // Overall Dialog Dimensions
         private const int DialogWidth = 800;
         private const int DialogHeight = 280;
@@ -37,8 +35,6 @@ namespace ProjectVagabond.UI
         private const int ButtonWidth = 100;
         private const int ButtonHeight = 25;
         private const int ButtonGap = 20;
-
-        #endregion
 
         private Slider _hourSlider;
         private Slider _minuteSlider;
