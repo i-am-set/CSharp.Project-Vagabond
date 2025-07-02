@@ -250,7 +250,7 @@ namespace ProjectVagabond.Scenes
         {
             if (_confirmationDialog.IsActive)
             {
-                _confirmationDialog.DrawOverlay(gameTime);
+                _confirmationDialog.Draw(gameTime);
             }
         }
 

@@ -15,11 +15,11 @@ namespace ProjectVagabond.UI
         public Color? CustomHoverTextColor { get; set; }
         public Color? CustomDisabledTextColor { get; set; }
         public bool IsEnabled { get; set; } = true;
-        public bool IsHovered { get; private set; }
+        public bool IsHovered { get; set; }
 
         public event Action OnClick;
 
-        private MouseState _previousMouseState;
+        protected MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
 
         #nullable enable
@@ -39,7 +39,7 @@ namespace ProjectVagabond.UI
         }
         #nullable restore
 
-        public void Update(MouseState currentMouseState)
+        public virtual void Update(MouseState currentMouseState)
         {
             if (!IsEnabled)
             {

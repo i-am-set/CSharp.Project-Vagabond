@@ -9,19 +9,13 @@ using System.Linq;
 
 namespace ProjectVagabond.UI
 {
-    public class ConfirmationDialog
+    public class ConfirmationDialog : Dialog
     {
-        public bool IsActive { get; private set; }
-
         private string _prompt;
         private List<string> _details;
         private List<Button> _buttons;
         private int _selectedButtonIndex;
 
-        private Rectangle _dialogBounds;
-
-        private KeyboardState _previousKeyboardState;
-        private MouseState _previousMouseState;
         private bool _keyboardNavigatedLastFrame;
 
         private float _inputDelay = 0.1f;
@@ -29,11 +23,8 @@ namespace ProjectVagabond.UI
 
         private bool _isHorizontalLayout;
 
-        private GameScene _currentGameScene;
-
-        public ConfirmationDialog(GameScene currentGameScene)
+        public ConfirmationDialog(GameScene currentGameScene) : base(currentGameScene)
         {
-            _currentGameScene = currentGameScene;
             _buttons = new List<Button>();
             _details = new List<string>();
         }
@@ -57,7 +48,7 @@ namespace ProjectVagabond.UI
 
             var font = Global.Instance.DefaultFont;
             float dialogWidth = 450;
-            float currentHeight = 20; // Top padding
+            float currentHeight = 20;
 
             var wrappedPrompt = WrapText(font, _prompt, dialogWidth - 40);
             currentHeight += wrappedPrompt.Count * font.LineHeight;
@@ -65,7 +56,7 @@ namespace ProjectVagabond.UI
 
             if (_details.Any())
             {
-                currentHeight += 10; // Padding before details
+                currentHeight += 10;
                 foreach (var detail in _details)
                 {
                     var wrappedDetail = WrapText(font, detail, dialogWidth - 60);
@@ -149,12 +140,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Hide()
-        {
-            IsActive = false;
-        }
-
-        public void Update(GameTime gameTime)
+        public override void Update(GameTime gameTime)
         {
             if (!IsActive) return;
 
@@ -207,7 +193,7 @@ namespace ProjectVagabond.UI
                             _selectedButtonIndex++;
                         }
                     }
-                    else // Vertical layout
+                    else
                     {
                         if (upPressed)
                         {
@@ -248,10 +234,8 @@ namespace ProjectVagabond.UI
             _previousKeyboardState = currentKeyboardState;
         }
 
-        public void Draw(GameTime gameTime)
+        protected override void DrawContent(GameTime gameTime)
         {
-            if (!IsActive) return;
-
             var spriteBatch = Global.Instance.CurrentSpriteBatch;
             var font = Global.Instance.DefaultFont;
             var pixel = Core.Pixel;
@@ -313,30 +297,6 @@ namespace ProjectVagabond.UI
             }
 
             spriteBatch.End();
-        }
-
-        public void DrawOverlay(GameTime gameTime)
-        {
-            if (!IsActive) return;
-
-            var spriteBatch = Global.Instance.CurrentSpriteBatch;
-            var graphicsDevice = Global.Instance.CurrentGraphics.GraphicsDevice;
-            var pixel = Core.Pixel;
-            var screenBounds = new Rectangle(0, 0, graphicsDevice.PresentationParameters.BackBufferWidth, graphicsDevice.PresentationParameters.BackBufferHeight);
-
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            spriteBatch.Draw(pixel, screenBounds, Color.Black * 0.7f);
-            spriteBatch.End();
-        }
-
-        private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
-
-        private static void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
-        {
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
         }
 
         private (string text, Color? color) ParseButtonTextAndColor(string taggedText)

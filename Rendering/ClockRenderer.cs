@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -14,6 +14,9 @@ namespace ProjectVagabond
         private readonly RadioGroup _timeScaleGroup;
         public RadioGroup TimeScaleGroup => _timeScaleGroup;
         private readonly ToggleButton _pausePlayButton;
+        private readonly ImageButton _clockButton;
+
+        public event Action OnClockClicked;
 
         public ClockRenderer()
         {
@@ -27,6 +30,9 @@ namespace ProjectVagabond
 
             _pausePlayButton = new ToggleButton(Rectangle.Empty, "||");
             _pausePlayButton.OnClick += () => Core.CurrentGameState.TogglePause();
+
+            _clockButton = new ImageButton(Rectangle.Empty);
+            _clockButton.OnClick += () => OnClockClicked?.Invoke(); 
             
             HandleTimeScaleChange(_timeScaleGroup.GetSelectedButton());
         }
@@ -55,8 +61,18 @@ namespace ProjectVagabond
 
         public void Update(GameTime gameTime)
         {
-            _timeScaleGroup.Update(Mouse.GetState());
-            _pausePlayButton.Update(Mouse.GetState());
+            var currentMouseState = Mouse.GetState();
+
+            _clockButton.Update(currentMouseState);
+
+            if (_clockButton.IsHovered)
+            {
+                Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+                Core.CurrentTooltipManager.RequestTooltip(_clockButton, "Click to wait", virtualMousePos, 0.2f);
+            }
+
+            _timeScaleGroup.Update(currentMouseState);
+            _pausePlayButton.Update(currentMouseState);
         }
 
         public void DrawClock(SpriteBatch spriteBatch, GameTime gameTime)
@@ -69,6 +85,8 @@ namespace ProjectVagabond
             int statsBaseY = 50 + Global.GRID_SIZE * Global.GRID_CELL_SIZE + 10;
             int statsHeight = 14 + 16 + Global.FONT_SIZE;
             _clockPosition = new Vector2(statsBaseX, statsBaseY + statsHeight + 10);
+
+            _clockButton.Bounds = new Rectangle((int)_clockPosition.X, (int)_clockPosition.Y, CLOCK_SIZE, CLOCK_SIZE);
 
             Vector2 clockCenter = _clockPosition + new Vector2(CLOCK_SIZE / 2f, CLOCK_SIZE / 2f);
 
@@ -115,6 +133,8 @@ namespace ProjectVagabond
             spriteBatch.Draw(pixel, clockCenter, null, Global.Instance.Palette_BrightWhite, hourRotation, handOrigin, new Vector2(hourHandLength, 2), SpriteEffects.None, 0);
             spriteBatch.Draw(pixel, clockCenter, null, Global.Instance.Palette_BrightWhite, minuteRotation, handOrigin, new Vector2(minuteHandLength, 2), SpriteEffects.None, 0);
             spriteBatch.Draw(pixel, clockCenter, null, Global.Instance.Palette_Red, secondRotation, handOrigin, new Vector2(secondHandLength, 1), SpriteEffects.None, 0);
+
+            _clockButton.Draw(spriteBatch, font, gameTime);
 
             // Set button positions and draw them
             // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
