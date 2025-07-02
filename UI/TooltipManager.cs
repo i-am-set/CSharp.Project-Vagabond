@@ -23,7 +23,7 @@ namespace ProjectVagabond
         /// <param name="text">The text to display in the tooltip.</param>
         /// <param name="anchorPosition">The position to anchor the tooltip to (e.g., mouse position).</param>
         /// <param name="delay">The time in seconds to wait before showing the tooltip.</param>
-        public void RequestTooltip(object requestor, string text, Vector2 anchorPosition, float delay = 0.5f)
+        public void RequestTooltip(object requestor, string text, Vector2 anchorPosition, float delay = Global.TOOLTIP_AVERAGE_POPUP_TIME)
         {
             if (requestor == null) return;
 

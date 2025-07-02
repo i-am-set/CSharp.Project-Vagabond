@@ -94,7 +94,7 @@ namespace ProjectVagabond
                 }
 
                 string tooltipText = stringBuilder.ToString();
-                Core.CurrentTooltipManager.RequestTooltip(currentHoveredPos.Value, tooltipText, virtualMousePos, 0.5f);
+                Core.CurrentTooltipManager.RequestTooltip(currentHoveredPos.Value, tooltipText, virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
             }
         }
 

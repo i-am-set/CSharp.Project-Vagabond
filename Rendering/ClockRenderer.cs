@@ -68,7 +68,7 @@ namespace ProjectVagabond
             if (_clockButton.IsHovered)
             {
                 Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-                Core.CurrentTooltipManager.RequestTooltip(_clockButton, "Click to wait", virtualMousePos, 0.2f);
+                Core.CurrentTooltipManager.RequestTooltip(_clockButton, "Click to wait", virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
             }
 
             _timeScaleGroup.Update(currentMouseState);

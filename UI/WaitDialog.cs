@@ -9,6 +9,37 @@ namespace ProjectVagabond.UI
 {
     public class WaitDialog : Dialog
     {
+        #region Layout Configuration
+
+        // Overall Dialog Dimensions
+        private const int DialogWidth = 800;
+        private const int DialogHeight = 280;
+
+        // Padding and Margins
+        private const int DialogHorizontalPadding = 40;
+        private const int TitleTopMargin = 20;
+        private const int ButtonBottomMargin = 20;
+        private const int TimeStringBottomMargin = 75;
+
+        // Sliders
+        private const int FirstSliderTopMargin = 70;
+        private const int SliderHeight = 20;
+        private const int SliderVerticalSpacing = 60;
+
+        // Tick Marks
+        private const int MinorTickMarkHeight = 4;
+        private const int MajorTickMarkHeight = 8;
+        private const int TickMarkWidth = 2;
+        private const int HourMajorTickInterval = 6;
+        private const int MinuteSecondMajorTickInterval = 5;
+
+        // Buttons
+        private const int ButtonWidth = 100;
+        private const int ButtonHeight = 25;
+        private const int ButtonGap = 20;
+
+        #endregion
+
         private Slider _hourSlider;
         private Slider _minuteSlider;
         private Slider _secondSlider;
@@ -18,9 +49,7 @@ namespace ProjectVagabond.UI
 
         private Action<int, int, int> _onConfirm;
 
-        public WaitDialog(GameScene currentGameScene) : base(currentGameScene)
-        {
-        }
+        public WaitDialog(GameScene currentGameScene) : base(currentGameScene) {}
 
         public void Show(Action<int, int, int> onConfirm)
         {
@@ -32,38 +61,37 @@ namespace ProjectVagabond.UI
             _previousMouseState = Mouse.GetState();
             Core.Instance.IsMouseVisible = true;
 
-            int dialogWidth = 400;
-            int dialogHeight = 280;
-
+            // Dialog Bounds 
             _dialogBounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - dialogWidth) / 2,
-                (Global.VIRTUAL_HEIGHT - dialogHeight) / 2,
-                dialogWidth,
-                dialogHeight
+                (Global.VIRTUAL_WIDTH - DialogWidth) / 2,
+                (Global.VIRTUAL_HEIGHT - DialogHeight) / 2,
+                DialogWidth,
+                DialogHeight
             );
 
-            int sliderWidth = dialogWidth - 80;
-            int sliderX = _dialogBounds.X + 40;
-            int sliderHeight = 20;
+            // Slider Layout 
+            int sliderWidth = DialogWidth - (DialogHorizontalPadding * 2);
+            int sliderX = _dialogBounds.X + DialogHorizontalPadding;
+            int sliderStartY = _dialogBounds.Y + FirstSliderTopMargin;
 
-            _hourSlider = new Slider(new Rectangle(sliderX, _dialogBounds.Y + 70, sliderWidth, sliderHeight), "Hours", 0, 24, 0, 1);
-            _minuteSlider = new Slider(new Rectangle(sliderX, _dialogBounds.Y + 130, sliderWidth, sliderHeight), "Minutes", 0, 59, 0, 1);
-            _secondSlider = new Slider(new Rectangle(sliderX, _dialogBounds.Y + 190, sliderWidth, sliderHeight), "Seconds", 0, 59, 0, 1);
+            _hourSlider = new Slider(new Rectangle(sliderX, sliderStartY, sliderWidth, SliderHeight), "Hours", 0, 24, 0, 1);
+            _minuteSlider = new Slider(new Rectangle(sliderX, sliderStartY + SliderVerticalSpacing, sliderWidth, SliderHeight), "Minutes", 0, 59, 0, 1);
+            _secondSlider = new Slider(new Rectangle(sliderX, sliderStartY + (SliderVerticalSpacing * 2), sliderWidth, SliderHeight), "Seconds", 0, 59, 0, 1);
 
-            int buttonWidth = 100;
-            int buttonHeight = 25;
-            int buttonY = _dialogBounds.Bottom - buttonHeight - 20;
-            int buttonGap = 20;
+            // Button Layout 
+            int buttonY = _dialogBounds.Bottom - ButtonHeight - ButtonBottomMargin;
+            int buttonCenterX = _dialogBounds.Center.X;
+            int halfButtonGap = ButtonGap / 2;
 
-            var (cancelText, cancelColor) = ParseButtonTextAndColor("[red]Cancel");
-            _cancelButton = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth - buttonGap / 2, buttonY, buttonWidth, buttonHeight), cancelText)
+            var (cancelText, cancelColor) = ParseButtonTextAndColor("[gray]Cancel");
+            _cancelButton = new Button(new Rectangle(buttonCenterX - ButtonWidth - halfButtonGap, buttonY, ButtonWidth, ButtonHeight), cancelText)
             {
                 CustomDefaultTextColor = cancelColor
             };
             _cancelButton.OnClick += Hide;
 
-            var (confirmText, confirmColor) = ParseButtonTextAndColor("[green]Confirm");
-            _confirmButton = new Button(new Rectangle(_dialogBounds.Center.X + buttonGap / 2, buttonY, buttonWidth, buttonHeight), confirmText)
+            var (confirmText, confirmColor) = ParseButtonTextAndColor("Confirm");
+            _confirmButton = new Button(new Rectangle(buttonCenterX + halfButtonGap, buttonY, ButtonWidth, ButtonHeight), confirmText)
             {
                 CustomDefaultTextColor = confirmColor
             };
@@ -113,23 +141,55 @@ namespace ProjectVagabond.UI
             spriteBatch.Draw(pixel, _dialogBounds, Global.Instance.Palette_DarkGray);
             DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, Global.Instance.Palette_LightGray);
 
-            string title = "Wait for how long?";
+            string title = "How long would you like to wait?";
             Vector2 titleSize = font.MeasureString(title);
-            spriteBatch.DrawString(font, title, new Vector2(_dialogBounds.Center.X - titleSize.X / 2, _dialogBounds.Y + 20), Global.Instance.Palette_BrightWhite);
+            Vector2 titlePosition = new Vector2(_dialogBounds.Center.X - titleSize.X / 2, _dialogBounds.Y + TitleTopMargin);
+            spriteBatch.DrawString(font, title, titlePosition, Global.Instance.Palette_BrightWhite);
 
+            // Draw sliders and their tick marks
             _hourSlider.Draw(spriteBatch, font);
-            _minuteSlider.Draw(spriteBatch, font);
-            _secondSlider.Draw(spriteBatch, font);
+            DrawSliderTickMarks(spriteBatch, pixel, _hourSlider, HourMajorTickInterval);
 
+            _minuteSlider.Draw(spriteBatch, font);
+            DrawSliderTickMarks(spriteBatch, pixel, _minuteSlider, MinuteSecondMajorTickInterval);
+
+            _secondSlider.Draw(spriteBatch, font);
+            DrawSliderTickMarks(spriteBatch, pixel, _secondSlider, MinuteSecondMajorTickInterval);
+
+            // Draw total time string
             int totalSeconds = (int)_hourSlider.CurrentValue * 3600 + (int)_minuteSlider.CurrentValue * 60 + (int)_secondSlider.CurrentValue;
             string timeString = Core.CurrentWorldClockManager.GetCommaFormattedTimeFromSeconds(totalSeconds);
             Vector2 timeStringSize = font.MeasureString(timeString);
-            spriteBatch.DrawString(font, timeString, new Vector2(_dialogBounds.Center.X - timeStringSize.X / 2, _dialogBounds.Bottom - 75), Global.Instance.Palette_Yellow);
+            Vector2 timeStringPosition = new Vector2(_dialogBounds.Center.X - timeStringSize.X / 2, _dialogBounds.Bottom - TimeStringBottomMargin);
+            spriteBatch.DrawString(font, timeString, timeStringPosition, Global.Instance.Palette_Yellow);
 
             _confirmButton.Draw(spriteBatch, font, gameTime);
             _cancelButton.Draw(spriteBatch, font, gameTime);
 
             spriteBatch.End();
+        }
+
+        private void DrawSliderTickMarks(SpriteBatch spriteBatch, Texture2D pixel, Slider slider, int majorTickInterval)
+        {
+            float valueRange = slider.MaxValue - slider.MinValue;
+            if (valueRange <= 0) return;
+
+            float pixelsPerUnit = (float)(slider.Bounds.Width - 1) / valueRange;
+
+            int tickStartY = slider.Bounds.Bottom + 1;
+            Color tickColor = Global.Instance.Palette_Gray;
+
+            for (int i = 0; i <= valueRange; i++)
+            {
+                int currentValue = (int)slider.MinValue + i;
+
+                bool isMajorTick = (currentValue % majorTickInterval == 0);
+                int tickHeight = isMajorTick ? MajorTickMarkHeight : MinorTickMarkHeight;
+
+                int tickX = slider.Bounds.X + (int)Math.Round(i * pixelsPerUnit);
+
+                spriteBatch.Draw(pixel, new Rectangle(tickX, tickStartY, TickMarkWidth, tickHeight), tickColor);
+            }
         }
 
         private (string text, Color? color) ParseButtonTextAndColor(string taggedText)
