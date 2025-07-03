@@ -17,7 +17,7 @@ namespace ProjectVagabond.UI
 
         private Rectangle _handleBounds;
         private bool _isDragging;
-        private readonly int _handleWidth = 10;
+        private readonly int _handleWidth = 8;
         private readonly int _handleHeight = 15;
 
         public event Action<float> OnValueChanged;
@@ -96,13 +96,13 @@ namespace ProjectVagabond.UI
             Vector2 valueSize = font.MeasureString(valueString);
             spriteBatch.DrawString(font, valueString, new Vector2(Bounds.Right - valueSize.X, Bounds.Y - font.LineHeight - 2), Global.Instance.Palette_BrightWhite);
 
-            // Draw Track
-            var trackRect = new Rectangle(Bounds.X, Bounds.Y + (Bounds.Height / 2) - 1, Bounds.Width, 2);
-            spriteBatch.Draw(Core.Pixel, trackRect, Global.Instance.Palette_DarkGray);
+            // Draw the slider rail line
+            var railRect = new Rectangle(Bounds.X, Bounds.Y + (Bounds.Height / 2) - 1, Bounds.Width, 2);
+            spriteBatch.Draw(Core.Pixel, railRect, Global.Instance.Palette_Gray);
 
             // Draw Handle
             UpdateHandlePosition();
-            spriteBatch.Draw(Core.Pixel, _handleBounds, Global.Instance.Palette_LightGray);
+            spriteBatch.Draw(Core.Pixel, _handleBounds, Global.Instance.Palette_BrightWhite);
         }
     }
 }

@@ -25,9 +25,9 @@ namespace ProjectVagabond.UI
         private const int SliderVerticalSpacing = 50;
 
         // Tick Marks
-        private const int MinorTickMarkHeight = 4;
-        private const int MajorTickMarkHeight = 8;
-        private const int TickMarkWidth = 2;
+        private const int MinorTickMarkHeight = 6;
+        private const int MajorTickMarkHeight = 12;
+        private const int TickMarkWidth = 1;
         private const int HourMajorTickInterval = 6;
         private const int MinuteSecondMajorTickInterval = 5;
 
@@ -87,7 +87,7 @@ namespace ProjectVagabond.UI
             _cancelButton.OnClick += Hide;
 
             var (confirmText, confirmColor) = ParseButtonTextAndColor("Confirm");
-            _confirmButton = new Button(new Rectangle(buttonCenterX + halfButtonGap, buttonY, ButtonWidth, ButtonHeight), confirmText)
+            _confirmButton = new Button(new Rectangle(buttonCenterX + halfButtonGap, buttonY, ButtonWidth, ButtonHeight), confirmText, customDisabledTextColor: Global.Instance.Palette_Gray)
             {
                 CustomDefaultTextColor = confirmColor
             };
@@ -109,6 +109,7 @@ namespace ProjectVagabond.UI
             _minuteSlider.Update(currentMouseState, _previousMouseState);
             _secondSlider.Update(currentMouseState, _previousMouseState);
 
+            _confirmButton.IsEnabled = true ? ((int)_hourSlider.CurrentValue > 0 || (int)_minuteSlider.CurrentValue > 0 || (int)_secondSlider.CurrentValue > 0) : false;
             _confirmButton.Update(currentMouseState);
             _cancelButton.Update(currentMouseState);
 
@@ -143,21 +144,21 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawString(font, title, titlePosition, Global.Instance.Palette_BrightWhite);
 
             // Draw sliders and their tick marks
-            _hourSlider.Draw(spriteBatch, font);
             DrawSliderTickMarks(spriteBatch, pixel, _hourSlider, HourMajorTickInterval);
+            _hourSlider.Draw(spriteBatch, font);
 
-            _minuteSlider.Draw(spriteBatch, font);
             DrawSliderTickMarks(spriteBatch, pixel, _minuteSlider, MinuteSecondMajorTickInterval);
+            _minuteSlider.Draw(spriteBatch, font);
 
-            _secondSlider.Draw(spriteBatch, font);
             DrawSliderTickMarks(spriteBatch, pixel, _secondSlider, MinuteSecondMajorTickInterval);
+            _secondSlider.Draw(spriteBatch, font);
 
             // Draw total time string
             int totalSeconds = (int)_hourSlider.CurrentValue * 3600 + (int)_minuteSlider.CurrentValue * 60 + (int)_secondSlider.CurrentValue;
             string timeString = Core.CurrentWorldClockManager.GetCommaFormattedTimeFromSeconds(totalSeconds);
             Vector2 timeStringSize = font.MeasureString(timeString);
             Vector2 timeStringPosition = new Vector2(_dialogBounds.Center.X - timeStringSize.X / 2, _dialogBounds.Bottom - TimeStringBottomMargin);
-            spriteBatch.DrawString(font, timeString, timeStringPosition, Global.Instance.Palette_Yellow);
+            if (totalSeconds > 0) spriteBatch.DrawString(font, timeString, timeStringPosition, Global.Instance.Palette_Yellow);
 
             _confirmButton.Draw(spriteBatch, font, gameTime);
             _cancelButton.Draw(spriteBatch, font, gameTime);
@@ -172,7 +173,7 @@ namespace ProjectVagabond.UI
 
             float pixelsPerUnit = (float)(slider.Bounds.Width - 1) / valueRange;
 
-            int tickStartY = slider.Bounds.Bottom + 1;
+            int tickStartY = slider.Bounds.Bottom - 10;
             Color tickColor = Global.Instance.Palette_Gray;
 
             for (int i = 0; i <= valueRange; i++)
