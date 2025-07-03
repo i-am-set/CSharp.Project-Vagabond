@@ -32,7 +32,17 @@ namespace ProjectVagabond
             _pausePlayButton.OnClick += () => Core.CurrentGameState.TogglePause();
 
             _clockButton = new ImageButton(Rectangle.Empty);
-            _clockButton.OnClick += () => OnClockClicked?.Invoke(); 
+            _clockButton.OnClick += () =>
+            {
+                if (Core.CurrentGameState.IsExecutingPath)
+                {
+                    Core.CurrentGameState.TogglePause();
+                }
+                else
+                {
+                    OnClockClicked?.Invoke();
+                }
+            };
             
             HandleTimeScaleChange(_timeScaleGroup.GetSelectedButton());
         }
@@ -68,7 +78,16 @@ namespace ProjectVagabond
             if (_clockButton.IsHovered)
             {
                 Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-                Core.CurrentTooltipManager.RequestTooltip(_clockButton, "Click to wait", virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
+                string tooltipText;
+                if (Core.CurrentGameState.IsExecutingPath)
+                {
+                    tooltipText = Core.CurrentGameState.IsPaused ? "Click to resume" : "Click to pause";
+                }
+                else
+                {
+                    tooltipText = "Click to wait";
+                }
+                Core.CurrentTooltipManager.RequestTooltip(_clockButton, tooltipText.ToUpper(), virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
             }
 
             _timeScaleGroup.Update(currentMouseState);

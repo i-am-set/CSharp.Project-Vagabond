@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Scenes;
 using System;
+using System.Text;
 
 namespace ProjectVagabond.UI
 {
@@ -93,7 +94,17 @@ namespace ProjectVagabond.UI
             };
             _confirmButton.OnClick += () =>
             {
-                _onConfirm?.Invoke((int)_hourSlider.CurrentValue, (int)_minuteSlider.CurrentValue, (int)_secondSlider.CurrentValue);
+                int hours = (int)_hourSlider.CurrentValue;
+                int minutes = (int)_minuteSlider.CurrentValue;
+                int seconds = (int)_secondSlider.CurrentValue;
+
+                if (hours >= (int)_hourSlider.MaxValue)
+                {
+                    minutes = 0;
+                    seconds = 0;
+                }
+
+                _onConfirm?.Invoke(hours, minutes, seconds);
                 Hide();
             };
         }
@@ -106,10 +117,16 @@ namespace ProjectVagabond.UI
             var currentKeyboardState = Keyboard.GetState();
 
             _hourSlider.Update(currentMouseState, _previousMouseState);
+
+            bool areSubSlidersDisabled = (int)_hourSlider.CurrentValue >= _hourSlider.MaxValue;
+
+            _minuteSlider.IsEnabled = !areSubSlidersDisabled;
+            _secondSlider.IsEnabled = !areSubSlidersDisabled;
+
             _minuteSlider.Update(currentMouseState, _previousMouseState);
             _secondSlider.Update(currentMouseState, _previousMouseState);
 
-            _confirmButton.IsEnabled = true ? ((int)_hourSlider.CurrentValue > 0 || (int)_minuteSlider.CurrentValue > 0 || (int)_secondSlider.CurrentValue > 0) : false;
+            _confirmButton.IsEnabled = (int)_hourSlider.CurrentValue > 0 || (int)_minuteSlider.CurrentValue > 0 || (int)_secondSlider.CurrentValue > 0;
             _confirmButton.Update(currentMouseState);
             _cancelButton.Update(currentMouseState);
 
@@ -143,7 +160,6 @@ namespace ProjectVagabond.UI
             Vector2 titlePosition = new Vector2(_dialogBounds.Center.X - titleSize.X / 2, _dialogBounds.Y + TitleTopMargin);
             spriteBatch.DrawString(font, title, titlePosition, Global.Instance.Palette_BrightWhite);
 
-            // Draw sliders and their tick marks
             DrawSliderTickMarks(spriteBatch, pixel, _hourSlider, HourMajorTickInterval);
             _hourSlider.Draw(spriteBatch, font);
 
@@ -153,12 +169,23 @@ namespace ProjectVagabond.UI
             DrawSliderTickMarks(spriteBatch, pixel, _secondSlider, MinuteSecondMajorTickInterval);
             _secondSlider.Draw(spriteBatch, font);
 
-            // Draw total time string
-            int totalSeconds = (int)_hourSlider.CurrentValue * 3600 + (int)_minuteSlider.CurrentValue * 60 + (int)_secondSlider.CurrentValue;
-            string timeString = Core.CurrentWorldClockManager.GetCommaFormattedTimeFromSeconds(totalSeconds);
-            Vector2 timeStringSize = font.MeasureString(timeString);
+            int totalSeconds;
+            int hours = (int)_hourSlider.CurrentValue;
+
+            if (hours >= (int)_hourSlider.MaxValue)
+            {
+                totalSeconds = hours * 3600;
+            }
+            else
+            {
+                totalSeconds = hours * 3600 + (int)_minuteSlider.CurrentValue * 60 + (int)_secondSlider.CurrentValue;
+            }
+            
+            StringBuilder timeStringBuilder = new StringBuilder(capacity: 100);
+            timeStringBuilder.Append("Wait ").Append(Core.CurrentWorldClockManager.GetCommaFormattedTimeFromSeconds(totalSeconds)).Append("?");
+            Vector2 timeStringSize = font.MeasureString(timeStringBuilder);
             Vector2 timeStringPosition = new Vector2(_dialogBounds.Center.X - timeStringSize.X / 2, _dialogBounds.Bottom - TimeStringBottomMargin);
-            if (totalSeconds > 0) spriteBatch.DrawString(font, timeString, timeStringPosition, Global.Instance.Palette_Yellow);
+            if (totalSeconds > 0) spriteBatch.DrawString(font, timeStringBuilder, timeStringPosition, Global.Instance.Palette_Yellow);
 
             _confirmButton.Draw(spriteBatch, font, gameTime);
             _cancelButton.Draw(spriteBatch, font, gameTime);
@@ -174,7 +201,7 @@ namespace ProjectVagabond.UI
             float pixelsPerUnit = (float)(slider.Bounds.Width - 1) / valueRange;
 
             int tickStartY = slider.Bounds.Bottom - 10;
-            Color tickColor = Global.Instance.Palette_Gray;
+            Color tickColor = slider.IsEnabled ? Slider.SubElementColor : Slider.DisabledSliderColor;
 
             for (int i = 0; i <= valueRange; i++)
             {

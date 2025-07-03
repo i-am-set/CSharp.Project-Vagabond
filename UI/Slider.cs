@@ -14,11 +14,16 @@ namespace ProjectVagabond.UI
         public float MaxValue { get; }
         public float Step { get; }
         public float CurrentValue { get; private set; }
+        public bool IsEnabled { get; set; } = true;
 
         private Rectangle _handleBounds;
         private bool _isDragging;
         private readonly int _handleWidth = 8;
         private readonly int _handleHeight = 15;
+
+        public static readonly Color ElementColor = Global.Instance.Palette_BrightWhite;
+        public static readonly Color SubElementColor = Global.Instance.Palette_LightGray;
+        public static readonly Color DisabledSliderColor = Global.Instance.Palette_Gray;
 
         public event Action<float> OnValueChanged;
 
@@ -49,6 +54,12 @@ namespace ProjectVagabond.UI
 
         public void Update(MouseState currentMouseState, MouseState previousMouseState)
         {
+            if (!IsEnabled)
+            {
+                _isDragging = false; 
+                return;
+            }
+
             Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             bool isHoveringHandle = _handleBounds.Contains(virtualMousePos);
@@ -88,21 +99,27 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font)
         {
+            // Enabled/Disabled colors
+            Color labelColor = IsEnabled ? ElementColor : DisabledSliderColor;
+            Color valueColor = IsEnabled ? ElementColor : DisabledSliderColor;
+            Color handleColor = IsEnabled ? ElementColor : DisabledSliderColor;
+            Color railColor = IsEnabled ? SubElementColor : DisabledSliderColor;
+
             // Draw Label
-            spriteBatch.DrawString(font, Label, new Vector2(Bounds.X, Bounds.Y - font.LineHeight - 2), Global.Instance.Palette_White);
+            spriteBatch.DrawString(font, Label, new Vector2(Bounds.X, Bounds.Y - font.LineHeight - 2), labelColor);
 
             // Draw Value
             string valueString = CurrentValue.ToString("F0");
             Vector2 valueSize = font.MeasureString(valueString);
-            spriteBatch.DrawString(font, valueString, new Vector2(Bounds.Right - valueSize.X, Bounds.Y - font.LineHeight - 2), Global.Instance.Palette_BrightWhite);
+            spriteBatch.DrawString(font, valueString, new Vector2(Bounds.Right - valueSize.X, Bounds.Y - font.LineHeight - 2), valueColor);
 
             // Draw the slider rail line
             var railRect = new Rectangle(Bounds.X, Bounds.Y + (Bounds.Height / 2) - 1, Bounds.Width, 2);
-            spriteBatch.Draw(Core.Pixel, railRect, Global.Instance.Palette_Gray);
+            spriteBatch.Draw(Core.Pixel, railRect, railColor);
 
             // Draw Handle
             UpdateHandlePosition();
-            spriteBatch.Draw(Core.Pixel, _handleBounds, Global.Instance.Palette_BrightWhite);
+            spriteBatch.Draw(Core.Pixel, _handleBounds, handleColor);
         }
     }
 }
