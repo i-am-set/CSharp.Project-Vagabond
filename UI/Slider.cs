@@ -18,7 +18,7 @@ namespace ProjectVagabond.UI
         private Rectangle _handleBounds;
         private bool _isDragging;
         private readonly int _handleWidth = 10;
-        private readonly int _handleHeight = 20;
+        private readonly int _handleHeight = 15;
 
         public event Action<float> OnValueChanged;
 

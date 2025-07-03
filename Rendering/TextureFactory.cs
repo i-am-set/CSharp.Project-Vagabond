@@ -244,5 +244,31 @@ namespace ProjectVagabond
             texture.SetData(colorData);
             return texture;
         }
+
+        public Texture2D CreateCircleTexture()
+        {
+            const int size = 16;
+            var texture = new Texture2D(Core.Instance.GraphicsDevice, size, size);
+            var colorData = new Color[size * size];
+
+            float radius = size / 2f;
+            var center = new Vector2(radius - 0.5f, radius - 0.5f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    var position = new Vector2(x, y);
+                    float distance = Vector2.Distance(center, position);
+
+                    float alpha = Math.Clamp(1.0f - (distance - (radius - 1)), 0, 1);
+
+                    colorData[y * size + x] = Color.White * alpha;
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
     }
 }

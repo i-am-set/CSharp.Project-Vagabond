@@ -10,19 +10,19 @@ namespace ProjectVagabond.UI
     public class WaitDialog : Dialog
     {
         // Overall Dialog Dimensions
-        private const int DialogWidth = 800;
-        private const int DialogHeight = 280;
+        private const int DialogWidth = 400;
+        private const int DialogHeight = 240;
 
         // Padding and Margins
-        private const int DialogHorizontalPadding = 40;
-        private const int TitleTopMargin = 20;
-        private const int ButtonBottomMargin = 20;
-        private const int TimeStringBottomMargin = 75;
+        private const int DialogHorizontalPadding = 20;
+        private const int TitleTopMargin = 10;
+        private const int ButtonBottomMargin = 10;
+        private const int TimeStringBottomMargin = 50;
 
         // Sliders
-        private const int FirstSliderTopMargin = 70;
+        private const int FirstSliderTopMargin = 40;
         private const int SliderHeight = 20;
-        private const int SliderVerticalSpacing = 60;
+        private const int SliderVerticalSpacing = 50;
 
         // Tick Marks
         private const int MinorTickMarkHeight = 4;
