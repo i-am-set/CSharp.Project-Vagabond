@@ -18,7 +18,7 @@ using System;
 // TODO: Impliment combat logic into combat scene
 // TODO: Convert display to have larger map, smaller terminal, with the terminal input being hidden unless the player presses ~ to "open console"
 // TODO: Finish entity implimentation
-// TODO: Add helper ui in game menu corner
+// TODO: Add settings ui in game menu corner
 
 namespace ProjectVagabond
 {

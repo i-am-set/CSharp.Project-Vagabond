@@ -164,7 +164,7 @@ namespace ProjectVagabond
             if (_fadeTexture == null)
             {
                 _fadeTexture = new Texture2D(graphicsDevice, 1, 1);
-                _fadeTexture.SetData(new[] { Global.Instance.Palette_Black });
+                _fadeTexture.SetData(new[] { Color.White });
             }
 
             var screenBounds = graphicsDevice.Viewport.Bounds;
