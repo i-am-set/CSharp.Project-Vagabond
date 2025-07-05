@@ -140,7 +140,7 @@ namespace ProjectVagabond
             }
             else
             {
-                scaleFactor = 0.00045f; // Slowest (Base Speed)
+                scaleFactor = 0.002f; // Slowest (Base Speed)
             }
 
             _interpolationDurationRealSeconds = Math.Clamp(minDuration + (_totalSecondsPassedDuringInterpolation * scaleFactor), minDuration, maxDuration);
