@@ -160,6 +160,9 @@ namespace ProjectVagabond
                         Vector2 oldWorldPos = posComp.WorldPosition;
                         posComp.WorldPosition = nextPosition;
 
+                        // Update the entity's chunk registration after it moves.
+                        Core.ChunkManager.UpdateEntityChunk(playerEntityId, oldWorldPos, nextPosition);
+
                         Vector2 moveDir = nextPosition - oldWorldPos;
                         Vector2 newLocalPos = new Vector2(32, 32);
                         if (moveDir.X > 0) newLocalPos.X = 0; else if (moveDir.X < 0) newLocalPos.X = 63;
