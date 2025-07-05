@@ -32,10 +32,9 @@ namespace ProjectVagabond
         // --- Core ECS and Systems must be initialized first, as other managers may depend on them. ---
         private static readonly EntityManager _entityManager = new();
         private static readonly ComponentStore _componentStore = new();
-        private static readonly ChunkManager _chunkManager = new();
-        private static readonly SystemManager _systemManager = new();
         private static readonly PlayerInputSystem _playerInputSystem = new();
         private static readonly ActionExecutionSystem _actionExecutionSystem = new();
+        private static readonly List<ISystem> _updateSystems = new() { _playerInputSystem, _actionExecutionSystem };
 
         // --- GameState can now be initialized safely as its dependencies are ready. ---
         private static readonly GameState _gameState = new();
@@ -84,8 +83,6 @@ namespace ProjectVagabond
         public static Texture2D Pixel => _pixel;
         public static EntityManager EntityManager => _entityManager;
         public static ComponentStore ComponentStore => _componentStore;
-        public static ChunkManager ChunkManager => _chunkManager;
-        public static SystemManager SystemManager => _systemManager;
         public static PlayerInputSystem PlayerInputSystem => _playerInputSystem;
         public static ActionExecutionSystem ActionExecutionSystem => _actionExecutionSystem;
 
@@ -115,9 +112,6 @@ namespace ProjectVagabond
             Settings.ApplyGameSettings();
 
             _pixel = new Texture2D(GraphicsDevice, 1, 1);
-
-            // Register systems with their update frequencies
-            _systemManager.RegisterSystem(_actionExecutionSystem, 0f); // Runs every frame
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());
@@ -173,8 +167,10 @@ namespace ProjectVagabond
 
             if (_sceneManager.CurrentActiveScene is TerminalMapScene)
             {
-                CurrentGameState.UpdateActiveEntities();
-                _systemManager.Update(gameTime);
+                foreach (var system in _updateSystems)
+                {
+                    system.Update(gameTime);
+                }
             }
 
             _tooltipManager.Update(gameTime);

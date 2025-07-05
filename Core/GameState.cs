@@ -64,7 +64,6 @@ namespace ProjectVagabond
         public StatsComponent PlayerStats => Core.ComponentStore.GetComponent<StatsComponent>(PlayerEntityId);
         public MapView CurrentMapView { get; private set; } = MapView.World;
         public (int finalEnergy, bool possible, int secondsPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
-        public List<int> ActiveEntities { get; private set; } = new List<int>();
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -79,30 +78,10 @@ namespace ProjectVagabond
             Core.ComponentStore.AddComponent(PlayerEntityId, new ActionQueueComponent());
             Core.ComponentStore.AddComponent(PlayerEntityId, new PlayerTagComponent());
 
-            var playerPos = Core.ComponentStore.GetComponent<PositionComponent>(PlayerEntityId).WorldPosition;
-            Core.ChunkManager.RegisterEntity(PlayerEntityId, playerPos);
-
             _noiseManager = new NoiseMapManager(masterSeed);
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
-        public void UpdateActiveEntities()
-        {
-            var playerPosComp = Core.ComponentStore.GetComponent<PositionComponent>(PlayerEntityId);
-            if (playerPosComp == null)
-            {
-                ActiveEntities.Clear();
-                return;
-            }
-
-            var playerChunkCoords = ChunkManager.WorldToChunkCoords(playerPosComp.WorldPosition);
-            var tetheredEntities = Core.ChunkManager.GetEntitiesInTetherRange(playerChunkCoords);
-
-            var highImportanceEntities = Core.ComponentStore.GetAllEntitiesWithComponent<HighImportanceComponent>();
-
-            ActiveEntities = tetheredEntities.Union(highImportanceEntities).ToList();
-        }
 
         public void ToggleMapView()
         {

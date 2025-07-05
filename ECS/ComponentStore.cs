@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -92,20 +91,6 @@ namespace ProjectVagabond
             {
                 componentMap.Remove(entityId);
             }
-        }
-
-        /// <summary>
-        /// Gets an enumerable collection of all entity IDs that have a specific component.
-        /// </summary>
-        /// <typeparam name="T">The type of the component to query for.</typeparam>
-        /// <returns>An enumerable of entity IDs.</returns>
-        public IEnumerable<int> GetAllEntitiesWithComponent<T>() where T : IComponent
-        {
-            if (_components.TryGetValue(typeof(T), out var componentMap))
-            {
-                return componentMap.Keys;
-            }
-            return Enumerable.Empty<int>();
         }
     }
 }

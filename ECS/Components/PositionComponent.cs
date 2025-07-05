@@ -8,6 +8,5 @@ namespace ProjectVagabond
     public class PositionComponent : IComponent
     {
         public Vector2 WorldPosition { get; set; }
-        public Point CurrentChunk { get; set; }
     }
 }
