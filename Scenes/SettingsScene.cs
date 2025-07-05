@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -31,6 +31,8 @@ namespace ProjectVagabond.Scenes
 
         private GameSettings _tempSettings;
         private ConfirmationDialog _confirmationDialog;
+
+        public GameSceneState ReturnScene { get; set; } = GameSceneState.MainMenu;
 
         public override void Enter()
         {
@@ -307,15 +309,15 @@ namespace ProjectVagabond.Scenes
                     "You have unsaved changes.",
                     new List<Tuple<string, Action>>
                     {
-                        Tuple.Create("APPLY", new Action(() => { ExecuteApplySettings(); Core.CurrentSceneManager.ChangeScene(GameSceneState.MainMenu); })),
-                        Tuple.Create("DISCARD", new Action(() => { RevertChanges(); Core.CurrentSceneManager.ChangeScene(GameSceneState.MainMenu); })),
+                        Tuple.Create("APPLY", new Action(() => { ExecuteApplySettings(); Core.CurrentSceneManager.ChangeScene(ReturnScene); })),
+                        Tuple.Create("DISCARD", new Action(() => { RevertChanges(); Core.CurrentSceneManager.ChangeScene(ReturnScene); })),
                         Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide()))
                     }
                 );
             }
             else
             {
-                Core.CurrentSceneManager.ChangeScene(GameSceneState.MainMenu);
+                Core.CurrentSceneManager.ChangeScene(ReturnScene);
             }
         }
 

@@ -16,6 +16,7 @@ namespace ProjectVagabond.UI
         public Color? CustomDisabledTextColor { get; set; }
         public bool IsEnabled { get; set; } = true;
         public bool IsHovered { get; set; }
+        public bool UseScreenCoordinates { get; set; } = false;
 
         public event Action OnClick;
 
@@ -47,8 +48,10 @@ namespace ProjectVagabond.UI
                 return;
             }
 
-            Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-            IsHovered = Bounds.Contains(virtualMousePos);
+            Vector2 mousePos = UseScreenCoordinates
+                ? currentMouseState.Position.ToVector2()
+                : Core.TransformMouse(currentMouseState.Position);
+            IsHovered = Bounds.Contains(mousePos);
 
             if (IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
@@ -66,8 +69,10 @@ namespace ProjectVagabond.UI
                 return;
             }
 
-            Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-            IsHovered = Bounds.Contains(virtualMousePos);
+            Vector2 mousePos = UseScreenCoordinates
+                ? currentMouseState.Position.ToVector2()
+                : Core.TransformMouse(currentMouseState.Position);
+            IsHovered = Bounds.Contains(mousePos);
         }
 
         public void TriggerClick()

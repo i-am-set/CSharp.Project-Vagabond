@@ -77,15 +77,11 @@ namespace ProjectVagabond.UI
             _previousMouseState = currentMouseState;
         }
 
-        /// <summary>
-        /// Overrides the default Draw method to render textures or a hover border.
-        /// </summary>
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover = false)
         {
-            Texture2D textureToDraw = null;
+            Texture2D textureToDraw = _defaultTexture;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
-            // Determine which texture to draw based on the button's state
             if (!IsEnabled && _disabledTexture != null)
             {
                 textureToDraw = _disabledTexture;
@@ -98,17 +94,13 @@ namespace ProjectVagabond.UI
             {
                 textureToDraw = _hoverTexture;
             }
-            else if (_defaultTexture != null)
-            {
-                textureToDraw = _defaultTexture;
-            }
 
             if (textureToDraw != null)
             {
                 spriteBatch.Draw(textureToDraw, Bounds, Color.White);
             }
-            // Fallback: If no appropriate texture is found, draw the corner brackets on hover.
-            else if (isActivated)
+
+            if (isActivated && _hoverTexture == null)
             {
                 DrawCornerBrackets(spriteBatch, Core.Pixel, Bounds, BorderThickness, HoverBorderColor);
             }

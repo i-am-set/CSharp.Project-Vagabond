@@ -39,6 +39,17 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Retrieves a scene instance from the manager.
+        /// </summary>
+        /// <param name="state">The state of the scene to retrieve.</param>
+        /// <returns>The GameScene instance, or null if not found.</returns>
+        public GameScene GetScene(GameSceneState state)
+        {
+            _scenes.TryGetValue(state, out var scene);
+            return scene;
+        }
+
+        /// <summary>
         /// Changes the currently active scene, with an optional fade transition.
         /// </summary>
         /// <param name="state">The state of the scene to switch to.</param>

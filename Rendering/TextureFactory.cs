@@ -28,7 +28,6 @@ namespace ProjectVagabond
             var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
             var colorData = new Color[64];
 
-            // Define a simple wave pattern using sine-like curves
             for (int y = 0; y < 8; y++)
             {
                 for (int x = 0; x < 8; x++)
