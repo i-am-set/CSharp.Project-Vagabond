@@ -44,6 +44,9 @@ namespace ProjectVagabond
         // Game version
         public const string GAME_VERSION = "0.1.0";
 
+        // World constants
+        public const float BASE_TIME_SCALE = 0.002f; // base speed in which the time moves in the world
+
         // Virtual resolution for fixed aspect ratio rendering
         public const int VIRTUAL_WIDTH = 960;
         public const int VIRTUAL_HEIGHT = 540;
