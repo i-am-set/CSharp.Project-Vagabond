@@ -46,29 +46,22 @@ namespace ProjectVagabond
 
     public class GameState
     {
-        private Player _player;
         private NoiseMapManager _noiseManager;
         private bool _isExecutingPath = false;
-        private int _currentPathIndex = 0;
         private bool _isFreeMoveMode = false;
         private bool _isPaused = false;
 
-        private PendingAction _actionAwaitingExecution = null;
-        private MapView _pathExecutionMapView;
+        public MapView PathExecutionMapView { get; private set; }
 
-        private List<Entity> _worldEntities = new List<Entity>();
-        private List<Entity> _tetheredEntities = new List<Entity>();
-        private const int TETHER_RANGE = 32;
-
-        public Vector2 PlayerWorldPos => _player.WorldPosition;
-        public Vector2 PlayerLocalPos => _player.LocalPosition;
-        public List<PendingAction> PendingActions => _player.ActionQueue;
+        public int PlayerEntityId { get; private set; }
+        public Vector2 PlayerWorldPos => Core.ComponentStore.GetComponent<PositionComponent>(PlayerEntityId).WorldPosition;
+        public Vector2 PlayerLocalPos => Core.ComponentStore.GetComponent<LocalPositionComponent>(PlayerEntityId).LocalPosition;
+        public List<PendingAction> PendingActions => Core.ComponentStore.GetComponent<ActionQueueComponent>(PlayerEntityId).ActionQueue;
         public bool IsExecutingPath => _isExecutingPath;
         public bool IsPaused => _isPaused;
         public bool IsFreeMoveMode => _isFreeMoveMode;
-        public int CurrentPathIndex => _currentPathIndex;
         public NoiseMapManager NoiseManager => _noiseManager;
-        public PlayerStats PlayerStats => _player.Stats;
+        public StatsComponent PlayerStats => Core.ComponentStore.GetComponent<StatsComponent>(PlayerEntityId);
         public MapView CurrentMapView { get; private set; } = MapView.World;
         public (int finalEnergy, bool possible, int secondsPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
 
@@ -78,12 +71,14 @@ namespace ProjectVagabond
         {
             int masterSeed = RandomNumberGenerator.GetInt32(1, 99999) + Environment.TickCount;
 
-            _player = new Player(new Vector2(0, 0));
-            _worldEntities.Add(_player);
+            PlayerEntityId = Core.EntityManager.CreateEntity();
+            Core.ComponentStore.AddComponent(PlayerEntityId, new PositionComponent { WorldPosition = new Vector2(0, 0) });
+            Core.ComponentStore.AddComponent(PlayerEntityId, new LocalPositionComponent { LocalPosition = new Vector2(32, 32) });
+            Core.ComponentStore.AddComponent(PlayerEntityId, new StatsComponent(5, 5, 5, 5, 5));
+            Core.ComponentStore.AddComponent(PlayerEntityId, new ActionQueueComponent());
+            Core.ComponentStore.AddComponent(PlayerEntityId, new PlayerTagComponent());
 
             _noiseManager = new NoiseMapManager(masterSeed);
-
-            UpdateTetheredEntities();
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -103,70 +98,17 @@ namespace ProjectVagabond
             }
         }
 
-        public void QueueNewPath(List<Vector2> path, bool isRunning)
-        {
-            CancelPendingActions();
-            AppendPath(path, isRunning);
-        }
-
-        public void AppendPath(List<Vector2> path, bool isRunning)
-        {
-            if (path == null) return;
-
-            bool isLocalPath = CurrentMapView == MapView.Local;
-
-            if (!isRunning || isLocalPath) // For walking or any local path, just add. No energy cost.
-            {
-                foreach (var pos in path)
-                {
-                    _player.ActionQueue.Add(new PendingAction(pos, isRunning: isRunning));
-                }
-                return;
-            }
-
-            // For running on the world map, check energy for each step.
-            foreach (var nextPos in path)
-            {
-                var nextAction = new PendingAction(nextPos, isRunning: true);
-                var tempQueue = new List<PendingAction>(_player.ActionQueue) { nextAction };
-                var simulationResult = SimulateActionQueueEnergy(tempQueue);
-
-                if (!simulationResult.possible)
-                {
-                    Vector2 restPosition = _player.ActionQueue.Any() ? _player.ActionQueue.Last().Position : _player.WorldPosition;
-                    var restAction = new PendingAction(RestType.ShortRest, restPosition);
-                    var tempQueueWithRest = new List<PendingAction>(_player.ActionQueue) { restAction, nextAction };
-
-                    if (SimulateActionQueueEnergy(tempQueueWithRest).possible)
-                    {
-                        _player.ActionQueue.Add(restAction);
-                        _player.ActionQueue.Add(nextAction);
-                    }
-                    else
-                    {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot queue path. Not enough energy even after a short rest.");
-                        return; // Stop adding the rest of the path
-                    }
-                }
-                else
-                {
-                    _player.ActionQueue.Add(nextAction);// Enough energy, just add the action
-                }
-            }
-        }
-
-        public void CancelPendingActions()
-        {
-            _player.ActionQueue.Clear();
-            Core.CurrentTerminalRenderer.AddOutputToHistory("Pending actions cleared.");
-        }
-
         public void ToggleExecutingPath(bool toggle)
         {
             ToggleIsFreeMoveMode(false);
             if (toggle)
             {
-                _pathExecutionMapView = CurrentMapView;
+                PathExecutionMapView = CurrentMapView;
+                Core.ActionExecutionSystem.StartExecution();
+            }
+            else
+            {
+                Core.ActionExecutionSystem.StopExecution();
             }
             _isExecutingPath = toggle;
         }
@@ -187,11 +129,6 @@ namespace ProjectVagabond
                     Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Free move disabled.");
                 }
             }
-        }
-
-        public void SetCurrentPathIndex(int index)
-        {
-            _currentPathIndex = index;
         }
 
         public bool IsPositionPassable(Vector2 position, MapView view, out MapData mapData)
@@ -240,8 +177,8 @@ namespace ProjectVagabond
 
             float baseTime = actionType switch
             {
-                ActionType.WalkMove => 360f / _player.Stats.WalkSpeed,
-                ActionType.RunMove => 360f / _player.Stats.RunSpeed,
+                ActionType.WalkMove => 360f / PlayerStats.WalkSpeed,
+                ActionType.RunMove => 360f / PlayerStats.RunSpeed,
                 _ => 0
             };
 
@@ -266,14 +203,14 @@ namespace ProjectVagabond
 
         public (int finalEnergy, bool possible, int secondsPassed) SimulateActionQueueEnergy(List<PendingAction> customQueue = null)
         {
-            var queueToSimulate = customQueue ?? _player.ActionQueue;
-            if (!queueToSimulate.Any()) return (_player.Stats.CurrentEnergyPoints, true, 0);
+            var queueToSimulate = customQueue ?? PendingActions;
+            if (!queueToSimulate.Any()) return (PlayerStats.CurrentEnergyPoints, true, 0);
 
             bool isLocalSim = CurrentMapView == MapView.Local;
-            int finalEnergy = _player.Stats.CurrentEnergyPoints;
-            int maxEnergy = _player.Stats.MaxEnergyPoints;
+            int finalEnergy = PlayerStats.CurrentEnergyPoints;
+            int maxEnergy = PlayerStats.MaxEnergyPoints;
             int secondsPassed = 0;
-            Vector2 lastPosition = isLocalSim ? _player.LocalPosition : _player.WorldPosition;
+            Vector2 lastPosition = isLocalSim ? PlayerLocalPos : PlayerWorldPos;
             bool isFirstMoveInQueue = true;
             bool localRunCostApplied = false;
 
@@ -311,21 +248,21 @@ namespace ProjectVagabond
                         lastPosition = action.Position;
                         break;
                     case ActionType.ShortRest:
-                        finalEnergy += _player.Stats.ShortRestEnergyRestored;
+                        finalEnergy += PlayerStats.ShortRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
-                        secondsPassed += _player.Stats.ShortRestDuration * 60;
+                        secondsPassed += PlayerStats.ShortRestDuration * 60;
                         lastPosition = action.Position;
                         break;
                     case ActionType.LongRest:
-                        finalEnergy += _player.Stats.LongRestEnergyRestored;
+                        finalEnergy += PlayerStats.LongRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
-                        secondsPassed += _player.Stats.LongRestDuration * 60;
+                        secondsPassed += PlayerStats.LongRestDuration * 60;
                         lastPosition = action.Position;
                         break;
                     case ActionType.FullRest:
-                        finalEnergy += _player.Stats.FullRestEnergyRestored;
+                        finalEnergy += PlayerStats.FullRestEnergyRestored;
                         finalEnergy = Math.Min(finalEnergy, maxEnergy);
-                        secondsPassed += _player.Stats.FullRestDuration * 60;
+                        secondsPassed += PlayerStats.FullRestDuration * 60;
                         lastPosition = action.Position;
                         break;
                 }
@@ -334,394 +271,43 @@ namespace ProjectVagabond
             return (finalEnergy, true, secondsPassed);
         }
 
-        public void QueueRest(string[] args)
-        {
-            if (_isExecutingPath)
-            {
-                Core.CurrentTerminalRenderer.AddOutputToHistory("Cannot queue actions while executing a path.");
-                return;
-            }
-
-            RestType restType = RestType.ShortRest;
-            if (args.Length > 1)
-            {
-                if (args[1].ToLower() == "short")
-                {
-                    restType = RestType.ShortRest;
-                }
-                else if (args[1].ToLower() == "long")
-                {
-                    restType = RestType.LongRest;
-                }
-                else if (args[1].ToLower() == "full")
-                {
-                    restType = RestType.FullRest;
-                }
-
-                Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {args[1].ToLower()} rest.");
-            }
-            else
-            {
-                restType = RestType.ShortRest;
-                Core.CurrentTerminalRenderer.AddOutputToHistory("Queued a short rest.");
-            }
-
-            Vector2 restPosition = _player.ActionQueue.Any() ? _player.ActionQueue.Last().Position : (CurrentMapView == MapView.Local ? _player.LocalPosition : _player.WorldPosition);
-            _player.ActionQueue.Add(new PendingAction(restType, restPosition));
-        }
-
-        private void QueueMovementInternal(Vector2 direction, string[] args, bool isRunning)
-        {
-            if (_isExecutingPath)
-            {
-                Core.CurrentTerminalRenderer.AddOutputToHistory("Cannot queue movements while executing a path.");
-                return;
-            }
-
-            bool isLocalMove = CurrentMapView == MapView.Local;
-            int count = 1;
-            if (args.Length > 1 && int.TryParse(args[1], out int parsedCount))
-            {
-                count = Math.Max(1, Math.Min(Global.MAX_SINGLE_MOVE_LIMIT, parsedCount));
-            }
-
-            if (isLocalMove && isRunning)
-            {
-                if (!_player.ActionQueue.Any(a => a.Type == ActionType.RunMove))
-                {
-                    if (!_player.Stats.CanExertEnergy(1))
-                    {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to start a local run! <Requires 1 EP>");
-                        return;
-                    }
-                }
-            }
-
-            Vector2 oppositeDirection = -direction;
-            int removedSteps = 0;
-
-            while (_player.ActionQueue.Count > 0 && removedSteps < count)
-            {
-                int lastMoveIndex = _player.ActionQueue.FindLastIndex(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
-                if (lastMoveIndex == -1) break;
-
-                PendingAction lastMoveAction = _player.ActionQueue[lastMoveIndex];
-                Vector2 prevPos = (lastMoveIndex > 0) ? _player.ActionQueue[lastMoveIndex - 1].Position : (isLocalMove ? _player.LocalPosition : _player.WorldPosition);
-                Vector2 lastDirection = lastMoveAction.Position - prevPos;
-
-                if (lastDirection == oppositeDirection)
-                {
-                    _player.ActionQueue.RemoveAt(lastMoveIndex);
-                    removedSteps++;
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            int remainingSteps = count - removedSteps;
-            if (remainingSteps > 0)
-            {
-                Vector2 currentPos = _player.ActionQueue.Any() ? _player.ActionQueue.Last().Position : (isLocalMove ? _player.LocalPosition : _player.WorldPosition);
-                int validSteps = 0;
-
-                for (int i = 0; i < remainingSteps; i++)
-                {
-                    Vector2 nextPos = currentPos + direction;
-
-                    if (!IsPositionPassable(nextPos, CurrentMapView))
-                    {
-                        if (isLocalMove)
-                        {
-                            Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot move here... edge of the area.");
-                        }
-                        else
-                        {
-                            var mapData = GetMapDataAt((int)nextPos.X, (int)nextPos.Y);
-                            Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot move here... terrain is impassable! <{mapData.TerrainType.ToLower()}>");
-                        }
-                        break;
-                    }
-
-                    var nextAction = new PendingAction(nextPos, isRunning);
-                    var tempQueue = new List<PendingAction>(_player.ActionQueue) { nextAction };
-                    var simulationResult = SimulateActionQueueEnergy(tempQueue);
-
-                    if (!simulationResult.possible)
-                    {
-                        if (_isFreeMoveMode && !isLocalMove)
-                        {
-                            Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Not enough energy. Auto-queuing a short rest.");
-                            Vector2 restPosition = _player.ActionQueue.Any() ? _player.ActionQueue.Last().Position : _player.WorldPosition;
-
-                            var tempQueueWithRest = new List<PendingAction>(_player.ActionQueue);
-                            tempQueueWithRest.Add(new PendingAction(RestType.ShortRest, restPosition));
-                            tempQueueWithRest.Add(nextAction);
-
-                            if (SimulateActionQueueEnergy(tempQueueWithRest).possible)
-                            {
-                                _player.ActionQueue.Add(new PendingAction(RestType.ShortRest, restPosition));
-                            }
-                            else
-                            {
-                                Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot move here... Not enough energy even after a rest!");
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            int stepCost = GetMovementEnergyCost(nextAction, isLocalMove);
-                            if (isLocalMove && isRunning) stepCost = 1;
-                            Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot move here... Not enough energy! <Requires {stepCost} EP>");
-                            break;
-                        }
-                    }
-
-                    currentPos = nextPos;
-                    _player.ActionQueue.Add(nextAction);
-                    validSteps++;
-                }
-
-                if (validSteps > 0)
-                {
-                    string moveType = isRunning ? "run" : "walk";
-                    if (removedSteps > 0)
-                    {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[undo]Backtracked {removedSteps} time(s), added {validSteps} {moveType}(s)");
-                    }
-                    else
-                    {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued {moveType} {validSteps} {args[0].ToLower()}");
-                    }
-                }
-                else if (removedSteps > 0)
-                {
-                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[undo]Backtracked {removedSteps} time(s)");
-                }
-            }
-            else if (removedSteps > 0)
-            {
-                Core.CurrentTerminalRenderer.AddOutputToHistory($"[undo]Backtracked {removedSteps} time(s)");
-            }
-        }
-
-        public void QueueRunMovement(Vector2 direction, string[] args)
-        {
-            QueueMovementInternal(direction, args, true);
-        }
-
-        public void QueueWalkMovement(Vector2 direction, string[] args)
-        {
-            QueueMovementInternal(direction, args, false);
-        }
-
-        public void UpdateMovement(GameTime gameTime)
-        {
-            if (_isPaused) return;
-
-            if (Core.CurrentWorldClockManager.IsInterpolatingTime)
-            {
-                return;
-            }
-
-            if (_actionAwaitingExecution != null)
-            {
-                bool success = ApplyActionEffects(_actionAwaitingExecution);
-                _actionAwaitingExecution = null;
-
-                if (success)
-                {
-                    _currentPathIndex++;
-                    if (_currentPathIndex >= _player.ActionQueue.Count)
-                    {
-                        _isExecutingPath = false;
-                        _player.ActionQueue.Clear();
-                        _currentPathIndex = 0;
-                        Core.CurrentTerminalRenderer.AddOutputToHistory("Action queue completed.");
-                    }
-                }
-                else
-                {
-                    CancelPathExecution(true);
-                }
-                return;
-            }
-
-            if (_isExecutingPath && _currentPathIndex < _player.ActionQueue.Count)
-            {
-                PendingAction nextAction = _player.ActionQueue[_currentPathIndex];
-                _actionAwaitingExecution = nextAction;
-                int secondsPassed = CalculateSecondsForAction(nextAction);
-                Core.CurrentWorldClockManager.PassTime(seconds: secondsPassed);
-            }
-        }
-
-        private int CalculateSecondsForAction(PendingAction action)
-        {
-            bool isLocalMove = _pathExecutionMapView == MapView.Local;
-            switch (action.Type)
-            {
-                case ActionType.WalkMove:
-                case ActionType.RunMove:
-                    Vector2 previousPosition;
-                    MapData mapData;
-                    if (isLocalMove)
-                    {
-                        previousPosition = (_currentPathIndex > 0) ? _player.ActionQueue[_currentPathIndex - 1].Position : _player.LocalPosition;
-                        mapData = default;
-                    }
-                    else
-                    {
-                        previousPosition = (_currentPathIndex > 0) ? _player.ActionQueue[_currentPathIndex - 1].Position : _player.WorldPosition;
-                        mapData = GetMapDataAt((int)action.Position.X, (int)action.Position.Y);
-                    }
-                    Vector2 moveDirection = action.Position - previousPosition;
-                    int fullDuration = GetSecondsPassedDuringMovement(action.Type, mapData, moveDirection, isLocalMove);
-
-                    if (_currentPathIndex == 0 && !isLocalMove)
-                    {
-                        float timeScaleFactor = GetFirstMoveTimeScaleFactor(moveDirection);
-                        return (int)Math.Ceiling(fullDuration * timeScaleFactor);
-                    }
-
-                    return fullDuration;
-                case ActionType.ShortRest:
-                    return _player.Stats.ShortRestDuration * 60;
-                case ActionType.LongRest:
-                    return _player.Stats.LongRestDuration * 60;
-                case ActionType.FullRest:
-                    return _player.Stats.FullRestDuration * 60;
-                default:
-                    return 0;
-            }
-        }
-
-        private bool ApplyActionEffects(PendingAction action)
-        {
-            bool isLocalMove = _pathExecutionMapView == MapView.Local;
-            switch (action.Type)
-            {
-                case ActionType.WalkMove:
-                case ActionType.RunMove:
-                    Vector2 nextPosition = action.Position;
-                    if (!IsPositionPassable(nextPosition, _pathExecutionMapView))
-                    {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Movement blocked at {nextPosition}.");
-                        return false;
-                    }
-
-                    string moveType = action.Type == ActionType.RunMove ? "Ran" : "Walked";
-                    int secondsPassedForAction = CalculateSecondsForAction(action);
-                    string timeString = Core.CurrentWorldClockManager.GetCommaFormattedTimeFromSeconds(secondsPassedForAction);
-
-                    if (isLocalMove)
-                    {
-                        if (action.Type == ActionType.RunMove)
-                        {
-                            int firstRunIndex = _player.ActionQueue.FindIndex(a => a.Type == ActionType.RunMove);
-                            if (_currentPathIndex == firstRunIndex)
-                            {
-                                _player.Stats.ExertEnergy(1);
-                            }
-                        }
-                        _player.SetLocalPosition(nextPosition);
-                    }
-                    else
-                    {
-                        int energyCost = GetMovementEnergyCost(action, false);
-                        if (!_player.Stats.CanExertEnergy(energyCost))
-                        {
-                            Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to continue! Need {energyCost}, have {_player.Stats.CurrentEnergyPoints}");
-                            return false;
-                        }
-                        _player.Stats.ExertEnergy(energyCost);
-
-                        Vector2 oldWorldPos = _player.WorldPosition;
-                        _player.SetPosition(nextPosition);
-
-                        Vector2 moveDir = nextPosition - oldWorldPos;
-                        Vector2 newLocalPos = new Vector2(32, 32);
-                        if (moveDir.X > 0) newLocalPos.X = 0; else if (moveDir.X < 0) newLocalPos.X = 63;
-                        if (moveDir.Y > 0) newLocalPos.Y = 0; else if (moveDir.Y < 0) newLocalPos.Y = 63;
-                        if (moveDir.X != 0 && moveDir.Y == 0) newLocalPos.Y = 32;
-                        if (moveDir.Y != 0 && moveDir.X == 0) newLocalPos.X = 32;
-                        _player.SetLocalPosition(newLocalPos);
-
-                        var mapData = GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through[gold] {mapData.TerrainType.ToLower()}[khaki].[dim] ({timeString})");
-                    }
-                    break;
-
-                case ActionType.ShortRest:
-                case ActionType.LongRest:
-                case ActionType.FullRest:
-                    _player.Stats.Rest(action.ActionRestType.Value);
-                    string restType = action.ActionRestType.Value.ToString().Replace("Rest", "");
-                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[rest]Completed {restType.ToLower()} rest. Energy is now {_player.Stats.CurrentEnergyPoints}/{_player.Stats.MaxEnergyPoints}.");
-                    break;
-            }
-
-            UpdateTetheredEntities();
-            return true;
-        }
-
-        private void UpdateTetheredEntities()
-        {
-            _tetheredEntities.Clear();
-            var playerPos = _player.WorldPosition;
-            var tetherBounds = new Rectangle(
-                (int)playerPos.X - TETHER_RANGE,
-                (int)playerPos.Y - TETHER_RANGE,
-                TETHER_RANGE * 2,
-                TETHER_RANGE * 2);
-
-            foreach (var entity in _worldEntities)
-            {
-                if (entity == _player) continue;
-
-                if (tetherBounds.Contains(entity.WorldPosition))
-                {
-                    _tetheredEntities.Add(entity);
-                }
-            }
-        }
-
         public void CancelPathExecution(bool interrupted = false)
         {
             if (_isExecutingPath)
             {
-                if (_actionAwaitingExecution != null && (_actionAwaitingExecution.Type == ActionType.RunMove || _actionAwaitingExecution.Type == ActionType.WalkMove))
+                var actionSystem = Core.ActionExecutionSystem;
+                var actionAwaitingExecution = actionSystem.CurrentActionAwaitingExecution;
+
+                if (actionAwaitingExecution != null && (actionAwaitingExecution.Type == ActionType.RunMove || actionAwaitingExecution.Type == ActionType.WalkMove))
                 {
                     float progress = Core.CurrentWorldClockManager.GetInterpolationProgress();
                     if (progress > 0 && progress < 1)
                     {
                         Vector2 newLocalPos;
-                        if (_pathExecutionMapView == MapView.World)
+                        if (PathExecutionMapView == MapView.World)
                         {
-                            Vector2 worldMoveDirection = _actionAwaitingExecution.Position - _player.WorldPosition;
+                            Vector2 worldMoveDirection = actionAwaitingExecution.Position - PlayerWorldPos;
                             Vector2 exitLocalPos = new Vector2(32, 32);
                             if (worldMoveDirection.X > 0) exitLocalPos.X = 63; else if (worldMoveDirection.X < 0) exitLocalPos.X = 0;
                             if (worldMoveDirection.Y > 0) exitLocalPos.Y = 63; else if (worldMoveDirection.Y < 0) exitLocalPos.Y = 0;
                             if (worldMoveDirection.X != 0 && worldMoveDirection.Y == 0) exitLocalPos.Y = 32;
                             if (worldMoveDirection.Y != 0 && worldMoveDirection.X == 0) exitLocalPos.X = 32;
-                            newLocalPos = Vector2.Lerp(_player.LocalPosition, exitLocalPos, progress);
+                            newLocalPos = Vector2.Lerp(PlayerLocalPos, exitLocalPos, progress);
                         }
                         else // Local move
                         {
-                            Vector2 startPos = (_currentPathIndex > 0) ? _player.ActionQueue[_currentPathIndex - 1].Position : _player.LocalPosition;
-                            Vector2 endPos = _actionAwaitingExecution.Position;
+                            Vector2 startPos = (actionSystem.CurrentPathIndex > 0) ? PendingActions[actionSystem.CurrentPathIndex - 1].Position : PlayerLocalPos;
+                            Vector2 endPos = actionAwaitingExecution.Position;
                             newLocalPos = Vector2.Lerp(startPos, endPos, progress);
                         }
-                        _player.SetLocalPosition(new Vector2((int)Math.Round(newLocalPos.X), (int)Math.Round(newLocalPos.Y)));
+                        var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(PlayerEntityId);
+                        localPosComp.LocalPosition = new Vector2((int)Math.Round(newLocalPos.X), (int)Math.Round(newLocalPos.Y));
                     }
                 }
 
-                _isExecutingPath = false;
+                ToggleExecutingPath(false);
                 _isPaused = false;
-                _player.ActionQueue.Clear();
-                _currentPathIndex = 0;
-                _actionAwaitingExecution = null;
+                PendingActions.Clear();
                 ToggleIsFreeMoveMode(false);
                 Core.CurrentWorldClockManager.CancelInterpolation();
                 if (interrupted)
@@ -735,9 +321,9 @@ namespace ProjectVagabond
             }
         }
 
-        private float GetFirstMoveTimeScaleFactor(Vector2 worldMoveDirection)
+        public float GetFirstMoveTimeScaleFactor(Vector2 worldMoveDirection)
         {
-            Vector2 startPos = _player.LocalPosition;
+            Vector2 startPos = PlayerLocalPos;
 
             const float localGridMax = Global.LOCAL_GRID_SIZE - 1;
 

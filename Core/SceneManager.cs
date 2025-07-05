@@ -25,6 +25,11 @@ namespace ProjectVagabond
         private GameSceneState _nextSceneState;
 
         /// <summary>
+        /// The currently active scene.
+        /// </summary>
+        public GameScene CurrentActiveScene => _currentScene;
+
+        /// <summary>
         /// The last input device used to trigger a major action, like changing a scene.
         /// </summary>
         public InputDevice LastInputDevice { get; set; } = InputDevice.Mouse;

@@ -2,7 +2,7 @@
 
 namespace ProjectVagabond
 {
-    public class PlayerStats
+    public class StatsComponent : IComponent
     {
         // Main stats (1-10, average 5)
         private int _strength;
@@ -21,7 +21,7 @@ namespace ProjectVagabond
         private int _socialInfluence;
         private int _shortRestDuration = 10; // minutes
         private int _longRestDuration = 60;
-        private int _fullRestDuration = 60*8;
+        private int _fullRestDuration = 60 * 8;
 
         // Current values
         private int _currentHealthPoints;
@@ -59,7 +59,7 @@ namespace ProjectVagabond
         public int ShortRestDuration => _shortRestDuration; // in minutes
         public int LongRestDuration => _longRestDuration; // in minutes
         public int FullRestDuration => _fullRestDuration; // in minutes
-        public int ShortRestEnergyRestored => (int)Math.Floor((double)_maxEnergyPoints*0.8f);
+        public int ShortRestEnergyRestored => (int)Math.Floor((double)_maxEnergyPoints * 0.8f);
         public int LongRestEnergyRestored => _maxEnergyPoints;
         public int FullRestEnergyRestored => _maxEnergyPoints;
 
@@ -83,15 +83,15 @@ namespace ProjectVagabond
         // CONSTRUCTOR
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public PlayerStats(int strength = 5, int agility = 5, int tenacity = 5, int intelligence = 5, int charm = 5)
+        public StatsComponent(int strength = 5, int agility = 5, int tenacity = 5, int intelligence = 5, int charm = 5)
         {
             SetMainStats(strength, agility, tenacity, intelligence, charm);
-            
+
             // Set default character info
             _weight = 70f;
             _age = 25;
             _background = "Wanderer";
-            
+
             RecalculateSecondaryStats();
             RestoreToFull();
         }
@@ -151,12 +151,12 @@ namespace ProjectVagabond
         {
             // Health Points
             int oldMaxHP = _maxHealthPoints;
-            int _calculatedHealthPoints = (int)Math.Floor((_strength*0.5f)+(2*_tenacity)+ ((1*0.5f)*((_tenacity*0.5f))));
+            int _calculatedHealthPoints = (int)Math.Floor((_strength * 0.5f) + (2 * _tenacity) + ((1 * 0.5f) * ((_tenacity * 0.5f))));
             _maxHealthPoints = Math.Min(_calculatedHealthPoints, Global.MAX_MAX_HEALTH_ENERGY);
 
             // Energy Points
             int oldMaxEP = _maxEnergyPoints;
-            int _calculatedEnergyPoints = 5 + (int)Math.Floor(_agility*0.5f);
+            int _calculatedEnergyPoints = 5 + (int)Math.Floor(_agility * 0.5f);
             _maxEnergyPoints = Math.Min(_calculatedEnergyPoints, Global.MAX_MAX_HEALTH_ENERGY);
 
             // Move Speed 

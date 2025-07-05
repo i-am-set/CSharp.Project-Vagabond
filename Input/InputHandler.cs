@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using ProjectVagabond;
 using System;
@@ -72,7 +72,7 @@ namespace ProjectVagabond
                 }
                 else if (Core.CurrentGameState.PendingActions.Count > 0)
                 {
-                    Core.CurrentGameState.CancelPendingActions();
+                    Core.PlayerInputSystem.CancelPendingActions(Core.CurrentGameState);
                 }
             }
 
@@ -110,11 +110,11 @@ namespace ProjectVagabond
                     string[] args = { "move", "1" };
                     if (_shiftPressed)
                     {
-                        Core.CurrentGameState.QueueRunMovement(moveDir, args);
+                        Core.PlayerInputSystem.QueueRunMovement(Core.CurrentGameState, moveDir, args);
                     }
                     else
                     {
-                        Core.CurrentGameState.QueueWalkMovement(moveDir, args);
+                        Core.PlayerInputSystem.QueueWalkMovement(Core.CurrentGameState, moveDir, args);
                     }
                 }
                 else if (!_previousKeyboardState.IsKeyDown(Keys.Enter) && currentKeyboardState.IsKeyDown(Keys.Enter))
@@ -122,7 +122,6 @@ namespace ProjectVagabond
                     if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
                     {
                         Core.CurrentGameState.ToggleExecutingPath(true);
-                        Core.CurrentGameState.SetCurrentPathIndex(0);
                         Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
                     }
                     else if (Core.CurrentGameState.IsExecutingPath)
@@ -147,7 +146,6 @@ namespace ProjectVagabond
                             if (string.IsNullOrEmpty(_currentInput.Trim()) && Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
                             {
                                 Core.CurrentGameState.ToggleExecutingPath(true);
-                                Core.CurrentGameState.SetCurrentPathIndex(0);
                                 Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue with {Core.CurrentGameState.PendingActions.Count} actions...");
                             }
                             else

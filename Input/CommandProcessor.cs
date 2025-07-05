@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using ProjectVagabond;
 using ProjectVagabond.Scenes;
 using System;
@@ -10,14 +10,16 @@ namespace ProjectVagabond
     public class CommandProcessor
     {
         private readonly GameState _gameState = Core.CurrentGameState;
+        private readonly PlayerInputSystem _playerInputSystem;
         private Dictionary<string, Command> _commands;
 
         public Dictionary<string, Command> Commands => _commands;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public CommandProcessor()
+        public CommandProcessor(PlayerInputSystem playerInputSystem)
         {
+            _playerInputSystem = playerInputSystem;
             InitializeCommands();
         }
 
@@ -76,14 +78,14 @@ namespace ProjectVagabond
                 string[] movementArgs = args.Skip(1).ToArray();
                 switch (direction)
                 {
-                    case "up": _gameState.QueueRunMovement(new Vector2(0, -1), movementArgs); break;
-                    case "down": _gameState.QueueRunMovement(new Vector2(0, 1), movementArgs); break;
-                    case "left": _gameState.QueueRunMovement(new Vector2(-1, 0), movementArgs); break;
-                    case "right": _gameState.QueueRunMovement(new Vector2(1, 0), movementArgs); break;
-                    case "up-left": _gameState.QueueRunMovement(new Vector2(-1, -1), movementArgs); break;
-                    case "up-right": _gameState.QueueRunMovement(new Vector2(1, -1), movementArgs); break;
-                    case "down-left": _gameState.QueueRunMovement(new Vector2(-1, 1), movementArgs); break;
-                    case "down-right": _gameState.QueueRunMovement(new Vector2(1, 1), movementArgs); break;
+                    case "up": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(0, -1), movementArgs); break;
+                    case "down": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(0, 1), movementArgs); break;
+                    case "left": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(-1, 0), movementArgs); break;
+                    case "right": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(1, 0), movementArgs); break;
+                    case "up-left": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(-1, -1), movementArgs); break;
+                    case "up-right": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(1, -1), movementArgs); break;
+                    case "down-left": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(-1, 1), movementArgs); break;
+                    case "down-right": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(1, 1), movementArgs); break;
                     default: AddOutputToHistory($"Unknown direction for run: '{direction}'."); break;
                 }
             },
@@ -105,14 +107,14 @@ namespace ProjectVagabond
                 string[] movementArgs = args.Skip(1).ToArray();
                 switch (direction)
                 {
-                    case "up": _gameState.QueueWalkMovement(new Vector2(0, -1), movementArgs); break;
-                    case "down": _gameState.QueueWalkMovement(new Vector2(0, 1), movementArgs); break;
-                    case "left": _gameState.QueueWalkMovement(new Vector2(-1, 0), movementArgs); break;
-                    case "right": _gameState.QueueWalkMovement(new Vector2(1, 0), movementArgs); break;
-                    case "up-left": _gameState.QueueWalkMovement(new Vector2(-1, -1), movementArgs); break;
-                    case "up-right": _gameState.QueueWalkMovement(new Vector2(1, -1), movementArgs); break;
-                    case "down-left": _gameState.QueueWalkMovement(new Vector2(-1, 1), movementArgs); break;
-                    case "down-right": _gameState.QueueWalkMovement(new Vector2(1, 1), movementArgs); break;
+                    case "up": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(0, -1), movementArgs); break;
+                    case "down": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(0, 1), movementArgs); break;
+                    case "left": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, 0), movementArgs); break;
+                    case "right": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, 0), movementArgs); break;
+                    case "up-left": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, -1), movementArgs); break;
+                    case "up-right": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, -1), movementArgs); break;
+                    case "down-left": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, 1), movementArgs); break;
+                    case "down-right": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, 1), movementArgs); break;
                     default: AddOutputToHistory($"Unknown direction for walk: '{direction}'."); break;
                 }
             },
@@ -123,20 +125,20 @@ namespace ProjectVagabond
                 return new List<string>();
             });
 
-            _commands["up"] = new Command("up", (args) => { _gameState.QueueWalkMovement(new Vector2(0, -1), args); }, "up <count?> [gray]- Queue a walk up.");
-            _commands["down"] = new Command("down", (args) => { _gameState.QueueWalkMovement(new Vector2(0, 1), args); }, "down <count?> [gray]- Queue a walk down.");
-            _commands["left"] = new Command("left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, 0), args); }, "left <count?> [gray]- Queue a walk left.");
-            _commands["right"] = new Command("right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, 0), args); }, "right <count?> [gray]- Queue a walk right.");
-            _commands["up-left"] = new Command("up-left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, -1), args); }, "up-left <count?> [gray]- Queue a walk up-left.");
-            _commands["up-right"] = new Command("up-right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, -1), args); }, "up-right <count?> [gray]- Queue a walk up-right.");
-            _commands["down-left"] = new Command("down-left", (args) => { _gameState.QueueWalkMovement(new Vector2(-1, 1), args); }, "down-left <count?> [gray]- Queue a walk down-left.");
-            _commands["down-right"] = new Command("down-right", (args) => { _gameState.QueueWalkMovement(new Vector2(1, 1), args); }, "down-right <count?> [gray]- Queue a walk down-right.");
+            _commands["up"] = new Command("up", (args) => { _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(0, -1), args); }, "up <count?> [gray]- Queue a walk up.");
+            _commands["down"] = new Command("down", (args) => { _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(0, 1), args); }, "down <count?> [gray]- Queue a walk down.");
+            _commands["left"] = new Command("left", (args) => { _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, 0), args); }, "left <count?> [gray]- Queue a walk left.");
+            _commands["right"] = new Command("right", (args) => { _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, 0), args); }, "right <count?> [gray]- Queue a walk right.");
+            _commands["up-left"] = new Command("up-left", (args) => { _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, -1), args); }, "up-left <count?> [gray]- Queue a walk up-left.");
+            _commands["up-right"] = new Command("up-right", (args) => { _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, -1), args); }, "up-right <count?> [gray]- Queue a walk up-right.");
+            _commands["down-left"] = new Command("down-left", (args) => { _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, 1), args); }, "down-left <count?> [gray]- Queue a walk down-left.");
+            _commands["down-right"] = new Command("down-right", (args) => { _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, 1), args); }, "down-right <count?> [gray]- Queue a walk down-right.");
 
             _commands["cancel"] = new Command("cancel", (args) =>
             {
                 if (_gameState.PendingActions.Count > 0)
                 {
-                    _gameState.CancelPendingActions();
+                    _playerInputSystem.CancelPendingActions(_gameState);
                 }
                 else
                 {
@@ -151,7 +153,7 @@ namespace ProjectVagabond
                 AddOutputToHistory($"Pending actions in queue: {_gameState.PendingActions.Count}");
                 if (_gameState.IsExecutingPath)
                 {
-                    AddOutputToHistory($"Executing queue: action {_gameState.CurrentPathIndex + 1}/{_gameState.PendingActions.Count}");
+                    AddOutputToHistory($"Executing queue: action {Core.ActionExecutionSystem.CurrentPathIndex + 1}/{_gameState.PendingActions.Count}");
                 }
             }, "pos [gray]- Show current position and queue status.");
 
@@ -177,7 +179,7 @@ namespace ProjectVagabond
                     AddOutputToHistory("[error]Cannot queue rests from the local map."); // HACK: fix this
                     return;
                 }
-                _gameState.QueueRest(args);
+                _playerInputSystem.QueueRest(_gameState, args);
             },
             "rest <short|long|full> [gray]- Queue a rest action.",
             (args) =>

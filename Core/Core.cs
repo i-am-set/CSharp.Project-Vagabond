@@ -4,6 +4,7 @@ using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Timers;
 using ProjectVagabond.Scenes;
 using System;
+using System.Collections.Generic;
 
 // TODO: generate different noise maps to generate different map things
 // TODO: add a way to generate different map elements based on the noise map
@@ -28,7 +29,17 @@ namespace ProjectVagabond
         public static Core Instance { get; private set; }
 
         // Class references //
+        // --- Core ECS and Systems must be initialized first, as other managers may depend on them. ---
+        private static readonly EntityManager _entityManager = new();
+        private static readonly ComponentStore _componentStore = new();
+        private static readonly PlayerInputSystem _playerInputSystem = new();
+        private static readonly ActionExecutionSystem _actionExecutionSystem = new();
+        private static readonly List<ISystem> _updateSystems = new() { _playerInputSystem, _actionExecutionSystem };
+
+        // --- GameState can now be initialized safely as its dependencies are ready. ---
         private static readonly GameState _gameState = new();
+
+        // --- Other managers and renderers ---
         private static readonly SpriteManager _spriteManager = new();
         private static readonly TextureFactory _textureFactory = new();
         private static readonly InputHandler _inputHandler = new();
@@ -36,7 +47,7 @@ namespace ProjectVagabond
         private static readonly MapInputHandler _mapInputHandler = new(_mapRenderer.MapContextMenu, _mapRenderer);
         private static readonly TerminalRenderer _terminalRenderer = new();
         private static readonly AutoCompleteManager _autoCompleteManager = new();
-        private static readonly CommandProcessor _commandProcessor = new();
+        private static readonly CommandProcessor _commandProcessor = new(_playerInputSystem);
         private static readonly StatsRenderer _statsRenderer = new();
         private static readonly WorldClockManager _worldClockManager = new();
         private static readonly ClockRenderer _clockRenderer = new();
@@ -70,6 +81,10 @@ namespace ProjectVagabond
         public static TooltipManager CurrentTooltipManager => _tooltipManager;
         public static GameSettings Settings => _settings;
         public static Texture2D Pixel => _pixel;
+        public static EntityManager EntityManager => _entityManager;
+        public static ComponentStore ComponentStore => _componentStore;
+        public static PlayerInputSystem PlayerInputSystem => _playerInputSystem;
+        public static ActionExecutionSystem ActionExecutionSystem => _actionExecutionSystem;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -149,6 +164,15 @@ namespace ProjectVagabond
             Global.Instance.CurrentGraphics.SynchronizeWithVerticalRetrace = Settings.IsVsync;
 
             _sceneManager.Update(gameTime);
+
+            if (_sceneManager.CurrentActiveScene is TerminalMapScene)
+            {
+                foreach (var system in _updateSystems)
+                {
+                    system.Update(gameTime);
+                }
+            }
+
             _tooltipManager.Update(gameTime);
             base.Update(gameTime);
         }

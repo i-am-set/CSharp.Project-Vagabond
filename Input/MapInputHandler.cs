@@ -11,6 +11,7 @@ namespace ProjectVagabond
     {
         private GameState _gameState = Core.CurrentGameState;
         private MapRenderer _mapRenderer = Core.CurrentMapRenderer;
+        private PlayerInputSystem _playerInputSystem = Core.PlayerInputSystem;
         private ContextMenu _contextMenu;
 
         private MouseState _currentMouseState;
@@ -18,7 +19,7 @@ namespace ProjectVagabond
         private KeyboardState _previousKeyboardState;
 
         private bool _isDraggingPath = false;
-        private bool _isAppendModeDrag = false; 
+        private bool _isAppendModeDrag = false;
         private int _originalPendingActionCount = 0;
 
         private float _pathUpdateTimer = 0f;
@@ -64,7 +65,7 @@ namespace ProjectVagabond
                         button.OnClick += HandleToggleMapClick;
                         break;
                     case "clear":
-                        button.OnClick += _gameState.CancelPendingActions;
+                        button.OnClick += () => _playerInputSystem.CancelPendingActions(_gameState);
                         break;
                     default:
                         throw new InvalidOperationException(
@@ -142,6 +143,15 @@ namespace ProjectVagabond
             bool leftClickReleased = _currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool rightClickPressed = _currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
 
+            if (_gameState.IsExecutingPath)
+            {
+                if (leftClickPressed || rightClickPressed)
+                {
+                    _gameState.CancelPathExecution(interrupted: true);
+                }
+                return;
+            }
+
             Vector2? hoveredGridPos = _mapRenderer.HoveredGridPos;
 
             if (hoveredGridPos.HasValue)
@@ -203,7 +213,7 @@ namespace ProjectVagabond
             {
                 if (_gameState.PendingActions.Count > _originalPendingActionCount)
                 {
-                    _gameState.PendingActions.RemoveRange(_originalPendingActionCount, _gameState.PendingActions.Count - _originalPendingActionCount);
+                    _playerInputSystem.RemovePendingActionsFrom(_gameState, _originalPendingActionCount);
                 }
 
                 Vector2 startPos = (_originalPendingActionCount > 0)
@@ -215,19 +225,19 @@ namespace ProjectVagabond
                 var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
                 if (path != null)
                 {
-                    _gameState.AppendPath(path, isRunning: isRunning);
+                    _playerInputSystem.AppendPath(_gameState, path, isRunning: isRunning);
                 }
             }
             else // REPOSITION mode (default)
             {
-                _gameState.PendingActions.Clear();
+                _playerInputSystem.ClearPendingActions(_gameState);
 
                 if (playerPos == targetPos) return;
 
                 var path = Pathfinder.FindPath(playerPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
                 if (path != null)
                 {
-                    _gameState.AppendPath(path, isRunning: isRunning);
+                    _playerInputSystem.AppendPath(_gameState, path, isRunning: isRunning);
                 }
             }
         }
@@ -255,7 +265,7 @@ namespace ProjectVagabond
                     var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time, MapView.World);
                     if (path != null)
                     {
-                        _gameState.AppendPath(path, isRunning: false);
+                        _playerInputSystem.AppendPath(_gameState, path, isRunning: false);
                     }
                     else
                     {
@@ -264,7 +274,7 @@ namespace ProjectVagabond
                     }
                 }
 
-                _gameState.PendingActions.Add(new PendingAction(restType, targetPos));
+                _playerInputSystem.QueueAction(_gameState, new PendingAction(restType, targetPos));
                 string restTypeName = restType.ToString().Replace("Rest", "").ToLower();
                 Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {restTypeName} rest at ({targetPos.X},{targetPos.Y}).");
             };
@@ -288,7 +298,7 @@ namespace ProjectVagabond
                 {
                     var startPos = pathPending ? _gameState.PendingActions.Last().Position : (_gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos);
                     var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time, _gameState.CurrentMapView);
-                    if (path != null) _gameState.AppendPath(path, isRunning: false);
+                    if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: false);
                 }
             });
 
@@ -300,7 +310,7 @@ namespace ProjectVagabond
                 {
                     var startPos = pathPending ? _gameState.PendingActions.Last().Position : (_gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos);
                     var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: true, PathfindingMode.Time, _gameState.CurrentMapView);
-                    if (path != null) _gameState.AppendPath(path, isRunning: true);
+                    if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: true);
                 }
             });
 
@@ -325,7 +335,7 @@ namespace ProjectVagabond
                 IsVisible = () => pathPending,
                 OnClick = () =>
                 {
-                    _gameState.CancelPendingActions();
+                    _playerInputSystem.CancelPendingActions(_gameState);
                 }
             });
 

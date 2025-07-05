@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using System;
@@ -252,21 +252,22 @@ namespace ProjectVagabond
             }
 
             var gameState = Core.CurrentGameState;
+            var actionSystem = Core.ActionExecutionSystem;
             if (gameState.PendingActions.Count != _cachedPendingActionCount ||
                 gameState.IsExecutingPath != _cachedIsExecutingPath ||
                 gameState.IsFreeMoveMode != _cachedIsFreeMoveMode ||
-                (gameState.IsExecutingPath && gameState.CurrentPathIndex != _cachedCurrentPathIndex))
+                (gameState.IsExecutingPath && actionSystem.CurrentPathIndex != _cachedCurrentPathIndex))
             {
                 _cachedPendingActionCount = gameState.PendingActions.Count;
                 _cachedIsExecutingPath = gameState.IsExecutingPath;
                 _cachedIsFreeMoveMode = gameState.IsFreeMoveMode;
-                _cachedCurrentPathIndex = gameState.CurrentPathIndex;
+                _cachedCurrentPathIndex = actionSystem.CurrentPathIndex;
 
                 _stringBuilder.Clear();
                 _stringBuilder.Append("Actions Queued: ").Append(gameState.PendingActions.Count);
                 if (gameState.IsExecutingPath)
                 {
-                    _stringBuilder.Append(" | Executing: ").Append(gameState.CurrentPathIndex + 1).Append("/").Append(gameState.PendingActions.Count);
+                    _stringBuilder.Append(" | Executing: ").Append(actionSystem.CurrentPathIndex + 1).Append("/").Append(gameState.PendingActions.Count);
                 }
                 _cachedWrappedStatusText = WrapText(_stringBuilder.ToString(), GetTerminalContentWidthInPixels());
 
@@ -319,7 +320,7 @@ namespace ProjectVagabond
             {
                 if (Core.CurrentGameState.IsFreeMoveMode)
                 {
-                    promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
+                    promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([deepskyblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
                 }
                 else
                 {

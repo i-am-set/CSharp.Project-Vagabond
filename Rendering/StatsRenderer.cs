@@ -48,7 +48,7 @@ namespace ProjectVagabond
             _spriteBatch.DrawString(Global.Instance.DefaultFont, secondaryStats, new Vector2(baseX, currentY), Global.Instance.Palette_LightGray);
         }
 
-        private Rectangle DrawEnergyBarWithPreview(SpriteBatch spriteBatch, PlayerStats stats, Vector2 position, int width)
+        private Rectangle DrawEnergyBarWithPreview(SpriteBatch spriteBatch, StatsComponent stats, Vector2 position, int width)
         {
             Texture2D pixel = Core.Pixel;
             pixel.SetData(new[] { Color.White });
@@ -68,7 +68,7 @@ namespace ProjectVagabond
             int maxEnergy = stats.MaxEnergyPoints;
             bool hasPendingActions = _gameState.PendingActions.Count > 0;
 
-            for (int i = 0; i < maxEnergy; i++) 
+            for (int i = 0; i < maxEnergy; i++)
             {
                 int segmentX = barX + i * 6;
                 Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
@@ -116,7 +116,7 @@ namespace ProjectVagabond
             int barX = (int)(position.X + textSize.X + 5);
             int barY = (int)(position.Y + 3);
 
-            
+
             int barWidth = (max * 6) - 3;
 
             Rectangle barBg = new Rectangle(barX - 2, barY - 2, barWidth + 4, 10);
@@ -127,7 +127,7 @@ namespace ProjectVagabond
                 for (int i = 0; i < max; i++)
                 {
                     int segmentX = barX + i * 6;
-                    Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6); 
+                    Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
 
                     if (i < current)
                     {
@@ -140,7 +140,7 @@ namespace ProjectVagabond
                 }
             }
 
-            return new Rectangle((int)position.X, (int)position.Y, (int)textSize.X + 5 + barWidth, 12); 
+            return new Rectangle((int)position.X, (int)position.Y, (int)textSize.X + 5 + barWidth, 12);
         }
 
         private void CheckTooltipHover()
@@ -150,13 +150,13 @@ namespace ProjectVagabond
             if (_gameState.PlayerStats == null) return;
 
             var stats = _gameState.PlayerStats;
-            
-            if (_hpBarBounds.Contains(virtualMousePos)) 
+
+            if (_hpBarBounds.Contains(virtualMousePos))
             {
                 string tooltipText = $"{stats.CurrentHealthPoints}/{stats.MaxHealthPoints}";
                 Core.CurrentTooltipManager.RequestTooltip(_hpBarBounds, tooltipText, virtualMousePos, 0f);
             }
-            else if (_epBarBounds.Contains(virtualMousePos)) 
+            else if (_epBarBounds.Contains(virtualMousePos))
             {
                 string tooltipText;
                 if (_gameState.PendingActions.Count > 0)
