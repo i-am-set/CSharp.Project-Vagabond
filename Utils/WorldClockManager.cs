@@ -41,6 +41,7 @@ namespace ProjectVagabond
         public int CurrentSecond => _second;
         public string CurrentTime => Global.Instance.Use24HourClock ? GetTimeString() : GetConverted24hToAmPm(GetTimeString());
         public float TimeScale { get; set; } = 1.0f;
+        public TimeSpan CurrentTimeSpan { get; private set; }
 
         // Interpolation State Fields //
         private bool _isInterpolating = false;
@@ -73,6 +74,8 @@ namespace ProjectVagabond
             _hour = RandomNumberGenerator.GetInt32(0, 23);
             _minute = RandomNumberGenerator.GetInt32(0, 59);
             _second = RandomNumberGenerator.GetInt32(0, 59);
+
+            CurrentTimeSpan = new TimeSpan(_dayOfYear - 1, _hour, _minute, _second);
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -111,8 +114,8 @@ namespace ProjectVagabond
             _totalSecondsPassedDuringInterpolation = (long)seconds + ((long)minutes * 60) + ((long)hours * 3600) + ((long)days * 86400);
             if (_totalSecondsPassedDuringInterpolation == 0) return;
 
-            // Store start and calculate target time
-            _interpolationStartTime = new TimeSpan(_dayOfYear - 1, _hour, _minute, _second);
+            // Store start and calculate target time. Use the high-precision CurrentTimeSpan to prevent precision loss.
+            _interpolationStartTime = CurrentTimeSpan;
             _interpolationTargetTime = _interpolationStartTime.Add(TimeSpan.FromSeconds(_totalSecondsPassedDuringInterpolation));
 
             // Tiered Animation Speed Calculation
@@ -195,6 +198,7 @@ namespace ProjectVagabond
         /// </summary>
         private void SetTimeFromTimeSpan(TimeSpan time)
         {
+            CurrentTimeSpan = time;
             _dayOfYear = time.Days + 1;
             _hour = time.Hours;
             _minute = time.Minutes;

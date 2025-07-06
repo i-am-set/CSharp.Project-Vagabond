@@ -43,7 +43,7 @@ namespace ProjectVagabond
                     OnClockClicked?.Invoke();
                 }
             };
-            
+
             HandleTimeScaleChange(_timeScaleGroup.GetSelectedButton());
         }
 
@@ -120,21 +120,22 @@ namespace ProjectVagabond
                 spriteBatch.Draw(pixel, new Rectangle((int)(dotPosition.X - DOT_SIZE / 2f), (int)(dotPosition.Y - DOT_SIZE / 2f), DOT_SIZE, DOT_SIZE), Global.Instance.Palette_BrightWhite);
             }
 
-            // Get current time
+            // Get current time with high precision
             // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-            int hour = clockManager.CurrentHour;
-            int minute = clockManager.CurrentMinute;
-            int second = clockManager.CurrentSecond;
+            var currentTime = clockManager.CurrentTimeSpan;
+            double totalHours = currentTime.TotalHours;
+            double totalMinutes = currentTime.TotalMinutes;
+            double totalSeconds = currentTime.TotalSeconds;
 
-            // Calculate hand rotations in radians.
+            // Calculate hand rotations in radians using high-precision total time values.
             // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-            float secondRotation = (second / 60f) * MathHelper.TwoPi - MathHelper.PiOver2;
-            float minuteRotation = (minute / 60f) * MathHelper.TwoPi - MathHelper.PiOver2;
-            float hourRotation = (((hour % 12) + minute / 60f) / 12f) * MathHelper.TwoPi - MathHelper.PiOver2;
+            float secondRotation = (float)(totalSeconds / 60.0 * MathHelper.TwoPi - MathHelper.PiOver2);
+            float minuteRotation = (float)(totalMinutes / 60.0 * MathHelper.TwoPi - MathHelper.PiOver2);
+            float hourRotation = (float)(totalHours / 12.0 * MathHelper.TwoPi - MathHelper.PiOver2);
 
-            // Draw AM/PM text
+            // Draw AM/PM text (still uses integer hour for simplicity)
             // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-            string period = hour >= 12 ? "PM" : "AM";
+            string period = clockManager.CurrentHour >= 12 ? "PM" : "AM";
             Vector2 periodSize = font.MeasureString(period);
             Vector2 periodPosition = new Vector2(clockCenter.X - periodSize.X / 2, _clockPosition.Y + CLOCK_SIZE * 0.7f - periodSize.Y / 2);
             spriteBatch.DrawString(font, period, periodPosition, Global.Instance.Palette_BrightWhite);
@@ -150,7 +151,9 @@ namespace ProjectVagabond
             // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
             // Hour hand
             spriteBatch.Draw(pixel, clockCenter, null, Global.Instance.Palette_BrightWhite, hourRotation, handOrigin, new Vector2(hourHandLength, 2), SpriteEffects.None, 0);
+            // Minute hand
             spriteBatch.Draw(pixel, clockCenter, null, Global.Instance.Palette_BrightWhite, minuteRotation, handOrigin, new Vector2(minuteHandLength, 2), SpriteEffects.None, 0);
+            // Second hand
             spriteBatch.Draw(pixel, clockCenter, null, Global.Instance.Palette_Red, secondRotation, handOrigin, new Vector2(secondHandLength, 1), SpriteEffects.None, 0);
 
             _clockButton.Draw(spriteBatch, font, gameTime);
@@ -160,15 +163,15 @@ namespace ProjectVagabond
             int buttonWidth = 30;
             int buttonHeight = 18;
             int buttonSpacing = 2;
-            
+
             // Pause/Play Button
             _pausePlayButton.IsEnabled = Core.CurrentGameState.IsExecutingActions;
             _pausePlayButton.Text = Core.CurrentGameState.IsPaused ? "►" : "▐▐";
-            
+
             // Time Scale Buttons
             var timeButtons = _timeScaleGroup.Buttons;
             float totalGroupWidth = (buttonWidth * timeButtons.Count) + (buttonSpacing * (timeButtons.Count - 1));
-            
+
             // Add pause button width if it's visible
             if (_pausePlayButton.IsEnabled)
             {
