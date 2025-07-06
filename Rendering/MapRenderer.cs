@@ -137,7 +137,7 @@ namespace ProjectVagabond
                 if (screenPos.HasValue)
                 {
                     Rectangle indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
-                    _spriteBatch.Draw(Core.CurrentSpriteManager.MapHoverMarkerSprite, indicatorRect, Color.Lime * 0.5f);
+                    _spriteBatch.Draw(Core.CurrentSpriteManager.WorldMapHoverSelectorSprite, indicatorRect, Color.Lime * 0.5f);
                 }
             }
 
@@ -147,7 +147,7 @@ namespace ProjectVagabond
                 if (screenPos.HasValue)
                 {
                     Rectangle markerRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
-                    _spriteBatch.Draw(Core.CurrentSpriteManager.MapHoverMarkerSprite, markerRect, Color.Cyan * 0.6f);
+                    _spriteBatch.Draw(Core.CurrentSpriteManager.WorldMapHoverSelectorSprite, markerRect, Color.Cyan * 0.6f);
                 }
             }
 
@@ -182,7 +182,7 @@ namespace ProjectVagabond
                 if (screenPos.HasValue)
                 {
                     Rectangle indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
-                    _spriteBatch.Draw(Core.CurrentSpriteManager.MapHoverMarkerSprite, indicatorRect, Color.Lime * 0.5f);
+                    _spriteBatch.Draw(Core.CurrentSpriteManager.LocalMapHoverSelectorSprite, indicatorRect, Color.Lime * 0.5f);
                 }
             }
 
@@ -305,83 +305,64 @@ namespace ProjectVagabond
             int startX = (int)_gameState.PlayerWorldPos.X - gridSize / 2;
             int startY = (int)_gameState.PlayerWorldPos.Y - gridSize / 2;
 
+            // Layer 1: Base Terrain
             for (int y = 0; y < gridSize; y++)
             {
                 for (int x = 0; x < gridSize; x++)
                 {
                     int worldX = startX + x;
                     int worldY = startY + y;
-                    Vector2 worldPos = new Vector2(worldX, worldY);
-
                     float noise = _gameState.GetNoiseAt(worldX, worldY);
-                    Texture2D texture = GetTerrainTexture(noise);
-                    Color color = GetTerrainColor(noise);
-
-                    if (worldPos == _gameState.PlayerWorldPos)
-                    {
-                        texture = Core.CurrentSpriteManager.PlayerSprite;
-                        color = Global.Instance.PlayerColor;
-                    }
-                    else
-                    {
-                        // Combine queued actions and the active action for rendering
-                        var allActionsAtPos = new List<IAction>();
-
-                        // Get actions from the queue
-                        var queuedActions = _gameState.PendingActions
-                            .Where(a => (a is MoveAction ma && ma.Destination == worldPos) || (a is RestAction ra && ra.Position == worldPos));
-                        allActionsAtPos.AddRange(queuedActions);
-
-                        // Get the currently executing action component
-                        var activeMoveAction = Core.ComponentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId);
-                        if (activeMoveAction != null && activeMoveAction.Destination == worldPos)
-                        {
-                            allActionsAtPos.Add(activeMoveAction);
-                        }
-                        var activeRestAction = Core.ComponentStore.GetComponent<RestAction>(_gameState.PlayerEntityId);
-                        if (activeRestAction != null && activeRestAction.Position == worldPos)
-                        {
-                            allActionsAtPos.Add(activeRestAction);
-                        }
-
-                        if (allActionsAtPos.Any())
-                        {
-                            if (allActionsAtPos.Any(a => a is RestAction ra && ra.RestType == RestType.ShortRest))
-                            {
-                                texture = Core.CurrentSpriteManager.ShortRestSprite;
-                                color = Global.Instance.ShortRestColor;
-                            }
-                            else if (allActionsAtPos.Any(a => a is RestAction ra && ra.RestType == RestType.LongRest))
-                            {
-                                texture = Core.CurrentSpriteManager.LongRestSprite;
-                                color = Global.Instance.LongRestColor;
-                            }
-                            else if (allActionsAtPos.Any(a => a is MoveAction))
-                            {
-                                bool isRunning = allActionsAtPos.OfType<MoveAction>().Any(ma => ma.IsRunning);
-                                texture = isRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
-
-                                // Determine if this position is the final destination in the queue
-                                var lastActionInQueue = _gameState.PendingActions.LastOrDefault();
-                                Vector2? lastPos = null;
-                                if (lastActionInQueue is MoveAction lm) lastPos = lm.Destination;
-                                if (lastActionInQueue is RestAction lr) lastPos = lr.Position;
-
-                                if (lastPos.HasValue && lastPos.Value == worldPos)
-                                {
-                                    color = Global.Instance.PathEndColor;
-                                }
-                                else
-                                {
-                                    color = isRunning ? Global.Instance.RunPathColor : Global.Instance.PathColor;
-                                }
-                            }
-                        }
-                    }
                     Vector2 gridPos = new Vector2(mapStartX + x * cellSize, mapStartY + y * cellSize);
-                    elements.Add(new GridElement(texture, color, gridPos));
+                    elements.Add(new GridElement(GetTerrainTexture(noise), GetTerrainColor(noise), gridPos));
                 }
             }
+
+            // Layer 2: Player Path/Action Markers
+            var allPlayerActions = new List<IAction>(_gameState.PendingActions);
+            var activePlayerAction = Core.ComponentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId) ?? (IAction)Core.ComponentStore.GetComponent<RestAction>(_gameState.PlayerEntityId);
+            if (activePlayerAction != null)
+            {
+                allPlayerActions.Add(activePlayerAction);
+            }
+
+            foreach (var action in allPlayerActions)
+            {
+                Vector2 actionPos = Vector2.Zero;
+                Texture2D actionTexture = null;
+                Color actionColor = Color.Transparent;
+
+                if (action is MoveAction moveAction)
+                {
+                    actionPos = moveAction.Destination;
+                    actionTexture = moveAction.IsRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
+                    actionColor = moveAction.IsRunning ? Global.Instance.RunPathColor : Global.Instance.PathColor;
+                }
+                else if (action is RestAction restAction)
+                {
+                    actionPos = restAction.Position;
+                    actionTexture = restAction.RestType == RestType.ShortRest ? Core.CurrentSpriteManager.ShortRestSprite : Core.CurrentSpriteManager.LongRestSprite;
+                    actionColor = Global.Instance.ShortRestColor;
+                }
+
+                Vector2? screenPos = MapCoordsToScreen(actionPos);
+                if (screenPos.HasValue)
+                {
+                    elements.Add(new GridElement(actionTexture, actionColor, screenPos.Value));
+                }
+            }
+
+            // Layer 3: Player Entity (drawn last to be on top)
+            var playerRenderComp = Core.ComponentStore.GetComponent<RenderableComponent>(_gameState.PlayerEntityId);
+            if (playerRenderComp != null)
+            {
+                Vector2? screenPos = MapCoordsToScreen(_gameState.PlayerWorldPos);
+                if (screenPos.HasValue)
+                {
+                    elements.Add(new GridElement(playerRenderComp.Texture, playerRenderComp.Color, screenPos.Value));
+                }
+            }
+
             return elements;
         }
 
@@ -391,57 +372,57 @@ namespace ProjectVagabond
             Color bgColor = Global.Instance.Palette_DarkGray;
             Texture2D pixel = Core.Pixel;
 
+            // Layer 1: Background
             for (int y = 0; y < gridSize; y++)
             {
                 for (int x = 0; x < gridSize; x++)
                 {
-                    Vector2 localPos = new Vector2(x, y);
-                    Texture2D texture = pixel;
-                    Color color = bgColor;
-
-                    if (localPos == _gameState.PlayerLocalPos)
-                    {
-                        texture = pixel;
-                        color = Global.Instance.PlayerColor;
-                    }
-                    else
-                    {
-                        // Combine queued actions and the active action for rendering
-                        var allActionsAtPos = new List<IAction>();
-
-                        // Get actions from the queue
-                        var queuedActions = _gameState.PendingActions
-                            .OfType<MoveAction>()
-                            .Where(ma => ma.Destination == localPos);
-                        allActionsAtPos.AddRange(queuedActions);
-
-                        // Get the currently executing action component
-                        var activeMoveAction = Core.ComponentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId);
-                        if (activeMoveAction != null && activeMoveAction.Destination == localPos)
-                        {
-                            allActionsAtPos.Add(activeMoveAction);
-                        }
-
-                        if (allActionsAtPos.Any())
-                        {
-                            bool isRunning = allActionsAtPos.OfType<MoveAction>().Any(ma => ma.IsRunning);
-                            texture = isRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
-
-                            var lastActionInQueue = _gameState.PendingActions.LastOrDefault() as MoveAction;
-                            if (lastActionInQueue != null && lastActionInQueue.Destination == localPos)
-                            {
-                                color = Global.Instance.PathEndColor;
-                            }
-                            else
-                            {
-                                color = isRunning ? Global.Instance.RunPathColor : Global.Instance.PathColor;
-                            }
-                        }
-                    }
                     Vector2 gridPos = new Vector2(mapStartX + x * cellSize, mapStartY + y * cellSize);
-                    elements.Add(new GridElement(texture, color, gridPos));
+                    elements.Add(new GridElement(pixel, bgColor, gridPos));
                 }
             }
+
+            // Layer 2: Player Path
+            var allPlayerActions = new List<IAction>(_gameState.PendingActions);
+            var activePlayerAction = Core.ComponentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId);
+            if (activePlayerAction != null)
+            {
+                allPlayerActions.Add(activePlayerAction);
+            }
+
+            foreach (var action in allPlayerActions.OfType<MoveAction>())
+            {
+                Vector2? screenPos = MapCoordsToScreen(action.Destination);
+                if (screenPos.HasValue)
+                {
+                    Texture2D texture = action.IsRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
+                    Color color = action.IsRunning ? Global.Instance.RunPathColor : Global.Instance.PathColor;
+                    elements.Add(new GridElement(texture, color, screenPos.Value));
+                }
+            }
+
+            // Layer 3: Entities
+            foreach (var entityId in _gameState.ActiveEntities)
+            {
+                var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+                var renderComp = Core.ComponentStore.GetComponent<RenderableComponent>(entityId);
+
+                if (localPosComp != null && renderComp != null)
+                {
+                    Vector2? screenPos = MapCoordsToScreen(localPosComp.LocalPosition);
+                    if (screenPos.HasValue)
+                    {
+                        // Use a pixel for the player in local view, but their assigned texture/color otherwise
+                        Texture2D textureToDraw = renderComp.Texture;
+                        if (entityId == _gameState.PlayerEntityId)
+                        {
+                            textureToDraw = Core.Pixel;
+                        }
+                        elements.Add(new GridElement(textureToDraw, renderComp.Color, screenPos.Value));
+                    }
+                }
+            }
+
             return elements;
         }
 

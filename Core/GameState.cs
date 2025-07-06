@@ -42,7 +42,7 @@ namespace ProjectVagabond
             int masterSeed = RandomNumberGenerator.GetInt32(1, 99999) + Environment.TickCount;
             _noiseManager = new NoiseMapManager(masterSeed);
 
-            // Create Player
+            // Create Player (without renderable component initially)
             PlayerEntityId = Core.EntityManager.CreateEntity();
             Core.ComponentStore.AddComponent(PlayerEntityId, new PositionComponent { WorldPosition = new Vector2(0, 0) });
             Core.ComponentStore.AddComponent(PlayerEntityId, new LocalPositionComponent { LocalPosition = new Vector2(32, 32) });
@@ -51,7 +51,7 @@ namespace ProjectVagabond
             Core.ComponentStore.AddComponent(PlayerEntityId, new PlayerTagComponent());
             Core.ChunkManager.RegisterEntity(PlayerEntityId, PlayerWorldPos);
 
-            // Create NPC
+            // Create NPC (without renderable component initially)
             int npcId = Core.EntityManager.CreateEntity();
             var npcWorldPos = new Vector2(0, 0); // Start in the same chunk as the player
             Core.ComponentStore.AddComponent(npcId, new PositionComponent { WorldPosition = npcWorldPos });
@@ -60,6 +60,23 @@ namespace ProjectVagabond
             Core.ComponentStore.AddComponent(npcId, new AIComponent());
             Core.ComponentStore.AddComponent(npcId, new NPCTagComponent());
             Core.ChunkManager.RegisterEntity(npcId, npcWorldPos);
+        }
+
+        /// <summary>
+        /// Initializes components that depend on loaded content.
+        /// This should be called from Core.LoadContent().
+        /// </summary>
+        public void InitializeRenderableEntities()
+        {
+            // Now that sprites are loaded, we can safely add the RenderableComponents.
+            Core.ComponentStore.AddComponent(PlayerEntityId, new RenderableComponent(Core.CurrentSpriteManager.PlayerSprite, Global.Instance.PlayerColor));
+
+            var npcEntities = Core.ComponentStore.GetAllEntitiesWithComponent<NPCTagComponent>().ToList();
+            foreach (var npcId in npcEntities)
+            {
+                // The NPC was being given the player's sprite. Let's use a generic pixel for now.
+                Core.ComponentStore.AddComponent(npcId, new RenderableComponent(Core.Pixel, Color.CornflowerBlue));
+            }
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

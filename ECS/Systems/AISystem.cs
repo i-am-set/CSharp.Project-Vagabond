@@ -29,8 +29,6 @@ namespace ProjectVagabond
         public void ProcessEntities(int timeBudget)
         {
             var gameState = Core.CurrentGameState;
-            // --- ADD THIS LINE ---
-            Core.CurrentTerminalRenderer.AddOutputToHistory($"[debug]AISystem processing with a time budget of {timeBudget}s.");
 
             foreach (var entityId in gameState.ActiveEntities)
             {
@@ -130,8 +128,6 @@ namespace ProjectVagabond
                 var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
                 if (localPosComp != null)
                 {
-                    // --- ADD THIS LINE ---
-                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[debug]NPC {entityId} moved to local pos {moveAction.Destination}.");
                     localPosComp.LocalPosition = moveAction.Destination;
                     // Check if the NPC moved to the edge of the local map
                     if (localPosComp.LocalPosition.X == 0 || localPosComp.LocalPosition.X == Global.LOCAL_GRID_SIZE - 1 ||

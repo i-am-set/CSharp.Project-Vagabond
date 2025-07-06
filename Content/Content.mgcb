@@ -44,18 +44,6 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/flatland.png
 
-#begin Sprites/flatland.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/flatland.png
-
 #begin Sprites/hill.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -67,30 +55,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/hill.png
-
-#begin Sprites/hill.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/hill.png
-
-#begin Sprites/logo.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/logo.png
 
 #begin Sprites/logo.png
 /importer:TextureImporter
@@ -116,18 +80,6 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/longRest.png
 
-#begin Sprites/longRest.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/longRest.png
-
 #begin Sprites/mountain.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -139,30 +91,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/mountain.png
-
-#begin Sprites/mountain.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/mountain.png
-
-#begin Sprites/peak.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/peak.png
 
 #begin Sprites/peak.png
 /importer:TextureImporter
@@ -188,18 +116,6 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/shortRest.png
 
-#begin Sprites/shortRest.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/shortRest.png
-
 #begin Sprites/speedMark.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -212,7 +128,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/speedMark.png
 
-#begin Sprites/speedMark.png
+#begin Sprites/UI/ButtonIcons/ui_settings_icon.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -222,7 +138,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/speedMark.png
+/build:Sprites/UI/ButtonIcons/ui_settings_icon.png;Sprites/UI/ButtonIcons/ui_settings_icon
 
 #begin Sprites/UI/ButtonIcons/ui_settings_icon.png
 /importer:TextureImporter
@@ -428,7 +344,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/KeyPrompts/ui_key_up.png;Sprites/UI/KeyPrompts/ui_key_up
 
-#begin Sprites/warningMark.png
+#begin Sprites/UI/ui_local_map_selector.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -438,7 +354,19 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/warningMark.png
+/build:Sprites/UI/ui_local_map_selector.png;Sprites/UI/ui_local_map_selector
+
+#begin Sprites/UI/ui_world_map_selector.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/ui_world_map_selector.png;Sprites/UI/ui_world_map_selector
 
 #begin Sprites/warningMark.png
 /importer:TextureImporter
@@ -451,18 +379,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/warningMark.png
-
-#begin Sprites/water.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/water.png
 
 #begin Sprites/water.png
 /importer:TextureImporter

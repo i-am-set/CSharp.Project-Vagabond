@@ -25,7 +25,8 @@ namespace ProjectVagabond
         private Texture2D _warningMarkSprite;
         private Texture2D _emptySprite;
         private Texture2D _speedMarkSprite;
-        private Texture2D _mapHoverMarkerSprite;
+        private Texture2D _worldMapHoverSelectorSprite;
+        private Texture2D _localMapHoverSelectorSprite;
         private Texture2D _circleTextureSprite;
         private Texture2D _settingsIconSprite;
 
@@ -44,7 +45,8 @@ namespace ProjectVagabond
         public Texture2D WarningMarkSprite => _warningMarkSprite;
         public Texture2D EmptySprite => _emptySprite;
         public Texture2D SpeedMarkSprite => _speedMarkSprite;
-        public Texture2D MapHoverMarkerSprite => _mapHoverMarkerSprite;
+        public Texture2D WorldMapHoverSelectorSprite => _worldMapHoverSelectorSprite;
+        public Texture2D LocalMapHoverSelectorSprite => _localMapHoverSelectorSprite;
         public Texture2D CircleTextureSprite => _circleTextureSprite;
         public Texture2D SettingsIconSprite => _settingsIconSprite;
 
@@ -193,11 +195,20 @@ namespace ProjectVagabond
 
             try
             {
-                _mapHoverMarkerSprite = Core.CurrentTextureFactory.CreateSelectionSquareTexture();
+                _worldMapHoverSelectorSprite = Core.Instance.Content.Load<Texture2D>("Sprites/UI/ui_world_map_selector");
             }
             catch (Exception)
             {
-                _mapHoverMarkerSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
+                _worldMapHoverSelectorSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
+            }
+
+            try
+            {
+                _localMapHoverSelectorSprite = Core.Instance.Content.Load<Texture2D>("Sprites/UI/ui_local_map_selector");
+            }
+            catch (Exception)
+            {
+                _localMapHoverSelectorSprite = Core.CurrentTextureFactory.CreateColoredTexture(5, 5, Color.Red);
             }
 
             try
@@ -207,7 +218,7 @@ namespace ProjectVagabond
             catch (Exception)
             {
 
-                _mapHoverMarkerSprite = Core.CurrentTextureFactory.CreateColoredTexture(16, 16, Color.Red);
+                _circleTextureSprite = Core.CurrentTextureFactory.CreateColoredTexture(16, 16, Color.Red);
             }
 
             try
@@ -217,7 +228,7 @@ namespace ProjectVagabond
             catch (Exception)
             {
 
-                _mapHoverMarkerSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
+                _settingsIconSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
             }
         }
     }
