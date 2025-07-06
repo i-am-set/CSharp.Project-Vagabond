@@ -238,6 +238,13 @@ namespace ProjectVagabond
 
                     int moveDuration = GetSecondsPassedDuringMovement(moveAction.IsRunning, mapData, moveDirection, isLocalSim);
 
+                    // Apply first-move time scaling for world map simulation
+                    if (!isLocalSim && isFirstMoveInQueue)
+                    {
+                        float scaleFactor = GetFirstMoveTimeScaleFactor(moveDirection);
+                        moveDuration = (int)Math.Ceiling(moveDuration * scaleFactor);
+                    }
+
                     secondsPassed += moveDuration;
                     int cost = GetMovementEnergyCost(moveAction, isLocalSim);
 
@@ -288,19 +295,13 @@ namespace ProjectVagabond
         {
             if (_isExecutingActions)
             {
+                Core.ActionExecutionSystem.HandleInterruption(); // Let the system handle partial effects
                 ToggleExecutingActions(false);
                 _isPaused = false;
                 PendingActions.Clear();
                 ToggleIsFreeMoveMode(false);
                 Core.CurrentWorldClockManager.CancelInterpolation();
-                if (interrupted)
-                {
-                    Core.CurrentTerminalRenderer.AddOutputToHistory("[cancel]Action queue interrupted.");
-                }
-                else
-                {
-                    Core.CurrentTerminalRenderer.AddOutputToHistory("[cancel]Action queue cancelled.");
-                }
+                Core.CurrentTerminalRenderer.AddOutputToHistory(interrupted ? "[cancel]Action queue interrupted." : "[cancel]Action queue cancelled.");
             }
         }
 

@@ -27,6 +27,53 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Called when an action queue is forcefully stopped mid-execution.
+        /// It applies partial effects for the action that was in progress.
+        /// </summary>
+        public void HandleInterruption()
+        {
+            var gameState = Core.CurrentGameState;
+            int playerEntityId = gameState.PlayerEntityId;
+
+            var moveAction = Core.ComponentStore.GetComponent<MoveAction>(playerEntityId);
+            if (moveAction != null && gameState.PathExecutionMapView == MapView.World)
+            {
+                float progress = Core.CurrentWorldClockManager.GetInterpolationProgress();
+                if (progress > 0.01f) // Only apply if some progress was made
+                {
+                    // Player does NOT change world chunks on interruption.
+                    // We only update their local position within the CURRENT chunk.
+                    var posComp = Core.ComponentStore.GetComponent<PositionComponent>(playerEntityId);
+                    var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(playerEntityId);
+                    var statsComp = Core.ComponentStore.GetComponent<StatsComponent>(playerEntityId);
+
+                    Vector2 moveDir = moveAction.Destination - posComp.WorldPosition;
+
+                    // The player was at the center of the local map when the world move started.
+                    // We calculate their new position based on how far they moved towards the edge.
+                    Vector2 startLocalPos = new Vector2(32, 32);
+                    Vector2 targetLocalPos = startLocalPos;
+                    if (moveDir.X > 0) targetLocalPos.X = 63; else if (moveDir.X < 0) targetLocalPos.X = 0;
+                    if (moveDir.Y > 0) targetLocalPos.Y = 63; else if (moveDir.Y < 0) targetLocalPos.Y = 0;
+
+                    Vector2 newLocalPos = Vector2.Lerp(startLocalPos, targetLocalPos, progress);
+                    localPosComp.LocalPosition = new Vector2(
+                        MathHelper.Clamp((int)newLocalPos.X, 0, Global.LOCAL_GRID_SIZE - 1),
+                        MathHelper.Clamp((int)newLocalPos.Y, 0, Global.LOCAL_GRID_SIZE - 1)
+                    );
+
+                    // Also apply partial energy cost
+                    int fullEnergyCost = gameState.GetMovementEnergyCost(moveAction, false);
+                    int energyToExert = (int)Math.Ceiling(fullEnergyCost * progress);
+                    statsComp.ExertEnergy(energyToExert);
+                }
+            }
+            // Clean up the action components
+            Core.ComponentStore.RemoveComponent<MoveAction>(playerEntityId);
+            Core.ComponentStore.RemoveComponent<RestAction>(playerEntityId);
+        }
+
+        /// <summary>
         /// Updates the action system, processing actions for the player.
         /// </summary>
         public void Update(GameTime gameTime)
@@ -147,7 +194,16 @@ namespace ProjectVagabond
                 Vector2 moveDirection = moveAction.Destination - previousPosition;
                 int fullDuration = gameState.GetSecondsPassedDuringMovement(moveAction.IsRunning, mapData, moveDirection, isLocalMove);
 
-                return fullDuration;
+                int finalDuration = fullDuration;
+                // If this is the first world move, scale the time based on local position.
+                if (!isLocalMove && _isFirstPlayerAction)
+                {
+                    float scaleFactor = gameState.GetFirstMoveTimeScaleFactor(moveDirection);
+                    finalDuration = (int)Math.Ceiling(fullDuration * scaleFactor);
+                }
+
+                // A move must always take at least 1 second to ensure time passes.
+                return Math.Max(1, finalDuration);
             }
             else if (action is RestAction restAction)
             {
@@ -201,6 +257,8 @@ namespace ProjectVagabond
 
                 Core.ChunkManager.UpdateEntityChunk(entityId, oldWorldPos, nextPosition);
 
+                // On completing a world move, the player's local position is reset
+                // to the entry point of the new local area.
                 Vector2 moveDir = nextPosition - oldWorldPos;
                 Vector2 newLocalPos = new Vector2(32, 32);
                 if (moveDir.X > 0) newLocalPos.X = 0; else if (moveDir.X < 0) newLocalPos.X = 63;
