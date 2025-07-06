@@ -7,40 +7,7 @@ using System.Security.Cryptography;
 
 namespace ProjectVagabond
 {
-    public enum ActionType
-    {
-        WalkMove,
-        RunMove,
-        ShortRest,
-        LongRest,
-        FullRest
-    }
-
     public enum MapView { World, Local }
-
-    public class PendingAction
-    {
-        public ActionType Type { get; }
-        public Vector2 Position { get; }
-        public RestType? ActionRestType { get; }
-
-        public PendingAction(Vector2 position, bool isRunning = true)
-        {
-            Type = isRunning ? ActionType.RunMove : ActionType.WalkMove;
-            Position = position;
-            ActionRestType = null;
-        }
-
-        public PendingAction(RestType restType, Vector2 position)
-        {
-            if (restType == RestType.ShortRest) Type = ActionType.ShortRest;
-            else if (restType == RestType.LongRest) Type = ActionType.LongRest;
-            else if (restType == RestType.FullRest) Type = ActionType.FullRest;
-
-            Position = position;
-            this.ActionRestType = restType;
-        }
-    }
 
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -56,7 +23,7 @@ namespace ProjectVagabond
         public int PlayerEntityId { get; private set; }
         public Vector2 PlayerWorldPos => Core.ComponentStore.GetComponent<PositionComponent>(PlayerEntityId).WorldPosition;
         public Vector2 PlayerLocalPos => Core.ComponentStore.GetComponent<LocalPositionComponent>(PlayerEntityId).LocalPosition;
-        public List<PendingAction> PendingActions => Core.ComponentStore.GetComponent<ActionQueueComponent>(PlayerEntityId).ActionQueue;
+        public Queue<IAction> PendingActions => Core.ComponentStore.GetComponent<ActionQueueComponent>(PlayerEntityId).ActionQueue;
         public bool IsExecutingPath => _isExecutingPath;
         public bool IsPaused => _isPaused;
         public bool IsFreeMoveMode => _isFreeMoveMode;
@@ -65,6 +32,7 @@ namespace ProjectVagabond
         public MapView CurrentMapView { get; private set; } = MapView.World;
         public (int finalEnergy, bool possible, int secondsPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
         public List<int> ActiveEntities { get; private set; } = new List<int>();
+        public int InitialActionCount { get; private set; }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -124,11 +92,13 @@ namespace ProjectVagabond
             ToggleIsFreeMoveMode(false);
             if (toggle)
             {
+                InitialActionCount = PendingActions.Count;
                 PathExecutionMapView = CurrentMapView;
                 Core.ActionExecutionSystem.StartExecution();
             }
             else
             {
+                InitialActionCount = 0;
                 Core.ActionExecutionSystem.StopExecution();
             }
             _isExecutingPath = toggle;
@@ -170,23 +140,23 @@ namespace ProjectVagabond
             return IsPositionPassable(position, view, out _);
         }
 
-        public int GetMovementEnergyCost(PendingAction action, bool isLocalMove = false)
+        public int GetMovementEnergyCost(MoveAction action, bool isLocalMove = false)
         {
-            if (isLocalMove || action.Type == ActionType.WalkMove)
+            if (isLocalMove || !action.IsRunning)
             {
                 return 0;
             }
 
-            if (action.Type == ActionType.RunMove)
+            if (action.IsRunning)
             {
-                var mapData = GetMapDataAt((int)action.Position.X, (int)action.Position.Y);
+                var mapData = GetMapDataAt((int)action.Destination.X, (int)action.Destination.Y);
                 return mapData.EnergyCost;
             }
 
             return 0;
         }
 
-        public int GetSecondsPassedDuringMovement(ActionType actionType, MapData mapData, Vector2 moveDirection, bool isLocalMove = false)
+        public int GetSecondsPassedDuringMovement(bool isRunning, MapData mapData, Vector2 moveDirection, bool isLocalMove = false)
         {
             float secondsPassed = 0;
             float timeMultiplier = 1.0f;
@@ -196,12 +166,7 @@ namespace ProjectVagabond
                 timeMultiplier = 1.5f;
             }
 
-            float baseTime = actionType switch
-            {
-                ActionType.WalkMove => 360f / PlayerStats.WalkSpeed,
-                ActionType.RunMove => 360f / PlayerStats.RunSpeed,
-                _ => 0
-            };
+            float baseTime = isRunning ? (360f / PlayerStats.RunSpeed) : (360f / PlayerStats.WalkSpeed);
 
             if (isLocalMove)
             {
@@ -222,7 +187,7 @@ namespace ProjectVagabond
             return (int)Math.Ceiling(secondsPassed * timeMultiplier);
         }
 
-        public (int finalEnergy, bool possible, int secondsPassed) SimulateActionQueueEnergy(List<PendingAction> customQueue = null)
+        public (int finalEnergy, bool possible, int secondsPassed) SimulateActionQueueEnergy(IEnumerable<IAction> customQueue = null)
         {
             var queueToSimulate = customQueue ?? PendingActions;
             if (!queueToSimulate.Any()) return (PlayerStats.CurrentEnergyPoints, true, 0);
@@ -237,55 +202,54 @@ namespace ProjectVagabond
 
             foreach (var action in queueToSimulate)
             {
-                switch (action.Type)
+                if (action is MoveAction moveAction)
                 {
-                    case ActionType.WalkMove:
-                    case ActionType.RunMove:
-                        Vector2 moveDirection = action.Position - lastPosition;
-                        MapData mapData = isLocalSim ? default : GetMapDataAt((int)action.Position.X, (int)action.Position.Y);
+                    Vector2 moveDirection = moveAction.Destination - lastPosition;
+                    MapData mapData = isLocalSim ? default : GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
 
-                        int moveDuration = GetSecondsPassedDuringMovement(action.Type, mapData, moveDirection, isLocalSim);
+                    int moveDuration = GetSecondsPassedDuringMovement(moveAction.IsRunning, mapData, moveDirection, isLocalSim);
 
-                        if (isFirstMoveInQueue && !isLocalSim)
-                        {
-                            float timeScaleFactor = GetFirstMoveTimeScaleFactor(moveDirection);
-                            moveDuration = (int)Math.Ceiling(moveDuration * timeScaleFactor);
-                        }
+                    if (isFirstMoveInQueue && !isLocalSim)
+                    {
+                        float timeScaleFactor = GetFirstMoveTimeScaleFactor(moveDirection);
+                        moveDuration = (int)Math.Ceiling(moveDuration * timeScaleFactor);
+                    }
 
-                        secondsPassed += moveDuration;
-                        int cost = GetMovementEnergyCost(action, isLocalSim);
+                    secondsPassed += moveDuration;
+                    int cost = GetMovementEnergyCost(moveAction, isLocalSim);
 
-                        if (isLocalSim && action.Type == ActionType.RunMove && !localRunCostApplied)
-                        {
-                            cost = 1;
-                            localRunCostApplied = true;
-                        }
+                    if (isLocalSim && moveAction.IsRunning && !localRunCostApplied)
+                    {
+                        cost = 1;
+                        localRunCostApplied = true;
+                    }
 
-                        if (finalEnergy < cost)
-                        {
-                            return (finalEnergy, false, secondsPassed);
-                        }
-                        finalEnergy -= cost;
-                        lastPosition = action.Position;
-                        break;
-                    case ActionType.ShortRest:
-                        finalEnergy += PlayerStats.ShortRestEnergyRestored;
-                        finalEnergy = Math.Min(finalEnergy, maxEnergy);
-                        secondsPassed += PlayerStats.ShortRestDuration * 60;
-                        lastPosition = action.Position;
-                        break;
-                    case ActionType.LongRest:
-                        finalEnergy += PlayerStats.LongRestEnergyRestored;
-                        finalEnergy = Math.Min(finalEnergy, maxEnergy);
-                        secondsPassed += PlayerStats.LongRestDuration * 60;
-                        lastPosition = action.Position;
-                        break;
-                    case ActionType.FullRest:
-                        finalEnergy += PlayerStats.FullRestEnergyRestored;
-                        finalEnergy = Math.Min(finalEnergy, maxEnergy);
-                        secondsPassed += PlayerStats.FullRestDuration * 60;
-                        lastPosition = action.Position;
-                        break;
+                    if (finalEnergy < cost)
+                    {
+                        return (finalEnergy, false, secondsPassed);
+                    }
+                    finalEnergy -= cost;
+                    lastPosition = moveAction.Destination;
+                }
+                else if (action is RestAction restAction)
+                {
+                    switch (restAction.RestType)
+                    {
+                        case RestType.ShortRest:
+                            finalEnergy += PlayerStats.ShortRestEnergyRestored;
+                            secondsPassed += PlayerStats.ShortRestDuration * 60;
+                            break;
+                        case RestType.LongRest:
+                            finalEnergy += PlayerStats.LongRestEnergyRestored;
+                            secondsPassed += PlayerStats.LongRestDuration * 60;
+                            break;
+                        case RestType.FullRest:
+                            finalEnergy += PlayerStats.FullRestEnergyRestored;
+                            secondsPassed += PlayerStats.FullRestDuration * 60;
+                            break;
+                    }
+                    finalEnergy = Math.Min(finalEnergy, maxEnergy);
+                    lastPosition = restAction.Position;
                 }
                 isFirstMoveInQueue = false;
             }
@@ -296,35 +260,9 @@ namespace ProjectVagabond
         {
             if (_isExecutingPath)
             {
-                var actionSystem = Core.ActionExecutionSystem;
-                var actionAwaitingExecution = actionSystem.CurrentActionAwaitingExecution;
-
-                if (actionAwaitingExecution != null && (actionAwaitingExecution.Type == ActionType.RunMove || actionAwaitingExecution.Type == ActionType.WalkMove))
-                {
-                    float progress = Core.CurrentWorldClockManager.GetInterpolationProgress();
-                    if (progress > 0 && progress < 1)
-                    {
-                        Vector2 newLocalPos;
-                        if (PathExecutionMapView == MapView.World)
-                        {
-                            Vector2 worldMoveDirection = actionAwaitingExecution.Position - PlayerWorldPos;
-                            Vector2 exitLocalPos = new Vector2(32, 32);
-                            if (worldMoveDirection.X > 0) exitLocalPos.X = 63; else if (worldMoveDirection.X < 0) exitLocalPos.X = 0;
-                            if (worldMoveDirection.Y > 0) exitLocalPos.Y = 63; else if (worldMoveDirection.Y < 0) exitLocalPos.Y = 0;
-                            if (worldMoveDirection.X != 0 && worldMoveDirection.Y == 0) exitLocalPos.Y = 32;
-                            if (worldMoveDirection.Y != 0 && worldMoveDirection.X == 0) exitLocalPos.X = 32;
-                            newLocalPos = Vector2.Lerp(PlayerLocalPos, exitLocalPos, progress);
-                        }
-                        else // Local move
-                        {
-                            Vector2 startPos = (actionSystem.CurrentPathIndex > 0) ? PendingActions[actionSystem.CurrentPathIndex - 1].Position : PlayerLocalPos;
-                            Vector2 endPos = actionAwaitingExecution.Position;
-                            newLocalPos = Vector2.Lerp(startPos, endPos, progress);
-                        }
-                        var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(PlayerEntityId);
-                        localPosComp.LocalPosition = new Vector2((int)Math.Round(newLocalPos.X), (int)Math.Round(newLocalPos.Y));
-                    }
-                }
+                // The new ActionExecutionSystem does not use _actionAwaitingExecution.
+                // The cancellation logic is simplified. We just stop execution and clear the queue.
+                // Any mid-action progress is handled by WorldClockManager.CancelInterpolation.
 
                 ToggleExecutingPath(false);
                 _isPaused = false;

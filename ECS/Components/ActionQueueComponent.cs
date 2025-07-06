@@ -1,4 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Cryptography;
 
 namespace ProjectVagabond
 {
@@ -7,6 +11,6 @@ namespace ProjectVagabond
     /// </summary>
     public class ActionQueueComponent : IComponent
     {
-        public List<PendingAction> ActionQueue { get; } = new List<PendingAction>();
+        public Queue<IAction> ActionQueue { get; } = new Queue<IAction>();
     }
 }

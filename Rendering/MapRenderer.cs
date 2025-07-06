@@ -17,7 +17,7 @@ namespace ProjectVagabond
         private Rectangle _mapGridBounds;
         private ContextMenu _contextMenu = new ContextMenu();
         private string _cachedTimeText;
-        private Vector2 _timeTextPos ;
+        private Vector2 _timeTextPos;
         private int _cachedMapStartX, _cachedMapWidth;
         private MapView _cachedMapView;
         private Dictionary<string, Button> _buttonMap;
@@ -71,7 +71,7 @@ namespace ProjectVagabond
                     }
                 }
             }
-            
+
             _hoveredGridPos = currentHoveredPos;
 
             if (currentHoveredPos.HasValue)
@@ -239,7 +239,7 @@ namespace ProjectVagabond
 
             if (_buttonMap.TryGetValue("map", out Button toggleMapButton))
             {
-                toggleMapButton.Text = 
+                toggleMapButton.Text =
                     _gameState.CurrentMapView == MapView.World
                         ? "Local Map"
                         : "World Map";
@@ -252,7 +252,7 @@ namespace ProjectVagabond
                 );
             }
 
-            if (_buttonMap.TryGetValue("stop", out Button stopButton) 
+            if (_buttonMap.TryGetValue("stop", out Button stopButton)
              && _buttonMap.TryGetValue("map", out toggleMapButton))
             {
                 stopButton.Bounds = new Rectangle(
@@ -263,7 +263,7 @@ namespace ProjectVagabond
                 );
             }
 
-            if (_buttonMap.TryGetValue("go", out Button goButton) 
+            if (_buttonMap.TryGetValue("go", out Button goButton)
              && _buttonMap.TryGetValue("stop", out stopButton))
             {
                 goButton.Bounds = new Rectangle(
@@ -324,25 +324,29 @@ namespace ProjectVagabond
                     }
                     else
                     {
-                        var actionsAtPos = _gameState.PendingActions.Where(a => a.Position == worldPos).ToList();
+                        var actionsAtPos = _gameState.PendingActions
+                            .Where(a => (a is MoveAction ma && ma.Destination == worldPos) || (a is RestAction ra && ra.Position == worldPos))
+                            .ToList();
+
                         if (actionsAtPos.Any())
                         {
-                            if (actionsAtPos.Any(a => a.Type == ActionType.ShortRest))
+                            if (actionsAtPos.Any(a => a is RestAction ra && ra.RestType == RestType.ShortRest))
                             {
                                 texture = Core.CurrentSpriteManager.ShortRestSprite;
                                 color = Global.Instance.ShortRestColor;
                             }
-                            else if (actionsAtPos.Any(a => a.Type == ActionType.LongRest))
+                            else if (actionsAtPos.Any(a => a is RestAction ra && ra.RestType == RestType.LongRest))
                             {
                                 texture = Core.CurrentSpriteManager.LongRestSprite;
                                 color = Global.Instance.LongRestColor;
                             }
-                            else if (actionsAtPos.Any(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove))
+                            else if (actionsAtPos.Any(a => a is MoveAction))
                             {
-                                bool isRunning = actionsAtPos.Any(a => a.Type == ActionType.RunMove);
+                                bool isRunning = actionsAtPos.OfType<MoveAction>().Any(ma => ma.IsRunning);
                                 texture = isRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
-                                var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
-                                if (lastMoveAction != null && lastMoveAction.Position == worldPos)
+
+                                var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a is MoveAction) as MoveAction;
+                                if (lastMoveAction != null && lastMoveAction.Destination == worldPos)
                                 {
                                     color = Global.Instance.PathEndColor;
                                 }
@@ -376,18 +380,23 @@ namespace ProjectVagabond
 
                     if (localPos == _gameState.PlayerLocalPos)
                     {
-                        texture = pixel; 
+                        texture = pixel;
                         color = Global.Instance.PlayerColor;
                     }
                     else
                     {
-                        var actionsAtPos = _gameState.PendingActions.Where(a => a.Position == localPos).ToList();
+                        var actionsAtPos = _gameState.PendingActions
+                            .OfType<MoveAction>()
+                            .Where(ma => ma.Destination == localPos)
+                            .ToList();
+
                         if (actionsAtPos.Any())
                         {
-                            bool isRunning = actionsAtPos.Any(a => a.Type == ActionType.RunMove);
+                            bool isRunning = actionsAtPos.Any(ma => ma.IsRunning);
                             texture = isRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
-                            var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
-                            if (lastMoveAction != null && lastMoveAction.Position == localPos)
+
+                            var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a is MoveAction) as MoveAction;
+                            if (lastMoveAction != null && lastMoveAction.Destination == localPos)
                             {
                                 color = Global.Instance.PathEndColor;
                             }

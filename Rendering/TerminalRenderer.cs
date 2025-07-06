@@ -252,22 +252,22 @@ namespace ProjectVagabond
             }
 
             var gameState = Core.CurrentGameState;
-            var actionSystem = Core.ActionExecutionSystem;
+            // The ActionExecutionSystem no longer has a CurrentPathIndex.
+            // We can just check if the other values have changed.
             if (gameState.PendingActions.Count != _cachedPendingActionCount ||
                 gameState.IsExecutingPath != _cachedIsExecutingPath ||
-                gameState.IsFreeMoveMode != _cachedIsFreeMoveMode ||
-                (gameState.IsExecutingPath && actionSystem.CurrentPathIndex != _cachedCurrentPathIndex))
+                gameState.IsFreeMoveMode != _cachedIsFreeMoveMode)
             {
                 _cachedPendingActionCount = gameState.PendingActions.Count;
                 _cachedIsExecutingPath = gameState.IsExecutingPath;
                 _cachedIsFreeMoveMode = gameState.IsFreeMoveMode;
-                _cachedCurrentPathIndex = actionSystem.CurrentPathIndex;
 
                 _stringBuilder.Clear();
                 _stringBuilder.Append("Actions Queued: ").Append(gameState.PendingActions.Count);
                 if (gameState.IsExecutingPath)
                 {
-                    _stringBuilder.Append(" | Executing: ").Append(actionSystem.CurrentPathIndex + 1).Append("/").Append(gameState.PendingActions.Count);
+                    // We can't easily get the current index, so we'll just show the total.
+                    _stringBuilder.Append(" | Executing...");
                 }
                 _cachedWrappedStatusText = WrapText(_stringBuilder.ToString(), GetTerminalContentWidthInPixels());
 
@@ -305,8 +305,8 @@ namespace ProjectVagabond
 
         private static string GetPromptText()
         {
-            int moveCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
-            int restCount = Core.CurrentGameState.PendingActions.Count(a => a.Type == ActionType.ShortRest || a.Type == ActionType.LongRest);
+            int moveCount = Core.CurrentGameState.PendingActions.Count(a => a is MoveAction);
+            int restCount = Core.CurrentGameState.PendingActions.Count(a => a is RestAction);
 
             var promptBuilder = new StringBuilder();
 

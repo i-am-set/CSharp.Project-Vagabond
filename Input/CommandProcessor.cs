@@ -153,7 +153,9 @@ namespace ProjectVagabond
                 AddOutputToHistory($"Pending actions in queue: {_gameState.PendingActions.Count}");
                 if (_gameState.IsExecutingPath)
                 {
-                    AddOutputToHistory($"Executing queue: action {Core.ActionExecutionSystem.CurrentPathIndex + 1}/{_gameState.PendingActions.Count}");
+                    int totalActions = _gameState.InitialActionCount;
+                    int completedActions = totalActions - _gameState.PendingActions.Count;
+                    AddOutputToHistory($"Executing queue: action {completedActions + 1}/{totalActions}");
                 }
             }, "pos [gray]- Show current position and queue status.");
 

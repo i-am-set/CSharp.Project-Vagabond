@@ -29,6 +29,7 @@ namespace ProjectVagabond
             var actionQueue = Core.ComponentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
             var playerStats = Core.ComponentStore.GetComponent<StatsComponent>(gameState.PlayerEntityId);
             var playerWorldPos = Core.ComponentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId).WorldPosition;
+            var playerEntityId = gameState.PlayerEntityId;
 
             bool isLocalPath = gameState.CurrentMapView == MapView.Local;
 
@@ -36,7 +37,7 @@ namespace ProjectVagabond
             {
                 foreach (var pos in path)
                 {
-                    actionQueue.Add(new PendingAction(pos, isRunning: isRunning));
+                    actionQueue.Enqueue(new MoveAction(playerEntityId, pos, isRunning));
                 }
                 return;
             }
@@ -44,20 +45,20 @@ namespace ProjectVagabond
             // For running on the world map, check energy for each step.
             foreach (var nextPos in path)
             {
-                var nextAction = new PendingAction(nextPos, isRunning: true);
-                var tempQueue = new List<PendingAction>(actionQueue) { nextAction };
+                var nextAction = new MoveAction(playerEntityId, nextPos, true);
+                var tempQueue = new List<IAction>(actionQueue) { nextAction };
                 var simulationResult = gameState.SimulateActionQueueEnergy(tempQueue);
 
                 if (!simulationResult.possible)
                 {
-                    Vector2 restPosition = actionQueue.Any() ? actionQueue.Last().Position : playerWorldPos;
-                    var restAction = new PendingAction(RestType.ShortRest, restPosition);
-                    var tempQueueWithRest = new List<PendingAction>(actionQueue) { restAction, nextAction };
+                    Vector2 restPosition = actionQueue.Any() ? ((actionQueue.Last() as MoveAction)?.Destination ?? playerWorldPos) : playerWorldPos;
+                    var restAction = new RestAction(playerEntityId, RestType.ShortRest, restPosition);
+                    var tempQueueWithRest = new List<IAction>(actionQueue) { restAction, nextAction };
 
                     if (gameState.SimulateActionQueueEnergy(tempQueueWithRest).possible)
                     {
-                        actionQueue.Add(restAction);
-                        actionQueue.Add(nextAction);
+                        actionQueue.Enqueue(restAction);
+                        actionQueue.Enqueue(nextAction);
                     }
                     else
                     {
@@ -67,7 +68,7 @@ namespace ProjectVagabond
                 }
                 else
                 {
-                    actionQueue.Add(nextAction);// Enough energy, just add the action
+                    actionQueue.Enqueue(nextAction);// Enough energy, just add the action
                 }
             }
         }
@@ -87,15 +88,25 @@ namespace ProjectVagabond
 
         public void RemovePendingActionsFrom(GameState gameState, int index)
         {
-            var actionQueue = Core.ComponentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
+            var actionQueueComp = Core.ComponentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId);
+            var actionQueue = actionQueueComp.ActionQueue;
             if (index < 0 || index >= actionQueue.Count) return;
-            actionQueue.RemoveRange(index, actionQueue.Count - index);
+
+            // Inefficient, but necessary to support indexed removal on a Queue as per instructions.
+            var tempList = actionQueue.ToList();
+            tempList.RemoveRange(index, tempList.Count - index);
+
+            actionQueue.Clear();
+            foreach (var action in tempList)
+            {
+                actionQueue.Enqueue(action);
+            }
         }
 
-        public void QueueAction(GameState gameState, PendingAction action)
+        public void QueueAction(GameState gameState, IAction action)
         {
             var actionQueue = Core.ComponentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
-            actionQueue.Add(action);
+            actionQueue.Enqueue(action);
         }
 
         public void QueueRest(GameState gameState, string[] args)
@@ -109,6 +120,7 @@ namespace ProjectVagabond
             var actionQueue = Core.ComponentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
             var playerLocalPos = Core.ComponentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId).LocalPosition;
             var playerWorldPos = Core.ComponentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId).WorldPosition;
+            var playerEntityId = gameState.PlayerEntityId;
 
             RestType restType = RestType.ShortRest;
             if (args.Length > 1)
@@ -125,8 +137,22 @@ namespace ProjectVagabond
                 Core.CurrentTerminalRenderer.AddOutputToHistory("Queued a short rest.");
             }
 
-            Vector2 restPosition = actionQueue.Any() ? actionQueue.Last().Position : (gameState.CurrentMapView == MapView.Local ? playerLocalPos : playerWorldPos);
-            actionQueue.Add(new PendingAction(restType, restPosition));
+            Vector2 restPosition;
+            var lastAction = actionQueue.LastOrDefault();
+            if (lastAction is MoveAction lastMove)
+            {
+                restPosition = lastMove.Destination;
+            }
+            else if (lastAction is RestAction lastRest)
+            {
+                restPosition = lastRest.Position;
+            }
+            else
+            {
+                restPosition = (gameState.CurrentMapView == MapView.Local ? playerLocalPos : playerWorldPos);
+            }
+
+            actionQueue.Enqueue(new RestAction(playerEntityId, restType, restPosition));
         }
 
         private void QueueMovementInternal(GameState gameState, Vector2 direction, string[] args, bool isRunning)
@@ -141,6 +167,7 @@ namespace ProjectVagabond
             var playerStats = Core.ComponentStore.GetComponent<StatsComponent>(gameState.PlayerEntityId);
             var playerLocalPos = Core.ComponentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId).LocalPosition;
             var playerWorldPos = Core.ComponentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId).WorldPosition;
+            var playerEntityId = gameState.PlayerEntityId;
 
             bool isLocalMove = gameState.CurrentMapView == MapView.Local;
             int count = 1;
@@ -151,7 +178,7 @@ namespace ProjectVagabond
 
             if (isLocalMove && isRunning)
             {
-                if (!actionQueue.Any(a => a.Type == ActionType.RunMove))
+                if (!actionQueue.Any(a => a is MoveAction ma && ma.IsRunning))
                 {
                     if (!playerStats.CanExertEnergy(1))
                     {
@@ -164,18 +191,30 @@ namespace ProjectVagabond
             Vector2 oppositeDirection = -direction;
             int removedSteps = 0;
 
-            while (actionQueue.Count > 0 && removedSteps < count)
+            // This backtracking logic is inefficient with a Queue but maintained to follow original functionality.
+            var actionList = actionQueue.ToList();
+            while (actionList.Count > 0 && removedSteps < count)
             {
-                int lastMoveIndex = actionQueue.FindLastIndex(a => a.Type == ActionType.WalkMove || a.Type == ActionType.RunMove);
+                int lastMoveIndex = actionList.FindLastIndex(a => a is MoveAction);
                 if (lastMoveIndex == -1) break;
 
-                PendingAction lastMoveAction = actionQueue[lastMoveIndex];
-                Vector2 prevPos = (lastMoveIndex > 0) ? actionQueue[lastMoveIndex - 1].Position : (isLocalMove ? playerLocalPos : playerWorldPos);
-                Vector2 lastDirection = lastMoveAction.Position - prevPos;
+                MoveAction lastMoveAction = actionList[lastMoveIndex] as MoveAction;
+                Vector2 prevPos;
+                if (lastMoveIndex > 0)
+                {
+                    var prevAction = actionList[lastMoveIndex - 1];
+                    prevPos = (prevAction is MoveAction prevMove) ? prevMove.Destination : (prevAction as RestAction)?.Position ?? (isLocalMove ? playerLocalPos : playerWorldPos);
+                }
+                else
+                {
+                    prevPos = isLocalMove ? playerLocalPos : playerWorldPos;
+                }
+
+                Vector2 lastDirection = lastMoveAction.Destination - prevPos;
 
                 if (lastDirection == oppositeDirection)
                 {
-                    actionQueue.RemoveAt(lastMoveIndex);
+                    actionList.RemoveAt(lastMoveIndex);
                     removedSteps++;
                 }
                 else
@@ -183,11 +222,20 @@ namespace ProjectVagabond
                     break;
                 }
             }
+            // Rebuild queue after potential removals
+            actionQueue.Clear();
+            foreach (var action in actionList) actionQueue.Enqueue(action);
+
 
             int remainingSteps = count - removedSteps;
             if (remainingSteps > 0)
             {
-                Vector2 currentPos = actionQueue.Any() ? actionQueue.Last().Position : (isLocalMove ? playerLocalPos : playerWorldPos);
+                Vector2 currentPos;
+                var lastAction = actionQueue.LastOrDefault();
+                if (lastAction is MoveAction lastMove) currentPos = lastMove.Destination;
+                else if (lastAction is RestAction lastRest) currentPos = lastRest.Position;
+                else currentPos = isLocalMove ? playerLocalPos : playerWorldPos;
+
                 int validSteps = 0;
 
                 for (int i = 0; i < remainingSteps; i++)
@@ -208,8 +256,8 @@ namespace ProjectVagabond
                         break;
                     }
 
-                    var nextAction = new PendingAction(nextPos, isRunning);
-                    var tempQueue = new List<PendingAction>(actionQueue) { nextAction };
+                    var nextAction = new MoveAction(playerEntityId, nextPos, isRunning);
+                    var tempQueue = new List<IAction>(actionQueue) { nextAction };
                     var simulationResult = gameState.SimulateActionQueueEnergy(tempQueue);
 
                     if (!simulationResult.possible)
@@ -217,15 +265,15 @@ namespace ProjectVagabond
                         if (gameState.IsFreeMoveMode && !isLocalMove)
                         {
                             Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Not enough energy. Auto-queuing a short rest.");
-                            Vector2 restPosition = actionQueue.Any() ? actionQueue.Last().Position : playerWorldPos;
+                            Vector2 restPosition = actionQueue.Any() ? ((actionQueue.Last() as MoveAction)?.Destination ?? playerWorldPos) : playerWorldPos;
 
-                            var tempQueueWithRest = new List<PendingAction>(actionQueue);
-                            tempQueueWithRest.Add(new PendingAction(RestType.ShortRest, restPosition));
+                            var tempQueueWithRest = new List<IAction>(actionQueue);
+                            tempQueueWithRest.Add(new RestAction(playerEntityId, RestType.ShortRest, restPosition));
                             tempQueueWithRest.Add(nextAction);
 
                             if (gameState.SimulateActionQueueEnergy(tempQueueWithRest).possible)
                             {
-                                actionQueue.Add(new PendingAction(RestType.ShortRest, restPosition));
+                                actionQueue.Enqueue(new RestAction(playerEntityId, RestType.ShortRest, restPosition));
                             }
                             else
                             {
@@ -243,7 +291,7 @@ namespace ProjectVagabond
                     }
 
                     currentPos = nextPos;
-                    actionQueue.Add(nextAction);
+                    actionQueue.Enqueue(nextAction);
                     validSteps++;
                 }
 

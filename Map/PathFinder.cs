@@ -66,9 +66,8 @@ namespace ProjectVagabond
                     }
                     else
                     {
-                        var actionType = isRunning ? ActionType.RunMove : ActionType.WalkMove;
                         Vector2 moveDir = _neighborOffsets[i];
-                        moveCost = gameState.GetSecondsPassedDuringMovement(actionType, mapData, moveDir, mapView == MapView.Local);
+                        moveCost = gameState.GetSecondsPassedDuringMovement(isRunning, mapData, moveDir, mapView == MapView.Local);
                     }
 
                     float tentative_gScore = current_gScore + moveCost;
@@ -94,7 +93,7 @@ namespace ProjectVagabond
             {
                 path.Add(current);
             }
-            
+
             path.RemoveAt(path.Count - 1);
             path.Reverse();
             return path;
