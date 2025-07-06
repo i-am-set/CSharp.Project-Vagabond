@@ -15,9 +15,10 @@ namespace ProjectVagabond
         /// Spawns a new entity based on a specified archetype at a given position.
         /// </summary>
         /// <param name="archetypeId">The ID of the archetype to spawn (e.g., "player", "wanderer_npc").</param>
-        /// <param name="position">The world position where the entity should be spawned.</param>
+        /// <param name="worldPosition">The world position where the entity should be spawned.</param>
+        /// <param name="localPosition">The local position where the entity should be spawned within its world chunk.</param>
         /// <returns>The entity ID of the newly spawned entity, or -1 if spawning fails.</returns>
-        public static int Spawn(string archetypeId, Vector2 position)
+        public static int Spawn(string archetypeId, Vector2 worldPosition, Vector2 localPosition)
         {
             var archetype = ArchetypeManager.Instance.GetArchetype(archetypeId);
             if (archetype == null)
@@ -41,13 +42,19 @@ namespace ProjectVagabond
                         continue;
                     }
 
-                    // Create an instance of the component
+                    // Create an instance of the component using its parameterless constructor
                     object componentInstance = Activator.CreateInstance(componentType);
 
                     // Set properties from the JSON definition
                     if (componentDef.TryGetValue("Properties", out object props) && props is JsonElement propertiesElement)
                     {
                         PopulateComponentProperties(componentInstance, propertiesElement);
+                    }
+
+                    // If the component needs post-property-setting logic, run it now.
+                    if (componentInstance is IInitializableComponent initializable)
+                    {
+                        initializable.Initialize();
                     }
 
                     // Add the fully populated component to the store
@@ -61,15 +68,21 @@ namespace ProjectVagabond
                 }
             }
 
-            // After all components are added, set the specific spawn position
+            // After all components are added, set the specific spawn positions
             var posComp = Core.ComponentStore.GetComponent<PositionComponent>(entityId);
             if (posComp != null)
             {
-                posComp.WorldPosition = position;
+                posComp.WorldPosition = worldPosition;
+            }
+
+            var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+            if (localPosComp != null)
+            {
+                localPosComp.LocalPosition = localPosition;
             }
 
             // Register the new entity with the spatial partitioning system
-            Core.ChunkManager.RegisterEntity(entityId, position);
+            Core.ChunkManager.RegisterEntity(entityId, worldPosition);
 
             return entityId;
         }

@@ -41,25 +41,15 @@ namespace ProjectVagabond
         {
             int masterSeed = RandomNumberGenerator.GetInt32(1, 99999) + Environment.TickCount;
             _noiseManager = new NoiseMapManager(masterSeed);
+        }
 
-            // Create Player (without renderable component initially)
-            PlayerEntityId = Core.EntityManager.CreateEntity();
-            Core.ComponentStore.AddComponent(PlayerEntityId, new PositionComponent { WorldPosition = new Vector2(0, 0) });
-            Core.ComponentStore.AddComponent(PlayerEntityId, new LocalPositionComponent { LocalPosition = new Vector2(32, 32) });
-            Core.ComponentStore.AddComponent(PlayerEntityId, new StatsComponent(5, 5, 5, 5, 5));
-            Core.ComponentStore.AddComponent(PlayerEntityId, new ActionQueueComponent());
-            Core.ComponentStore.AddComponent(PlayerEntityId, new PlayerTagComponent());
-            Core.ChunkManager.RegisterEntity(PlayerEntityId, PlayerWorldPos);
+        public void InitializeWorld()
+        {
+            // Spawn player and assign its ID to the GameState
+            PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0), localPosition: new Vector2(32, 32));
 
-            // Create NPC (without renderable component initially)
-            int npcId = Core.EntityManager.CreateEntity();
-            var npcWorldPos = new Vector2(0, 0); // Start in the same chunk as the player
-            Core.ComponentStore.AddComponent(npcId, new PositionComponent { WorldPosition = npcWorldPos });
-            Core.ComponentStore.AddComponent(npcId, new LocalPositionComponent { LocalPosition = new Vector2(10, 10) });
-            Core.ComponentStore.AddComponent(npcId, new ActionQueueComponent());
-            Core.ComponentStore.AddComponent(npcId, new AIComponent());
-            Core.ComponentStore.AddComponent(npcId, new NPCTagComponent());
-            Core.ChunkManager.RegisterEntity(npcId, npcWorldPos);
+            // Spawn an NPC
+            Spawner.Spawn("wanderer_npc", worldPosition: new Vector2(0, 0), localPosition: new Vector2(40, 40));
         }
 
         /// <summary>

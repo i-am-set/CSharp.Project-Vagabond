@@ -2,14 +2,14 @@
 
 namespace ProjectVagabond
 {
-    public class StatsComponent : IComponent
+    public class StatsComponent : IComponent, IInitializableComponent
     {
-        // Main stats (1-10, average 5)
-        private int _strength;
-        private int _agility;
-        private int _tenacity;
-        private int _intelligence;
-        private int _charm;
+        // Main stats (1-10) - now with public setters for the Spawner
+        public int Strength { get; set; }
+        public int Agility { get; set; }
+        public int Tenacity { get; set; }
+        public int Intelligence { get; set; }
+        public int Charm { get; set; }
 
         // Secondary stats (calculated from main stats)
         private int _maxHealthPoints;
@@ -40,13 +40,6 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // PROPERTIES
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
-        // Main stats (read-only)
-        public int Strength => _strength;
-        public int Agility => _agility;
-        public int Tenacity => _tenacity;
-        public int Intelligence => _intelligence;
-        public int Charm => _charm;
 
         // Secondary stats (read-only)
         public int MaxHealthPoints => _maxHealthPoints;
@@ -80,17 +73,31 @@ namespace ProjectVagabond
         public bool IsExhausted => _currentEnergyPoints <= 0;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        // CONSTRUCTOR
+        // CONSTRUCTOR & INITIALIZATION
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public StatsComponent(int strength = 5, int agility = 5, int tenacity = 5, int intelligence = 5, int charm = 5)
+        /// <summary>
+        /// Parameterless constructor required by the Spawner.
+        /// </summary>
+        public StatsComponent()
         {
-            SetMainStats(strength, agility, tenacity, intelligence, charm);
-
-            // Set default character info
+            // Set temporary default character info
             _weight = 70f;
             _age = 25;
             _background = "Wanderer";
+        }
+
+        /// <summary>
+        /// Called by the Spawner after all properties from the JSON have been set.
+        /// </summary>
+        public void Initialize()
+        {
+            // Clamp values to ensure they are within the valid 1-10 range
+            Strength = Math.Clamp(Strength, 1, 10);
+            Agility = Math.Clamp(Agility, 1, 10);
+            Tenacity = Math.Clamp(Tenacity, 1, 10);
+            Intelligence = Math.Clamp(Intelligence, 1, 10);
+            Charm = Math.Clamp(Charm, 1, 10);
 
             RecalculateSecondaryStats();
             RestoreToFull();
@@ -102,13 +109,13 @@ namespace ProjectVagabond
 
         public void SetMainStats(int strength, int agility, int tenacity, int intelligence, int charm)
         {
-            _strength = Math.Clamp(strength, 1, 10);
-            _agility = Math.Clamp(agility, 1, 10);
-            _tenacity = Math.Clamp(tenacity, 1, 10);
-            _intelligence = Math.Clamp(intelligence, 1, 10);
-            _charm = Math.Clamp(charm, 1, 10);
+            Strength = strength;
+            Agility = agility;
+            Tenacity = tenacity;
+            Intelligence = intelligence;
+            Charm = charm;
 
-            RecalculateSecondaryStats();
+            Initialize(); // Use the same finalization logic
         }
 
         public void ModifyMainStat(StatType statType, int amount)
@@ -116,19 +123,19 @@ namespace ProjectVagabond
             switch (statType)
             {
                 case StatType.Strength:
-                    _strength = Math.Clamp(_strength + amount, 1, 10);
+                    Strength = Math.Clamp(Strength + amount, 1, 10);
                     break;
                 case StatType.Agility:
-                    _agility = Math.Clamp(_agility + amount, 1, 10);
+                    Agility = Math.Clamp(Agility + amount, 1, 10);
                     break;
                 case StatType.Tenacity:
-                    _tenacity = Math.Clamp(_tenacity + amount, 1, 10);
+                    Tenacity = Math.Clamp(Tenacity + amount, 1, 10);
                     break;
                 case StatType.Intelligence:
-                    _intelligence = Math.Clamp(_intelligence + amount, 1, 10);
+                    Intelligence = Math.Clamp(Intelligence + amount, 1, 10);
                     break;
                 case StatType.Charm:
-                    _charm = Math.Clamp(_charm + amount, 1, 10);
+                    Charm = Math.Clamp(Charm + amount, 1, 10);
                     break;
             }
 
@@ -151,27 +158,27 @@ namespace ProjectVagabond
         {
             // Health Points
             int oldMaxHP = _maxHealthPoints;
-            int _calculatedHealthPoints = (int)Math.Floor((_strength * 0.5f) + (2 * _tenacity) + ((1 * 0.5f) * ((_tenacity * 0.5f))));
+            int _calculatedHealthPoints = (int)Math.Floor((Strength * 0.5f) + (2 * Tenacity) + ((1 * 0.5f) * ((Tenacity * 0.5f))));
             _maxHealthPoints = Math.Min(_calculatedHealthPoints, Global.MAX_MAX_HEALTH_ENERGY);
 
             // Energy Points
             int oldMaxEP = _maxEnergyPoints;
-            int _calculatedEnergyPoints = 5 + (int)Math.Floor(_agility * 0.5f);
+            int _calculatedEnergyPoints = 5 + (int)Math.Floor(Agility * 0.5f);
             _maxEnergyPoints = Math.Min(_calculatedEnergyPoints, Global.MAX_MAX_HEALTH_ENERGY);
 
             // Move Speed 
             float weightFactor = Math.Max(0f, (_weight - 70f) * 0.01f); // Penalty for being over 70kg
-            _walkSpeed = Math.Max(0.1f, 1.0f + (_agility * 0.1f) - weightFactor);
+            _walkSpeed = Math.Max(0.1f, 1.0f + (Agility * 0.1f) - weightFactor);
             _runSpeed = _walkSpeed * 3f;
 
             // Carry Capacity = Base(20) + (Strength * 8) + (Tenacity * 3)
-            _carryCapacity = 20 + (_strength * 8) + (_tenacity * 3);
+            _carryCapacity = 20 + (Strength * 8) + (Tenacity * 3);
 
             // Mental Resistance = Base(10) + (Intelligence * 6) + (Tenacity * 4)
-            _mentalResistance = 10 + (_intelligence * 6) + (_tenacity * 4);
+            _mentalResistance = 10 + (Intelligence * 6) + (Tenacity * 4);
 
             // Social Influence = Base(5) + (Charm * 8) + (Intelligence * 2)
-            _socialInfluence = 5 + (_charm * 8) + (_intelligence * 2);
+            _socialInfluence = 5 + (Charm * 8) + (Intelligence * 2);
 
             // Adjust current values if max values changed
             if (oldMaxHP != _maxHealthPoints)
@@ -319,11 +326,11 @@ namespace ProjectVagabond
         {
             return statType switch
             {
-                StatType.Strength => _strength,
-                StatType.Agility => _agility,
-                StatType.Tenacity => _tenacity,
-                StatType.Intelligence => _intelligence,
-                StatType.Charm => _charm,
+                StatType.Strength => Strength,
+                StatType.Agility => Agility,
+                StatType.Tenacity => Tenacity,
+                StatType.Intelligence => Intelligence,
+                StatType.Charm => Charm,
                 _ => 0
             };
         }

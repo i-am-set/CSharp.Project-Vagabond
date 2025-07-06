@@ -23,5 +23,10 @@ namespace ProjectVagabond
             Texture = texture;
             Color = color;
         }
+
+        /// <summary>
+        /// Parameterless constructor for the Spawner.
+        /// </summary>
+        public RenderableComponent() { }
     }
 }

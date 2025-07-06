@@ -10,7 +10,7 @@ namespace ProjectVagabond
         public int ActorId { get; }
         public bool IsComplete { get; set; }
 
-        /// <summary>
+        /// <summary>0
         /// The type of rest to perform.
         /// </summary>
         public RestType RestType { get; }
