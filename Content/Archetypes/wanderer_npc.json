@@ -1,0 +1,31 @@
+{
+  "Id": "wanderer_npc",
+  "Name": "Wanderer",
+  "Components": [
+    {
+      "Type": "ProjectVagabond.PositionComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.LocalPositionComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.ActionQueueComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.AIComponent, ProjectVagabond",
+      "Properties": {
+        "CurrentState": "Idle",
+        "StateTimer": 5.0
+      }
+    },
+    {
+      "Type": "ProjectVagabond.NPCTagComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.RenderableComponent, ProjectVagabond",
+      "Properties": {
+        "Color": "CornflowerBlue"
+      }
+    }
+  ]
+}

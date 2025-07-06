@@ -157,6 +157,7 @@ namespace ProjectVagabond
             }
 
             _spriteManager.LoadSpriteContent();
+            ArchetypeManager.Instance.LoadArchetypes("Content/Archetypes");
             _gameState.InitializeRenderableEntities();
 
             _sceneManager.ChangeScene(GameSceneState.MainMenu, fade_duration: 0.5f);

@@ -1,0 +1,37 @@
+{
+  "Id": "player",
+  "Name": "Player",
+  "Components": [
+    {
+      "Type": "ProjectVagabond.PositionComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.LocalPositionComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.StatsComponent, ProjectVagabond",
+      "Properties": {
+        "Strength": 5,
+        "Agility": 5,
+        "Tenacity": 5,
+        "Intelligence": 5,
+        "Charm": 5
+      }
+    },
+    {
+      "Type": "ProjectVagabond.ActionQueueComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.PlayerTagComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.HighImportanceComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.RenderableComponent, ProjectVagabond",
+      "Properties": {
+        "Color": "PlayerColor"
+      }
+    }
+  ]
+}
