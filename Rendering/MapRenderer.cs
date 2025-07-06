@@ -324,29 +324,50 @@ namespace ProjectVagabond
                     }
                     else
                     {
-                        var actionsAtPos = _gameState.PendingActions
-                            .Where(a => (a is MoveAction ma && ma.Destination == worldPos) || (a is RestAction ra && ra.Position == worldPos))
-                            .ToList();
+                        // Combine queued actions and the active action for rendering
+                        var allActionsAtPos = new List<IAction>();
 
-                        if (actionsAtPos.Any())
+                        // Get actions from the queue
+                        var queuedActions = _gameState.PendingActions
+                            .Where(a => (a is MoveAction ma && ma.Destination == worldPos) || (a is RestAction ra && ra.Position == worldPos));
+                        allActionsAtPos.AddRange(queuedActions);
+
+                        // Get the currently executing action component
+                        var activeMoveAction = Core.ComponentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId);
+                        if (activeMoveAction != null && activeMoveAction.Destination == worldPos)
                         {
-                            if (actionsAtPos.Any(a => a is RestAction ra && ra.RestType == RestType.ShortRest))
+                            allActionsAtPos.Add(activeMoveAction);
+                        }
+                        var activeRestAction = Core.ComponentStore.GetComponent<RestAction>(_gameState.PlayerEntityId);
+                        if (activeRestAction != null && activeRestAction.Position == worldPos)
+                        {
+                            allActionsAtPos.Add(activeRestAction);
+                        }
+
+                        if (allActionsAtPos.Any())
+                        {
+                            if (allActionsAtPos.Any(a => a is RestAction ra && ra.RestType == RestType.ShortRest))
                             {
                                 texture = Core.CurrentSpriteManager.ShortRestSprite;
                                 color = Global.Instance.ShortRestColor;
                             }
-                            else if (actionsAtPos.Any(a => a is RestAction ra && ra.RestType == RestType.LongRest))
+                            else if (allActionsAtPos.Any(a => a is RestAction ra && ra.RestType == RestType.LongRest))
                             {
                                 texture = Core.CurrentSpriteManager.LongRestSprite;
                                 color = Global.Instance.LongRestColor;
                             }
-                            else if (actionsAtPos.Any(a => a is MoveAction))
+                            else if (allActionsAtPos.Any(a => a is MoveAction))
                             {
-                                bool isRunning = actionsAtPos.OfType<MoveAction>().Any(ma => ma.IsRunning);
+                                bool isRunning = allActionsAtPos.OfType<MoveAction>().Any(ma => ma.IsRunning);
                                 texture = isRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
 
-                                var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a is MoveAction) as MoveAction;
-                                if (lastMoveAction != null && lastMoveAction.Destination == worldPos)
+                                // Determine if this position is the final destination in the queue
+                                var lastActionInQueue = _gameState.PendingActions.LastOrDefault();
+                                Vector2? lastPos = null;
+                                if (lastActionInQueue is MoveAction lm) lastPos = lm.Destination;
+                                if (lastActionInQueue is RestAction lr) lastPos = lr.Position;
+
+                                if (lastPos.HasValue && lastPos.Value == worldPos)
                                 {
                                     color = Global.Instance.PathEndColor;
                                 }
@@ -385,18 +406,29 @@ namespace ProjectVagabond
                     }
                     else
                     {
-                        var actionsAtPos = _gameState.PendingActions
-                            .OfType<MoveAction>()
-                            .Where(ma => ma.Destination == localPos)
-                            .ToList();
+                        // Combine queued actions and the active action for rendering
+                        var allActionsAtPos = new List<IAction>();
 
-                        if (actionsAtPos.Any())
+                        // Get actions from the queue
+                        var queuedActions = _gameState.PendingActions
+                            .OfType<MoveAction>()
+                            .Where(ma => ma.Destination == localPos);
+                        allActionsAtPos.AddRange(queuedActions);
+
+                        // Get the currently executing action component
+                        var activeMoveAction = Core.ComponentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId);
+                        if (activeMoveAction != null && activeMoveAction.Destination == localPos)
                         {
-                            bool isRunning = actionsAtPos.Any(ma => ma.IsRunning);
+                            allActionsAtPos.Add(activeMoveAction);
+                        }
+
+                        if (allActionsAtPos.Any())
+                        {
+                            bool isRunning = allActionsAtPos.OfType<MoveAction>().Any(ma => ma.IsRunning);
                             texture = isRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
 
-                            var lastMoveAction = _gameState.PendingActions.LastOrDefault(a => a is MoveAction) as MoveAction;
-                            if (lastMoveAction != null && lastMoveAction.Destination == localPos)
+                            var lastActionInQueue = _gameState.PendingActions.LastOrDefault() as MoveAction;
+                            if (lastActionInQueue != null && lastActionInQueue.Destination == localPos)
                             {
                                 color = Global.Instance.PathEndColor;
                             }

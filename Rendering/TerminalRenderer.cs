@@ -252,11 +252,11 @@ namespace ProjectVagabond
             }
 
             var gameState = Core.CurrentGameState;
-            // The ActionExecutionSystem no longer has a CurrentPathIndex.
-            // We can just check if the other values have changed.
+
             if (gameState.PendingActions.Count != _cachedPendingActionCount ||
                 gameState.IsExecutingPath != _cachedIsExecutingPath ||
-                gameState.IsFreeMoveMode != _cachedIsFreeMoveMode)
+                gameState.IsFreeMoveMode != _cachedIsFreeMoveMode ||
+                gameState.IsActionQueueDirty)
             {
                 _cachedPendingActionCount = gameState.PendingActions.Count;
                 _cachedIsExecutingPath = gameState.IsExecutingPath;
@@ -266,7 +266,6 @@ namespace ProjectVagabond
                 _stringBuilder.Append("Actions Queued: ").Append(gameState.PendingActions.Count);
                 if (gameState.IsExecutingPath)
                 {
-                    // We can't easily get the current index, so we'll just show the total.
                     _stringBuilder.Append(" | Executing...");
                 }
                 _cachedWrappedStatusText = WrapText(_stringBuilder.ToString(), GetTerminalContentWidthInPixels());
@@ -281,6 +280,8 @@ namespace ProjectVagabond
                 {
                     _cachedPromptLines = null;
                 }
+
+                gameState.IsActionQueueDirty = false;
             }
 
             int statusY = terminalY + terminalHeight + 15;

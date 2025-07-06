@@ -96,7 +96,7 @@ namespace ProjectVagabond
                     {
                         int segmentX = barX + i * 6;
                         Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
-                        spriteBatch.Draw(pixel, segmentRect, Global.Instance.Palette_Teal);
+                        spriteBatch.Draw(pixel, segmentRect, Global.Instance.Palette_LightBlue);
                     }
                 }
             }

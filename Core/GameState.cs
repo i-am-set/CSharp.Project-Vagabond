@@ -33,6 +33,7 @@ namespace ProjectVagabond
         public (int finalEnergy, bool possible, int secondsPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
         public List<int> ActiveEntities { get; private set; } = new List<int>();
         public int InitialActionCount { get; private set; }
+        public bool IsActionQueueDirty { get; set; } = true;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -102,6 +103,7 @@ namespace ProjectVagabond
                 Core.ActionExecutionSystem.StopExecution();
             }
             _isExecutingPath = toggle;
+            IsActionQueueDirty = true;
         }
 
         public void ToggleIsFreeMoveMode(bool toggle)
@@ -120,6 +122,7 @@ namespace ProjectVagabond
                     Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Free move disabled.");
                 }
             }
+            IsActionQueueDirty = true;
         }
 
         public bool IsPositionPassable(Vector2 position, MapView view, out MapData mapData)
@@ -208,12 +211,6 @@ namespace ProjectVagabond
                     MapData mapData = isLocalSim ? default : GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
 
                     int moveDuration = GetSecondsPassedDuringMovement(moveAction.IsRunning, mapData, moveDirection, isLocalSim);
-
-                    if (isFirstMoveInQueue && !isLocalSim)
-                    {
-                        float timeScaleFactor = GetFirstMoveTimeScaleFactor(moveDirection);
-                        moveDuration = (int)Math.Ceiling(moveDuration * timeScaleFactor);
-                    }
 
                     secondsPassed += moveDuration;
                     int cost = GetMovementEnergyCost(moveAction, isLocalSim);

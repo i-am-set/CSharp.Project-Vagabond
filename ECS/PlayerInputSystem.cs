@@ -20,6 +20,7 @@ namespace ProjectVagabond
         {
             CancelPendingActions(gameState);
             AppendPath(gameState, path, isRunning);
+            gameState.IsActionQueueDirty = true;
         }
 
         public void AppendPath(GameState gameState, List<Vector2> path, bool isRunning)
@@ -39,6 +40,7 @@ namespace ProjectVagabond
                 {
                     actionQueue.Enqueue(new MoveAction(playerEntityId, pos, isRunning));
                 }
+                gameState.IsActionQueueDirty = true;
                 return;
             }
 
@@ -63,6 +65,7 @@ namespace ProjectVagabond
                     else
                     {
                         Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot queue path. Not enough energy even after a short rest.");
+                        gameState.IsActionQueueDirty = true;
                         return; // Stop adding the rest of the path
                     }
                 }
@@ -71,6 +74,7 @@ namespace ProjectVagabond
                     actionQueue.Enqueue(nextAction);// Enough energy, just add the action
                 }
             }
+            gameState.IsActionQueueDirty = true;
         }
 
         public void CancelPendingActions(GameState gameState)
@@ -78,12 +82,14 @@ namespace ProjectVagabond
             var actionQueue = Core.ComponentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
             actionQueue.Clear();
             Core.CurrentTerminalRenderer.AddOutputToHistory("Pending actions cleared.");
+            gameState.IsActionQueueDirty = true;
         }
 
         public void ClearPendingActions(GameState gameState)
         {
             var actionQueue = Core.ComponentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
             actionQueue.Clear();
+            gameState.IsActionQueueDirty = true;
         }
 
         public void RemovePendingActionsFrom(GameState gameState, int index)
@@ -101,12 +107,14 @@ namespace ProjectVagabond
             {
                 actionQueue.Enqueue(action);
             }
+            gameState.IsActionQueueDirty = true;
         }
 
         public void QueueAction(GameState gameState, IAction action)
         {
             var actionQueue = Core.ComponentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
             actionQueue.Enqueue(action);
+            gameState.IsActionQueueDirty = true;
         }
 
         public void QueueRest(GameState gameState, string[] args)
@@ -153,6 +161,7 @@ namespace ProjectVagabond
             }
 
             actionQueue.Enqueue(new RestAction(playerEntityId, restType, restPosition));
+            gameState.IsActionQueueDirty = true;
         }
 
         private void QueueMovementInternal(GameState gameState, Vector2 direction, string[] args, bool isRunning)
@@ -316,6 +325,7 @@ namespace ProjectVagabond
             {
                 Core.CurrentTerminalRenderer.AddOutputToHistory($"[undo]Backtracked {removedSteps} time(s)");
             }
+            gameState.IsActionQueueDirty = true;
         }
 
         public void QueueRunMovement(GameState gameState, Vector2 direction, string[] args)
