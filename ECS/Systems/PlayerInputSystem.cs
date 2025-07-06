@@ -119,7 +119,7 @@ namespace ProjectVagabond
 
         public void QueueRest(GameState gameState, string[] args)
         {
-            if (gameState.IsExecutingPath)
+            if (gameState.IsExecutingActions)
             {
                 Core.CurrentTerminalRenderer.AddOutputToHistory("Cannot queue actions while executing a path.");
                 return;
@@ -166,7 +166,7 @@ namespace ProjectVagabond
 
         private void QueueMovementInternal(GameState gameState, Vector2 direction, string[] args, bool isRunning)
         {
-            if (gameState.IsExecutingPath)
+            if (gameState.IsExecutingActions)
             {
                 Core.CurrentTerminalRenderer.AddOutputToHistory("Cannot queue movements while executing a path.");
                 return;

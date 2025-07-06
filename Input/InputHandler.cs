@@ -61,9 +61,9 @@ namespace ProjectVagabond
 
             if (!_previousKeyboardState.IsKeyDown(Keys.Escape) && currentKeyboardState.IsKeyDown(Keys.Escape))
             {
-                if (Core.CurrentGameState.IsExecutingPath)
+                if (Core.CurrentGameState.IsExecutingActions)
                 {
-                    Core.CurrentGameState.CancelPathExecution();
+                    Core.CurrentGameState.CancelExecutingActions();
                 }
                 else if (Core.CurrentGameState.IsFreeMoveMode)
                 {
@@ -81,7 +81,7 @@ namespace ProjectVagabond
             //    Core.CurrentGameState.ToggleMapView();
             //}
 
-            if (Core.CurrentGameState.IsExecutingPath && !_previousKeyboardState.IsKeyDown(Keys.Space) && currentKeyboardState.IsKeyDown(Keys.Space))
+            if (Core.CurrentGameState.IsExecutingActions && !_previousKeyboardState.IsKeyDown(Keys.Space) && currentKeyboardState.IsKeyDown(Keys.Space))
             {
                 Core.CurrentGameState.TogglePause();
             }
@@ -119,14 +119,13 @@ namespace ProjectVagabond
                 }
                 else if (!_previousKeyboardState.IsKeyDown(Keys.Enter) && currentKeyboardState.IsKeyDown(Keys.Enter))
                 {
-                    if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+                    if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingActions)
                     {
-                        Core.CurrentGameState.ToggleExecutingPath(true);
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
+                        Core.CurrentGameState.ToggleExecutingActions(true);
                     }
-                    else if (Core.CurrentGameState.IsExecutingPath)
+                    else if (Core.CurrentGameState.IsExecutingActions)
                     {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory("Already executing an action queue.");
+                        Core.CurrentGameState.ToggleExecutingActions(false);
                     }
                     else
                     {
@@ -134,7 +133,7 @@ namespace ProjectVagabond
                     }
                 }
             }
-            else if (!Core.CurrentGameState.IsExecutingPath)
+            else if (!Core.CurrentGameState.IsExecutingActions)
             {
                 foreach (Keys key in pressedKeys)
                 {
@@ -143,10 +142,15 @@ namespace ProjectVagabond
                         if (key == Keys.Enter)
                         {
                             Core.CurrentAutoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
-                            if (string.IsNullOrEmpty(_currentInput.Trim()) && Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+                            if (string.IsNullOrEmpty(_currentInput.Trim()) && Core.CurrentGameState.PendingActions.Count > 0)
                             {
-                                Core.CurrentGameState.ToggleExecutingPath(true);
-                                Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue with {Core.CurrentGameState.PendingActions.Count} actions...");
+                                if (!Core.CurrentGameState.IsExecutingActions)
+                                {
+                                    Core.CurrentGameState.ToggleExecutingActions(true);
+                                } else
+                                {
+                                    Core.CurrentGameState.ToggleExecutingActions(false);
+                                }
                             }
                             else
                             {

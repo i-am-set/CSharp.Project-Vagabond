@@ -39,7 +39,7 @@ namespace ProjectVagabond
 
             // --- Phase 1: INITIATION ---
             var actionQueueComp = Core.ComponentStore.GetComponent<ActionQueueComponent>(playerEntityId);
-            if (actionQueueComp != null && actionQueueComp.ActionQueue.Count > 0 && gameState.IsExecutingPath)
+            if (actionQueueComp != null && actionQueueComp.ActionQueue.Count > 0 && gameState.IsExecutingActions)
             {
                 bool hasAction = Core.ComponentStore.HasComponent<MoveAction>(playerEntityId) ||
                                  Core.ComponentStore.HasComponent<RestAction>(playerEntityId);
@@ -54,7 +54,7 @@ namespace ProjectVagabond
                         if (!gameState.IsPositionPassable(moveAction.Destination, gameState.PathExecutionMapView))
                         {
                             Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Movement blocked at {moveAction.Destination}.");
-                            gameState.CancelPathExecution(true);
+                            gameState.CancelExecutingActions(true);
                             return;
                         }
                         int energyCost = gameState.GetMovementEnergyCost(moveAction, gameState.PathExecutionMapView == MapView.Local);
@@ -65,7 +65,7 @@ namespace ProjectVagabond
                         if (!gameState.PlayerStats.CanExertEnergy(energyCost))
                         {
                             Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to move! Need {energyCost}, have {gameState.PlayerStats.CurrentEnergyPoints}");
-                            gameState.CancelPathExecution(true);
+                            gameState.CancelExecutingActions(true);
                             return;
                         }
                     }
@@ -113,14 +113,14 @@ namespace ProjectVagabond
             }
 
             // After all phases, check if the player's queue is now empty to end the execution state.
-            if (gameState.IsExecutingPath)
+            if (gameState.IsExecutingActions)
             {
                 bool playerHasAction = Core.ComponentStore.HasComponent<MoveAction>(playerEntityId) ||
                                        Core.ComponentStore.HasComponent<RestAction>(playerEntityId);
 
                 if (actionQueueComp != null && actionQueueComp.ActionQueue.Count == 0 && !playerHasAction)
                 {
-                    gameState.ToggleExecutingPath(false);
+                    gameState.ToggleExecutingActions(false);
                     Core.CurrentTerminalRenderer.AddOutputToHistory("Action queue completed.");
                 }
             }

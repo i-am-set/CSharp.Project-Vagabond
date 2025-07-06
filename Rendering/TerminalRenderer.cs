@@ -200,7 +200,7 @@ namespace ProjectVagabond
 
             _caratBlinkTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
             string caratUnderscore = "_";
-            if (!Core.CurrentGameState.IsExecutingPath)
+            if (!Core.CurrentGameState.IsExecutingActions)
             {
                 // Use a 1-second cycle (0.5s on, 0.5s off) for a standard blink rate.
                 if (_caratBlinkTimer % 1.0f > 0.5f)
@@ -215,7 +215,7 @@ namespace ProjectVagabond
 
             string wrappedInput = WrapText(inputCarat, GetTerminalContentWidthInPixels());
 
-            _inputCaratColor = Core.CurrentGameState.IsExecutingPath ? Global.Instance.TerminalDarkGray : Global.Instance.InputCaratColor;
+            _inputCaratColor = Core.CurrentGameState.IsExecutingActions ? Global.Instance.TerminalDarkGray : Global.Instance.InputCaratColor;
 
             _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY + 1), _inputCaratColor, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
@@ -254,17 +254,17 @@ namespace ProjectVagabond
             var gameState = Core.CurrentGameState;
 
             if (gameState.PendingActions.Count != _cachedPendingActionCount ||
-                gameState.IsExecutingPath != _cachedIsExecutingPath ||
+                gameState.IsExecutingActions != _cachedIsExecutingPath ||
                 gameState.IsFreeMoveMode != _cachedIsFreeMoveMode ||
                 gameState.IsActionQueueDirty)
             {
                 _cachedPendingActionCount = gameState.PendingActions.Count;
-                _cachedIsExecutingPath = gameState.IsExecutingPath;
+                _cachedIsExecutingPath = gameState.IsExecutingActions;
                 _cachedIsFreeMoveMode = gameState.IsFreeMoveMode;
 
                 _stringBuilder.Clear();
                 _stringBuilder.Append("Actions Queued: ").Append(gameState.PendingActions.Count);
-                if (gameState.IsExecutingPath)
+                if (gameState.IsExecutingActions)
                 {
                     _stringBuilder.Append(" | Executing...");
                 }
@@ -317,7 +317,7 @@ namespace ProjectVagabond
                 promptBuilder.Append("[gold]Press[orange] ENTER[gold] to confirm,[orange] ESC[gold] to cancel\n");
                 return promptBuilder.ToString();
             }
-            else if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingPath)
+            else if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingActions)
             {
                 if (Core.CurrentGameState.IsFreeMoveMode)
                 {

@@ -209,7 +209,6 @@ namespace ProjectVagabond
             if (!_isInterpolating) return;
 
             _isInterpolating = false;
-            // Time is reverted to start state by GameState's CancelPathExecution logic
         }
 
         /// <summary>

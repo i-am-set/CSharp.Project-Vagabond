@@ -63,7 +63,7 @@ namespace ProjectVagabond.Scenes
             {
                 if (hours > 0 || minutes > 0 || seconds > 0)
                 {
-                    Core.CurrentGameState.CancelPathExecution();
+                    Core.CurrentGameState.CancelExecutingActions();
                     Core.CurrentWorldClockManager.PassTime(0, hours, minutes, seconds);
                 }
             });

@@ -151,7 +151,7 @@ namespace ProjectVagabond
                 AddOutputToHistory($"World position: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})");
                 AddOutputToHistory($"Local position: ({(int)_gameState.PlayerLocalPos.X}, {(int)_gameState.PlayerLocalPos.Y})");
                 AddOutputToHistory($"Pending actions in queue: {_gameState.PendingActions.Count}");
-                if (_gameState.IsExecutingPath)
+                if (_gameState.IsExecutingActions)
                 {
                     int totalActions = _gameState.InitialActionCount;
                     int completedActions = totalActions - _gameState.PendingActions.Count;

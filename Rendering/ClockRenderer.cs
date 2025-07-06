@@ -34,7 +34,7 @@ namespace ProjectVagabond
             _clockButton = new ImageButton(Rectangle.Empty);
             _clockButton.OnClick += () =>
             {
-                if (Core.CurrentGameState.IsExecutingPath)
+                if (Core.CurrentGameState.IsExecutingActions)
                 {
                     Core.CurrentGameState.TogglePause();
                 }
@@ -79,7 +79,7 @@ namespace ProjectVagabond
             {
                 Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
                 string tooltipText;
-                if (Core.CurrentGameState.IsExecutingPath)
+                if (Core.CurrentGameState.IsExecutingActions)
                 {
                     tooltipText = Core.CurrentGameState.IsPaused ? "Click to resume" : "Click to pause";
                 }
@@ -162,7 +162,7 @@ namespace ProjectVagabond
             int buttonSpacing = 2;
             
             // Pause/Play Button
-            _pausePlayButton.IsEnabled = Core.CurrentGameState.IsExecutingPath;
+            _pausePlayButton.IsEnabled = Core.CurrentGameState.IsExecutingActions;
             _pausePlayButton.Text = Core.CurrentGameState.IsPaused ? "►" : "▐▐";
             
             // Time Scale Buttons

@@ -89,13 +89,13 @@ namespace ProjectVagabond
                 switch (button.Function.ToLower())
                 {
                     case "go":
-                        button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingPath;
+                        button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions;
                         break;
                     case "stop":
-                        button.IsEnabled = _gameState.IsExecutingPath;
+                        button.IsEnabled = _gameState.IsExecutingActions;
                         break;
                     case "clear":
-                        button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingPath;
+                        button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions;
                         break;
                 }
                 button.Update(_currentMouseState);
@@ -122,13 +122,12 @@ namespace ProjectVagabond
 
         private void HandleGoClick()
         {
-            _gameState.ToggleExecutingPath(true);
-            Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of {_gameState.PendingActions.Count} action(s)...");
+            _gameState.ToggleExecutingActions(true);
         }
 
         private void HandleStopClick()
         {
-            _gameState.CancelPathExecution();
+            _gameState.CancelExecutingActions();
         }
 
         private void HandleToggleMapClick()
@@ -143,12 +142,8 @@ namespace ProjectVagabond
             bool leftClickReleased = _currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool rightClickPressed = _currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
 
-            if (_gameState.IsExecutingPath)
+            if (_gameState.IsExecutingActions)
             {
-                if (leftClickPressed || rightClickPressed)
-                {
-                    _gameState.CancelPathExecution(interrupted: true);
-                }
                 return;
             }
 
@@ -295,10 +290,10 @@ namespace ProjectVagabond
             menuItems.Add(new ContextMenuItem
             {
                 Text = "Submit Path",
-                IsVisible = () => pathPending && !_gameState.IsExecutingPath,
+                IsVisible = () => pathPending && !_gameState.IsExecutingActions,
                 OnClick = () =>
                 {
-                    _gameState.ToggleExecutingPath(true);
+                    _gameState.ToggleExecutingActions(true);
                     Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
                 }
             });

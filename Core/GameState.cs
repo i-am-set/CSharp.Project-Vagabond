@@ -14,7 +14,7 @@ namespace ProjectVagabond
     public class GameState
     {
         private NoiseMapManager _noiseManager;
-        private bool _isExecutingPath = false;
+        private bool _isExecutingActions = false;
         private bool _isFreeMoveMode = false;
         private bool _isPaused = false;
 
@@ -24,7 +24,7 @@ namespace ProjectVagabond
         public Vector2 PlayerWorldPos => Core.ComponentStore.GetComponent<PositionComponent>(PlayerEntityId).WorldPosition;
         public Vector2 PlayerLocalPos => Core.ComponentStore.GetComponent<LocalPositionComponent>(PlayerEntityId).LocalPosition;
         public Queue<IAction> PendingActions => Core.ComponentStore.GetComponent<ActionQueueComponent>(PlayerEntityId).ActionQueue;
-        public bool IsExecutingPath => _isExecutingPath;
+        public bool IsExecutingActions => _isExecutingActions;
         public bool IsPaused => _isPaused;
         public bool IsFreeMoveMode => _isFreeMoveMode;
         public NoiseMapManager NoiseManager => _noiseManager;
@@ -100,20 +100,20 @@ namespace ProjectVagabond
 
         public void ToggleMapView()
         {
-            CancelPathExecution();
+            CancelExecutingActions();
             CurrentMapView = (CurrentMapView == MapView.World) ? MapView.Local : MapView.World;
             Core.CurrentTerminalRenderer.AddOutputToHistory($"[undo]Switched to {CurrentMapView} map view.");
         }
 
         public void TogglePause()
         {
-            if (_isExecutingPath)
+            if (_isExecutingActions)
             {
                 _isPaused = !_isPaused;
             }
         }
 
-        public void ToggleExecutingPath(bool toggle)
+        public void ToggleExecutingActions(bool toggle)
         {
             ToggleIsFreeMoveMode(false);
             if (toggle)
@@ -121,13 +121,14 @@ namespace ProjectVagabond
                 InitialActionCount = PendingActions.Count;
                 PathExecutionMapView = CurrentMapView;
                 Core.ActionExecutionSystem.StartExecution();
+                Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
             }
             else
             {
                 InitialActionCount = 0;
                 Core.ActionExecutionSystem.StopExecution();
             }
-            _isExecutingPath = toggle;
+            _isExecutingActions = toggle;
             IsActionQueueDirty = true;
         }
 
@@ -278,15 +279,16 @@ namespace ProjectVagabond
             return (finalEnergy, true, secondsPassed);
         }
 
-        public void CancelPathExecution(bool interrupted = false)
+        public void ExecuteActions()
         {
-            if (_isExecutingPath)
-            {
-                // The new ActionExecutionSystem does not use _actionAwaitingExecution.
-                // The cancellation logic is simplified. We just stop execution and clear the queue.
-                // Any mid-action progress is handled by WorldClockManager.CancelInterpolation.
+            ToggleExecutingActions(false);
+        }
 
-                ToggleExecutingPath(false);
+        public void CancelExecutingActions(bool interrupted = false)
+        {
+            if (_isExecutingActions)
+            {
+                ToggleExecutingActions(false);
                 _isPaused = false;
                 PendingActions.Clear();
                 ToggleIsFreeMoveMode(false);
