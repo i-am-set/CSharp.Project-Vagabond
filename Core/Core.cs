@@ -36,6 +36,7 @@ namespace ProjectVagabond
         private static readonly SystemManager _systemManager = new();
         private static readonly PlayerInputSystem _playerInputSystem = new();
         private static readonly ActionExecutionSystem _actionExecutionSystem = new();
+        private static readonly AISystem _aiSystem = new();
 
         // --- GameState can now be initialized safely as its dependencies are ready. ---
         private static readonly GameState _gameState = new();
@@ -88,6 +89,7 @@ namespace ProjectVagabond
         public static SystemManager SystemManager => _systemManager;
         public static PlayerInputSystem PlayerInputSystem => _playerInputSystem;
         public static ActionExecutionSystem ActionExecutionSystem => _actionExecutionSystem;
+        public static AISystem AISystem => _aiSystem;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -118,6 +120,9 @@ namespace ProjectVagabond
 
             // Register systems with their update frequencies
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f); // Runs every frame
+
+            // Subscribe the AISystem to the time-passing event
+            _worldClockManager.OnTimePassed += _aiSystem.ProcessEntities;
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());

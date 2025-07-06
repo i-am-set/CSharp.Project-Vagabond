@@ -25,6 +25,7 @@ namespace ProjectVagabond
         public event Action OnDayChanged;
         public event Action OnSeasonChanged;
         public event Action OnYearChanged;
+        public event Action<int> OnTimePassed;
 
         // Private fields for tracking time //
         private int _year;
@@ -36,7 +37,7 @@ namespace ProjectVagabond
         // Public properties to access time information //
         public int CurrentYear => _year;
         public int CurrentHour => _hour;
-        public int CurrentMinute =>_minute;
+        public int CurrentMinute => _minute;
         public int CurrentSecond => _second;
         public string CurrentTime => Global.Instance.Use24HourClock ? GetTimeString() : GetConverted24hToAmPm(GetTimeString());
         public float TimeScale { get; set; } = 1.0f;
@@ -186,6 +187,7 @@ namespace ProjectVagabond
 
             Debug.WriteLine($"{GetCommaFormattedTimeFromSeconds((int)_totalSecondsPassedDuringInterpolation)} passed");
             OnTimeChanged?.Invoke();
+            OnTimePassed?.Invoke((int)_totalSecondsPassedDuringInterpolation);
         }
 
         /// <summary>

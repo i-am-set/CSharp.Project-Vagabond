@@ -40,18 +40,26 @@ namespace ProjectVagabond
         public GameState()
         {
             int masterSeed = RandomNumberGenerator.GetInt32(1, 99999) + Environment.TickCount;
+            _noiseManager = new NoiseMapManager(masterSeed);
 
+            // Create Player
             PlayerEntityId = Core.EntityManager.CreateEntity();
             Core.ComponentStore.AddComponent(PlayerEntityId, new PositionComponent { WorldPosition = new Vector2(0, 0) });
             Core.ComponentStore.AddComponent(PlayerEntityId, new LocalPositionComponent { LocalPosition = new Vector2(32, 32) });
             Core.ComponentStore.AddComponent(PlayerEntityId, new StatsComponent(5, 5, 5, 5, 5));
             Core.ComponentStore.AddComponent(PlayerEntityId, new ActionQueueComponent());
             Core.ComponentStore.AddComponent(PlayerEntityId, new PlayerTagComponent());
+            Core.ChunkManager.RegisterEntity(PlayerEntityId, PlayerWorldPos);
 
-            var playerPos = Core.ComponentStore.GetComponent<PositionComponent>(PlayerEntityId).WorldPosition;
-            Core.ChunkManager.RegisterEntity(PlayerEntityId, playerPos);
-
-            _noiseManager = new NoiseMapManager(masterSeed);
+            // Create NPC
+            int npcId = Core.EntityManager.CreateEntity();
+            var npcWorldPos = new Vector2(0, 0); // Start in the same chunk as the player
+            Core.ComponentStore.AddComponent(npcId, new PositionComponent { WorldPosition = npcWorldPos });
+            Core.ComponentStore.AddComponent(npcId, new LocalPositionComponent { LocalPosition = new Vector2(10, 10) });
+            Core.ComponentStore.AddComponent(npcId, new ActionQueueComponent());
+            Core.ComponentStore.AddComponent(npcId, new AIComponent());
+            Core.ComponentStore.AddComponent(npcId, new NPCTagComponent());
+            Core.ChunkManager.RegisterEntity(npcId, npcWorldPos);
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
