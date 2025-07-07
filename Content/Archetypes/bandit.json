@@ -1,6 +1,6 @@
 {
-  "Id": "player",
-  "Name": "Player",
+  "Id": "bandit",
+  "Name": "Bandit",
   "Components": [
     {
       "Type": "ProjectVagabond.PositionComponent, ProjectVagabond"
@@ -9,49 +9,43 @@
       "Type": "ProjectVagabond.LocalPositionComponent, ProjectVagabond"
     },
     {
-      "Type": "ProjectVagabond.StatsComponent, ProjectVagabond",
-      "Properties": {
-        "Strength": 5,
-        "Agility": 5,
-        "Tenacity": 5,
-        "Intelligence": 5,
-        "Charm": 5
-      }
-    },
-    {
       "Type": "ProjectVagabond.ActionQueueComponent, ProjectVagabond"
     },
     {
-      "Type": "ProjectVagabond.PlayerTagComponent, ProjectVagabond"
+      "Type": "ProjectVagabond.AIComponent, ProjectVagabond",
+      "Properties": {
+        "CurrentState": "Idle",
+        "StateTimer": 5.0
+      }
     },
     {
-      "Type": "ProjectVagabond.HighImportanceComponent, ProjectVagabond"
+      "Type": "ProjectVagabond.NPCTagComponent, ProjectVagabond"
     },
     {
       "Type": "ProjectVagabond.RenderableComponent, ProjectVagabond",
       "Properties": {
-        "Color": "PlayerColor"
+        "Color": "CornflowerBlue"
       }
     },
     {
       "Type": "ProjectVagabond.HealthComponent, ProjectVagabond",
       "Properties": {
-        "MaxHealth": 100,
-        "CurrentHealth": 100
+        "MaxHealth": 60,
+        "CurrentHealth": 60
       }
     },
     {
       "Type": "ProjectVagabond.CombatantComponent, ProjectVagabond",
       "Properties": {
-        "AttackPower": 10,
-        "AttackRange": 1.5,
-        "AggroRange": 0.0
+        "AttackPower": 5,
+        "AttackRange": 1.0,
+        "AggroRange": 8.0
       }
     },
     {
       "Type": "ProjectVagabond.CombatStatsComponent, ProjectVagabond",
       "Properties": {
-        "ActionPoints": 4
+        "ActionPoints": 3
       }
     },
     {

@@ -36,13 +36,7 @@
 	</Content>
   </ItemGroup>
   <ItemGroup>
-    <None Update="Content\Archetypes\dog.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <None Update="Content\Archetypes\player.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Content\Archetypes\wanderer_npc.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

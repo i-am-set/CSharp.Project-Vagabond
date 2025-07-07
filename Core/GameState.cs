@@ -49,8 +49,7 @@ namespace ProjectVagabond
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0), localPosition: new Vector2(32, 32));
 
             // Spawn an NPC
-            Spawner.Spawn("wanderer_npc", worldPosition: new Vector2(0, 0), localPosition: new Vector2(40, 40));
-            Spawner.Spawn("dog", worldPosition: new Vector2(0, 0), localPosition: new Vector2(20, 20));
+            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(40, 40));
         }
 
         /// <summary>

@@ -153,6 +153,11 @@ namespace ProjectVagabond
 
                 case JsonValueKind.False:
                     return false;
+
+                case JsonValueKind.Array:
+                    // Use the built-in deserializer to handle arrays of complex objects.
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    return JsonSerializer.Deserialize(element.GetRawText(), targetType, options);
             }
 
             return Convert.ChangeType(element.ToString(), targetType);
