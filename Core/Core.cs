@@ -38,6 +38,7 @@ namespace ProjectVagabond
         private static readonly ActionExecutionSystem _actionExecutionSystem = new();
         private static readonly AISystem _aiSystem = new();
         private static readonly CombatTurnSystem _combatTurnSystem = new();
+        private static readonly CombatResolutionSystem _combatResolutionSystem = new();
 
         // --- GameState can now be initialized safely as its dependencies are ready. ---
         private static readonly GameState _gameState = new();
@@ -92,6 +93,7 @@ namespace ProjectVagabond
         public static ActionExecutionSystem ActionExecutionSystem => _actionExecutionSystem;
         public static AISystem AISystem => _aiSystem;
         public static CombatTurnSystem CombatTurnSystem => _combatTurnSystem;
+        public static CombatResolutionSystem CombatResolutionSystem => _combatResolutionSystem;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 

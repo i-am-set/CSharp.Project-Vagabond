@@ -35,20 +35,30 @@ namespace ProjectVagabond
             // Check if we've completed a full round.
             if (_currentTurnIndex >= gameState.InitiativeOrder.Count)
             {
+                // End of the round. Resolve all actions that were chosen.
+                Core.CombatResolutionSystem.ResolveTurn();
+
                 _currentTurnIndex = 0; // Reset for the new round.
                 CombatLog.Log("[yellow]New round begins.");
 
-                // CORRECTED LOGIC: Pass the time for the entire round only AFTER the last person has acted.
+                // Pass the time for the entire round only AFTER everyone has acted and actions are resolved.
                 Core.CurrentWorldClockManager.PassTime(seconds: GameState.COMBAT_TURN_DURATION_SECONDS);
             }
 
             // Update the GameState to reflect the new active entity for the next turn.
-            gameState.SetCurrentTurnEntity(gameState.InitiativeOrder[_currentTurnIndex]);
+            var newTurnEntityId = gameState.InitiativeOrder[_currentTurnIndex];
+            gameState.SetCurrentTurnEntity(newTurnEntityId);
 
             // Log whose turn it is now.
             var archetype = ArchetypeManager.Instance.GetArchetype(Core.ComponentStore.GetComponent<RenderableComponent>(gameState.CurrentTurnEntityId)?.Texture?.Name ?? "Unknown");
             var newTurnEntityName = archetype?.Name ?? $"Entity {gameState.CurrentTurnEntityId}";
             CombatLog.Log($"Turn: {newTurnEntityName}");
+
+            // If the new entity is an AI, tell it to take its turn.
+            if (Core.ComponentStore.HasComponent<AIComponent>(newTurnEntityId))
+            {
+                Core.AISystem.ProcessCombatTurn(newTurnEntityId);
+            }
         }
 
         /// <summary>
