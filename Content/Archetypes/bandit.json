@@ -39,7 +39,7 @@
       "Properties": {
         "AttackPower": 5,
         "AttackRange": 1.0,
-        "AggroRange": 8.0
+        "AggroRange": 4.0
       }
     },
     {

@@ -37,6 +37,7 @@ namespace ProjectVagabond
         private static readonly PlayerInputSystem _playerInputSystem = new();
         private static readonly ActionExecutionSystem _actionExecutionSystem = new();
         private static readonly AISystem _aiSystem = new();
+        private static readonly CombatTurnSystem _combatTurnSystem = new();
 
         // --- GameState can now be initialized safely as its dependencies are ready. ---
         private static readonly GameState _gameState = new();
@@ -90,6 +91,7 @@ namespace ProjectVagabond
         public static PlayerInputSystem PlayerInputSystem => _playerInputSystem;
         public static ActionExecutionSystem ActionExecutionSystem => _actionExecutionSystem;
         public static AISystem AISystem => _aiSystem;
+        public static CombatTurnSystem CombatTurnSystem => _combatTurnSystem;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -176,6 +178,16 @@ namespace ProjectVagabond
                 IsFixedTimeStep = false;
             }
             Global.Instance.CurrentGraphics.SynchronizeWithVerticalRetrace = Settings.IsVsync;
+
+            // --- Scene State Management ---
+            if (CurrentGameState.IsInCombat && _sceneManager.CurrentActiveScene?.GetType() != typeof(CombatScene))
+            {
+                _sceneManager.ChangeScene(GameSceneState.Combat);
+            }
+            else if (!CurrentGameState.IsInCombat && _sceneManager.CurrentActiveScene?.GetType() == typeof(CombatScene))
+            {
+                _sceneManager.ChangeScene(GameSceneState.TerminalMap);
+            }
 
             _sceneManager.Update(gameTime);
 

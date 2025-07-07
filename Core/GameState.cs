@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace ProjectVagabond
 {
@@ -17,6 +18,7 @@ namespace ProjectVagabond
         private bool _isExecutingActions = false;
         private bool _isFreeMoveMode = false;
         private bool _isPaused = false;
+        private readonly Random _random = new Random();
 
         public MapView PathExecutionMapView { get; private set; }
 
@@ -34,6 +36,13 @@ namespace ProjectVagabond
         public List<int> ActiveEntities { get; private set; } = new List<int>();
         public int InitialActionCount { get; private set; }
         public bool IsActionQueueDirty { get; set; } = true;
+
+        // Combat State
+        public const int COMBAT_TURN_DURATION_SECONDS = 5;
+        public bool IsInCombat { get; private set; } = false;
+        public List<int> Combatants { get; private set; } = new List<int>();
+        public List<int> InitiativeOrder { get; private set; } = new List<int>();
+        public int CurrentTurnEntityId { get; private set; }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -82,6 +91,61 @@ namespace ProjectVagabond
                     renderable.Texture = Core.Pixel;
                 }
             }
+        }
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        // COMBAT MANAGEMENT
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+        public void InitiateCombat(List<int> initialCombatants)
+        {
+            if (IsInCombat) return;
+
+            IsInCombat = true;
+            Combatants = new List<int>(initialCombatants);
+            InitiativeOrder.Clear();
+
+            var initiativeScores = new Dictionary<int, int>();
+            var initiativeLog = new StringBuilder();
+            initiativeLog.Append("[yellow]Combat has begun! Initiative Order: ");
+
+            foreach (var entityId in Combatants)
+            {
+                var stats = Core.ComponentStore.GetComponent<StatsComponent>(entityId);
+                int agility = stats?.Agility ?? 0;
+                int initiative = _random.Next(1, 21) + agility;
+                initiativeScores[entityId] = initiative;
+            }
+
+            InitiativeOrder = Combatants.OrderByDescending(id => initiativeScores[id]).ToList();
+            CurrentTurnEntityId = InitiativeOrder.FirstOrDefault();
+
+            for (int i = 0; i < InitiativeOrder.Count; i++)
+            {
+                var entityId = InitiativeOrder[i];
+                var archetype = ArchetypeManager.Instance.GetArchetype(Core.ComponentStore.GetComponent<RenderableComponent>(entityId)?.Texture?.Name ?? "Unknown");
+                string name = archetype?.Name ?? $"Entity {entityId}";
+                initiativeLog.Append($"\n  {i + 1}. {name} ({initiativeScores[entityId]})");
+            }
+
+            CombatLog.Log(initiativeLog.ToString());
+
+            Core.CombatTurnSystem.StartCombat();
+        }
+
+        public void AddEntityToCombat(int entityId)
+        {
+            // Logic to add an entity to an ongoing combat will be implemented later.
+        }
+
+        public void EndCombat()
+        {
+            // Logic to clean up and end combat will be implemented later.
+        }
+
+        public void SetCurrentTurnEntity(int entityId)
+        {
+            CurrentTurnEntityId = entityId;
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

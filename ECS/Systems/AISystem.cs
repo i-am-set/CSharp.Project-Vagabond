@@ -30,6 +30,9 @@ namespace ProjectVagabond
         {
             var gameState = Core.CurrentGameState;
 
+            // Don't process AI movement/decisions if in combat
+            if (gameState.IsInCombat) return;
+
             foreach (var entityId in gameState.ActiveEntities)
             {
                 var aiComp = Core.ComponentStore.GetComponent<AIComponent>(entityId);
@@ -53,7 +56,7 @@ namespace ProjectVagabond
                         DecideNextAction(entityId, aiComp);
                     }
 
-                    // If there's still nothing in the queue, the AI is idle.
+                    // If there's still nothing in the queue, the AI is idle or has initiated combat.
                     if (actionQueueComp.ActionQueue.Count == 0)
                     {
                         // Spend the remaining budget being idle.
@@ -86,12 +89,28 @@ namespace ProjectVagabond
         /// </summary>
         private void DecideNextAction(int entityId, AIComponent aiComp)
         {
+            var gameState = Core.CurrentGameState;
+            if (gameState.IsInCombat) return;
+
             var actionQueueComp = Core.ComponentStore.GetComponent<ActionQueueComponent>(entityId);
             var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+            var combatantComp = Core.ComponentStore.GetComponent<CombatantComponent>(entityId);
 
-            if (actionQueueComp == null || localPosComp == null) return;
+            if (actionQueueComp == null || localPosComp == null || combatantComp == null) return;
 
-            // For now, the AI just wanders randomly.
+            // Check for combat initiation
+            var playerLocalPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId);
+            if (playerLocalPosComp != null)
+            {
+                float distanceToPlayer = Vector2.Distance(localPosComp.LocalPosition, playerLocalPosComp.LocalPosition);
+                if (distanceToPlayer <= combatantComp.AggroRange)
+                {
+                    gameState.InitiateCombat(new List<int> { entityId, gameState.PlayerEntityId });
+                    return; // Combat initiated, no further action decided this tick.
+                }
+            }
+
+            // If not initiating combat, wander randomly.
             var shuffledOffsets = _neighborOffsets.OrderBy(v => _random.Next()).ToList();
             foreach (var offset in shuffledOffsets)
             {
