@@ -50,6 +50,7 @@ namespace ProjectVagabond
 
             // Spawn an NPC
             Spawner.Spawn("wanderer_npc", worldPosition: new Vector2(0, 0), localPosition: new Vector2(40, 40));
+            Spawner.Spawn("dog", worldPosition: new Vector2(0, 0), localPosition: new Vector2(20, 20));
         }
 
         /// <summary>
@@ -59,13 +60,28 @@ namespace ProjectVagabond
         public void InitializeRenderableEntities()
         {
             // Now that sprites are loaded, we can safely add the RenderableComponents.
-            Core.ComponentStore.AddComponent(PlayerEntityId, new RenderableComponent(Core.CurrentSpriteManager.PlayerSprite, Global.Instance.PlayerColor));
+            // --- PLAYER ---
+            var playerRenderable = Core.ComponentStore.GetComponent<RenderableComponent>(PlayerEntityId);
+            if (playerRenderable != null)
+            {
+                playerRenderable.Texture = Core.CurrentSpriteManager.PlayerSprite;
+            }
 
+            // --- NPCs ---
             var npcEntities = Core.ComponentStore.GetAllEntitiesWithComponent<NPCTagComponent>().ToList();
             foreach (var npcId in npcEntities)
             {
-                // The NPC was being given the player's sprite. Let's use a generic pixel for now.
-                Core.ComponentStore.AddComponent(npcId, new RenderableComponent(Core.Pixel, Color.CornflowerBlue));
+                // Get the component that the Spawner already created from the JSON file.
+                var renderable = Core.ComponentStore.GetComponent<RenderableComponent>(npcId);
+
+                // If the component exists but doesn't have a texture yet, assign one.
+                // This preserves the color and other properties loaded from the JSON.
+                if (renderable != null && renderable.Texture == null)
+                {
+                    // For now, all NPCs get a generic pixel sprite.
+                    // In the future, you could have a lookup here based on archetype ID.
+                    renderable.Texture = Core.Pixel;
+                }
             }
         }
 
