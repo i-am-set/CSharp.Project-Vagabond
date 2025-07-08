@@ -29,6 +29,9 @@ namespace ProjectVagabond
 
             int entityId = Core.EntityManager.CreateEntity();
 
+            // Store the archetype ID for easy lookup later
+            Core.ComponentStore.AddComponent(entityId, new ArchetypeIdComponent { ArchetypeId = archetypeId });
+
             foreach (var componentDef in archetype.Components)
             {
                 try

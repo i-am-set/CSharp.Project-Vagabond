@@ -4,7 +4,7 @@ using System.Linq;
 namespace ProjectVagabond
 {
     /// <summary>
-    /// Processes all chosen attacks at the end of a combat round.
+    /// Processes combat actions as they happen.
     /// </summary>
     public class CombatResolutionSystem : ISystem
     {
@@ -12,55 +12,47 @@ namespace ProjectVagabond
         public void Update(GameTime gameTime) { }
 
         /// <summary>
-        /// Resolves all queued attacks for the turn.
+        /// Resolves a single attack action immediately.
         /// </summary>
-        public void ResolveTurn()
+        /// <param name="attackerId">The ID of the entity performing the attack.</param>
+        /// <param name="chosenAttack">The component containing the attack details.</param>
+        public void ResolveAction(int attackerId, ChosenAttackComponent chosenAttack)
         {
-            var attackers = Core.ComponentStore.GetAllEntitiesWithComponent<ChosenAttackComponent>().ToList();
+            var attackerCombatantComp = Core.ComponentStore.GetComponent<CombatantComponent>(attackerId);
+            var attackerAttacksComp = Core.ComponentStore.GetComponent<AvailableAttacksComponent>(attackerId);
+            var targetHealthComp = Core.ComponentStore.GetComponent<HealthComponent>(chosenAttack.TargetId);
 
-            foreach (var attackerId in attackers)
+            // Get attacker and target names for logging
+            var attackerArchetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(attackerId);
+            var attackerArchetype = ArchetypeManager.Instance.GetArchetype(attackerArchetypeIdComp?.ArchetypeId ?? "Unknown");
+            var attackerName = attackerArchetype?.Name ?? $"Entity {attackerId}";
+
+            var targetArchetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(chosenAttack.TargetId);
+            var targetArchetype = ArchetypeManager.Instance.GetArchetype(targetArchetypeIdComp?.ArchetypeId ?? "Unknown");
+            var targetName = targetArchetype?.Name ?? $"Entity {chosenAttack.TargetId}";
+
+            if (attackerCombatantComp == null || attackerAttacksComp == null || targetHealthComp == null)
             {
-                var chosenAttackComp = Core.ComponentStore.GetComponent<ChosenAttackComponent>(attackerId);
-                var attackerCombatantComp = Core.ComponentStore.GetComponent<CombatantComponent>(attackerId);
-                var attackerAttacksComp = Core.ComponentStore.GetComponent<AvailableAttacksComponent>(attackerId);
-                var targetHealthComp = Core.ComponentStore.GetComponent<HealthComponent>(chosenAttackComp.TargetId);
-
-                // Get attacker and target names for logging
-                var attackerArchetype = ArchetypeManager.Instance.GetArchetype(Core.ComponentStore.GetComponent<RenderableComponent>(attackerId)?.Texture?.Name ?? "Unknown");
-                var attackerName = attackerArchetype?.Name ?? $"Entity {attackerId}";
-
-                var targetArchetype = ArchetypeManager.Instance.GetArchetype(Core.ComponentStore.GetComponent<RenderableComponent>(chosenAttackComp.TargetId)?.Texture?.Name ?? "Unknown");
-                var targetName = targetArchetype?.Name ?? $"Entity {chosenAttackComp.TargetId}";
-
-                if (chosenAttackComp == null || attackerCombatantComp == null || attackerAttacksComp == null || targetHealthComp == null)
-                {
-                    CombatLog.Log($"[error]Could not resolve attack for {attackerName}. Missing components.");
-                    // Clean up the component anyway to prevent an infinite loop
-                    Core.ComponentStore.RemoveComponent<ChosenAttackComponent>(attackerId);
-                    continue;
-                }
-
-                var attack = attackerAttacksComp.Attacks.FirstOrDefault(a => a.Name == chosenAttackComp.AttackName);
-
-                if (attack == null)
-                {
-                    CombatLog.Log($"[error]{attackerName} tried to use an unknown attack: {chosenAttackComp.AttackName}");
-                    Core.ComponentStore.RemoveComponent<ChosenAttackComponent>(attackerId);
-                    continue;
-                }
-
-                // Calculate damage
-                int damage = (int)(attackerCombatantComp.AttackPower * attack.DamageMultiplier);
-
-                // Apply damage
-                targetHealthComp.TakeDamage(damage);
-
-                // Log the result
-                CombatLog.Log($"{attackerName} attacks {targetName} with {attack.Name} for [red]{damage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining.");
-
-                // Remove the temporary component
-                Core.ComponentStore.RemoveComponent<ChosenAttackComponent>(attackerId);
+                Core.CurrentTerminalRenderer.AddCombatLog($"[error]Could not resolve attack for {attackerName}. Missing components.");
+                return;
             }
+
+            var attack = attackerAttacksComp.Attacks.FirstOrDefault(a => a.Name == chosenAttack.AttackName);
+
+            if (attack == null)
+            {
+                Core.CurrentTerminalRenderer.AddCombatLog($"[error]{attackerName} tried to use an unknown attack: {chosenAttack.AttackName}");
+                return;
+            }
+
+            // Calculate damage
+            int damage = (int)(attackerCombatantComp.AttackPower * attack.DamageMultiplier);
+
+            // Apply damage
+            targetHealthComp.TakeDamage(damage);
+
+            // Log the result
+            Core.CurrentTerminalRenderer.AddCombatLog($"{attackerName} attacks {targetName} with {attack.Name} for [red]{damage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining.");
         }
     }
 }

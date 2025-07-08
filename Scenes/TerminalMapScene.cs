@@ -58,7 +58,7 @@ namespace ProjectVagabond.Scenes
                 int tipWidth = 250;
                 int tipHeight = 100;
                 int tipX = 375;
-                int tipY = 50 + (Global.DEFAULT_TERMINAL_HEIGHT / 2) + 30; // Below the shrunken terminal
+                int tipY = 50 + ((Global.DEFAULT_TERMINAL_HEIGHT / 2) + 20) + 10; // Below the shrunken terminal
                 _targetInfoPanel = new TargetInfoPanel(new Rectangle(tipX, tipY, tipWidth, tipHeight));
 
                 _playerCombatInputSystem = new PlayerCombatInputSystem(_actionMenuPanel, Core.CurrentMapRenderer);

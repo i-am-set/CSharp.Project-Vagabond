@@ -48,7 +48,8 @@ namespace ProjectVagabond
 
         private void UpdateHover(GameTime gameTime, Vector2 virtualMousePos)
         {
-            Vector2? currentHoveredPos = null;
+            _hoveredGridPos = null; // Reset hover state each frame
+            Vector2? currentHoveredGridPos = null;
             int cellSize = _gameState.CurrentMapView == MapView.World ? Global.GRID_CELL_SIZE : Global.LOCAL_GRID_CELL_SIZE;
             int gridSize = _gameState.CurrentMapView == MapView.World ? Global.GRID_SIZE : Global.LOCAL_GRID_SIZE;
 
@@ -63,22 +64,47 @@ namespace ProjectVagabond
                     {
                         int startX = (int)_gameState.PlayerWorldPos.X - Global.GRID_SIZE / 2;
                         int startY = (int)_gameState.PlayerWorldPos.Y - Global.GRID_SIZE / 2;
-                        currentHoveredPos = new Vector2(startX + gridX, startY + gridY);
+                        currentHoveredGridPos = new Vector2(startX + gridX, startY + gridY);
                     }
                     else
                     {
-                        currentHoveredPos = new Vector2(gridX, gridY);
+                        currentHoveredGridPos = new Vector2(gridX, gridY);
                     }
                 }
             }
 
-            _hoveredGridPos = currentHoveredPos;
+            if (!currentHoveredGridPos.HasValue) return;
 
-            if (currentHoveredPos.HasValue)
+            _hoveredGridPos = currentHoveredGridPos;
+            var stringBuilder = new StringBuilder();
+
+            // --- Tooltip Logic ---
+            // Check for an entity on the hovered tile first.
+            int? entityIdOnTile = GetEntityIdAtGridPos(currentHoveredGridPos.Value);
+
+            if (entityIdOnTile.HasValue && _gameState.IsInCombat)
             {
-                var stringBuilder = new StringBuilder();
-                int posX = (int)currentHoveredPos.Value.X;
-                int posY = (int)currentHoveredPos.Value.Y;
+                // Build combatant tooltip
+                var health = Core.ComponentStore.GetComponent<HealthComponent>(entityIdOnTile.Value);
+                var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(entityIdOnTile.Value);
+                var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
+                var targetPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityIdOnTile.Value);
+                var playerPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
+
+                if (health != null && archetype != null && targetPosComp != null && playerPosComp != null)
+                {
+                    float distance = Vector2.Distance(playerPosComp.LocalPosition, targetPosComp.LocalPosition);
+                    stringBuilder.AppendLine(archetype.Name);
+                    stringBuilder.AppendLine($"Health: {health.CurrentHealth}/{health.MaxHealth}");
+                    stringBuilder.Append($"Distance: {distance:F1}m");
+                    Core.CurrentTooltipManager.RequestTooltip(entityIdOnTile.Value, stringBuilder.ToString(), virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
+                }
+            }
+            else
+            {
+                // Build default grid coordinate tooltip
+                int posX = (int)currentHoveredGridPos.Value.X;
+                int posY = (int)currentHoveredGridPos.Value.Y;
 
                 if (_gameState.CurrentMapView == MapView.World)
                 {
@@ -92,9 +118,7 @@ namespace ProjectVagabond
                 {
                     stringBuilder.Append($"Local Pos: ({posX}, {posY})");
                 }
-
-                string tooltipText = stringBuilder.ToString();
-                Core.CurrentTooltipManager.RequestTooltip(currentHoveredPos.Value, tooltipText, virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
+                Core.CurrentTooltipManager.RequestTooltip(currentHoveredGridPos.Value, stringBuilder.ToString(), virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
             }
         }
 
@@ -529,6 +553,22 @@ namespace ProjectVagabond
                 }
             }
 
+            return null;
+        }
+
+        /// <summary>
+        /// Gets the ID of the entity at a specific grid coordinate on the local map.
+        /// </summary>
+        private int? GetEntityIdAtGridPos(Vector2 gridPos)
+        {
+            foreach (var entityId in _gameState.Combatants)
+            {
+                var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+                if (localPosComp != null && (int)localPosComp.LocalPosition.X == (int)gridPos.X && (int)localPosComp.LocalPosition.Y == (int)gridPos.Y)
+                {
+                    return entityId;
+                }
+            }
             return null;
         }
 

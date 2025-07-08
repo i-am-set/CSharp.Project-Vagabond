@@ -101,8 +101,11 @@ namespace ProjectVagabond
 
         public void InitiateCombat(List<int> initialCombatants)
         {
+            CancelExecutingActions(true); // Interrupt player's pathfinding
+
             if (IsInCombat) return;
 
+            Core.CurrentTerminalRenderer.ClearCombatHistory();
             IsInCombat = true;
             CurrentMapView = MapView.Local; // Lock map view to local for combat
             Combatants = new List<int>(initialCombatants);
@@ -126,14 +129,23 @@ namespace ProjectVagabond
             for (int i = 0; i < InitiativeOrder.Count; i++)
             {
                 var entityId = InitiativeOrder[i];
-                var archetype = ArchetypeManager.Instance.GetArchetype(Core.ComponentStore.GetComponent<RenderableComponent>(entityId)?.Texture?.Name ?? "Unknown");
+                var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(entityId);
+                var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
                 string name = archetype?.Name ?? $"Entity {entityId}";
                 initiativeLog.Append($"\n  {i + 1}. {name} ({initiativeScores[entityId]})");
             }
 
-            CombatLog.Log(initiativeLog.ToString());
+            Core.CurrentTerminalRenderer.AddCombatLog(initiativeLog.ToString());
 
             Core.CombatTurnSystem.StartCombat();
+
+            // --- CRITICAL FIX ---
+            // After setting up combat, if the first entity to act is an AI,
+            // we must immediately tell it to process its turn.
+            if (Core.ComponentStore.HasComponent<AIComponent>(CurrentTurnEntityId))
+            {
+                Core.AISystem.ProcessCombatTurn(CurrentTurnEntityId);
+            }
         }
 
         public void AddEntityToCombat(int entityId)
@@ -145,6 +157,7 @@ namespace ProjectVagabond
         {
             // Logic to clean up and end combat will be implemented later.
             UIState = CombatUIState.Default;
+            Core.CurrentTerminalRenderer.ClearCombatHistory();
         }
 
         public void SetCurrentTurnEntity(int entityId)
@@ -294,11 +307,11 @@ namespace ProjectVagabond
             var queueToSimulate = customQueue ?? PendingActions;
             if (!queueToSimulate.Any()) return (PlayerStats.CurrentEnergyPoints, true, 0);
 
-            bool isLocalSim = CurrentMapView == MapView.Local;
+            bool isLocalMove = CurrentMapView == MapView.Local;
             int finalEnergy = PlayerStats.CurrentEnergyPoints;
             int maxEnergy = PlayerStats.MaxEnergyPoints;
             int secondsPassed = 0;
-            Vector2 lastPosition = isLocalSim ? PlayerLocalPos : PlayerWorldPos;
+            Vector2 lastPosition = isLocalMove ? PlayerLocalPos : PlayerWorldPos;
             bool isFirstMoveInQueue = true;
             bool localRunCostApplied = false;
 
@@ -307,21 +320,21 @@ namespace ProjectVagabond
                 if (action is MoveAction moveAction)
                 {
                     Vector2 moveDirection = moveAction.Destination - lastPosition;
-                    MapData mapData = isLocalSim ? default : GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
+                    MapData mapData = isLocalMove ? default : GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
 
-                    int moveDuration = GetSecondsPassedDuringMovement(moveAction.IsRunning, mapData, moveDirection, isLocalSim);
+                    int moveDuration = GetSecondsPassedDuringMovement(moveAction.IsRunning, mapData, moveDirection, isLocalMove);
 
                     // Apply first-move time scaling for world map simulation
-                    if (!isLocalSim && isFirstMoveInQueue)
+                    if (!isLocalMove && isFirstMoveInQueue)
                     {
                         float scaleFactor = GetFirstMoveTimeScaleFactor(moveDirection);
                         moveDuration = (int)Math.Ceiling(moveDuration * scaleFactor);
                     }
 
                     secondsPassed += moveDuration;
-                    int cost = GetMovementEnergyCost(moveAction, isLocalSim);
+                    int cost = GetMovementEnergyCost(moveAction, isLocalMove);
 
-                    if (isLocalSim && moveAction.IsRunning && !localRunCostApplied)
+                    if (isLocalMove && moveAction.IsRunning && !localRunCostApplied)
                     {
                         cost = 1;
                         localRunCostApplied = true;

@@ -45,17 +45,31 @@ namespace ProjectVagabond
                 int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
                 int scrollLines = scrollDelta > 0 ? 3 : -3;
 
-                int maxVisibleLines = Core.CurrentTerminalRenderer.GetMaxVisibleLines();
-                int currentOffset = Core.CurrentTerminalRenderer.ScrollOffset;
-                int maxOffset = Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - maxVisibleLines);
-
-                if (scrollDelta > 0) // scrolling up
+                if (Core.CurrentGameState.IsInCombat)
                 {
-                    Core.CurrentTerminalRenderer.SetScrollOffset(Math.Min(currentOffset + Math.Abs(scrollLines), maxOffset));
+                    int currentOffset = Core.CurrentTerminalRenderer.CombatScrollOffset;
+                    int maxOffset = Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - Core.CurrentTerminalRenderer.GetMaxVisibleLines());
+                    if (scrollDelta > 0) // scrolling up
+                    {
+                        Core.CurrentTerminalRenderer.CombatScrollOffset = Math.Min(currentOffset + Math.Abs(scrollLines), maxOffset);
+                    }
+                    else // scrolling down
+                    {
+                        Core.CurrentTerminalRenderer.CombatScrollOffset = Math.Max(currentOffset - Math.Abs(scrollLines), 0);
+                    }
                 }
-                else // scrolling down
+                else
                 {
-                    Core.CurrentTerminalRenderer.SetScrollOffset(Math.Max(currentOffset - Math.Abs(scrollLines), 0));
+                    int currentOffset = Core.CurrentTerminalRenderer.ScrollOffset;
+                    int maxOffset = Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - Core.CurrentTerminalRenderer.GetMaxVisibleLines());
+                    if (scrollDelta > 0) // scrolling up
+                    {
+                        Core.CurrentTerminalRenderer.ScrollOffset = Math.Min(currentOffset + Math.Abs(scrollLines), maxOffset);
+                    }
+                    else // scrolling down
+                    {
+                        Core.CurrentTerminalRenderer.ScrollOffset = Math.Max(currentOffset - Math.Abs(scrollLines), 0);
+                    }
                 }
             }
 
@@ -242,11 +256,11 @@ namespace ProjectVagabond
                         else if (key == Keys.PageUp)
                         {
                             int maxVisibleLines = Core.CurrentTerminalRenderer.GetMaxVisibleLines(); // <-- FIX
-                            Core.CurrentTerminalRenderer.SetScrollOffset(Math.Min(Core.CurrentTerminalRenderer.ScrollOffset + 5, Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - maxVisibleLines)));
+                            Core.CurrentTerminalRenderer.ScrollOffset = Math.Min(Core.CurrentTerminalRenderer.ScrollOffset + 5, Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - maxVisibleLines));
                         }
                         else if (key == Keys.PageDown)
                         {
-                            Core.CurrentTerminalRenderer.SetScrollOffset(Math.Max(Core.CurrentTerminalRenderer.ScrollOffset - 5, 0));
+                            Core.CurrentTerminalRenderer.ScrollOffset = Math.Max(Core.CurrentTerminalRenderer.ScrollOffset - 5, 0);
                         }
                         else
                         {
@@ -335,13 +349,13 @@ namespace ProjectVagabond
                 case Keys.U: // Scroll up (CTRL + U)
                     {
                         int maxVisibleLines = Core.CurrentTerminalRenderer.GetMaxVisibleLines(); // <-- FIX
-                        Core.CurrentTerminalRenderer.SetScrollOffset(Math.Min(Core.CurrentTerminalRenderer.ScrollOffset + 5, Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - maxVisibleLines)));
+                        Core.CurrentTerminalRenderer.ScrollOffset = Math.Min(Core.CurrentTerminalRenderer.ScrollOffset + 5, Math.Max(0, Core.CurrentTerminalRenderer.WrappedHistory.Count - maxVisibleLines));
                     }
                     break;
 
                 case Keys.D: // Scroll down (CTRL + D)
                     {
-                        Core.CurrentTerminalRenderer.SetScrollOffset(Math.Max(Core.CurrentTerminalRenderer.ScrollOffset - 5, 0));
+                        Core.CurrentTerminalRenderer.ScrollOffset = Math.Max(Core.CurrentTerminalRenderer.ScrollOffset - 5, 0);
                     }
                     break;
             }
@@ -443,7 +457,7 @@ namespace ProjectVagabond
                 Core.CurrentTerminalRenderer.AddOutputToHistory($"Unknown command: '{commandName}'. Type 'help' for available commands.");
             }
 
-            Core.CurrentTerminalRenderer.SetScrollOffset(0);
+            Core.CurrentTerminalRenderer.ScrollOffset = 0;
         }
     }
 }

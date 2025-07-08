@@ -26,7 +26,8 @@ namespace ProjectVagabond
         public void ProcessInput()
         {
             var gameState = Core.CurrentGameState;
-            if (!gameState.IsInCombat || gameState.UIState == CombatUIState.Busy)
+            // Only process input if it's the player's turn and the UI is not busy.
+            if (!gameState.IsInCombat || gameState.CurrentTurnEntityId != gameState.PlayerEntityId || gameState.UIState == CombatUIState.Busy)
             {
                 _previousMouseState = Mouse.GetState();
                 return;
@@ -44,6 +45,9 @@ namespace ProjectVagabond
                 if (clickedEntityId.HasValue)
                 {
                     gameState.SelectedTargetId = clickedEntityId;
+                    var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(clickedEntityId.Value);
+                    var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
+                    Core.CurrentTerminalRenderer.AddCombatLog($"Player selects target: {archetype?.Name ?? $"Entity {clickedEntityId.Value}"}.");
 
                     // If we were waiting to select a target, execute the action now
                     if (gameState.UIState == CombatUIState.SelectTarget)
@@ -73,19 +77,21 @@ namespace ProjectVagabond
             {
                 case "Attack":
                     gameState.UIState = CombatUIState.SelectAttack;
+                    Core.CurrentTerminalRenderer.AddCombatLog("Player opens Attack menu.");
                     break;
                 case "Skills":
                     // gameState.UIState = CombatUIState.SelectSkill; // For later
-                    CombatLog.Log("[dim]Skills are not yet implemented.");
+                    Core.CurrentTerminalRenderer.AddCombatLog("[dim]Skills are not yet implemented.");
                     break;
                 case "Move":
                     // gameState.UIState = CombatUIState.SelectMove; // For later
-                    CombatLog.Log("[dim]Moving in combat is not yet implemented.");
+                    Core.CurrentTerminalRenderer.AddCombatLog("[dim]Moving in combat is not yet implemented.");
                     break;
                 case "Item":
-                    CombatLog.Log("[dim]Items are not yet implemented.");
+                    Core.CurrentTerminalRenderer.AddCombatLog("[dim]Items are not yet implemented.");
                     break;
                 case "End Turn":
+                    Core.CurrentTerminalRenderer.AddCombatLog("Player ends their turn.");
                     gameState.UIState = CombatUIState.Busy;
                     Core.CombatTurnSystem.EndCurrentTurn();
                     break;
@@ -95,6 +101,7 @@ namespace ProjectVagabond
                     {
                         _selectedAttackName = command;
                         gameState.UIState = CombatUIState.SelectTarget;
+                        Core.CurrentTerminalRenderer.AddCombatLog($"Player selects '{command}'. Now select a target.");
                     }
                     break;
             }
@@ -114,24 +121,24 @@ namespace ProjectVagabond
 
             if (attack == null)
             {
-                CombatLog.Log($"[error]Could not find attack: {_selectedAttackName}");
+                Core.CurrentTerminalRenderer.AddCombatLog($"[error]Could not find attack: {_selectedAttackName}");
                 ResetToDefaultState();
                 return;
             }
 
             if (playerStats.ActionPoints >= attack.ActionPointCost)
             {
-                // Add the chosen attack component to be resolved at the end of the round
                 var chosenAttack = new ChosenAttackComponent
                 {
                     TargetId = gameState.SelectedTargetId.Value,
                     AttackName = attack.Name
                 };
-                Core.ComponentStore.AddComponent(gameState.PlayerEntityId, chosenAttack);
 
-                // Deduct cost and log
+                // Deduct cost
                 playerStats.ActionPoints -= attack.ActionPointCost;
-                CombatLog.Log($"Player prepares to use {attack.Name}.");
+
+                // Resolve the action immediately
+                Core.CombatResolutionSystem.ResolveAction(gameState.PlayerEntityId, chosenAttack);
 
                 // Player's turn is over after committing to an action
                 gameState.UIState = CombatUIState.Busy;
@@ -139,7 +146,7 @@ namespace ProjectVagabond
             }
             else
             {
-                CombatLog.Log($"[warning]Not enough Action Points to use {attack.Name}.");
+                Core.CurrentTerminalRenderer.AddCombatLog($"[warning]Not enough Action Points to use {attack.Name}. Need {attack.ActionPointCost}, have {playerStats.ActionPoints}.");
                 ResetToDefaultState();
             }
         }
@@ -149,6 +156,7 @@ namespace ProjectVagabond
             var gameState = Core.CurrentGameState;
             _selectedAttackName = null;
             gameState.UIState = CombatUIState.Default;
+            Core.CurrentTerminalRenderer.AddCombatLog("[dim]Action cancelled. Returning to main menu.");
             // We don't reset SelectedTargetId, as it's useful to keep the last-clicked enemy selected.
         }
     }

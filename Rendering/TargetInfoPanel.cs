@@ -24,19 +24,12 @@ namespace ProjectVagabond
         public void Draw(SpriteBatch spriteBatch)
         {
             var gameState = Core.CurrentGameState;
-            if (!gameState.IsInCombat || !gameState.SelectedTargetId.HasValue) return;
+            if (!gameState.IsInCombat) return; // Only draw the panel at all during combat
 
             var font = Global.Instance.DefaultFont;
             if (font == null) return;
 
-            int targetId = gameState.SelectedTargetId.Value;
-            var health = Core.ComponentStore.GetComponent<HealthComponent>(targetId);
-            var renderable = Core.ComponentStore.GetComponent<RenderableComponent>(targetId);
-            var archetype = ArchetypeManager.Instance.GetArchetype(renderable?.Texture?.Name ?? "Unknown");
-
-            if (health == null || archetype == null) return;
-
-            // Draw border and background
+            // --- Draw the panel frame regardless of whether a target is selected ---
             var borderRect = new Rectangle(
                 _bounds.X - BORDER_THICKNESS,
                 _bounds.Y - BORDER_THICKNESS,
@@ -45,6 +38,35 @@ namespace ProjectVagabond
             );
             spriteBatch.Draw(Core.Pixel, borderRect, Global.Instance.Palette_White);
             spriteBatch.Draw(Core.Pixel, _bounds, Global.Instance.TerminalBg);
+
+            // --- Now, draw the content based on whether a target is selected ---
+            if (gameState.SelectedTargetId.HasValue)
+            {
+                DrawTargetDetails(spriteBatch, gameState.SelectedTargetId.Value, font);
+            }
+            else
+            {
+                // Draw a placeholder message if no target is selected
+                string noTargetText = "[No Target Selected]";
+                Vector2 textSize = font.MeasureString(noTargetText);
+                Vector2 textPosition = new Vector2(
+                    _bounds.Center.X - textSize.X / 2,
+                    _bounds.Center.Y - textSize.Y / 2
+                );
+                spriteBatch.DrawString(font, noTargetText, textPosition, Global.Instance.Palette_Gray);
+            }
+        }
+
+        private void DrawTargetDetails(SpriteBatch spriteBatch, int targetId, BitmapFont font)
+        {
+            var gameState = Core.CurrentGameState;
+            var health = Core.ComponentStore.GetComponent<HealthComponent>(targetId);
+            var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(targetId);
+            var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
+            var targetPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(targetId);
+            var playerPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId);
+
+            if (health == null || archetype == null || targetPosComp == null || playerPosComp == null) return;
 
             // Draw content
             float currentY = _bounds.Y + PADDING;
@@ -70,6 +92,12 @@ namespace ProjectVagabond
                 var fgBarRect = new Rectangle(_bounds.X + PADDING, (int)currentY, fgBarWidth, barHeight);
                 spriteBatch.Draw(Core.Pixel, fgBarRect, Color.LawnGreen);
             }
+            currentY += barHeight + PADDING;
+
+            // Distance
+            float distance = Vector2.Distance(playerPosComp.LocalPosition, targetPosComp.LocalPosition);
+            string distanceText = $"Distance: {distance:F1}m";
+            spriteBatch.DrawString(font, distanceText, new Vector2(_bounds.X + PADDING, currentY), Global.Instance.GameTextColor);
         }
     }
 }

@@ -35,13 +35,8 @@ namespace ProjectVagabond
             // Check if we've completed a full round.
             if (_currentTurnIndex >= gameState.InitiativeOrder.Count)
             {
-                // End of the round. Resolve all actions that were chosen.
-                Core.CombatResolutionSystem.ResolveTurn();
-
                 _currentTurnIndex = 0; // Reset for the new round.
-                CombatLog.Log("[yellow]New round begins.");
-
-                // Pass the time for the entire round only AFTER everyone has acted and actions are resolved.
+                Core.CurrentTerminalRenderer.AddCombatLog("[yellow]New round begins.");
                 Core.CurrentWorldClockManager.PassTime(seconds: GameState.COMBAT_TURN_DURATION_SECONDS);
             }
 
@@ -50,14 +45,20 @@ namespace ProjectVagabond
             gameState.SetCurrentTurnEntity(newTurnEntityId);
 
             // Log whose turn it is now.
-            var archetype = ArchetypeManager.Instance.GetArchetype(Core.ComponentStore.GetComponent<RenderableComponent>(gameState.CurrentTurnEntityId)?.Texture?.Name ?? "Unknown");
+            var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(gameState.CurrentTurnEntityId);
+            var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
             var newTurnEntityName = archetype?.Name ?? $"Entity {gameState.CurrentTurnEntityId}";
-            CombatLog.Log($"Turn: {newTurnEntityName}");
+            Core.CurrentTerminalRenderer.AddCombatLog($"Turn: {newTurnEntityName}");
 
             // If the new entity is an AI, tell it to take its turn.
             if (Core.ComponentStore.HasComponent<AIComponent>(newTurnEntityId))
             {
                 Core.AISystem.ProcessCombatTurn(newTurnEntityId);
+            }
+            else if (newTurnEntityId == gameState.PlayerEntityId)
+            {
+                // It's the player's turn, reset their UI state to default
+                gameState.UIState = CombatUIState.Default;
             }
         }
 

@@ -37,8 +37,8 @@ namespace ProjectVagabond
 
             foreach (var entityId in initiativeOrder)
             {
-                var renderable = Core.ComponentStore.GetComponent<RenderableComponent>(entityId);
-                var archetype = ArchetypeManager.Instance.GetArchetype(renderable?.Texture?.Name ?? "Unknown");
+                var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(entityId);
+                var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
                 string baseName = archetype?.Name ?? $"Entity {entityId}";
 
                 // The player's name is always unique and doesn't get a number.

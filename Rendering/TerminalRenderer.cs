@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -12,9 +13,13 @@ namespace ProjectVagabond
 {
     public class TerminalRenderer
     {
-        private List<string> _inputHistory = new List<string>();
-        private List<ColoredLine> _wrappedHistory = new List<ColoredLine>();
-        private int _scrollOffset = 0;
+        private readonly List<string> _inputHistory = new List<string>();
+        private readonly List<ColoredLine> _wrappedHistory = new List<ColoredLine>();
+        private readonly List<ColoredLine> _combatHistory = new List<ColoredLine>();
+
+        public int ScrollOffset { get; set; } = 0;
+        public int CombatScrollOffset { get; set; } = 0;
+
         private int _nextLineNumber = 1;
         private Color _inputCaratColor;
 
@@ -28,15 +33,9 @@ namespace ProjectVagabond
         private bool _cachedIsFreeMoveMode = false;
         private int _cachedCurrentPathIndex = -1;
 
-        public int ScrollOffset => _scrollOffset;
         public List<ColoredLine> WrappedHistory => _wrappedHistory;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
-        public void SetScrollOffset(int index)
-        {
-            _scrollOffset = index;
-        }
 
         public void ResetCaratBlink()
         {
@@ -60,7 +59,7 @@ namespace ProjectVagabond
                 var keptLines = _wrappedHistory.GetRange(startIndex, _wrappedHistory.Count - startIndex);
 
                 _wrappedHistory.Clear();
-                _scrollOffset = 0;
+                ScrollOffset = 0;
 
                 var truncationMessage = ParseColoredText("--- HISTORY TRUNCATED ---", Global.Instance.Palette_Gray);
                 truncationMessage.LineNumber = 1;
@@ -106,12 +105,30 @@ namespace ProjectVagabond
             AddToHistory(output, Global.Instance.OutputTextColor);
         }
 
+        public void AddCombatLog(string message)
+        {
+            var coloredLine = ParseColoredText(message, Global.Instance.OutputTextColor);
+            var wrappedLines = WrapColoredText(coloredLine, GetTerminalContentWidthInPixels());
+            _combatHistory.AddRange(wrappedLines);
+
+            while (_combatHistory.Count > Global.MAX_HISTORY_LINES)
+            {
+                _combatHistory.RemoveAt(0);
+            }
+        }
+
         public void ClearHistory()
         {
             _inputHistory.Clear();
             _wrappedHistory.Clear();
-            _scrollOffset = 0;
+            ScrollOffset = 0;
             _nextLineNumber = 1;
+        }
+
+        public void ClearCombatHistory()
+        {
+            _combatHistory.Clear();
+            CombatScrollOffset = 0;
         }
 
 
@@ -123,12 +140,16 @@ namespace ProjectVagabond
             BitmapFont _defaultFont = Global.Instance.DefaultFont;
 
             bool isInCombat = Core.CurrentGameState.IsInCombat;
-            int terminalHeight = GetTerminalHeight(); // Use helper for dynamic height
+            int terminalHeight = GetTerminalHeight();
             int terminalX = 375;
             int terminalY = GetTerminalY();
             int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
 
             Texture2D pixel = Core.Pixel;
+
+            // Determine which history and scroll offset to use
+            List<ColoredLine> activeHistory = isInCombat ? _combatHistory : _wrappedHistory;
+            int activeScrollOffset = isInCombat ? CombatScrollOffset : ScrollOffset;
 
             // Draw Frame
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, terminalHeight + 30), Global.Instance.TerminalBg);
@@ -140,27 +161,21 @@ namespace ProjectVagabond
             _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 5, terminalWidth + 10, 2), Global.Instance.Palette_White);
 
             // Draw History
-            int maxVisibleLines = GetMaxVisibleLines(); // Helper is now dynamic
-            int totalLines = _wrappedHistory.Count;
-            int lastHistoryIndexToDraw = totalLines - 1 - _scrollOffset;
-
-            // Calculate the Y position of the last line based on the dynamic output area height
+            int maxVisibleLines = GetMaxVisibleLines();
+            int totalLines = activeHistory.Count;
+            int lastHistoryIndexToDraw = totalLines - 1 - activeScrollOffset;
             float lastScreenLineY = terminalY + GetOutputAreaHeight() - Global.TERMINAL_LINE_SPACING;
 
             for (int i = 0; i < maxVisibleLines; i++)
             {
                 int historyIndex = lastHistoryIndexToDraw - i;
-
-                if (historyIndex < 0)
-                    break;
+                if (historyIndex < 0) break;
 
                 float y = lastScreenLineY - i * Global.TERMINAL_LINE_SPACING;
-
-                if (y < terminalY)
-                    continue;
+                if (y < terminalY) continue;
 
                 float x = terminalX;
-                var line = _wrappedHistory[historyIndex];
+                var line = activeHistory[historyIndex];
 
                 foreach (var segment in line.Segments)
                 {
@@ -177,18 +192,11 @@ namespace ProjectVagabond
             }
 
             // Draw Scroll Indicator
-            bool canScrollUp = _scrollOffset > 0;
-            bool canScrollDown = _wrappedHistory.Count > maxVisibleLines;
-            if (canScrollUp || canScrollDown)
+            if (activeScrollOffset > 0)
             {
-                string scrollIndicator = "";
-                if (_scrollOffset > 0)
-                {
-                    _stringBuilder.Clear();
-                    _stringBuilder.Append("^ Scrolled up ").Append(_scrollOffset).Append(" lines");
-                    scrollIndicator = _stringBuilder.ToString();
-                }
-
+                _stringBuilder.Clear();
+                _stringBuilder.Append("^ Scrolled up ").Append(activeScrollOffset).Append(" lines");
+                string scrollIndicator = _stringBuilder.ToString();
                 int scrollY = terminalY - 35;
                 _spriteBatch.DrawString(_defaultFont, scrollIndicator, new Vector2(terminalX, scrollY), Color.Gold);
             }

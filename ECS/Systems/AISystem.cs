@@ -94,18 +94,15 @@ namespace ProjectVagabond
             var gameState = Core.CurrentGameState;
             if (!gameState.IsInCombat) return;
 
-            // If this AI has already chosen an attack this round, do nothing.
-            if (Core.ComponentStore.HasComponent<ChosenAttackComponent>(entityId))
-            {
-                return;
-            }
-
             var combatStats = Core.ComponentStore.GetComponent<CombatStatsComponent>(entityId);
             var availableAttacks = Core.ComponentStore.GetComponent<AvailableAttacksComponent>(entityId);
+            var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(entityId);
+            var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
+            var aiName = archetype?.Name ?? $"Entity {entityId}";
 
             if (combatStats == null || availableAttacks == null)
             {
-                CombatLog.Log($"[error]AI {entityId} cannot act in combat (missing stats/attacks).");
+                Core.CurrentTerminalRenderer.AddCombatLog($"[error]{aiName} cannot act in combat (missing stats/attacks).");
                 Core.CombatTurnSystem.EndCurrentTurn(); // End turn anyway to not stall combat.
                 return;
             }
@@ -121,21 +118,17 @@ namespace ProjectVagabond
                     TargetId = gameState.PlayerEntityId,
                     AttackName = affordableAttack.Name
                 };
-                Core.ComponentStore.AddComponent(entityId, chosenAttack);
-
+                
                 // Spend the action points.
                 combatStats.ActionPoints -= affordableAttack.ActionPointCost;
 
-                var archetype = ArchetypeManager.Instance.GetArchetype(Core.ComponentStore.GetComponent<RenderableComponent>(entityId)?.Texture?.Name ?? "Unknown");
-                var aiName = archetype?.Name ?? $"Entity {entityId}";
-                CombatLog.Log($"{aiName} prepares to use {affordableAttack.Name}.");
+                // Resolve the action immediately
+                Core.CombatResolutionSystem.ResolveAction(entityId, chosenAttack);
             }
             else
             {
                 // Can't afford any attacks, just log it.
-                var archetype = ArchetypeManager.Instance.GetArchetype(Core.ComponentStore.GetComponent<RenderableComponent>(entityId)?.Texture?.Name ?? "Unknown");
-                var aiName = archetype?.Name ?? $"Entity {entityId}";
-                CombatLog.Log($"{aiName} has no affordable attacks and does nothing.");
+                Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} has no affordable attacks and does nothing.");
             }
 
             // The AI has made its decision (or decided to do nothing), so it ends its turn.
