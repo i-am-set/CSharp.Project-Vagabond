@@ -45,9 +45,7 @@ namespace ProjectVagabond
             gameState.SetCurrentTurnEntity(newTurnEntityId);
 
             // Log whose turn it is now.
-            var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(gameState.CurrentTurnEntityId);
-            var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
-            var newTurnEntityName = archetype?.Name ?? $"Entity {gameState.CurrentTurnEntityId}";
+            var newTurnEntityName = EntityNamer.GetName(gameState.CurrentTurnEntityId);
             Core.CurrentTerminalRenderer.AddCombatLog($"Turn: {newTurnEntityName}");
 
             // If the new entity is an AI, tell it to take its turn.

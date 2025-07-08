@@ -32,35 +32,7 @@ namespace ProjectVagabond
             }
 
             // --- 1. Generate Unique Display Names ---
-            var displayNames = new Dictionary<int, string>();
-            var nameCounts = new Dictionary<string, int>();
-
-            foreach (var entityId in initiativeOrder)
-            {
-                var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(entityId);
-                var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
-                string baseName = archetype?.Name ?? $"Entity {entityId}";
-
-                // The player's name is always unique and doesn't get a number.
-                if (entityId == gameState.PlayerEntityId)
-                {
-                    displayNames[entityId] = baseName;
-                    continue;
-                }
-
-                // Count occurrences of non-player names
-                if (nameCounts.TryGetValue(baseName, out int count))
-                {
-                    nameCounts[baseName] = count + 1;
-                }
-                else
-                {
-                    nameCounts[baseName] = 1;
-                }
-
-                // Append the count to make the name unique
-                displayNames[entityId] = $"{baseName} {nameCounts[baseName]}";
-            }
+            var displayNames = EntityNamer.GetUniqueNames(initiativeOrder);
 
             // --- 2. Draw the List ---
             int panelWidth = 200;

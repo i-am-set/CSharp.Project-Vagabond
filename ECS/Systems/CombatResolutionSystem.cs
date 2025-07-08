@@ -23,13 +23,8 @@ namespace ProjectVagabond
             var targetHealthComp = Core.ComponentStore.GetComponent<HealthComponent>(chosenAttack.TargetId);
 
             // Get attacker and target names for logging
-            var attackerArchetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(attackerId);
-            var attackerArchetype = ArchetypeManager.Instance.GetArchetype(attackerArchetypeIdComp?.ArchetypeId ?? "Unknown");
-            var attackerName = attackerArchetype?.Name ?? $"Entity {attackerId}";
-
-            var targetArchetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(chosenAttack.TargetId);
-            var targetArchetype = ArchetypeManager.Instance.GetArchetype(targetArchetypeIdComp?.ArchetypeId ?? "Unknown");
-            var targetName = targetArchetype?.Name ?? $"Entity {chosenAttack.TargetId}";
+            var attackerName = EntityNamer.GetName(attackerId);
+            var targetName = EntityNamer.GetName(chosenAttack.TargetId);
 
             if (attackerCombatantComp == null || attackerAttacksComp == null || targetHealthComp == null)
             {
@@ -53,6 +48,13 @@ namespace ProjectVagabond
 
             // Log the result
             Core.CurrentTerminalRenderer.AddCombatLog($"{attackerName} attacks {targetName} with {attack.Name} for [red]{damage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining.");
+
+            // Check for death
+            if (targetHealthComp.CurrentHealth <= 0)
+            {
+                Core.CurrentTerminalRenderer.AddCombatLog($"[red]{targetName} has been defeated![/]");
+                // TODO: Add logic to remove the entity from combat, drop loot, etc.
+            }
         }
     }
 }

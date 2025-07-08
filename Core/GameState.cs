@@ -126,12 +126,11 @@ namespace ProjectVagabond
             InitiativeOrder = Combatants.OrderByDescending(id => initiativeScores[id]).ToList();
             CurrentTurnEntityId = InitiativeOrder.FirstOrDefault();
 
+            var uniqueNames = EntityNamer.GetUniqueNames(InitiativeOrder);
             for (int i = 0; i < InitiativeOrder.Count; i++)
             {
                 var entityId = InitiativeOrder[i];
-                var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(entityId);
-                var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
-                string name = archetype?.Name ?? $"Entity {entityId}";
+                string name = uniqueNames[entityId];
                 initiativeLog.Append($"\n  {i + 1}. {name} ({initiativeScores[entityId]})");
             }
 

@@ -96,9 +96,7 @@ namespace ProjectVagabond
 
             var combatStats = Core.ComponentStore.GetComponent<CombatStatsComponent>(entityId);
             var availableAttacks = Core.ComponentStore.GetComponent<AvailableAttacksComponent>(entityId);
-            var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(entityId);
-            var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
-            var aiName = archetype?.Name ?? $"Entity {entityId}";
+            var aiName = EntityNamer.GetName(entityId);
 
             if (combatStats == null || availableAttacks == null)
             {
