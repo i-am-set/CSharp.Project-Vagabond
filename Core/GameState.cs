@@ -43,6 +43,8 @@ namespace ProjectVagabond
         public List<int> Combatants { get; private set; } = new List<int>();
         public List<int> InitiativeOrder { get; private set; } = new List<int>();
         public int CurrentTurnEntityId { get; private set; }
+        public CombatUIState UIState { get; set; } = CombatUIState.Default;
+        public int? SelectedTargetId { get; set; } = null;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -58,7 +60,7 @@ namespace ProjectVagabond
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0), localPosition: new Vector2(32, 32));
 
             // Spawn an NPC
-            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(40, 40));
+            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 34));
         }
 
         /// <summary>

@@ -1,0 +1,5 @@
+I like this placement. But, I dont like the implementation.
+ -Id rather it be a 450x75 rectangle instead as shown in the screenshots displayed above the combatlog while the combat log is slightly truncated down a bit to fit the new display
+-I want an idetical local map as seen in the terminalmap renderer to be there to show what is happening in the world.
+-The player is the 16x16 yellow square in the middle and the red dot is the enemy that is currently selected on the game map
+-The 2d battle area is just an abstract display of the battle field with the distance between the player and the enemies being 
