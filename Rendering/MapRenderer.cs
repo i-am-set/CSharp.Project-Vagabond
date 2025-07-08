@@ -186,6 +186,38 @@ namespace ProjectVagabond
                 }
             }
 
+            // --- In-Combat Visuals ---
+            if (_gameState.IsInCombat)
+            {
+                foreach (var entityId in _gameState.Combatants)
+                {
+                    var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+                    if (localPosComp == null) continue;
+
+                    Vector2? screenPos = MapCoordsToScreen(localPosComp.LocalPosition);
+                    if (!screenPos.HasValue) continue;
+
+                    var cellRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
+
+                    // Draw Bounding Box
+                    Color boxColor = (entityId == _gameState.SelectedTargetId) ? Global.Instance.Palette_Pink : Global.Instance.Palette_Teal;
+                    DrawHollowRectangle(_spriteBatch, cellRect, boxColor, 1);
+
+                    // Draw Turn Indicator
+                    if (entityId == _gameState.CurrentTurnEntityId)
+                    {
+                        int indicatorSize = 8;
+                        var indicatorRect = new Rectangle(
+                            cellRect.Center.X - indicatorSize / 2,
+                            cellRect.Y - indicatorSize - 2,
+                            indicatorSize,
+                            indicatorSize
+                        );
+                        _spriteBatch.Draw(Core.Pixel, indicatorRect, Global.Instance.Palette_Teal);
+                    }
+                }
+            }
+
             if (_gameState.IsPaused) DrawPauseIcon(_spriteBatch);
             _contextMenu.Draw(_spriteBatch);
         }
@@ -468,6 +500,38 @@ namespace ProjectVagabond
             return null;
         }
 
+        /// <summary>
+        /// Gets the ID of the entity at a specific mouse position on the local map.
+        /// </summary>
+        /// <param name="mousePosition">The position of the mouse cursor in virtual screen coordinates.</param>
+        /// <returns>The entity ID of the combatant, or null if no combatant is at that position.</returns>
+        public int? GetEntityIdAt(Point mousePosition)
+        {
+            if (!_mapGridBounds.Contains(mousePosition) || !_gameState.IsInCombat) return null;
+
+            int cellSize = Global.LOCAL_GRID_CELL_SIZE;
+
+            foreach (var entityId in _gameState.Combatants)
+            {
+                if (entityId == _gameState.PlayerEntityId) continue; // Can't target self
+
+                var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+                if (localPosComp == null) continue;
+
+                Vector2? screenPos = MapCoordsToScreen(localPosComp.LocalPosition);
+                if (screenPos.HasValue)
+                {
+                    var cellRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
+                    if (cellRect.Contains(mousePosition))
+                    {
+                        return entityId;
+                    }
+                }
+            }
+
+            return null;
+        }
+
         private string GetTerrainName(float noise)
         {
             if (noise < Global.Instance.WaterLevel) return "Water";
@@ -493,6 +557,17 @@ namespace ProjectVagabond
             if (noise < Global.Instance.HillsLevel) return Global.Instance.HillColor;
             if (noise < Global.Instance.MountainsLevel) return Global.Instance.MountainColor;
             return Global.Instance.MountainColor;
+        }
+
+        /// <summary>
+        /// Draws a hollow rectangle.
+        /// </summary>
+        private void DrawHollowRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)
+        {
+            spriteBatch.Draw(Core.Pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color); // Top
+            spriteBatch.Draw(Core.Pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color); // Bottom
+            spriteBatch.Draw(Core.Pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color); // Left
+            spriteBatch.Draw(Core.Pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color); // Right
         }
     }
 }

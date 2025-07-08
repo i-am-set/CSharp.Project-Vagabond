@@ -104,6 +104,7 @@ namespace ProjectVagabond
             if (IsInCombat) return;
 
             IsInCombat = true;
+            CurrentMapView = MapView.Local; // Lock map view to local for combat
             Combatants = new List<int>(initialCombatants);
             InitiativeOrder.Clear();
 
@@ -143,6 +144,7 @@ namespace ProjectVagabond
         public void EndCombat()
         {
             // Logic to clean up and end combat will be implemented later.
+            UIState = CombatUIState.Default;
         }
 
         public void SetCurrentTurnEntity(int entityId)

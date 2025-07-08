@@ -132,7 +132,6 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
-            _sceneManager.AddScene(GameSceneState.Combat, new CombatScene());
 
             OnResize(null, null);
 
@@ -182,15 +181,6 @@ namespace ProjectVagabond
             Global.Instance.CurrentGraphics.SynchronizeWithVerticalRetrace = Settings.IsVsync;
 
             // --- Scene State Management ---
-            if (CurrentGameState.IsInCombat && _sceneManager.CurrentActiveScene?.GetType() != typeof(CombatScene))
-            {
-                _sceneManager.ChangeScene(GameSceneState.Combat);
-            }
-            else if (!CurrentGameState.IsInCombat && _sceneManager.CurrentActiveScene?.GetType() == typeof(CombatScene))
-            {
-                _sceneManager.ChangeScene(GameSceneState.TerminalMap);
-            }
-
             _sceneManager.Update(gameTime);
 
             if (_sceneManager.CurrentActiveScene is TerminalMapScene)
