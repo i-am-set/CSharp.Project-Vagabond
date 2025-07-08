@@ -20,6 +20,7 @@ using System.Collections.Generic;
 // TODO: Convert display to have larger map, smaller terminal, with the terminal input being hidden unless the player presses ~ to "open console"
 // TODO: Finish entity implimentation
 // TODO: Add settings ui in game menu corner
+// TODO: Fix player attack range being so far
 
 namespace ProjectVagabond
 {
@@ -39,6 +40,7 @@ namespace ProjectVagabond
         private static readonly AISystem _aiSystem = new();
         private static readonly CombatTurnSystem _combatTurnSystem = new();
         private static readonly CombatResolutionSystem _combatResolutionSystem = new();
+        private static readonly CombatProcessingSystem _combatProcessingSystem = new();
 
         // --- GameState can now be initialized safely as its dependencies are ready. ---
         private static readonly GameState _gameState = new();
@@ -94,6 +96,7 @@ namespace ProjectVagabond
         public static AISystem AISystem => _aiSystem;
         public static CombatTurnSystem CombatTurnSystem => _combatTurnSystem;
         public static CombatResolutionSystem CombatResolutionSystem => _combatResolutionSystem;
+        public static CombatProcessingSystem CombatProcessingSystem => _combatProcessingSystem;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -180,10 +183,13 @@ namespace ProjectVagabond
             }
             Global.Instance.CurrentGraphics.SynchronizeWithVerticalRetrace = Settings.IsVsync;
 
-            // --- Scene State Management ---
             _sceneManager.Update(gameTime);
 
-            if (_sceneManager.CurrentActiveScene is TerminalMapScene)
+            if (CurrentGameState.IsInCombat)
+            {
+                _combatProcessingSystem.Update(gameTime);
+            }
+            else if (_sceneManager.CurrentActiveScene is TerminalMapScene)
             {
                 CurrentGameState.UpdateActiveEntities();
                 _systemManager.Update(gameTime);

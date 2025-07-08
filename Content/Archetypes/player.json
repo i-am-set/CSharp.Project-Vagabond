@@ -51,7 +51,7 @@
     {
       "Type": "ProjectVagabond.CombatStatsComponent, ProjectVagabond",
       "Properties": {
-        "ActionPoints": 4
+        "ActionPoints": 400
       }
     },
     {

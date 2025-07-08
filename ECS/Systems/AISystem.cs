@@ -94,43 +94,80 @@ namespace ProjectVagabond
             var gameState = Core.CurrentGameState;
             if (!gameState.IsInCombat) return;
 
+            // Get AI components
+            var aiPos = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
             var combatStats = Core.ComponentStore.GetComponent<CombatStatsComponent>(entityId);
             var availableAttacks = Core.ComponentStore.GetComponent<AvailableAttacksComponent>(entityId);
+            var combatant = Core.ComponentStore.GetComponent<CombatantComponent>(entityId);
             var aiName = EntityNamer.GetName(entityId);
 
-            if (combatStats == null || availableAttacks == null)
+            // Get Player components
+            var playerPos = Core.ComponentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId);
+
+            if (aiPos == null || combatStats == null || availableAttacks == null || combatant == null || playerPos == null)
             {
-                Core.CurrentTerminalRenderer.AddCombatLog($"[error]{aiName} cannot act in combat (missing stats/attacks).");
-                Core.CombatTurnSystem.EndCurrentTurn(); // End turn anyway to not stall combat.
+                Core.CurrentTerminalRenderer.AddCombatLog($"[error]{aiName} cannot act in combat (missing critical components).");
+                Core.CombatTurnSystem.EndCurrentTurn();
                 return;
             }
 
-            // Simple AI: Find the first affordable attack and use it on the player.
-            var affordableAttack = availableAttacks.Attacks.FirstOrDefault(a => combatStats.ActionPoints >= a.ActionPointCost);
+            float distanceToPlayer = Vector2.Distance(aiPos.LocalPosition, playerPos.LocalPosition);
 
-            if (affordableAttack != null)
+            // --- DECISION TREE ---
+
+            // 1. Attack or Move?
+            if (distanceToPlayer <= combatant.AttackRange)
             {
-                // Found an attack, let's use it.
-                var chosenAttack = new ChosenAttackComponent
-                {
-                    TargetId = gameState.PlayerEntityId,
-                    AttackName = affordableAttack.Name
-                };
-                
-                // Spend the action points.
-                combatStats.ActionPoints -= affordableAttack.ActionPointCost;
+                // In range, try to attack.
+                var bestAttack = availableAttacks.Attacks
+                    .Where(a => combatStats.ActionPoints >= a.ActionPointCost)
+                    .OrderByDescending(a => a.DamageMultiplier)
+                    .FirstOrDefault();
 
-                // Resolve the action immediately
-                Core.CombatResolutionSystem.ResolveAction(entityId, chosenAttack);
+                if (bestAttack != null)
+                {
+                    var chosenAttack = new ChosenAttackComponent
+                    {
+                        TargetId = gameState.PlayerEntityId,
+                        AttackName = bestAttack.Name
+                    };
+                    // Add the component representing the AI's intent.
+                    Core.ComponentStore.AddComponent(entityId, chosenAttack);
+                    combatStats.ActionPoints -= bestAttack.ActionPointCost;
+                    Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} decides to use {bestAttack.Name}.");
+                }
+                else
+                {
+                    Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} is in range but cannot afford an attack.");
+                }
             }
             else
             {
-                // Can't afford any attacks, just log it.
-                Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} has no affordable attacks and does nothing.");
+                // Not in range, try to move.
+                const int moveCost = 5; // Assume a fixed move cost for now
+                if (combatStats.ActionPoints >= moveCost)
+                {
+                    var path = Pathfinder.FindPath(aiPos.LocalPosition, playerPos.LocalPosition, gameState, false, PathfindingMode.Moves, MapView.Local);
+                    if (path != null && path.Count > 0)
+                    {
+                        var nextStep = path[0];
+                        var actionQueue = Core.ComponentStore.GetComponent<ActionQueueComponent>(entityId);
+                        // Add the component representing the AI's intent.
+                        actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, nextStep, false));
+                        combatStats.ActionPoints -= moveCost;
+                        Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} decides to move towards the player.");
+                    }
+                    else
+                    {
+                        Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} cannot find a path to the player.");
+                    }
+                }
+                else
+                {
+                    Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} wants to move but cannot afford it.");
+                }
             }
-
-            // The AI has made its decision (or decided to do nothing), so it ends its turn.
-            Core.CombatTurnSystem.EndCurrentTurn();
+            // The AI's decision is made. The CombatProcessingSystem will execute it and then the turn will end.
         }
 
         /// <summary>

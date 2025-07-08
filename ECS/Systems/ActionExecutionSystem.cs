@@ -6,7 +6,7 @@ using System.Linq;
 namespace ProjectVagabond
 {
     /// <summary>
-    /// Processes the action queue of the PLAYER, executing one action at a time
+    /// Processes the player's OUT-OF-COMBAT action queue, executing one action at a time
     /// and applying its effects to the game state. This system drives the game clock.
     /// </summary>
     public class ActionExecutionSystem : ISystem
@@ -74,56 +74,34 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Updates the action system, processing actions for the player.
+        /// Updates the action system, processing actions for the player out of combat.
         /// </summary>
         public void Update(GameTime gameTime)
         {
             var gameState = Core.CurrentGameState;
-            if (gameState.IsPaused) return;
+            if (gameState.IsPaused || gameState.IsInCombat) return;
 
-            // This system now ONLY handles the player.
+            // This system now ONLY handles the player's out-of-combat queue.
             int playerEntityId = gameState.PlayerEntityId;
+            var playerActionQueueComp = Core.ComponentStore.GetComponent<ActionQueueComponent>(playerEntityId);
 
             // --- Phase 1: INITIATION ---
-            var actionQueueComp = Core.ComponentStore.GetComponent<ActionQueueComponent>(playerEntityId);
-            if (actionQueueComp != null && actionQueueComp.ActionQueue.Count > 0 && gameState.IsExecutingActions)
+            if (playerActionQueueComp != null && playerActionQueueComp.ActionQueue.Count > 0 && gameState.IsExecutingActions)
             {
                 bool hasAction = Core.ComponentStore.HasComponent<MoveAction>(playerEntityId) ||
                                  Core.ComponentStore.HasComponent<RestAction>(playerEntityId);
 
                 if (!hasAction)
                 {
-                    IAction nextAction = actionQueueComp.ActionQueue.Peek();
-
-                    // Pre-start checks for the player's action
-                    if (nextAction is MoveAction moveAction)
+                    IAction nextAction = playerActionQueueComp.ActionQueue.Peek();
+                    if (PreActionChecks(gameState, playerEntityId, nextAction))
                     {
-                        if (!gameState.IsPositionPassable(moveAction.Destination, gameState.PathExecutionMapView))
-                        {
-                            Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Movement blocked at {moveAction.Destination}.");
-                            gameState.CancelExecutingActions(true);
-                            return;
-                        }
-                        int energyCost = gameState.GetMovementEnergyCost(moveAction, gameState.PathExecutionMapView == MapView.Local);
-                        if (gameState.PathExecutionMapView == MapView.Local && moveAction.IsRunning && !_localRunCostApplied)
-                        {
-                            energyCost = 1; // Initial cost to start running locally
-                        }
-                        if (!gameState.PlayerStats.CanExertEnergy(energyCost))
-                        {
-                            Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to move! Need {energyCost}, have {gameState.PlayerStats.CurrentEnergyPoints}");
-                            gameState.CancelExecutingActions(true);
-                            return;
-                        }
+                        int secondsToPass = CalculateSecondsForAction(gameState, nextAction);
+                        playerActionQueueComp.ActionQueue.Dequeue();
+                        if (nextAction is MoveAction ma) Core.ComponentStore.AddComponent(playerEntityId, ma);
+                        else if (nextAction is RestAction ra) Core.ComponentStore.AddComponent(playerEntityId, ra);
+                        Core.CurrentWorldClockManager.PassTime(seconds: secondsToPass);
                     }
-
-                    // If checks pass, calculate time, dequeue, add component, and pass time.
-                    int secondsToPass = CalculateSecondsForAction(gameState, nextAction);
-                    actionQueueComp.ActionQueue.Dequeue();
-                    if (nextAction is MoveAction ma) Core.ComponentStore.AddComponent(playerEntityId, ma);
-                    else if (nextAction is RestAction ra) Core.ComponentStore.AddComponent(playerEntityId, ra);
-
-                    Core.CurrentWorldClockManager.PassTime(seconds: secondsToPass);
                 }
             }
 
@@ -131,7 +109,6 @@ namespace ProjectVagabond
             if (Core.CurrentWorldClockManager.IsInterpolatingTime) return;
 
             // --- Phase 2: REAL PROCESSING ---
-            // This phase applies the effects of the player's action that has just finished.
             var playerMoveAction = Core.ComponentStore.GetComponent<MoveAction>(playerEntityId);
             if (playerMoveAction != null && !playerMoveAction.IsComplete)
             {
@@ -149,28 +126,40 @@ namespace ProjectVagabond
             }
 
             // --- Phase 3: CLEANUP ---
-            // This phase removes the player's completed action component.
-            if (playerMoveAction?.IsComplete == true)
-            {
-                Core.ComponentStore.RemoveComponent<MoveAction>(playerEntityId);
-            }
-            if (playerRestAction?.IsComplete == true)
-            {
-                Core.ComponentStore.RemoveComponent<RestAction>(playerEntityId);
-            }
+            if (playerMoveAction?.IsComplete == true) Core.ComponentStore.RemoveComponent<MoveAction>(playerEntityId);
+            if (playerRestAction?.IsComplete == true) Core.ComponentStore.RemoveComponent<RestAction>(playerEntityId);
 
             // After all phases, check if the player's queue is now empty to end the execution state.
-            if (gameState.IsExecutingActions)
+            if (gameState.IsExecutingActions && playerActionQueueComp != null && playerActionQueueComp.ActionQueue.Count == 0 && !Core.ComponentStore.HasComponent<MoveAction>(playerEntityId) && !Core.ComponentStore.HasComponent<RestAction>(playerEntityId))
             {
-                bool playerHasAction = Core.ComponentStore.HasComponent<MoveAction>(playerEntityId) ||
-                                       Core.ComponentStore.HasComponent<RestAction>(playerEntityId);
+                gameState.ToggleExecutingActions(false);
+                Core.CurrentTerminalRenderer.AddOutputToHistory("Action queue completed.");
+            }
+        }
 
-                if (actionQueueComp != null && actionQueueComp.ActionQueue.Count == 0 && !playerHasAction)
+        private bool PreActionChecks(GameState gameState, int entityId, IAction action)
+        {
+            if (action is MoveAction moveAction)
+            {
+                if (!gameState.IsPositionPassable(moveAction.Destination, gameState.PathExecutionMapView))
                 {
-                    gameState.ToggleExecutingActions(false);
-                    Core.CurrentTerminalRenderer.AddOutputToHistory("Action queue completed.");
+                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Movement blocked at {moveAction.Destination}.");
+                    gameState.CancelExecutingActions(true);
+                    return false;
+                }
+                int energyCost = gameState.GetMovementEnergyCost(moveAction, gameState.PathExecutionMapView == MapView.Local);
+                if (gameState.PathExecutionMapView == MapView.Local && moveAction.IsRunning && !_localRunCostApplied)
+                {
+                    energyCost = 1; // Initial cost to start running locally
+                }
+                if (!gameState.PlayerStats.CanExertEnergy(energyCost))
+                {
+                    Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Not enough energy to move! Need {energyCost}, have {gameState.PlayerStats.CurrentEnergyPoints}");
+                    gameState.CancelExecutingActions(true);
+                    return false;
                 }
             }
+            return true;
         }
 
         private int CalculateSecondsForAction(GameState gameState, IAction action)
@@ -224,32 +213,29 @@ namespace ProjectVagabond
         private void ApplyMoveActionEffects(GameState gameState, int entityId, MoveAction action)
         {
             var stats = Core.ComponentStore.GetComponent<StatsComponent>(entityId);
-            if (stats == null) return;
+            var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+            if (localPosComp == null) return;
 
-            bool isLocalMove = gameState.PathExecutionMapView == MapView.Local;
+            bool isPlayer = entityId == gameState.PlayerEntityId;
+            bool isLocalMove = isPlayer && gameState.PathExecutionMapView == MapView.Local;
             Vector2 nextPosition = action.Destination;
-
-            string moveType = action.IsRunning ? "Ran" : "Walked";
-            int secondsPassedForAction = CalculateSecondsForAction(gameState, action);
-            string timeString = Core.CurrentWorldClockManager.GetCommaFormattedTimeFromSeconds(secondsPassedForAction);
 
             if (isLocalMove)
             {
-                if (action.IsRunning && !_localRunCostApplied)
+                if (isPlayer && action.IsRunning && !_localRunCostApplied)
                 {
-                    stats.ExertEnergy(1);
+                    stats?.ExertEnergy(1);
                     _localRunCostApplied = true;
                 }
-                var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
                 localPosComp.LocalPosition = new Vector2(
                     MathHelper.Clamp(nextPosition.X, 0, Global.LOCAL_GRID_SIZE - 1),
                     MathHelper.Clamp(nextPosition.Y, 0, Global.LOCAL_GRID_SIZE - 1)
                 );
             }
-            else // World Move
+            else if (isPlayer) // World Move (only for player)
             {
                 int energyCost = gameState.GetMovementEnergyCost(action, false);
-                stats.ExertEnergy(energyCost);
+                stats?.ExertEnergy(energyCost);
 
                 var posComp = Core.ComponentStore.GetComponent<PositionComponent>(entityId);
                 Vector2 oldWorldPos = posComp.WorldPosition;
@@ -257,8 +243,6 @@ namespace ProjectVagabond
 
                 Core.ChunkManager.UpdateEntityChunk(entityId, oldWorldPos, nextPosition);
 
-                // On completing a world move, the player's local position is reset
-                // to the entry point of the new local area.
                 Vector2 moveDir = nextPosition - oldWorldPos;
                 Vector2 newLocalPos = new Vector2(32, 32);
                 if (moveDir.X > 0) newLocalPos.X = 0; else if (moveDir.X < 0) newLocalPos.X = 63;
@@ -266,12 +250,14 @@ namespace ProjectVagabond
                 if (moveDir.X != 0 && moveDir.Y == 0) newLocalPos.Y = 32;
                 if (moveDir.Y != 0 && moveDir.X == 0) newLocalPos.X = 32;
 
-                var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
                 localPosComp.LocalPosition = new Vector2(
                     MathHelper.Clamp(newLocalPos.X, 0, Global.LOCAL_GRID_SIZE - 1),
                     MathHelper.Clamp(newLocalPos.Y, 0, Global.LOCAL_GRID_SIZE - 1)
                 );
 
+                string moveType = action.IsRunning ? "Ran" : "Walked";
+                int secondsPassedForAction = CalculateSecondsForAction(gameState, action);
+                string timeString = Core.CurrentWorldClockManager.GetCommaFormattedTimeFromSeconds(secondsPassedForAction);
                 var mapData = gameState.GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
                 Core.CurrentTerminalRenderer.AddOutputToHistory($"[khaki]{moveType} through[gold] {mapData.TerrainType.ToLower()}[khaki].[dim] ({timeString})");
             }

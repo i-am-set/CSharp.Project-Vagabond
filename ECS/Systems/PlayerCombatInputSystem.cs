@@ -128,21 +128,22 @@ namespace ProjectVagabond
 
             if (playerStats.ActionPoints >= attack.ActionPointCost)
             {
+                // Add the component representing the player's intent.
                 var chosenAttack = new ChosenAttackComponent
                 {
                     TargetId = gameState.SelectedTargetId.Value,
                     AttackName = attack.Name
                 };
+                Core.ComponentStore.AddComponent(gameState.PlayerEntityId, chosenAttack);
 
                 // Deduct cost
                 playerStats.ActionPoints -= attack.ActionPointCost;
+                var targetArchetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(chosenAttack.TargetId);
+                var targetArchetype = ArchetypeManager.Instance.GetArchetype(targetArchetypeIdComp?.ArchetypeId ?? "Unknown");
+                Core.CurrentTerminalRenderer.AddCombatLog($"Player decides to use {attack.Name} on {targetArchetype?.Name ?? $"Entity {chosenAttack.TargetId}"}.");
 
-                // Resolve the action immediately
-                Core.CombatResolutionSystem.ResolveAction(gameState.PlayerEntityId, chosenAttack);
-
-                // Player's turn is over after committing to an action
+                // The player's action is now chosen. Set the UI to busy while the action is processed.
                 gameState.UIState = CombatUIState.Busy;
-                Core.CombatTurnSystem.EndCurrentTurn();
             }
             else
             {
