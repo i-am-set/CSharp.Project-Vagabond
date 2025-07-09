@@ -76,9 +76,11 @@ namespace ProjectVagabond
         public const float BACKSPACE_ACCELERATION = 0.25f;
 
         // UI settings Global
+        public const float DEFAULT_OVERFLOW_SCROLL_SPEED = 20.0f;
         public const float VALUE_DISPLAY_WIDTH = 110f;
         public const int APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING = 5;
         public const float TOOLTIP_AVERAGE_POPUP_TIME = 0.5f;
+        public const int TERMINAL_Y = 50;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES

@@ -142,7 +142,7 @@ namespace ProjectVagabond
             bool isInCombat = Core.CurrentGameState.IsInCombat;
             int terminalHeight = GetTerminalHeight();
             int terminalX = 375;
-            int terminalY = GetTerminalY();
+            int terminalY = Global.TERMINAL_Y;
             int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
 
             Texture2D pixel = Core.Pixel;
@@ -673,11 +673,6 @@ namespace ProjectVagabond
             return terminalWidth - (2 * charWidth);
         }
 
-        private int GetTerminalY()
-        {
-            return 50;
-        }
-
         private int GetTerminalHeight()
         {
             return Core.CurrentGameState.IsInCombat
@@ -687,7 +682,7 @@ namespace ProjectVagabond
 
         private int GetInputLineY()
         {
-            return GetTerminalY() + GetTerminalHeight() - 10;
+            return Global.TERMINAL_Y + GetTerminalHeight() - 10;
         }
 
         private int GetSeparatorY()
@@ -701,7 +696,7 @@ namespace ProjectVagabond
             {
                 return GetTerminalHeight();
             }
-            return GetSeparatorY() - GetTerminalY();
+            return GetSeparatorY() - Global.TERMINAL_Y;
         }
 
         public int GetMaxVisibleLines()

@@ -1,6 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -12,10 +15,14 @@ namespace ProjectVagabond
     public class ActionMenuPanel
     {
         private readonly Rectangle _bounds;
-        private readonly Dictionary<string, Rectangle> _menuOptionBounds = new Dictionary<string, Rectangle>();
+        private readonly List<Button> _buttons = new List<Button>();
+        private CombatUIState _lastUIState = CombatUIState.Busy;
+
         private const int PADDING = 10;
         private const int BORDER_THICKNESS = 2;
-        private const int LINE_SPACING = 18;
+        private const int BUTTON_HEIGHT = 18;
+
+        public event Action<string> OnActionSelected;
 
         public ActionMenuPanel(Rectangle bounds)
         {
@@ -23,14 +30,114 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Draws the action menu panel, changing its content based on the current UI state.
+        /// Updates the state of the menu buttons and rebuilds them if the UI state has changed.
         /// </summary>
-        public void Draw(SpriteBatch spriteBatch)
+        public void Update(GameTime gameTime, MouseState currentMouseState)
         {
             var gameState = Core.CurrentGameState;
             if (!gameState.IsInCombat) return;
 
-            _menuOptionBounds.Clear();
+            // Rebuild buttons if the UI state has changed
+            if (gameState.UIState != _lastUIState)
+            {
+                RebuildButtons(gameState);
+                _lastUIState = gameState.UIState;
+            }
+
+            // Update all current buttons
+            foreach (var button in _buttons)
+            {
+                button.Update(currentMouseState);
+            }
+        }
+
+        /// <summary>
+        /// Rebuilds the list of buttons based on the current combat UI state.
+        /// </summary>
+        private void RebuildButtons(GameState gameState)
+        {
+            _buttons.Clear();
+            int currentY = _bounds.Y + PADDING;
+
+            switch (gameState.UIState)
+            {
+                case CombatUIState.Default:
+                    var mainOptions = new List<string> { "Attack", "Skills", "Move", "Item", "End Turn" };
+                    foreach (var option in mainOptions)
+                    {
+                        var buttonBounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
+                        var button = new Button(buttonBounds, option);
+                        button.OnClick += () => OnActionSelected?.Invoke(option);
+                        _buttons.Add(button);
+                        currentY += BUTTON_HEIGHT;
+                    }
+                    break;
+
+                case CombatUIState.SelectAttack:
+                    var attacksComp = Core.ComponentStore.GetComponent<AvailableAttacksComponent>(gameState.PlayerEntityId);
+                    var combatStats = Core.ComponentStore.GetComponent<CombatStatsComponent>(gameState.PlayerEntityId);
+                    if (attacksComp == null || combatStats == null) break;
+
+                    foreach (var attack in attacksComp.Attacks)
+                    {
+                        bool canAfford = combatStats.ActionPoints >= attack.ActionPointCost;
+                        string text = $"{attack.Name} (Cost: {attack.ActionPointCost} AP)";
+                        var buttonBounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
+                        var button = new Button(buttonBounds, text, attack.Name)
+                        {
+                            IsEnabled = canAfford,
+                            CustomDefaultTextColor = Global.Instance.GameTextColor,
+                            CustomHoverTextColor = Global.Instance.Palette_Yellow,
+                            CustomDisabledTextColor = Color.DarkGray
+                        };
+                        button.OnClick += () => OnActionSelected?.Invoke(attack.Name);
+                        _buttons.Add(button);
+                        currentY += BUTTON_HEIGHT;
+                    }
+                    AddBackButton();
+                    break;
+
+                case CombatUIState.SelectSkill:
+                    var skillOptions = new List<string> { "Block", "Power Strike" };
+                    foreach (var option in skillOptions)
+                    {
+                        var buttonBounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
+                        var button = new Button(buttonBounds, option) { IsEnabled = false }; // Disabled for now
+                        _buttons.Add(button);
+                        currentY += BUTTON_HEIGHT;
+                    }
+                    AddBackButton();
+                    break;
+
+                case CombatUIState.SelectTarget:
+                case CombatUIState.SelectMove:
+                    AddBackButton();
+                    break;
+            }
+        }
+
+        private void AddBackButton()
+        {
+            int backButtonY = _bounds.Bottom - PADDING - BUTTON_HEIGHT;
+            var backButtonBounds = new Rectangle(_bounds.X + PADDING, backButtonY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
+            var backButton = new Button(backButtonBounds, "Back")
+            {
+                CustomDefaultTextColor = Global.Instance.Palette_Red,
+                CustomHoverTextColor = Global.Instance.Palette_Pink
+            };
+            backButton.OnClick += () => OnActionSelected?.Invoke("Back");
+            _buttons.Add(backButton);
+        }
+
+        /// <summary>
+        /// Draws the action menu panel, including its buttons and instructional text.
+        /// </summary>
+        public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
+        {
+            var gameState = Core.CurrentGameState;
+            if (!gameState.IsInCombat) return;
+
+            var font = Global.Instance.DefaultFont;
 
             // Draw border and background
             var borderRect = new Rectangle(
@@ -42,79 +149,21 @@ namespace ProjectVagabond
             spriteBatch.Draw(Core.Pixel, borderRect, Global.Instance.Palette_White);
             spriteBatch.Draw(Core.Pixel, _bounds, Global.Instance.TerminalBg);
 
-            // Draw content based on state
+            // Draw buttons
+            foreach (var button in _buttons)
+            {
+                button.Draw(spriteBatch, font, gameTime);
+            }
+
+            // Draw instructional text over the buttons if needed
             switch (gameState.UIState)
             {
-                case CombatUIState.Default:
-                    DrawDefaultMenu(spriteBatch);
-                    break;
-                case CombatUIState.SelectAttack:
-                    DrawAttackMenu(spriteBatch);
-                    break;
-                case CombatUIState.SelectSkill:
-                    DrawSkillMenu(spriteBatch);
-                    break;
                 case CombatUIState.SelectTarget:
                     DrawInstruction(spriteBatch, "Select a target...");
                     break;
                 case CombatUIState.SelectMove:
                     DrawInstruction(spriteBatch, "Select a destination...");
                     break;
-                case CombatUIState.Busy:
-                    // Draw nothing or a "Busy" indicator
-                    break;
-            }
-        }
-
-        private void DrawDefaultMenu(SpriteBatch spriteBatch)
-        {
-            var font = Global.Instance.DefaultFont;
-            var options = new List<string> { "Attack", "Skills", "Move", "Item", "End Turn" };
-            for (int i = 0; i < options.Count; i++)
-            {
-                var position = new Vector2(_bounds.X + PADDING, _bounds.Y + PADDING + (i * LINE_SPACING));
-                spriteBatch.DrawString(font, options[i], position, Global.Instance.GameTextColor);
-
-                var bounds = new Rectangle((int)position.X, (int)position.Y, (int)font.MeasureString(options[i]).Width, font.LineHeight);
-                _menuOptionBounds[options[i]] = bounds;
-            }
-        }
-
-        private void DrawAttackMenu(SpriteBatch spriteBatch)
-        {
-            var font = Global.Instance.DefaultFont;
-            var gameState = Core.CurrentGameState;
-            var attacksComp = Core.ComponentStore.GetComponent<AvailableAttacksComponent>(gameState.PlayerEntityId);
-            var combatStats = Core.ComponentStore.GetComponent<CombatStatsComponent>(gameState.PlayerEntityId);
-
-            if (attacksComp == null || combatStats == null) return;
-
-            for (int i = 0; i < attacksComp.Attacks.Count; i++)
-            {
-                var attack = attacksComp.Attacks[i];
-                bool canAfford = combatStats.ActionPoints >= attack.ActionPointCost;
-                Color textColor = canAfford ? Global.Instance.GameTextColor : Color.DarkGray;
-
-                string text = $"{attack.Name} (Cost: {attack.ActionPointCost} AP)";
-                var position = new Vector2(_bounds.X + PADDING, _bounds.Y + PADDING + (i * LINE_SPACING));
-                spriteBatch.DrawString(font, text, position, textColor);
-
-                var bounds = new Rectangle((int)position.X, (int)position.Y, (int)font.MeasureString(text).Width, font.LineHeight);
-                _menuOptionBounds[attack.Name] = bounds;
-            }
-        }
-
-        private void DrawSkillMenu(SpriteBatch spriteBatch)
-        {
-            var font = Global.Instance.DefaultFont;
-            var options = new List<string> { "Block", "Power Strike" }; // Placeholder skills
-            for (int i = 0; i < options.Count; i++)
-            {
-                var position = new Vector2(_bounds.X + PADDING, _bounds.Y + PADDING + (i * LINE_SPACING));
-                spriteBatch.DrawString(font, options[i], position, Color.DarkGray); // Grayed out as they are not implemented
-
-                var bounds = new Rectangle((int)position.X, (int)position.Y, (int)font.MeasureString(options[i]).Width, font.LineHeight);
-                _menuOptionBounds[options[i]] = bounds;
             }
         }
 
@@ -123,37 +172,6 @@ namespace ProjectVagabond
             var font = Global.Instance.DefaultFont;
             var position = new Vector2(_bounds.X + PADDING, _bounds.Y + PADDING);
             spriteBatch.DrawString(font, text, position, Color.Yellow);
-        }
-
-        /// <summary>
-        /// Handles mouse input for the action menu.
-        /// </summary>
-        /// <param name="mousePosition">The position of the mouse cursor.</param>
-        /// <returns>The name of the action/button clicked, or null if none.</returns>
-        public string HandleInput(Point mousePosition)
-        {
-            foreach (var option in _menuOptionBounds)
-            {
-                if (option.Value.Contains(mousePosition))
-                {
-                    // Check for affordability if in the attack selection menu
-                    var gameState = Core.CurrentGameState;
-                    if (gameState.UIState == CombatUIState.SelectAttack)
-                    {
-                        var attacksComp = Core.ComponentStore.GetComponent<AvailableAttacksComponent>(gameState.PlayerEntityId);
-                        var combatStats = Core.ComponentStore.GetComponent<CombatStatsComponent>(gameState.PlayerEntityId);
-                        var attack = attacksComp?.Attacks.FirstOrDefault(a => a.Name == option.Key);
-
-                        if (attack != null && combatStats.ActionPoints < attack.ActionPointCost)
-                        {
-                            CombatLog.Log($"[warning]Not enough AP for {attack.Name}.");
-                            return null; // Clicked an unaffordable attack, do nothing.
-                        }
-                    }
-                    return option.Key;
-                }
-            }
-            return null;
         }
     }
 }

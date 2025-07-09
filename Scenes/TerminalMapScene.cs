@@ -37,31 +37,36 @@ namespace ProjectVagabond.Scenes
 
             if (_turnOrderPanel == null)
             {
-                _turnOrderPanel = new TurnOrderPanel();
+                int turnOrderPanelWidth = 100;
+                int maxTurnOrderItems = 16; // The panel will show a maximum of 5 names at a time
+                var turnOrderPosition = new Vector2((Global.VIRTUAL_WIDTH - turnOrderPanelWidth) / 2, Global.TERMINAL_Y - 23);
+                _turnOrderPanel = new TurnOrderPanel(turnOrderPosition, turnOrderPanelWidth, maxTurnOrderItems);
             }
 
             if (_playerStatusPanel == null)
             {
-                // Define bounds for the panels
-                int pspWidth = 250;
-                int pspHeight = 100;
-                int pspX = 20;
-                int pspY = Global.VIRTUAL_HEIGHT - pspHeight - 20;
-                _playerStatusPanel = new PlayerStatusPanel(new Rectangle(pspX, pspY, pspWidth, pspHeight));
+                // Define bounds for the Player Status Panel (bottom-left)
+                int playerStatusPanelWidth = 250;
+                int playerStatusPanelHeight = 100;
+                int playerStatusPanelX = 20;
+                int playerStatusPanelY = Global.VIRTUAL_HEIGHT - playerStatusPanelHeight - 20;
+                _playerStatusPanel = new PlayerStatusPanel(new Rectangle(playerStatusPanelX, playerStatusPanelY, playerStatusPanelWidth, playerStatusPanelHeight));
 
-                int ampWidth = 200;
-                int ampHeight = 150;
-                int ampX = pspX + pspWidth + 10;
-                int ampY = Global.VIRTUAL_HEIGHT - ampHeight - 20;
-                _actionMenuPanel = new ActionMenuPanel(new Rectangle(ampX, ampY, ampWidth, ampHeight));
+                // Define bounds for the Action Menu Panel (next to player status)
+                int actionMenuPanelWidth = 200;
+                int actionMenuPanelHeight = 150;
+                int actionMenuPanelX = playerStatusPanelX + playerStatusPanelWidth + 10;
+                int actionMenuPanelY = Global.VIRTUAL_HEIGHT - actionMenuPanelHeight - 20;
+                _actionMenuPanel = new ActionMenuPanel(new Rectangle(actionMenuPanelX, actionMenuPanelY, actionMenuPanelWidth, actionMenuPanelHeight));
 
-                int tipWidth = 250;
-                int tipHeight = 100;
-                int tipX = 375;
-                int tipY = 50 + ((Global.DEFAULT_TERMINAL_HEIGHT / 2) + 20) + 10; // Below the shrunken terminal
-                _targetInfoPanel = new TargetInfoPanel(new Rectangle(tipX, tipY, tipWidth, tipHeight));
+                // Define bounds for the Target Info Panel (below the shrunken terminal)
+                int targetInfoPanelWidth = 250;
+                int targetInfoPanelHeight = 100;
+                int targetInfoPanelX = 375; // Aligns with the terminal's X position
+                int targetInfoPanelY = 50 + ((Global.DEFAULT_TERMINAL_HEIGHT / 2) + 20) + 10;
+                _targetInfoPanel = new TargetInfoPanel(new Rectangle(targetInfoPanelX, targetInfoPanelY, targetInfoPanelWidth, targetInfoPanelHeight));
 
-                _playerCombatInputSystem = new PlayerCombatInputSystem(_actionMenuPanel, Core.CurrentMapRenderer);
+                _playerCombatInputSystem = new PlayerCombatInputSystem(_actionMenuPanel, _turnOrderPanel, Core.CurrentMapRenderer);
             }
         }
 
@@ -108,11 +113,14 @@ namespace ProjectVagabond.Scenes
             _waitDialog.Update(gameTime);
             if (_waitDialog.IsActive) return;
 
-            _settingsButton?.Update(Mouse.GetState());
+            var currentMouseState = Mouse.GetState();
+            _settingsButton?.Update(currentMouseState);
 
             if (Core.CurrentGameState.IsInCombat)
             {
                 _playerCombatInputSystem.ProcessInput();
+                _actionMenuPanel.Update(gameTime, currentMouseState);
+                _turnOrderPanel.Update(gameTime, currentMouseState);
             }
             else
             {
@@ -137,12 +145,12 @@ namespace ProjectVagabond.Scenes
             Core.CurrentMapRenderer.DrawMap(gameTime);
             Core.CurrentStatsRenderer.DrawStats();
             Core.CurrentClockRenderer.DrawClock(Global.Instance.CurrentSpriteBatch, gameTime);
-            _turnOrderPanel.Draw(Global.Instance.CurrentSpriteBatch);
+            _turnOrderPanel.Draw(Global.Instance.CurrentSpriteBatch, gameTime);
 
             // Draw Combat UI Panels
             _playerStatusPanel.Draw(Global.Instance.CurrentSpriteBatch);
             _targetInfoPanel.Draw(Global.Instance.CurrentSpriteBatch);
-            _actionMenuPanel.Draw(Global.Instance.CurrentSpriteBatch);
+            _actionMenuPanel.Draw(Global.Instance.CurrentSpriteBatch, gameTime);
 
             _settingsButton?.Draw(Global.Instance.CurrentSpriteBatch, Global.Instance.DefaultFont, gameTime);
 

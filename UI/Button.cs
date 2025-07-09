@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -9,7 +9,7 @@ namespace ProjectVagabond.UI
     public class Button
     {
         public Rectangle Bounds { get; set; }
-        public string Text { get; set;  }
+        public string Text { get; set; }
         public string Function { get; set; }
         public Color? CustomDefaultTextColor { get; set; }
         public Color? CustomHoverTextColor { get; set; }
@@ -17,14 +17,17 @@ namespace ProjectVagabond.UI
         public bool IsEnabled { get; set; } = true;
         public bool IsHovered { get; set; }
         public bool UseScreenCoordinates { get; set; } = false;
+        public bool AlignLeft { get; set; } = false;
+        public float OverflowScrollSpeed { get; set; } = 0f;
 
         public event Action OnClick;
 
         protected MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
+        private float _scrollPosition = 0f;
 
-        #nullable enable
-        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null)
+#nullable enable
+        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f)
         {
             if (function == null)
             {
@@ -37,8 +40,10 @@ namespace ProjectVagabond.UI
             CustomDefaultTextColor = customDefaultTextColor;
             CustomHoverTextColor = customHoverTextColor;
             CustomDisabledTextColor = customDisabledTextColor;
+            AlignLeft = alignLeft;
+            OverflowScrollSpeed = overflowScrollSpeed;
         }
-        #nullable restore
+#nullable restore
 
         public virtual void Update(MouseState currentMouseState)
         {
@@ -95,47 +100,81 @@ namespace ProjectVagabond.UI
 
             if (!IsEnabled)
             {
-                if (CustomDisabledTextColor.HasValue)
-                {
-                    textColor = CustomDisabledTextColor.Value;
-                } else
-                {
-                    textColor = Global.Instance.ButtonDisableColor;
-                }
+                textColor = CustomDisabledTextColor ?? Global.Instance.ButtonDisableColor;
             }
             else
             {
-                if (isActivated)
-                {
-                    if (CustomHoverTextColor.HasValue)
-                    {
-                        textColor = CustomHoverTextColor.Value;
-                    } else
-                    {
-                        textColor = Global.Instance.ButtonHoverColor;
-                    }
-                } 
-                else
-                {
-                    if (CustomDefaultTextColor.HasValue)
-                    {
-                        textColor = CustomDefaultTextColor.Value;
-                    }else
-                    {
-                        textColor = Global.Instance.Palette_BrightWhite;
-                    }
-                }
+                textColor = isActivated
+                    ? (CustomHoverTextColor ?? Global.Instance.ButtonHoverColor)
+                    : (CustomDefaultTextColor ?? Global.Instance.Palette_BrightWhite);
             }
 
             float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
-
             Vector2 textSize = font.MeasureString(Text);
-            Vector2 textPosition = new Vector2(
-                Bounds.X + (Bounds.Width - textSize.X) / 2 + xOffset,
-                Bounds.Y + (Bounds.Height - textSize.Y) / 2
-            );
 
-            spriteBatch.DrawString(font, Text, textPosition, textColor);
+            // Store the original rasterizer state
+            var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
+            var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
+
+            // Create a new rasterizer state for clipping
+            var clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
+
+            // Begin a new sprite batch with the clipping state
+            spriteBatch.End();
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp, rasterizerState: clipRasterizerState);
+
+            // Apply the clipping rectangle
+            spriteBatch.GraphicsDevice.ScissorRectangle = Bounds;
+
+            // Handle Overflow Scrolling
+            bool shouldScroll = OverflowScrollSpeed > 0 && textSize.X > Bounds.Width;
+            if (shouldScroll)
+            {
+                _scrollPosition += (float)gameTime.ElapsedGameTime.TotalSeconds * OverflowScrollSpeed;
+
+                // The text to scroll is the original text plus a separator and itself again for a seamless loop
+                string scrollingText = Text + "  ";
+                Vector2 scrollingTextSize = font.MeasureString(scrollingText);
+
+                if (_scrollPosition > scrollingTextSize.X)
+                {
+                    _scrollPosition -= scrollingTextSize.X;
+                }
+
+                Vector2 scrollTextPosition = new Vector2(
+                    Bounds.X - _scrollPosition,
+                    Bounds.Y + (Bounds.Height - textSize.Y) / 2
+                );
+
+                // Draw the text twice for seamless scrolling
+                spriteBatch.DrawString(font, scrollingText, scrollTextPosition, textColor);
+                spriteBatch.DrawString(font, scrollingText, new Vector2(scrollTextPosition.X + scrollingTextSize.X, scrollTextPosition.Y), textColor);
+            }
+            else
+            {
+                // Handle standard text alignment
+                Vector2 textPosition;
+                if (AlignLeft)
+                {
+                    textPosition = new Vector2(
+                        Bounds.X + xOffset,
+                        Bounds.Y + (Bounds.Height - textSize.Y) / 2
+                    );
+                }
+                else // Center align (default)
+                {
+                    textPosition = new Vector2(
+                        Bounds.X + (Bounds.Width - textSize.X) / 2 + xOffset,
+                        Bounds.Y + (Bounds.Height - textSize.Y) / 2
+                    );
+                }
+                spriteBatch.DrawString(font, Text, textPosition, textColor);
+            }
+
+            // End the clipping sprite batch and restore the original state
+            spriteBatch.End();
+            spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect; // Restore scissor rect
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp, rasterizerState: originalRasterizerState);
         }
     }
 }

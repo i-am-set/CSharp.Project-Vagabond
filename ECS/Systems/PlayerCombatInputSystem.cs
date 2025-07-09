@@ -9,15 +9,16 @@ namespace ProjectVagabond
     /// </summary>
     public class PlayerCombatInputSystem
     {
-        private readonly ActionMenuPanel _actionMenuPanel;
         private readonly MapRenderer _mapRenderer;
         private MouseState _previousMouseState;
         private string _selectedAttackName;
 
-        public PlayerCombatInputSystem(ActionMenuPanel actionMenuPanel, MapRenderer mapRenderer)
+        public PlayerCombatInputSystem(ActionMenuPanel actionMenuPanel, TurnOrderPanel turnOrderPanel, MapRenderer mapRenderer)
         {
-            _actionMenuPanel = actionMenuPanel;
             _mapRenderer = mapRenderer;
+            // Subscribe to the UI events
+            actionMenuPanel.OnActionSelected += ProcessMenuCommand;
+            turnOrderPanel.OnTargetSelected += SelectTarget;
         }
 
         /// <summary>
@@ -40,33 +41,30 @@ namespace ProjectVagabond
             {
                 var virtualMousePos = Core.TransformMouse(currentMouseState.Position).ToPoint();
 
-                // 1. Check for a click on an enemy on the map
+                // Check for a click on an enemy on the map
                 int? clickedEntityId = _mapRenderer.GetEntityIdAt(virtualMousePos);
                 if (clickedEntityId.HasValue)
                 {
-                    gameState.SelectedTargetId = clickedEntityId;
-                    var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(clickedEntityId.Value);
-                    var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
-                    Core.CurrentTerminalRenderer.AddCombatLog($"Player selects target: {archetype?.Name ?? $"Entity {clickedEntityId.Value}"}.");
-
-                    // If we were waiting to select a target, execute the action now
-                    if (gameState.UIState == CombatUIState.SelectTarget)
-                    {
-                        ExecutePlayerAttack();
-                        _previousMouseState = currentMouseState;
-                        return; // Action taken, end processing for this frame
-                    }
-                }
-
-                // 2. Check for a click on the action menu
-                string command = _actionMenuPanel.HandleInput(virtualMousePos);
-                if (command != null)
-                {
-                    ProcessMenuCommand(command);
+                    SelectTarget(clickedEntityId.Value);
                 }
             }
 
             _previousMouseState = currentMouseState;
+        }
+
+        private void SelectTarget(int targetId)
+        {
+            var gameState = Core.CurrentGameState;
+            gameState.SelectedTargetId = targetId;
+            var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(targetId);
+            var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
+            Core.CurrentTerminalRenderer.AddCombatLog($"Player selects target: {archetype?.Name ?? $"Entity {targetId}"}.");
+
+            // If we were waiting to select a target, execute the action now
+            if (gameState.UIState == CombatUIState.SelectTarget)
+            {
+                ExecutePlayerAttack();
+            }
         }
 
         private void ProcessMenuCommand(string command)
@@ -80,11 +78,9 @@ namespace ProjectVagabond
                     Core.CurrentTerminalRenderer.AddCombatLog("Player opens Attack menu.");
                     break;
                 case "Skills":
-                    // gameState.UIState = CombatUIState.SelectSkill; // For later
                     Core.CurrentTerminalRenderer.AddCombatLog("[dim]Skills are not yet implemented.");
                     break;
                 case "Move":
-                    // gameState.UIState = CombatUIState.SelectMove; // For later
                     Core.CurrentTerminalRenderer.AddCombatLog("[dim]Moving in combat is not yet implemented.");
                     break;
                 case "Item":
@@ -94,6 +90,9 @@ namespace ProjectVagabond
                     Core.CurrentTerminalRenderer.AddCombatLog("Player ends their turn.");
                     gameState.UIState = CombatUIState.Busy;
                     Core.CombatTurnSystem.EndCurrentTurn();
+                    break;
+                case "Back":
+                    ResetToDefaultState();
                     break;
                 default:
                     // If the command is not a main menu option, it must be an attack/skill name.
@@ -158,7 +157,6 @@ namespace ProjectVagabond
             _selectedAttackName = null;
             gameState.UIState = CombatUIState.Default;
             Core.CurrentTerminalRenderer.AddCombatLog("[dim]Action cancelled. Returning to main menu.");
-            // We don't reset SelectedTargetId, as it's useful to keep the last-clicked enemy selected.
         }
     }
 }
