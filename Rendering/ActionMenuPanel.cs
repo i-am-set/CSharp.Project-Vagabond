@@ -5,7 +5,6 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -14,6 +13,10 @@ namespace ProjectVagabond
     /// </summary>
     public class ActionMenuPanel
     {
+        private readonly GameState _gameState;
+        private readonly ComponentStore _componentStore;
+        private readonly Global _global;
+
         private readonly Rectangle _bounds;
         private readonly List<Button> _buttons = new List<Button>();
         private CombatUIState _lastUIState = CombatUIState.Busy;
@@ -27,21 +30,23 @@ namespace ProjectVagabond
         public ActionMenuPanel(Rectangle bounds)
         {
             _bounds = bounds;
+            _gameState = ServiceLocator.Get<GameState>();
+            _componentStore = ServiceLocator.Get<ComponentStore>();
+            _global = ServiceLocator.Get<Global>();
         }
 
         /// <summary>
         /// Updates the state of the menu buttons and rebuilds them if the UI state has changed.
         /// </summary>
-        public void Update(GameTime gameTime, MouseState currentMouseState)
+        public void Update(GameTime gameTime, MouseState currentMouseState, BitmapFont font)
         {
-            var gameState = Core.CurrentGameState;
-            if (!gameState.IsInCombat) return;
+            if (!_gameState.IsInCombat) return;
 
             // Rebuild buttons if the UI state has changed
-            if (gameState.UIState != _lastUIState)
+            if (_gameState.UIState != _lastUIState)
             {
-                RebuildButtons(gameState);
-                _lastUIState = gameState.UIState;
+                RebuildButtons(font);
+                _lastUIState = _gameState.UIState;
             }
 
             // Update all current buttons
@@ -54,12 +59,12 @@ namespace ProjectVagabond
         /// <summary>
         /// Rebuilds the list of buttons based on the current combat UI state.
         /// </summary>
-        private void RebuildButtons(GameState gameState)
+        private void RebuildButtons(BitmapFont font)
         {
             _buttons.Clear();
             int currentY = _bounds.Y + PADDING;
 
-            switch (gameState.UIState)
+            switch (_gameState.UIState)
             {
                 case CombatUIState.Default:
                     var mainOptions = new List<string> { "Attack", "Skills", "Move", "Item", "End Turn" };
@@ -74,8 +79,8 @@ namespace ProjectVagabond
                     break;
 
                 case CombatUIState.SelectAttack:
-                    var attacksComp = Core.ComponentStore.GetComponent<AvailableAttacksComponent>(gameState.PlayerEntityId);
-                    var combatStats = Core.ComponentStore.GetComponent<CombatStatsComponent>(gameState.PlayerEntityId);
+                    var attacksComp = _componentStore.GetComponent<AvailableAttacksComponent>(_gameState.PlayerEntityId);
+                    var combatStats = _componentStore.GetComponent<CombatStatsComponent>(_gameState.PlayerEntityId);
                     if (attacksComp == null || combatStats == null) break;
 
                     foreach (var attack in attacksComp.Attacks)
@@ -86,8 +91,8 @@ namespace ProjectVagabond
                         var button = new Button(buttonBounds, text, attack.Name)
                         {
                             IsEnabled = canAfford,
-                            CustomDefaultTextColor = Global.Instance.GameTextColor,
-                            CustomHoverTextColor = Global.Instance.Palette_Yellow,
+                            CustomDefaultTextColor = _global.GameTextColor,
+                            CustomHoverTextColor = _global.Palette_Yellow,
                             CustomDisabledTextColor = Color.DarkGray
                         };
                         button.OnClick += () => OnActionSelected?.Invoke(attack.Name);
@@ -122,8 +127,8 @@ namespace ProjectVagabond
             var backButtonBounds = new Rectangle(_bounds.X + PADDING, backButtonY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
             var backButton = new Button(backButtonBounds, "Back")
             {
-                CustomDefaultTextColor = Global.Instance.Palette_Red,
-                CustomHoverTextColor = Global.Instance.Palette_Pink
+                CustomDefaultTextColor = _global.Palette_Red,
+                CustomHoverTextColor = _global.Palette_Pink
             };
             backButton.OnClick += () => OnActionSelected?.Invoke("Back");
             _buttons.Add(backButton);
@@ -132,12 +137,11 @@ namespace ProjectVagabond
         /// <summary>
         /// Draws the action menu panel, including its buttons and instructional text.
         /// </summary>
-        public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            var gameState = Core.CurrentGameState;
-            if (!gameState.IsInCombat) return;
+            if (!_gameState.IsInCombat) return;
 
-            var font = Global.Instance.DefaultFont;
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             // Draw border and background
             var borderRect = new Rectangle(
@@ -146,8 +150,8 @@ namespace ProjectVagabond
                 _bounds.Width + (BORDER_THICKNESS * 2),
                 _bounds.Height + (BORDER_THICKNESS * 2)
             );
-            spriteBatch.Draw(Core.Pixel, borderRect, Global.Instance.Palette_White);
-            spriteBatch.Draw(Core.Pixel, _bounds, Global.Instance.TerminalBg);
+            spriteBatch.Draw(pixel, borderRect, _global.Palette_White);
+            spriteBatch.Draw(pixel, _bounds, _global.TerminalBg);
 
             // Draw buttons
             foreach (var button in _buttons)
@@ -156,20 +160,19 @@ namespace ProjectVagabond
             }
 
             // Draw instructional text over the buttons if needed
-            switch (gameState.UIState)
+            switch (_gameState.UIState)
             {
                 case CombatUIState.SelectTarget:
-                    DrawInstruction(spriteBatch, "Select a target...");
+                    DrawInstruction(spriteBatch, font, "Select a target...");
                     break;
                 case CombatUIState.SelectMove:
-                    DrawInstruction(spriteBatch, "Select a destination...");
+                    DrawInstruction(spriteBatch, font, "Select a destination...");
                     break;
             }
         }
 
-        private void DrawInstruction(SpriteBatch spriteBatch, string text)
+        private void DrawInstruction(SpriteBatch spriteBatch, BitmapFont font, string text)
         {
-            var font = Global.Instance.DefaultFont;
             var position = new Vector2(_bounds.X + PADDING, _bounds.Y + PADDING);
             spriteBatch.DrawString(font, text, position, Color.Yellow);
         }

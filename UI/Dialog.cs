@@ -1,14 +1,17 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Scenes;
 
 namespace ProjectVagabond.UI
 {
     public abstract class Dialog
     {
+        protected readonly GameScene _currentGameScene;
+        protected readonly Global _global;
+
         public bool IsActive { get; protected set; }
-        protected GameScene _currentGameScene;
         protected Rectangle _dialogBounds;
 
         protected KeyboardState _previousKeyboardState;
@@ -17,6 +20,7 @@ namespace ProjectVagabond.UI
         public Dialog(GameScene currentGameScene)
         {
             _currentGameScene = currentGameScene;
+            _global = ServiceLocator.Get<Global>();
         }
 
         public virtual void Hide()
@@ -26,31 +30,20 @@ namespace ProjectVagabond.UI
 
         public abstract void Update(GameTime gameTime);
 
-        /// <summary>
-        /// The main drawing method for the dialog. It handles drawing the overlay and then the dialog content on top of it.
-        /// </summary>
-        public void Draw(GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (!IsActive) return;
 
-            DrawOverlay(gameTime);
-
-            DrawContent(gameTime);
+            DrawOverlay(spriteBatch);
+            DrawContent(spriteBatch, font, gameTime);
         }
 
-        /// <summary>
-        /// Draws the specific content of the dialog. Must be implemented by derived classes.
-        /// </summary>
-        protected abstract void DrawContent(GameTime gameTime);
+        protected abstract void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime);
 
-        /// <summary>
-        /// Draws the semi-transparent background that darkens the main screen.
-        /// </summary>
-        private void DrawOverlay(GameTime gameTime)
+        private void DrawOverlay(SpriteBatch spriteBatch)
         {
-            var spriteBatch = Global.Instance.CurrentSpriteBatch;
-            var graphicsDevice = Global.Instance.CurrentGraphics.GraphicsDevice;
-            var pixel = Core.Pixel;
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var pixel = ServiceLocator.Get<Texture2D>();
             var screenBounds = new Rectangle(0, 0, graphicsDevice.PresentationParameters.BackBufferWidth, graphicsDevice.PresentationParameters.BackBufferHeight);
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
@@ -60,7 +53,7 @@ namespace ProjectVagabond.UI
 
         protected bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
 
-        protected static void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
+        protected void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
         {
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);

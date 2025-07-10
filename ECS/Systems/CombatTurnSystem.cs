@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 
 namespace ProjectVagabond
 {
@@ -8,7 +9,17 @@ namespace ProjectVagabond
     /// </summary>
     public class CombatTurnSystem : ISystem
     {
+        private GameState _gameState;
+        private readonly ComponentStore _componentStore;
+        private WorldClockManager _worldClockManager;
+        private AISystem _aiSystem;
+
         private int _currentTurnIndex = 0;
+
+        public CombatTurnSystem()
+        {
+            _componentStore = ServiceLocator.Get<ComponentStore>();
+        }
 
         /// <summary>
         /// Resets the turn manager to the beginning of the initiative order.
@@ -24,8 +35,11 @@ namespace ProjectVagabond
         /// </summary>
         public void EndCurrentTurn()
         {
-            var gameState = Core.CurrentGameState;
-            if (!gameState.IsInCombat)
+            _gameState ??= ServiceLocator.Get<GameState>();
+            _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
+            _aiSystem ??= ServiceLocator.Get<AISystem>();
+
+            if (!_gameState.IsInCombat)
             {
                 return;
             }
@@ -33,30 +47,30 @@ namespace ProjectVagabond
             _currentTurnIndex++;
 
             // Check if we've completed a full round.
-            if (_currentTurnIndex >= gameState.InitiativeOrder.Count)
+            if (_currentTurnIndex >= _gameState.InitiativeOrder.Count)
             {
                 _currentTurnIndex = 0; // Reset for the new round.
-                Core.CurrentTerminalRenderer.AddCombatLog("[yellow]New round begins.");
-                Core.CurrentWorldClockManager.PassTime(seconds: GameState.COMBAT_TURN_DURATION_SECONDS);
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[yellow]New round begins." });
+                _worldClockManager.PassTime(seconds: GameState.COMBAT_TURN_DURATION_SECONDS);
             }
 
             // Update the GameState to reflect the new active entity for the next turn.
-            var newTurnEntityId = gameState.InitiativeOrder[_currentTurnIndex];
-            gameState.SetCurrentTurnEntity(newTurnEntityId);
+            var newTurnEntityId = _gameState.InitiativeOrder[_currentTurnIndex];
+            _gameState.SetCurrentTurnEntity(newTurnEntityId);
 
             // Log whose turn it is now.
-            var newTurnEntityName = EntityNamer.GetName(gameState.CurrentTurnEntityId);
-            Core.CurrentTerminalRenderer.AddCombatLog($"Turn: {newTurnEntityName}");
+            var newTurnEntityName = EntityNamer.GetName(_gameState.CurrentTurnEntityId);
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"Turn: {newTurnEntityName}" });
 
             // If the new entity is an AI, tell it to take its turn.
-            if (Core.ComponentStore.HasComponent<AIComponent>(newTurnEntityId))
+            if (_componentStore.HasComponent<AIComponent>(newTurnEntityId))
             {
-                Core.AISystem.ProcessCombatTurn(newTurnEntityId);
+                _aiSystem.ProcessCombatTurn(newTurnEntityId);
             }
-            else if (newTurnEntityId == gameState.PlayerEntityId)
+            else if (newTurnEntityId == _gameState.PlayerEntityId)
             {
                 // It's the player's turn, reset their UI state to default
-                gameState.UIState = CombatUIState.Default;
+                _gameState.UIState = CombatUIState.Default;
             }
         }
 

@@ -1,9 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
@@ -13,6 +11,12 @@ namespace ProjectVagabond.Scenes
 {
     public class SettingsScene : GameScene
     {
+        private readonly GameSettings _settings;
+        private readonly SceneManager _sceneManager;
+        private readonly Core _core;
+        private readonly GraphicsDeviceManager _graphics;
+        private readonly Global _global;
+
         private List<object> _uiElements = new();
         private int _selectedIndex = -1;
         private int _hoveredIndex = -1;
@@ -34,25 +38,32 @@ namespace ProjectVagabond.Scenes
 
         public GameSceneState ReturnScene { get; set; } = GameSceneState.MainMenu;
 
+        public SettingsScene()
+        {
+            _settings = ServiceLocator.Get<GameSettings>();
+            _sceneManager = ServiceLocator.Get<SceneManager>();
+            _core = ServiceLocator.Get<Core>();
+            _graphics = ServiceLocator.Get<GraphicsDeviceManager>();
+            _global = ServiceLocator.Get<Global>();
+        }
+
         public override void Enter()
         {
             base.Enter();
             _confirmationDialog = new ConfirmationDialog(this);
             _tempSettings = new GameSettings
             {
-                Resolution = Core.Settings.Resolution,
-                IsFullscreen = Core.Settings.IsFullscreen,
-                IsVsync = Core.Settings.IsVsync,
-                IsFrameLimiterEnabled = Core.Settings.IsFrameLimiterEnabled,
-                TargetFramerate = Core.Settings.TargetFramerate,
-                SmallerUi = Core.Settings.SmallerUi,
-                UseImperialUnits = Core.Settings.UseImperialUnits,
-                Use24HourClock = Core.Settings.Use24HourClock
+                Resolution = _settings.Resolution,
+                IsFullscreen = _settings.IsFullscreen,
+                IsVsync = _settings.IsVsync,
+                IsFrameLimiterEnabled = _settings.IsFrameLimiterEnabled,
+                TargetFramerate = _settings.TargetFramerate,
+                SmallerUi = _settings.SmallerUi,
+                UseImperialUnits = _settings.UseImperialUnits,
+                Use24HourClock = _settings.Use24HourClock
             };
 
-            var resolutions = SettingsManager.GetResolutions();
             _tempSettings.Resolution = SettingsManager.FindClosestResolution(_tempSettings.Resolution);
-
             _titleBobTimer = 0f;
 
             BuildInitialUI();
@@ -69,7 +80,6 @@ namespace ProjectVagabond.Scenes
             }
 
             _previousKeyboardState = Keyboard.GetState();
-
             _currentInputDelay = _inputDelay;
         }
 
@@ -81,34 +91,21 @@ namespace ProjectVagabond.Scenes
             for (int i = 0; i < _uiElements.Count; i++)
             {
                 var item = _uiElements[i];
-
                 if (item is ISettingControl || item is Button)
                 {
                     float itemHeight = (item is ISettingControl) ? 20 : 25;
                     return new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, (int)itemHeight);
                 }
-
-                if (item is ISettingControl)
-                {
-                    currentPos.Y += 20;
-                }
-                else if (item is Button)
-                {
-                    currentPos.Y += 25;
-                }
-                else if (item is string)
-                {
-                    currentPos.Y += 25;
-                }
+                if (item is ISettingControl) currentPos.Y += 20;
+                else if (item is Button) currentPos.Y += 25;
+                else if (item is string) currentPos.Y += 25;
             }
-
-            return null; // No selectable elements found
+            return null;
         }
 
         private void BuildInitialUI()
         {
             _uiElements.Clear();
-
             _uiElements.Add("Graphics");
 
             var resolutions = SettingsManager.GetResolutions();
@@ -145,42 +142,22 @@ namespace ProjectVagabond.Scenes
 
             UpdateFramerateControl();
             LayoutUI();
-
             applyButton.IsEnabled = IsDirty();
         }
 
-        /// <summary>
-        /// Calculates and sets the correct positions for all UI elements, specifically Buttons.
-        /// </summary>
         private void LayoutUI()
         {
             Vector2 currentPos = new Vector2(0, _settingsStartY);
             int screenWidth = Global.VIRTUAL_WIDTH;
-
             foreach (var item in _uiElements)
             {
                 if (item is Button button)
                 {
-                    button.Bounds = new Rectangle(
-                        (screenWidth - button.Bounds.Width) / 2,
-                        (int)currentPos.Y,
-                        button.Bounds.Width,
-                        button.Bounds.Height
-                    );
+                    button.Bounds = new Rectangle((screenWidth - button.Bounds.Width) / 2, (int)currentPos.Y, button.Bounds.Width, button.Bounds.Height);
                 }
-
-                if (item is ISettingControl)
-                {
-                    currentPos.Y += 20;
-                }
-                else if (item is Button)
-                {
-                    currentPos.Y += 25;
-                }
-                else if (item is string)
-                {
-                    currentPos.Y += 25;
-                }
+                if (item is ISettingControl) currentPos.Y += 20;
+                else if (item is Button) currentPos.Y += 25;
+                else if (item is string) currentPos.Y += 25;
             }
         }
 
@@ -200,11 +177,7 @@ namespace ProjectVagabond.Scenes
 
             if (_tempSettings.IsFrameLimiterEnabled && framerateControl == null && limiterIndex != -1)
             {
-                var framerates = new List<KeyValuePair<string, int>>
-                {
-                    new("30 FPS", 30), new("60 FPS", 60), new("75 FPS", 75),
-                    new("120 FPS", 120), new("144 FPS", 144), new("240 FPS", 240)
-                };
+                var framerates = new List<KeyValuePair<string, int>> { new("30 FPS", 30), new("60 FPS", 60), new("75 FPS", 75), new("120 FPS", 120), new("144 FPS", 144), new("240 FPS", 240) };
                 var newControl = new OptionSettingControl<int>("Target Framerate", framerates, () => _tempSettings.TargetFramerate, v => _tempSettings.TargetFramerate = v);
                 _uiElements.Insert(limiterIndex + 1, newControl);
                 changed = true;
@@ -214,50 +187,32 @@ namespace ProjectVagabond.Scenes
                 _uiElements.Remove(framerateControl);
                 changed = true;
             }
-
-            if (changed)
-            {
-                LayoutUI();
-            }
+            if (changed) LayoutUI();
         }
 
         private void ConfirmApplySettings()
         {
             if (!IsDirty()) return;
-
-            var details = _uiElements.OfType<ISettingControl>()
-                .Where(c => c.IsDirty)
-                .Select(c => $"{c.Label}: {c.GetSavedValueAsString()} -> {c.GetCurrentValueAsString()}")
-                .ToList();
-
-            _confirmationDialog.Show(
-                "Apply the following changes?",
-                new List<Tuple<string, Action>>
-                {
-                    Tuple.Create("YES", new Action(() => { ExecuteApplySettings(); _confirmationDialog.Hide(); })),
-                    Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide()))
-                },
-                details
-            );
+            var details = _uiElements.OfType<ISettingControl>().Where(c => c.IsDirty).Select(c => $"{c.Label}: {c.GetSavedValueAsString()} -> {c.GetCurrentValueAsString()}").ToList();
+            _confirmationDialog.Show("Apply the following changes?", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { ExecuteApplySettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide())) }, details);
         }
 
         private void ExecuteApplySettings()
         {
-            Core.Settings.Resolution = _tempSettings.Resolution;
-            Core.Settings.IsFullscreen = _tempSettings.IsFullscreen;
-            Core.Settings.IsVsync = _tempSettings.IsVsync;
-            Core.Settings.IsFrameLimiterEnabled = _tempSettings.IsFrameLimiterEnabled;
-            Core.Settings.TargetFramerate = _tempSettings.TargetFramerate;
-            Core.Settings.SmallerUi = _tempSettings.SmallerUi;
-            Core.Settings.UseImperialUnits = _tempSettings.UseImperialUnits;
-            Core.Settings.Use24HourClock = _tempSettings.Use24HourClock;
+            _settings.Resolution = _tempSettings.Resolution;
+            _settings.IsFullscreen = _tempSettings.IsFullscreen;
+            _settings.IsVsync = _tempSettings.IsVsync;
+            _settings.IsFrameLimiterEnabled = _tempSettings.IsFrameLimiterEnabled;
+            _settings.TargetFramerate = _tempSettings.TargetFramerate;
+            _settings.SmallerUi = _tempSettings.SmallerUi;
+            _settings.UseImperialUnits = _tempSettings.UseImperialUnits;
+            _settings.Use24HourClock = _tempSettings.Use24HourClock;
 
-            Core.Settings.ApplyGraphicsSettings(Global.Instance.CurrentGraphics, Core.Instance);
-            Core.Settings.ApplyGameSettings();
-            SettingsManager.SaveSettings(Core.Settings);
+            _settings.ApplyGraphicsSettings(_graphics, _core);
+            _settings.ApplyGameSettings();
+            SettingsManager.SaveSettings(_settings);
 
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.Apply();
-
             _confirmationMessage = "Settings Applied!";
             _confirmationTimer = 5f;
             MoveMouseToSelected();
@@ -266,28 +221,21 @@ namespace ProjectVagabond.Scenes
         private void RevertChanges()
         {
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.Revert();
-            _tempSettings.Resolution = Core.Settings.Resolution;
-            _tempSettings.IsFullscreen = Core.Settings.IsFullscreen;
-            _tempSettings.IsVsync = Core.Settings.IsVsync;
-            _tempSettings.IsFrameLimiterEnabled = Core.Settings.IsFrameLimiterEnabled;
-            _tempSettings.TargetFramerate = Core.Settings.TargetFramerate;
-            _tempSettings.SmallerUi = Core.Settings.SmallerUi;
-            _tempSettings.UseImperialUnits = Core.Settings.UseImperialUnits;
-            _tempSettings.Use24HourClock = Core.Settings.Use24HourClock;
+            _tempSettings.Resolution = _settings.Resolution;
+            _tempSettings.IsFullscreen = _settings.IsFullscreen;
+            _tempSettings.IsVsync = _settings.IsVsync;
+            _tempSettings.IsFrameLimiterEnabled = _settings.IsFrameLimiterEnabled;
+            _tempSettings.TargetFramerate = _settings.TargetFramerate;
+            _tempSettings.SmallerUi = _settings.SmallerUi;
+            _tempSettings.UseImperialUnits = _settings.UseImperialUnits;
+            _tempSettings.Use24HourClock = _settings.Use24HourClock;
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
             UpdateFramerateControl();
         }
 
         private void ConfirmResetSettings()
         {
-            _confirmationDialog.Show(
-                "Reset all settings to default? This cannot be undone.",
-                new List<Tuple<string, Action>>
-                {
-                    Tuple.Create("YES", new Action(() => { ExecuteResetSettings(); _confirmationDialog.Hide(); })),
-                    Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide()))
-                }
-            );
+            _confirmationDialog.Show("Reset all settings to default? This cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide())) });
         }
 
         private void ExecuteResetSettings()
@@ -305,19 +253,11 @@ namespace ProjectVagabond.Scenes
         {
             if (IsDirty())
             {
-                _confirmationDialog.Show(
-                    "You have unsaved changes.",
-                    new List<Tuple<string, Action>>
-                    {
-                        Tuple.Create("APPLY", new Action(() => { ExecuteApplySettings(); Core.CurrentSceneManager.ChangeScene(ReturnScene); })),
-                        Tuple.Create("DISCARD", new Action(() => { RevertChanges(); Core.CurrentSceneManager.ChangeScene(ReturnScene); })),
-                        Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide()))
-                    }
-                );
+                _confirmationDialog.Show("You have unsaved changes.", new List<Tuple<string, Action>> { Tuple.Create("APPLY", new Action(() => { ExecuteApplySettings(); _sceneManager.ChangeScene(ReturnScene); })), Tuple.Create("DISCARD", new Action(() => { RevertChanges(); _sceneManager.ChangeScene(ReturnScene); })), Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide())) });
             }
             else
             {
-                Core.CurrentSceneManager.ChangeScene(ReturnScene);
+                _sceneManager.ChangeScene(ReturnScene);
             }
         }
 
@@ -334,9 +274,7 @@ namespace ProjectVagabond.Scenes
                 currentPos.X = (Global.VIRTUAL_WIDTH - 450) / 2;
                 if (i == _selectedIndex)
                 {
-                    Point mousePos = (item is ISettingControl)
-                        ? new Point((int)currentPos.X + 230, (int)currentPos.Y + 10)
-                        : new Point(Global.VIRTUAL_WIDTH / 2, (int)currentPos.Y + 10);
+                    Point mousePos = (item is ISettingControl) ? new Point((int)currentPos.X + 230, (int)currentPos.Y + 10) : new Point(Global.VIRTUAL_WIDTH / 2, (int)currentPos.Y + 10);
                     Point screenPos = Core.TransformVirtualToScreen(mousePos);
                     Mouse.SetPosition(screenPos.X, screenPos.Y);
                     break;
@@ -350,7 +288,6 @@ namespace ProjectVagabond.Scenes
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
-
             _titleBobTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             if (IsInputBlocked)
@@ -370,16 +307,12 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             _hoveredIndex = -1;
 
-            if (currentMouseState.Position != previousMouseState.Position ||
-                (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released))
+            if (currentMouseState.Position != previousMouseState.Position || (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released))
             {
-                Core.CurrentSceneManager.LastInputDevice = InputDevice.Mouse;
+                _sceneManager.LastInputDevice = InputDevice.Mouse;
             }
 
-            if (Core.CurrentSceneManager.LastInputDevice == InputDevice.Mouse)
-            {
-                _selectedIndex = -1;
-            }
+            if (_sceneManager.LastInputDevice == InputDevice.Mouse) _selectedIndex = -1;
 
             if (_currentInputDelay > 0) _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_confirmationTimer > 0) _confirmationTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -398,7 +331,7 @@ namespace ProjectVagabond.Scenes
                 {
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, 20);
                     if (hoverRect.Contains(virtualMousePos)) { _selectedIndex = i; _hoveredIndex = i; }
-                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 5), isSelected, currentMouseState, previousMouseState);
+                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 5), isSelected, currentMouseState, previousMouseState, virtualMousePos);
                     currentPos.Y += 20;
                 }
                 else if (item is Button button)
@@ -425,22 +358,22 @@ namespace ProjectVagabond.Scenes
         private void HandleKeyboardInput(KeyboardState currentKeyboardState)
         {
             bool selectionChanged = false;
-            if (KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState)) { Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard; _selectedIndex = FindNextSelectable(_selectedIndex, 1); selectionChanged = true; }
-            if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState)) { Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard; _selectedIndex = FindNextSelectable(_selectedIndex, -1); selectionChanged = true; }
+            if (KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState)) { _sceneManager.LastInputDevice = InputDevice.Keyboard; _selectedIndex = FindNextSelectable(_selectedIndex, 1); selectionChanged = true; }
+            if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState)) { _sceneManager.LastInputDevice = InputDevice.Keyboard; _selectedIndex = FindNextSelectable(_selectedIndex, -1); selectionChanged = true; }
 
-            if (selectionChanged) { MoveMouseToSelected(); Core.Instance.IsMouseVisible = false; keyboardNavigatedLastFrame = true; }
+            if (selectionChanged) { MoveMouseToSelected(); _core.IsMouseVisible = false; keyboardNavigatedLastFrame = true; }
 
             if (_selectedIndex >= 0 && _selectedIndex < _uiElements.Count)
             {
                 var selectedItem = _uiElements[_selectedIndex];
                 if (selectedItem is ISettingControl setting)
                 {
-                    if (KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState)) { Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard; setting.HandleInput(Keys.Left); }
-                    if (KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState)) { Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard; setting.HandleInput(Keys.Right); }
+                    if (KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState)) { _sceneManager.LastInputDevice = InputDevice.Keyboard; setting.HandleInput(Keys.Left); }
+                    if (KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState)) { _sceneManager.LastInputDevice = InputDevice.Keyboard; setting.HandleInput(Keys.Right); }
                 }
                 else if (selectedItem is Button button && KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
                 {
-                    Core.CurrentSceneManager.LastInputDevice = InputDevice.Keyboard;
+                    _sceneManager.LastInputDevice = InputDevice.Keyboard;
                     button.TriggerClick();
                 }
             }
@@ -458,22 +391,19 @@ namespace ProjectVagabond.Scenes
             return currentIndex;
         }
 
-        public override void Draw(GameTime gameTime)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            var spriteBatch = Global.Instance.CurrentSpriteBatch;
-            var font = Global.Instance.DefaultFont;
             int screenWidth = Global.VIRTUAL_WIDTH;
             var virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
+            var pixel = ServiceLocator.Get<Texture2D>();
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            Core.Pixel.SetData(new[] { Color.White });
 
             string title = "Settings";
             Vector2 titleSize = font.MeasureString(title) * 2f;
-
             float yOffset = (float)Math.Sin(_titleBobTimer * TitleBobSpeed) * TitleBobAmount;
             Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, 75 + yOffset);
-            spriteBatch.DrawString(font, title, titlePosition, Global.Instance.Palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
+            spriteBatch.DrawString(font, title, titlePosition, _global.Palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
 
             Vector2 currentPos = new Vector2(0, _settingsStartY);
             for (int i = 0; i < _uiElements.Count; i++)
@@ -484,25 +414,24 @@ namespace ProjectVagabond.Scenes
 
                 if (isSelected)
                 {
-                    bool isHovered = (item is ISettingControl s && new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, 20).Contains(virtualMousePos))
-                                  || (item is Button b && b.IsHovered);
+                    bool isHovered = (item is ISettingControl s && new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, 20).Contains(virtualMousePos)) || (item is Button b && b.IsHovered);
                     if (isHovered || keyboardNavigatedLastFrame)
                     {
                         float itemHeight = (item is ISettingControl) ? 20 : (item is Button) ? 20 : 0;
-                        if (itemHeight > 0) DrawRectangleBorder(spriteBatch, Core.Pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, (int)itemHeight), 1, Global.Instance.ButtonHoverColor);
+                        if (itemHeight > 0) DrawRectangleBorder(spriteBatch, pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, (int)itemHeight), 1, _global.ButtonHoverColor);
                     }
                 }
 
                 if (item is ISettingControl setting)
                 {
-                    setting.Draw(spriteBatch, new Vector2(currentPos.X, currentPos.Y + 5), isSelected, gameTime);
+                    setting.Draw(spriteBatch, font, new Vector2(currentPos.X, currentPos.Y + 5), isSelected, gameTime);
                     if (setting.Label == "Resolution")
                     {
                         var originalEntry = SettingsManager.GetResolutions().FirstOrDefault(r => r.Value == _tempSettings.Resolution);
                         if (originalEntry.Key != null && originalEntry.Key.Contains(" ("))
                         {
                             string aspectRatio = originalEntry.Key.Substring(originalEntry.Key.IndexOf(" (")).Trim();
-                            spriteBatch.DrawString(font, aspectRatio, new Vector2(currentPos.X + 460, currentPos.Y + 5), Global.Instance.Palette_DarkGray);
+                            spriteBatch.DrawString(font, aspectRatio, new Vector2(currentPos.X + 460, currentPos.Y + 5), _global.Palette_DarkGray);
                         }
                     }
                     currentPos.Y += 20;
@@ -515,8 +444,8 @@ namespace ProjectVagabond.Scenes
                 else if (item is string header)
                 {
                     currentPos.Y += 5;
-                    spriteBatch.DrawString(font, header, new Vector2(screenWidth / 2 - font.MeasureString(header).Width / 2, currentPos.Y), Global.Instance.Palette_LightGray);
-                    spriteBatch.Draw(Core.Pixel, new Rectangle(screenWidth / 2 - 180, (int)currentPos.Y + 10, 360, 1), Global.Instance.Palette_Gray);
+                    spriteBatch.DrawString(font, header, new Vector2(screenWidth / 2 - font.MeasureString(header).Width / 2, currentPos.Y), _global.Palette_LightGray);
+                    spriteBatch.Draw(pixel, new Rectangle(screenWidth / 2 - 180, (int)currentPos.Y + 10, 360, 1), _global.Palette_Gray);
                     currentPos.Y += 20;
                 }
             }
@@ -524,21 +453,21 @@ namespace ProjectVagabond.Scenes
             if (_confirmationTimer > 0)
             {
                 Vector2 msgSize = font.MeasureString(_confirmationMessage);
-                spriteBatch.DrawString(font, _confirmationMessage, new Vector2(screenWidth / 2 - msgSize.X / 2, Global.VIRTUAL_HEIGHT - 50), Global.Instance.Palette_Teal);
+                spriteBatch.DrawString(font, _confirmationMessage, new Vector2(screenWidth / 2 - msgSize.X / 2, Global.VIRTUAL_HEIGHT - 50), _global.Palette_Teal);
             }
             spriteBatch.End();
 
             if (_confirmationDialog.IsActive)
             {
-                _confirmationDialog.Draw(gameTime);
+                _confirmationDialog.Draw(spriteBatch, font, gameTime);
             }
         }
 
-        public override void DrawUnderlay(GameTime gameTime)
+        public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (_confirmationDialog.IsActive)
             {
-                _confirmationDialog.Draw(gameTime);
+                _confirmationDialog.Draw(spriteBatch, font, gameTime);
             }
         }
 

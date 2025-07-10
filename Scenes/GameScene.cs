@@ -1,5 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 
 namespace ProjectVagabond.Scenes
 {
@@ -11,7 +13,6 @@ namespace ProjectVagabond.Scenes
         MainMenu,
         TerminalMap,
         Dialogue,
-        Combat,
         Settings
     }
 
@@ -29,6 +30,8 @@ namespace ProjectVagabond.Scenes
     /// </summary>
     public abstract class GameScene
     {
+        protected readonly Core _core;
+
         protected MouseState previousMouseState;
         protected bool keyboardNavigatedLastFrame = false;
         protected bool firstTimeOpened = true;
@@ -45,6 +48,11 @@ namespace ProjectVagabond.Scenes
         /// Returns true if the scene is currently blocking input, e.g., for a short duration after entering.
         /// </summary>
         protected bool IsInputBlocked => _inputBlockTimer > 0;
+
+        protected GameScene()
+        {
+            _core = ServiceLocator.Get<Core>();
+        }
 
         /// <summary>
         /// Called once when the scene is first added to the SceneManager.
@@ -66,11 +74,11 @@ namespace ProjectVagabond.Scenes
 
             if (this.LastUsedInputForNav == InputDevice.Keyboard)
             {
-                Core.Instance.IsMouseVisible = false;
+                _core.IsMouseVisible = false;
             }
             else // Mouse was used to enter
             {
-                Core.Instance.IsMouseVisible = true;
+                _core.IsMouseVisible = true;
                 keyboardNavigatedLastFrame = false;
             }
         }
@@ -100,21 +108,25 @@ namespace ProjectVagabond.Scenes
             {
                 if (!IsInputBlocked)
                 {
-                    Core.Instance.IsMouseVisible = true;
+                    _core.IsMouseVisible = true;
                 }
             }
-
         }
 
         /// <summary>
         /// Called every frame to draw the scene.
         /// </summary>
-        public abstract void Draw(GameTime gameTime);
+        public abstract void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime);
 
         /// <summary>
         /// Called every frame to draw full-screen effects underneath the main scene content.
         /// </summary>
-        public virtual void DrawUnderlay(GameTime gameTime) { }
+        public virtual void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime) { }
+
+        /// <summary>
+        /// Called every frame to draw full-screen effects over the main scene content.
+        /// </summary>
+        public virtual void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime) { }
 
         public void ResetInputBlockTimer()
         {
@@ -143,11 +155,9 @@ namespace ProjectVagabond.Scenes
                 Point screenPos = Core.TransformVirtualToScreen(firstElementBounds.Value.Center);
                 Mouse.SetPosition(screenPos.X, screenPos.Y);
 
-                Core.Instance.IsMouseVisible = false;
+                _core.IsMouseVisible = false;
                 keyboardNavigatedLastFrame = true;
             }
         }
-
-        public virtual void DrawOverlay(GameTime gameTime) { }
     }
 }

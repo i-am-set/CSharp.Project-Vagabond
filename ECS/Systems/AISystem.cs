@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -11,12 +12,21 @@ namespace ProjectVagabond
     /// </summary>
     public class AISystem : ISystem
     {
+        private GameState _gameState;
+        private readonly ComponentStore _componentStore;
+        private CombatTurnSystem _combatTurnSystem;
+
         private readonly Random _random = new();
         private static readonly Vector2[] _neighborOffsets = new Vector2[]
         {
             new Vector2(0, -1), new Vector2(0, 1), new Vector2(-1, 0), new Vector2(1, 0),
             new Vector2(-1, -1), new Vector2(1, -1), new Vector2(-1, 1), new Vector2(1, 1)
         };
+
+        public AISystem()
+        {
+            _componentStore = ServiceLocator.Get<ComponentStore>();
+        }
 
         // This system is no longer updated by the SystemManager in real-time.
         // Its logic is triggered by the OnTimePassed event from the WorldClockManager.
@@ -28,15 +38,15 @@ namespace ProjectVagabond
         /// <param name="timeBudget">The amount of in-game seconds that just passed.</param>
         public void ProcessEntities(int timeBudget)
         {
-            var gameState = Core.CurrentGameState;
+            _gameState ??= ServiceLocator.Get<GameState>();
 
             // Don't process AI movement/decisions if in combat
-            if (gameState.IsInCombat) return;
+            if (_gameState.IsInCombat) return;
 
-            foreach (var entityId in gameState.ActiveEntities)
+            foreach (var entityId in _gameState.ActiveEntities)
             {
-                var aiComp = Core.ComponentStore.GetComponent<AIComponent>(entityId);
-                if (aiComp == null || !Core.ComponentStore.HasComponent<NPCTagComponent>(entityId))
+                var aiComp = _componentStore.GetComponent<AIComponent>(entityId);
+                if (aiComp == null || !_componentStore.HasComponent<NPCTagComponent>(entityId))
                 {
                     continue; // Not a relevant AI entity
                 }
@@ -47,7 +57,7 @@ namespace ProjectVagabond
                 // Process this entity's decisions and actions as long as it has budget
                 while (aiComp.ActionTimeBudget > 0)
                 {
-                    var actionQueueComp = Core.ComponentStore.GetComponent<ActionQueueComponent>(entityId);
+                    var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(entityId);
                     if (actionQueueComp == null) break;
 
                     // If the queue is empty, the AI needs to decide what to do next.
@@ -91,23 +101,25 @@ namespace ProjectVagabond
         /// <param name="entityId">The ID of the AI entity to process.</param>
         public void ProcessCombatTurn(int entityId)
         {
-            var gameState = Core.CurrentGameState;
-            if (!gameState.IsInCombat) return;
+            _gameState ??= ServiceLocator.Get<GameState>();
+            _combatTurnSystem ??= ServiceLocator.Get<CombatTurnSystem>();
+
+            if (!_gameState.IsInCombat) return;
 
             // Get AI components
-            var aiPos = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
-            var combatStats = Core.ComponentStore.GetComponent<CombatStatsComponent>(entityId);
-            var availableAttacks = Core.ComponentStore.GetComponent<AvailableAttacksComponent>(entityId);
-            var combatant = Core.ComponentStore.GetComponent<CombatantComponent>(entityId);
+            var aiPos = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+            var combatStats = _componentStore.GetComponent<CombatStatsComponent>(entityId);
+            var availableAttacks = _componentStore.GetComponent<AvailableAttacksComponent>(entityId);
+            var combatant = _componentStore.GetComponent<CombatantComponent>(entityId);
             var aiName = EntityNamer.GetName(entityId);
 
             // Get Player components
-            var playerPos = Core.ComponentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId);
+            var playerPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
 
             if (aiPos == null || combatStats == null || availableAttacks == null || combatant == null || playerPos == null)
             {
-                Core.CurrentTerminalRenderer.AddCombatLog($"[error]{aiName} cannot act in combat (missing critical components).");
-                Core.CombatTurnSystem.EndCurrentTurn();
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{aiName} cannot act in combat (missing critical components)." });
+                _combatTurnSystem.EndCurrentTurn();
                 return;
             }
 
@@ -128,17 +140,17 @@ namespace ProjectVagabond
                 {
                     var chosenAttack = new ChosenAttackComponent
                     {
-                        TargetId = gameState.PlayerEntityId,
+                        TargetId = _gameState.PlayerEntityId,
                         AttackName = bestAttack.Name
                     };
                     // Add the component representing the AI's intent.
-                    Core.ComponentStore.AddComponent(entityId, chosenAttack);
+                    _componentStore.AddComponent(entityId, chosenAttack);
                     combatStats.ActionPoints -= bestAttack.ActionPointCost;
-                    Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} decides to use {bestAttack.Name}.");
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} decides to use {bestAttack.Name}." });
                 }
                 else
                 {
-                    Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} is in range but cannot afford an attack.");
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} is in range but cannot afford an attack." });
                 }
             }
             else
@@ -147,24 +159,24 @@ namespace ProjectVagabond
                 const int moveCost = 5; // Assume a fixed move cost for now
                 if (combatStats.ActionPoints >= moveCost)
                 {
-                    var path = Pathfinder.FindPath(aiPos.LocalPosition, playerPos.LocalPosition, gameState, false, PathfindingMode.Moves, MapView.Local);
+                    var path = Pathfinder.FindPath(aiPos.LocalPosition, playerPos.LocalPosition, _gameState, false, PathfindingMode.Moves, MapView.Local);
                     if (path != null && path.Count > 0)
                     {
                         var nextStep = path[0];
-                        var actionQueue = Core.ComponentStore.GetComponent<ActionQueueComponent>(entityId);
+                        var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(entityId);
                         // Add the component representing the AI's intent.
                         actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, nextStep, false));
                         combatStats.ActionPoints -= moveCost;
-                        Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} decides to move towards the player.");
+                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} decides to move towards the player." });
                     }
                     else
                     {
-                        Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} cannot find a path to the player.");
+                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} cannot find a path to the player." });
                     }
                 }
                 else
                 {
-                    Core.CurrentTerminalRenderer.AddCombatLog($"{aiName} wants to move but cannot afford it.");
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} wants to move but cannot afford it." });
                 }
             }
             // The AI's decision is made. The CombatProcessingSystem will execute it and then the turn will end.
@@ -175,23 +187,23 @@ namespace ProjectVagabond
         /// </summary>
         private void DecideNextAction(int entityId, AIComponent aiComp)
         {
-            var gameState = Core.CurrentGameState;
-            if (gameState.IsInCombat) return;
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.IsInCombat) return;
 
-            var actionQueueComp = Core.ComponentStore.GetComponent<ActionQueueComponent>(entityId);
-            var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
-            var combatantComp = Core.ComponentStore.GetComponent<CombatantComponent>(entityId);
+            var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(entityId);
+            var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+            var combatantComp = _componentStore.GetComponent<CombatantComponent>(entityId);
 
             if (actionQueueComp == null || localPosComp == null || combatantComp == null) return;
 
             // Check for combat initiation
-            var playerLocalPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId);
+            var playerLocalPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
             if (playerLocalPosComp != null)
             {
                 float distanceToPlayer = Vector2.Distance(localPosComp.LocalPosition, playerLocalPosComp.LocalPosition);
                 if (distanceToPlayer <= combatantComp.AggroRange)
                 {
-                    gameState.InitiateCombat(new List<int> { entityId, gameState.PlayerEntityId });
+                    _gameState.InitiateCombat(new List<int> { entityId, _gameState.PlayerEntityId });
                     return; // Combat initiated, no further action decided this tick.
                 }
             }
@@ -230,7 +242,7 @@ namespace ProjectVagabond
         {
             if (action is MoveAction moveAction)
             {
-                var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+                var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
                 if (localPosComp != null)
                 {
                     localPosComp.LocalPosition = moveAction.Destination;

@@ -15,9 +15,15 @@ namespace ProjectVagabond
 
     public class SceneManager
     {
+        // Injected Dependencies
+        private readonly Global _global;
+        private readonly GraphicsDeviceManager _graphics;
+
+        // Scene Management State
         private readonly Dictionary<GameSceneState, GameScene> _scenes = new();
         private GameScene _currentScene;
 
+        // Fade Transition State
         private FadeState _fadeState = FadeState.Idle;
         private float _fadeAlpha = 0.0f;
         private float _fadeDuration = 0.1f;
@@ -33,6 +39,13 @@ namespace ProjectVagabond
         /// The last input device used to trigger a major action, like changing a scene.
         /// </summary>
         public InputDevice LastInputDevice { get; set; } = InputDevice.Mouse;
+
+        public SceneManager()
+        {
+            // Acquire dependencies from the ServiceLocator
+            _global = ServiceLocator.Get<Global>();
+            _graphics = ServiceLocator.Get<GraphicsDeviceManager>();
+        }
 
         /// <summary>
         /// Adds a scene to the manager and initializes it.
@@ -58,7 +71,7 @@ namespace ProjectVagabond
         /// Changes the currently active scene, with an optional fade transition.
         /// </summary>
         /// <param name="state">The state of the scene to switch to.</param>
-        /// <param name="fade_duration">If true, the screen will fade to black and then fade in to the new scene.</param>
+        /// <param name="fade_duration">The duration of the fade transition. If 0, the switch is instant.</param>
         public void ChangeScene(GameSceneState state, float fade_duration = 0.0f)
         {
             if (_fadeState != FadeState.Idle)
@@ -114,9 +127,7 @@ namespace ProjectVagabond
                 if (_fadeAlpha >= 1.0f)
                 {
                     _fadeAlpha = 1.0f;
-
                     SwitchToScene(_nextSceneState);
-
                     _fadeState = FadeState.FadingIn;
                 }
             }
@@ -131,40 +142,36 @@ namespace ProjectVagabond
             }
         }
 
-        public void Draw(GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            _currentScene?.Draw(gameTime);
+            _currentScene?.Draw(spriteBatch, font, gameTime);
         }
 
-        public void DrawUnderlay(GameTime gameTime)
+        public void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            _currentScene?.DrawUnderlay(gameTime);
+            _currentScene?.DrawUnderlay(spriteBatch, font, gameTime);
         }
 
-        public void DrawOverlay(GameTime gameTime)
+        public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            _currentScene?.DrawOverlay(gameTime);
+            _currentScene?.DrawOverlay(spriteBatch, font, gameTime);
 
-            var spriteBatch = Global.Instance.CurrentSpriteBatch;
-            var font = Global.Instance.DefaultFont;
-            var graphics = Global.Instance.CurrentGraphics;
-
-            if (graphics == null || spriteBatch == null)
+            if (spriteBatch == null)
             {
                 return;
             }
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-            DrawFade(spriteBatch, graphics.GraphicsDevice);
+            DrawFade(spriteBatch, _graphics.GraphicsDevice);
 
             if (font != null)
             {
                 string versionText = $"v{Global.GAME_VERSION}";
                 float padding = 5f;
-                var screenHeight = graphics.PreferredBackBufferHeight;
+                var screenHeight = _graphics.PreferredBackBufferHeight;
                 var versionPosition = new Vector2(padding, screenHeight - font.LineHeight - padding);
-                spriteBatch.DrawString(font, versionText, versionPosition, Global.Instance.Palette_Gray);
+                spriteBatch.DrawString(font, versionText, versionPosition, _global.Palette_Gray);
             }
 
             spriteBatch.End();
@@ -184,7 +191,7 @@ namespace ProjectVagabond
             }
 
             var screenBounds = graphicsDevice.Viewport.Bounds;
-            var fadeColor = Global.Instance.Palette_Black * _fadeAlpha;
+            var fadeColor = _global.Palette_Black * _fadeAlpha;
 
             spriteBatch.Draw(_fadeTexture, screenBounds, fadeColor);
         }

@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -85,11 +85,6 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
-        // Core variables
-        public BitmapFont DefaultFont { get; set; }
-        public GraphicsDeviceManager CurrentGraphics;
-        public SpriteBatch CurrentSpriteBatch;
 
         // Settings variables
         public bool UseImperialUnits { get; set; } = false;

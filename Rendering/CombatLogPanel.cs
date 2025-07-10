@@ -9,12 +9,17 @@ using System.Text.RegularExpressions;
 namespace ProjectVagabond
 {
     /// <summary>
-    /// A UI panel responsible for displaying messages from the CombatLog within a defined boundary.
+    /// A UI panel responsible for displaying combat log messages within a defined boundary.
     /// </summary>
     public class CombatLogPanel
     {
-        private readonly List<ColoredLine> _wrappedMessages = new List<ColoredLine>();
+        private readonly Global _global;
         private readonly Rectangle _bounds;
+
+        private readonly List<ColoredLine> _unwrappedMessages = new List<ColoredLine>();
+        private List<ColoredLine> _wrappedMessages = new List<ColoredLine>();
+        private bool _isDirty = true;
+
         private const int MAX_LOG_LINES = 100;
         private const int PADDING = 5;
         private const int BORDER_THICKNESS = 2;
@@ -22,31 +27,32 @@ namespace ProjectVagabond
         public CombatLogPanel(Rectangle bounds)
         {
             _bounds = bounds;
-            CombatLog.OnMessageLogged += HandleMessageLogged;
+            _global = ServiceLocator.Get<Global>();
+            EventBus.Subscribe<GameEvents.CombatLogMessagePublished>(HandleMessageLogged);
         }
 
-        private void HandleMessageLogged(string message)
+        private void HandleMessageLogged(GameEvents.CombatLogMessagePublished e)
         {
-            var font = Global.Instance.DefaultFont;
-            if (font == null) return;
+            var coloredLine = ParseColoredText(e.Message, _global.OutputTextColor);
+            _unwrappedMessages.Add(coloredLine);
 
-            var coloredLine = ParseColoredText(message, Global.Instance.OutputTextColor);
-            // Use the bounds width minus padding on both sides for wrapping calculations.
-            var wrappedLines = WrapColoredText(coloredLine, _bounds.Width - (PADDING * 2));
-
-            _wrappedMessages.AddRange(wrappedLines);
-
-            // Trim the log if it gets too long
-            while (_wrappedMessages.Count > MAX_LOG_LINES)
+            while (_unwrappedMessages.Count > MAX_LOG_LINES)
             {
-                _wrappedMessages.RemoveAt(0);
+                _unwrappedMessages.RemoveAt(0);
             }
+            _isDirty = true;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            var font = Global.Instance.DefaultFont;
             if (font == null) return;
+
+            if (_isDirty)
+            {
+                ReWrapMessages(font);
+            }
+
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             // Draw the border first (a slightly larger rectangle behind the background)
             var borderRect = new Rectangle(
@@ -55,10 +61,10 @@ namespace ProjectVagabond
                 _bounds.Width + (BORDER_THICKNESS * 2),
                 _bounds.Height + (BORDER_THICKNESS * 2)
             );
-            spriteBatch.Draw(Core.Pixel, borderRect, Global.Instance.Palette_White);
+            spriteBatch.Draw(pixel, borderRect, _global.Palette_White);
 
             // Draw the background for the log panel
-            spriteBatch.Draw(Core.Pixel, _bounds, Global.Instance.TerminalBg);
+            spriteBatch.Draw(pixel, _bounds, _global.TerminalBg);
 
             // --- Draw Text ---
             int lineHeight = Global.TERMINAL_LINE_SPACING;
@@ -87,12 +93,23 @@ namespace ProjectVagabond
             }
         }
 
+        private void ReWrapMessages(BitmapFont font)
+        {
+            _wrappedMessages.Clear();
+            float wrapWidth = _bounds.Width - (PADDING * 2);
+            foreach (var line in _unwrappedMessages)
+            {
+                _wrappedMessages.AddRange(WrapColoredText(line, wrapWidth, font));
+            }
+            _isDirty = false;
+        }
+
         #region Text Parsing and Wrapping (Adapted from TerminalRenderer)
 
         private ColoredLine ParseColoredText(string text, Color? baseColor = null)
         {
             var line = new ColoredLine();
-            var currentColor = baseColor ?? Global.Instance.InputTextColor;
+            var currentColor = baseColor ?? _global.InputTextColor;
             var currentText = "";
 
             for (int i = 0; i < text.Length; i++)
@@ -113,7 +130,7 @@ namespace ProjectVagabond
 
                         if (colorTag == "/")
                         {
-                            currentColor = baseColor ?? Global.Instance.InputTextColor;
+                            currentColor = baseColor ?? _global.InputTextColor;
                         }
                         else
                         {
@@ -149,7 +166,7 @@ namespace ProjectVagabond
                 case "warning": return Color.Gold;
                 case "debug": return Color.Chartreuse;
                 case "rest": return Color.LightGreen;
-                case "dim": return Global.Instance.TerminalDarkGray;
+                case "dim": return _global.TerminalDarkGray;
                 case "khaki": return Color.Khaki;
                 case "red": return Color.Red;
                 case "green": return Color.Green;
@@ -173,15 +190,13 @@ namespace ProjectVagabond
                         }
                     }
                     catch { /* Fallback */ }
-                    return Global.Instance.GameTextColor;
+                    return _global.GameTextColor;
             }
         }
 
-        private List<ColoredLine> WrapColoredText(ColoredLine line, float maxWidthInPixels)
+        private List<ColoredLine> WrapColoredText(ColoredLine line, float maxWidthInPixels, BitmapFont font)
         {
             var wrappedLines = new List<ColoredLine>();
-            var font = Global.Instance.DefaultFont;
-
             var currentLine = new ColoredLine { LineNumber = line.LineNumber };
             float currentLineWidth = 0f;
 

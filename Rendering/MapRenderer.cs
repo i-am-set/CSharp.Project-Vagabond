@@ -11,16 +11,22 @@ namespace ProjectVagabond
 {
     public class MapRenderer
     {
-        private GameState _gameState = Core.CurrentGameState;
+        private readonly GameState _gameState;
+        private readonly ComponentStore _componentStore;
+        private readonly SpriteManager _spriteManager;
+        private readonly TooltipManager _tooltipManager;
+        private readonly ArchetypeManager _archetypeManager;
+        private readonly WorldClockManager _worldClockManager;
+        private readonly Global _global;
 
         private Vector2? _hoveredGridPos;
         private Rectangle _mapGridBounds;
-        private ContextMenu _contextMenu = new ContextMenu();
+        private readonly ContextMenu _contextMenu;
         private string _cachedTimeText;
         private Vector2 _timeTextPos;
         private int _cachedMapStartX, _cachedMapWidth;
         private MapView _cachedMapView;
-        private Dictionary<string, Button> _buttonMap;
+        private readonly Dictionary<string, Button> _buttonMap;
 
         private readonly List<Button> _headerButtons = new List<Button>();
         public IEnumerable<Button> HeaderButtons => _headerButtons;
@@ -29,9 +35,17 @@ namespace ProjectVagabond
         public ContextMenu MapContextMenu => _contextMenu;
         public Vector2? RightClickedWorldPos { get; set; }
 
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         public MapRenderer()
         {
+            _gameState = ServiceLocator.Get<GameState>();
+            _componentStore = ServiceLocator.Get<ComponentStore>();
+            _spriteManager = ServiceLocator.Get<SpriteManager>();
+            _tooltipManager = ServiceLocator.Get<TooltipManager>();
+            _archetypeManager = ServiceLocator.Get<ArchetypeManager>();
+            _worldClockManager = ServiceLocator.Get<WorldClockManager>();
+            _global = ServiceLocator.Get<Global>();
+            _contextMenu = new ContextMenu();
+
             _headerButtons.Add(new Button(Rectangle.Empty, "Clear") { IsEnabled = false });
             _headerButtons.Add(new Button(Rectangle.Empty, "Go") { IsEnabled = false });
             _headerButtons.Add(new Button(Rectangle.Empty, "Stop") { IsEnabled = false });
@@ -40,13 +54,15 @@ namespace ProjectVagabond
             _buttonMap = _headerButtons.ToDictionary(b => b.Function.ToLowerInvariant(), b => b);
         }
 
-        public void Update(GameTime gameTime)
+        public void Update(GameTime gameTime, BitmapFont font)
         {
-            var virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
-            UpdateHover(gameTime, virtualMousePos);
+            var mouseState = Mouse.GetState();
+            var virtualMousePos = Core.TransformMouse(mouseState.Position);
+            UpdateHover(virtualMousePos);
+            _contextMenu.Update(mouseState, mouseState, virtualMousePos, font); // Note: prevMouseState is same as current here, might need adjustment if complex logic is added
         }
 
-        private void UpdateHover(GameTime gameTime, Vector2 virtualMousePos)
+        private void UpdateHover(Vector2 virtualMousePos)
         {
             _hoveredGridPos = null; // Reset hover state each frame
             Vector2? currentHoveredGridPos = null;
@@ -79,17 +95,15 @@ namespace ProjectVagabond
             var stringBuilder = new StringBuilder();
 
             // --- Tooltip Logic ---
-            // Check for an entity on the hovered tile first.
             int? entityIdOnTile = GetEntityIdAtGridPos(currentHoveredGridPos.Value);
 
             if (entityIdOnTile.HasValue && _gameState.IsInCombat)
             {
-                // Build combatant tooltip
-                var health = Core.ComponentStore.GetComponent<HealthComponent>(entityIdOnTile.Value);
-                var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(entityIdOnTile.Value);
-                var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
-                var targetPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityIdOnTile.Value);
-                var playerPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
+                var health = _componentStore.GetComponent<HealthComponent>(entityIdOnTile.Value);
+                var archetypeIdComp = _componentStore.GetComponent<ArchetypeIdComponent>(entityIdOnTile.Value);
+                var archetype = _archetypeManager.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
+                var targetPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityIdOnTile.Value);
+                var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
 
                 if (health != null && archetype != null && targetPosComp != null && playerPosComp != null)
                 {
@@ -97,12 +111,11 @@ namespace ProjectVagabond
                     stringBuilder.AppendLine(archetype.Name);
                     stringBuilder.AppendLine($"Health: {health.CurrentHealth}/{health.MaxHealth}");
                     stringBuilder.Append($"Distance: {distance:F1}m");
-                    Core.CurrentTooltipManager.RequestTooltip(entityIdOnTile.Value, stringBuilder.ToString(), virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
+                    _tooltipManager.RequestTooltip(entityIdOnTile.Value, stringBuilder.ToString(), virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
                 }
             }
             else
             {
-                // Build default grid coordinate tooltip
                 int posX = (int)currentHoveredGridPos.Value.X;
                 int posY = (int)currentHoveredGridPos.Value.Y;
 
@@ -118,25 +131,24 @@ namespace ProjectVagabond
                 {
                     stringBuilder.Append($"Local Pos: ({posX}, {posY})");
                 }
-                Core.CurrentTooltipManager.RequestTooltip(currentHoveredGridPos.Value, stringBuilder.ToString(), virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
+                _tooltipManager.RequestTooltip(currentHoveredGridPos.Value, stringBuilder.ToString(), virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
             }
         }
 
-        public void DrawMap(GameTime gameTime)
+        public void DrawMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (_gameState.CurrentMapView == MapView.World)
             {
-                DrawWorldMap(gameTime);
+                DrawWorldMap(spriteBatch, font, gameTime);
             }
             else
             {
-                DrawLocalMap(gameTime);
+                DrawLocalMap(spriteBatch, font, gameTime);
             }
         }
 
-        private void DrawWorldMap(GameTime gameTime)
+        private void DrawWorldMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
             int cellSize = Global.GRID_CELL_SIZE;
             int gridSize = Global.GRID_SIZE;
 
@@ -147,12 +159,12 @@ namespace ProjectVagabond
 
             _mapGridBounds = new Rectangle(mapStartX, mapStartY, gridSize * cellSize, gridSize * cellSize);
 
-            DrawMapFrame(mapStartX, mapStartY, mapWidth, mapHeight, gameTime);
+            DrawMapFrame(spriteBatch, font, mapStartX, mapStartY, mapWidth, mapHeight, gameTime);
 
-            var gridElements = GenerateWorldMapGridElements(mapStartX, mapStartY, gridSize, cellSize);
+            var gridElements = GenerateWorldMapGridElements();
             foreach (var element in gridElements)
             {
-                DrawGridElement(element, cellSize);
+                DrawGridElement(spriteBatch, element, cellSize);
             }
 
             if (_hoveredGridPos.HasValue)
@@ -161,7 +173,7 @@ namespace ProjectVagabond
                 if (screenPos.HasValue)
                 {
                     Rectangle indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
-                    _spriteBatch.Draw(Core.CurrentSpriteManager.WorldMapHoverSelectorSprite, indicatorRect, Color.Lime * 0.5f);
+                    spriteBatch.Draw(_spriteManager.WorldMapHoverSelectorSprite, indicatorRect, Color.Lime * 0.5f);
                 }
             }
 
@@ -171,17 +183,16 @@ namespace ProjectVagabond
                 if (screenPos.HasValue)
                 {
                     Rectangle markerRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
-                    _spriteBatch.Draw(Core.CurrentSpriteManager.WorldMapHoverSelectorSprite, markerRect, Color.Cyan * 0.6f);
+                    spriteBatch.Draw(_spriteManager.WorldMapHoverSelectorSprite, markerRect, Color.Cyan * 0.6f);
                 }
             }
 
-            if (_gameState.IsPaused) DrawPauseIcon(_spriteBatch);
-            _contextMenu.Draw(_spriteBatch);
+            if (_gameState.IsPaused) DrawPauseIcon(spriteBatch, font);
+            _contextMenu.Draw(spriteBatch, font);
         }
 
-        private void DrawLocalMap(GameTime gameTime)
+        private void DrawLocalMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
             int cellSize = Global.LOCAL_GRID_CELL_SIZE;
             int gridSize = Global.LOCAL_GRID_SIZE;
 
@@ -192,12 +203,12 @@ namespace ProjectVagabond
 
             _mapGridBounds = new Rectangle(mapStartX, mapStartY, gridSize * cellSize, gridSize * cellSize);
 
-            DrawMapFrame(mapStartX, mapStartY, mapWidth, mapHeight, gameTime);
+            DrawMapFrame(spriteBatch, font, mapStartX, mapStartY, mapWidth, mapHeight, gameTime);
 
-            var gridElements = GenerateLocalMapGridElements(mapStartX, mapStartY, gridSize, cellSize);
+            var gridElements = GenerateLocalMapGridElements();
             foreach (var element in gridElements)
             {
-                DrawGridElement(element, cellSize);
+                DrawGridElement(spriteBatch, element, cellSize);
             }
 
             if (_hoveredGridPos.HasValue)
@@ -206,16 +217,15 @@ namespace ProjectVagabond
                 if (screenPos.HasValue)
                 {
                     Rectangle indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
-                    _spriteBatch.Draw(Core.CurrentSpriteManager.LocalMapHoverSelectorSprite, indicatorRect, Color.Lime * 0.5f);
+                    spriteBatch.Draw(_spriteManager.LocalMapHoverSelectorSprite, indicatorRect, Color.Lime * 0.5f);
                 }
             }
 
-            // --- In-Combat Visuals ---
             if (_gameState.IsInCombat)
             {
                 foreach (var entityId in _gameState.Combatants)
                 {
-                    var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+                    var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
                     if (localPosComp == null) continue;
 
                     Vector2? screenPos = MapCoordsToScreen(localPosComp.LocalPosition);
@@ -223,50 +233,39 @@ namespace ProjectVagabond
 
                     var cellRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
 
-                    // Draw Bounding Box
-                    Color boxColor = (entityId == _gameState.SelectedTargetId) ? Global.Instance.Palette_Pink : Global.Instance.Palette_Teal;
-                    DrawHollowRectangle(_spriteBatch, cellRect, boxColor, 1);
+                    Color boxColor = (entityId == _gameState.SelectedTargetId) ? _global.Palette_Pink : _global.Palette_Teal;
+                    DrawHollowRectangle(spriteBatch, cellRect, boxColor, 1);
 
-                    // Draw Turn Indicator
                     if (entityId == _gameState.CurrentTurnEntityId)
                     {
                         int indicatorSize = 8;
-                        var indicatorRect = new Rectangle(
-                            cellRect.Center.X - indicatorSize / 2,
-                            cellRect.Y - indicatorSize - 2,
-                            indicatorSize,
-                            indicatorSize
-                        );
-                        _spriteBatch.Draw(Core.Pixel, indicatorRect, Global.Instance.Palette_Teal);
+                        var indicatorRect = new Rectangle(cellRect.Center.X - indicatorSize / 2, cellRect.Y - indicatorSize - 2, indicatorSize, indicatorSize);
+                        spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), indicatorRect, _global.Palette_Teal);
                     }
                 }
             }
 
-            if (_gameState.IsPaused) DrawPauseIcon(_spriteBatch);
-            _contextMenu.Draw(_spriteBatch);
+            if (_gameState.IsPaused) DrawPauseIcon(spriteBatch, font);
+            _contextMenu.Draw(spriteBatch, font);
         }
 
-        private void DrawMapFrame(int mapStartX, int mapStartY, int mapWidth, int mapHeight, GameTime gameTime)
+        private void DrawMapFrame(SpriteBatch spriteBatch, BitmapFont font, int mapStartX, int mapStartY, int mapWidth, int mapHeight, GameTime gameTime)
         {
-            SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
-            Texture2D pixel = Core.Pixel;
-            BitmapFont font = Global.Instance.DefaultFont;
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
-            // Draw Frame //
-            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, mapWidth, 2), Global.Instance.Palette_White); // Top
-            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY + mapHeight - 27, mapWidth, 2), Global.Instance.Palette_White); // Bottom
-            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, 2, mapHeight), Global.Instance.Palette_White); // Left
-            _spriteBatch.Draw(pixel, new Rectangle(mapStartX + mapWidth - 7, mapStartY - 25, 2, mapHeight), Global.Instance.Palette_White); // Right
-            _spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 5, mapWidth, 2), Global.Instance.Palette_White); // Separator
+            spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, mapWidth, 2), _global.Palette_White); // Top
+            spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY + mapHeight - 27, mapWidth, 2), _global.Palette_White); // Bottom
+            spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 25, 2, mapHeight), _global.Palette_White); // Left
+            spriteBatch.Draw(pixel, new Rectangle(mapStartX + mapWidth - 7, mapStartY - 25, 2, mapHeight), _global.Palette_White); // Right
+            spriteBatch.Draw(pixel, new Rectangle(mapStartX - 5, mapStartY - 5, mapWidth, 2), _global.Palette_White); // Separator
 
-            // Draw Time //
-            string timeText = Core.CurrentWorldClockManager.CurrentTime;
+            string timeText = _worldClockManager.CurrentTime;
             if (timeText != _cachedTimeText)
             {
                 _timeTextPos = new Vector2(mapStartX, mapStartY - 20);
                 _cachedTimeText = timeText;
             }
-            _spriteBatch.DrawString(font, _cachedTimeText, _timeTextPos, Global.Instance.GameTextColor);
+            spriteBatch.DrawString(font, _cachedTimeText, _timeTextPos, _global.GameTextColor);
 
             bool viewChanged = _cachedMapView != _gameState.CurrentMapView;
             if (mapStartX != _cachedMapStartX || mapWidth != _cachedMapWidth || viewChanged)
@@ -279,7 +278,7 @@ namespace ProjectVagabond
 
             foreach (var b in _headerButtons)
             {
-                b.Draw(_spriteBatch, font, gameTime);
+                b.Draw(spriteBatch, font, gameTime);
             }
         }
 
@@ -295,73 +294,42 @@ namespace ProjectVagabond
 
             if (_buttonMap.TryGetValue("map", out Button toggleMapButton))
             {
-                toggleMapButton.Text =
-                    _gameState.CurrentMapView == MapView.World
-                        ? "Local Map"
-                        : "World Map";
-
-                toggleMapButton.Bounds = new Rectangle(
-                    headerContentRightEdge - toggleButtonWidth,
-                    buttonY,
-                    toggleButtonWidth,
-                    buttonHeight
-                );
+                toggleMapButton.Text = _gameState.CurrentMapView == MapView.World ? "Local Map" : "World Map";
+                toggleMapButton.Bounds = new Rectangle(headerContentRightEdge - toggleButtonWidth, buttonY, toggleButtonWidth, buttonHeight);
             }
 
-            if (_buttonMap.TryGetValue("stop", out Button stopButton)
-             && _buttonMap.TryGetValue("map", out toggleMapButton))
+            if (_buttonMap.TryGetValue("stop", out Button stopButton) && _buttonMap.TryGetValue("map", out toggleMapButton))
             {
-                stopButton.Bounds = new Rectangle(
-                    toggleMapButton.Bounds.X - buttonSpacing - goStopButtonWidth,
-                    buttonY,
-                    goStopButtonWidth,
-                    buttonHeight
-                );
+                stopButton.Bounds = new Rectangle(toggleMapButton.Bounds.X - buttonSpacing - goStopButtonWidth, buttonY, goStopButtonWidth, buttonHeight);
             }
 
-            if (_buttonMap.TryGetValue("go", out Button goButton)
-             && _buttonMap.TryGetValue("stop", out stopButton))
+            if (_buttonMap.TryGetValue("go", out Button goButton) && _buttonMap.TryGetValue("stop", out stopButton))
             {
-                goButton.Bounds = new Rectangle(
-                    stopButton.Bounds.X - buttonSpacing - goStopButtonWidth,
-                    buttonY,
-                    goStopButtonWidth,
-                    buttonHeight
-                );
+                goButton.Bounds = new Rectangle(stopButton.Bounds.X - buttonSpacing - goStopButtonWidth, buttonY, goStopButtonWidth, buttonHeight);
             }
 
-            if (_buttonMap.TryGetValue("clear", out Button clearButton)
-             && _buttonMap.TryGetValue("go", out goButton))
+            if (_buttonMap.TryGetValue("clear", out Button clearButton) && _buttonMap.TryGetValue("go", out goButton))
             {
-                clearButton.Bounds = new Rectangle(
-                    goButton.Bounds.X - buttonSpacing - goStopButtonWidth,
-                    buttonY,
-                    goStopButtonWidth,
-                    buttonHeight
-                );
+                clearButton.Bounds = new Rectangle(goButton.Bounds.X - buttonSpacing - goStopButtonWidth, buttonY, goStopButtonWidth, buttonHeight);
             }
         }
 
-        private void DrawPauseIcon(SpriteBatch spriteBatch)
+        private void DrawPauseIcon(SpriteBatch spriteBatch, BitmapFont font)
         {
             string pauseText = "▐▐";
             Vector2 scale = new Vector2(5, 5);
-            Vector2 textSize = Global.Instance.DefaultFont.MeasureString(pauseText) * scale;
-            Vector2 textPosition = new Vector2(
-                _mapGridBounds.Center.X - textSize.X / 2,
-                _mapGridBounds.Center.Y - textSize.Y / 2
-            );
-
-            spriteBatch.DrawString(Global.Instance.DefaultFont, pauseText, textPosition, Color.White * 0.7f, 0, Vector2.Zero, scale, SpriteEffects.None, 0);
+            Vector2 textSize = font.MeasureString(pauseText) * scale;
+            Vector2 textPosition = new Vector2(_mapGridBounds.Center.X - textSize.X / 2, _mapGridBounds.Center.Y - textSize.Y / 2);
+            spriteBatch.DrawString(font, pauseText, textPosition, Color.White * 0.7f, 0, Vector2.Zero, scale, SpriteEffects.None, 0);
         }
 
-        private List<GridElement> GenerateWorldMapGridElements(int mapStartX, int mapStartY, int gridSize, int cellSize)
+        private List<GridElement> GenerateWorldMapGridElements()
         {
             var elements = new List<GridElement>();
+            int gridSize = Global.GRID_SIZE;
             int startX = (int)_gameState.PlayerWorldPos.X - gridSize / 2;
             int startY = (int)_gameState.PlayerWorldPos.Y - gridSize / 2;
 
-            // Layer 1: Base Terrain
             for (int y = 0; y < gridSize; y++)
             {
                 for (int x = 0; x < gridSize; x++)
@@ -369,14 +337,16 @@ namespace ProjectVagabond
                     int worldX = startX + x;
                     int worldY = startY + y;
                     float noise = _gameState.GetNoiseAt(worldX, worldY);
-                    Vector2 gridPos = new Vector2(mapStartX + x * cellSize, mapStartY + y * cellSize);
-                    elements.Add(new GridElement(GetTerrainTexture(noise), GetTerrainColor(noise), gridPos));
+                    Vector2? screenPos = MapCoordsToScreen(new Vector2(worldX, worldY));
+                    if (screenPos.HasValue)
+                    {
+                        elements.Add(new GridElement(GetTerrainTexture(noise), GetTerrainColor(noise), screenPos.Value));
+                    }
                 }
             }
 
-            // Layer 2: Player Path/Action Markers
             var allPlayerActions = new List<IAction>(_gameState.PendingActions);
-            var activePlayerAction = Core.ComponentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId) ?? (IAction)Core.ComponentStore.GetComponent<RestAction>(_gameState.PlayerEntityId);
+            var activePlayerAction = _componentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId) ?? (IAction)_componentStore.GetComponent<RestAction>(_gameState.PlayerEntityId);
             if (activePlayerAction != null)
             {
                 allPlayerActions.Add(activePlayerAction);
@@ -391,14 +361,14 @@ namespace ProjectVagabond
                 if (action is MoveAction moveAction)
                 {
                     actionPos = moveAction.Destination;
-                    actionTexture = moveAction.IsRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
-                    actionColor = moveAction.IsRunning ? Global.Instance.RunPathColor : Global.Instance.PathColor;
+                    actionTexture = moveAction.IsRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
+                    actionColor = moveAction.IsRunning ? _global.RunPathColor : _global.PathColor;
                 }
                 else if (action is RestAction restAction)
                 {
                     actionPos = restAction.Position;
-                    actionTexture = restAction.RestType == RestType.ShortRest ? Core.CurrentSpriteManager.ShortRestSprite : Core.CurrentSpriteManager.LongRestSprite;
-                    actionColor = Global.Instance.ShortRestColor;
+                    actionTexture = restAction.RestType == RestType.ShortRest ? _spriteManager.ShortRestSprite : _spriteManager.LongRestSprite;
+                    actionColor = _global.ShortRestColor;
                 }
 
                 Vector2? screenPos = MapCoordsToScreen(actionPos);
@@ -408,8 +378,7 @@ namespace ProjectVagabond
                 }
             }
 
-            // Layer 3: Player Entity (drawn last to be on top)
-            var playerRenderComp = Core.ComponentStore.GetComponent<RenderableComponent>(_gameState.PlayerEntityId);
+            var playerRenderComp = _componentStore.GetComponent<RenderableComponent>(_gameState.PlayerEntityId);
             if (playerRenderComp != null)
             {
                 Vector2? screenPos = MapCoordsToScreen(_gameState.PlayerWorldPos);
@@ -422,25 +391,27 @@ namespace ProjectVagabond
             return elements;
         }
 
-        private List<GridElement> GenerateLocalMapGridElements(int mapStartX, int mapStartY, int gridSize, int cellSize)
+        private List<GridElement> GenerateLocalMapGridElements()
         {
             var elements = new List<GridElement>();
-            Color bgColor = Global.Instance.Palette_DarkGray;
-            Texture2D pixel = Core.Pixel;
+            int gridSize = Global.LOCAL_GRID_SIZE;
+            Color bgColor = _global.Palette_DarkGray;
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
-            // Layer 1: Background
             for (int y = 0; y < gridSize; y++)
             {
                 for (int x = 0; x < gridSize; x++)
                 {
-                    Vector2 gridPos = new Vector2(mapStartX + x * cellSize, mapStartY + y * cellSize);
-                    elements.Add(new GridElement(pixel, bgColor, gridPos));
+                    Vector2? screenPos = MapCoordsToScreen(new Vector2(x, y));
+                    if (screenPos.HasValue)
+                    {
+                        elements.Add(new GridElement(pixel, bgColor, screenPos.Value));
+                    }
                 }
             }
 
-            // Layer 2: Player Path
             var allPlayerActions = new List<IAction>(_gameState.PendingActions);
-            var activePlayerAction = Core.ComponentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId);
+            var activePlayerAction = _componentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId);
             if (activePlayerAction != null)
             {
                 allPlayerActions.Add(activePlayerAction);
@@ -451,28 +422,26 @@ namespace ProjectVagabond
                 Vector2? screenPos = MapCoordsToScreen(action.Destination);
                 if (screenPos.HasValue)
                 {
-                    Texture2D texture = action.IsRunning ? Core.CurrentSpriteManager.RunPathSprite : Core.CurrentSpriteManager.PathSprite;
-                    Color color = action.IsRunning ? Global.Instance.RunPathColor : Global.Instance.PathColor;
+                    Texture2D texture = action.IsRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
+                    Color color = action.IsRunning ? _global.RunPathColor : _global.PathColor;
                     elements.Add(new GridElement(texture, color, screenPos.Value));
                 }
             }
 
-            // Layer 3: Entities
             foreach (var entityId in _gameState.ActiveEntities)
             {
-                var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
-                var renderComp = Core.ComponentStore.GetComponent<RenderableComponent>(entityId);
+                var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+                var renderComp = _componentStore.GetComponent<RenderableComponent>(entityId);
 
                 if (localPosComp != null && renderComp != null)
                 {
                     Vector2? screenPos = MapCoordsToScreen(localPosComp.LocalPosition);
                     if (screenPos.HasValue)
                     {
-                        // Use a pixel for the player in local view, but their assigned texture/color otherwise
-                        Texture2D textureToDraw = renderComp.Texture;
+                        Texture2D textureToDraw = renderComp.Texture ?? pixel;
                         if (entityId == _gameState.PlayerEntityId)
                         {
-                            textureToDraw = Core.Pixel;
+                            textureToDraw = pixel;
                         }
                         elements.Add(new GridElement(textureToDraw, renderComp.Color, screenPos.Value));
                     }
@@ -482,10 +451,10 @@ namespace ProjectVagabond
             return elements;
         }
 
-        private void DrawGridElement(GridElement element, int cellSize)
+        private void DrawGridElement(SpriteBatch spriteBatch, GridElement element, int cellSize)
         {
             Rectangle destRect = new Rectangle((int)element.Position.X, (int)element.Position.Y, cellSize, cellSize);
-            Global.Instance.CurrentSpriteBatch.Draw(element.Texture, destRect, element.Color);
+            spriteBatch.Draw(element.Texture, destRect, element.Color);
         }
 
         public Vector2? MapCoordsToScreen(Vector2 mapPos)
@@ -501,26 +470,18 @@ namespace ProjectVagabond
 
                 if (gridX >= 0 && gridX < Global.GRID_SIZE && gridY >= 0 && gridY < Global.GRID_SIZE)
                 {
-                    int screenX = _mapGridBounds.X + gridX * Global.GRID_CELL_SIZE;
-                    int screenY = _mapGridBounds.Y + gridY * Global.GRID_CELL_SIZE;
-                    return new Vector2(screenX, screenY);
+                    return new Vector2(_mapGridBounds.X + gridX * Global.GRID_CELL_SIZE, _mapGridBounds.Y + gridY * Global.GRID_CELL_SIZE);
                 }
             }
-            else // Local Map
+            else
             {
                 int gridX = (int)mapPos.X;
                 int gridY = (int)mapPos.Y;
-                int cellSize = Global.LOCAL_GRID_CELL_SIZE;
-                int gridSize = Global.LOCAL_GRID_SIZE;
-
-                if (gridX >= 0 && gridX < gridSize && gridY >= 0 && gridY < gridSize)
+                if (gridX >= 0 && gridX < Global.LOCAL_GRID_SIZE && gridY >= 0 && gridY < Global.LOCAL_GRID_SIZE)
                 {
-                    int screenX = _mapGridBounds.X + gridX * cellSize;
-                    int screenY = _mapGridBounds.Y + gridY * cellSize;
-                    return new Vector2(screenX, screenY);
+                    return new Vector2(_mapGridBounds.X + gridX * Global.LOCAL_GRID_CELL_SIZE, _mapGridBounds.Y + gridY * Global.LOCAL_GRID_CELL_SIZE);
                 }
             }
-
             return null;
         }
 
@@ -537,9 +498,9 @@ namespace ProjectVagabond
 
             foreach (var entityId in _gameState.Combatants)
             {
-                if (entityId == _gameState.PlayerEntityId) continue; // Can't target self
+                if (entityId == _gameState.PlayerEntityId) continue;
 
-                var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+                var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
                 if (localPosComp == null) continue;
 
                 Vector2? screenPos = MapCoordsToScreen(localPosComp.LocalPosition);
@@ -552,7 +513,6 @@ namespace ProjectVagabond
                     }
                 }
             }
-
             return null;
         }
 
@@ -563,7 +523,7 @@ namespace ProjectVagabond
         {
             foreach (var entityId in _gameState.Combatants)
             {
-                var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+                var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
                 if (localPosComp != null && (int)localPosComp.LocalPosition.X == (int)gridPos.X && (int)localPosComp.LocalPosition.Y == (int)gridPos.Y)
                 {
                     return entityId;
@@ -574,40 +534,38 @@ namespace ProjectVagabond
 
         private string GetTerrainName(float noise)
         {
-            if (noise < Global.Instance.WaterLevel) return "Water";
-            if (noise < Global.Instance.FlatlandsLevel) return "Flatlands";
-            if (noise < Global.Instance.HillsLevel) return "Hills";
-            if (noise < Global.Instance.MountainsLevel) return "Mountains";
+            if (noise < _global.WaterLevel) return "Water";
+            if (noise < _global.FlatlandsLevel) return "Flatlands";
+            if (noise < _global.HillsLevel) return "Hills";
+            if (noise < _global.MountainsLevel) return "Mountains";
             return "Peak";
         }
 
         private Texture2D GetTerrainTexture(float noise)
         {
-            if (noise < Global.Instance.WaterLevel) return Core.CurrentSpriteManager.WaterSprite;
-            if (noise < Global.Instance.FlatlandsLevel) return Core.CurrentSpriteManager.FlatlandSprite;
-            if (noise < Global.Instance.HillsLevel) return Core.CurrentSpriteManager.HillSprite;
-            if (noise < Global.Instance.MountainsLevel) return Core.CurrentSpriteManager.MountainSprite;
-            return Core.CurrentSpriteManager.PeakSprite;
+            if (noise < _global.WaterLevel) return _spriteManager.WaterSprite;
+            if (noise < _global.FlatlandsLevel) return _spriteManager.FlatlandSprite;
+            if (noise < _global.HillsLevel) return _spriteManager.HillSprite;
+            if (noise < _global.MountainsLevel) return _spriteManager.MountainSprite;
+            return _spriteManager.PeakSprite;
         }
 
         private Color GetTerrainColor(float noise)
         {
-            if (noise < Global.Instance.WaterLevel) return Global.Instance.WaterColor;
-            if (noise < Global.Instance.FlatlandsLevel) return Global.Instance.FlatlandColor;
-            if (noise < Global.Instance.HillsLevel) return Global.Instance.HillColor;
-            if (noise < Global.Instance.MountainsLevel) return Global.Instance.MountainColor;
-            return Global.Instance.MountainColor;
+            if (noise < _global.WaterLevel) return _global.WaterColor;
+            if (noise < _global.FlatlandsLevel) return _global.FlatlandColor;
+            if (noise < _global.HillsLevel) return _global.HillColor;
+            if (noise < _global.MountainsLevel) return _global.MountainColor;
+            return _global.MountainColor;
         }
 
-        /// <summary>
-        /// Draws a hollow rectangle.
-        /// </summary>
         private void DrawHollowRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)
         {
-            spriteBatch.Draw(Core.Pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color); // Top
-            spriteBatch.Draw(Core.Pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color); // Bottom
-            spriteBatch.Draw(Core.Pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color); // Left
-            spriteBatch.Draw(Core.Pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color); // Right
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
         }
     }
 }

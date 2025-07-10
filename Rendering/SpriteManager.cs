@@ -1,15 +1,14 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
+
 namespace ProjectVagabond
 {
     public class SpriteManager
     {
+        private readonly Core _core;
+        private readonly TextureFactory _textureFactory;
+
         private Texture2D _logoSprite;
         private Texture2D _waterSprite;
         private Texture2D _flatlandSprite;
@@ -50,186 +49,70 @@ namespace ProjectVagabond
         public Texture2D CircleTextureSprite => _circleTextureSprite;
         public Texture2D SettingsIconSprite => _settingsIconSprite;
 
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        public SpriteManager()
+        {
+            _core = ServiceLocator.Get<Core>();
+            _textureFactory = ServiceLocator.Get<TextureFactory>();
+        }
 
         public void LoadSpriteContent()
         {
-            try
-            {
-                _logoSprite = Core.Instance.Content.Load<Texture2D>("Sprites/logo");
-            }
-            catch
-            {
-                _speedMarkSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
-            }
-            try
-            {
-                _waterSprite = Core.Instance.Content.Load<Texture2D>("Sprites/water");
-            }
-            catch
-            {
-                _waterSprite = Core.CurrentTextureFactory.CreateWaterTexture();
-            }
+            try { _logoSprite = _core.Content.Load<Texture2D>("Sprites/logo"); }
+            catch { _logoSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-            try
-            {
-                _flatlandSprite = Core.Instance.Content.Load<Texture2D>("Sprites/flatland");
-            }
-            catch
-            {
-                _flatlandSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.White);
-            }
+            try { _waterSprite = _core.Content.Load<Texture2D>("Sprites/water"); }
+            catch { _waterSprite = _textureFactory.CreateWaterTexture(); }
 
-            try
-            {
-                _hillSprite = Core.Instance.Content.Load<Texture2D>("Sprites/hill");
-            }
-            catch
-            {
-                _hillSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.White);
-            }
+            try { _flatlandSprite = _core.Content.Load<Texture2D>("Sprites/flatland"); }
+            catch { _flatlandSprite = _textureFactory.CreateColoredTexture(8, 8, Color.White); }
 
-            try
-            {
-                _mountainSprite = Core.Instance.Content.Load<Texture2D>("Sprites/mountain");
-            }
-            catch
-            {
-                _mountainSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.White);
-            }
+            try { _hillSprite = _core.Content.Load<Texture2D>("Sprites/hill"); }
+            catch { _hillSprite = _textureFactory.CreateColoredTexture(8, 8, Color.White); }
 
-            try
-            {
-                _peakSprite = Core.Instance.Content.Load<Texture2D>("Sprites/peak");
-            }
-            catch
-            {
-                _peakSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.White);
-            }
+            try { _mountainSprite = _core.Content.Load<Texture2D>("Sprites/mountain"); }
+            catch { _mountainSprite = _textureFactory.CreateColoredTexture(8, 8, Color.White); }
 
-            try
-            {
-                _playerSprite = Core.Instance.Content.Load<Texture2D>("Sprites/player");
-            }
-            catch
-            {
-                _playerSprite = Core.CurrentTextureFactory.CreatePlayerTexture();
-            }
+            try { _peakSprite = _core.Content.Load<Texture2D>("Sprites/peak"); }
+            catch { _peakSprite = _textureFactory.CreateColoredTexture(8, 8, Color.White); }
 
-            try
-            {
-                _pathSprite = Core.Instance.Content.Load<Texture2D>("Sprites/path");
-            }
-            catch
-            {
-                _pathSprite = Core.CurrentTextureFactory.CreatePathTexture();
-            }
+            try { _playerSprite = _core.Content.Load<Texture2D>("Sprites/player"); }
+            catch { _playerSprite = _textureFactory.CreatePlayerTexture(); }
 
-            try
-            {
-                _runPathSprite = Core.Instance.Content.Load<Texture2D>("Sprites/runPathEnd");
-            }
-            catch (Exception)
-            {
+            try { _pathSprite = _core.Content.Load<Texture2D>("Sprites/path"); }
+            catch { _pathSprite = _textureFactory.CreatePathTexture(); }
 
-                _runPathSprite = Core.CurrentTextureFactory.CreateRunPathTexture();
-            }
+            try { _runPathSprite = _core.Content.Load<Texture2D>("Sprites/runPathEnd"); }
+            catch { _runPathSprite = _textureFactory.CreateRunPathTexture(); }
 
-            try
-            {
-                _pathEndSprite = Core.Instance.Content.Load<Texture2D>("Sprites/pathEnd");
-            }
-            catch
-            {
-                _pathEndSprite = Core.CurrentTextureFactory.CreatePathEndTexture();
-            }
+            try { _pathEndSprite = _core.Content.Load<Texture2D>("Sprites/pathEnd"); }
+            catch { _pathEndSprite = _textureFactory.CreatePathEndTexture(); }
 
-            try
-            {
-                _shortRestSprite = Core.Instance.Content.Load<Texture2D>("Sprites/shortRest");
-            }
-            catch (Exception)
-            {
+            try { _shortRestSprite = _core.Content.Load<Texture2D>("Sprites/shortRest"); }
+            catch { _shortRestSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-                _shortRestSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
-            }
+            try { _longRestSprite = _core.Content.Load<Texture2D>("Sprites/longRest"); }
+            catch { _longRestSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-            try
-            {
-                _longRestSprite = Core.Instance.Content.Load<Texture2D>("Sprites/longRest");
-            }
-            catch (Exception)
-            {
+            try { _warningMarkSprite = _core.Content.Load<Texture2D>("Sprites/warningMark"); }
+            catch { _warningMarkSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-                _longRestSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
-            }
+            try { _emptySprite = _textureFactory.CreateEmptyTexture(); }
+            catch { _emptySprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-            try
-            {
-                _warningMarkSprite = Core.Instance.Content.Load<Texture2D>("Sprites/warningMark");
-            }
-            catch (Exception)
-            {
+            try { _speedMarkSprite = _core.Content.Load<Texture2D>("Sprites/speedMark"); }
+            catch { _speedMarkSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-                _warningMarkSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
-            }
+            try { _worldMapHoverSelectorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_world_map_selector"); }
+            catch { _worldMapHoverSelectorSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-            try
-            {
-                _emptySprite = Core.CurrentTextureFactory.CreateEmptyTexture();
-            }
-            catch (Exception)
-            {
+            try { _localMapHoverSelectorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_local_map_selector"); }
+            catch { _localMapHoverSelectorSprite = _textureFactory.CreateColoredTexture(5, 5, Color.Red); }
 
-                _emptySprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
-            }
+            try { _circleTextureSprite = _textureFactory.CreateCircleTexture(); }
+            catch { _circleTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
 
-            try
-            {
-                _speedMarkSprite = Core.Instance.Content.Load<Texture2D>("Sprites/speedMark");
-            }
-            catch (Exception)
-            {
-                _speedMarkSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
-            }
-
-            try
-            {
-                _worldMapHoverSelectorSprite = Core.Instance.Content.Load<Texture2D>("Sprites/UI/ui_world_map_selector");
-            }
-            catch (Exception)
-            {
-                _worldMapHoverSelectorSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
-            }
-
-            try
-            {
-                _localMapHoverSelectorSprite = Core.Instance.Content.Load<Texture2D>("Sprites/UI/ui_local_map_selector");
-            }
-            catch (Exception)
-            {
-                _localMapHoverSelectorSprite = Core.CurrentTextureFactory.CreateColoredTexture(5, 5, Color.Red);
-            }
-
-            try
-            {
-                _circleTextureSprite = Core.CurrentTextureFactory.CreateCircleTexture();
-            }
-            catch (Exception)
-            {
-
-                _circleTextureSprite = Core.CurrentTextureFactory.CreateColoredTexture(16, 16, Color.Red);
-            }
-
-            try
-            {
-                _settingsIconSprite = Core.Instance.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_settings_icon");
-            }
-            catch (Exception)
-            {
-
-                _settingsIconSprite = Core.CurrentTextureFactory.CreateColoredTexture(8, 8, Color.Red);
-            }
+            try { _settingsIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_settings_icon"); }
+            catch { _settingsIconSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
         }
     }
 }

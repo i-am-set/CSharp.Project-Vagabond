@@ -1,6 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Text.Json;
 
@@ -20,30 +19,29 @@ namespace ProjectVagabond
         /// <returns>The entity ID of the newly spawned entity, or -1 if spawning fails.</returns>
         public static int Spawn(string archetypeId, Vector2 worldPosition, Vector2 localPosition)
         {
-            var archetype = ArchetypeManager.Instance.GetArchetype(archetypeId);
+            var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
+            var entityManager = ServiceLocator.Get<EntityManager>();
+            var componentStore = ServiceLocator.Get<ComponentStore>();
+            var chunkManager = ServiceLocator.Get<ChunkManager>();
+
+            var archetype = archetypeManager.GetArchetype(archetypeId);
             if (archetype == null)
             {
                 Console.WriteLine($"[ERROR] Failed to spawn entity. Archetype '{archetypeId}' not found.");
                 return -1;
             }
 
-            int entityId = Core.EntityManager.CreateEntity();
+            int entityId = entityManager.CreateEntity();
 
             // Store the archetype ID for easy lookup later
-            Core.ComponentStore.AddComponent(entityId, new ArchetypeIdComponent { ArchetypeId = archetypeId });
+            componentStore.AddComponent(entityId, new ArchetypeIdComponent { ArchetypeId = archetypeId });
 
             foreach (var componentDef in archetype.Components)
             {
                 try
                 {
                     string typeName = componentDef["Type"].ToString();
-                    Type componentType = Type.GetType(typeName);
-
-                    if (componentType == null)
-                    {
-                        Console.WriteLine($"[ERROR] Could not find component type '{typeName}' for archetype '{archetypeId}'.");
-                        continue;
-                    }
+                    Type componentType = Type.GetType(typeName, throwOnError: true);
 
                     // Create an instance of the component using its parameterless constructor
                     object componentInstance = Activator.CreateInstance(componentType);
@@ -63,7 +61,7 @@ namespace ProjectVagabond
                     // Add the fully populated component to the store
                     // We use reflection to call the generic AddComponent method.
                     MethodInfo addComponentMethod = typeof(ComponentStore).GetMethod("AddComponent").MakeGenericMethod(componentType);
-                    addComponentMethod.Invoke(Core.ComponentStore, new object[] { entityId, componentInstance });
+                    addComponentMethod.Invoke(componentStore, new object[] { entityId, componentInstance });
                 }
                 catch (Exception ex)
                 {
@@ -72,20 +70,20 @@ namespace ProjectVagabond
             }
 
             // After all components are added, set the specific spawn positions
-            var posComp = Core.ComponentStore.GetComponent<PositionComponent>(entityId);
+            var posComp = componentStore.GetComponent<PositionComponent>(entityId);
             if (posComp != null)
             {
                 posComp.WorldPosition = worldPosition;
             }
 
-            var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+            var localPosComp = componentStore.GetComponent<LocalPositionComponent>(entityId);
             if (localPosComp != null)
             {
                 localPosComp.LocalPosition = localPosition;
             }
 
             // Register the new entity with the spatial partitioning system
-            Core.ChunkManager.RegisterEntity(entityId, worldPosition);
+            chunkManager.RegisterEntity(entityId, worldPosition);
 
             return entityId;
         }
@@ -130,10 +128,11 @@ namespace ProjectVagabond
                     // Handle special string-to-color conversion for RenderableComponent
                     if (targetType == typeof(Color))
                     {
+                        var globalInstance = ServiceLocator.Get<Global>();
                         var colorProp = typeof(Global).GetProperty(stringValue, BindingFlags.Public | BindingFlags.Instance);
                         if (colorProp != null && colorProp.PropertyType == typeof(Color))
                         {
-                            return colorProp.GetValue(Global.Instance);
+                            return colorProp.GetValue(globalInstance);
                         }
                         // Fallback to standard MonoGame colors
                         var mgColorProp = typeof(Color).GetProperty(stringValue, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);

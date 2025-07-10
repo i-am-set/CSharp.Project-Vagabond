@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -8,6 +8,8 @@ namespace ProjectVagabond.UI
 {
     public class BoolSettingControl : ISettingControl
     {
+        private readonly Global _global;
+
         public string Label { get; }
         public bool IsDirty => _currentValue != _savedValue;
 
@@ -24,6 +26,7 @@ namespace ProjectVagabond.UI
 
         public BoolSettingControl(string label, Func<bool> getter, Action<bool> onApply)
         {
+            _global = ServiceLocator.Get<Global>();
             Label = label;
             _getter = getter;
             _savedValue = getter();
@@ -48,10 +51,8 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState)
+        public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos)
         {
-            Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-
             _isLeftArrowHovered = _leftArrowRect.Contains(virtualMousePos);
             _isRightArrowHovered = _rightArrowRect.Contains(virtualMousePos);
 
@@ -79,15 +80,12 @@ namespace ProjectVagabond.UI
             _currentValue = _getter();
         }
 
-        public void Draw(SpriteBatch spriteBatch, Vector2 position, bool isSelected, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, Vector2 position, bool isSelected, GameTime gameTime)
         {
-            var font = Global.Instance.DefaultFont;
-            bool isActivated = isSelected;
-
-            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected);
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
-            Color labelColor = isSelected ? Global.Instance.ButtonHoverColor : Global.Instance.Palette_BrightWhite;
+            Color labelColor = isSelected ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
             spriteBatch.DrawString(font, Label, animatedPosition, labelColor);
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
@@ -97,44 +95,26 @@ namespace ProjectVagabond.UI
             string valueText = _currentValue ? "ON" : "OFF";
             string rightArrowText = ">";
 
-            Color baseValueColor = IsDirty ? Global.Instance.Palette_Teal : Global.Instance.Palette_BrightWhite;
-            Color leftArrowColor = _isLeftArrowHovered ? Global.Instance.ButtonHoverColor : baseValueColor;
-            Color rightArrowColor = _isRightArrowHovered ? Global.Instance.ButtonHoverColor : baseValueColor;
+            Color baseValueColor = IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite;
+            Color leftArrowColor = _isLeftArrowHovered ? _global.ButtonHoverColor : baseValueColor;
+            Color rightArrowColor = _isRightArrowHovered ? _global.ButtonHoverColor : baseValueColor;
 
             Vector2 leftArrowSize = font.MeasureString(leftArrowText);
             Vector2 valueTextSize = font.MeasureString(valueText);
             Vector2 rightArrowSize = font.MeasureString(rightArrowText);
 
-            // Left arrow
-            Vector2 leftArrowPos = valueAreaPosition;
-            spriteBatch.DrawString(font, leftArrowText, leftArrowPos, leftArrowColor);
+            spriteBatch.DrawString(font, leftArrowText, valueAreaPosition, leftArrowColor);
+            spriteBatch.DrawString(font, rightArrowText, new Vector2(valueAreaPosition.X + valueDisplayWidth - rightArrowSize.X, valueAreaPosition.Y), rightArrowColor);
 
-            // Right arrow
-            Vector2 rightArrowPos = new Vector2(valueAreaPosition.X + valueDisplayWidth - rightArrowSize.X, valueAreaPosition.Y);
-            spriteBatch.DrawString(font, rightArrowText, rightArrowPos, rightArrowColor);
-
-            // Value text
-            float spaceBetweenArrows = rightArrowPos.X - (leftArrowPos.X + leftArrowSize.X);
-            float textX = leftArrowPos.X + leftArrowSize.X + (spaceBetweenArrows - valueTextSize.X) * 0.5f;
-            Vector2 textPos = new Vector2(textX, valueAreaPosition.Y);
-            spriteBatch.DrawString(font, valueText, textPos, baseValueColor);
+            float spaceBetweenArrows = (valueAreaPosition.X + valueDisplayWidth - rightArrowSize.X) - (valueAreaPosition.X + leftArrowSize.X);
+            float textX = valueAreaPosition.X + leftArrowSize.X + (spaceBetweenArrows - valueTextSize.X) * 0.5f;
+            spriteBatch.DrawString(font, valueText, new Vector2(textX, valueAreaPosition.Y), baseValueColor);
 
             int padding = 5;
             float arrowVisualHeight = font.LineHeight;
 
-            _leftArrowRect = new Rectangle(
-                (int)(position.X + 340) - padding,
-                (int)position.Y - padding,
-                (int)leftArrowSize.X + (padding * 2),
-                (int)arrowVisualHeight + (padding * 2)
-            );
-
-            _rightArrowRect = new Rectangle(
-                (int)(position.X + 340 + valueDisplayWidth - rightArrowSize.X) - padding,
-                (int)position.Y - padding,
-                (int)rightArrowSize.X + (padding * 2),
-                (int)arrowVisualHeight + (padding * 2)
-            );
+            _leftArrowRect = new Rectangle((int)(position.X + 340) - padding, (int)position.Y - padding, (int)leftArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
+            _rightArrowRect = new Rectangle((int)(position.X + 340 + valueDisplayWidth - rightArrowSize.X) - padding, (int)position.Y - padding, (int)rightArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
         }
     }
 }

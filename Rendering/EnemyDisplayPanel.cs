@@ -1,6 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using System;
 
 namespace ProjectVagabond
 {
@@ -9,6 +8,10 @@ namespace ProjectVagabond
     /// </summary>
     public class EnemyDisplayPanel
     {
+        private readonly GameState _gameState;
+        private readonly ComponentStore _componentStore;
+        private readonly Global _global;
+
         private readonly Rectangle _bounds;
         private const int PADDING = 10;
         private const int BORDER_THICKNESS = 2;
@@ -18,6 +21,9 @@ namespace ProjectVagabond
         public EnemyDisplayPanel(Rectangle bounds)
         {
             _bounds = bounds;
+            _gameState = ServiceLocator.Get<GameState>();
+            _componentStore = ServiceLocator.Get<ComponentStore>();
+            _global = ServiceLocator.Get<Global>();
         }
 
         /// <summary>
@@ -25,6 +31,8 @@ namespace ProjectVagabond
         /// </summary>
         public void Draw(SpriteBatch spriteBatch)
         {
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
+
             // Draw the border and background
             var borderRect = new Rectangle(
                 _bounds.X - BORDER_THICKNESS,
@@ -32,26 +40,25 @@ namespace ProjectVagabond
                 _bounds.Width + (BORDER_THICKNESS * 2),
                 _bounds.Height + (BORDER_THICKNESS * 2)
             );
-            spriteBatch.Draw(Core.Pixel, borderRect, Global.Instance.Palette_White);
-            spriteBatch.Draw(Core.Pixel, _bounds, Global.Instance.TerminalBg);
+            spriteBatch.Draw(pixel, borderRect, _global.Palette_White);
+            spriteBatch.Draw(pixel, _bounds, _global.TerminalBg);
 
-            var gameState = Core.CurrentGameState;
-            if (gameState.Combatants.Count == 0) return;
+            if (_gameState.Combatants.Count == 0) return;
 
             int cellWidth = _bounds.Width / MAX_COLS;
             int cellHeight = _bounds.Height / MAX_ROWS;
             int enemyIndex = 0;
 
-            foreach (var entityId in gameState.Combatants)
+            foreach (var entityId in _gameState.Combatants)
             {
                 // Skip the player
-                if (entityId == gameState.PlayerEntityId) continue;
+                if (entityId == _gameState.PlayerEntityId) continue;
 
                 // Stop if we've drawn the max number of enemies
                 if (enemyIndex >= MAX_COLS * MAX_ROWS) break;
 
-                var renderable = Core.ComponentStore.GetComponent<RenderableComponent>(entityId);
-                var health = Core.ComponentStore.GetComponent<HealthComponent>(entityId);
+                var renderable = _componentStore.GetComponent<RenderableComponent>(entityId);
+                var health = _componentStore.GetComponent<HealthComponent>(entityId);
 
                 if (renderable == null || health == null)
                 {
@@ -65,7 +72,7 @@ namespace ProjectVagabond
                 var cellRect = new Rectangle(_bounds.X + col * cellWidth, _bounds.Y + row * cellHeight, cellWidth, cellHeight);
 
                 // Draw sprite (or placeholder)
-                var spriteTexture = renderable.Texture ?? Core.Pixel;
+                var spriteTexture = renderable.Texture ?? pixel;
                 var spriteSize = 32;
                 var spriteRect = new Rectangle(
                     cellRect.Center.X - spriteSize / 2,
@@ -85,7 +92,7 @@ namespace ProjectVagabond
 
                 // Background bar
                 var bgBarRect = new Rectangle((int)barPosition.X, (int)barPosition.Y, barWidth, barHeight);
-                spriteBatch.Draw(Core.Pixel, bgBarRect, Global.Instance.Palette_Red);
+                spriteBatch.Draw(pixel, bgBarRect, _global.Palette_Red);
 
                 // Foreground (current health) bar
                 if (health.CurrentHealth > 0)
@@ -93,7 +100,7 @@ namespace ProjectVagabond
                     float healthPercentage = (float)health.CurrentHealth / health.MaxHealth;
                     int fgBarWidth = (int)(barWidth * healthPercentage);
                     var fgBarRect = new Rectangle((int)barPosition.X, (int)barPosition.Y, fgBarWidth, barHeight);
-                    spriteBatch.Draw(Core.Pixel, fgBarRect, Color.LawnGreen);
+                    spriteBatch.Draw(pixel, fgBarRect, Color.LawnGreen);
                 }
 
                 enemyIndex++;

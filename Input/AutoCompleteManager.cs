@@ -6,6 +6,8 @@ namespace ProjectVagabond
 {
     public class AutoCompleteManager
     {
+        private CommandProcessor _commandProcessor; // Lazy loaded
+
         private List<string> _autoCompleteSuggestions = new List<string>();
         private int _selectedAutoCompleteSuggestionIndex = -1;
         private bool _showingAutoCompleteSuggestions = false;
@@ -13,6 +15,8 @@ namespace ProjectVagabond
         public List<string> AutoCompleteSuggestions => _autoCompleteSuggestions;
         public int SelectedAutoCompleteSuggestionIndex => _selectedAutoCompleteSuggestionIndex;
         public bool ShowingAutoCompleteSuggestions => _showingAutoCompleteSuggestions;
+
+        public AutoCompleteManager(){}
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -30,6 +34,8 @@ namespace ProjectVagabond
 
         public void UpdateAutoCompleteSuggestions(string currentInput)
         {
+            _commandProcessor ??= ServiceLocator.Get<CommandProcessor>(); // Lazyload the CommandProcessor.
+
             _autoCompleteSuggestions.Clear();
             _selectedAutoCompleteSuggestionIndex = -1;
 
@@ -48,7 +54,7 @@ namespace ProjectVagabond
 
             bool trailingSpace = currentInput.EndsWith(" ");
             string commandName = parts[0].ToLower();
-            bool isCompleteCommand = Core.CurrentCommandProcessor.Commands.ContainsKey(commandName);
+            bool isCompleteCommand = _commandProcessor.Commands.ContainsKey(commandName);
 
             // Suggest ARGUMENTS if:
             // 1. The first word is a complete command AND...
@@ -58,7 +64,7 @@ namespace ProjectVagabond
             if (isCompleteCommand && (parts.Length > 1 || trailingSpace || currentInput.Length == commandName.Length))
             {
                 // User is typing arguments for a known command.
-                var command = Core.CurrentCommandProcessor.Commands[commandName];
+                var command = _commandProcessor.Commands[commandName];
                 string[] typedArgs = parts.Skip(1).ToArray();
                 string partialArg = "";
 
@@ -88,7 +94,7 @@ namespace ProjectVagabond
             else
             {
                 // User is still typing the command name itself (e.g., "ru" for "run").
-                var matches = Core.CurrentCommandProcessor.Commands.Keys
+                var matches = _commandProcessor.Commands.Keys
                     .Where(cmd => cmd.StartsWith(currentInput.ToLower()))
                     .OrderBy(cmd => cmd)
                     .ToList();

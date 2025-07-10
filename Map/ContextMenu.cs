@@ -18,6 +18,8 @@ namespace ProjectVagabond
 
     public class ContextMenu
     {
+        private readonly Global _global;
+
         private List<ContextMenuItem> _allItems = new List<ContextMenuItem>();
         private List<ContextMenuItem> _visibleItems = new List<ContextMenuItem>();
         private bool _isOpen;
@@ -27,7 +29,12 @@ namespace ProjectVagabond
 
         public bool IsOpen => _isOpen;
 
-        public void Show(Vector2 position, List<ContextMenuItem> items)
+        public ContextMenu()
+        {
+            _global = ServiceLocator.Get<Global>();
+        }
+
+        public void Show(Vector2 position, List<ContextMenuItem> items, BitmapFont font)
         {
             _allItems = items;
             _visibleItems = _allItems.Where(i => i.IsVisible()).ToList();
@@ -37,14 +44,14 @@ namespace ProjectVagabond
             _isOpen = true;
             _hoveredIndex = -1;
 
-            float width = _visibleItems.Max(i => Global.Instance.DefaultFont.MeasureString(i.Text).Width) + 16;
-            float height = (_visibleItems.Count * (Global.Instance.DefaultFont.LineHeight + 4)) + 8;
+            float width = _visibleItems.Max(i => font.MeasureString(i.Text).Width) + 16;
+            float height = (_visibleItems.Count * (font.LineHeight + 4)) + 8;
             _bounds = new Rectangle((int)position.X, (int)position.Y, (int)width, (int)height);
         }
 
         public void Hide() => _isOpen = false;
 
-        public void Update(MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos)
+        public void Update(MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont font)
         {
             if (!_isOpen) return;
 
@@ -63,33 +70,31 @@ namespace ProjectVagabond
                     Hide();
                 }
             }
+
+            _hoveredIndex = -1;
+            if (_bounds.Contains(virtualMousePos))
             {
-                _hoveredIndex = -1;
-                if (_bounds.Contains(virtualMousePos))
+                float yOffset = virtualMousePos.Y - _bounds.Y - 4;
+                int itemHeight = font.LineHeight + 4;
+                int index = (int)(yOffset / itemHeight);
+                if (index >= 0 && index < _visibleItems.Count)
                 {
-                    float yOffset = virtualMousePos.Y - _bounds.Y - 4;
-                    int itemHeight = Global.Instance.DefaultFont.LineHeight + 4;
-                    int index = (int)(yOffset / itemHeight);
-                    if (index >= 0 && index < _visibleItems.Count)
-                    {
-                        _hoveredIndex = index;
-                    }
+                    _hoveredIndex = index;
                 }
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font)
         {
             if (!_isOpen) return;
 
-            Texture2D pixel = Core.Pixel;
-            pixel.SetData(new[] { Color.White });
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
-            spriteBatch.Draw(pixel, _bounds, Global.Instance.ToolTipBGColor * 0.9f);
-            spriteBatch.Draw(pixel, new Rectangle(_bounds.X, _bounds.Y, _bounds.Width, 1), Global.Instance.ToolTipBorderColor);
-            spriteBatch.Draw(pixel, new Rectangle(_bounds.X, _bounds.Bottom - 1, _bounds.Width, 1), Global.Instance.ToolTipBorderColor);
-            spriteBatch.Draw(pixel, new Rectangle(_bounds.X, _bounds.Y, 1, _bounds.Height), Global.Instance.ToolTipBorderColor);
-            spriteBatch.Draw(pixel, new Rectangle(_bounds.Right - 1, _bounds.Y, 1, _bounds.Height), Global.Instance.ToolTipBorderColor);
+            spriteBatch.Draw(pixel, _bounds, _global.ToolTipBGColor * 0.9f);
+            spriteBatch.Draw(pixel, new Rectangle(_bounds.X, _bounds.Y, _bounds.Width, 1), _global.ToolTipBorderColor);
+            spriteBatch.Draw(pixel, new Rectangle(_bounds.X, _bounds.Bottom - 1, _bounds.Width, 1), _global.ToolTipBorderColor);
+            spriteBatch.Draw(pixel, new Rectangle(_bounds.X, _bounds.Y, 1, _bounds.Height), _global.ToolTipBorderColor);
+            spriteBatch.Draw(pixel, new Rectangle(_bounds.Right - 1, _bounds.Y, 1, _bounds.Height), _global.ToolTipBorderColor);
 
             float y = _bounds.Y + 4;
             for (int i = 0; i < _visibleItems.Count; i++)
@@ -99,15 +104,15 @@ namespace ProjectVagabond
 
                 if (i == _hoveredIndex)
                 {
-                    color = Global.Instance.ButtonHoverColor;
+                    color = _global.ButtonHoverColor;
                 }
                 else
                 {
-                    color = item.Color ?? Global.Instance.ToolTipTextColor;
+                    color = item.Color ?? _global.ToolTipTextColor;
                 }
 
-                spriteBatch.DrawString(Global.Instance.DefaultFont, item.Text, new Vector2(_bounds.X + 8, y), color);
-                y += Global.Instance.DefaultFont.LineHeight + 4;
+                spriteBatch.DrawString(font, item.Text, new Vector2(_bounds.X + 8, y), color);
+                y += font.LineHeight + 4;
             }
         }
     }

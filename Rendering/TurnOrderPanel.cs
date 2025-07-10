@@ -14,6 +14,9 @@ namespace ProjectVagabond
     /// </summary>
     public class TurnOrderPanel
     {
+        private readonly GameState _gameState;
+        private readonly Global _global;
+
         private readonly Vector2 _position;
         private readonly int _width;
         private readonly int _maxVisibleItems;
@@ -26,7 +29,6 @@ namespace ProjectVagabond
         private const int PADDING = 5;
         private const int BORDER_THICKNESS = 2;
         private const int TITLE_AREA_HEIGHT = 18;
-        private const int TURN_NUMBER_OFFSET = 15;
 
         public event Action<int> OnTargetSelected;
 
@@ -35,26 +37,28 @@ namespace ProjectVagabond
             _position = position;
             _width = width;
             _maxVisibleItems = maxVisibleItems;
+
+            _gameState = ServiceLocator.Get<GameState>();
+            _global = ServiceLocator.Get<Global>();
         }
 
         /// <summary>
         /// Updates the turn order panel, rebuilding buttons if the state has changed.
         /// </summary>
-        public void Update(GameTime gameTime, MouseState currentMouseState)
+        public void Update(GameTime gameTime, MouseState currentMouseState, BitmapFont font)
         {
-            var gameState = Core.CurrentGameState;
-            if (!gameState.IsInCombat)
+            if (!_gameState.IsInCombat)
             {
                 if (_buttons.Count > 0) _buttons.Clear();
                 return;
             }
 
             // Check if the initiative order or current turn has changed, requiring a rebuild.
-            if (!gameState.InitiativeOrder.SequenceEqual(_lastInitiativeOrder) || gameState.CurrentTurnEntityId != _lastTurnEntityId)
+            if (!_gameState.InitiativeOrder.SequenceEqual(_lastInitiativeOrder) || _gameState.CurrentTurnEntityId != _lastTurnEntityId)
             {
-                RebuildButtons(gameState);
-                _lastInitiativeOrder = new List<int>(gameState.InitiativeOrder);
-                _lastTurnEntityId = gameState.CurrentTurnEntityId;
+                RebuildButtons(font);
+                _lastInitiativeOrder = new List<int>(_gameState.InitiativeOrder);
+                _lastTurnEntityId = _gameState.CurrentTurnEntityId;
             }
 
             foreach (var button in _buttons)
@@ -63,17 +67,14 @@ namespace ProjectVagabond
             }
         }
 
-        private void RebuildButtons(GameState gameState)
+        private void RebuildButtons(BitmapFont font)
         {
             _buttons.Clear();
-            var initiativeOrder = gameState.InitiativeOrder;
-            if (initiativeOrder == null || initiativeOrder.Count == 0) return;
-
-            var font = Global.Instance.DefaultFont;
-            if (font == null) return;
+            var initiativeOrder = _gameState.InitiativeOrder;
+            if (initiativeOrder == null || initiativeOrder.Count == 0 || font == null) return;
 
             // Update scroll position to keep the current turn visible
-            int currentIndex = initiativeOrder.IndexOf(gameState.CurrentTurnEntityId);
+            int currentIndex = initiativeOrder.IndexOf(_gameState.CurrentTurnEntityId);
             if (currentIndex != -1)
             {
                 if (currentIndex < _scrollStartIndex) _scrollStartIndex = currentIndex;
@@ -98,12 +99,12 @@ namespace ProjectVagabond
                 {
                     AlignLeft = true,
                     OverflowScrollSpeed = 30f,
-                    CustomDefaultTextColor = (entityId == gameState.PlayerEntityId) ? Color.Yellow : Color.LightGray,
-                    CustomHoverTextColor = Global.Instance.Palette_Pink
+                    CustomDefaultTextColor = (entityId == _gameState.PlayerEntityId) ? Color.Yellow : Color.LightGray,
+                    CustomHoverTextColor = _global.Palette_Pink
                 };
 
                 // Can't target self
-                if (entityId == gameState.PlayerEntityId)
+                if (entityId == _gameState.PlayerEntityId)
                 {
                     button.IsEnabled = false;
                     button.CustomDisabledTextColor = Color.Yellow;
@@ -118,68 +119,47 @@ namespace ProjectVagabond
         /// <summary>
         /// Draws the turn order display if the game is in combat.
         /// </summary>
-        public void Draw(SpriteBatch spriteBatch, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            var gameState = Core.CurrentGameState;
-            if (!gameState.IsInCombat) return;
+            if (!_gameState.IsInCombat || font == null) return;
 
-            var font = Global.Instance.DefaultFont;
-            if (font == null) return;
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             // --- Calculate Panel Dimensions with Fixed Height ---
             int lineHeight = font.LineHeight + 4;
-            // The height is now fixed based on the max number of visible items.
             int listHeight = _maxVisibleItems * lineHeight;
             int totalHeight = TITLE_AREA_HEIGHT + listHeight + PADDING;
             var bounds = new Rectangle((int)_position.X, (int)_position.Y, _width, totalHeight);
 
             // --- Draw Panel Border and Background ---
             var borderRect = new Rectangle(bounds.X - BORDER_THICKNESS, bounds.Y - BORDER_THICKNESS, bounds.Width + (BORDER_THICKNESS * 2), bounds.Height + (BORDER_THICKNESS * 2));
-            spriteBatch.Draw(Core.Pixel, borderRect, Global.Instance.Palette_White);
-            spriteBatch.Draw(Core.Pixel, bounds, Global.Instance.TerminalBg * 0.9f);
+            spriteBatch.Draw(pixel, borderRect, _global.Palette_White);
+            spriteBatch.Draw(pixel, bounds, _global.TerminalBg * 0.9f);
 
             // --- Draw Title and Divider ---
             string title = "TURN ORDER";
             Vector2 titleSize = font.MeasureString(title);
             Vector2 titlePos = new Vector2(bounds.Center.X - titleSize.X / 2, bounds.Y + PADDING);
-            spriteBatch.DrawString(font, title, titlePos, Global.Instance.Palette_Gray);
+            spriteBatch.DrawString(font, title, titlePos, _global.Palette_Gray);
             int dividerY = (int)titlePos.Y + font.LineHeight + 2;
-            spriteBatch.Draw(Core.Pixel, new Rectangle(bounds.X + PADDING, dividerY, bounds.Width - (PADDING * 2), 1), Global.Instance.Palette_Gray);
+            spriteBatch.Draw(pixel, new Rectangle(bounds.X + PADDING, dividerY, bounds.Width - (PADDING * 2), 1), _global.Palette_Gray);
 
             // --- Draw Buttons and Turn Numbers ---
             for (int i = 0; i < _buttons.Count; i++)
             {
                 var button = _buttons[i];
                 int listIndex = _scrollStartIndex + i;
-                int entityId = gameState.InitiativeOrder[listIndex];
+                int entityId = _gameState.InitiativeOrder[listIndex];
 
-                // Draw the turn number to the left of the box
-                string turnNumber = (listIndex + 1).ToString();
-                Vector2 turnNumberSize = font.MeasureString(turnNumber);
-                Vector2 turnNumberPos = new Vector2(
-                    button.Bounds.X - TURN_NUMBER_OFFSET - PADDING,
-                    button.Bounds.Center.Y - turnNumberSize.Y / 2
-                );
-                spriteBatch.DrawString(font, turnNumber, turnNumberPos, Global.Instance.Palette_Gray);
+                string indicator = (entityId == _gameState.CurrentTurnEntityId) ? ">" : (listIndex + 1).ToString();
+                Vector2 indicatorPos = new Vector2(button.Bounds.X, button.Bounds.Y + (button.Bounds.Height - font.LineHeight) / 2);
+                spriteBatch.DrawString(font, indicator, indicatorPos, entityId == _gameState.CurrentTurnEntityId ? _global.Palette_BrightWhite : _global.Palette_Gray);
 
-                // Draw the turn indicator separately from the button text
-                if (entityId == gameState.CurrentTurnEntityId)
-                {
-                    string indicator = ">";
-                    Vector2 indicatorPos = new Vector2(
-                        button.Bounds.X,
-                        button.Bounds.Y + (button.Bounds.Height - font.LineHeight) / 2
-                    );
-                    spriteBatch.DrawString(font, indicator, indicatorPos, button.CustomDefaultTextColor ?? Color.White);
-                }
-
-                // Adjust button text bounds to make space for the indicator
                 var textBounds = button.Bounds;
                 int indicatorWidth = (int)font.MeasureString("> ").Width;
                 textBounds.X += indicatorWidth;
                 textBounds.Width -= indicatorWidth;
 
-                // Temporarily set the button's bounds for drawing, then restore
                 var originalBounds = button.Bounds;
                 button.Bounds = textBounds;
                 button.Draw(spriteBatch, font, gameTime);

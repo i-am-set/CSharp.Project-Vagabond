@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using System.Text;
 using Microsoft.Xna.Framework;
 
 namespace ProjectVagabond
@@ -17,33 +16,33 @@ namespace ProjectVagabond
 
     public class WorldClockManager
     {
-        // Singleton instance //
-        public static WorldClockManager Instance { get; private set; }
+        // Injected Dependencies
+        private readonly Global _global;
 
-        // Time-related events //
+        // Time-related events
         public event Action OnTimeChanged;
         public event Action OnDayChanged;
         public event Action OnSeasonChanged;
         public event Action OnYearChanged;
         public event Action<int> OnTimePassed;
 
-        // Private fields for tracking time //
+        // Private fields for tracking time
         private int _year;
         private int _dayOfYear; // 1-365
         private int _hour;      // 0-23
         private int _minute;    // 0-59
         private int _second;    // 0-59
 
-        // Public properties to access time information //
+        // Public properties to access time information
         public int CurrentYear => _year;
         public int CurrentHour => _hour;
         public int CurrentMinute => _minute;
         public int CurrentSecond => _second;
-        public string CurrentTime => Global.Instance.Use24HourClock ? GetTimeString() : GetConverted24hToAmPm(GetTimeString());
+        public string CurrentTime => _global.Use24HourClock ? GetTimeString() : GetConverted24hToAmPm(GetTimeString());
         public float TimeScale { get; set; } = 1.0f;
         public TimeSpan CurrentTimeSpan { get; private set; }
 
-        // Interpolation State Fields //
+        // Interpolation State Fields
         private bool _isInterpolating = false;
         private TimeSpan _interpolationStartTime;
         private TimeSpan _interpolationTargetTime;
@@ -53,7 +52,7 @@ namespace ProjectVagabond
 
         public bool IsInterpolatingTime => _isInterpolating;
 
-        // Privte fields for season lengths //
+        // Private fields for season lengths
         private const int _fallDays = 91;
         private const int _winterDays = 92;
         private const int _springDays = 91;
@@ -63,13 +62,9 @@ namespace ProjectVagabond
 
         public WorldClockManager()
         {
-            if (Instance != null)
-            {
-                throw new Exception("WorldClockManager instance already exists.");
-            }
-            Instance = this;
+            _global = ServiceLocator.Get<Global>();
 
-            _year = RandomNumberGenerator.GetInt32(55, 785); // just random ass numbers
+            _year = RandomNumberGenerator.GetInt32(55, 785);
             _dayOfYear = RandomNumberGenerator.GetInt32(1, 365);
             _hour = RandomNumberGenerator.GetInt32(0, 23);
             _minute = RandomNumberGenerator.GetInt32(0, 59);
@@ -84,7 +79,8 @@ namespace ProjectVagabond
 
         public void Update(GameTime gameTime)
         {
-            if (!_isInterpolating || Core.CurrentGameState.IsPaused) return;
+            var gameState = ServiceLocator.Get<GameState>();
+            if (!_isInterpolating || gameState.IsPaused) return;
 
             _interpolationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -130,22 +126,10 @@ namespace ProjectVagabond
             // Select a scale factor based on the total duration of the action.
             // A smaller scale factor results in a FASTER animation for longer waits.
             float scaleFactor;
-            if (_totalSecondsPassedDuringInterpolation > ONE_DAY)
-            {
-                scaleFactor = 0.00005f; // Fastest
-            }
-            else if (_totalSecondsPassedDuringInterpolation > EIGHT_HOURS)
-            {
-                scaleFactor = 0.0001f;  // Faster
-            }
-            else if (_totalSecondsPassedDuringInterpolation > ONE_HOUR)
-            {
-                scaleFactor = 0.0002f;  // Fast
-            }
-            else
-            {
-                scaleFactor = Global.BASE_TIME_SCALE; // Slowest (Base Speed)
-            }
+            if (_totalSecondsPassedDuringInterpolation > ONE_DAY) scaleFactor = 0.00005f; // Fastest
+            else if (_totalSecondsPassedDuringInterpolation > EIGHT_HOURS) scaleFactor = 0.0001f;  // Faster
+            else if (_totalSecondsPassedDuringInterpolation > ONE_HOUR) scaleFactor = 0.0002f;  // Fast
+            else scaleFactor = Global.BASE_TIME_SCALE; // Slowest (Base Speed)
 
             _interpolationDurationRealSeconds = Math.Clamp(minDuration + (_totalSecondsPassedDuringInterpolation * scaleFactor), minDuration, maxDuration);
 
@@ -211,7 +195,6 @@ namespace ProjectVagabond
         public void CancelInterpolation()
         {
             if (!_isInterpolating) return;
-
             _isInterpolating = false;
         }
 
@@ -230,7 +213,6 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // BASE LOGIC
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
         public Season CurrentSeason
         {
             get
@@ -260,7 +242,6 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // HELPER METHODS
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
         public string GetDateSeasonTimeString()
         {
             return $"Year {CurrentYear}, Day {DayOfSeason} of {CurrentSeason} - {_hour:D2}:{_minute:D2}";
@@ -288,20 +269,15 @@ namespace ProjectVagabond
 
         public string GetCommaFormattedTimeFromSeconds(int totalSeconds)
         {
-            if (totalSeconds <= 0)
-                return "0 seconds";
+            if (totalSeconds <= 0) return "0 seconds";
 
             var timeSpan = TimeSpan.FromSeconds(totalSeconds);
             var parts = new List<string>();
 
-            if (timeSpan.Days > 0)
-                parts.Add($"{timeSpan.Days} {(timeSpan.Days == 1 ? "day" : "days")}");
-            if (timeSpan.Hours > 0)
-                parts.Add($"{timeSpan.Hours} {(timeSpan.Hours == 1 ? "hour" : "hours")}");
-            if (timeSpan.Minutes > 0)
-                parts.Add($"{timeSpan.Minutes} {(timeSpan.Minutes == 1 ? "minute" : "minutes")}");
-            if (timeSpan.Seconds > 0)
-                parts.Add($"{timeSpan.Seconds} {(timeSpan.Seconds == 1 ? "second" : "seconds")}");
+            if (timeSpan.Days > 0) parts.Add($"{timeSpan.Days} {(timeSpan.Days == 1 ? "day" : "days")}");
+            if (timeSpan.Hours > 0) parts.Add($"{timeSpan.Hours} {(timeSpan.Hours == 1 ? "hour" : "hours")}");
+            if (timeSpan.Minutes > 0) parts.Add($"{timeSpan.Minutes} {(timeSpan.Minutes == 1 ? "minute" : "minutes")}");
+            if (timeSpan.Seconds > 0) parts.Add($"{timeSpan.Seconds} {(timeSpan.Seconds == 1 ? "second" : "seconds")}");
 
             return string.Join(", ", parts);
         }
@@ -311,15 +287,9 @@ namespace ProjectVagabond
             currentTime = GetConvertedTo24hTime(currentTime);
 
             string[] timeParts = currentTime.Split(':');
-            if (timeParts.Length < 2)
-                throw new ArgumentException("Time must be in at least HH:MM format");
-
-            if (!int.TryParse(timeParts[0], out int currentHour) ||
-                !int.TryParse(timeParts[1], out int currentMinute))
-                throw new ArgumentException("Invalid time format");
-
-            if (currentHour < 0 || currentHour > 23 || currentMinute < 0 || currentMinute > 59)
-                throw new ArgumentException("Invalid time component range");
+            if (timeParts.Length < 2) throw new ArgumentException("Time must be in at least HH:MM format");
+            if (!int.TryParse(timeParts[0], out int currentHour) || !int.TryParse(timeParts[1], out int currentMinute)) throw new ArgumentException("Invalid time format");
+            if (currentHour < 0 || currentHour > 23 || currentMinute < 0 || currentMinute > 59) throw new ArgumentException("Invalid time component range");
 
             var timeSpan = new TimeSpan(currentHour, currentMinute, 0);
             var newTimeSpan = timeSpan.Add(TimeSpan.FromSeconds(secondsToAdd));
@@ -364,14 +334,10 @@ namespace ProjectVagabond
             var ts = TimeSpan.FromSeconds(totalSeconds);
             var parts = new List<string>();
 
-            if (ts.Days > 0)
-                parts.Add($"{ts.Days} d");
-            if (ts.Hours > 0)
-                parts.Add($"{ts.Hours} hr");
-            if (ts.Minutes > 0)
-                parts.Add($"{ts.Minutes} min");
-            if (ts.Seconds > 0)
-                parts.Add($"{ts.Seconds} sec");
+            if (ts.Days > 0) parts.Add($"{ts.Days} d");
+            if (ts.Hours > 0) parts.Add($"{ts.Hours} hr");
+            if (ts.Minutes > 0) parts.Add($"{ts.Minutes} min");
+            if (ts.Seconds > 0) parts.Add($"{ts.Seconds} sec");
 
             return parts.Count > 0 ? string.Join(" ", parts) : "0 sec";
         }
@@ -379,73 +345,49 @@ namespace ProjectVagabond
         public string GetConverted24hToAmPm(string militaryTime)
         {
             string[] timeParts = militaryTime.Split(':');
-            if (timeParts.Length < 2)
-                throw new ArgumentException("Time must be in at least HH:MM format");
-
-            if (!int.TryParse(timeParts[0], out int hour) ||
-                !int.TryParse(timeParts[1], out int minute))
-                throw new ArgumentException("Invalid time format");
-
-            if (hour < 0 || hour > 23 || minute < 0 || minute > 59)
-                throw new ArgumentException("Hour must be 0-23 and minute must be 0-59");
+            if (timeParts.Length < 2) throw new ArgumentException("Time must be in at least HH:MM format");
+            if (!int.TryParse(timeParts[0], out int hour) || !int.TryParse(timeParts[1], out int minute)) throw new ArgumentException("Invalid time format");
+            if (hour < 0 || hour > 23 || minute < 0 || minute > 59) throw new ArgumentException("Hour must be 0-23 and minute must be 0-59");
 
             string period = hour >= 12 ? "PM" : "AM";
             int displayHour = hour;
 
-            if (hour == 0)
-                displayHour = 12; // Midnight becomes 12 AM
-            else if (hour > 12)
-                displayHour = hour - 12; // Convert to 12-hour format
+            if (hour == 0) displayHour = 12; // Midnight becomes 12 AM
+            else if (hour > 12) displayHour = hour - 12; // Convert to 12-hour format
 
             return $"{displayHour}:{minute:D2} {period}";
         }
 
         public string GetConvertedTo24hTime(string time)
         {
-            if (string.IsNullOrWhiteSpace(time))
-                throw new ArgumentException("Time cannot be null or empty");
+            if (string.IsNullOrWhiteSpace(time)) throw new ArgumentException("Time cannot be null or empty");
 
             time = time.Trim();
 
             if (!time.ToUpper().Contains("AM") && !time.ToUpper().Contains("PM"))
             {
                 string[] parts = time.Split(':');
-                if (parts.Length < 2)
-                    throw new ArgumentException("Time must be in HH:MM format");
-
-                if (!int.TryParse(parts[0], out int hour) || !int.TryParse(parts[1], out int minute))
-                    throw new ArgumentException("Invalid time format");
-
-                if (hour < 0 || hour > 23 || minute < 0 || minute > 59)
-                    throw new ArgumentException("Hour must be 0-23 and minute must be 0-59");
-
+                if (parts.Length < 2) throw new ArgumentException("Time must be in HH:MM format");
+                if (!int.TryParse(parts[0], out int hour) || !int.TryParse(parts[1], out int minute)) throw new ArgumentException("Invalid time format");
+                if (hour < 0 || hour > 23 || minute < 0 || minute > 59) throw new ArgumentException("Hour must be 0-23 and minute must be 0-59");
                 return $"{hour:D2}:{minute:D2}";
             }
 
             bool isPM = time.ToUpper().Contains("PM");
             bool isAM = time.ToUpper().Contains("AM");
 
-            if (!isPM && !isAM)
-                throw new ArgumentException("Time must contain AM or PM");
+            if (!isPM && !isAM) throw new ArgumentException("Time must contain AM or PM");
 
             string timeOnly = time.ToUpper().Replace("AM", "").Replace("PM", "").Trim();
             string[] timeParts = timeOnly.Split(':');
 
-            if (timeParts.Length < 2)
-                throw new ArgumentException("Time must be in H:MM or HH:MM format");
-
-            if (!int.TryParse(timeParts[0], out int inputHour) || !int.TryParse(timeParts[1], out int inputMinute))
-                throw new ArgumentException("Invalid time format");
-
-            if (inputHour < 1 || inputHour > 12 || inputMinute < 0 || inputMinute > 59)
-                throw new ArgumentException("Hour must be 1-12 and minute must be 0-59 for AM/PM format");
+            if (timeParts.Length < 2) throw new ArgumentException("Time must be in H:MM or HH:MM format");
+            if (!int.TryParse(timeParts[0], out int inputHour) || !int.TryParse(timeParts[1], out int inputMinute)) throw new ArgumentException("Invalid time format");
+            if (inputHour < 1 || inputHour > 12 || inputMinute < 0 || inputMinute > 59) throw new ArgumentException("Hour must be 1-12 and minute must be 0-59 for AM/PM format");
 
             int militaryHour = inputHour;
-
-            if (isPM && inputHour != 12)
-                militaryHour = inputHour + 12;
-            else if (isAM && inputHour == 12)
-                militaryHour = 0;
+            if (isPM && inputHour != 12) militaryHour = inputHour + 12;
+            else if (isAM && inputHour == 12) militaryHour = 0;
 
             return $"{militaryHour:D2}:{inputMinute:D2}";
         }

@@ -9,12 +9,13 @@ namespace ProjectVagabond.UI
         public bool IsSelected { get; set; }
         public Color? CustomToggledTextColor { get; set; }
 
-        #nullable enable
+#nullable enable
         public ToggleButton(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, Color? customToggledTextColor = null)
-            : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor) {
+            : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor)
+        {
             CustomToggledTextColor = customToggledTextColor;
         }
-        #nullable restore
+#nullable restore
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover = false)
         {
@@ -23,22 +24,21 @@ namespace ProjectVagabond.UI
 
             if (IsSelected)
             {
-                textColor = CustomToggledTextColor ?? Global.Instance.Palette_Yellow;
+                textColor = CustomToggledTextColor ?? _global.Palette_Yellow;
             }
             else if (!IsEnabled)
             {
-                textColor = CustomDisabledTextColor ?? Global.Instance.ButtonDisableColor;
+                textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
             }
             else if (isActivated)
             {
-                textColor = CustomHoverTextColor ?? Global.Instance.ButtonHoverColor;
+                textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
             }
             else
             {
-                textColor = CustomDefaultTextColor ?? Global.Instance.Palette_BrightWhite;
+                textColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
             }
 
-            // Animate if hovered or selected
             float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated || IsSelected);
 
             Vector2 textSize = font.MeasureString(Text);

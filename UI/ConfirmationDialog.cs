@@ -11,20 +11,21 @@ namespace ProjectVagabond.UI
 {
     public class ConfirmationDialog : Dialog
     {
+        private readonly Core _core;
+
         private string _prompt;
         private List<string> _details;
         private List<Button> _buttons;
         private int _selectedButtonIndex;
 
         private bool _keyboardNavigatedLastFrame;
-
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
-
         private bool _isHorizontalLayout;
 
         public ConfirmationDialog(GameScene currentGameScene) : base(currentGameScene)
         {
+            _core = ServiceLocator.Get<Core>();
             _buttons = new List<Button>();
             _details = new List<string>();
         }
@@ -44,9 +45,9 @@ namespace ProjectVagabond.UI
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
             _previousMouseState = Mouse.GetState();
-            Core.Instance.IsMouseVisible = true;
+            _core.IsMouseVisible = true;
 
-            var font = Global.Instance.DefaultFont;
+            var font = ServiceLocator.Get<BitmapFont>();
             float dialogWidth = 450;
             float currentHeight = 20;
 
@@ -67,24 +68,11 @@ namespace ProjectVagabond.UI
 
             _isHorizontalLayout = buttonActions.Count == 2;
 
-            float buttonAreaHeight;
-            if (_isHorizontalLayout)
-            {
-                buttonAreaHeight = 25;
-            }
-            else
-            {
-                buttonAreaHeight = buttonActions.Count * 25;
-            }
+            float buttonAreaHeight = _isHorizontalLayout ? 25 : buttonActions.Count * 25;
             currentHeight += buttonAreaHeight;
             currentHeight += 10;
 
-            _dialogBounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - (int)dialogWidth) / 2,
-                (Global.VIRTUAL_HEIGHT - (int)currentHeight) / 2,
-                (int)dialogWidth,
-                (int)currentHeight
-            );
+            _dialogBounds = new Rectangle((Global.VIRTUAL_WIDTH - (int)dialogWidth) / 2, (Global.VIRTUAL_HEIGHT - (int)currentHeight) / 2, (int)dialogWidth, (int)currentHeight);
 
             int buttonHeight = 20;
             float buttonAreaTopY = _dialogBounds.Bottom - buttonAreaHeight - 10;
@@ -107,21 +95,15 @@ namespace ProjectVagabond.UI
                 float totalGroupWidth = width1 + interButtonGap + width2;
                 float startX = _dialogBounds.Center.X - totalGroupWidth / 2;
 
-                var button1 = new Button(new Rectangle((int)startX, (int)buttonY, (int)width1, buttonHeight), text1)
-                {
-                    CustomDefaultTextColor = color1
-                };
+                var button1 = new Button(new Rectangle((int)startX, (int)buttonY, (int)width1, buttonHeight), text1) { CustomDefaultTextColor = color1 };
                 button1.OnClick += action1;
                 _buttons.Add(button1);
 
-                var button2 = new Button(new Rectangle((int)(startX + width1 + interButtonGap), (int)buttonY, (int)width2, buttonHeight), text2)
-                {
-                    CustomDefaultTextColor = color2
-                };
+                var button2 = new Button(new Rectangle((int)(startX + width1 + interButtonGap), (int)buttonY, (int)width2, buttonHeight), text2) { CustomDefaultTextColor = color2 };
                 button2.OnClick += action2;
                 _buttons.Add(button2);
             }
-            else // Vertical layout
+            else
             {
                 int buttonWidth = 180;
                 float currentButtonY = buttonAreaTopY;
@@ -129,10 +111,7 @@ namespace ProjectVagabond.UI
                 {
                     var (text, color) = ParseButtonTextAndColor(taggedText);
                     float buttonY = currentButtonY + (25 - buttonHeight) / 2f;
-                    var button = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth / 2, (int)buttonY, buttonWidth, buttonHeight), text)
-                    {
-                        CustomDefaultTextColor = color
-                    };
+                    var button = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth / 2, (int)buttonY, buttonWidth, buttonHeight), text) { CustomDefaultTextColor = color };
                     button.OnClick += action;
                     _buttons.Add(button);
                     currentButtonY += 25;
@@ -158,7 +137,7 @@ namespace ProjectVagabond.UI
             }
             else if (currentMouseState.Position != _previousMouseState.Position)
             {
-                Core.Instance.IsMouseVisible = true;
+                _core.IsMouseVisible = true;
             }
 
             for (int i = 0; i < _buttons.Count; i++)
@@ -179,30 +158,18 @@ namespace ProjectVagabond.UI
 
                 if (upPressed || downPressed || leftPressed || rightPressed)
                 {
-                    Core.Instance.IsMouseVisible = false;
+                    _core.IsMouseVisible = false;
                     _keyboardNavigatedLastFrame = true;
 
                     if (_isHorizontalLayout)
                     {
-                        if (leftPressed && _selectedButtonIndex > 0)
-                        {
-                            _selectedButtonIndex--;
-                        }
-                        else if (rightPressed && _selectedButtonIndex < _buttons.Count - 1)
-                        {
-                            _selectedButtonIndex++;
-                        }
+                        if (leftPressed && _selectedButtonIndex > 0) _selectedButtonIndex--;
+                        else if (rightPressed && _selectedButtonIndex < _buttons.Count - 1) _selectedButtonIndex++;
                     }
                     else
                     {
-                        if (upPressed)
-                        {
-                            _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
-                        }
-                        else if (downPressed)
-                        {
-                            _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
-                        }
+                        if (upPressed) _selectedButtonIndex = (_selectedButtonIndex - 1 + _buttons.Count) % _buttons.Count;
+                        else if (downPressed) _selectedButtonIndex = (_selectedButtonIndex + 1) % _buttons.Count;
                     }
 
                     Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
@@ -212,7 +179,6 @@ namespace ProjectVagabond.UI
                 if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
                 {
                     bool isButtonHighlighted = _buttons[_selectedButtonIndex].IsHovered || _keyboardNavigatedLastFrame;
-
                     if (isButtonHighlighted)
                     {
                         _buttons[_selectedButtonIndex].TriggerClick();
@@ -220,12 +186,10 @@ namespace ProjectVagabond.UI
                     else
                     {
                         _selectedButtonIndex = 0;
-
                         Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
                         Mouse.SetPosition(screenPos.X, screenPos.Y);
-
                         _keyboardNavigatedLastFrame = true;
-                        Core.Instance.IsMouseVisible = false;
+                        _core.IsMouseVisible = false;
                     }
                 }
             }
@@ -234,16 +198,13 @@ namespace ProjectVagabond.UI
             _previousKeyboardState = currentKeyboardState;
         }
 
-        protected override void DrawContent(GameTime gameTime)
+        protected override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            var spriteBatch = Global.Instance.CurrentSpriteBatch;
-            var font = Global.Instance.DefaultFont;
-            var pixel = Core.Pixel;
-
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-            spriteBatch.Draw(pixel, _dialogBounds, Global.Instance.Palette_DarkGray);
-            DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, Global.Instance.Palette_LightGray);
+            var pixel = ServiceLocator.Get<Texture2D>();
+            spriteBatch.Draw(pixel, _dialogBounds, _global.Palette_DarkGray);
+            DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_LightGray);
 
             float currentY = _dialogBounds.Y + 20;
 
@@ -251,7 +212,7 @@ namespace ProjectVagabond.UI
             foreach (var line in wrappedPrompt)
             {
                 var promptSize = font.MeasureString(line);
-                spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.Center.X - promptSize.Width / 2, currentY), Global.Instance.Palette_BrightWhite);
+                spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.Center.X - promptSize.Width / 2, currentY), _global.Palette_BrightWhite);
                 currentY += font.LineHeight;
             }
 
@@ -259,7 +220,7 @@ namespace ProjectVagabond.UI
             {
                 currentY += 10;
                 var dividerRect = new Rectangle(_dialogBounds.X + 20, (int)currentY, _dialogBounds.Width - 40, 1);
-                spriteBatch.Draw(pixel, dividerRect, Global.Instance.Palette_Gray);
+                spriteBatch.Draw(pixel, dividerRect, _global.Palette_Gray);
                 currentY += 10;
 
                 foreach (var detail in _details)
@@ -267,7 +228,7 @@ namespace ProjectVagabond.UI
                     var wrappedDetail = WrapText(font, detail, _dialogBounds.Width - 60);
                     foreach (var line in wrappedDetail)
                     {
-                        spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.X + 30, currentY), Global.Instance.Palette_White);
+                        spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.X + 30, currentY), _global.Palette_White);
                         currentY += font.LineHeight + Global.APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING;
                     }
                 }
@@ -292,7 +253,7 @@ namespace ProjectVagabond.UI
                         (int)(textSize.X + horizontalPadding * 2),
                         (int)(textSize.Y + verticalPadding * 2)
                     );
-                    DrawRectangleBorder(spriteBatch, pixel, highlightRect, 1, Global.Instance.ButtonHoverColor);
+                    DrawRectangleBorder(spriteBatch, pixel, highlightRect, 1, _global.ButtonHoverColor);
                 }
             }
 
@@ -312,13 +273,12 @@ namespace ProjectVagabond.UI
                 Color color;
                 switch (colorName)
                 {
-                    case "red": color = Global.Instance.Palette_Red; break;
-                    case "green": color = Global.Instance.Palette_LightGreen; break;
-                    case "yellow": color = Global.Instance.Palette_Yellow; break;
-                    case "gray": color = Global.Instance.Palette_LightGray; break;
-                    case "grey": color = Global.Instance.Palette_LightGray; break;
-                    default:
-                        return (taggedText, null);
+                    case "red": color = _global.Palette_Red; break;
+                    case "green": color = _global.Palette_LightGreen; break;
+                    case "yellow": color = _global.Palette_Yellow; break;
+                    case "gray": color = _global.Palette_LightGray; break;
+                    case "grey": color = _global.Palette_LightGray; break;
+                    default: return (taggedText, null);
                 }
                 return (text, color);
             }

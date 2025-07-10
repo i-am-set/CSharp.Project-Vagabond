@@ -6,6 +6,8 @@ namespace ProjectVagabond
 {
     public class TooltipManager
     {
+        private readonly Global _global;
+
         private string _text = "";
         private Vector2 _anchorPosition;
         private bool _isVisible = false;
@@ -15,7 +17,12 @@ namespace ProjectVagabond
         private object _currentRequestor = null;
         private bool _requestThisFrame = false;
 
-        /// <summary>
+        public TooltipManager()
+        {
+            _global = ServiceLocator.Get<Global>();
+        }
+
+         /// <summary>
         /// Requests a tooltip to be shown for a specific UI element or game object.
         /// This should be called every frame that the object is being hovered.
         /// </summary>
@@ -60,15 +67,14 @@ namespace ProjectVagabond
             _requestThisFrame = false;
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font)
         {
             if (!_isVisible || string.IsNullOrEmpty(_text))
             {
                 return;
             }
 
-            Texture2D pixel = Core.Pixel;
-            BitmapFont font = Global.Instance.DefaultFont;
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
             Vector2 textSize = font.MeasureString(_text);
 
             const int paddingX = 8;
@@ -88,26 +94,16 @@ namespace ProjectVagabond
                 finalTopLeftPosition.Y = _anchorPosition.Y - tooltipHeight - 5;
             }
 
-            Rectangle tooltipBg = new Rectangle(
-                (int)finalTopLeftPosition.X,
-                (int)finalTopLeftPosition.Y,
-                tooltipWidth,
-                tooltipHeight
-            );
+            Rectangle tooltipBg = new Rectangle((int)finalTopLeftPosition.X, (int)finalTopLeftPosition.Y, tooltipWidth, tooltipHeight);
+            Vector2 textPosition = new Vector2(finalTopLeftPosition.X + (paddingX / 2), finalTopLeftPosition.Y + (paddingY / 2));
 
-            Vector2 textPosition = new Vector2(
-                finalTopLeftPosition.X + (paddingX / 2),
-                finalTopLeftPosition.Y + (paddingY / 2)
-            );
+            spriteBatch.Draw(pixel, tooltipBg, _global.ToolTipBGColor * 0.9f);
+            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), _global.ToolTipBorderColor);
+            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), _global.ToolTipBorderColor);
+            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
+            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
 
-            spriteBatch.Draw(pixel, tooltipBg, Global.Instance.ToolTipBGColor * 0.9f);
-
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), Global.Instance.ToolTipBorderColor); // Top
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), Global.Instance.ToolTipBorderColor); // Bottom
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), Global.Instance.ToolTipBorderColor); // Left
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), Global.Instance.ToolTipBorderColor); // Right
-
-            spriteBatch.DrawString(font, _text, textPosition, Global.Instance.ToolTipTextColor);
+            spriteBatch.DrawString(font, _text, textPosition, _global.ToolTipTextColor);
         }
     }
 }

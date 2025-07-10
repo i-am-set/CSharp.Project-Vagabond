@@ -8,30 +8,42 @@ namespace ProjectVagabond
     /// </summary>
     public class CombatProcessingSystem : ISystem
     {
+        private GameState _gameState;
+        private ComponentStore _componentStore;
+        private CombatResolutionSystem _combatResolutionSystem;
+        private CombatTurnSystem _combatTurnSystem;
+
+        public CombatProcessingSystem() { }
+
         /// <summary>
         /// Updates the system, processing the action of the current turn's entity.
         /// </summary>
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         public void Update(GameTime gameTime)
         {
-            var gameState = Core.CurrentGameState;
-            if (!gameState.IsInCombat) return;
+            // Lazy-load all dependencies on first use
+            _gameState ??= ServiceLocator.Get<GameState>();
+            _componentStore ??= ServiceLocator.Get<ComponentStore>();
+            _combatResolutionSystem ??= ServiceLocator.Get<CombatResolutionSystem>();
+            _combatTurnSystem ??= ServiceLocator.Get<CombatTurnSystem>();
 
-            int entityId = gameState.CurrentTurnEntityId;
+            if (!_gameState.IsInCombat) return;
+
+            int entityId = _gameState.CurrentTurnEntityId;
             bool actionWasProcessed = false;
 
             // Check for and process a chosen attack
-            var chosenAttack = Core.ComponentStore.GetComponent<ChosenAttackComponent>(entityId);
+            var chosenAttack = _componentStore.GetComponent<ChosenAttackComponent>(entityId);
             if (chosenAttack != null)
             {
-                Core.CombatResolutionSystem.ResolveAction(entityId, chosenAttack);
-                Core.ComponentStore.RemoveComponent<ChosenAttackComponent>(entityId);
+                _combatResolutionSystem.ResolveAction(entityId, chosenAttack);
+                _componentStore.RemoveComponent<ChosenAttackComponent>(entityId);
                 actionWasProcessed = true;
             }
             else // An entity can't move and attack in the same turn
             {
                 // Check for and process a move action
-                var actionQueue = Core.ComponentStore.GetComponent<ActionQueueComponent>(entityId);
+                var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(entityId);
                 if (actionQueue != null && actionQueue.ActionQueue.Count > 0)
                 {
                     if (actionQueue.ActionQueue.Peek() is MoveAction moveAction)
@@ -46,7 +58,7 @@ namespace ProjectVagabond
             // If the current entity took an action, their turn is over.
             if (actionWasProcessed)
             {
-                Core.CombatTurnSystem.EndCurrentTurn();
+                _combatTurnSystem.EndCurrentTurn();
             }
         }
 
@@ -58,7 +70,7 @@ namespace ProjectVagabond
         /// <param name="action">The move action to apply.</param>
         private void ApplyMoveActionEffects(int entityId, MoveAction action)
         {
-            var localPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(entityId);
+            var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
             if (localPosComp == null) return;
 
             Vector2 nextPosition = action.Destination;

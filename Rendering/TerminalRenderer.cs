@@ -1,41 +1,93 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Scenes;
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace ProjectVagabond
 {
     public class TerminalRenderer
     {
+        // Injected Dependencies
+        private readonly GameState _gameState;
+        private readonly WorldClockManager _worldClockManager;
+        private readonly HapticsManager _hapticsManager;
+        private readonly Global _global;
+        private AutoCompleteManager _autoCompleteManager; // Lazy loaded
+        private InputHandler _inputHandler; // Lazy loaded
+
+        // History State
         private readonly List<string> _inputHistory = new List<string>();
-        private readonly List<ColoredLine> _wrappedHistory = new List<ColoredLine>();
-        private readonly List<ColoredLine> _combatHistory = new List<ColoredLine>();
+        private readonly List<ColoredLine> _unwrappedHistory = new List<ColoredLine>();
+        private readonly List<ColoredLine> _unwrappedCombatHistory = new List<ColoredLine>();
+        private List<ColoredLine> _wrappedHistory = new List<ColoredLine>();
+        private List<ColoredLine> _wrappedCombatHistory = new List<ColoredLine>();
+        private bool _historyDirty = true;
+        private bool _combatHistoryDirty = true;
 
         public int ScrollOffset { get; set; } = 0;
         public int CombatScrollOffset { get; set; } = 0;
 
         private int _nextLineNumber = 1;
-        private Color _inputCaratColor;
-
         private float _caratBlinkTimer = 0f;
         private readonly StringBuilder _stringBuilder = new StringBuilder(256);
 
-        private List<ColoredLine> _cachedPromptLines;
-        private string _cachedWrappedStatusText;
+        // Caching for prompt/status text
+        private string _cachedStatusText;
+        private string _cachedPromptText;
         private int _cachedPendingActionCount = -1;
         private bool _cachedIsExecutingPath = false;
         private bool _cachedIsFreeMoveMode = false;
-        private int _cachedCurrentPathIndex = -1;
 
         public List<ColoredLine> WrappedHistory => _wrappedHistory;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+        public TerminalRenderer()
+        {
+            // Acquire dependencies from the ServiceLocator
+            _gameState = ServiceLocator.Get<GameState>();
+            _worldClockManager = ServiceLocator.Get<WorldClockManager>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _global = ServiceLocator.Get<Global>();
+
+            // Subscribe to events for decoupled communication
+            EventBus.Subscribe<GameEvents.TerminalMessagePublished>(OnTerminalMessagePublished);
+            EventBus.Subscribe<GameEvents.CombatLogMessagePublished>(OnCombatLogMessagePublished);
+            EventBus.Subscribe<GameEvents.CombatStateChanged>(OnCombatStateChanged);
+        }
+
+        private void OnTerminalMessagePublished(GameEvents.TerminalMessagePublished e)
+        {
+            AddToHistory(e.Message, e.BaseColor);
+        }
+
+        private void OnCombatLogMessagePublished(GameEvents.CombatLogMessagePublished e)
+        {
+            var coloredLine = ParseColoredText(e.Message, _global.OutputTextColor);
+            _unwrappedCombatHistory.Add(coloredLine);
+            _combatHistoryDirty = true;
+
+            while (_unwrappedCombatHistory.Count > Global.MAX_HISTORY_LINES)
+            {
+                _unwrappedCombatHistory.RemoveAt(0);
+            }
+        }
+
+        private void OnCombatStateChanged(GameEvents.CombatStateChanged e)
+        {
+            // Clear the combat log when combat starts to provide a clean slate.
+            if (e.IsInCombat)
+            {
+                ClearCombatHistory();
+            }
+        }
 
         public void ResetCaratBlink()
         {
@@ -44,35 +96,29 @@ namespace ProjectVagabond
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public void AddToHistory(string message, Color? baseColor = null)
+        private void AddToHistory(string message, Color? baseColor = null)
         {
             if (_nextLineNumber > 999)
             {
+                // Simple truncation logic for unwrapped history
                 int desiredLinesToKeep = GetMaxVisibleLines();
-                int startIndex = Math.Max(0, _wrappedHistory.Count - desiredLinesToKeep);
+                int startIndex = Math.Max(0, _unwrappedHistory.Count - desiredLinesToKeep);
 
-                while (startIndex > 0 && _wrappedHistory[startIndex].LineNumber == 0)
-                {
-                    startIndex--;
-                }
-
-                var keptLines = _wrappedHistory.GetRange(startIndex, _wrappedHistory.Count - startIndex);
-
-                _wrappedHistory.Clear();
+                var keptLines = _unwrappedHistory.GetRange(startIndex, _unwrappedHistory.Count - startIndex);
+                _unwrappedHistory.Clear();
                 ScrollOffset = 0;
 
-                var truncationMessage = ParseColoredText("--- HISTORY TRUNCATED ---", Global.Instance.Palette_Gray);
+                var truncationMessage = ParseColoredText("--- HISTORY TRUNCATED ---", _global.Palette_Gray);
                 truncationMessage.LineNumber = 1;
-                _wrappedHistory.Add(truncationMessage);
-
-                _wrappedHistory.AddRange(keptLines);
+                _unwrappedHistory.Add(truncationMessage);
+                _unwrappedHistory.AddRange(keptLines);
 
                 int currentLineNum = 2;
-                for (int i = 1; i < _wrappedHistory.Count; i++)
+                for (int i = 1; i < _unwrappedHistory.Count; i++)
                 {
-                    if (_wrappedHistory[i].LineNumber > 0)
+                    if (_unwrappedHistory[i].LineNumber > 0)
                     {
-                        _wrappedHistory[i].LineNumber = currentLineNum++;
+                        _unwrappedHistory[i].LineNumber = currentLineNum++;
                     }
                 }
                 _nextLineNumber = currentLineNum;
@@ -80,18 +126,14 @@ namespace ProjectVagabond
 
             _inputHistory.Add(message);
 
-            var coloredLine = ParseColoredText(message, baseColor);
+            var coloredLine = ParseColoredText(message, baseColor ?? _global.OutputTextColor);
             coloredLine.LineNumber = _nextLineNumber++;
+            _unwrappedHistory.Add(coloredLine);
+            _historyDirty = true;
 
-            var wrappedLines = WrapColoredText(coloredLine, GetTerminalContentWidthInPixels());
-            foreach (var line in wrappedLines)
+            while (_unwrappedHistory.Count > Global.MAX_HISTORY_LINES)
             {
-                _wrappedHistory.Add(line);
-            }
-
-            while (_wrappedHistory.Count > Global.MAX_HISTORY_LINES)
-            {
-                _wrappedHistory.RemoveAt(0);
+                _unwrappedHistory.RemoveAt(0);
             }
 
             if (_inputHistory.Count > 50)
@@ -100,65 +142,62 @@ namespace ProjectVagabond
             }
         }
 
-        public void AddOutputToHistory(string output)
-        {
-            AddToHistory(output, Global.Instance.OutputTextColor);
-        }
-
-        public void AddCombatLog(string message)
-        {
-            var coloredLine = ParseColoredText(message, Global.Instance.OutputTextColor);
-            var wrappedLines = WrapColoredText(coloredLine, GetTerminalContentWidthInPixels());
-            _combatHistory.AddRange(wrappedLines);
-
-            while (_combatHistory.Count > Global.MAX_HISTORY_LINES)
-            {
-                _combatHistory.RemoveAt(0);
-            }
-        }
-
         public void ClearHistory()
         {
             _inputHistory.Clear();
+            _unwrappedHistory.Clear();
             _wrappedHistory.Clear();
             ScrollOffset = 0;
             _nextLineNumber = 1;
+            _historyDirty = true;
         }
 
-        public void ClearCombatHistory()
+        private void ClearCombatHistory()
         {
-            _combatHistory.Clear();
+            _unwrappedCombatHistory.Clear();
+            _wrappedCombatHistory.Clear();
             CombatScrollOffset = 0;
+            _combatHistoryDirty = true;
         }
-
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public void DrawTerminal(GameTime gameTime)
+        public void DrawTerminal(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            SpriteBatch _spriteBatch = Global.Instance.CurrentSpriteBatch;
-            BitmapFont _defaultFont = Global.Instance.DefaultFont;
+            // Lazy-load dependencies to break initialization cycles
+            _inputHandler ??= ServiceLocator.Get<InputHandler>();
+            _autoCompleteManager ??= ServiceLocator.Get<AutoCompleteManager>();
 
-            bool isInCombat = Core.CurrentGameState.IsInCombat;
+            // Re-wrap text only when the history has changed, using the provided font.
+            if (_historyDirty)
+            {
+                ReWrapHistory(font);
+            }
+            if (_combatHistoryDirty)
+            {
+                ReWrapCombatHistory(font);
+            }
+
+            bool isInCombat = _gameState.IsInCombat;
             int terminalHeight = GetTerminalHeight();
             int terminalX = 375;
             int terminalY = Global.TERMINAL_Y;
-            int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
+            int terminalWidth = (!isInCombat ? Global.DEFAULT_TERMINAL_WIDTH : Global.DEFAULT_TERMINAL_WIDTH - 150); // Adjusted width for combat
 
-            Texture2D pixel = Core.Pixel;
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             // Determine which history and scroll offset to use
-            List<ColoredLine> activeHistory = isInCombat ? _combatHistory : _wrappedHistory;
+            List<ColoredLine> activeHistory = isInCombat ? _wrappedCombatHistory : _wrappedHistory;
             int activeScrollOffset = isInCombat ? CombatScrollOffset : ScrollOffset;
 
             // Draw Frame
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, terminalHeight + 30), Global.Instance.TerminalBg);
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, 2), Global.Instance.Palette_White); // Top
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY + terminalHeight + 3, terminalWidth + 10, 2), Global.Instance.Palette_White); // Bottom
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, 2, terminalHeight + 30), Global.Instance.Palette_White); // Left
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX + terminalWidth + 3, terminalY - 25, 2, terminalHeight + 30), Global.Instance.Palette_White); // Right
-            _spriteBatch.DrawString(_defaultFont, "Terminal Output", new Vector2(terminalX, terminalY - 20), Global.Instance.GameTextColor);
-            _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 5, terminalWidth + 10, 2), Global.Instance.Palette_White);
+            spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, terminalHeight + 30), _global.TerminalBg);
+            spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, 2), _global.Palette_White); // Top
+            spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY + terminalHeight + 3, terminalWidth + 10, 2), _global.Palette_White); // Bottom
+            spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, 2, terminalHeight + 30), _global.Palette_White); // Left
+            spriteBatch.Draw(pixel, new Rectangle(terminalX + terminalWidth + 3, terminalY - 25, 2, terminalHeight + 30), _global.Palette_White); // Right
+            spriteBatch.DrawString(font, "Terminal Output", new Vector2(terminalX, terminalY - 20), _global.GameTextColor);
+            spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 5, terminalWidth + 10, 2), _global.Palette_White);
 
             // Draw History
             int maxVisibleLines = GetMaxVisibleLines();
@@ -179,15 +218,8 @@ namespace ProjectVagabond
 
                 foreach (var segment in line.Segments)
                 {
-                    _spriteBatch.DrawString(_defaultFont, segment.Text, new Vector2(x, y), segment.Color);
-                    x += _defaultFont.MeasureString(segment.Text).Width;
-                }
-
-                if (line.LineNumber > 0)
-                {
-                    string lineNumText = line.LineNumber.ToString();
-                    float lineNumX = terminalX + 550;
-                    _spriteBatch.DrawString(_defaultFont, lineNumText, new Vector2(lineNumX, y), Global.Instance.TerminalDarkGray);
+                    spriteBatch.DrawString(font, segment.Text, new Vector2(x, y), segment.Color);
+                    x += font.MeasureString(segment.Text).Width;
                 }
             }
 
@@ -198,20 +230,21 @@ namespace ProjectVagabond
                 _stringBuilder.Append("^ Scrolled up ").Append(activeScrollOffset).Append(" lines");
                 string scrollIndicator = _stringBuilder.ToString();
                 int scrollY = terminalY - 35;
-                _spriteBatch.DrawString(_defaultFont, scrollIndicator, new Vector2(terminalX, scrollY), Color.Gold);
+                spriteBatch.DrawString(font, scrollIndicator, new Vector2(terminalX, scrollY), Color.Gold);
             }
 
             // Conditionally draw the input section
             if (!isInCombat)
             {
+                float contentWidth = GetTerminalContentWidthInPixels(font);
                 int inputLineY = GetInputLineY();
                 int separatorY = GetSeparatorY();
 
-                _spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, separatorY, Global.DEFAULT_TERMINAL_WIDTH + 10, 2), Global.Instance.Palette_White);
+                spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, separatorY, Global.DEFAULT_TERMINAL_WIDTH + 10, 2), _global.Palette_White);
 
                 _caratBlinkTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 string caratUnderscore = "_";
-                if (!Core.CurrentGameState.IsExecutingActions)
+                if (!_gameState.IsExecutingActions)
                 {
                     if (_caratBlinkTimer % 1.0f > 0.5f)
                     {
@@ -220,104 +253,113 @@ namespace ProjectVagabond
                 }
 
                 _stringBuilder.Clear();
-                _stringBuilder.Append("> ").Append(Core.CurrentInputHandler.CurrentInput).Append(caratUnderscore);
+                _stringBuilder.Append("> ").Append(_inputHandler.CurrentInput).Append(caratUnderscore);
                 string inputCarat = _stringBuilder.ToString();
-                string wrappedInput = WrapText(inputCarat, GetTerminalContentWidthInPixels());
-                _inputCaratColor = Core.CurrentGameState.IsExecutingActions ? Global.Instance.TerminalDarkGray : Global.Instance.InputCaratColor;
-                _spriteBatch.DrawString(_defaultFont, wrappedInput, new Vector2(terminalX, inputLineY + 1), _inputCaratColor, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+                string wrappedInput = WrapText(inputCarat, contentWidth, font);
+                Color inputCaratColor = _gameState.IsExecutingActions ? _global.TerminalDarkGray : _global.InputCaratColor;
+                spriteBatch.DrawString(font, wrappedInput, new Vector2(terminalX, inputLineY + 1), inputCaratColor, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
-                if (Core.CurrentAutoCompleteManager.ShowingAutoCompleteSuggestions && Core.CurrentAutoCompleteManager.AutoCompleteSuggestions.Count > 0)
+                if (_autoCompleteManager.ShowingAutoCompleteSuggestions && _autoCompleteManager.AutoCompleteSuggestions.Count > 0)
                 {
-                    int suggestionY = inputLineY - 20;
-                    int visibleSuggestions = Math.Min(Core.CurrentAutoCompleteManager.AutoCompleteSuggestions.Count, 5);
-                    int maxSuggestionWidth = 0;
-                    for (int i = 0; i < visibleSuggestions; i++)
-                    {
-                        string prefix = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? " >" : "  ";
-                        string fullText = prefix + Core.CurrentAutoCompleteManager.AutoCompleteSuggestions[i];
-                        int textWidth = (int)_defaultFont.MeasureString(fullText).Width;
-                        maxSuggestionWidth = Math.Max(maxSuggestionWidth, textWidth);
-                    }
-                    int backgroundHeight = visibleSuggestions * Global.FONT_SIZE;
-                    int backgroundY = suggestionY - (visibleSuggestions - 1) * Global.FONT_SIZE;
-                    _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, backgroundHeight), Global.Instance.Palette_Black);
-                    _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, 1), Global.Instance.Palette_LightGray); // Top
-                    _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), Global.Instance.Palette_LightGray); // Bottom
-                    _spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, 1, backgroundHeight), Global.Instance.Palette_LightGray); // Left
-                    _spriteBatch.Draw(pixel, new Rectangle(terminalX + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), Global.Instance.Palette_LightGray); // Right
-                    for (int i = 0; i < visibleSuggestions; i++)
-                    {
-                        Color suggestionColor = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? Color.Khaki : Global.Instance.Palette_LightGray;
-                        string prefix = (i == Core.CurrentAutoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? " >" : "  ";
-                        _spriteBatch.DrawString(_defaultFont, prefix + Core.CurrentAutoCompleteManager.AutoCompleteSuggestions[i],
-                            new Vector2(terminalX + 2, suggestionY - i * Global.FONT_SIZE), suggestionColor);
-                    }
+                    DrawAutoCompleteSuggestions(spriteBatch, font, terminalX, inputLineY);
                 }
 
-                var gameState = Core.CurrentGameState;
-                if (gameState.PendingActions.Count != _cachedPendingActionCount ||
-                    gameState.IsExecutingActions != _cachedIsExecutingPath ||
-                    gameState.IsFreeMoveMode != _cachedIsFreeMoveMode ||
-                    gameState.IsActionQueueDirty)
+                // Update cached prompt/status text if state has changed
+                if (_gameState.PendingActions.Count != _cachedPendingActionCount ||
+                    _gameState.IsExecutingActions != _cachedIsExecutingPath ||
+                    _gameState.IsFreeMoveMode != _cachedIsFreeMoveMode ||
+                    _gameState.IsActionQueueDirty)
                 {
-                    _cachedPendingActionCount = gameState.PendingActions.Count;
-                    _cachedIsExecutingPath = gameState.IsExecutingActions;
-                    _cachedIsFreeMoveMode = gameState.IsFreeMoveMode;
-                    _stringBuilder.Clear();
-                    _stringBuilder.Append("Actions Queued: ").Append(gameState.PendingActions.Count);
-                    if (gameState.IsExecutingActions)
-                    {
-                        _stringBuilder.Append(" | Executing...");
-                    }
-                    _cachedWrappedStatusText = WrapText(_stringBuilder.ToString(), GetTerminalContentWidthInPixels());
-                    string promptText = GetPromptText();
-                    if (!string.IsNullOrEmpty(promptText))
-                    {
-                        var coloredPrompt = ParseColoredText(promptText, Color.Khaki);
-                        _cachedPromptLines = WrapColoredText(coloredPrompt, GetTerminalContentWidthInPixels());
-                    }
-                    else
-                    {
-                        _cachedPromptLines = null;
-                    }
-                    gameState.IsActionQueueDirty = false;
+                    UpdateCachedPromptAndStatus();
+                    _gameState.IsActionQueueDirty = false;
                 }
 
+                // Draw Status Text
                 int statusY = terminalY + terminalHeight + 15;
-                _spriteBatch.DrawString(_defaultFont, _cachedWrappedStatusText, new Vector2(terminalX, statusY), Global.Instance.Palette_LightGray);
-                int promptY = statusY + (_cachedWrappedStatusText.Split('\n').Length * Global.TERMINAL_LINE_SPACING) + 5;
-                if (_cachedPromptLines != null)
+                string wrappedStatusText = WrapText(_cachedStatusText, contentWidth, font);
+                spriteBatch.DrawString(font, wrappedStatusText, new Vector2(terminalX, statusY), _global.Palette_LightGray);
+
+                // Draw Prompt Text
+                int promptY = statusY + (wrappedStatusText.Split('\n').Length * Global.TERMINAL_LINE_SPACING) + 5;
+                if (!string.IsNullOrEmpty(_cachedPromptText))
                 {
-                    for (int i = 0; i < _cachedPromptLines.Count; i++)
+                    var coloredPrompt = ParseColoredText(_cachedPromptText, Color.Khaki);
+                    var promptLines = WrapColoredText(coloredPrompt, contentWidth, font);
+                    for (int i = 0; i < promptLines.Count; i++)
                     {
                         float x = terminalX;
                         float y = promptY + i * Global.PROMPT_LINE_SPACING;
-                        foreach (var segment in _cachedPromptLines[i].Segments)
+                        foreach (var segment in promptLines[i].Segments)
                         {
-                            _spriteBatch.DrawString(_defaultFont, segment.Text, new Vector2(x, y), segment.Color);
-                            x += _defaultFont.MeasureString(segment.Text).Width;
+                            spriteBatch.DrawString(font, segment.Text, new Vector2(x, y), segment.Color);
+                            x += font.MeasureString(segment.Text).Width;
                         }
                     }
                 }
             }
         }
 
-        private static string GetPromptText()
+        private void DrawAutoCompleteSuggestions(SpriteBatch spriteBatch, BitmapFont font, int terminalX, int inputLineY)
         {
-            int moveCount = Core.CurrentGameState.PendingActions.Count(a => a is MoveAction);
-            int restCount = Core.CurrentGameState.PendingActions.Count(a => a is RestAction);
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
+            int suggestionY = inputLineY - 20;
+            int visibleSuggestions = Math.Min(_autoCompleteManager.AutoCompleteSuggestions.Count, 5);
+            int maxSuggestionWidth = 0;
+            for (int i = 0; i < visibleSuggestions; i++)
+            {
+                string prefix = (i == _autoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? " >" : "  ";
+                string fullText = prefix + _autoCompleteManager.AutoCompleteSuggestions[i];
+                int textWidth = (int)font.MeasureString(fullText).Width;
+                maxSuggestionWidth = Math.Max(maxSuggestionWidth, textWidth);
+            }
+            int backgroundHeight = visibleSuggestions * Global.FONT_SIZE;
+            int backgroundY = suggestionY - (visibleSuggestions - 1) * Global.FONT_SIZE;
+            spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, backgroundHeight), _global.Palette_Black);
+            spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, maxSuggestionWidth + 4, 1), _global.Palette_LightGray); // Top
+            spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), _global.Palette_LightGray); // Bottom
+            spriteBatch.Draw(pixel, new Rectangle(terminalX, backgroundY, 1, backgroundHeight), _global.Palette_LightGray); // Left
+            spriteBatch.Draw(pixel, new Rectangle(terminalX + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), _global.Palette_LightGray); // Right
+            for (int i = 0; i < visibleSuggestions; i++)
+            {
+                Color suggestionColor = (i == _autoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? Color.Khaki : _global.Palette_LightGray;
+                string prefix = (i == _autoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? " >" : "  ";
+                spriteBatch.DrawString(font, prefix + _autoCompleteManager.AutoCompleteSuggestions[i],
+                    new Vector2(terminalX + 2, suggestionY - i * Global.FONT_SIZE), suggestionColor);
+            }
+        }
+
+        private void UpdateCachedPromptAndStatus()
+        {
+            _cachedPendingActionCount = _gameState.PendingActions.Count;
+            _cachedIsExecutingPath = _gameState.IsExecutingActions;
+            _cachedIsFreeMoveMode = _gameState.IsFreeMoveMode;
+
+            _stringBuilder.Clear();
+            _stringBuilder.Append("Actions Queued: ").Append(_gameState.PendingActions.Count);
+            if (_gameState.IsExecutingActions)
+            {
+                _stringBuilder.Append(" | Executing...");
+            }
+            _cachedStatusText = _stringBuilder.ToString();
+            _cachedPromptText = GetPromptText();
+        }
+
+        private string GetPromptText()
+        {
+            int moveCount = _gameState.PendingActions.Count(a => a is MoveAction);
+            int restCount = _gameState.PendingActions.Count(a => a is RestAction);
 
             var promptBuilder = new StringBuilder();
 
-            if (Core.CurrentGameState.IsFreeMoveMode && Core.CurrentGameState.PendingActions.Count <= 0)
+            if (_gameState.IsFreeMoveMode && _gameState.PendingActions.Count <= 0)
             {
                 promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
                 promptBuilder.Append("[gold]Press[orange] ENTER[gold] to confirm,[orange] ESC[gold] to cancel\n");
                 return promptBuilder.ToString();
             }
-            else if (Core.CurrentGameState.PendingActions.Count > 0 && !Core.CurrentGameState.IsExecutingActions)
+            else if (_gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions)
             {
-                if (Core.CurrentGameState.IsFreeMoveMode)
+                if (_gameState.IsFreeMoveMode)
                 {
                     promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([deepskyblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
                 }
@@ -333,15 +375,14 @@ namespace ProjectVagabond
 
                 promptBuilder.Append($"[gold]Pending[orange] {string.Join(", ", details)}\n");
 
-                var simResult = Core.CurrentGameState.PendingQueueSimulationResult;
+                var simResult = _gameState.PendingQueueSimulationResult;
                 int secondsPassed = simResult.secondsPassed;
 
                 if (secondsPassed > 0)
                 {
-                    WorldClockManager worldClockManager = Core.CurrentWorldClockManager;
-                    string finalETA = worldClockManager.GetCalculatedNewTime(worldClockManager.CurrentTime, secondsPassed);
-                    finalETA = Global.Instance.Use24HourClock ? finalETA : worldClockManager.GetConverted24hToAmPm(finalETA);
-                    string formattedDuration = worldClockManager.GetFormattedTimeFromSecondsShortHand(secondsPassed);
+                    string finalETA = _worldClockManager.GetCalculatedNewTime(_worldClockManager.CurrentTime, secondsPassed);
+                    finalETA = _global.Use24HourClock ? finalETA : _worldClockManager.GetConverted24hToAmPm(finalETA);
+                    string formattedDuration = _worldClockManager.GetFormattedTimeFromSecondsShortHand(secondsPassed);
                     promptBuilder.Append($"[gold]Arrival Time:[orange] {finalETA} [Palette_Gray]({formattedDuration})\n");
                 }
 
@@ -355,7 +396,7 @@ namespace ProjectVagabond
         private ColoredLine ParseColoredText(string text, Color? baseColor = null)
         {
             var line = new ColoredLine();
-            var currentColor = baseColor ?? Global.Instance.InputTextColor;
+            var currentColor = baseColor ?? _global.InputTextColor;
             var currentText = "";
 
             for (int i = 0; i < text.Length; i++)
@@ -376,15 +417,15 @@ namespace ProjectVagabond
 
                         if (colorTag == "/")
                         {
-                            currentColor = Global.Instance.InputTextColor;
+                            currentColor = _global.InputTextColor;
                         }
                         else if (colorTag == "/o")
                         {
-                            currentColor = Global.Instance.OutputTextColor;
+                            currentColor = _global.OutputTextColor;
                         }
                         else
                         {
-                            if (colorTag == "error") Core.ScreenShake(2, 0.25f);
+                            if (colorTag == "error") _hapticsManager.TriggerShake(2, 0.25f);
                             currentColor = ParseColor(colorTag);
                         }
                     }
@@ -417,26 +458,26 @@ namespace ProjectVagabond
                 case "warning": return Color.Gold;
                 case "debug": return Color.Chartreuse;
                 case "rest": return Color.LightGreen;
-                case "dim": return Global.Instance.TerminalDarkGray;
+                case "dim": return _global.TerminalDarkGray;
 
-                case "palette_black": return Global.Instance.Palette_Black;
-                case "palette_darkgray": return Global.Instance.Palette_DarkGray;
-                case "palette_gray": return Global.Instance.Palette_Gray;
-                case "palette_lightgray": return Global.Instance.Palette_LightGray;
-                case "palette_white": return Global.Instance.Palette_White;
-                case "palette_teal": return Global.Instance.Palette_Teal;
-                case "palette_lightblue": return Global.Instance.Palette_LightBlue;
-                case "palette_darkblue": return Global.Instance.Palette_DarkBlue;
-                case "palette_darkgreen": return Global.Instance.Palette_DarkGreen;
-                case "palette_lightgreen": return Global.Instance.Palette_LightGreen;
-                case "palette_lightyellow": return Global.Instance.Palette_LightYellow;
-                case "palette_yellow": return Global.Instance.Palette_Yellow;
-                case "palette_orange": return Global.Instance.Palette_Orange;
-                case "palette_red": return Global.Instance.Palette_Red;
-                case "palette_darkpurple": return Global.Instance.Palette_DarkPurple;
-                case "palette_lightpurple": return Global.Instance.Palette_LightPurple;
-                case "palette_pink": return Global.Instance.Palette_Pink;
-                case "palette_brightwhite": return Global.Instance.Palette_BrightWhite;
+                case "palette_black": return _global.Palette_Black;
+                case "palette_darkgray": return _global.Palette_DarkGray;
+                case "palette_gray": return _global.Palette_Gray;
+                case "palette_lightgray": return _global.Palette_LightGray;
+                case "palette_white": return _global.Palette_White;
+                case "palette_teal": return _global.Palette_Teal;
+                case "palette_lightblue": return _global.Palette_LightBlue;
+                case "palette_darkblue": return _global.Palette_DarkBlue;
+                case "palette_darkgreen": return _global.Palette_DarkGreen;
+                case "palette_lightgreen": return _global.Palette_LightGreen;
+                case "palette_lightyellow": return _global.Palette_LightYellow;
+                case "palette_yellow": return _global.Palette_Yellow;
+                case "palette_orange": return _global.Palette_Orange;
+                case "palette_red": return _global.Palette_Red;
+                case "palette_darkpurple": return _global.Palette_DarkPurple;
+                case "palette_lightpurple": return _global.Palette_LightPurple;
+                case "palette_pink": return _global.Palette_Pink;
+                case "palette_brightwhite": return _global.Palette_BrightWhite;
 
                 case "khaki": return Color.Khaki;
                 case "red": return Color.Red;
@@ -451,7 +492,6 @@ namespace ProjectVagabond
                 case "grey": return Color.Gray;
             }
 
-
             try
             {
                 var colorProperty = typeof(Color).GetProperty(colorName,
@@ -462,19 +502,36 @@ namespace ProjectVagabond
                     return (Color)colorProperty.GetValue(null);
                 }
             }
-            catch
-            {
-                // bruh
-            }
+            catch { /* Fallback on failure */ }
 
-            return Global.Instance.GameTextColor;
+            return _global.GameTextColor;
         }
 
-        private List<ColoredLine> WrapColoredText(ColoredLine line, float maxWidthInPixels)
+        private void ReWrapHistory(BitmapFont font)
+        {
+            _wrappedHistory.Clear();
+            float wrapWidth = GetTerminalContentWidthInPixels(font);
+            foreach (var line in _unwrappedHistory)
+            {
+                _wrappedHistory.AddRange(WrapColoredText(line, wrapWidth, font));
+            }
+            _historyDirty = false;
+        }
+
+        private void ReWrapCombatHistory(BitmapFont font)
+        {
+            _wrappedCombatHistory.Clear();
+            float wrapWidth = GetTerminalContentWidthInPixels(font);
+            foreach (var line in _unwrappedCombatHistory)
+            {
+                _wrappedCombatHistory.AddRange(WrapColoredText(line, wrapWidth, font));
+            }
+            _combatHistoryDirty = false;
+        }
+
+        private List<ColoredLine> WrapColoredText(ColoredLine line, float maxWidthInPixels, BitmapFont font)
         {
             var wrappedLines = new List<ColoredLine>();
-            var font = Global.Instance.DefaultFont;
-
             var currentLine = new ColoredLine { LineNumber = line.LineNumber };
             float currentLineWidth = 0f;
 
@@ -589,12 +646,11 @@ namespace ProjectVagabond
             return wrappedLines;
         }
 
-        private string WrapText(string text, float maxWidthInPixels)
+        private string WrapText(string text, float maxWidthInPixels, BitmapFont font)
         {
             if (string.IsNullOrEmpty(text))
                 return text;
 
-            var font = Global.Instance.DefaultFont;
             var finalLines = new List<string>();
             string[] existingLines = text.Split('\n');
 
@@ -666,16 +722,16 @@ namespace ProjectVagabond
             return string.Join("\n", finalLines);
         }
 
-        private float GetTerminalContentWidthInPixels()
+        private float GetTerminalContentWidthInPixels(BitmapFont font)
         {
-            int terminalWidth = Global.DEFAULT_TERMINAL_WIDTH;
-            float charWidth = Global.Instance.DefaultFont.MeasureString("W").Width;
+            int terminalWidth = _gameState.IsInCombat ? Global.DEFAULT_TERMINAL_WIDTH - 150 : Global.DEFAULT_TERMINAL_WIDTH;
+            float charWidth = font.MeasureString("W").Width;
             return terminalWidth - (2 * charWidth);
         }
 
         private int GetTerminalHeight()
         {
-            return Core.CurrentGameState.IsInCombat
+            return _gameState.IsInCombat
                 ? (Global.DEFAULT_TERMINAL_HEIGHT / 2) + 20
                 : Global.DEFAULT_TERMINAL_HEIGHT;
         }
@@ -692,7 +748,7 @@ namespace ProjectVagabond
 
         private int GetOutputAreaHeight()
         {
-            if (Core.CurrentGameState.IsInCombat)
+            if (_gameState.IsInCombat)
             {
                 return GetTerminalHeight();
             }

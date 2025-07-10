@@ -1,19 +1,17 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Security.Cryptography;
+
 namespace ProjectVagabond
 {
     public class TextureFactory
     {
+        public TextureFactory() { }
+
         public Texture2D CreateColoredTexture(int width, int height, Color color)
         {
-            var texture = new Texture2D(Core.Instance.GraphicsDevice, width, height);
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var texture = new Texture2D(graphicsDevice, width, height);
             var colorData = new Color[width * height];
             for (int i = 0; i < colorData.Length; i++)
             {
@@ -25,7 +23,8 @@ namespace ProjectVagabond
 
         public Texture2D CreateWaterTexture()
         {
-            var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var texture = new Texture2D(graphicsDevice, 8, 8);
             var colorData = new Color[64];
 
             for (int y = 0; y < 8; y++)
@@ -51,8 +50,9 @@ namespace ProjectVagabond
 
         public Texture2D CreatePlayerTexture()
         {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
             int size = 10;
-            var texture = new Texture2D(Core.Instance.GraphicsDevice, size, size);
+            var texture = new Texture2D(graphicsDevice, size, size);
             var colorData = new Color[size * size];
 
             for (int y = 0; y < size; y++) // Create a simple diamond shape for player
@@ -77,7 +77,8 @@ namespace ProjectVagabond
 
         public Texture2D CreatePathTexture()
         {
-            var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var texture = new Texture2D(graphicsDevice, 8, 8);
             var colorData = new Color[64];
 
             for (int y = 0; y < 8; y++)
@@ -102,7 +103,8 @@ namespace ProjectVagabond
 
         public Texture2D CreateRunPathTexture()
         {
-            var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var texture = new Texture2D(graphicsDevice, 8, 8);
             var colorData = new Color[64];
 
             for (int y = 0; y < 8; y++)
@@ -126,7 +128,8 @@ namespace ProjectVagabond
 
         public Texture2D CreatePathEndTexture()
         {
-            var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var texture = new Texture2D(graphicsDevice, 8, 8);
             var colorData = new Color[64];
 
             for (int y = 0; y < 8; y++) // Create an X shape for path end
@@ -150,27 +153,22 @@ namespace ProjectVagabond
 
         public Texture2D CreateSmallXTexture()
         {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
             const int size = 10;
             const int margin = 3;
-            var texture = new Texture2D(Core.Instance.GraphicsDevice, size, size);
+            var texture = new Texture2D(graphicsDevice, size, size);
             var colorData = new Color[size * size];
 
             for (int y = 0; y < size; y++)
             {
                 for (int x = 0; x < size; x++)
                 {
-                    // check if (x,y) is inside the inner square
-                    bool inInner = x >= margin && x < (size - margin)
-                                && y >= margin && y < (size - margin);
-
+                    bool inInner = x >= margin && x < (size - margin) && y >= margin && y < (size - margin);
                     if (inInner)
                     {
-                        // rebase to [0..innerSize-1]
                         int xi = x - margin;
                         int yi = y - margin;
-                        int innerSize = size - 2 * margin;  
-
-                        // draw the two diagonals of the inner square
+                        int innerSize = size - 2 * margin;
                         if (xi == yi || xi == (innerSize - 1) - yi)
                             colorData[y * size + x] = Color.White;
                         else
@@ -189,12 +187,13 @@ namespace ProjectVagabond
 
         public Texture2D CreateSelectionSquareTexture()
         {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
             const int size = 10;
-            const int centerGap = 4;                // how many pixels to leave blank at the center of each side
-            int start = (size - centerGap) / 2;     // for size=10, start=4
-            int end = start + centerGap;            // end=6 (so pixels 4 and 5 are skipped)
+            const int centerGap = 4;
+            int start = (size - centerGap) / 2;
+            int end = start + centerGap;
 
-            var texture = new Texture2D(Core.Instance.GraphicsDevice, size, size);
+            var texture = new Texture2D(graphicsDevice, size, size);
             var colorData = new Color[size * size];
 
             for (int y = 0; y < size; y++)
@@ -202,23 +201,10 @@ namespace ProjectVagabond
                 for (int x = 0; x < size; x++)
                 {
                     bool draw = false;
-
-                    // Top edge, except the center gap
-                    if (y == 0 && (x < start || x >= end))
-                        draw = true;
-
-                    // Bottom edge, except the center gap
-                    if (y == size - 1 && (x < start || x >= end))
-                        draw = true;
-
-                    // Left edge, except the center gap
-                    if (x == 0 && (y < start || y >= end))
-                        draw = true;
-
-                    // Right edge, except the center gap
-                    if (x == size - 1 && (y < start || y >= end))
-                        draw = true;
-
+                    if (y == 0 && (x < start || x >= end)) draw = true;
+                    if (y == size - 1 && (x < start || x >= end)) draw = true;
+                    if (x == 0 && (y < start || y >= end)) draw = true;
+                    if (x == size - 1 && (y < start || y >= end)) draw = true;
                     colorData[y * size + x] = draw ? Color.White : Color.Transparent;
                 }
             }
@@ -229,25 +215,22 @@ namespace ProjectVagabond
 
         public Texture2D CreateEmptyTexture()
         {
-            var texture = new Texture2D(Core.Instance.GraphicsDevice, 8, 8);
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var texture = new Texture2D(graphicsDevice, 8, 8);
             var colorData = new Color[64];
-
-            for (int y = 0; y < 8; y++)
+            for (int i = 0; i < colorData.Length; i++)
             {
-                for (int x = 0; x < 8; x++)
-                {
-                    colorData[y * 8 + x] = Color.Transparent;
-                }
+                colorData[i] = Color.Transparent;
             }
-
             texture.SetData(colorData);
             return texture;
         }
 
         public Texture2D CreateCircleTexture()
         {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
             const int size = 16;
-            var texture = new Texture2D(Core.Instance.GraphicsDevice, size, size);
+            var texture = new Texture2D(graphicsDevice, size, size);
             var colorData = new Color[size * size];
 
             float radius = size / 2f;
@@ -259,9 +242,7 @@ namespace ProjectVagabond
                 {
                     var position = new Vector2(x, y);
                     float distance = Vector2.Distance(center, position);
-
                     float alpha = Math.Clamp(1.0f - (distance - (radius - 1)), 0, 1);
-
                     colorData[y * size + x] = Color.White * alpha;
                 }
             }

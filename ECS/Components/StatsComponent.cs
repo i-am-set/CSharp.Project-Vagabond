@@ -27,7 +27,7 @@ namespace ProjectVagabond
         private int _currentHealthPoints;
         private int _currentEnergyPoints;
 
-        // Character selection stats
+        // Character selection stats - internal storage is always metric (kg)
         private float _weight;
         private int _age;
         private string _background;
@@ -60,9 +60,8 @@ namespace ProjectVagabond
         public int CurrentHealthPoints => _currentHealthPoints;
         public int CurrentEnergyPoints => _currentEnergyPoints;
 
-        // Character info (read-only)
+        // Character info (read-only, always in metric units)
         public float Weight => _weight;
-        public float DisplayWeight => Global.Instance.UseImperialUnits ? _weight * 2.20462f : _weight;
         public int Age => _age;
         public string Background => _background;
 
@@ -82,7 +81,7 @@ namespace ProjectVagabond
         public StatsComponent()
         {
             // Set temporary default character info
-            _weight = 70f;
+            _weight = 70f; // kg
             _age = 25;
             _background = "Wanderer";
         }
@@ -142,10 +141,13 @@ namespace ProjectVagabond
             RecalculateSecondaryStats();
         }
 
-        public void SetCharacterInfo(float weight, int age, string background)
+        /// <summary>
+        /// Sets character info. Weight is always expected in kilograms (kg).
+        /// The UI layer is responsible for any unit conversions before calling this method.
+        /// </summary>
+        public void SetCharacterInfo(float weightInKg, int age, string background)
         {
-            _weight = Global.Instance.UseImperialUnits ? weight / 2.20462f : weight;
-            _weight = Math.Max(0f, _weight);
+            _weight = Math.Max(0f, weightInKg);
             _age = Math.Max(0, age);
             _background = background ?? "Unknown";
         }
@@ -333,18 +335,6 @@ namespace ProjectVagabond
                 StatType.Charm => Charm,
                 _ => 0
             };
-        }
-
-        public string GetWeightDisplayString()
-        {
-            if (Global.Instance.UseImperialUnits)
-            {
-                return $"{DisplayWeight:F1} lbs";
-            }
-            else
-            {
-                return $"{DisplayWeight:F1} kg";
-            }
         }
     }
 

@@ -8,23 +8,11 @@ namespace ProjectVagabond.UI
 {
     public class ImageButton : Button
     {
-        public Color HoverBorderColor { get; set; } = Global.Instance.ButtonHoverColor;
+        public Color HoverBorderColor { get; set; }
         public int BorderThickness { get; set; } = 1;
-
-        // --- Corner Bracket Customization ---
-        /// <summary>
-        /// The length of the corner arms as a percentage of the button's shortest side.
-        /// </summary>
         public float CornerLengthRatio { get; set; } = 0.25f;
-        /// <summary>
-        /// The minimum pixel length for a corner arm.
-        /// </summary>
         public int MinCornerArmLength { get; set; } = 3;
-        /// <summary>
-        /// The maximum pixel length for a corner arm.
-        /// </summary>
         public int MaxCornerArmLength { get; set; } = 20;
-
 
         private readonly Texture2D _defaultTexture;
         private readonly Texture2D _hoverTexture;
@@ -33,14 +21,6 @@ namespace ProjectVagabond.UI
 
         private bool _isHeldDown;
 
-        /// <summary>
-        /// Creates a button that can be visually represented by textures or a simple border on hover.
-        /// </summary>
-        /// <param name="bounds">The clickable area of the button.</param>
-        /// <param name="defaultTexture">The texture to display by default.</param>
-        /// <param name="hoverTexture">The texture to display when the mouse is over the button.</param>
-        /// <param name="clickedTexture">The texture to display when the button is being clicked.</param>
-        /// <param name="disabledTexture">The texture to display when the button is disabled.</param>
         public ImageButton(Rectangle bounds, Texture2D defaultTexture = null, Texture2D hoverTexture = null, Texture2D clickedTexture = null, Texture2D disabledTexture = null)
             : base(bounds, "")
         {
@@ -48,11 +28,9 @@ namespace ProjectVagabond.UI
             _hoverTexture = hoverTexture;
             _clickedTexture = clickedTexture;
             _disabledTexture = disabledTexture;
+            HoverBorderColor = _global.ButtonHoverColor;
         }
 
-        /// <summary>
-        /// Overrides the base Update to handle the held-down state for visual feedback.
-        /// </summary>
         public override void Update(MouseState currentMouseState)
         {
             if (!IsEnabled)
@@ -65,15 +43,12 @@ namespace ProjectVagabond.UI
             Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
             IsHovered = Bounds.Contains(virtualMousePos);
 
-            // Handle the click event (fires on mouse release)
             if (IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
                 TriggerClick();
             }
 
-            // Track if the button is currently being held down for visual state
             _isHeldDown = IsHovered && currentMouseState.LeftButton == ButtonState.Pressed;
-
             _previousMouseState = currentMouseState;
         }
 
@@ -102,37 +77,25 @@ namespace ProjectVagabond.UI
 
             if (isActivated && _hoverTexture == null)
             {
-                DrawCornerBrackets(spriteBatch, Core.Pixel, Bounds, BorderThickness, HoverBorderColor);
+                DrawCornerBrackets(spriteBatch, ServiceLocator.Get<Texture2D>(), Bounds, BorderThickness, HoverBorderColor);
             }
         }
 
-        /// <summary>
-        /// Draws four corner brackets inside the given rectangle.
-        /// </summary>
         private void DrawCornerBrackets(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
         {
-            // Calculate the length of the corner "arms" based on the shortest side of the rectangle.
             int shorterSide = Math.Min(rect.Width, rect.Height);
             int armLength = (int)(shorterSide * CornerLengthRatio);
             armLength = Math.Clamp(armLength, MinCornerArmLength, MaxCornerArmLength);
 
-            // Ensure the arms don't overlap on very small buttons
             if (armLength * 2 > rect.Width) armLength = rect.Width / 2;
             if (armLength * 2 > rect.Height) armLength = rect.Height / 2;
 
-            // Top-Left Corner
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, armLength, thickness), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, armLength), color);
-
-            // Top-Right Corner
             spriteBatch.Draw(pixel, new Rectangle(rect.Right - armLength, rect.Top, armLength, thickness), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, armLength), color);
-
-            // Bottom-Left Corner
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, armLength, thickness), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - armLength, thickness, armLength), color);
-
-            // Bottom-Right Corner
             spriteBatch.Draw(pixel, new Rectangle(rect.Right - armLength, rect.Bottom - thickness, armLength, thickness), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Bottom - armLength, thickness, armLength), color);
         }

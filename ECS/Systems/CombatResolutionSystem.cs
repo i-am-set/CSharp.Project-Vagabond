@@ -8,6 +8,13 @@ namespace ProjectVagabond
     /// </summary>
     public class CombatResolutionSystem : ISystem
     {
+        private readonly ComponentStore _componentStore;
+
+        public CombatResolutionSystem()
+        {
+            _componentStore = ServiceLocator.Get<ComponentStore>();
+        }
+
         // This system is not updated by the SystemManager, but called explicitly.
         public void Update(GameTime gameTime) { }
 
@@ -18,9 +25,9 @@ namespace ProjectVagabond
         /// <param name="chosenAttack">The component containing the attack details.</param>
         public void ResolveAction(int attackerId, ChosenAttackComponent chosenAttack)
         {
-            var attackerCombatantComp = Core.ComponentStore.GetComponent<CombatantComponent>(attackerId);
-            var attackerAttacksComp = Core.ComponentStore.GetComponent<AvailableAttacksComponent>(attackerId);
-            var targetHealthComp = Core.ComponentStore.GetComponent<HealthComponent>(chosenAttack.TargetId);
+            var attackerCombatantComp = _componentStore.GetComponent<CombatantComponent>(attackerId);
+            var attackerAttacksComp = _componentStore.GetComponent<AvailableAttacksComponent>(attackerId);
+            var targetHealthComp = _componentStore.GetComponent<HealthComponent>(chosenAttack.TargetId);
 
             // Get attacker and target names for logging
             var attackerName = EntityNamer.GetName(attackerId);
@@ -28,7 +35,7 @@ namespace ProjectVagabond
 
             if (attackerCombatantComp == null || attackerAttacksComp == null || targetHealthComp == null)
             {
-                Core.CurrentTerminalRenderer.AddCombatLog($"[error]Could not resolve attack for {attackerName}. Missing components.");
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]Could not resolve attack for {attackerName}. Missing components." });
                 return;
             }
 
@@ -36,7 +43,7 @@ namespace ProjectVagabond
 
             if (attack == null)
             {
-                Core.CurrentTerminalRenderer.AddCombatLog($"[error]{attackerName} tried to use an unknown attack: {chosenAttack.AttackName}");
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{attackerName} tried to use an unknown attack: {chosenAttack.AttackName}" });
                 return;
             }
 
@@ -47,12 +54,12 @@ namespace ProjectVagabond
             targetHealthComp.TakeDamage(damage);
 
             // Log the result
-            Core.CurrentTerminalRenderer.AddCombatLog($"{attackerName} attacks {targetName} with {attack.Name} for [red]{damage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining.");
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{attackerName} attacks {targetName} with {attack.Name} for [red]{damage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining." });
 
             // Check for death
             if (targetHealthComp.CurrentHealth <= 0)
             {
-                Core.CurrentTerminalRenderer.AddCombatLog($"[red]{targetName} has been defeated![/]");
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[red]{targetName} has been defeated![/]" });
                 // TODO: Add logic to remove the entity from combat, drop loot, etc.
             }
         }

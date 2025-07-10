@@ -11,6 +11,12 @@ namespace ProjectVagabond
     public class ChunkManager
     {
         private readonly Dictionary<Point, Chunk> _chunks = new Dictionary<Point, Chunk>();
+        private readonly ComponentStore _componentStore;
+
+        public ChunkManager()
+        {
+            _componentStore = ServiceLocator.Get<ComponentStore>();
+        }
 
         /// <summary>
         /// A static helper method that converts a Vector2 world position into a Point chunk coordinate.
@@ -39,7 +45,7 @@ namespace ProjectVagabond
 
             chunk.EntityIds.Add(entityId);
 
-            var posComponent = Core.ComponentStore.GetComponent<PositionComponent>(entityId);
+            var posComponent = _componentStore.GetComponent<PositionComponent>(entityId);
             if (posComponent != null)
             {
                 posComponent.CurrentChunk = chunkCoords;

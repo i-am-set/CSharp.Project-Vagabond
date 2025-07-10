@@ -8,6 +8,8 @@ namespace ProjectVagabond.UI
 {
     public class Slider
     {
+        private readonly Global _global;
+
         public Rectangle Bounds { get; }
         public string Label { get; }
         public float MinValue { get; }
@@ -21,14 +23,15 @@ namespace ProjectVagabond.UI
         private readonly int _handleWidth = 8;
         private readonly int _handleHeight = 15;
 
-        public static readonly Color ElementColor = Global.Instance.Palette_BrightWhite;
-        public static readonly Color SubElementColor = Global.Instance.Palette_LightGray;
-        public static readonly Color DisabledSliderColor = Global.Instance.Palette_Gray;
+        public Color ElementColor => _global.Palette_BrightWhite;
+        public Color SubElementColor => _global.Palette_LightGray;
+        public Color DisabledSliderColor => _global.Palette_Gray;
 
         public event Action<float> OnValueChanged;
 
         public Slider(Rectangle bounds, string label, float minValue, float maxValue, float initialValue, float step = 1f)
         {
+            _global = ServiceLocator.Get<Global>();
             Bounds = bounds;
             Label = label;
             MinValue = minValue;
@@ -56,7 +59,7 @@ namespace ProjectVagabond.UI
         {
             if (!IsEnabled)
             {
-                _isDragging = false; 
+                _isDragging = false;
                 return;
             }
 
@@ -99,27 +102,24 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font)
         {
-            // Enabled/Disabled colors
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
+
             Color labelColor = IsEnabled ? ElementColor : DisabledSliderColor;
             Color valueColor = IsEnabled ? ElementColor : DisabledSliderColor;
             Color handleColor = IsEnabled ? ElementColor : DisabledSliderColor;
             Color railColor = IsEnabled ? SubElementColor : DisabledSliderColor;
 
-            // Draw Label
             spriteBatch.DrawString(font, Label, new Vector2(Bounds.X, Bounds.Y - font.LineHeight - 2), labelColor);
 
-            // Draw Value
             string valueString = CurrentValue.ToString("F0");
             Vector2 valueSize = font.MeasureString(valueString);
             spriteBatch.DrawString(font, valueString, new Vector2(Bounds.Right - valueSize.X, Bounds.Y - font.LineHeight - 2), valueColor);
 
-            // Draw the slider rail line
             var railRect = new Rectangle(Bounds.X, Bounds.Y + (Bounds.Height / 2) - 1, Bounds.Width, 2);
-            spriteBatch.Draw(Core.Pixel, railRect, railColor);
+            spriteBatch.Draw(pixel, railRect, railColor);
 
-            // Draw Handle
             UpdateHandlePosition();
-            spriteBatch.Draw(Core.Pixel, _handleBounds, handleColor);
+            spriteBatch.Draw(pixel, _handleBounds, handleColor);
         }
     }
 }

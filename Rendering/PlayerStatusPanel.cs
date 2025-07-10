@@ -9,6 +9,10 @@ namespace ProjectVagabond
     /// </summary>
     public class PlayerStatusPanel
     {
+        private readonly GameState _gameState;
+        private readonly ComponentStore _componentStore;
+        private readonly Global _global;
+
         private readonly Rectangle _bounds;
         private const int PADDING = 5;
         private const int BORDER_THICKNESS = 2;
@@ -16,23 +20,24 @@ namespace ProjectVagabond
         public PlayerStatusPanel(Rectangle bounds)
         {
             _bounds = bounds;
+            _gameState = ServiceLocator.Get<GameState>();
+            _componentStore = ServiceLocator.Get<ComponentStore>();
+            _global = ServiceLocator.Get<Global>();
         }
 
         /// <summary>
         /// Draws the player status panel if in combat.
         /// </summary>
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font)
         {
-            var gameState = Core.CurrentGameState;
-            if (!gameState.IsInCombat) return;
+            if (!_gameState.IsInCombat || font == null) return;
 
-            var font = Global.Instance.DefaultFont;
-            if (font == null) return;
-
-            var health = Core.ComponentStore.GetComponent<HealthComponent>(gameState.PlayerEntityId);
-            var combatStats = Core.ComponentStore.GetComponent<CombatStatsComponent>(gameState.PlayerEntityId);
+            var health = _componentStore.GetComponent<HealthComponent>(_gameState.PlayerEntityId);
+            var combatStats = _componentStore.GetComponent<CombatStatsComponent>(_gameState.PlayerEntityId);
 
             if (health == null || combatStats == null) return;
+
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             // Draw border and background
             var borderRect = new Rectangle(
@@ -41,8 +46,8 @@ namespace ProjectVagabond
                 _bounds.Width + (BORDER_THICKNESS * 2),
                 _bounds.Height + (BORDER_THICKNESS * 2)
             );
-            spriteBatch.Draw(Core.Pixel, borderRect, Global.Instance.Palette_White);
-            spriteBatch.Draw(Core.Pixel, _bounds, Global.Instance.TerminalBg);
+            spriteBatch.Draw(pixel, borderRect, _global.Palette_White);
+            spriteBatch.Draw(pixel, _bounds, _global.TerminalBg);
 
             // Draw content
             float currentY = _bounds.Y + PADDING;
@@ -53,26 +58,26 @@ namespace ProjectVagabond
 
             // Health Bar
             string hpText = $"HP: {health.CurrentHealth} / {health.MaxHealth}";
-            spriteBatch.DrawString(font, hpText, new Vector2(_bounds.X + PADDING, currentY), Global.Instance.GameTextColor);
+            spriteBatch.DrawString(font, hpText, new Vector2(_bounds.X + PADDING, currentY), _global.GameTextColor);
             currentY += font.LineHeight;
 
             int barWidth = _bounds.Width - (PADDING * 2);
             int barHeight = 10;
             var bgBarRect = new Rectangle(_bounds.X + PADDING, (int)currentY, barWidth, barHeight);
-            spriteBatch.Draw(Core.Pixel, bgBarRect, Global.Instance.Palette_Red);
+            spriteBatch.Draw(pixel, bgBarRect, _global.Palette_Red);
 
             if (health.CurrentHealth > 0)
             {
                 float healthPercentage = (float)health.CurrentHealth / health.MaxHealth;
                 int fgBarWidth = (int)(barWidth * healthPercentage);
                 var fgBarRect = new Rectangle(_bounds.X + PADDING, (int)currentY, fgBarWidth, barHeight);
-                spriteBatch.Draw(Core.Pixel, fgBarRect, Color.LawnGreen);
+                spriteBatch.Draw(pixel, fgBarRect, Color.LawnGreen);
             }
             currentY += barHeight + PADDING;
 
             // Action Points
             string apText = $"AP: {combatStats.ActionPoints}";
-            spriteBatch.DrawString(font, apText, new Vector2(_bounds.X + PADDING, currentY), Global.Instance.GameTextColor);
+            spriteBatch.DrawString(font, apText, new Vector2(_bounds.X + PADDING, currentY), _global.GameTextColor);
         }
     }
 }

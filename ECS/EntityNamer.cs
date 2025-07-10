@@ -14,13 +14,17 @@ namespace ProjectVagabond
         /// <returns>The entity's display name (e.g., "Player", "Bandit").</returns>
         public static string GetName(int entityId)
         {
-            if (entityId == Core.CurrentGameState.PlayerEntityId)
+            var gameState = ServiceLocator.Get<GameState>();
+            var componentStore = ServiceLocator.Get<ComponentStore>();
+            var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
+
+            if (entityId == gameState.PlayerEntityId)
             {
                 return "Player";
             }
 
-            var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(entityId);
-            var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
+            var archetypeIdComp = componentStore.GetComponent<ArchetypeIdComponent>(entityId);
+            var archetype = archetypeManager.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
             return archetype?.Name ?? $"Entity {entityId}";
         }
 
@@ -34,13 +38,14 @@ namespace ProjectVagabond
         {
             var displayNames = new Dictionary<int, string>();
             var nameCounts = new Dictionary<string, int>();
+            var playerEntityId = ServiceLocator.Get<GameState>().PlayerEntityId;
 
             foreach (var entityId in entityIds)
             {
                 string baseName = GetName(entityId);
 
                 // The player's name is always unique and doesn't get a number.
-                if (entityId == Core.CurrentGameState.PlayerEntityId)
+                if (entityId == playerEntityId)
                 {
                     displayNames[entityId] = baseName;
                     continue;
@@ -73,7 +78,7 @@ namespace ProjectVagabond
             foreach (var entityId in entityIds)
             {
                 string baseName = GetName(entityId);
-                if (entityId == Core.CurrentGameState.PlayerEntityId)
+                if (entityId == playerEntityId)
                 {
                     finalNames[entityId] = baseName;
                     continue;

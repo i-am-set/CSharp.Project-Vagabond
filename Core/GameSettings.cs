@@ -23,14 +23,17 @@ namespace ProjectVagabond
 
         public GameSettings()
         {
+            // Default graphics settings
             Resolution = new Point(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             IsFullscreen = false;
             IsVsync = true;
             IsFrameLimiterEnabled = true;
             TargetFramerate = 60;
             SmallerUi = false;
-            UseImperialUnits = Global.Instance.UseImperialUnits;
-            Use24HourClock = Global.Instance.Use24HourClock;
+
+            // Default game settings. This class is the source of truth for defaults.
+            UseImperialUnits = false;
+            Use24HourClock = false;
         }
 
         /// <summary>
@@ -47,18 +50,27 @@ namespace ProjectVagabond
 
             gdm.SynchronizeWithVerticalRetrace = IsVsync;
             gdm.IsFullScreen = IsFullscreen;
-            Core.ResizeWindow(Resolution.X, Resolution.Y);
 
+            // Set the new resolution directly instead of using a static helper
+            gdm.PreferredBackBufferWidth = Resolution.X;
+            gdm.PreferredBackBufferHeight = Resolution.Y;
+
+            // Apply all pending graphics changes
             gdm.ApplyChanges();
+
+            // Notify the game of the resize to recalculate the render area
+            game.OnResize(null, null);
         }
 
         /// <summary>
-        /// Applies the general game settings.
+        /// Applies the general game settings to the Global configuration object.
         /// </summary>
         public void ApplyGameSettings()
         {
-            Global.Instance.UseImperialUnits = UseImperialUnits;
-            Global.Instance.Use24HourClock = Use24HourClock;
+            // Get the Global instance from the ServiceLocator to apply settings
+            var global = ServiceLocator.Get<Global>();
+            global.UseImperialUnits = UseImperialUnits;
+            global.Use24HourClock = Use24HourClock;
         }
     }
 }

@@ -6,15 +6,15 @@ using System.Text.Json;
 namespace ProjectVagabond
 {
     /// <summary>
-    /// A singleton manager responsible for loading, storing, and providing
-    /// access to all entity archetypes from JSON files.
+    /// A manager responsible for loading, storing, and providing
+    /// access to all entity archetypes from JSON files. This class is
+    /// registered with the ServiceLocator.
     /// </summary>
     public class ArchetypeManager
     {
-        public static readonly ArchetypeManager Instance = new ArchetypeManager();
         private readonly Dictionary<string, Archetype> _archetypes = new Dictionary<string, Archetype>();
 
-        private ArchetypeManager() { }
+        public ArchetypeManager() { }
 
         /// <summary>
         /// Loads all .json files from a specified directory, deserializes them

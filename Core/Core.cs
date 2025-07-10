@@ -1,10 +1,8 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
-using MonoGame.Extended.Timers;
 using ProjectVagabond.Scenes;
 using System;
-using System.Collections.Generic;
 
 // TODO: generate different noise maps to generate different map things
 // TODO: add a way to generate different map elements based on the noise map
@@ -26,110 +24,153 @@ namespace ProjectVagabond
 {
     public class Core : Game
     {
-        // Singleton logic //
-        public static Core Instance { get; private set; }
-
-        // Class references //
-        // --- Core ECS and Systems must be initialized first, as other managers may depend on them. ---
-        private static readonly EntityManager _entityManager = new();
-        private static readonly ComponentStore _componentStore = new();
-        private static readonly ChunkManager _chunkManager = new();
-        private static readonly SystemManager _systemManager = new();
-        private static readonly PlayerInputSystem _playerInputSystem = new();
-        private static readonly ActionExecutionSystem _actionExecutionSystem = new();
-        private static readonly AISystem _aiSystem = new();
-        private static readonly CombatTurnSystem _combatTurnSystem = new();
-        private static readonly CombatResolutionSystem _combatResolutionSystem = new();
-        private static readonly CombatProcessingSystem _combatProcessingSystem = new();
-
-        // --- GameState can now be initialized safely as its dependencies are ready. ---
-        private static readonly GameState _gameState = new();
-
-        // --- Other managers and renderers ---
-        private static readonly SpriteManager _spriteManager = new();
-        private static readonly TextureFactory _textureFactory = new();
-        private static readonly InputHandler _inputHandler = new();
-        private static readonly MapRenderer _mapRenderer = new();
-        private static readonly MapInputHandler _mapInputHandler = new(_mapRenderer.MapContextMenu, _mapRenderer);
-        private static readonly TerminalRenderer _terminalRenderer = new();
-        private static readonly AutoCompleteManager _autoCompleteManager = new();
-        private static readonly CommandProcessor _commandProcessor = new(_playerInputSystem);
-        private static readonly StatsRenderer _statsRenderer = new();
-        private static readonly WorldClockManager _worldClockManager = new();
-        private static readonly ClockRenderer _clockRenderer = new();
-        private static readonly HapticsManager _hapticsManager = new();
-        private static readonly SceneManager _sceneManager = new();
-        private static readonly TooltipManager _tooltipManager = new();
-        public static readonly GameSettings _settings = SettingsManager.LoadSettings();
-
-        // Misc //
+        // Graphics and Content
+        private GraphicsDeviceManager _graphics;
+        private SpriteBatch _spriteBatch;
+        private BitmapFont _defaultFont;
+        private Texture2D _pixel;
         private RenderTarget2D _renderTarget;
         private Rectangle _finalRenderRectangle;
-        private static Matrix _mouseTransformMatrix;
-        private static Texture2D _pixel;
+        private Matrix _mouseTransformMatrix;
         private bool _useLinearSampling;
 
-        // Public references //
-        public static GameState CurrentGameState => _gameState;
-        public static MapRenderer CurrentMapRenderer => _mapRenderer;
-        public static MapInputHandler CurrentMapInputHandler => _mapInputHandler;
-        public static SpriteManager CurrentSpriteManager => _spriteManager;
-        public static TextureFactory CurrentTextureFactory => _textureFactory;
-        public static AutoCompleteManager CurrentAutoCompleteManager => _autoCompleteManager;
-        public static TerminalRenderer CurrentTerminalRenderer => _terminalRenderer;
-        public static CommandProcessor CurrentCommandProcessor => _commandProcessor;
-        public static InputHandler CurrentInputHandler => _inputHandler;
-        public static StatsRenderer CurrentStatsRenderer => _statsRenderer;
-        public static ClockRenderer CurrentClockRenderer => _clockRenderer;
-        public static WorldClockManager CurrentWorldClockManager => _worldClockManager;
-        public static HapticsManager CurrentHapticsManager => _hapticsManager;
-        public static SceneManager CurrentSceneManager => _sceneManager;
-        public static TooltipManager CurrentTooltipManager => _tooltipManager;
-        public static GameSettings Settings => _settings;
-        public static Texture2D Pixel => _pixel;
-        public static EntityManager EntityManager => _entityManager;
-        public static ComponentStore ComponentStore => _componentStore;
-        public static ChunkManager ChunkManager => _chunkManager;
-        public static SystemManager SystemManager => _systemManager;
-        public static PlayerInputSystem PlayerInputSystem => _playerInputSystem;
-        public static ActionExecutionSystem ActionExecutionSystem => _actionExecutionSystem;
-        public static AISystem AISystem => _aiSystem;
-        public static CombatTurnSystem CombatTurnSystem => _combatTurnSystem;
-        public static CombatResolutionSystem CombatResolutionSystem => _combatResolutionSystem;
-        public static CombatProcessingSystem CombatProcessingSystem => _combatProcessingSystem;
+        public Matrix MouseTransformMatrix => _mouseTransformMatrix;
+
+        // Managers & Systems
+        private Global _global;
+        private GameSettings _settings;
+        private SceneManager _sceneManager;
+        private HapticsManager _hapticsManager;
+        private SystemManager _systemManager;
+        private TooltipManager _tooltipManager;
+        private GameState _gameState;
+        private ActionExecutionSystem _actionExecutionSystem;
+        private AISystem _aiSystem;
+        private CombatProcessingSystem _combatProcessingSystem;
+        private SpriteManager _spriteManager;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public Core()
         {
-            Global.Instance.CurrentGraphics = new GraphicsDeviceManager(this);
+            _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            Global.Instance.CurrentGraphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
-            Global.Instance.CurrentGraphics.PreferredBackBufferHeight = Global.VIRTUAL_HEIGHT;
+            _graphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
+            _graphics.PreferredBackBufferHeight = Global.VIRTUAL_HEIGHT;
             Window.AllowUserResizing = false;
             Window.ClientSizeChanged += OnResize;
         }
 
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
         protected override void Initialize()
         {
-            Instance = this;
+            // Phase 1: Register Core Services & Settings
+            ServiceLocator.Register<Core>(this);
+            ServiceLocator.Register<GraphicsDeviceManager>(_graphics);
+            ServiceLocator.Register<GameWindow>(Window);
+            ServiceLocator.Register<Global>(Global.Instance);
+            _settings = SettingsManager.LoadSettings();
+            ServiceLocator.Register<GameSettings>(_settings);
 
+            _global = ServiceLocator.Get<Global>();
+
+            // Phase 2: GraphicsDevice Registration
+            ServiceLocator.Register<GraphicsDevice>(GraphicsDevice);
+
+            // Phase 3: Instantiate and Register Managers & Systems in Dependency Order
+            var entityManager = new EntityManager();
+            ServiceLocator.Register<EntityManager>(entityManager);
+
+            var componentStore = new ComponentStore();
+            ServiceLocator.Register<ComponentStore>(componentStore);
+
+            var chunkManager = new ChunkManager();
+            ServiceLocator.Register<ChunkManager>(chunkManager);
+
+            _systemManager = new SystemManager();
+            ServiceLocator.Register<SystemManager>(_systemManager);
+
+            var archetypeManager = new ArchetypeManager();
+            ServiceLocator.Register<ArchetypeManager>(archetypeManager);
+
+            var playerInputSystem = new PlayerInputSystem();
+            ServiceLocator.Register<PlayerInputSystem>(playerInputSystem);
+
+            _actionExecutionSystem = new ActionExecutionSystem();
+            ServiceLocator.Register<ActionExecutionSystem>(_actionExecutionSystem);
+
+            var combatTurnSystem = new CombatTurnSystem();
+            ServiceLocator.Register<CombatTurnSystem>(combatTurnSystem);
+
+            _aiSystem = new AISystem();
+            ServiceLocator.Register<AISystem>(_aiSystem);
+
+            var combatResolutionSystem = new CombatResolutionSystem();
+            ServiceLocator.Register<CombatResolutionSystem>(combatResolutionSystem);
+
+            _combatProcessingSystem = new CombatProcessingSystem();
+            ServiceLocator.Register<CombatProcessingSystem>(_combatProcessingSystem);
+
+            var worldClockManager = new WorldClockManager();
+            ServiceLocator.Register<WorldClockManager>(worldClockManager);
+
+            var noiseManager = new NoiseMapManager();
+            ServiceLocator.Register<NoiseMapManager>(noiseManager);
+
+            var textureFactory = new TextureFactory();
+            ServiceLocator.Register<TextureFactory>(textureFactory);
+
+            _spriteManager = new SpriteManager();
+            ServiceLocator.Register<SpriteManager>(_spriteManager);
+
+            _hapticsManager = new HapticsManager();
+            ServiceLocator.Register<HapticsManager>(_hapticsManager);
+
+            _tooltipManager = new TooltipManager();
+            ServiceLocator.Register<TooltipManager>(_tooltipManager);
+
+            _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);
+            ServiceLocator.Register<GameState>(_gameState);
+
+            var terminalRenderer = new TerminalRenderer();
+            ServiceLocator.Register<TerminalRenderer>(terminalRenderer);
+
+            var mapRenderer = new MapRenderer();
+            ServiceLocator.Register<MapRenderer>(mapRenderer);
+
+            var mapInputHandler = new MapInputHandler(mapRenderer.MapContextMenu, mapRenderer);
+            ServiceLocator.Register<MapInputHandler>(mapInputHandler);
+
+            var autoCompleteManager = new AutoCompleteManager();
+            ServiceLocator.Register<AutoCompleteManager>(autoCompleteManager);
+
+            var commandProcessor = new CommandProcessor(playerInputSystem);
+            ServiceLocator.Register<CommandProcessor>(commandProcessor);
+
+            var statsRenderer = new StatsRenderer();
+            ServiceLocator.Register<StatsRenderer>(statsRenderer);
+
+            var clockRenderer = new ClockRenderer();
+            ServiceLocator.Register<ClockRenderer>(clockRenderer);
+
+            var inputHandler = new InputHandler();
+            ServiceLocator.Register<InputHandler>(inputHandler);
+
+            _sceneManager = new SceneManager();
+            ServiceLocator.Register<SceneManager>(_sceneManager);
+
+            // Phase 4: Final Setup
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
-
-            Settings.ApplyGraphicsSettings(Global.Instance.CurrentGraphics, this);
-            Settings.ApplyGameSettings();
+            _settings.ApplyGraphicsSettings(_graphics, this);
+            _settings.ApplyGameSettings();
 
             _pixel = new Texture2D(GraphicsDevice, 1, 1);
+            _pixel.SetData(new[] { Color.White });
+            ServiceLocator.Register<Texture2D>(_pixel);
 
-            // Register systems with their update frequencies
-            _systemManager.RegisterSystem(_actionExecutionSystem, 0f); // Runs every frame
-
-            // Subscribe the AISystem to the time-passing event
-            _worldClockManager.OnTimePassed += _aiSystem.ProcessEntities;
+            _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
+            worldClockManager.OnTimePassed += _aiSystem.ProcessEntities;
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());
@@ -137,13 +178,13 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
 
             OnResize(null, null);
-
             base.Initialize();
         }
 
         protected override void LoadContent()
         {
-            Global.Instance.CurrentSpriteBatch = new SpriteBatch(GraphicsDevice);
+            _spriteBatch = new SpriteBatch(GraphicsDevice);
+            ServiceLocator.Register<SpriteBatch>(_spriteBatch);
 
             _renderTarget = new RenderTarget2D(
                 GraphicsDevice,
@@ -155,15 +196,16 @@ namespace ProjectVagabond
 
             try
             {
-                Global.Instance.DefaultFont = Content.Load<BitmapFont>("Fonts/Px437_IBM_BIOS");
+                _defaultFont = Content.Load<BitmapFont>("Fonts/Px437_IBM_BIOS");
+                ServiceLocator.Register<BitmapFont>(_defaultFont);
             }
             catch
             {
-                throw new Exception("Please add a BitmapFont to your Content/Fonts folder");
+                throw new Exception("Please add a BitmapFont to your 'Content/Fonts' folder");
             }
 
             _spriteManager.LoadSpriteContent();
-            ArchetypeManager.Instance.LoadArchetypes("Content/Archetypes");
+            ServiceLocator.Get<ArchetypeManager>().LoadArchetypes("Content/Archetypes");
             _gameState.InitializeWorld();
             _gameState.InitializeRenderableEntities();
 
@@ -172,26 +214,26 @@ namespace ProjectVagabond
 
         protected override void Update(GameTime gameTime)
         {
-            if (Settings.IsFrameLimiterEnabled)
+            if (_settings.IsFrameLimiterEnabled)
             {
                 IsFixedTimeStep = true;
-                TargetElapsedTime = TimeSpan.FromSeconds(1.0 / Settings.TargetFramerate);
+                TargetElapsedTime = TimeSpan.FromSeconds(1.0 / _settings.TargetFramerate);
             }
             else
             {
                 IsFixedTimeStep = false;
             }
-            Global.Instance.CurrentGraphics.SynchronizeWithVerticalRetrace = Settings.IsVsync;
+            _graphics.SynchronizeWithVerticalRetrace = _settings.IsVsync;
 
             _sceneManager.Update(gameTime);
 
-            if (CurrentGameState.IsInCombat)
+            if (_gameState.IsInCombat)
             {
                 _combatProcessingSystem.Update(gameTime);
             }
             else if (_sceneManager.CurrentActiveScene is TerminalMapScene)
             {
-                CurrentGameState.UpdateActiveEntities();
+                _gameState.UpdateActiveEntities();
                 _systemManager.Update(gameTime);
             }
 
@@ -204,24 +246,24 @@ namespace ProjectVagabond
             GraphicsDevice.SetRenderTarget(_renderTarget);
             GraphicsDevice.Clear(Color.Transparent);
 
-            _sceneManager.Draw(gameTime);
+            _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime);
 
-            Global.Instance.CurrentSpriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            _tooltipManager.Draw(Global.Instance.CurrentSpriteBatch);
-            Global.Instance.CurrentSpriteBatch.End();
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            _tooltipManager.Draw(_spriteBatch, _defaultFont);
+            _spriteBatch.End();
 
             GraphicsDevice.SetRenderTarget(null);
-            GraphicsDevice.Clear(Global.Instance.GameBg);
+            GraphicsDevice.Clear(_global.GameBg);
 
-            _sceneManager.DrawUnderlay(gameTime);
+            _sceneManager.DrawUnderlay(_spriteBatch, _defaultFont, gameTime);
 
             var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
 
-            Global.Instance.CurrentSpriteBatch.Begin(samplerState: finalSamplerState);
-            Global.Instance.CurrentSpriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
-            Global.Instance.CurrentSpriteBatch.End();
+            _spriteBatch.Begin(samplerState: finalSamplerState);
+            _spriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
+            _spriteBatch.End();
 
-            _sceneManager.DrawOverlay(gameTime);
+            _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
 
             base.Draw(gameTime);
         }
@@ -253,7 +295,7 @@ namespace ProjectVagabond
             else
             {
                 int integerScale = (int)Math.Min(scaleX, scaleY);
-                if (Settings.SmallerUi) integerScale--;
+                if (_settings.SmallerUi) integerScale--;
                 finalScale = Math.Max(1, integerScale);
                 _useLinearSampling = false;
             }
@@ -266,8 +308,7 @@ namespace ProjectVagabond
 
             _finalRenderRectangle = new Rectangle(destX, destY, destWidth, destHeight);
 
-            _mouseTransformMatrix = Matrix.CreateTranslation(-destX, -destY, 0) *
-                                      Matrix.CreateScale(1.0f / finalScale);
+            _mouseTransformMatrix = Matrix.CreateTranslation(-destX, -destY, 0) * Matrix.CreateScale(1.0f / finalScale);
         }
 
         /// <summary>
@@ -275,7 +316,8 @@ namespace ProjectVagabond
         /// </summary>
         public static Vector2 TransformMouse(Point screenPoint)
         {
-            return Vector2.Transform(screenPoint.ToVector2(), _mouseTransformMatrix);
+            var coreInstance = ServiceLocator.Get<Core>();
+            return Vector2.Transform(screenPoint.ToVector2(), coreInstance.MouseTransformMatrix);
         }
 
         /// <summary>
@@ -283,55 +325,12 @@ namespace ProjectVagabond
         /// </summary>
         public static Point TransformVirtualToScreen(Point virtualPoint)
         {
-            // We need the inverse of _mouseTransformMatrix to go from virtual to screen.
-            var toScreenMatrix = Matrix.Invert(_mouseTransformMatrix);
+            var coreInstance = ServiceLocator.Get<Core>();
+            var toScreenMatrix = Matrix.Invert(coreInstance.MouseTransformMatrix);
             var screenVector = Vector2.Transform(virtualPoint.ToVector2(), toScreenMatrix);
             return new Point((int)screenVector.X, (int)screenVector.Y);
         }
 
-        /// <summary>
-        /// Helper method to resize the game window.
-        /// </summary>
-        /// <param name="width"></param>
-        /// <param name="height"></param>
-        public static void ResizeWindow(int width, int height)
-        {
-            var graphics = Global.Instance.CurrentGraphics;
-            graphics.PreferredBackBufferWidth = width;
-            graphics.PreferredBackBufferHeight = height;
-            graphics.ApplyChanges();
-
-            Instance.OnResize(null, null);
-        }
-
-        /// <summary>
-        /// Helper method to exit the application.
-        /// </summary>
         public void ExitApplication() => Exit();
-
-        public static void ScreenShake(float intensity, float duration) =>
-            _hapticsManager.TriggerShake(intensity, duration);
-
-        public static void ScreenHop(float intensity, float duration) =>
-            _hapticsManager.TriggerHop(intensity, duration);
-
-
-
-        public static void ScreenPulse(float intensity, float duration) =>
-            _hapticsManager.TriggerPulse(intensity, duration);
-
-        public static void ScreenWobble(float intensity, float duration, float frequency = 5f) =>
-            _hapticsManager.TriggerWobble(intensity, duration, frequency);
-
-        public static void ScreenDrift(Vector2 direction, float intensity, float duration) =>
-            _hapticsManager.TriggerDrift(direction, intensity, duration);
-
-        public static void ScreenBounce(Vector2 direction, float intensity, float duration) =>
-            _hapticsManager.TriggerBounce(direction, intensity, duration);
-
-        public static void ScreenRandomHop(float intensity, float duration) =>
-            _hapticsManager.TriggerRandomHop(intensity, duration);
-
-        public static void StopAllHaptics() => _hapticsManager.StopAll();
     }
 }

@@ -9,6 +9,11 @@ namespace ProjectVagabond
     /// </summary>
     public class TargetInfoPanel
     {
+        private readonly GameState _gameState;
+        private readonly ComponentStore _componentStore;
+        private readonly ArchetypeManager _archetypeManager;
+        private readonly Global _global;
+
         private readonly Rectangle _bounds;
         private const int PADDING = 5;
         private const int BORDER_THICKNESS = 2;
@@ -16,18 +21,20 @@ namespace ProjectVagabond
         public TargetInfoPanel(Rectangle bounds)
         {
             _bounds = bounds;
+            _gameState = ServiceLocator.Get<GameState>();
+            _componentStore = ServiceLocator.Get<ComponentStore>();
+            _archetypeManager = ServiceLocator.Get<ArchetypeManager>();
+            _global = ServiceLocator.Get<Global>();
         }
 
         /// <summary>
         /// Draws the target info panel if a target is selected.
         /// </summary>
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font)
         {
-            var gameState = Core.CurrentGameState;
-            if (!gameState.IsInCombat) return; // Only draw the panel at all during combat
+            if (!_gameState.IsInCombat || font == null) return;
 
-            var font = Global.Instance.DefaultFont;
-            if (font == null) return;
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             // --- Draw the panel frame regardless of whether a target is selected ---
             var borderRect = new Rectangle(
@@ -36,13 +43,13 @@ namespace ProjectVagabond
                 _bounds.Width + (BORDER_THICKNESS * 2),
                 _bounds.Height + (BORDER_THICKNESS * 2)
             );
-            spriteBatch.Draw(Core.Pixel, borderRect, Global.Instance.Palette_White);
-            spriteBatch.Draw(Core.Pixel, _bounds, Global.Instance.TerminalBg);
+            spriteBatch.Draw(pixel, borderRect, _global.Palette_White);
+            spriteBatch.Draw(pixel, _bounds, _global.TerminalBg);
 
             // --- Now, draw the content based on whether a target is selected ---
-            if (gameState.SelectedTargetId.HasValue)
+            if (_gameState.SelectedTargetId.HasValue)
             {
-                DrawTargetDetails(spriteBatch, gameState.SelectedTargetId.Value, font);
+                DrawTargetDetails(spriteBatch, _gameState.SelectedTargetId.Value, font);
             }
             else
             {
@@ -53,51 +60,52 @@ namespace ProjectVagabond
                     _bounds.Center.X - textSize.X / 2,
                     _bounds.Center.Y - textSize.Y / 2
                 );
-                spriteBatch.DrawString(font, noTargetText, textPosition, Global.Instance.Palette_Gray);
+                spriteBatch.DrawString(font, noTargetText, textPosition, _global.Palette_Gray);
             }
         }
 
         private void DrawTargetDetails(SpriteBatch spriteBatch, int targetId, BitmapFont font)
         {
-            var gameState = Core.CurrentGameState;
-            var health = Core.ComponentStore.GetComponent<HealthComponent>(targetId);
-            var archetypeIdComp = Core.ComponentStore.GetComponent<ArchetypeIdComponent>(targetId);
-            var archetype = ArchetypeManager.Instance.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
-            var targetPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(targetId);
-            var playerPosComp = Core.ComponentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId);
+            var health = _componentStore.GetComponent<HealthComponent>(targetId);
+            var archetypeIdComp = _componentStore.GetComponent<ArchetypeIdComponent>(targetId);
+            var archetype = _archetypeManager.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
+            var targetPosComp = _componentStore.GetComponent<LocalPositionComponent>(targetId);
+            var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
 
             if (health == null || archetype == null || targetPosComp == null || playerPosComp == null) return;
+
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             // Draw content
             float currentY = _bounds.Y + PADDING;
 
             // Target Name
-            spriteBatch.DrawString(font, archetype.Name, new Vector2(_bounds.X + PADDING, currentY), Global.Instance.Palette_Red);
+            spriteBatch.DrawString(font, archetype.Name, new Vector2(_bounds.X + PADDING, currentY), _global.Palette_Red);
             currentY += font.LineHeight + PADDING;
 
             // Health Bar
             string hpText = $"HP: {health.CurrentHealth} / {health.MaxHealth}";
-            spriteBatch.DrawString(font, hpText, new Vector2(_bounds.X + PADDING, currentY), Global.Instance.GameTextColor);
+            spriteBatch.DrawString(font, hpText, new Vector2(_bounds.X + PADDING, currentY), _global.GameTextColor);
             currentY += font.LineHeight;
 
             int barWidth = _bounds.Width - (PADDING * 2);
             int barHeight = 10;
             var bgBarRect = new Rectangle(_bounds.X + PADDING, (int)currentY, barWidth, barHeight);
-            spriteBatch.Draw(Core.Pixel, bgBarRect, Global.Instance.Palette_Red);
+            spriteBatch.Draw(pixel, bgBarRect, _global.Palette_Red);
 
             if (health.CurrentHealth > 0)
             {
                 float healthPercentage = (float)health.CurrentHealth / health.MaxHealth;
                 int fgBarWidth = (int)(barWidth * healthPercentage);
                 var fgBarRect = new Rectangle(_bounds.X + PADDING, (int)currentY, fgBarWidth, barHeight);
-                spriteBatch.Draw(Core.Pixel, fgBarRect, Color.LawnGreen);
+                spriteBatch.Draw(pixel, fgBarRect, Color.LawnGreen);
             }
             currentY += barHeight + PADDING;
 
             // Distance
             float distance = Vector2.Distance(playerPosComp.LocalPosition, targetPosComp.LocalPosition);
             string distanceText = $"Distance: {distance:F1}m";
-            spriteBatch.DrawString(font, distanceText, new Vector2(_bounds.X + PADDING, currentY), Global.Instance.GameTextColor);
+            spriteBatch.DrawString(font, distanceText, new Vector2(_bounds.X + PADDING, currentY), _global.GameTextColor);
         }
     }
 }

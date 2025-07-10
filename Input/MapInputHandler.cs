@@ -1,5 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
@@ -9,10 +11,12 @@ namespace ProjectVagabond
 {
     public class MapInputHandler
     {
-        private GameState _gameState = Core.CurrentGameState;
-        private MapRenderer _mapRenderer = Core.CurrentMapRenderer;
-        private PlayerInputSystem _playerInputSystem = Core.PlayerInputSystem;
-        private ContextMenu _contextMenu;
+        private readonly GameState _gameState;
+        private readonly MapRenderer _mapRenderer;
+        private readonly PlayerInputSystem _playerInputSystem;
+        private readonly ContextMenu _contextMenu;
+        private readonly Global _global;
+        private BitmapFont _font; // Lazyloaded
 
         private MouseState _currentMouseState;
         private MouseState _previousMouseState;
@@ -30,9 +34,12 @@ namespace ProjectVagabond
         {
             _contextMenu = contextMenu;
             _mapRenderer = mapRenderer;
+            _gameState = ServiceLocator.Get<GameState>();
+            _playerInputSystem = ServiceLocator.Get<PlayerInputSystem>();
+            _global = ServiceLocator.Get<Global>();
+
             _previousKeyboardState = Keyboard.GetState();
 
-            // make sure no two buttons share the same Function
             Dictionary<string, int> seen = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             int count = 0;
             foreach (Button button in _mapRenderer.HeaderButtons)
@@ -41,42 +48,30 @@ namespace ProjectVagabond
                 var function = button.Function;
                 if (seen.TryGetValue(function, out var firstIndex))
                 {
-                    throw new InvalidOperationException(
-                        $"Duplicate button function '{function}' found at indices {firstIndex} and {count}."
-                    );
+                    throw new InvalidOperationException($"Duplicate button function '{function}' found at indices {firstIndex} and {count}.");
                 }
                 seen[function] = count;
             }
 
-            // wire up each buttons OnClick and throw if we miss one
             count = 0;
             foreach (var button in _mapRenderer.HeaderButtons)
             {
                 count++;
                 switch (button.Function.ToLowerInvariant())
                 {
-                    case "go":
-                        button.OnClick += HandleGoClick;
-                        break;
-                    case "stop":
-                        button.OnClick += HandleStopClick;
-                        break;
-                    case "map":
-                        button.OnClick += HandleToggleMapClick;
-                        break;
-                    case "clear":
-                        button.OnClick += () => _playerInputSystem.CancelPendingActions(_gameState);
-                        break;
-                    default:
-                        throw new InvalidOperationException(
-                            $"ERROR! No click handler defined for button with function '{button.Function}' at index {count}."
-                        );
+                    case "go": button.OnClick += HandleGoClick; break;
+                    case "stop": button.OnClick += HandleStopClick; break;
+                    case "map": button.OnClick += HandleToggleMapClick; break;
+                    case "clear": button.OnClick += () => _playerInputSystem.CancelPendingActions(_gameState); break;
+                    default: throw new InvalidOperationException($"ERROR! No click handler defined for button with function '{button.Function}' at index {count}.");
                 }
             }
         }
 
         public void Update(GameTime gameTime)
         {
+            _font ??= ServiceLocator.Get<BitmapFont>(); // Lazy-load the font.
+
             _previousMouseState = _currentMouseState;
             _currentMouseState = Mouse.GetState();
             var keyboardState = Keyboard.GetState();
@@ -88,35 +83,25 @@ namespace ProjectVagabond
             {
                 switch (button.Function.ToLower())
                 {
-                    case "go":
-                        button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions;
-                        break;
-                    case "stop":
-                        button.IsEnabled = _gameState.IsExecutingActions;
-                        break;
-                    case "clear":
-                        button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions;
-                        break;
+                    case "go": button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions; break;
+                    case "stop": button.IsEnabled = _gameState.IsExecutingActions; break;
+                    case "clear": button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions; break;
                 }
                 button.Update(_currentMouseState);
             }
 
             bool menuWasOpen = _contextMenu.IsOpen;
-            _contextMenu.Update(_currentMouseState, _previousMouseState, virtualMousePos);
+            _contextMenu.Update(_currentMouseState, _previousMouseState, virtualMousePos, _font);
 
-            if (menuWasOpen)
+            if (menuWasOpen && !_contextMenu.IsOpen)
             {
-                if (!_contextMenu.IsOpen)
-                {
-                    _mapRenderer.RightClickedWorldPos = null;
-                }
+                _mapRenderer.RightClickedWorldPos = null;
                 return;
             }
+            if (menuWasOpen) return;
 
             _mapRenderer.RightClickedWorldPos = null;
-
             HandleMapInteraction(virtualMousePos, keyboardState);
-
             _previousKeyboardState = keyboardState;
         }
 
@@ -142,17 +127,13 @@ namespace ProjectVagabond
             bool leftClickReleased = _currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool rightClickPressed = _currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
 
-            if (_gameState.IsExecutingActions)
-            {
-                return;
-            }
+            if (_gameState.IsExecutingActions) return;
 
             Vector2? hoveredGridPos = _mapRenderer.HoveredGridPos;
 
             if (hoveredGridPos.HasValue)
             {
                 var targetPos = hoveredGridPos.Value;
-
                 if (leftClickPressed)
                 {
                     _isDraggingPath = true;
@@ -165,12 +146,8 @@ namespace ProjectVagabond
                 else if (leftClickHeld && _isDraggingPath)
                 {
                     bool mouseMoved = targetPos != _lastPathTargetPosition;
-
-                    bool altChanged = (keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt)) !=
-                                      (_previousKeyboardState.IsKeyDown(Keys.LeftAlt) || _previousKeyboardState.IsKeyDown(Keys.RightAlt));
-                    bool shiftChanged = (keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift)) !=
-                                        (_previousKeyboardState.IsKeyDown(Keys.LeftShift) || _previousKeyboardState.IsKeyDown(Keys.RightShift));
-
+                    bool altChanged = (keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt)) != (_previousKeyboardState.IsKeyDown(Keys.LeftAlt) || _previousKeyboardState.IsKeyDown(Keys.RightAlt));
+                    bool shiftChanged = (keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift)) != (_previousKeyboardState.IsKeyDown(Keys.LeftShift) || _previousKeyboardState.IsKeyDown(Keys.RightShift));
                     bool modifiersChanged = altChanged || shiftChanged;
 
                     if ((mouseMoved && _pathUpdateTimer >= PATH_PREVIEW_UPDATE_DELAY) || modifiersChanged)
@@ -180,7 +157,6 @@ namespace ProjectVagabond
                         _lastPathTargetPosition = targetPos;
                     }
                 }
-
                 if (rightClickPressed)
                 {
                     HandleRightClickOnMap(targetPos, virtualMousePos);
@@ -197,43 +173,29 @@ namespace ProjectVagabond
         private void HandlePathUpdate(Vector2 targetPos, KeyboardState keyboardState)
         {
             Vector2 playerPos = _gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos;
-
             if (!_gameState.IsPositionPassable(targetPos, _gameState.CurrentMapView)) return;
 
             bool isAltHeld = keyboardState.IsKeyDown(Keys.LeftAlt) || keyboardState.IsKeyDown(Keys.RightAlt);
             bool isRunning = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift);
             var mode = isAltHeld ? PathfindingMode.Moves : PathfindingMode.Time;
 
-            if (_isAppendModeDrag) // APPEND mode (locked in at start of drag)
+            if (_isAppendModeDrag)
             {
                 if (_gameState.PendingActions.Count > _originalPendingActionCount)
                 {
                     _playerInputSystem.RemovePendingActionsFrom(_gameState, _originalPendingActionCount);
                 }
-
-                Vector2 startPos = (_originalPendingActionCount > 0)
-                    ? (_gameState.PendingActions.Last() as MoveAction)?.Destination ?? playerPos
-                    : playerPos;
-
+                Vector2 startPos = (_originalPendingActionCount > 0) ? (_gameState.PendingActions.Last() as MoveAction)?.Destination ?? playerPos : playerPos;
                 if (startPos == targetPos) return;
-
                 var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
-                if (path != null)
-                {
-                    _playerInputSystem.AppendPath(_gameState, path, isRunning: isRunning);
-                }
+                if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: isRunning);
             }
-            else // REPOSITION mode (default)
+            else
             {
                 _playerInputSystem.ClearPendingActions(_gameState);
-
                 if (playerPos == targetPos) return;
-
                 var path = Pathfinder.FindPath(playerPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
-                if (path != null)
-                {
-                    _playerInputSystem.AppendPath(_gameState, path, isRunning: isRunning);
-                }
+                if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: isRunning);
             }
         }
 
@@ -249,146 +211,65 @@ namespace ProjectVagabond
             {
                 if (!isWorldMap)
                 {
-                    Core.CurrentTerminalRenderer.AddOutputToHistory("[error]Cannot queue rests on the local map.");
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Cannot queue rests on the local map." });
                     return;
                 }
-
                 var lastAction = _gameState.PendingActions.LastOrDefault();
                 Vector2 startPos;
-                if (lastAction is MoveAction lastMove)
-                {
-                    startPos = lastMove.Destination;
-                }
-                else if (lastAction is RestAction lastRest)
-                {
-                    startPos = lastRest.Position;
-                }
-                else
-                {
-                    startPos = _gameState.PlayerWorldPos;
-                }
+                if (lastAction is MoveAction lastMove) startPos = lastMove.Destination;
+                else if (lastAction is RestAction lastRest) startPos = lastRest.Position;
+                else startPos = _gameState.PlayerWorldPos;
 
                 if (startPos != targetPos)
                 {
                     var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time, MapView.World);
-                    if (path != null)
-                    {
-                        _playerInputSystem.AppendPath(_gameState, path, isRunning: false);
-                    }
+                    if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: false);
                     else
                     {
-                        Core.CurrentTerminalRenderer.AddOutputToHistory($"[error]Cannot find a path to ({targetPos.X},{targetPos.Y}).");
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Cannot find a path to ({targetPos.X},{targetPos.Y})." });
                         return;
                     }
                 }
-
                 _playerInputSystem.QueueAction(_gameState, new RestAction(_gameState.PlayerEntityId, restType, targetPos));
                 string restTypeName = restType.ToString().Replace("Rest", "").ToLower();
-                Core.CurrentTerminalRenderer.AddOutputToHistory($"Queued a {restTypeName} rest at ({targetPos.X},{targetPos.Y}).");
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Queued a {restTypeName} rest at ({targetPos.X},{targetPos.Y})." });
             };
 
-            menuItems.Add(new ContextMenuItem
+            menuItems.Add(new ContextMenuItem { Text = "Submit Path", IsVisible = () => pathPending && !_gameState.IsExecutingActions, OnClick = () => _gameState.ToggleExecutingActions(true) });
+            menuItems.Add(new ContextMenuItem { Text = "Walk To", IsVisible = () => isPassable && !isPlayerPos, OnClick = () =>
             {
-                Text = "Submit Path",
-                IsVisible = () => pathPending && !_gameState.IsExecutingActions,
-                OnClick = () =>
-                {
-                    _gameState.ToggleExecutingActions(true);
-                    Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
-                }
-            });
-
-            menuItems.Add(new ContextMenuItem
+                var lastAction = _gameState.PendingActions.LastOrDefault();
+                Vector2 startPos;
+                if (lastAction is MoveAction lastMove) startPos = lastMove.Destination;
+                else if (lastAction is RestAction lastRest) startPos = lastRest.Position;
+                else startPos = (_gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos);
+                var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time, _gameState.CurrentMapView);
+                if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: false);
+            }});
+            menuItems.Add(new ContextMenuItem { Text = "Run To", IsVisible = () => isPassable && !isPlayerPos, OnClick = () =>
             {
-                Text = "Walk To",
-                IsVisible = () => isPassable && !isPlayerPos,
-                OnClick = () =>
-                {
-                    var lastAction = _gameState.PendingActions.LastOrDefault();
-                    Vector2 startPos;
-                    if (lastAction is MoveAction lastMove)
-                    {
-                        startPos = lastMove.Destination;
-                    }
-                    else if (lastAction is RestAction lastRest)
-                    {
-                        startPos = lastRest.Position;
-                    }
-                    else
-                    {
-                        startPos = (_gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos);
-                    }
-                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time, _gameState.CurrentMapView);
-                    if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: false);
-                }
-            });
-
-            menuItems.Add(new ContextMenuItem
-            {
-                Text = "Run To",
-                IsVisible = () => isPassable && !isPlayerPos,
-                OnClick = () =>
-                {
-                    var lastAction = _gameState.PendingActions.LastOrDefault();
-                    Vector2 startPos;
-                    if (lastAction is MoveAction lastMove)
-                    {
-                        startPos = lastMove.Destination;
-                    }
-                    else if (lastAction is RestAction lastRest)
-                    {
-                        startPos = lastRest.Position;
-                    }
-                    else
-                    {
-                        startPos = (_gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos);
-                    }
-                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: true, PathfindingMode.Time, _gameState.CurrentMapView);
-                    if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: true);
-                }
-            });
-
-            menuItems.Add(new ContextMenuItem
-            {
-                Text = "Short Rest",
-                IsVisible = () => isPassable && isWorldMap,
-                OnClick = () => queuePathAndRest(RestType.ShortRest)
-            });
-
-            menuItems.Add(new ContextMenuItem
-            {
-                Text = "Long Rest",
-                IsVisible = () => isPassable && isWorldMap,
-                OnClick = () => queuePathAndRest(RestType.LongRest)
-            });
-
-            menuItems.Add(new ContextMenuItem
-            {
-                Text = "Clear Path",
-                Color = Global.Instance.Palette_Yellow,
-                IsVisible = () => pathPending,
-                OnClick = () =>
-                {
-                    _playerInputSystem.CancelPendingActions(_gameState);
-                }
-            });
+                var lastAction = _gameState.PendingActions.LastOrDefault();
+                Vector2 startPos;
+                if (lastAction is MoveAction lastMove) startPos = lastMove.Destination;
+                else if (lastAction is RestAction lastRest) startPos = lastRest.Position;
+                else startPos = (_gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos);
+                var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: true, PathfindingMode.Time, _gameState.CurrentMapView);
+                if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: true);
+            }});
+            menuItems.Add(new ContextMenuItem { Text = "Short Rest", IsVisible = () => isPassable && isWorldMap, OnClick = () => queuePathAndRest(RestType.ShortRest) });
+            menuItems.Add(new ContextMenuItem { Text = "Long Rest", IsVisible = () => isPassable && isWorldMap, OnClick = () => queuePathAndRest(RestType.LongRest) });
+            menuItems.Add(new ContextMenuItem { Text = "Clear Path", Color = _global.Palette_Yellow, IsVisible = () => pathPending, OnClick = () => _playerInputSystem.CancelPendingActions(_gameState) });
 
             if (isWorldMap) _mapRenderer.RightClickedWorldPos = targetPos;
 
             Vector2? menuScreenPos = _mapRenderer.MapCoordsToScreen(targetPos);
             Vector2 finalMenuPos;
-            int cellSize = _gameState.CurrentMapView == MapView.World ? Global.GRID_CELL_SIZE : 5;
+            int cellSize = _gameState.CurrentMapView == MapView.World ? Global.GRID_CELL_SIZE : Global.LOCAL_GRID_CELL_SIZE;
 
-            if (menuScreenPos.HasValue)
-            {
-                finalMenuPos = new Vector2(menuScreenPos.Value.X + cellSize, menuScreenPos.Value.Y + cellSize);
-            }
-            else
-            {
-                finalMenuPos = mousePos;
-            }
+            if (menuScreenPos.HasValue) finalMenuPos = new Vector2(menuScreenPos.Value.X + cellSize, menuScreenPos.Value.Y + cellSize);
+            else finalMenuPos = mousePos;
 
-            _contextMenu.Show(finalMenuPos, menuItems);
+            _contextMenu.Show(finalMenuPos, menuItems, _font);
         }
     }
 }

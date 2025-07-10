@@ -8,6 +8,8 @@ namespace ProjectVagabond.UI
 {
     public class Button
     {
+        protected readonly Global _global;
+
         public Rectangle Bounds { get; set; }
         public string Text { get; set; }
         public string Function { get; set; }
@@ -29,6 +31,8 @@ namespace ProjectVagabond.UI
 #nullable enable
         public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f)
         {
+            _global = ServiceLocator.Get<Global>();
+
             if (function == null)
             {
                 function = text;
@@ -47,16 +51,11 @@ namespace ProjectVagabond.UI
 
         public virtual void Update(MouseState currentMouseState)
         {
-            if (!IsEnabled)
-            {
-                IsHovered = false;
-                return;
-            }
-
-            Vector2 mousePos = UseScreenCoordinates
+            Vector2 virtualMousePos = UseScreenCoordinates
                 ? currentMouseState.Position.ToVector2()
                 : Core.TransformMouse(currentMouseState.Position);
-            IsHovered = Bounds.Contains(mousePos);
+
+            UpdateHoverState(virtualMousePos);
 
             if (IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
@@ -66,18 +65,14 @@ namespace ProjectVagabond.UI
             _previousMouseState = currentMouseState;
         }
 
-        public void UpdateHoverState(MouseState currentMouseState)
+        public void UpdateHoverState(Vector2 virtualMousePos)
         {
             if (!IsEnabled)
             {
                 IsHovered = false;
                 return;
             }
-
-            Vector2 mousePos = UseScreenCoordinates
-                ? currentMouseState.Position.ToVector2()
-                : Core.TransformMouse(currentMouseState.Position);
-            IsHovered = Bounds.Contains(mousePos);
+            IsHovered = Bounds.Contains(virtualMousePos);
         }
 
         public void TriggerClick()
@@ -100,80 +95,57 @@ namespace ProjectVagabond.UI
 
             if (!IsEnabled)
             {
-                textColor = CustomDisabledTextColor ?? Global.Instance.ButtonDisableColor;
+                textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
             }
             else
             {
                 textColor = isActivated
-                    ? (CustomHoverTextColor ?? Global.Instance.ButtonHoverColor)
-                    : (CustomDefaultTextColor ?? Global.Instance.Palette_BrightWhite);
+                    ? (CustomHoverTextColor ?? _global.ButtonHoverColor)
+                    : (CustomDefaultTextColor ?? _global.Palette_BrightWhite);
             }
 
             float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             Vector2 textSize = font.MeasureString(Text);
 
-            // Store the original rasterizer state
             var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
             var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
-
-            // Create a new rasterizer state for clipping
             var clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
-            // Begin a new sprite batch with the clipping state
             spriteBatch.End();
             spriteBatch.Begin(samplerState: SamplerState.PointClamp, rasterizerState: clipRasterizerState);
 
-            // Apply the clipping rectangle
             spriteBatch.GraphicsDevice.ScissorRectangle = Bounds;
 
-            // Handle Overflow Scrolling
             bool shouldScroll = OverflowScrollSpeed > 0 && textSize.X > Bounds.Width;
             if (shouldScroll)
             {
                 _scrollPosition += (float)gameTime.ElapsedGameTime.TotalSeconds * OverflowScrollSpeed;
-
-                // The text to scroll is the original text plus a separator and itself again for a seamless loop
                 string scrollingText = Text + "  ";
                 Vector2 scrollingTextSize = font.MeasureString(scrollingText);
-
                 if (_scrollPosition > scrollingTextSize.X)
                 {
                     _scrollPosition -= scrollingTextSize.X;
                 }
-
-                Vector2 scrollTextPosition = new Vector2(
-                    Bounds.X - _scrollPosition,
-                    Bounds.Y + (Bounds.Height - textSize.Y) / 2
-                );
-
-                // Draw the text twice for seamless scrolling
+                Vector2 scrollTextPosition = new Vector2(Bounds.X - _scrollPosition, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
                 spriteBatch.DrawString(font, scrollingText, scrollTextPosition, textColor);
                 spriteBatch.DrawString(font, scrollingText, new Vector2(scrollTextPosition.X + scrollingTextSize.X, scrollTextPosition.Y), textColor);
             }
             else
             {
-                // Handle standard text alignment
                 Vector2 textPosition;
                 if (AlignLeft)
                 {
-                    textPosition = new Vector2(
-                        Bounds.X + xOffset,
-                        Bounds.Y + (Bounds.Height - textSize.Y) / 2
-                    );
+                    textPosition = new Vector2(Bounds.X + xOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
                 }
-                else // Center align (default)
+                else
                 {
-                    textPosition = new Vector2(
-                        Bounds.X + (Bounds.Width - textSize.X) / 2 + xOffset,
-                        Bounds.Y + (Bounds.Height - textSize.Y) / 2
-                    );
+                    textPosition = new Vector2(Bounds.X + (Bounds.Width - textSize.X) / 2 + xOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
                 }
                 spriteBatch.DrawString(font, Text, textPosition, textColor);
             }
 
-            // End the clipping sprite batch and restore the original state
             spriteBatch.End();
-            spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect; // Restore scissor rect
+            spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
             spriteBatch.Begin(samplerState: SamplerState.PointClamp, rasterizerState: originalRasterizerState);
         }
     }

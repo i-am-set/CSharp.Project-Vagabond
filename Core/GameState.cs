@@ -10,11 +10,21 @@ namespace ProjectVagabond
 {
     public enum MapView { World, Local }
 
-    // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
     public class GameState
     {
-        private NoiseMapManager _noiseManager;
+        // Injected Dependencies
+        private readonly NoiseMapManager _noiseManager;
+        private readonly ComponentStore _componentStore;
+        private readonly WorldClockManager _worldClockManager;
+        private readonly ChunkManager _chunkManager;
+        private readonly Global _global;
+        private readonly SpriteManager _spriteManager;
+
+        // Lazyloaded System Dependencies
+        private ActionExecutionSystem _actionExecutionSystem;
+        private AISystem _aiSystem;
+        private CombatTurnSystem _combatTurnSystem;
+
         private bool _isExecutingActions = false;
         private bool _isFreeMoveMode = false;
         private bool _isPaused = false;
@@ -23,14 +33,14 @@ namespace ProjectVagabond
         public MapView PathExecutionMapView { get; private set; }
 
         public int PlayerEntityId { get; private set; }
-        public Vector2 PlayerWorldPos => Core.ComponentStore.GetComponent<PositionComponent>(PlayerEntityId).WorldPosition;
-        public Vector2 PlayerLocalPos => Core.ComponentStore.GetComponent<LocalPositionComponent>(PlayerEntityId).LocalPosition;
-        public Queue<IAction> PendingActions => Core.ComponentStore.GetComponent<ActionQueueComponent>(PlayerEntityId).ActionQueue;
+        public Vector2 PlayerWorldPos => _componentStore.GetComponent<PositionComponent>(PlayerEntityId).WorldPosition;
+        public Vector2 PlayerLocalPos => _componentStore.GetComponent<LocalPositionComponent>(PlayerEntityId).LocalPosition;
+        public Queue<IAction> PendingActions => _componentStore.GetComponent<ActionQueueComponent>(PlayerEntityId).ActionQueue;
         public bool IsExecutingActions => _isExecutingActions;
         public bool IsPaused => _isPaused;
         public bool IsFreeMoveMode => _isFreeMoveMode;
         public NoiseMapManager NoiseManager => _noiseManager;
-        public StatsComponent PlayerStats => Core.ComponentStore.GetComponent<StatsComponent>(PlayerEntityId);
+        public StatsComponent PlayerStats => _componentStore.GetComponent<StatsComponent>(PlayerEntityId);
         public MapView CurrentMapView { get; private set; } = MapView.World;
         public (int finalEnergy, bool possible, int secondsPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
         public List<int> ActiveEntities { get; private set; } = new List<int>();
@@ -48,49 +58,44 @@ namespace ProjectVagabond
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public GameState()
+        public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, WorldClockManager worldClockManager, ChunkManager chunkManager, Global global, SpriteManager spriteManager)
         {
-            int masterSeed = RandomNumberGenerator.GetInt32(1, 99999) + Environment.TickCount;
-            _noiseManager = new NoiseMapManager(masterSeed);
+            _noiseManager = noiseManager;
+            _componentStore = componentStore;
+            _worldClockManager = worldClockManager;
+            _chunkManager = chunkManager;
+            _global = global;
+            _spriteManager = spriteManager;
         }
 
         public void InitializeWorld()
         {
-            // Spawn player and assign its ID to the GameState
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0), localPosition: new Vector2(32, 32));
-
-            // Spawn an NPC
-            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 39));
+            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 34));
         }
 
-        /// <summary>
-        /// Initializes components that depend on loaded content.
-        /// This should be called from Core.LoadContent().
-        /// </summary>
         public void InitializeRenderableEntities()
         {
-            // Now that sprites are loaded, we can safely add the RenderableComponents.
-            // --- PLAYER ---
-            var playerRenderable = Core.ComponentStore.GetComponent<RenderableComponent>(PlayerEntityId);
+            // Player
+            var playerRenderable = _componentStore.GetComponent<RenderableComponent>(PlayerEntityId);
             if (playerRenderable != null)
             {
-                playerRenderable.Texture = Core.CurrentSpriteManager.PlayerSprite;
+                playerRenderable.Texture = _spriteManager.PlayerSprite;
             }
 
-            // --- NPCs ---
-            var npcEntities = Core.ComponentStore.GetAllEntitiesWithComponent<NPCTagComponent>().ToList();
+            // NPCs
+            var npcEntities = _componentStore.GetAllEntitiesWithComponent<NPCTagComponent>().ToList();
             foreach (var npcId in npcEntities)
             {
                 // Get the component that the Spawner already created from the JSON file.
-                var renderable = Core.ComponentStore.GetComponent<RenderableComponent>(npcId);
-
+                var renderable = _componentStore.GetComponent<RenderableComponent>(npcId);
                 // If the component exists but doesn't have a texture yet, assign one.
                 // This preserves the color and other properties loaded from the JSON.
                 if (renderable != null && renderable.Texture == null)
                 {
                     // For now, all NPCs get a generic pixel sprite.
                     // In the future, you could have a lookup here based on archetype ID.
-                    renderable.Texture = Core.Pixel;
+                    renderable.Texture = ServiceLocator.Get<Texture2D>();
                 }
             }
         }
@@ -98,16 +103,15 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // COMBAT MANAGEMENT
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
         public void InitiateCombat(List<int> initialCombatants)
         {
-            CancelExecutingActions(true); // Interrupt player's pathfinding
+            CancelExecutingActions(true);
 
             if (IsInCombat) return;
 
-            Core.CurrentTerminalRenderer.ClearCombatHistory();
+            EventBus.Publish(new GameEvents.CombatStateChanged { IsInCombat = true });
             IsInCombat = true;
-            CurrentMapView = MapView.Local; // Lock map view to local for combat
+            CurrentMapView = MapView.Local;
             Combatants = new List<int>(initialCombatants);
             InitiativeOrder.Clear();
 
@@ -117,7 +121,7 @@ namespace ProjectVagabond
 
             foreach (var entityId in Combatants)
             {
-                var stats = Core.ComponentStore.GetComponent<StatsComponent>(entityId);
+                var stats = _componentStore.GetComponent<StatsComponent>(entityId);
                 int agility = stats?.Agility ?? 0;
                 int initiative = _random.Next(1, 21) + agility;
                 initiativeScores[entityId] = initiative;
@@ -134,16 +138,15 @@ namespace ProjectVagabond
                 initiativeLog.Append($"\n  {i + 1}. {name} ({initiativeScores[entityId]})");
             }
 
-            Core.CurrentTerminalRenderer.AddCombatLog(initiativeLog.ToString());
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = initiativeLog.ToString() });
 
-            Core.CombatTurnSystem.StartCombat();
+            _combatTurnSystem ??= ServiceLocator.Get<CombatTurnSystem>();
+            _combatTurnSystem.StartCombat();
 
-            // --- CRITICAL FIX ---
-            // After setting up combat, if the first entity to act is an AI,
-            // we must immediately tell it to process its turn.
-            if (Core.ComponentStore.HasComponent<AIComponent>(CurrentTurnEntityId))
+            if (_componentStore.HasComponent<AIComponent>(CurrentTurnEntityId))
             {
-                Core.AISystem.ProcessCombatTurn(CurrentTurnEntityId);
+                _aiSystem ??= ServiceLocator.Get<AISystem>();
+                _aiSystem.ProcessCombatTurn(CurrentTurnEntityId);
             }
         }
 
@@ -156,7 +159,7 @@ namespace ProjectVagabond
         {
             // Logic to clean up and end combat will be implemented later.
             UIState = CombatUIState.Default;
-            Core.CurrentTerminalRenderer.ClearCombatHistory();
+            EventBus.Publish(new GameEvents.CombatStateChanged { IsInCombat = false });
         }
 
         public void SetCurrentTurnEntity(int entityId)
@@ -168,7 +171,7 @@ namespace ProjectVagabond
 
         public void UpdateActiveEntities()
         {
-            var playerPosComp = Core.ComponentStore.GetComponent<PositionComponent>(PlayerEntityId);
+            var playerPosComp = _componentStore.GetComponent<PositionComponent>(PlayerEntityId);
             if (playerPosComp == null)
             {
                 ActiveEntities.Clear();
@@ -176,10 +179,8 @@ namespace ProjectVagabond
             }
 
             var playerChunkCoords = ChunkManager.WorldToChunkCoords(playerPosComp.WorldPosition);
-            var tetheredEntities = Core.ChunkManager.GetEntitiesInTetherRange(playerChunkCoords);
-
-            var highImportanceEntities = Core.ComponentStore.GetAllEntitiesWithComponent<HighImportanceComponent>();
-
+            var tetheredEntities = _chunkManager.GetEntitiesInTetherRange(playerChunkCoords);
+            var highImportanceEntities = _componentStore.GetAllEntitiesWithComponent<HighImportanceComponent>();
             ActiveEntities = tetheredEntities.Union(highImportanceEntities).ToList();
         }
 
@@ -187,7 +188,7 @@ namespace ProjectVagabond
         {
             CancelExecutingActions();
             CurrentMapView = (CurrentMapView == MapView.World) ? MapView.Local : MapView.World;
-            Core.CurrentTerminalRenderer.AddOutputToHistory($"[undo]Switched to {CurrentMapView} map view.");
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[undo]Switched to {CurrentMapView} map view." });
         }
 
         public void TogglePause()
@@ -200,18 +201,19 @@ namespace ProjectVagabond
 
         public void ToggleExecutingActions(bool toggle)
         {
+            _actionExecutionSystem ??= ServiceLocator.Get<ActionExecutionSystem>();
             ToggleIsFreeMoveMode(false);
             if (toggle)
             {
                 InitialActionCount = PendingActions.Count;
                 PathExecutionMapView = CurrentMapView;
-                Core.ActionExecutionSystem.StartExecution();
-                Core.CurrentTerminalRenderer.AddOutputToHistory($"Executing queue of[undo] {Core.CurrentGameState.PendingActions.Count}[gray] action(s)...");
+                _actionExecutionSystem.StartExecution();
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Executing queue of[undo] {PendingActions.Count}[gray] action(s)..." });
             }
             else
             {
                 InitialActionCount = 0;
-                Core.ActionExecutionSystem.StopExecution();
+                _actionExecutionSystem.StopExecution();
             }
             _isExecutingActions = toggle;
             IsActionQueueDirty = true;
@@ -224,14 +226,8 @@ namespace ProjectVagabond
 
             if (cachedFreeMoveMode != _isFreeMoveMode)
             {
-                if (toggle)
-                {
-                    Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Free move enabled.");
-                }
-                else
-                {
-                    Core.CurrentTerminalRenderer.AddOutputToHistory("[warning]Free move disabled.");
-                }
+                if (toggle) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[warning]Free move enabled." });
+                else EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[warning]Free move disabled." });
             }
             IsActionQueueDirty = true;
         }
@@ -246,7 +242,7 @@ namespace ProjectVagabond
             }
 
             mapData = GetMapDataAt((int)position.X, (int)position.Y);
-            return mapData.IsPassable;
+            return mapData.TerrainHeight >= _global.WaterLevel && mapData.TerrainHeight < _global.MountainsLevel;
         }
 
         public bool IsPositionPassable(Vector2 position, MapView view)
@@ -264,7 +260,7 @@ namespace ProjectVagabond
             if (action.IsRunning)
             {
                 var mapData = GetMapDataAt((int)action.Destination.X, (int)action.Destination.Y);
-                return mapData.EnergyCost;
+                return GetTerrainEnergyCost(mapData.TerrainHeight);
             }
 
             return 0;
@@ -291,9 +287,9 @@ namespace ProjectVagabond
                 secondsPassed += baseTime;
                 secondsPassed += mapData.TerrainHeight switch
                 {
-                    var height when height < Global.Instance.FlatlandsLevel => 0, // Flatlands (and water, though we can't enter it)
-                    var height when height < Global.Instance.HillsLevel => secondsPassed * 0.5f, // Hills
-                    var height when height < Global.Instance.MountainsLevel => secondsPassed + 300, // Mountains
+                    var height when height < _global.FlatlandsLevel => 0,
+                    var height when height < _global.HillsLevel => secondsPassed * 0.5f,
+                    var height when height < _global.MountainsLevel => secondsPassed + 300,
                     _ => 0
                 };
             }
@@ -323,7 +319,6 @@ namespace ProjectVagabond
 
                     int moveDuration = GetSecondsPassedDuringMovement(moveAction.IsRunning, mapData, moveDirection, isLocalMove);
 
-                    // Apply first-move time scaling for world map simulation
                     if (!isLocalMove && isFirstMoveInQueue)
                     {
                         float scaleFactor = GetFirstMoveTimeScaleFactor(moveDirection);
@@ -380,22 +375,21 @@ namespace ProjectVagabond
         {
             if (_isExecutingActions)
             {
-                Core.ActionExecutionSystem.HandleInterruption(); // Let the system handle partial effects
+                _actionExecutionSystem ??= ServiceLocator.Get<ActionExecutionSystem>();
+                _actionExecutionSystem.HandleInterruption();
                 ToggleExecutingActions(false);
                 _isPaused = false;
                 PendingActions.Clear();
                 ToggleIsFreeMoveMode(false);
-                Core.CurrentWorldClockManager.CancelInterpolation();
-                Core.CurrentTerminalRenderer.AddOutputToHistory(interrupted ? "[cancel]Action queue interrupted." : "[cancel]Action queue cancelled.");
+                _worldClockManager.CancelInterpolation();
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = interrupted ? "[cancel]Action queue interrupted." : "[cancel]Action queue cancelled." });
             }
         }
 
         public float GetFirstMoveTimeScaleFactor(Vector2 worldMoveDirection)
         {
             Vector2 startPos = PlayerLocalPos;
-
             const float localGridMax = Global.LOCAL_GRID_SIZE - 1;
-
             Vector2 exitPos = startPos;
 
             if (worldMoveDirection.X > 0) exitPos.X = localGridMax;
@@ -425,23 +419,37 @@ namespace ProjectVagabond
 
         public MapData GetMapDataAt(int x, int y) => _noiseManager.GetMapData(x, y);
         public float GetNoiseAt(int x, int y) => _noiseManager.GetNoiseValue(NoiseMapType.TerrainHeight, x, y);
+
         public string GetTerrainDescription(float noise)
         {
-            if (noise < Global.Instance.WaterLevel) return "deep water";
-            if (noise < Global.Instance.FlatlandsLevel) return "flatlands";
-            if (noise < Global.Instance.HillsLevel) return "hills";
-            if (noise < Global.Instance.MountainsLevel) return "mountains";
+            if (noise < _global.WaterLevel) return "deep water";
+            if (noise < _global.FlatlandsLevel) return "flatlands";
+            if (noise < _global.HillsLevel) return "hills";
+            if (noise < _global.MountainsLevel) return "mountains";
             return "peaks";
         }
-        public string GetTerrainDescription(int x, int y) => GetMapDataAt(x, y).TerrainType.ToLower();
+
+        public string GetTerrainDescription(MapData data) => GetTerrainDescription(data.TerrainHeight);
+        public string GetTerrainDescription(int x, int y) => GetTerrainDescription(GetMapDataAt(x, y).TerrainHeight);
+
         public Texture2D GetTerrainTexture(float noise)
         {
-            if (noise < Global.Instance.WaterLevel) return Core.CurrentSpriteManager.WaterSprite;
-            if (noise < Global.Instance.FlatlandsLevel) return Core.CurrentSpriteManager.FlatlandSprite;
-            if (noise < Global.Instance.HillsLevel) return Core.CurrentSpriteManager.HillSprite;
-            if (noise < Global.Instance.MountainsLevel) return Core.CurrentSpriteManager.MountainSprite;
-            return Core.CurrentSpriteManager.PeakSprite;
+            if (noise < _global.WaterLevel) return _spriteManager.WaterSprite;
+            if (noise < _global.FlatlandsLevel) return _spriteManager.FlatlandSprite;
+            if (noise < _global.HillsLevel) return _spriteManager.HillSprite;
+            if (noise < _global.MountainsLevel) return _spriteManager.MountainSprite;
+            return _spriteManager.PeakSprite;
         }
+
         public Texture2D GetTerrainTexture(int x, int y) => GetTerrainTexture(GetNoiseAt(x, y));
+
+        private int GetTerrainEnergyCost(float height)
+        {
+            if (height < _global.WaterLevel) return 3;
+            if (height < _global.FlatlandsLevel) return 1;
+            if (height < _global.HillsLevel) return 2;
+            if (height < _global.MountainsLevel) return 4;
+            return 5;
+        }
     }
 }
