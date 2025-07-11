@@ -19,7 +19,6 @@ namespace ProjectVagabond
         private readonly WorldClockManager _worldClockManager;
         private readonly HapticsManager _hapticsManager;
         private readonly Global _global;
-        private readonly GraphicsDevice _graphicsDevice;
         private AutoCompleteManager _autoCompleteManager; // Lazy loaded
         private InputHandler _inputHandler; // Lazy loaded
 
@@ -46,10 +45,6 @@ namespace ProjectVagabond
         private bool _cachedIsExecutingPath = false;
         private bool _cachedIsFreeMoveMode = false;
 
-        // Render Target Caching
-        private RenderTarget2D _historyCacheTarget;
-        private RenderTarget2D _combatHistoryCacheTarget;
-
         public List<ColoredLine> WrappedHistory => _wrappedHistory;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -61,7 +56,6 @@ namespace ProjectVagabond
             _worldClockManager = ServiceLocator.Get<WorldClockManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _global = ServiceLocator.Get<Global>();
-            _graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
 
             // Subscribe to events for decoupled communication
             EventBus.Subscribe<GameEvents.TerminalMessagePublished>(OnTerminalMessagePublished);
@@ -174,22 +168,27 @@ namespace ProjectVagabond
             _inputHandler ??= ServiceLocator.Get<InputHandler>();
             _autoCompleteManager ??= ServiceLocator.Get<AutoCompleteManager>();
 
-            if (_historyDirty) ReWrapHistory(font);
-            if (_combatHistoryDirty) ReWrapCombatHistory(font);
-
-            RedrawHistoryCaches(spriteBatch, font);
+            // Re-wrap text only when the history has changed, using the provided font.
+            if (_historyDirty)
+            {
+                ReWrapHistory(font);
+            }
+            if (_combatHistoryDirty)
+            {
+                ReWrapCombatHistory(font);
+            }
 
             bool isInCombat = _gameState.IsInCombat;
             int terminalHeight = GetTerminalHeight();
             int terminalX = 375;
             int terminalY = Global.TERMINAL_Y;
-            int terminalWidth = (!isInCombat ? Global.DEFAULT_TERMINAL_WIDTH : Global.DEFAULT_TERMINAL_WIDTH - 150);
+            int terminalWidth = (!isInCombat ? Global.DEFAULT_TERMINAL_WIDTH : Global.DEFAULT_TERMINAL_WIDTH - 150); // Adjusted width for combat
 
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
+            // Determine which history and scroll offset to use
             List<ColoredLine> activeHistory = isInCombat ? _wrappedCombatHistory : _wrappedHistory;
             int activeScrollOffset = isInCombat ? CombatScrollOffset : ScrollOffset;
-            RenderTarget2D activeCache = isInCombat ? _combatHistoryCacheTarget : _historyCacheTarget;
 
             // Draw Frame
             spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 25, terminalWidth + 10, terminalHeight + 30), _global.TerminalBg);
@@ -200,24 +199,28 @@ namespace ProjectVagabond
             spriteBatch.DrawString(font, "Terminal Output", new Vector2(terminalX, terminalY - 20), _global.GameTextColor);
             spriteBatch.Draw(pixel, new Rectangle(terminalX - 5, terminalY - 5, terminalWidth + 10, 2), _global.Palette_White);
 
-            // Draw History from Cache
-            if (activeCache != null && !activeCache.IsDisposed)
+            // Draw History
+            int maxVisibleLines = GetMaxVisibleLines();
+            int totalLines = activeHistory.Count;
+            int lastHistoryIndexToDraw = totalLines - 1 - activeScrollOffset;
+            float lastScreenLineY = terminalY + GetOutputAreaHeight() - Global.TERMINAL_LINE_SPACING;
+
+            for (int i = 0; i < maxVisibleLines; i++)
             {
-                int outputAreaHeight = GetOutputAreaHeight();
-                int totalHistoryPixelHeight = activeHistory.Count * Global.TERMINAL_LINE_SPACING;
+                int historyIndex = lastHistoryIndexToDraw - i;
+                if (historyIndex < 0) break;
 
-                var sourceRect = new Rectangle
+                float y = lastScreenLineY - i * Global.TERMINAL_LINE_SPACING;
+                if (y < terminalY) continue;
+
+                float x = terminalX;
+                var line = activeHistory[historyIndex];
+
+                foreach (var segment in line.Segments)
                 {
-                    X = 0,
-                    Width = activeCache.Width,
-                    Height = Math.Min(outputAreaHeight, activeCache.Height)
-                };
-                sourceRect.Y = Math.Max(0, totalHistoryPixelHeight - sourceRect.Height - (activeScrollOffset * Global.TERMINAL_LINE_SPACING));
-                sourceRect.Y = Math.Min(sourceRect.Y, activeCache.Height - sourceRect.Height);
-
-                var destRect = new Rectangle(terminalX, terminalY, (int)GetTerminalContentWidthInPixels(font), outputAreaHeight);
-
-                spriteBatch.Draw(activeCache, destRect, sourceRect, Color.White);
+                    spriteBatch.DrawString(font, segment.Text, new Vector2(x, y), segment.Color);
+                    x += font.MeasureString(segment.Text).Width;
+                }
             }
 
             // Draw Scroll Indicator
@@ -504,77 +507,6 @@ namespace ProjectVagabond
             return _global.GameTextColor;
         }
 
-        private void RedrawHistoryCaches(SpriteBatch spriteBatch, BitmapFont font)
-        {
-            if (!_historyDirty && !_combatHistoryDirty) return;
-
-            int cacheWidth = (int)GetTerminalContentWidthInPixels(font);
-            int cacheHeight = Global.MAX_HISTORY_LINES * Global.TERMINAL_LINE_SPACING;
-
-            if (cacheWidth <= 0 || cacheHeight <= 0) return;
-
-            if (_historyCacheTarget == null || _historyCacheTarget.Width != cacheWidth || _historyCacheTarget.Height != cacheHeight)
-            {
-                _historyCacheTarget?.Dispose();
-                _historyCacheTarget = new RenderTarget2D(_graphicsDevice, cacheWidth, cacheHeight, false, _graphicsDevice.PresentationParameters.BackBufferFormat, DepthFormat.None);
-                _historyDirty = true;
-            }
-            if (_combatHistoryCacheTarget == null || _combatHistoryCacheTarget.Width != cacheWidth || _combatHistoryCacheTarget.Height != cacheHeight)
-            {
-                _combatHistoryCacheTarget?.Dispose();
-                _combatHistoryCacheTarget = new RenderTarget2D(_graphicsDevice, cacheWidth, cacheHeight, false, _graphicsDevice.PresentationParameters.BackBufferFormat, DepthFormat.None);
-                _combatHistoryDirty = true;
-            }
-
-            spriteBatch.End();
-
-            var originalRenderTargets = _graphicsDevice.GetRenderTargets();
-
-            if (_historyDirty)
-            {
-                _graphicsDevice.SetRenderTarget(_historyCacheTarget);
-                _graphicsDevice.Clear(_global.TerminalBg);
-                spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                for (int i = 0; i < _wrappedHistory.Count; i++)
-                {
-                    float x = 0;
-                    float y = i * Global.TERMINAL_LINE_SPACING;
-                    var line = _wrappedHistory[i];
-                    foreach (var segment in line.Segments)
-                    {
-                        spriteBatch.DrawString(font, segment.Text, new Vector2(x, y), segment.Color);
-                        x += font.MeasureString(segment.Text).Width;
-                    }
-                }
-                spriteBatch.End();
-                _historyDirty = false;
-            }
-
-            if (_combatHistoryDirty)
-            {
-                _graphicsDevice.SetRenderTarget(_combatHistoryCacheTarget);
-                _graphicsDevice.Clear(_global.TerminalBg);
-                spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                for (int i = 0; i < _wrappedCombatHistory.Count; i++)
-                {
-                    float x = 0;
-                    float y = i * Global.TERMINAL_LINE_SPACING;
-                    var line = _wrappedCombatHistory[i];
-                    foreach (var segment in line.Segments)
-                    {
-                        spriteBatch.DrawString(font, segment.Text, new Vector2(x, y), segment.Color);
-                        x += font.MeasureString(segment.Text).Width;
-                    }
-                }
-                spriteBatch.End();
-                _combatHistoryDirty = false;
-            }
-
-            _graphicsDevice.SetRenderTargets(originalRenderTargets);
-
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-        }
-
         private void ReWrapHistory(BitmapFont font)
         {
             _wrappedHistory.Clear();
@@ -583,7 +515,7 @@ namespace ProjectVagabond
             {
                 _wrappedHistory.AddRange(WrapColoredText(line, wrapWidth, font));
             }
-            _historyDirty = true;
+            _historyDirty = false;
         }
 
         private void ReWrapCombatHistory(BitmapFont font)
@@ -594,7 +526,7 @@ namespace ProjectVagabond
             {
                 _wrappedCombatHistory.AddRange(WrapColoredText(line, wrapWidth, font));
             }
-            _combatHistoryDirty = true;
+            _combatHistoryDirty = false;
         }
 
         private List<ColoredLine> WrapColoredText(ColoredLine line, float maxWidthInPixels, BitmapFont font)
@@ -825,6 +757,7 @@ namespace ProjectVagabond
 
         public int GetMaxVisibleLines()
         {
+            // Subtract a small buffer to prevent the last line from being partially cut off.
             return (GetOutputAreaHeight() - 5) / Global.TERMINAL_LINE_SPACING;
         }
     }

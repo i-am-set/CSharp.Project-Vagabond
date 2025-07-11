@@ -18,7 +18,6 @@ namespace ProjectVagabond
         private readonly ArchetypeManager _archetypeManager;
         private readonly WorldClockManager _worldClockManager;
         private readonly Global _global;
-        private readonly GraphicsDevice _graphicsDevice;
 
         private Vector2? _hoveredGridPos;
         private Rectangle _mapGridBounds;
@@ -26,6 +25,7 @@ namespace ProjectVagabond
         private string _cachedTimeText;
         private Vector2 _timeTextPos;
         private int _cachedMapStartX, _cachedMapWidth;
+        private MapView _cachedMapView;
         private readonly Dictionary<string, Button> _buttonMap;
 
         private readonly List<Button> _headerButtons = new List<Button>();
@@ -34,12 +34,6 @@ namespace ProjectVagabond
         public Vector2? HoveredGridPos => _hoveredGridPos;
         public ContextMenu MapContextMenu => _contextMenu;
         public Vector2? RightClickedWorldPos { get; set; }
-
-        // Cache state
-        private RenderTarget2D _mapCacheTarget;
-        private bool _isMapCacheDirty = true;
-        private Vector2 _cachedPlayerWorldPos = new Vector2(-1, -1);
-        private MapView _cachedMapView;
 
         public MapRenderer()
         {
@@ -50,7 +44,6 @@ namespace ProjectVagabond
             _archetypeManager = ServiceLocator.Get<ArchetypeManager>();
             _worldClockManager = ServiceLocator.Get<WorldClockManager>();
             _global = ServiceLocator.Get<Global>();
-            _graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
             _contextMenu = new ContextMenu();
 
             _headerButtons.Add(new Button(Rectangle.Empty, "Clear") { IsEnabled = false });
@@ -59,7 +52,6 @@ namespace ProjectVagabond
             _headerButtons.Add(new Button(Rectangle.Empty, "World Map", "map"));
 
             _buttonMap = _headerButtons.ToDictionary(b => b.Function.ToLowerInvariant(), b => b);
-            _cachedMapView = _gameState.CurrentMapView; // Initialize to prevent initial dirty check mismatch
         }
 
         public void Update(GameTime gameTime, BitmapFont font)
@@ -145,12 +137,6 @@ namespace ProjectVagabond
 
         public void DrawMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            if (_gameState.CurrentMapView != _cachedMapView ||
-                (_gameState.CurrentMapView == MapView.World && _gameState.PlayerWorldPos != _cachedPlayerWorldPos))
-            {
-                _isMapCacheDirty = true;
-            }
-
             if (_gameState.CurrentMapView == MapView.World)
             {
                 DrawWorldMap(spriteBatch, font, gameTime);
@@ -161,62 +147,11 @@ namespace ProjectVagabond
             }
         }
 
-        private void RedrawMapCache(SpriteBatch spriteBatch)
-        {
-            int cacheWidth, cacheHeight, cellSize, gridSize;
-
-            if (_gameState.CurrentMapView == MapView.World)
-            {
-                cellSize = Global.GRID_CELL_SIZE;
-                gridSize = Global.GRID_SIZE;
-            }
-            else
-            {
-                cellSize = Global.LOCAL_GRID_CELL_SIZE;
-                gridSize = Global.LOCAL_GRID_SIZE;
-            }
-            cacheWidth = gridSize * cellSize;
-            cacheHeight = gridSize * cellSize;
-
-            if (_mapCacheTarget == null || _mapCacheTarget.Width != cacheWidth || _mapCacheTarget.Height != cacheHeight)
-            {
-                _mapCacheTarget?.Dispose();
-                _mapCacheTarget = new RenderTarget2D(_graphicsDevice, cacheWidth, cacheHeight, false, _graphicsDevice.PresentationParameters.BackBufferFormat, DepthFormat.None);
-            }
-
-            spriteBatch.End();
-
-            var originalRenderTargets = _graphicsDevice.GetRenderTargets();
-            _graphicsDevice.SetRenderTarget(_mapCacheTarget);
-            _graphicsDevice.Clear(Color.Transparent);
-
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-
-            var staticElements = _gameState.CurrentMapView == MapView.World
-                ? GenerateStaticWorldMapGridElements()
-                : GenerateStaticLocalMapGridElements();
-
-            foreach (var element in staticElements)
-            {
-                Rectangle destRect = new Rectangle((int)element.Position.X, (int)element.Position.Y, cellSize, cellSize);
-                spriteBatch.Draw(element.Texture, destRect, element.Color);
-            }
-
-            spriteBatch.End();
-
-            _graphicsDevice.SetRenderTargets(originalRenderTargets);
-
-            _cachedPlayerWorldPos = _gameState.PlayerWorldPos;
-            _cachedMapView = _gameState.CurrentMapView;
-            _isMapCacheDirty = false;
-
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-        }
-
         private void DrawWorldMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             int cellSize = Global.GRID_CELL_SIZE;
             int gridSize = Global.GRID_SIZE;
+
             int mapStartX = 35;
             int mapStartY = 50;
             int mapWidth = gridSize * cellSize + 10;
@@ -224,20 +159,10 @@ namespace ProjectVagabond
 
             _mapGridBounds = new Rectangle(mapStartX, mapStartY, gridSize * cellSize, gridSize * cellSize);
 
-            if (_isMapCacheDirty)
-            {
-                RedrawMapCache(spriteBatch);
-            }
-
             DrawMapFrame(spriteBatch, font, mapStartX, mapStartY, mapWidth, mapHeight, gameTime);
 
-            if (_mapCacheTarget != null)
-            {
-                spriteBatch.Draw(_mapCacheTarget, _mapGridBounds, Color.White);
-            }
-
-            var dynamicElements = GenerateDynamicWorldMapGridElements();
-            foreach (var element in dynamicElements)
+            var gridElements = GenerateWorldMapGridElements();
+            foreach (var element in gridElements)
             {
                 DrawGridElement(spriteBatch, element, cellSize);
             }
@@ -270,6 +195,7 @@ namespace ProjectVagabond
         {
             int cellSize = Global.LOCAL_GRID_CELL_SIZE;
             int gridSize = Global.LOCAL_GRID_SIZE;
+
             int mapStartX = 35;
             int mapStartY = 50;
             int mapWidth = gridSize * cellSize + 10;
@@ -277,20 +203,10 @@ namespace ProjectVagabond
 
             _mapGridBounds = new Rectangle(mapStartX, mapStartY, gridSize * cellSize, gridSize * cellSize);
 
-            if (_isMapCacheDirty)
-            {
-                RedrawMapCache(spriteBatch);
-            }
-
             DrawMapFrame(spriteBatch, font, mapStartX, mapStartY, mapWidth, mapHeight, gameTime);
 
-            if (_mapCacheTarget != null)
-            {
-                spriteBatch.Draw(_mapCacheTarget, _mapGridBounds, Color.White);
-            }
-
-            var dynamicElements = GenerateDynamicLocalMapGridElements();
-            foreach (var element in dynamicElements)
+            var gridElements = GenerateLocalMapGridElements();
+            foreach (var element in gridElements)
             {
                 DrawGridElement(spriteBatch, element, cellSize);
             }
@@ -357,6 +273,7 @@ namespace ProjectVagabond
                 LayoutHeaderButtons(mapStartX, mapWidth, mapStartY);
                 _cachedMapStartX = mapStartX;
                 _cachedMapWidth = mapWidth;
+                _cachedMapView = _gameState.CurrentMapView;
             }
 
             foreach (var b in _headerButtons)
@@ -406,11 +323,10 @@ namespace ProjectVagabond
             spriteBatch.DrawString(font, pauseText, textPosition, Color.White * 0.7f, 0, Vector2.Zero, scale, SpriteEffects.None, 0);
         }
 
-        private List<GridElement> GenerateStaticWorldMapGridElements()
+        private List<GridElement> GenerateWorldMapGridElements()
         {
             var elements = new List<GridElement>();
             int gridSize = Global.GRID_SIZE;
-            int cellSize = Global.GRID_CELL_SIZE;
             int startX = (int)_gameState.PlayerWorldPos.X - gridSize / 2;
             int startY = (int)_gameState.PlayerWorldPos.Y - gridSize / 2;
 
@@ -421,16 +337,14 @@ namespace ProjectVagabond
                     int worldX = startX + x;
                     int worldY = startY + y;
                     float noise = _gameState.GetNoiseAt(worldX, worldY);
-                    Vector2 cachePos = new Vector2(x * cellSize, y * cellSize);
-                    elements.Add(new GridElement(GetTerrainTexture(noise), GetTerrainColor(noise), cachePos));
+                    Vector2? screenPos = MapCoordsToScreen(new Vector2(worldX, worldY));
+                    if (screenPos.HasValue)
+                    {
+                        elements.Add(new GridElement(GetTerrainTexture(noise), GetTerrainColor(noise), screenPos.Value));
+                    }
                 }
             }
-            return elements;
-        }
 
-        private List<GridElement> GenerateDynamicWorldMapGridElements()
-        {
-            var elements = new List<GridElement>();
             var allPlayerActions = new List<IAction>(_gameState.PendingActions);
             var activePlayerAction = _componentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId) ?? (IAction)_componentStore.GetComponent<RestAction>(_gameState.PlayerEntityId);
             if (activePlayerAction != null)
@@ -477,11 +391,10 @@ namespace ProjectVagabond
             return elements;
         }
 
-        private List<GridElement> GenerateStaticLocalMapGridElements()
+        private List<GridElement> GenerateLocalMapGridElements()
         {
             var elements = new List<GridElement>();
             int gridSize = Global.LOCAL_GRID_SIZE;
-            int cellSize = Global.LOCAL_GRID_CELL_SIZE;
             Color bgColor = _global.Palette_DarkGray;
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
@@ -489,17 +402,13 @@ namespace ProjectVagabond
             {
                 for (int x = 0; x < gridSize; x++)
                 {
-                    Vector2 cachePos = new Vector2(x * cellSize, y * cellSize);
-                    elements.Add(new GridElement(pixel, bgColor, cachePos));
+                    Vector2? screenPos = MapCoordsToScreen(new Vector2(x, y));
+                    if (screenPos.HasValue)
+                    {
+                        elements.Add(new GridElement(pixel, bgColor, screenPos.Value));
+                    }
                 }
             }
-            return elements;
-        }
-
-        private List<GridElement> GenerateDynamicLocalMapGridElements()
-        {
-            var elements = new List<GridElement>();
-            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             var allPlayerActions = new List<IAction>(_gameState.PendingActions);
             var activePlayerAction = _componentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId);
