@@ -16,7 +16,7 @@ namespace ProjectVagabond
         private readonly PlayerInputSystem _playerInputSystem;
         private readonly ContextMenu _contextMenu;
         private readonly Global _global;
-        private BitmapFont _font;
+        private BitmapFont _font; // Lazyloaded
 
         private MouseState _currentMouseState;
         private MouseState _previousMouseState;
@@ -70,7 +70,7 @@ namespace ProjectVagabond
 
         public void Update(GameTime gameTime)
         {
-            _font ??= ServiceLocator.Get<BitmapFont>();
+            _font ??= ServiceLocator.Get<BitmapFont>(); // Lazy-load the font.
 
             _previousMouseState = _currentMouseState;
             _currentMouseState = Mouse.GetState();

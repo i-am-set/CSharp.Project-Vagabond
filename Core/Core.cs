@@ -14,10 +14,11 @@ using System;
 // TODO: Brainstorm a way to add POIs (think rust, darkwood, the long dark, tarkov)
 // TODO: Add a way to save and load the game state
 // TODO: Impliment dialogue logic into dialogue scene
+// TODO: Impliment combat logic into combat scene
 // TODO: Convert display to have larger map, smaller terminal, with the terminal input being hidden unless the player presses ~ to "open console"
 // TODO: Finish entity implimentation
+// TODO: Add settings ui in game menu corner
 // TODO: Fix player attack range being so far
-// TODO: Fix bug that caches the players path preview in the 4th quadrant when going into local map
 
 namespace ProjectVagabond
 {

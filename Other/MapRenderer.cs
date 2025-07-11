@@ -59,7 +59,7 @@ namespace ProjectVagabond
             _headerButtons.Add(new Button(Rectangle.Empty, "World Map", "map"));
 
             _buttonMap = _headerButtons.ToDictionary(b => b.Function.ToLowerInvariant(), b => b);
-            _cachedMapView = _gameState.CurrentMapView;
+            _cachedMapView = _gameState.CurrentMapView; // Initialize to prevent initial dirty check mismatch
         }
 
         public void Update(GameTime gameTime, BitmapFont font)
@@ -72,7 +72,7 @@ namespace ProjectVagabond
 
         private void UpdateHover(Vector2 virtualMousePos)
         {
-            _hoveredGridPos = null;
+            _hoveredGridPos = null; // Reset hover state each frame
             Vector2? currentHoveredGridPos = null;
             int cellSize = _gameState.CurrentMapView == MapView.World ? Global.GRID_CELL_SIZE : Global.LOCAL_GRID_CELL_SIZE;
             int gridSize = _gameState.CurrentMapView == MapView.World ? Global.GRID_SIZE : Global.LOCAL_GRID_SIZE;
@@ -102,7 +102,7 @@ namespace ProjectVagabond
             _hoveredGridPos = currentHoveredGridPos;
             var stringBuilder = new StringBuilder();
 
-            // Tooltip Logic
+            // --- Tooltip Logic ---
             int? entityIdOnTile = GetEntityIdAtGridPos(currentHoveredGridPos.Value);
 
             if (entityIdOnTile.HasValue && _gameState.IsInCombat)
@@ -575,8 +575,6 @@ namespace ProjectVagabond
             }
             return null;
         }
-
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         /// <summary>
         /// Gets the ID of the entity at a specific mouse position on the local map.
