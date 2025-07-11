@@ -186,9 +186,10 @@ namespace ProjectVagabond
 
         public void ToggleMapView()
         {
+            ClearPendingActions();
             CancelExecutingActions();
             CurrentMapView = (CurrentMapView == MapView.World) ? MapView.Local : MapView.World;
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[undo]Switched to {CurrentMapView} map view." });
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[dim]Switched to {CurrentMapView} map view." });
         }
 
         public void TogglePause()
@@ -371,7 +372,12 @@ namespace ProjectVagabond
             ToggleExecutingActions(false);
         }
 
-        public void CancelExecutingActions(bool interrupted = false)
+        public void ClearPendingActions()
+        {
+            PendingActions.Clear();
+        }
+
+        public bool CancelExecutingActions(bool interrupted = false)
         {
             if (_isExecutingActions)
             {
@@ -383,7 +389,9 @@ namespace ProjectVagabond
                 ToggleIsFreeMoveMode(false);
                 _worldClockManager.CancelInterpolation();
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = interrupted ? "[cancel]Action queue interrupted." : "[cancel]Action queue cancelled." });
+                return true;
             }
+            return false;
         }
 
         public float GetFirstMoveTimeScaleFactor(Vector2 worldMoveDirection)
