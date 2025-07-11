@@ -68,7 +68,7 @@ namespace ProjectVagabond
         {
             var health = _componentStore.GetComponent<HealthComponent>(targetId);
             var archetypeIdComp = _componentStore.GetComponent<ArchetypeIdComponent>(targetId);
-            var archetype = _archetypeManager.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
+            var archetype = _archetypeManager.GetArchetypeTemplate(archetypeIdComp?.ArchetypeId ?? "Unknown");
             var targetPosComp = _componentStore.GetComponent<LocalPositionComponent>(targetId);
             var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
 

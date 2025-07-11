@@ -1,6 +1,6 @@
 ﻿namespace ProjectVagabond
 {
-    public class HealthComponent : IComponent
+    public class HealthComponent : IComponent, ICloneableComponent
     {
         public int CurrentHealth { get; set; }
         public int MaxHealth { get; set; }
@@ -18,6 +18,11 @@
             {
                 CurrentHealth = 0;
             }
+        }
+
+        public IComponent Clone()
+        {
+            return (IComponent)this.MemberwiseClone();
         }
     }
 }

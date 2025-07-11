@@ -3,7 +3,7 @@
     /// <summary>
     /// Holds state information for an AI-controlled entity.
     /// </summary>
-    public class AIComponent : IComponent
+    public class AIComponent : IComponent, ICloneableComponent
     {
         /// <summary>
         /// The current state of the AI's finite state machine.
@@ -20,5 +20,10 @@
         /// This is granted when the player performs an action.
         /// </summary>
         public int ActionTimeBudget { get; set; } = 0;
+
+        public IComponent Clone()
+        {
+            return (IComponent)this.MemberwiseClone();
+        }
     }
 }

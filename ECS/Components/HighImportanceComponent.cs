@@ -5,7 +5,11 @@
     /// regardless of their distance from the player (e.g., quest-critical NPCs,
     /// long-running environmental effects).
     /// </summary>
-    public class HighImportanceComponent : IComponent
+    public class HighImportanceComponent : IComponent, ICloneableComponent
     {
+        public IComponent Clone()
+        {
+            return (IComponent)this.MemberwiseClone();
+        }
     }
 }

@@ -9,8 +9,15 @@ namespace ProjectVagabond
     /// <summary>
     /// Holds the queue of actions for an entity to perform.
     /// </summary>
-    public class ActionQueueComponent : IComponent
+    public class ActionQueueComponent : IComponent, ICloneableComponent
     {
-        public Queue<IAction> ActionQueue { get; } = new Queue<IAction>();
+        public Queue<IAction> ActionQueue { get; set; } = new Queue<IAction>();
+
+        public IComponent Clone()
+        {
+            var clone = (ActionQueueComponent)this.MemberwiseClone();
+            clone.ActionQueue = new Queue<IAction>();
+            return clone;
+        }
     }
 }

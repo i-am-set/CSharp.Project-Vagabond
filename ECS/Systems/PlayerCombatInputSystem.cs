@@ -66,7 +66,7 @@ namespace ProjectVagabond
         {
             _gameState.SelectedTargetId = targetId;
             var archetypeIdComp = _componentStore.GetComponent<ArchetypeIdComponent>(targetId);
-            var archetype = _archetypeManager.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
+            var archetype = _archetypeManager.GetArchetypeTemplate(archetypeIdComp?.ArchetypeId ?? "Unknown");
             EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"Player selects target: {archetype?.Name ?? $"Entity {targetId}"}." });
 
             // If we were waiting to select a target, execute the action now
@@ -144,7 +144,7 @@ namespace ProjectVagabond
                 // Deduct cost
                 playerStats.ActionPoints -= attack.ActionPointCost;
                 var targetArchetypeIdComp = _componentStore.GetComponent<ArchetypeIdComponent>(chosenAttack.TargetId);
-                var targetArchetype = _archetypeManager.GetArchetype(targetArchetypeIdComp?.ArchetypeId ?? "Unknown");
+                var targetArchetype = _archetypeManager.GetArchetypeTemplate(targetArchetypeIdComp?.ArchetypeId ?? "Unknown");
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"Player decides to use {attack.Name} on {targetArchetype?.Name ?? $"Entity {chosenAttack.TargetId}"}." });
 
                 // The player's action is now chosen. Set the UI to busy while the action is processed.

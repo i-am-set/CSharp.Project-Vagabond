@@ -2,7 +2,7 @@
 
 namespace ProjectVagabond
 {
-    public class AvailableAttacksComponent : IComponent
+    public class AvailableAttacksComponent : IComponent, ICloneableComponent
     {
         public class CombatAttack
         {
@@ -12,5 +12,10 @@ namespace ProjectVagabond
         }
 
         public List<CombatAttack> Attacks { get; set; } = new List<CombatAttack>();
+
+        public IComponent Clone()
+        {
+            return (IComponent)this.MemberwiseClone();
+        }
     }
 }

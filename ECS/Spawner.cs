@@ -12,6 +12,7 @@ namespace ProjectVagabond
     {
         /// <summary>
         /// Spawns a new entity based on a specified archetype at a given position.
+        /// This method uses a fast cloning mechanism and avoids runtime reflection for property setting.
         /// </summary>
         /// <param name="archetypeId">The ID of the archetype to spawn (e.g., "player", "wanderer_npc").</param>
         /// <param name="worldPosition">The world position where the entity should be spawned.</param>
@@ -24,48 +25,31 @@ namespace ProjectVagabond
             var componentStore = ServiceLocator.Get<ComponentStore>();
             var chunkManager = ServiceLocator.Get<ChunkManager>();
 
-            var archetype = archetypeManager.GetArchetype(archetypeId);
-            if (archetype == null)
+            var template = archetypeManager.GetArchetypeTemplate(archetypeId);
+            if (template == null)
             {
-                Console.WriteLine($"[ERROR] Failed to spawn entity. Archetype '{archetypeId}' not found.");
+                Console.WriteLine($"[ERROR] Failed to spawn entity. Archetype template '{archetypeId}' not found.");
                 return -1;
             }
 
             int entityId = entityManager.CreateEntity();
 
-            // Store the archetype ID for easy lookup later
-            componentStore.AddComponent(entityId, new ArchetypeIdComponent { ArchetypeId = archetypeId });
-
-            foreach (var componentDef in archetype.Components)
+            foreach (var templateComponent in template.TemplateComponents)
             {
                 try
                 {
-                    string typeName = componentDef["Type"].ToString();
-                    Type componentType = Type.GetType(typeName, throwOnError: true);
-
-                    // Create an instance of the component using its parameterless constructor
-                    object componentInstance = Activator.CreateInstance(componentType);
-
-                    // Set properties from the JSON definition
-                    if (componentDef.TryGetValue("Properties", out object props) && props is JsonElement propertiesElement)
-                    {
-                        PopulateComponentProperties(componentInstance, propertiesElement);
-                    }
-
-                    // If the component needs post-property-setting logic, run it now.
-                    if (componentInstance is IInitializableComponent initializable)
-                    {
-                        initializable.Initialize();
-                    }
+                    // Clone the component from the pre-baked template
+                    IComponent clonedComponent = ((ICloneableComponent)templateComponent).Clone();
+                    Type componentType = clonedComponent.GetType();
 
                     // Add the fully populated component to the store
-                    // We use reflection to call the generic AddComponent method.
+                    // We use reflection to call the generic AddComponent method, which is acceptable and necessary.
                     MethodInfo addComponentMethod = typeof(ComponentStore).GetMethod("AddComponent").MakeGenericMethod(componentType);
-                    addComponentMethod.Invoke(componentStore, new object[] { entityId, componentInstance });
+                    addComponentMethod.Invoke(componentStore, new object[] { entityId, clonedComponent });
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERROR] Failed to create or add component for archetype '{archetypeId}': {ex.Message}");
+                    Console.WriteLine($"[ERROR] Failed to clone or add component for archetype '{archetypeId}': {ex.Message}");
                 }
             }
 
@@ -86,83 +70,6 @@ namespace ProjectVagabond
             chunkManager.RegisterEntity(entityId, worldPosition);
 
             return entityId;
-        }
-
-        /// <summary>
-        /// Uses reflection to set properties on a component instance from JSON data.
-        /// </summary>
-        private static void PopulateComponentProperties(object component, JsonElement properties)
-        {
-            foreach (JsonProperty property in properties.EnumerateObject())
-            {
-                PropertyInfo propInfo = component.GetType().GetProperty(property.Name, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-
-                if (propInfo != null && propInfo.CanWrite)
-                {
-                    try
-                    {
-                        object value = ConvertJsonElement(property.Value, propInfo.PropertyType);
-                        propInfo.SetValue(component, value);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[WARNING] Could not set property '{property.Name}' on component '{component.GetType().Name}': {ex.Message}");
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Converts a JsonElement to the target C# type.
-        /// </summary>
-        private static object ConvertJsonElement(JsonElement element, Type targetType)
-        {
-            switch (element.ValueKind)
-            {
-                case JsonValueKind.String:
-                    string stringValue = element.GetString();
-                    if (targetType.IsEnum)
-                    {
-                        return Enum.Parse(targetType, stringValue, true);
-                    }
-                    // Handle special string-to-color conversion for RenderableComponent
-                    if (targetType == typeof(Color))
-                    {
-                        var globalInstance = ServiceLocator.Get<Global>();
-                        var colorProp = typeof(Global).GetProperty(stringValue, BindingFlags.Public | BindingFlags.Instance);
-                        if (colorProp != null && colorProp.PropertyType == typeof(Color))
-                        {
-                            return colorProp.GetValue(globalInstance);
-                        }
-                        // Fallback to standard MonoGame colors
-                        var mgColorProp = typeof(Color).GetProperty(stringValue, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
-                        if (mgColorProp != null)
-                        {
-                            return mgColorProp.GetValue(null);
-                        }
-                    }
-                    return stringValue;
-
-                case JsonValueKind.Number:
-                    if (targetType == typeof(int)) return element.GetInt32();
-                    if (targetType == typeof(float)) return element.GetSingle();
-                    if (targetType == typeof(double)) return element.GetDouble();
-                    if (targetType == typeof(decimal)) return element.GetDecimal();
-                    break;
-
-                case JsonValueKind.True:
-                    return true;
-
-                case JsonValueKind.False:
-                    return false;
-
-                case JsonValueKind.Array:
-                    // Use the built-in deserializer to handle arrays of complex objects.
-                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                    return JsonSerializer.Deserialize(element.GetRawText(), targetType, options);
-            }
-
-            return Convert.ChangeType(element.ToString(), targetType);
         }
     }
 }

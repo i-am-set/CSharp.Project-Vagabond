@@ -1,8 +1,9 @@
-﻿using System;
+﻿
+using System;
 
 namespace ProjectVagabond
 {
-    public class StatsComponent : IComponent, IInitializableComponent
+    public class StatsComponent : IComponent, IInitializableComponent, ICloneableComponent
     {
         // Main stats (1-10) - now with public setters for the Spawner
         public int Strength { get; set; }
@@ -100,6 +101,17 @@ namespace ProjectVagabond
 
             RecalculateSecondaryStats();
             RestoreToFull();
+        }
+
+        public IComponent Clone()
+        {
+            var clone = (StatsComponent)this.MemberwiseClone();
+            // Null out the event handlers on the new instance to prevent
+            // subscribers from being carried over to the clone.
+            clone.OnHealthChanged = null;
+            clone.OnEnergyChanged = null;
+            clone.OnStatsRecalculated = null;
+            return clone;
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

@@ -1,12 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 
 namespace ProjectVagabond
 {
     /// <summary>
     /// A component that gives an entity the necessary data to be drawn on the screen.
     /// </summary>
-    public class RenderableComponent : IComponent
+    public class RenderableComponent : IComponent, ICloneableComponent
     {
         /// <summary>
         /// The texture to draw for the entity.
@@ -28,5 +29,10 @@ namespace ProjectVagabond
         /// Parameterless constructor for the Spawner.
         /// </summary>
         public RenderableComponent() { }
+
+        public IComponent Clone()
+        {
+            return (IComponent)this.MemberwiseClone();
+        }
     }
 }

@@ -24,7 +24,7 @@ namespace ProjectVagabond
             }
 
             var archetypeIdComp = componentStore.GetComponent<ArchetypeIdComponent>(entityId);
-            var archetype = archetypeManager.GetArchetype(archetypeIdComp?.ArchetypeId ?? "Unknown");
+            var archetype = archetypeManager.GetArchetypeTemplate(archetypeIdComp?.ArchetypeId ?? "Unknown");
             return archetype?.Name ?? $"Entity {entityId}";
         }
 
