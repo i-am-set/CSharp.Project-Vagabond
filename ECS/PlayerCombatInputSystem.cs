@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System.Linq;
 
@@ -120,6 +120,27 @@ namespace ProjectVagabond
                 return;
             }
 
+            var playerCombatant = _componentStore.GetComponent<CombatantComponent>(_gameState.PlayerEntityId);
+            var playerPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
+            var targetPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.SelectedTargetId.Value);
+
+            // --- ADDED: RANGE CHECK ---
+            if (playerCombatant == null || playerPos == null || targetPos == null)
+            {
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[error]Cannot attack. Missing combat components." });
+                ResetToDefaultState();
+                return;
+            }
+
+            float distance = Vector2.Distance(playerPos.LocalPosition, targetPos.LocalPosition);
+            if (distance > playerCombatant.AttackRange)
+            {
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[warning]Target is out of range! (Range: {playerCombatant.AttackRange}, Distance: {distance:F1})" });
+                ResetToDefaultState();
+                return;
+            }
+            // --- END: RANGE CHECK ---
+
             var playerStats = _componentStore.GetComponent<CombatStatsComponent>(_gameState.PlayerEntityId);
             var playerAttacks = _componentStore.GetComponent<AvailableAttacksComponent>(_gameState.PlayerEntityId);
             var attack = playerAttacks?.Attacks.FirstOrDefault(a => a.Name == _selectedAttackName);
@@ -161,6 +182,7 @@ namespace ProjectVagabond
         {
             _selectedAttackName = null;
             _gameState.UIState = CombatUIState.Default;
+            _gameState.SelectedTargetId = null; // Also clear the selected target
             EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[dim]Action cancelled. Returning to main menu." });
         }
     }

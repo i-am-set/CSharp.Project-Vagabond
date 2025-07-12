@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 
 namespace ProjectVagabond
 {
@@ -22,12 +21,12 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Resets the turn manager to the beginning of the initiative order.
-        /// Called when combat starts.
+        /// Resets the turn manager and starts the first turn of combat.
         /// </summary>
         public void StartCombat()
         {
             _currentTurnIndex = 0;
+            StartNewTurn();
         }
 
         /// <summary>
@@ -37,7 +36,6 @@ namespace ProjectVagabond
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
-            _aiSystem ??= ServiceLocator.Get<AISystem>();
 
             if (!_gameState.IsInCombat)
             {
@@ -54,7 +52,18 @@ namespace ProjectVagabond
                 _worldClockManager.PassTime(seconds: GameState.COMBAT_TURN_DURATION_SECONDS);
             }
 
-            // Update the GameState to reflect the new active entity for the next turn.
+            StartNewTurn();
+        }
+
+        /// <summary>
+        /// Centralized logic to begin a turn for the current entity in the initiative order.
+        /// </summary>
+        private void StartNewTurn()
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            _aiSystem ??= ServiceLocator.Get<AISystem>();
+
+            // Update the GameState to reflect the new active entity for the turn.
             var newTurnEntityId = _gameState.InitiativeOrder[_currentTurnIndex];
             _gameState.SetCurrentTurnEntity(newTurnEntityId);
 

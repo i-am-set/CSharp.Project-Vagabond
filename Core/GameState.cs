@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -71,7 +71,7 @@ namespace ProjectVagabond
         public void InitializeWorld()
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0), localPosition: new Vector2(32, 32));
-            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 34));
+            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 36));
         }
 
         public void InitializeRenderableEntities()
@@ -126,7 +126,6 @@ namespace ProjectVagabond
             }
 
             InitiativeOrder = Combatants.OrderByDescending(id => initiativeScores[id]).ToList();
-            CurrentTurnEntityId = InitiativeOrder.FirstOrDefault();
 
             EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[yellow]Combat has begun! Initiative Order: " });
 
@@ -141,12 +140,6 @@ namespace ProjectVagabond
 
             _combatTurnSystem ??= ServiceLocator.Get<CombatTurnSystem>();
             _combatTurnSystem.StartCombat();
-
-            if (_componentStore.HasComponent<AIComponent>(CurrentTurnEntityId))
-            {
-                _aiSystem ??= ServiceLocator.Get<AISystem>();
-                _aiSystem.ProcessCombatTurn(CurrentTurnEntityId);
-            }
         }
 
         public void AddEntityToCombat(int entityId)

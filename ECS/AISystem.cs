@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -119,7 +119,7 @@ namespace ProjectVagabond
             if (aiPos == null || combatStats == null || availableAttacks == null || combatant == null || playerPos == null)
             {
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{aiName} cannot act in combat (missing critical components)." });
-                _combatTurnSystem.EndCurrentTurn();
+                // The CombatProcessingSystem will now handle ending the turn even in this error case.
                 return;
             }
 
