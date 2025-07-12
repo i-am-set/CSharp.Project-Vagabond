@@ -116,8 +116,6 @@ namespace ProjectVagabond
             InitiativeOrder.Clear();
 
             var initiativeScores = new Dictionary<int, int>();
-            var initiativeLog = new StringBuilder();
-            initiativeLog.Append("[yellow]Combat has begun! Initiative Order: ");
 
             foreach (var entityId in Combatants)
             {
@@ -130,15 +128,16 @@ namespace ProjectVagabond
             InitiativeOrder = Combatants.OrderByDescending(id => initiativeScores[id]).ToList();
             CurrentTurnEntityId = InitiativeOrder.FirstOrDefault();
 
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[yellow]Combat has begun! Initiative Order: " });
+
             var uniqueNames = EntityNamer.GetUniqueNames(InitiativeOrder);
             for (int i = 0; i < InitiativeOrder.Count; i++)
             {
                 var entityId = InitiativeOrder[i];
                 string name = uniqueNames[entityId];
-                initiativeLog.Append($"\n  {i + 1}. {name} ({initiativeScores[entityId]})");
+                string lineMessage = $"[yellow]  {i + 1}. {name} ({initiativeScores[entityId]})";
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = lineMessage });
             }
-
-            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = initiativeLog.ToString() });
 
             _combatTurnSystem ??= ServiceLocator.Get<CombatTurnSystem>();
             _combatTurnSystem.StartCombat();

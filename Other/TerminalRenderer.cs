@@ -6,6 +6,7 @@ using ProjectVagabond.Scenes;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -31,10 +32,11 @@ namespace ProjectVagabond
         private bool _historyDirty = true;
         private bool _combatHistoryDirty = true;
 
-        public int ScrollOffset { get; set; } = 0;
-        public int CombatScrollOffset { get; set; } = 0;
+        public int ScrollOffset = 0;
+        public int CombatScrollOffset = 0;
 
         private int _nextLineNumber = 1;
+        private int _nextCombatLineNumber = 1;
         private float _caratBlinkTimer = 0f;
         private readonly StringBuilder _stringBuilder = new StringBuilder(256);
 
@@ -70,14 +72,7 @@ namespace ProjectVagabond
 
         private void OnCombatLogMessagePublished(GameEvents.CombatLogMessagePublished e)
         {
-            var coloredLine = ParseColoredText(e.Message, _global.OutputTextColor);
-            _unwrappedCombatHistory.Add(coloredLine);
-            _combatHistoryDirty = true;
-
-            while (_unwrappedCombatHistory.Count > Global.MAX_HISTORY_LINES)
-            {
-                _unwrappedCombatHistory.RemoveAt(0);
-            }
+            AddToCombatHistory(e.Message, _global.OutputTextColor);
         }
 
         private void OnCombatStateChanged(GameEvents.CombatStateChanged e)
@@ -96,50 +91,66 @@ namespace ProjectVagabond
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        private void AddToHistory(string message, Color? baseColor = null)
+        /// <summary>
+        /// The core, shared logic for adding a line to a history buffer.
+        /// </summary>
+        private void AddLineToHistoryInternal(string message, Color? baseColor,
+                                              List<ColoredLine> unwrappedHistory,
+                                              ref bool historyDirty,
+                                              ref int scrollOffset,
+                                              ref int nextLineNumber)
         {
-            if (_nextLineNumber > 999)
+            if (nextLineNumber > 999)
             {
-                // Simple truncation logic for unwrapped history
+                // Simple truncation logic for the given history buffer
                 int desiredLinesToKeep = GetMaxVisibleLines();
-                int startIndex = Math.Max(0, _unwrappedHistory.Count - desiredLinesToKeep);
+                int startIndex = Math.Max(0, unwrappedHistory.Count - desiredLinesToKeep);
 
-                var keptLines = _unwrappedHistory.GetRange(startIndex, _unwrappedHistory.Count - startIndex);
-                _unwrappedHistory.Clear();
-                ScrollOffset = 0;
+                var keptLines = unwrappedHistory.GetRange(startIndex, unwrappedHistory.Count - startIndex);
+                unwrappedHistory.Clear();
+                scrollOffset = 0;
 
                 var truncationMessage = ParseColoredText("--- HISTORY TRUNCATED ---", _global.Palette_Gray);
                 truncationMessage.LineNumber = 1;
-                _unwrappedHistory.Add(truncationMessage);
-                _unwrappedHistory.AddRange(keptLines);
+                unwrappedHistory.Add(truncationMessage);
+                unwrappedHistory.AddRange(keptLines);
 
                 int currentLineNum = 2;
-                for (int i = 1; i < _unwrappedHistory.Count; i++)
+                for (int i = 1; i < unwrappedHistory.Count; i++)
                 {
-                    if (_unwrappedHistory[i].LineNumber > 0)
+                    if (unwrappedHistory[i].LineNumber > 0)
                     {
-                        _unwrappedHistory[i].LineNumber = currentLineNum++;
+                        unwrappedHistory[i].LineNumber = currentLineNum++;
                     }
                 }
-                _nextLineNumber = currentLineNum;
+                nextLineNumber = currentLineNum;
             }
-
-            _inputHistory.Add(message);
 
             var coloredLine = ParseColoredText(message, baseColor ?? _global.OutputTextColor);
-            coloredLine.LineNumber = _nextLineNumber++;
-            _unwrappedHistory.Add(coloredLine);
-            _historyDirty = true;
+            coloredLine.LineNumber = nextLineNumber++;
+            unwrappedHistory.Add(coloredLine);
+            historyDirty = true;
 
-            while (_unwrappedHistory.Count > Global.MAX_HISTORY_LINES)
+            while (unwrappedHistory.Count > Global.MAX_HISTORY_LINES)
             {
-                _unwrappedHistory.RemoveAt(0);
+                unwrappedHistory.RemoveAt(0);
             }
+        }
 
+        private void AddToHistory(string message, Color? baseColor = null)
+        {
+            _inputHistory.Add(message);
             if (_inputHistory.Count > 50)
             {
                 _inputHistory.RemoveAt(0);
             }
+
+            AddLineToHistoryInternal(message, baseColor, _unwrappedHistory, ref _historyDirty, ref ScrollOffset, ref _nextLineNumber);
+        }
+
+        private void AddToCombatHistory(string message, Color? baseColor = null)
+        {
+            AddLineToHistoryInternal(message, baseColor, _unwrappedCombatHistory, ref _combatHistoryDirty, ref CombatScrollOffset, ref _nextCombatLineNumber);
         }
 
         public void ClearHistory()
@@ -157,6 +168,7 @@ namespace ProjectVagabond
             _unwrappedCombatHistory.Clear();
             _wrappedCombatHistory.Clear();
             CombatScrollOffset = 0;
+            _nextCombatLineNumber = 1; // Reset the combat line counter
             _combatHistoryDirty = true;
         }
 
@@ -182,7 +194,7 @@ namespace ProjectVagabond
             int terminalHeight = GetTerminalHeight();
             int terminalX = 375;
             int terminalY = Global.TERMINAL_Y;
-            int terminalWidth = (!isInCombat ? Global.DEFAULT_TERMINAL_WIDTH : Global.DEFAULT_TERMINAL_WIDTH - 150); // Adjusted width for combat
+            int terminalWidth = (!isInCombat ? Global.DEFAULT_TERMINAL_WIDTH : Global.DEFAULT_TERMINAL_WIDTH - Global.COMBAT_TERMINAL_BUFFER); // Adjusted width for combat
 
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
@@ -532,115 +544,74 @@ namespace ProjectVagabond
         private List<ColoredLine> WrapColoredText(ColoredLine line, float maxWidthInPixels, BitmapFont font)
         {
             var wrappedLines = new List<ColoredLine>();
-            var currentLine = new ColoredLine { LineNumber = line.LineNumber };
-            float currentLineWidth = 0f;
+            if (!line.Segments.Any())
+            {
+                wrappedLines.Add(line);
+                return wrappedLines;
+            }
 
-            Action finishLine = () =>
+            var currentLine = new ColoredLine { LineNumber = line.LineNumber };
+            var currentLineText = new StringBuilder();
+
+            Action finishCurrentLine = () =>
             {
                 if (currentLine.Segments.Any())
                 {
                     wrappedLines.Add(currentLine);
                 }
                 currentLine = new ColoredLine { LineNumber = 0 };
-                currentLineWidth = 0f;
+                currentLineText.Clear();
             };
-
-            void AddTokenToLine(string token, Color color)
-            {
-                float tokenWidth = font.MeasureString(token).Width;
-                bool isWhitespace = string.IsNullOrWhiteSpace(token);
-
-                if (!isWhitespace && currentLineWidth > 0 && currentLineWidth + tokenWidth > maxWidthInPixels)
-                {
-                    finishLine();
-                }
-
-                if (!isWhitespace && tokenWidth > maxWidthInPixels)
-                {
-                    if (currentLineWidth > 0) finishLine();
-
-                    string remainingToken = token;
-                    while (remainingToken.Length > 0)
-                    {
-                        int charsThatFit = 0;
-                        for (int i = 1; i <= remainingToken.Length; i++)
-                        {
-                            if (font.MeasureString(remainingToken.Substring(0, i)).Width > maxWidthInPixels)
-                            {
-                                break;
-                            }
-                            charsThatFit = i;
-                        }
-                        if (charsThatFit == 0 && remainingToken.Length > 0) charsThatFit = 1;
-
-                        string part = remainingToken.Substring(0, charsThatFit);
-                        remainingToken = remainingToken.Substring(charsThatFit);
-
-                        var newLine = new ColoredLine { LineNumber = 0 };
-                        newLine.Segments.Add(new ColoredText(part, color));
-                        wrappedLines.Add(newLine);
-                    }
-                    currentLineWidth = 0;
-                    return;
-                }
-
-                if (currentLine.Segments.Count > 0 && currentLine.Segments.Last().Color == color)
-                {
-                    currentLine.Segments.Last().Text += token;
-                }
-                else
-                {
-                    currentLine.Segments.Add(new ColoredText(token, color));
-                }
-                currentLineWidth += tokenWidth;
-            }
 
             foreach (var segment in line.Segments)
             {
-                string text = segment.Text;
-                Color color = segment.Color;
+                // Split text into tokens (words, spaces, newlines)
+                string processedText = segment.Text.Replace("\r", "");
+                var tokens = Regex.Split(processedText, @"(\s+|\n)");
 
-                var tokens = Regex.Split(text, @"(\s+)");
-
-                foreach (var token in tokens)
+                foreach (string token in tokens)
                 {
                     if (string.IsNullOrEmpty(token)) continue;
 
-                    if (token.Contains('\n'))
+                    if (token == "\n")
                     {
-                        string[] subTokens = token.Split('\n');
-                        for (int i = 0; i < subTokens.Length; i++)
-                        {
-                            string subToken = subTokens[i].Replace("\r", "");
-                            if (!string.IsNullOrEmpty(subToken))
-                            {
-                                AddTokenToLine(subToken, color);
-                            }
-
-                            if (i < subTokens.Length - 1)
-                            {
-                                finishLine();
-                            }
-                        }
+                        finishCurrentLine();
                         continue;
                     }
 
-                    AddTokenToLine(token, color);
+                    float potentialWidth = font.MeasureString(currentLineText.ToString() + token).Width;
+                    bool isWhitespace = string.IsNullOrWhiteSpace(token);
+
+                    if (currentLineText.Length > 0 && !isWhitespace && potentialWidth > maxWidthInPixels)
+                    {
+                        finishCurrentLine();
+                    }
+
+                    // Add the token to the now-current line.
+                    // First, merge with last segment if colors match.
+                    if (currentLine.Segments.Any() && currentLine.Segments.Last().Color == segment.Color)
+                    {
+                        currentLine.Segments.Last().Text += token;
+                    }
+                    else // Otherwise, create a new segment.
+                    {
+                        currentLine.Segments.Add(new ColoredText(token, segment.Color));
+                    }
+                    // Append to our text tracker for measurement.
+                    currentLineText.Append(token);
                 }
             }
 
+            // Add the last line if it has any content.
             if (currentLine.Segments.Any())
             {
                 wrappedLines.Add(currentLine);
             }
 
+            // Ensure we always return at least one line, even if it's empty.
             if (!wrappedLines.Any())
             {
                 wrappedLines.Add(new ColoredLine { LineNumber = line.LineNumber });
-            }
-            else
-            {
-                wrappedLines[0].LineNumber = line.LineNumber;
             }
 
             return wrappedLines;
@@ -664,52 +635,19 @@ namespace ProjectVagabond
                 {
                     var words = Regex.Split(line, @"(\s+)").Where(s => !string.IsNullOrEmpty(s)).ToArray();
                     var currentLine = new StringBuilder();
-                    float currentLineWidth = 0f;
 
                     foreach (string word in words)
                     {
-                        float wordWidth = font.MeasureString(word).Width;
                         bool isSpace = string.IsNullOrWhiteSpace(word);
+                        float potentialWidth = font.MeasureString(currentLine.ToString() + word).Width;
 
-                        if (!isSpace && currentLine.Length > 0 && currentLineWidth + wordWidth > maxWidthInPixels)
+                        if (!isSpace && currentLine.Length > 0 && potentialWidth > maxWidthInPixels)
                         {
                             finalLines.Add(currentLine.ToString());
                             currentLine.Clear();
-                            currentLineWidth = 0;
                         }
 
-                        if (!isSpace && wordWidth > maxWidthInPixels)
-                        {
-                            if (currentLine.Length > 0)
-                            {
-                                finalLines.Add(currentLine.ToString());
-                                currentLine.Clear();
-                            }
-
-                            string remainingWord = word;
-                            while (remainingWord.Length > 0)
-                            {
-                                int charsThatFit = 0;
-                                for (int i = 1; i <= remainingWord.Length; i++)
-                                {
-                                    if (font.MeasureString(remainingWord.Substring(0, i)).Width > maxWidthInPixels)
-                                    {
-                                        break;
-                                    }
-                                    charsThatFit = i;
-                                }
-                                if (charsThatFit == 0 && remainingWord.Length > 0) charsThatFit = 1;
-
-                                finalLines.Add(remainingWord.Substring(0, charsThatFit));
-                                remainingWord = remainingWord.Substring(charsThatFit);
-                            }
-                            currentLineWidth = 0;
-                        }
-                        else
-                        {
-                            currentLine.Append(word);
-                            currentLineWidth += wordWidth;
-                        }
+                        currentLine.Append(word);
                     }
 
                     if (currentLine.Length > 0)
@@ -724,9 +662,13 @@ namespace ProjectVagabond
 
         private float GetTerminalContentWidthInPixels(BitmapFont font)
         {
-            int terminalWidth = _gameState.IsInCombat ? Global.DEFAULT_TERMINAL_WIDTH - 150 : Global.DEFAULT_TERMINAL_WIDTH;
-            float charWidth = font.MeasureString("W").Width;
-            return terminalWidth - (2 * charWidth);
+            // When in combat, the terminal is narrower. This logic must match the width calculation in DrawTerminal.
+            int terminalWidth = _gameState.IsInCombat ? (Global.DEFAULT_TERMINAL_WIDTH - Global.COMBAT_TERMINAL_BUFFER) : Global.DEFAULT_TERMINAL_WIDTH;
+
+            // The text content area is `terminalWidth` pixels wide, based on the drawing logic.
+            // The previous calculation using `font.MeasureString("W")` was fragile.
+            // We subtract a small fixed padding to prevent text from touching the right border due to font rendering nuances.
+            return terminalWidth - 2.0f;
         }
 
         private int GetTerminalHeight()

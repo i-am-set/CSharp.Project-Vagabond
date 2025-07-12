@@ -63,6 +63,7 @@ namespace ProjectVagabond
         public const float NOISE_SCALE = 0.2f;
         public const int DEFAULT_TERMINAL_WIDTH = 540;
         public const int DEFAULT_TERMINAL_HEIGHT = 338;
+        public const int COMBAT_TERMINAL_BUFFER = 130;
 
         // Player stats Global
         public const int MAX_MAX_HEALTH_ENERGY = 48;
