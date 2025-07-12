@@ -1,4 +1,5 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -32,47 +33,57 @@ namespace ProjectVagabond
             int currentEntityId = _gameState.CurrentTurnEntityId;
 
             // --- Player Turn Processing ---
-            // If it's the player's turn, we only process an action if one has been chosen.
-            // We do not end the turn automatically.
             if (currentEntityId == _gameState.PlayerEntityId)
             {
+                bool playerActionTaken = false;
+
+                // Process a chosen attack first
                 var chosenAttack = _componentStore.GetComponent<ChosenAttackComponent>(currentEntityId);
                 if (chosenAttack != null)
                 {
-                    // An action was selected via the UI. Process it.
                     _combatResolutionSystem.ResolveAction(currentEntityId, chosenAttack);
                     _componentStore.RemoveComponent<ChosenAttackComponent>(currentEntityId);
+                    playerActionTaken = true;
+                }
 
-                    // After the action is resolved, return the UI to the default state
-                    // so the player can choose another action or end their turn.
-                    _gameState.UIState = CombatUIState.Default;
+                // Then, process any queued move actions
+                var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(currentEntityId);
+                if (actionQueue != null && actionQueue.ActionQueue.Any() && actionQueue.ActionQueue.Peek() is MoveAction)
+                {
+                    while (actionQueue.ActionQueue.Any() && actionQueue.ActionQueue.Peek() is MoveAction moveAction)
+                    {
+                        actionQueue.ActionQueue.Dequeue();
+                        ApplyMoveActionEffects(currentEntityId, moveAction);
+                    }
+                    playerActionTaken = true;
+                }
+
+                // If the player took an action, their turn is over.
+                if (playerActionTaken)
+                {
+                    _combatTurnSystem.EndCurrentTurn();
                 }
             }
             // --- AI Turn Processing ---
-            // If it's an AI's turn, we process its action and then immediately end its turn.
             else
             {
-                bool actionWasProcessed = false;
-
                 // Check for and process a chosen attack
                 var chosenAttack = _componentStore.GetComponent<ChosenAttackComponent>(currentEntityId);
                 if (chosenAttack != null)
                 {
                     _combatResolutionSystem.ResolveAction(currentEntityId, chosenAttack);
                     _componentStore.RemoveComponent<ChosenAttackComponent>(currentEntityId);
-                    actionWasProcessed = true;
                 }
                 else
                 {
                     // Check for and process a move action
                     var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(currentEntityId);
-                    if (actionQueue != null && actionQueue.ActionQueue.Count > 0)
+                    if (actionQueue != null && actionQueue.ActionQueue.Any() && actionQueue.ActionQueue.Peek() is MoveAction)
                     {
-                        if (actionQueue.ActionQueue.Peek() is MoveAction moveAction)
+                        while (actionQueue.ActionQueue.Any() && actionQueue.ActionQueue.Peek() is MoveAction moveAction)
                         {
                             actionQueue.ActionQueue.Dequeue();
                             ApplyMoveActionEffects(currentEntityId, moveAction);
-                            actionWasProcessed = true;
                         }
                     }
                 }

@@ -184,15 +184,21 @@ namespace ProjectVagabond
                     mapData = gameState.GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
                 }
                 Vector2 moveDirection = moveAction.Destination - previousPosition;
-                int fullDuration = gameState.GetSecondsPassedDuringMovement(moveAction.IsRunning, mapData, moveDirection, isLocalMove);
 
-                int finalDuration = fullDuration;
+                // Get the player's stats component
+                var playerStats = gameState.PlayerStats;
+                if (playerStats == null) return 0; // Safety check
+
+                // Call the updated method signature
+                float fullDuration = gameState.GetSecondsPassedDuringMovement(playerStats, moveAction.IsRunning, mapData, moveDirection, isLocalMove);
+
+                float finalDuration = fullDuration;
                 if (!isLocalMove && _isFirstPlayerAction)
                 {
                     float scaleFactor = gameState.GetFirstMoveTimeScaleFactor(moveDirection);
-                    finalDuration = (int)Math.Ceiling(fullDuration * scaleFactor);
+                    finalDuration *= scaleFactor;
                 }
-                return Math.Max(1, finalDuration);
+                return Math.Max(1, (int)Math.Ceiling(finalDuration));
             }
             else if (action is RestAction restAction)
             {

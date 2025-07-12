@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -108,7 +108,6 @@ namespace ProjectVagabond
 
             // Get AI components
             var aiPos = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-            var combatStats = _componentStore.GetComponent<CombatStatsComponent>(entityId);
             var availableAttacks = _componentStore.GetComponent<AvailableAttacksComponent>(entityId);
             var combatant = _componentStore.GetComponent<CombatantComponent>(entityId);
             var aiName = EntityNamer.GetName(entityId);
@@ -116,10 +115,9 @@ namespace ProjectVagabond
             // Get Player components
             var playerPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
 
-            if (aiPos == null || combatStats == null || availableAttacks == null || combatant == null || playerPos == null)
+            if (aiPos == null || availableAttacks == null || combatant == null || playerPos == null)
             {
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{aiName} cannot act in combat (missing critical components)." });
-                // The CombatProcessingSystem will now handle ending the turn even in this error case.
                 return;
             }
 
@@ -132,7 +130,6 @@ namespace ProjectVagabond
             {
                 // In range, try to attack.
                 var bestAttack = availableAttacks.Attacks
-                    .Where(a => combatStats.ActionPoints >= a.ActionPointCost)
                     .OrderByDescending(a => a.DamageMultiplier)
                     .FirstOrDefault();
 
@@ -143,40 +140,31 @@ namespace ProjectVagabond
                         TargetId = _gameState.PlayerEntityId,
                         AttackName = bestAttack.Name
                     };
-                    // Add the component representing the AI's intent.
                     _componentStore.AddComponent(entityId, chosenAttack);
-                    combatStats.ActionPoints -= bestAttack.ActionPointCost;
                     EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} decides to use {bestAttack.Name}." });
                 }
                 else
                 {
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} is in range but cannot afford an attack." });
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} is in range but has no attacks." });
                 }
             }
             else
             {
-                // Not in range, try to move.
-                const int moveCost = 5; // Assume a fixed move cost for now
-                if (combatStats.ActionPoints >= moveCost)
+                // Not in range, try to move closer.
+                var path = _gameState.GetAffordablePath(entityId, aiPos.LocalPosition, playerPos.LocalPosition, false, GameState.COMBAT_TURN_DURATION_SECONDS, out _);
+
+                if (path != null && path.Any())
                 {
-                    var path = Pathfinder.FindPath(aiPos.LocalPosition, playerPos.LocalPosition, _gameState, false, PathfindingMode.Moves, MapView.Local);
-                    if (path != null && path.Count > 0)
+                    var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(entityId);
+                    foreach (var step in path)
                     {
-                        var nextStep = path[0];
-                        var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(entityId);
-                        // Add the component representing the AI's intent.
-                        actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, nextStep, false));
-                        combatStats.ActionPoints -= moveCost;
-                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} decides to move towards the player." });
+                        actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, step, false));
                     }
-                    else
-                    {
-                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} cannot find a path to the player." });
-                    }
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} decides to move towards the player." });
                 }
                 else
                 {
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} wants to move but cannot afford it." });
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} cannot find a path to the player." });
                 }
             }
             // The AI's decision is made. The CombatProcessingSystem will execute it and then the turn will end.

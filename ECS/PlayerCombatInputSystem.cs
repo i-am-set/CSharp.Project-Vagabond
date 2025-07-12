@@ -1,5 +1,6 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace ProjectVagabond
@@ -45,17 +46,72 @@ namespace ProjectVagabond
             }
 
             var currentMouseState = Mouse.GetState();
-            bool leftClicked = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
+            var virtualMousePos = Core.TransformMouse(currentMouseState.Position).ToPoint();
 
-            if (leftClicked)
+            if (_gameState.UIState == CombatUIState.SelectMove)
             {
-                var virtualMousePos = Core.TransformMouse(currentMouseState.Position).ToPoint();
-
-                // Check for a click on an enemy on the map
-                int? clickedEntityId = _mapRenderer.GetEntityIdAt(virtualMousePos);
-                if (clickedEntityId.HasValue)
+                var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
+                if (playerPosComp != null)
                 {
-                    SelectTarget(clickedEntityId.Value);
+                    var targetTile = _mapRenderer.ScreenToLocalGrid(virtualMousePos);
+
+                    // Update preview path continuously
+                    if (targetTile.X >= 0)
+                    {
+                        bool isRunning = false; // Assume walking for now
+                        var path = _gameState.GetAffordablePath(_gameState.PlayerEntityId, playerPosComp.LocalPosition, targetTile, isRunning, GameState.COMBAT_TURN_DURATION_SECONDS, out _);
+                        _gameState.CombatMovePreviewPath = path ?? new List<Vector2>();
+                    }
+                    else
+                    {
+                        _gameState.CombatMovePreviewPath.Clear();
+                    }
+
+                    // Handle click to confirm
+                    bool leftClicked = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
+                    if (leftClicked && _gameState.CombatMovePreviewPath.Any())
+                    {
+                        var playerActionQueue = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
+                        if (playerActionQueue != null)
+                        {
+                            bool isRunning = false; // Assume walking
+                            foreach (var step in _gameState.CombatMovePreviewPath)
+                            {
+                                playerActionQueue.ActionQueue.Enqueue(new MoveAction(_gameState.PlayerEntityId, step, isRunning));
+                            }
+
+                            // Recalculate final cost for log message
+                            _gameState.GetAffordablePath(_gameState.PlayerEntityId, playerPosComp.LocalPosition, targetTile, isRunning, GameState.COMBAT_TURN_DURATION_SECONDS, out float totalTimeCost);
+                            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"Player moves. (Time: {totalTimeCost:F1}s)" });
+
+                            _gameState.UIState = CombatUIState.Busy;
+                            _gameState.CombatMovePreviewPath.Clear();
+                        }
+                    }
+                    else if (leftClicked) // Clicked on an invalid tile
+                    {
+                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[warning]Cannot move to the selected tile." });
+                        ResetToDefaultState();
+                    }
+                }
+            }
+            else
+            {
+                // If not in SelectMove state, ensure the preview path is cleared.
+                if (_gameState.CombatMovePreviewPath.Any())
+                {
+                    _gameState.CombatMovePreviewPath.Clear();
+                }
+
+                // Handle other input, like selecting a target
+                bool leftClicked = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
+                if (leftClicked)
+                {
+                    int? clickedEntityId = _mapRenderer.GetEntityIdAt(virtualMousePos);
+                    if (clickedEntityId.HasValue)
+                    {
+                        SelectTarget(clickedEntityId.Value);
+                    }
                 }
             }
 
@@ -88,7 +144,8 @@ namespace ProjectVagabond
                     EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[dim]Skills are not yet implemented." });
                     break;
                 case "Move":
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[dim]Moving in combat is not yet implemented." });
+                    _gameState.UIState = CombatUIState.SelectMove;
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "Player is selecting a destination to move." });
                     break;
                 case "Item":
                     EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[dim]Items are not yet implemented." });
@@ -124,7 +181,6 @@ namespace ProjectVagabond
             var playerPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
             var targetPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.SelectedTargetId.Value);
 
-            // --- ADDED: RANGE CHECK ---
             if (playerCombatant == null || playerPos == null || targetPos == null)
             {
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[error]Cannot attack. Missing combat components." });
@@ -139,9 +195,7 @@ namespace ProjectVagabond
                 ResetToDefaultState();
                 return;
             }
-            // --- END: RANGE CHECK ---
 
-            var playerStats = _componentStore.GetComponent<CombatStatsComponent>(_gameState.PlayerEntityId);
             var playerAttacks = _componentStore.GetComponent<AvailableAttacksComponent>(_gameState.PlayerEntityId);
             var attack = playerAttacks?.Attacks.FirstOrDefault(a => a.Name == _selectedAttackName);
 
@@ -152,30 +206,20 @@ namespace ProjectVagabond
                 return;
             }
 
-            if (playerStats.ActionPoints >= attack.ActionPointCost)
+            // Add the component representing the player's intent.
+            var chosenAttack = new ChosenAttackComponent
             {
-                // Add the component representing the player's intent.
-                var chosenAttack = new ChosenAttackComponent
-                {
-                    TargetId = _gameState.SelectedTargetId.Value,
-                    AttackName = attack.Name
-                };
-                _componentStore.AddComponent(_gameState.PlayerEntityId, chosenAttack);
+                TargetId = _gameState.SelectedTargetId.Value,
+                AttackName = attack.Name
+            };
+            _componentStore.AddComponent(_gameState.PlayerEntityId, chosenAttack);
 
-                // Deduct cost
-                playerStats.ActionPoints -= attack.ActionPointCost;
-                var targetArchetypeIdComp = _componentStore.GetComponent<ArchetypeIdComponent>(chosenAttack.TargetId);
-                var targetArchetype = _archetypeManager.GetArchetypeTemplate(targetArchetypeIdComp?.ArchetypeId ?? "Unknown");
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"Player decides to use {attack.Name} on {targetArchetype?.Name ?? $"Entity {chosenAttack.TargetId}"}." });
+            var targetArchetypeIdComp = _componentStore.GetComponent<ArchetypeIdComponent>(chosenAttack.TargetId);
+            var targetArchetype = _archetypeManager.GetArchetypeTemplate(targetArchetypeIdComp?.ArchetypeId ?? "Unknown");
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"Player decides to use {attack.Name} on {targetArchetype?.Name ?? $"Entity {chosenAttack.TargetId}"}." });
 
-                // The player's action is now chosen. Set the UI to busy while the action is processed.
-                _gameState.UIState = CombatUIState.Busy;
-            }
-            else
-            {
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[warning]Not enough Action Points to use {attack.Name}. Need {attack.ActionPointCost}, have {playerStats.ActionPoints}." });
-                ResetToDefaultState();
-            }
+            // The player's action is now chosen. Set the UI to busy while the action is processed.
+            _gameState.UIState = CombatUIState.Busy;
         }
 
         private void ResetToDefaultState()
@@ -183,6 +227,7 @@ namespace ProjectVagabond
             _selectedAttackName = null;
             _gameState.UIState = CombatUIState.Default;
             _gameState.SelectedTargetId = null; // Also clear the selected target
+            _gameState.CombatMovePreviewPath.Clear();
             EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[dim]Action cancelled. Returning to main menu." });
         }
     }

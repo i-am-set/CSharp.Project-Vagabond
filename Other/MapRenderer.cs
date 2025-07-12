@@ -211,6 +211,24 @@ namespace ProjectVagabond
                 DrawGridElement(spriteBatch, element, cellSize);
             }
 
+            // Draw Combat Move Preview Path
+            if (_gameState.IsInCombat && _gameState.CombatMovePreviewPath.Any())
+            {
+                foreach (var pos in _gameState.CombatMovePreviewPath)
+                {
+                    Vector2? screenPos = MapCoordsToScreen(pos);
+                    if (screenPos.HasValue)
+                    {
+                        // Assuming walking for now. Could check a flag if running preview is added.
+                        Texture2D texture = _spriteManager.PathSprite;
+                        Color color = _global.PathColor * 0.6f; // Use transparency for preview
+
+                        var destRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
+                        spriteBatch.Draw(texture, destRect, color);
+                    }
+                }
+            }
+
             if (_hoveredGridPos.HasValue)
             {
                 Vector2? screenPos = MapCoordsToScreen(_hoveredGridPos.Value);
@@ -483,6 +501,27 @@ namespace ProjectVagabond
                 }
             }
             return null;
+        }
+
+        /// <summary>
+        /// Converts a screen position (e.g., mouse coordinates) to local grid coordinates.
+        /// </summary>
+        /// <param name="screenPosition">The position on the screen.</param>
+        /// <returns>The corresponding coordinates on the local grid.</returns>
+        public Vector2 ScreenToLocalGrid(Point screenPosition)
+        {
+            if (!_mapGridBounds.Contains(screenPosition))
+            {
+                // Return an invalid position if the click is outside the map area.
+                return new Vector2(-1, -1);
+            }
+
+            // This calculation is only valid for the local map view, which is where combat movement occurs.
+            int cellSize = Global.LOCAL_GRID_CELL_SIZE;
+            int gridX = (screenPosition.X - _mapGridBounds.X) / cellSize;
+            int gridY = (screenPosition.Y - _mapGridBounds.Y) / cellSize;
+
+            return new Vector2(gridX, gridY);
         }
 
         /// <summary>

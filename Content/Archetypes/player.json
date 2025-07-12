@@ -49,19 +49,12 @@
       }
     },
     {
-      "Type": "ProjectVagabond.CombatStatsComponent, ProjectVagabond",
-      "Properties": {
-        "ActionPoints": 400
-      }
-    },
-    {
       "Type": "ProjectVagabond.AvailableAttacksComponent, ProjectVagabond",
       "Properties": {
         "Attacks": [
           {
             "Name": "Punch",
-            "DamageMultiplier": 1.0,
-            "ActionPointCost": 2
+            "DamageMultiplier": 1.0
           }
         ]
       }

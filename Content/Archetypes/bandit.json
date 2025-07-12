@@ -19,6 +19,16 @@
       }
     },
     {
+      "Type": "ProjectVagabond.StatsComponent, ProjectVagabond",
+      "Properties": {
+        "Strength": 4,
+        "Agility": 4,
+        "Tenacity": 6,
+        "Intelligence": 2,
+        "Charm": 1
+      }
+    },
+    {
       "Type": "ProjectVagabond.NPCTagComponent, ProjectVagabond"
     },
     {
@@ -43,19 +53,12 @@
       }
     },
     {
-      "Type": "ProjectVagabond.CombatStatsComponent, ProjectVagabond",
-      "Properties": {
-        "ActionPoints": 300
-      }
-    },
-    {
       "Type": "ProjectVagabond.AvailableAttacksComponent, ProjectVagabond",
       "Properties": {
         "Attacks": [
           {
             "Name": "Punch",
-            "DamageMultiplier": 1.0,
-            "ActionPointCost": 2
+            "DamageMultiplier": 1.0
           }
         ]
       }

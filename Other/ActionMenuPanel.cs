@@ -80,17 +80,15 @@ namespace ProjectVagabond
 
                 case CombatUIState.SelectAttack:
                     var attacksComp = _componentStore.GetComponent<AvailableAttacksComponent>(_gameState.PlayerEntityId);
-                    var combatStats = _componentStore.GetComponent<CombatStatsComponent>(_gameState.PlayerEntityId);
-                    if (attacksComp == null || combatStats == null) break;
+                    if (attacksComp == null) break;
 
                     foreach (var attack in attacksComp.Attacks)
                     {
-                        bool canAfford = combatStats.ActionPoints >= attack.ActionPointCost;
-                        string text = $"{attack.Name} (Cost: {attack.ActionPointCost} AP)";
+                        string text = attack.Name;
                         var buttonBounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
                         var button = new Button(buttonBounds, text, attack.Name)
                         {
-                            IsEnabled = canAfford,
+                            IsEnabled = true, // All attacks are always available now
                             CustomDefaultTextColor = _global.GameTextColor,
                             CustomHoverTextColor = _global.Palette_Yellow,
                             CustomDisabledTextColor = Color.DarkGray

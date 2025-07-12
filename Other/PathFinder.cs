@@ -67,7 +67,10 @@ namespace ProjectVagabond
                     else
                     {
                         Vector2 moveDir = _neighborOffsets[i];
-                        moveCost = gameState.GetSecondsPassedDuringMovement(isRunning, mapData, moveDir, mapView == MapView.Local);
+                        // We use player stats here because pathfinder doesn't know which entity is pathing.
+                        // The cost is relative, so this is acceptable for finding the "fastest" path.
+                        // The actual time cost is calculated later when truncating the path.
+                        moveCost = gameState.GetSecondsPassedDuringMovement(gameState.PlayerStats, isRunning, mapData, moveDir, mapView == MapView.Local);
                     }
 
                     float tentative_gScore = current_gScore + moveCost;

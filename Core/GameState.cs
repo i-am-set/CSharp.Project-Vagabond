@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -48,13 +48,14 @@ namespace ProjectVagabond
         public bool IsActionQueueDirty { get; set; } = true;
 
         // Combat State
-        public const int COMBAT_TURN_DURATION_SECONDS = 5;
+        public const int COMBAT_TURN_DURATION_SECONDS = 15;
         public bool IsInCombat { get; private set; } = false;
         public List<int> Combatants { get; private set; } = new List<int>();
         public List<int> InitiativeOrder { get; private set; } = new List<int>();
         public int CurrentTurnEntityId { get; private set; }
         public CombatUIState UIState { get; set; } = CombatUIState.Default;
         public int? SelectedTargetId { get; set; } = null;
+        public List<Vector2> CombatMovePreviewPath { get; set; } = new List<Vector2>();
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -259,7 +260,7 @@ namespace ProjectVagabond
             return 0;
         }
 
-        public int GetSecondsPassedDuringMovement(bool isRunning, MapData mapData, Vector2 moveDirection, bool isLocalMove = false)
+        public float GetSecondsPassedDuringMovement(StatsComponent stats, bool isRunning, MapData mapData, Vector2 moveDirection, bool isLocalMove = false)
         {
             float secondsPassed = 0;
             float timeMultiplier = 1.0f;
@@ -269,7 +270,7 @@ namespace ProjectVagabond
                 timeMultiplier = 1.5f;
             }
 
-            float baseTime = isRunning ? (360f / PlayerStats.RunSpeed) : (360f / PlayerStats.WalkSpeed);
+            float baseTime = isRunning ? (360f / stats.RunSpeed) : (360f / stats.WalkSpeed);
 
             if (isLocalMove)
             {
@@ -287,7 +288,7 @@ namespace ProjectVagabond
                 };
             }
 
-            return (int)Math.Ceiling(secondsPassed * timeMultiplier);
+            return (float)Math.Ceiling(secondsPassed * timeMultiplier);
         }
 
         public (int finalEnergy, bool possible, int secondsPassed) SimulateActionQueueEnergy(IEnumerable<IAction> customQueue = null)
@@ -310,7 +311,7 @@ namespace ProjectVagabond
                     Vector2 moveDirection = moveAction.Destination - lastPosition;
                     MapData mapData = isLocalMove ? default : GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
 
-                    int moveDuration = GetSecondsPassedDuringMovement(moveAction.IsRunning, mapData, moveDirection, isLocalMove);
+                    int moveDuration = (int)GetSecondsPassedDuringMovement(PlayerStats, moveAction.IsRunning, mapData, moveDirection, isLocalMove);
 
                     if (!isLocalMove && isFirstMoveInQueue)
                     {
@@ -357,6 +358,43 @@ namespace ProjectVagabond
                 isFirstMoveInQueue = false;
             }
             return (finalEnergy, true, secondsPassed);
+        }
+
+        public List<Vector2> GetAffordablePath(int entityId, Vector2 start, Vector2 end, bool isRunning, float timeBudget, out float totalTimeCost)
+        {
+            totalTimeCost = 0f;
+            var stats = _componentStore.GetComponent<StatsComponent>(entityId);
+            if (stats == null)
+            {
+                return null;
+            }
+
+            var fullPath = Pathfinder.FindPath(start, end, this, isRunning, PathfindingMode.Time, MapView.Local);
+            if (fullPath == null || !fullPath.Any())
+            {
+                return null;
+            }
+
+            var affordablePath = new List<Vector2>();
+            var lastPos = start;
+
+            foreach (var step in fullPath)
+            {
+                var moveDirection = step - lastPos;
+                float stepCost = GetSecondsPassedDuringMovement(stats, isRunning, default, moveDirection, true);
+
+                if (totalTimeCost + stepCost <= timeBudget)
+                {
+                    totalTimeCost += stepCost;
+                    affordablePath.Add(step);
+                    lastPos = step;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            return affordablePath;
         }
 
         public void ExecuteActions()
