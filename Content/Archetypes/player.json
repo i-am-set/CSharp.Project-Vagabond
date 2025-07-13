@@ -49,6 +49,9 @@
       }
     },
     {
+      "Type": "ProjectVagabond.TurnStatsComponent, ProjectVagabond"
+    },
+    {
       "Type": "ProjectVagabond.AvailableAttacksComponent, ProjectVagabond",
       "Properties": {
         "Attacks": [

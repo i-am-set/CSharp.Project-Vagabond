@@ -219,9 +219,9 @@ namespace ProjectVagabond
                     Vector2? screenPos = MapCoordsToScreen(pos);
                     if (screenPos.HasValue)
                     {
-                        // Assuming walking for now. Could check a flag if running preview is added.
-                        Texture2D texture = _spriteManager.PathSprite;
-                        Color color = _global.PathColor * 0.6f; // Use transparency for preview
+                        bool isRunning = _gameState.IsCombatMovePreviewRunning;
+                        Texture2D texture = isRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
+                        Color color = (isRunning ? _global.RunPathColor : _global.PathColor) * 0.6f; // Use transparency for preview
 
                         var destRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
                         spriteBatch.Draw(texture, destRect, color);

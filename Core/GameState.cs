@@ -56,6 +56,7 @@ namespace ProjectVagabond
         public CombatUIState UIState { get; set; } = CombatUIState.Default;
         public int? SelectedTargetId { get; set; } = null;
         public List<Vector2> CombatMovePreviewPath { get; set; } = new List<Vector2>();
+        public bool IsCombatMovePreviewRunning { get; set; } = false;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -360,13 +361,20 @@ namespace ProjectVagabond
             return (finalEnergy, true, secondsPassed);
         }
 
-        public List<Vector2> GetAffordablePath(int entityId, Vector2 start, Vector2 end, bool isRunning, float timeBudget, out float totalTimeCost)
+        public List<Vector2> GetAffordablePath(int entityId, Vector2 start, Vector2 end, bool isRunning, out float totalTimeCost)
         {
             totalTimeCost = 0f;
             var stats = _componentStore.GetComponent<StatsComponent>(entityId);
-            if (stats == null)
+            var turnStats = _componentStore.GetComponent<TurnStatsComponent>(entityId);
+            if (stats == null || turnStats == null)
             {
                 return null;
+            }
+
+            float timeBudget = COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
+            if (timeBudget <= 0)
+            {
+                return new List<Vector2>();
             }
 
             var fullPath = Pathfinder.FindPath(start, end, this, isRunning, PathfindingMode.Time, MapView.Local);

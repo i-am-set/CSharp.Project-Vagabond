@@ -67,6 +67,21 @@ namespace ProjectVagabond
             var newTurnEntityId = _gameState.InitiativeOrder[_currentTurnIndex];
             _gameState.SetCurrentTurnEntity(newTurnEntityId);
 
+            // Reset the turn-specific stats for the new entity.
+            var turnStats = _componentStore.GetComponent<TurnStatsComponent>(newTurnEntityId);
+            if (turnStats != null)
+            {
+                turnStats.HasPrimaryAction = true;
+                turnStats.HasSecondaryAction = true;
+                turnStats.MovementTimeUsedThisTurn = 0f;
+            }
+            else
+            {
+                // Safety: if an entity enters combat without this component, add it.
+                var newTurnStats = new TurnStatsComponent();
+                _componentStore.AddComponent(newTurnEntityId, newTurnStats);
+            }
+
             // Log whose turn it is now.
             var newTurnEntityName = EntityNamer.GetName(_gameState.CurrentTurnEntityId);
             EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"Turn: {newTurnEntityName}" });

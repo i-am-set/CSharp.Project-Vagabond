@@ -14,15 +14,13 @@ namespace ProjectVagabond
         private CombatResolutionSystem _combatResolutionSystem;
         private CombatTurnSystem _combatTurnSystem;
 
+        private float _actionDelayTimer = 0f;
+        private const float ACTION_DELAY_SECONDS = 0.15f;
+
         public CombatProcessingSystem() { }
 
-        /// <summary>
-        /// Updates the system, processing the action of the current turn's entity.
-        /// </summary>
-        /// <param name="gameTime">Provides a snapshot of timing values.</param>
         public void Update(GameTime gameTime)
         {
-            // Lazy-load all dependencies on first use
             _gameState ??= ServiceLocator.Get<GameState>();
             _componentStore ??= ServiceLocator.Get<ComponentStore>();
             _combatResolutionSystem ??= ServiceLocator.Get<CombatResolutionSystem>();
@@ -30,86 +28,65 @@ namespace ProjectVagabond
 
             if (!_gameState.IsInCombat) return;
 
-            int currentEntityId = _gameState.CurrentTurnEntityId;
-
-            // --- Player Turn Processing ---
-            if (currentEntityId == _gameState.PlayerEntityId)
+            if (_actionDelayTimer > 0)
             {
-                bool playerActionTaken = false;
+                _actionDelayTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                return;
+            }
 
-                // Process a chosen attack first
-                var chosenAttack = _componentStore.GetComponent<ChosenAttackComponent>(currentEntityId);
-                if (chosenAttack != null)
+            int currentEntityId = _gameState.CurrentTurnEntityId;
+            var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(currentEntityId);
+
+            if (actionQueue != null && actionQueue.ActionQueue.TryDequeue(out IAction nextAction))
+            {
+                bool isAI = _componentStore.HasComponent<AIComponent>(currentEntityId);
+
+                // Process the dequeued action
+                switch (nextAction)
                 {
-                    _combatResolutionSystem.ResolveAction(currentEntityId, chosenAttack);
-                    _componentStore.RemoveComponent<ChosenAttackComponent>(currentEntityId);
-                    playerActionTaken = true;
+                    case MoveAction moveAction:
+                        ApplyMoveActionEffects(moveAction);
+                        break;
+
+                    case AttackAction attackAction:
+                        _combatResolutionSystem.ResolveAction(attackAction);
+                        break;
+
+                    case EndTurnAction:
+                        _combatTurnSystem.EndCurrentTurn();
+                        break;
                 }
+                _actionDelayTimer = ACTION_DELAY_SECONDS;
 
-                // Then, process any queued move actions
-                var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(currentEntityId);
-                if (actionQueue != null && actionQueue.ActionQueue.Any() && actionQueue.ActionQueue.Peek() is MoveAction)
+                // ** THE FIX IS HERE **
+                // After processing an action, check if the queue is now empty.
+                if (!actionQueue.ActionQueue.Any())
                 {
-                    while (actionQueue.ActionQueue.Any() && actionQueue.ActionQueue.Peek() is MoveAction moveAction)
+                    // If it's the player's turn and their queue is empty,
+                    // it means their move/attack sequence is done. Return control to them.
+                    if (!isAI)
                     {
-                        actionQueue.ActionQueue.Dequeue();
-                        ApplyMoveActionEffects(currentEntityId, moveAction);
+                        _gameState.UIState = CombatUIState.Default;
                     }
-                    playerActionTaken = true;
-                }
-
-                // If the player took an action, their turn is over.
-                if (playerActionTaken)
-                {
-                    _combatTurnSystem.EndCurrentTurn();
                 }
             }
-            // --- AI Turn Processing ---
-            else
+            else if (_componentStore.HasComponent<AIComponent>(currentEntityId))
             {
-                // Check for and process a chosen attack
-                var chosenAttack = _componentStore.GetComponent<ChosenAttackComponent>(currentEntityId);
-                if (chosenAttack != null)
-                {
-                    _combatResolutionSystem.ResolveAction(currentEntityId, chosenAttack);
-                    _componentStore.RemoveComponent<ChosenAttackComponent>(currentEntityId);
-                }
-                else
-                {
-                    // Check for and process a move action
-                    var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(currentEntityId);
-                    if (actionQueue != null && actionQueue.ActionQueue.Any() && actionQueue.ActionQueue.Peek() is MoveAction)
-                    {
-                        while (actionQueue.ActionQueue.Any() && actionQueue.ActionQueue.Peek() is MoveAction moveAction)
-                        {
-                            actionQueue.ActionQueue.Dequeue();
-                            ApplyMoveActionEffects(currentEntityId, moveAction);
-                        }
-                    }
-                }
-
-                // An AI's turn always ends after its action (or lack thereof) is processed.
+                // Safety net: If an AI's queue is somehow empty at the start of its processing, end its turn.
                 _combatTurnSystem.EndCurrentTurn();
             }
         }
 
-        /// <summary>
-        /// Applies the effects of a move action for a given entity.
-        /// Simplified for local, in-combat movement.
-        /// </summary>
-        /// <param name="entityId">The ID of the entity to move.</param>
-        /// <param name="action">The move action to apply.</param>
-        private void ApplyMoveActionEffects(int entityId, MoveAction action)
+        private void ApplyMoveActionEffects(MoveAction action)
         {
-            var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-            if (localPosComp == null) return;
-
-            Vector2 nextPosition = action.Destination;
-
-            localPosComp.LocalPosition = new Vector2(
-                MathHelper.Clamp(nextPosition.X, 0, Global.LOCAL_GRID_SIZE - 1),
-                MathHelper.Clamp(nextPosition.Y, 0, Global.LOCAL_GRID_SIZE - 1)
-            );
+            var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(action.ActorId);
+            if (localPosComp != null)
+            {
+                localPosComp.LocalPosition = new Vector2(
+                    MathHelper.Clamp(action.Destination.X, 0, Global.LOCAL_GRID_SIZE - 1),
+                    MathHelper.Clamp(action.Destination.Y, 0, Global.LOCAL_GRID_SIZE - 1)
+                );
+            }
         }
     }
 }

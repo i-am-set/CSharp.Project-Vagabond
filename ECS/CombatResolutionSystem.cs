@@ -21,17 +21,18 @@ namespace ProjectVagabond
         /// <summary>
         /// Resolves a single attack action immediately.
         /// </summary>
-        /// <param name="attackerId">The ID of the entity performing the attack.</param>
-        /// <param name="chosenAttack">The component containing the attack details.</param>
-        public void ResolveAction(int attackerId, ChosenAttackComponent chosenAttack)
+        /// <param name="action">The attack action to resolve.</param>
+        public void ResolveAction(AttackAction action)
         {
+            var attackerId = action.ActorId;
+            var targetId = action.TargetId;
+
             var attackerCombatantComp = _componentStore.GetComponent<CombatantComponent>(attackerId);
             var attackerAttacksComp = _componentStore.GetComponent<AvailableAttacksComponent>(attackerId);
-            var targetHealthComp = _componentStore.GetComponent<HealthComponent>(chosenAttack.TargetId);
+            var targetHealthComp = _componentStore.GetComponent<HealthComponent>(targetId);
 
-            // Get attacker and target names for logging
             var attackerName = EntityNamer.GetName(attackerId);
-            var targetName = EntityNamer.GetName(chosenAttack.TargetId);
+            var targetName = EntityNamer.GetName(targetId);
 
             if (attackerCombatantComp == null || attackerAttacksComp == null || targetHealthComp == null)
             {
@@ -39,24 +40,19 @@ namespace ProjectVagabond
                 return;
             }
 
-            var attack = attackerAttacksComp.Attacks.FirstOrDefault(a => a.Name == chosenAttack.AttackName);
+            var attack = attackerAttacksComp.Attacks.FirstOrDefault(a => a.Name == action.AttackName);
 
             if (attack == null)
             {
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{attackerName} tried to use an unknown attack: {chosenAttack.AttackName}" });
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{attackerName} tried to use an unknown attack: {action.AttackName}" });
                 return;
             }
 
-            // Calculate damage
             int damage = (int)(attackerCombatantComp.AttackPower * attack.DamageMultiplier);
-
-            // Apply damage
             targetHealthComp.TakeDamage(damage);
 
-            // Log the result
             EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{attackerName} attacks {targetName} with {attack.Name} for [red]{damage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining." });
 
-            // Check for death
             if (targetHealthComp.CurrentHealth <= 0)
             {
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[red]{targetName} has been defeated![/]" });
