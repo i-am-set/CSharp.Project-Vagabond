@@ -140,6 +140,58 @@ namespace ProjectVagabond
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = lineMessage });
             }
 
+            var enemies = new List<int>(Combatants);
+            enemies.Remove(PlayerEntityId);
+
+            if (enemies.Count == 1)
+            {
+                SelectedTargetId = enemies[0];
+            }
+            else if (enemies.Count > 1)
+            {
+                int closestEnemyId = -1;
+                float minDistance = float.MaxValue;
+                var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(PlayerEntityId);
+
+                if (playerPosComp != null)
+                {
+                    foreach (var enemyId in enemies)
+                    {
+                        var enemyPosComp = _componentStore.GetComponent<LocalPositionComponent>(enemyId);
+                        if (enemyPosComp != null)
+                        {
+                            float distance = Vector2.Distance(playerPosComp.LocalPosition, enemyPosComp.LocalPosition);
+                            if (distance < minDistance)
+                            {
+                                minDistance = distance;
+                                closestEnemyId = enemyId;
+                            }
+                        }
+                    }
+                }
+
+                if (closestEnemyId != -1)
+                {
+                    SelectedTargetId = closestEnemyId;
+                }
+                else
+                {
+                    // Failsafe in case positions couldn't be determined
+                    SelectedTargetId = null;
+                }
+            }
+            else
+            {
+                SelectedTargetId = null;
+            }
+
+            // Log the auto-selected target if one was found
+            if (SelectedTargetId.HasValue)
+            {
+                var targetName = EntityNamer.GetName(SelectedTargetId.Value);
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[dim]Auto-targeting {targetName}." });
+            }
+
             _combatTurnSystem ??= ServiceLocator.Get<CombatTurnSystem>();
             _combatTurnSystem.StartCombat();
         }

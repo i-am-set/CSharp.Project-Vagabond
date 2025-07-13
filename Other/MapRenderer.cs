@@ -35,6 +35,11 @@ namespace ProjectVagabond
         public ContextMenu MapContextMenu => _contextMenu;
         public Vector2? RightClickedWorldPos { get; set; }
 
+        // Fields for selection pulse animation
+        private float _selectionPulseTimer = 0f;
+        private bool _isSelectionInflated = false;
+        private const float SELECTION_PULSE_DURATION = 0.5f;
+
         public MapRenderer()
         {
             _gameState = ServiceLocator.Get<GameState>();
@@ -193,6 +198,13 @@ namespace ProjectVagabond
 
         private void DrawLocalMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
+            _selectionPulseTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_selectionPulseTimer >= SELECTION_PULSE_DURATION)
+            {
+                _isSelectionInflated = !_isSelectionInflated;
+                _selectionPulseTimer = 0f;
+            }
+
             int cellSize = Global.LOCAL_GRID_CELL_SIZE;
             int gridSize = Global.LOCAL_GRID_SIZE;
 
@@ -251,8 +263,19 @@ namespace ProjectVagabond
 
                     var cellRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
 
-                    Color boxColor = (entityId == _gameState.SelectedTargetId) ? _global.Palette_Pink : _global.Palette_Teal;
-                    DrawHollowRectangle(spriteBatch, cellRect, boxColor, 1);
+                    if (entityId == _gameState.SelectedTargetId)
+                    {
+                        Rectangle highlightRect;
+                        if (_isSelectionInflated)
+                        {
+                            highlightRect = new Rectangle(cellRect.X - 1, cellRect.Y - 1, cellRect.Width + 2, cellRect.Height + 2);
+                        }
+                        else
+                        {
+                            highlightRect = cellRect;
+                        }
+                        DrawHollowRectangle(spriteBatch, highlightRect, _global.Palette_Pink, 1);
+                    }
 
                     if (entityId == _gameState.CurrentTurnEntityId)
                     {
