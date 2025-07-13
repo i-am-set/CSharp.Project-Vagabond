@@ -48,6 +48,7 @@ namespace ProjectVagabond
         private AISystem _aiSystem;
         private CombatProcessingSystem _combatProcessingSystem;
         private SpriteManager _spriteManager;
+        private CombatUIAnimationManager _combatUIAnimationManager;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -129,6 +130,11 @@ namespace ProjectVagabond
 
             _tooltipManager = new TooltipManager();
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
+
+            _combatUIAnimationManager = new CombatUIAnimationManager();
+            _combatUIAnimationManager.RegisterAnimation("TargetSelector", new PulsingAnimation(duration: 0.5f));
+            _combatUIAnimationManager.RegisterAnimation("TurnIndicator", new BobbingAnimation(speed: 5f, amount: 1.5f));
+            ServiceLocator.Register<CombatUIAnimationManager>(_combatUIAnimationManager);
 
             _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
@@ -226,6 +232,7 @@ namespace ProjectVagabond
             _graphics.SynchronizeWithVerticalRetrace = _settings.IsVsync;
 
             _sceneManager.Update(gameTime);
+            _combatUIAnimationManager.Update(gameTime);
 
             if (_gameState.IsInCombat)
             {

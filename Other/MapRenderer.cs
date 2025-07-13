@@ -18,6 +18,7 @@ namespace ProjectVagabond
         private readonly ArchetypeManager _archetypeManager;
         private readonly WorldClockManager _worldClockManager;
         private readonly Global _global;
+        private readonly CombatUIAnimationManager _animationManager;
 
         private Vector2? _hoveredGridPos;
         private Rectangle _mapGridBounds;
@@ -35,11 +36,6 @@ namespace ProjectVagabond
         public ContextMenu MapContextMenu => _contextMenu;
         public Vector2? RightClickedWorldPos { get; set; }
 
-        // Fields for selection pulse animation
-        private float _selectionPulseTimer = 0f;
-        private bool _isSelectionInflated = false;
-        private const float SELECTION_PULSE_DURATION = 0.5f;
-
         public MapRenderer()
         {
             _gameState = ServiceLocator.Get<GameState>();
@@ -49,6 +45,7 @@ namespace ProjectVagabond
             _archetypeManager = ServiceLocator.Get<ArchetypeManager>();
             _worldClockManager = ServiceLocator.Get<WorldClockManager>();
             _global = ServiceLocator.Get<Global>();
+            _animationManager = ServiceLocator.Get<CombatUIAnimationManager>();
             _contextMenu = new ContextMenu();
 
             _headerButtons.Add(new Button(Rectangle.Empty, "Clear") { IsEnabled = false });
@@ -198,13 +195,6 @@ namespace ProjectVagabond
 
         private void DrawLocalMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            _selectionPulseTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_selectionPulseTimer >= SELECTION_PULSE_DURATION)
-            {
-                _isSelectionInflated = !_isSelectionInflated;
-                _selectionPulseTimer = 0f;
-            }
-
             int cellSize = Global.LOCAL_GRID_CELL_SIZE;
             int gridSize = Global.LOCAL_GRID_SIZE;
 
@@ -265,8 +255,9 @@ namespace ProjectVagabond
 
                     if (entityId == _gameState.SelectedTargetId)
                     {
+                        bool isInflated = _animationManager.IsPulsing("TargetSelector");
                         Rectangle highlightRect;
-                        if (_isSelectionInflated)
+                        if (isInflated)
                         {
                             highlightRect = new Rectangle(cellRect.X - 1, cellRect.Y - 1, cellRect.Width + 2, cellRect.Height + 2);
                         }
@@ -279,8 +270,9 @@ namespace ProjectVagabond
 
                     if (entityId == _gameState.CurrentTurnEntityId)
                     {
+                        float yOffset = _animationManager.GetBobbingOffset("TurnIndicator");
                         int indicatorSize = 8;
-                        var indicatorRect = new Rectangle(cellRect.Center.X - indicatorSize / 2, cellRect.Y - indicatorSize - 2, indicatorSize, indicatorSize);
+                        var indicatorRect = new Rectangle(cellRect.Center.X - indicatorSize / 2, (int)(cellRect.Y - indicatorSize - 2 + yOffset), indicatorSize, indicatorSize);
                         spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), indicatorRect, _global.Palette_Teal);
                     }
                 }
