@@ -52,41 +52,43 @@ namespace ProjectVagabond
 
             // --- AI TURN PLANNING ---
             var simulatedPosition = aiPos.LocalPosition;
-            float movementBudget = GameState.COMBAT_TURN_DURATION_SECONDS;
 
-            // ** GOAL 1: Attack if already in range. **
-            if (Vector2.Distance(simulatedPosition, playerPos.LocalPosition) <= combatant.AttackRange)
+            // ** GOAL: Move into attack range, then attack. **
+            // Pathfind to the player's position. The pathfinder is allowed to target an occupied tile.
+            var path = _gameState.GetAffordablePath(entityId, simulatedPosition, playerPos.LocalPosition, true, out float pathTimeCost);
+
+            var pathToMove = new List<Vector2>();
+            if (path != null && path.Any())
+            {
+                // The actual path to travel is all steps except the last one (which is the target's tile).
+                // If the path is only one step, it means we are already adjacent, so we don't move.
+                if (path.Count > 1)
+                {
+                    pathToMove = path.Take(path.Count - 1).ToList();
+                }
+            }
+
+            if (pathToMove.Any())
+            {
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} moves towards the player." });
+                foreach (var step in pathToMove)
+                {
+                    actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, step, true));
+                }
+            }
+
+            // The position the AI will be in after moving. If no move, it's the starting position.
+            var finalPositionAfterMove = pathToMove.Any() ? pathToMove.Last() : simulatedPosition;
+
+            // Check if the AI's new position is in attack range of the player.
+            if (Vector2.Distance(finalPositionAfterMove, playerPos.LocalPosition) <= combatant.AttackRange)
             {
                 var attack = _componentStore.GetComponent<AvailableAttacksComponent>(entityId)?.Attacks.FirstOrDefault();
                 if (attack != null)
                 {
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} is in range and attacks!" });
+                    string message = pathToMove.Any() ? $"{aiName} will attack after moving." : $"{aiName} is in range and attacks!";
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = message });
                     actionQueue.ActionQueue.Enqueue(new AttackAction(entityId, _gameState.PlayerEntityId, attack.Name));
-                    actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
-                    return; // Turn is planned.
-                }
-            }
-
-            // ** GOAL 2: Move into attack range, then attack. **
-            var path = _gameState.GetAffordablePath(entityId, simulatedPosition, playerPos.LocalPosition, false, out float pathTimeCost);
-            if (path != null && path.Any())
-            {
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} moves towards the player." });
-                foreach (var step in path)
-                {
-                    actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, step, false));
-                }
-
-                // Check if the final position is in attack range
-                var finalPosition = path.Last();
-                if (Vector2.Distance(finalPosition, playerPos.LocalPosition) <= combatant.AttackRange)
-                {
-                    var attack = _componentStore.GetComponent<AvailableAttacksComponent>(entityId)?.Attacks.FirstOrDefault();
-                    if (attack != null)
-                    {
-                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} will attack after moving." });
-                        actionQueue.ActionQueue.Enqueue(new AttackAction(entityId, _gameState.PlayerEntityId, attack.Name));
-                    }
                 }
             }
 

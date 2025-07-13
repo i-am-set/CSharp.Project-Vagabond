@@ -20,6 +20,7 @@ namespace ProjectVagabond
         private readonly Rectangle _bounds;
         private readonly List<Button> _buttons = new List<Button>();
         private CombatUIState _lastUIState = CombatUIState.Busy;
+        private int _lastTurnEntityId = -1;
 
         private const int PADDING = 10;
         private const int BORDER_THICKNESS = 2;
@@ -39,10 +40,12 @@ namespace ProjectVagabond
         {
             if (!_gameState.IsInCombat) return;
 
-            if (_gameState.UIState != _lastUIState)
+            // Rebuild buttons if the UI state OR the current turn entity has changed.
+            if (_gameState.UIState != _lastUIState || _gameState.CurrentTurnEntityId != _lastTurnEntityId)
             {
                 RebuildButtons(font);
                 _lastUIState = _gameState.UIState;
+                _lastTurnEntityId = _gameState.CurrentTurnEntityId;
             }
 
             foreach (var button in _buttons)
@@ -54,16 +57,34 @@ namespace ProjectVagabond
         private void RebuildButtons(BitmapFont font)
         {
             _buttons.Clear();
+
+            if (_gameState.CurrentTurnEntityId != _gameState.PlayerEntityId)
+            {
+                return;
+            }
+
             int currentY = _bounds.Y + PADDING;
 
             switch (_gameState.UIState)
             {
                 case CombatUIState.Default:
                     var mainOptions = new List<string> { "Attack", "Move", "End Turn" };
+                    var turnStats = _componentStore.GetComponent<TurnStatsComponent>(_gameState.PlayerEntityId);
+
                     foreach (var option in mainOptions)
                     {
                         var buttonBounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
                         var button = new Button(buttonBounds, option);
+
+                        if (option == "Move")
+                        {
+                            button.IsEnabled = _gameState.CanPlayerMoveInCombat();
+                        }
+                        else if (option == "Attack")
+                        {
+                            button.IsEnabled = turnStats?.HasPrimaryAction ?? false;
+                        }
+
                         button.OnClick += () => OnActionSelected?.Invoke(option);
                         _buttons.Add(button);
                         currentY += BUTTON_HEIGHT;
@@ -116,19 +137,23 @@ namespace ProjectVagabond
             spriteBatch.Draw(pixel, borderRect, _global.Palette_White);
             spriteBatch.Draw(pixel, _bounds, _global.TerminalBg);
 
-            foreach (var button in _buttons)
+            // Only draw buttons and instructions if it's the player's turn.
+            if (_gameState.CurrentTurnEntityId == _gameState.PlayerEntityId)
             {
-                button.Draw(spriteBatch, font, gameTime);
-            }
+                foreach (var button in _buttons)
+                {
+                    button.Draw(spriteBatch, font, gameTime);
+                }
 
-            switch (_gameState.UIState)
-            {
-                case CombatUIState.SelectTarget:
-                    DrawInstruction(spriteBatch, font, "Select a target...");
-                    break;
-                case CombatUIState.SelectMove:
-                    DrawInstruction(spriteBatch, font, "Select a destination...");
-                    break;
+                switch (_gameState.UIState)
+                {
+                    case CombatUIState.SelectTarget:
+                        DrawInstruction(spriteBatch, font, "Select a target...");
+                        break;
+                    case CombatUIState.SelectMove:
+                        DrawInstruction(spriteBatch, font, "Select a destination...");
+                        break;
+                }
             }
         }
 

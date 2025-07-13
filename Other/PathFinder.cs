@@ -24,7 +24,7 @@ namespace ProjectVagabond
             new Vector2(1, 1)   // Down-Right
         };
 
-        public static List<Vector2> FindPath(Vector2 start, Vector2 end, GameState gameState, bool isRunning, PathfindingMode mode, MapView mapView)
+        public static List<Vector2> FindPath(int pathfindingEntityId, Vector2 start, Vector2 end, GameState gameState, bool isRunning, PathfindingMode mode, MapView mapView)
         {
             var openQueue = new PriorityQueue<Vector2, float>();
             openQueue.Enqueue(start, 0);
@@ -45,7 +45,7 @@ namespace ProjectVagabond
                 {
                     var neighborPos = currentPos + _neighborOffsets[i];
 
-                    if (!gameState.IsPositionPassable(neighborPos, mapView, out var mapData))
+                    if (!gameState.IsPositionPassable(neighborPos, mapView, pathfindingEntityId, end, out var mapData))
                         continue;
 
                     bool isDiagonal = i >= 4;
@@ -53,7 +53,7 @@ namespace ProjectVagabond
                     {
                         var neighbor1 = currentPos + new Vector2(_neighborOffsets[i].X, 0);
                         var neighbor2 = currentPos + new Vector2(0, _neighborOffsets[i].Y);
-                        if (!gameState.IsPositionPassable(neighbor1, mapView) || !gameState.IsPositionPassable(neighbor2, mapView))
+                        if (!gameState.IsPositionPassable(neighbor1, mapView, pathfindingEntityId, end, out _) || !gameState.IsPositionPassable(neighbor2, mapView, pathfindingEntityId, end, out _))
                         {
                             continue;
                         }

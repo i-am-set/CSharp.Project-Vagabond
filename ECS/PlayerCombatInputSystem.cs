@@ -17,6 +17,7 @@ namespace ProjectVagabond
 
         private MouseState _previousMouseState;
         private string _selectedAttackName;
+        private float _previewPathCost = 0f;
 
         public PlayerCombatInputSystem(ActionMenuPanel actionMenuPanel, TurnOrderPanel turnOrderPanel, MapRenderer mapRenderer)
         {
@@ -47,7 +48,11 @@ namespace ProjectVagabond
             }
             else
             {
-                if (_gameState.CombatMovePreviewPath.Any()) _gameState.CombatMovePreviewPath.Clear();
+                if (_gameState.CombatMovePreviewPath.Any())
+                {
+                    _gameState.CombatMovePreviewPath.Clear();
+                    _previewPathCost = 0f;
+                }
 
                 bool leftClicked = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
                 if (leftClicked)
@@ -70,27 +75,33 @@ namespace ProjectVagabond
 
             if (targetTile.X >= 0)
             {
-                var path = _gameState.GetAffordablePath(_gameState.PlayerEntityId, playerPosComp.LocalPosition, targetTile, isRunning, out _);
+                var path = _gameState.GetAffordablePath(_gameState.PlayerEntityId, playerPosComp.LocalPosition, targetTile, isRunning, out _previewPathCost);
                 _gameState.CombatMovePreviewPath = path ?? new List<Vector2>();
                 _gameState.IsCombatMovePreviewRunning = isRunning;
             }
             else
             {
                 _gameState.CombatMovePreviewPath.Clear();
+                _previewPathCost = 0f;
             }
 
             bool leftClicked = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
             if (leftClicked && _gameState.CombatMovePreviewPath.Any())
             {
                 var playerActionQueue = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
-                if (playerActionQueue != null)
+                var playerTurnStats = _componentStore.GetComponent<TurnStatsComponent>(_gameState.PlayerEntityId);
+
+                if (playerActionQueue != null && playerTurnStats != null)
                 {
+                    playerTurnStats.MovementTimeUsedThisTurn += _previewPathCost;
+
                     foreach (var step in _gameState.CombatMovePreviewPath)
                     {
                         playerActionQueue.ActionQueue.Enqueue(new MoveAction(_gameState.PlayerEntityId, step, isRunning));
                     }
                     _gameState.UIState = CombatUIState.Busy;
                     _gameState.CombatMovePreviewPath.Clear();
+                    _previewPathCost = 0f;
                 }
             }
             else if (leftClicked)
@@ -152,8 +163,9 @@ namespace ProjectVagabond
             var playerPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
             var targetPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.SelectedTargetId.Value);
             var playerCombatant = _componentStore.GetComponent<CombatantComponent>(_gameState.PlayerEntityId);
+            var turnStats = _componentStore.GetComponent<TurnStatsComponent>(_gameState.PlayerEntityId);
 
-            if (actionQueue == null || playerPos == null || targetPos == null || playerCombatant == null) return;
+            if (actionQueue == null || playerPos == null || targetPos == null || playerCombatant == null || turnStats == null) return;
 
             if (Vector2.Distance(playerPos.LocalPosition, targetPos.LocalPosition) > playerCombatant.AttackRange)
             {
@@ -163,6 +175,10 @@ namespace ProjectVagabond
             }
 
             actionQueue.ActionQueue.Enqueue(new AttackAction(_gameState.PlayerEntityId, _gameState.SelectedTargetId.Value, _selectedAttackName));
+
+            // Consume the primary action for the turn.
+            turnStats.HasPrimaryAction = false;
+
             _gameState.UIState = CombatUIState.Busy;
         }
 
@@ -173,6 +189,7 @@ namespace ProjectVagabond
             _gameState.SelectedTargetId = null;
             _gameState.CombatMovePreviewPath.Clear();
             _gameState.IsCombatMovePreviewRunning = false;
+            _previewPathCost = 0f;
         }
     }
 }

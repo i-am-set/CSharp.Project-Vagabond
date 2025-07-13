@@ -16,7 +16,7 @@ namespace ProjectVagabond
         private readonly PlayerInputSystem _playerInputSystem;
         private readonly ContextMenu _contextMenu;
         private readonly Global _global;
-        private BitmapFont _font; 
+        private BitmapFont _font;
 
         private MouseState _currentMouseState;
         private MouseState _previousMouseState;
@@ -187,14 +187,14 @@ namespace ProjectVagabond
                 }
                 Vector2 startPos = (_originalPendingActionCount > 0) ? (_gameState.PendingActions.Last() as MoveAction)?.Destination ?? playerPos : playerPos;
                 if (startPos == targetPos) return;
-                var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
+                var path = Pathfinder.FindPath(_gameState.PlayerEntityId, startPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
                 if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: isRunning);
             }
             else
             {
                 _playerInputSystem.ClearPendingActions(_gameState);
                 if (playerPos == targetPos) return;
-                var path = Pathfinder.FindPath(playerPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
+                var path = Pathfinder.FindPath(_gameState.PlayerEntityId, playerPos, targetPos, _gameState, isRunning, mode, _gameState.CurrentMapView);
                 if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: isRunning);
             }
         }
@@ -222,7 +222,7 @@ namespace ProjectVagabond
 
                 if (startPos != targetPos)
                 {
-                    var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time, MapView.World);
+                    var path = Pathfinder.FindPath(_gameState.PlayerEntityId, startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time, MapView.World);
                     if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: false);
                     else
                     {
@@ -236,26 +236,36 @@ namespace ProjectVagabond
             };
 
             menuItems.Add(new ContextMenuItem { Text = "Submit Path", IsVisible = () => pathPending && !_gameState.IsExecutingActions, OnClick = () => _gameState.ToggleExecutingActions(true) });
-            menuItems.Add(new ContextMenuItem { Text = "Walk To", IsVisible = () => isPassable && !isPlayerPos, OnClick = () =>
+            menuItems.Add(new ContextMenuItem
             {
-                var lastAction = _gameState.PendingActions.LastOrDefault();
-                Vector2 startPos;
-                if (lastAction is MoveAction lastMove) startPos = lastMove.Destination;
-                else if (lastAction is RestAction lastRest) startPos = lastRest.Position;
-                else startPos = (_gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos);
-                var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time, _gameState.CurrentMapView);
-                if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: false);
-            }});
-            menuItems.Add(new ContextMenuItem { Text = "Run To", IsVisible = () => isPassable && !isPlayerPos, OnClick = () =>
+                Text = "Walk To",
+                IsVisible = () => isPassable && !isPlayerPos,
+                OnClick = () =>
+                {
+                    var lastAction = _gameState.PendingActions.LastOrDefault();
+                    Vector2 startPos;
+                    if (lastAction is MoveAction lastMove) startPos = lastMove.Destination;
+                    else if (lastAction is RestAction lastRest) startPos = lastRest.Position;
+                    else startPos = (_gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos);
+                    var path = Pathfinder.FindPath(_gameState.PlayerEntityId, startPos, targetPos, _gameState, isRunning: false, PathfindingMode.Time, _gameState.CurrentMapView);
+                    if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: false);
+                }
+            });
+            menuItems.Add(new ContextMenuItem
             {
-                var lastAction = _gameState.PendingActions.LastOrDefault();
-                Vector2 startPos;
-                if (lastAction is MoveAction lastMove) startPos = lastMove.Destination;
-                else if (lastAction is RestAction lastRest) startPos = lastRest.Position;
-                else startPos = (_gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos);
-                var path = Pathfinder.FindPath(startPos, targetPos, _gameState, isRunning: true, PathfindingMode.Time, _gameState.CurrentMapView);
-                if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: true);
-            }});
+                Text = "Run To",
+                IsVisible = () => isPassable && !isPlayerPos,
+                OnClick = () =>
+                {
+                    var lastAction = _gameState.PendingActions.LastOrDefault();
+                    Vector2 startPos;
+                    if (lastAction is MoveAction lastMove) startPos = lastMove.Destination;
+                    else if (lastAction is RestAction lastRest) startPos = lastRest.Position;
+                    else startPos = (_gameState.CurrentMapView == MapView.World ? _gameState.PlayerWorldPos : _gameState.PlayerLocalPos);
+                    var path = Pathfinder.FindPath(_gameState.PlayerEntityId, startPos, targetPos, _gameState, isRunning: true, PathfindingMode.Time, _gameState.CurrentMapView);
+                    if (path != null) _playerInputSystem.AppendPath(_gameState, path, isRunning: true);
+                }
+            });
             menuItems.Add(new ContextMenuItem { Text = "Short Rest", IsVisible = () => isPassable && isWorldMap, OnClick = () => queuePathAndRest(RestType.ShortRest) });
             menuItems.Add(new ContextMenuItem { Text = "Long Rest", IsVisible = () => isPassable && isWorldMap, OnClick = () => queuePathAndRest(RestType.LongRest) });
             menuItems.Add(new ContextMenuItem { Text = "Clear Path", Color = _global.Palette_Yellow, IsVisible = () => pathPending, OnClick = () => _playerInputSystem.CancelPendingActions(_gameState) });

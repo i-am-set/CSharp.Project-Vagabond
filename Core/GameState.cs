@@ -161,6 +161,29 @@ namespace ProjectVagabond
             CurrentTurnEntityId = entityId;
         }
 
+        /// <summary>
+        /// Checks if the player has enough time remaining in their turn to make at least one move.
+        /// </summary>
+        /// <returns>True if the player can still move, false otherwise.</returns>
+        public bool CanPlayerMoveInCombat()
+        {
+            if (!IsInCombat) return false;
+
+            var turnStats = _componentStore.GetComponent<TurnStatsComponent>(PlayerEntityId);
+            var playerStats = _componentStore.GetComponent<StatsComponent>(PlayerEntityId);
+
+            if (turnStats == null || playerStats == null) return false;
+
+            float remainingTime = COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
+
+            // Calculate the cost of the cheapest possible move (a non-diagonal walk)
+            float baseTime = 360f / playerStats.WalkSpeed;
+            float secondsPassed = baseTime / Global.LOCAL_GRID_SIZE;
+            float cheapestMoveCost = (float)Math.Ceiling(secondsPassed * 1.0f); // timeMultiplier is 1.0 for non-diagonal
+
+            return remainingTime >= cheapestMoveCost;
+        }
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public void UpdateActiveEntities()
@@ -227,17 +250,56 @@ namespace ProjectVagabond
             IsActionQueueDirty = true;
         }
 
-        public bool IsPositionPassable(Vector2 position, MapView view, out MapData mapData)
+        public bool IsPositionPassable(Vector2 position, MapView view, int pathfindingEntityId, Vector2 targetDestination, out MapData mapData)
         {
             mapData = default;
 
+            // Basic terrain/bounds checks
             if (view == MapView.Local)
             {
-                return position.X >= 0 && position.X < Global.LOCAL_GRID_SIZE && position.Y >= 0 && position.Y < Global.LOCAL_GRID_SIZE;
+                if (!(position.X >= 0 && position.X < Global.LOCAL_GRID_SIZE && position.Y >= 0 && position.Y < Global.LOCAL_GRID_SIZE))
+                {
+                    return false; // Out of bounds
+                }
+            }
+            else // World view
+            {
+                mapData = GetMapDataAt((int)position.X, (int)position.Y);
+                if (!(mapData.TerrainHeight >= _global.WaterLevel && mapData.TerrainHeight < _global.MountainsLevel))
+                {
+                    return false; // Impassable terrain
+                }
             }
 
-            mapData = GetMapDataAt((int)position.X, (int)position.Y);
-            return mapData.TerrainHeight >= _global.WaterLevel && mapData.TerrainHeight < _global.MountainsLevel;
+            // Combatant check (only for local view during combat)
+            if (IsInCombat && view == MapView.Local && pathfindingEntityId != -1)
+            {
+                // The destination tile itself is ALWAYS considered valid for the pathfinder to reach.
+                // The calling system is responsible for stopping before it if needed.
+                if (position == targetDestination)
+                {
+                    return true;
+                }
+
+                // Check if any other combatant (that isn't the one moving) is on this tile.
+                foreach (var combatantId in Combatants)
+                {
+                    if (combatantId == pathfindingEntityId) continue;
+
+                    var posComp = _componentStore.GetComponent<LocalPositionComponent>(combatantId);
+                    if (posComp != null && posComp.LocalPosition == position)
+                    {
+                        return false; // Occupied
+                    }
+                }
+            }
+
+            return true; // All checks passed
+        }
+
+        public bool IsPositionPassable(Vector2 position, MapView view, out MapData mapData)
+        {
+            return IsPositionPassable(position, view, -1, new Vector2(-1, -1), out mapData);
         }
 
         public bool IsPositionPassable(Vector2 position, MapView view)
@@ -377,7 +439,7 @@ namespace ProjectVagabond
                 return new List<Vector2>();
             }
 
-            var fullPath = Pathfinder.FindPath(start, end, this, isRunning, PathfindingMode.Time, MapView.Local);
+            var fullPath = Pathfinder.FindPath(entityId, start, end, this, isRunning, PathfindingMode.Time, MapView.Local);
             if (fullPath == null || !fullPath.Any())
             {
                 return null;
