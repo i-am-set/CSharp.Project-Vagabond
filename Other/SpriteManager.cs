@@ -28,6 +28,7 @@ namespace ProjectVagabond
         private Texture2D _localMapHoverSelectorSprite;
         private Texture2D _circleTextureSprite;
         private Texture2D _settingsIconSprite;
+        private Texture2D _turnIndicatorSprite;
 
         public Texture2D LogoSprite => _logoSprite;
         public Texture2D WaterSprite => _waterSprite;
@@ -48,6 +49,7 @@ namespace ProjectVagabond
         public Texture2D LocalMapHoverSelectorSprite => _localMapHoverSelectorSprite;
         public Texture2D CircleTextureSprite => _circleTextureSprite;
         public Texture2D SettingsIconSprite => _settingsIconSprite;
+        public Texture2D TurnIndicatorSprite => _turnIndicatorSprite;
 
         public SpriteManager()
         {
@@ -113,6 +115,9 @@ namespace ProjectVagabond
 
             try { _settingsIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_settings_icon"); }
             catch { _settingsIconSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
+
+            try { _turnIndicatorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_turn_indicator"); }
+            catch { _turnIndicatorSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
         }
     }
 }

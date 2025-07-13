@@ -42,6 +42,9 @@ namespace ProjectVagabond
         // PROPERTIES
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
+        // New Time Variance Property
+        public float TimeVariance { get; set; } = 0.2f;
+
         // Secondary stats (read-only)
         public int MaxHealthPoints => _maxHealthPoints;
         public int MaxEnergyPoints => _maxEnergyPoints;

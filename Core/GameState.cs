@@ -42,7 +42,7 @@ namespace ProjectVagabond
         public NoiseMapManager NoiseManager => _noiseManager;
         public StatsComponent PlayerStats => _componentStore.GetComponent<StatsComponent>(PlayerEntityId);
         public MapView CurrentMapView { get; private set; } = MapView.World;
-        public (int finalEnergy, bool possible, int secondsPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
+        public (int finalEnergy, bool possible, float secondsPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
         public List<int> ActiveEntities { get; private set; } = new List<int>();
         public int InitialActionCount { get; private set; }
         public bool IsActionQueueDirty { get; set; } = true;
@@ -140,6 +140,7 @@ namespace ProjectVagabond
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = lineMessage });
             }
 
+            // --- Automatic Target Selection Logic ---
             var enemies = new List<int>(Combatants);
             enemies.Remove(PlayerEntityId);
 
@@ -191,6 +192,7 @@ namespace ProjectVagabond
                 var targetName = EntityNamer.GetName(SelectedTargetId.Value);
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[dim]Auto-targeting {targetName}." });
             }
+            // --- End of Automatic Target Selection Logic ---
 
             _combatTurnSystem ??= ServiceLocator.Get<CombatTurnSystem>();
             _combatTurnSystem.StartCombat();
@@ -229,7 +231,7 @@ namespace ProjectVagabond
             float remainingTime = COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
 
             // Calculate the cost of the cheapest possible move (a non-diagonal walk)
-            float baseTime = 360f / playerStats.WalkSpeed;
+            float baseTime = (Global.FeetPerWorldTile * Global.SECONDS_PER_FOOT_SCALING_FACTOR) / playerStats.WalkSpeed;
             float secondsPassed = baseTime / Global.LOCAL_GRID_SIZE;
             float cheapestMoveCost = (float)Math.Ceiling(secondsPassed * 1.0f); // timeMultiplier is 1.0 for non-diagonal
 
@@ -385,7 +387,7 @@ namespace ProjectVagabond
                 timeMultiplier = 1.5f;
             }
 
-            float baseTime = isRunning ? (360f / stats.RunSpeed) : (360f / stats.WalkSpeed);
+            float baseTime = (Global.FeetPerWorldTile * Global.SECONDS_PER_FOOT_SCALING_FACTOR) / (isRunning ? stats.RunSpeed : stats.WalkSpeed);
 
             if (isLocalMove)
             {
@@ -406,7 +408,7 @@ namespace ProjectVagabond
             return (float)Math.Ceiling(secondsPassed * timeMultiplier);
         }
 
-        public (int finalEnergy, bool possible, int secondsPassed) SimulateActionQueueEnergy(IEnumerable<IAction> customQueue = null)
+        public (int finalEnergy, bool possible, float secondsPassed) SimulateActionQueueEnergy(IEnumerable<IAction> customQueue = null)
         {
             var queueToSimulate = customQueue ?? PendingActions;
             if (!queueToSimulate.Any()) return (PlayerStats.CurrentEnergyPoints, true, 0);
@@ -414,7 +416,7 @@ namespace ProjectVagabond
             bool isLocalMove = CurrentMapView == MapView.Local;
             int finalEnergy = PlayerStats.CurrentEnergyPoints;
             int maxEnergy = PlayerStats.MaxEnergyPoints;
-            int secondsPassed = 0;
+            float secondsPassed = 0f;
             Vector2 lastPosition = isLocalMove ? PlayerLocalPos : PlayerWorldPos;
             bool isFirstMoveInQueue = true;
             bool localRunCostApplied = false;
@@ -426,12 +428,12 @@ namespace ProjectVagabond
                     Vector2 moveDirection = moveAction.Destination - lastPosition;
                     MapData mapData = isLocalMove ? default : GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
 
-                    int moveDuration = (int)GetSecondsPassedDuringMovement(PlayerStats, moveAction.IsRunning, mapData, moveDirection, isLocalMove);
+                    float moveDuration = GetSecondsPassedDuringMovement(PlayerStats, moveAction.IsRunning, mapData, moveDirection, isLocalMove);
 
                     if (!isLocalMove && isFirstMoveInQueue)
                     {
                         float scaleFactor = GetFirstMoveTimeScaleFactor(moveDirection);
-                        moveDuration = (int)Math.Ceiling(moveDuration * scaleFactor);
+                        moveDuration *= scaleFactor;
                     }
 
                     secondsPassed += moveDuration;

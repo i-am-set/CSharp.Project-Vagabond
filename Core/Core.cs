@@ -132,8 +132,8 @@ namespace ProjectVagabond
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
 
             _combatUIAnimationManager = new CombatUIAnimationManager();
-            _combatUIAnimationManager.RegisterAnimation("TargetSelector", new PulsingAnimation(duration: 0.5f));
-            _combatUIAnimationManager.RegisterAnimation("TurnIndicator", new BobbingAnimation(speed: 5f, amount: 1.5f));
+            _combatUIAnimationManager.RegisterAnimation("TargetSelector", new PulsingAnimation(duration: 1.0f));
+            _combatUIAnimationManager.RegisterAnimation("TurnIndicator", new BobbingAnimation(speed: 5f, amount: 1f));
             ServiceLocator.Register<CombatUIAnimationManager>(_combatUIAnimationManager);
 
             _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);

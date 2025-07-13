@@ -253,27 +253,39 @@ namespace ProjectVagabond
 
                     var cellRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
 
-                    if (entityId == _gameState.SelectedTargetId)
+                    // Only draw the selected target highlight if it's the player's turn.
+                    if (_gameState.CurrentTurnEntityId == _gameState.PlayerEntityId)
                     {
-                        bool isInflated = _animationManager.IsPulsing("TargetSelector");
-                        Rectangle highlightRect;
-                        if (isInflated)
+                        if (entityId == _gameState.SelectedTargetId)
                         {
-                            highlightRect = new Rectangle(cellRect.X - 1, cellRect.Y - 1, cellRect.Width + 2, cellRect.Height + 2);
+                            bool isInflated = _animationManager.IsPulsing("TargetSelector");
+                            Rectangle highlightRect;
+                            if (isInflated)
+                            {
+                                highlightRect = new Rectangle(cellRect.X - 1, cellRect.Y - 1, cellRect.Width + 2, cellRect.Height + 2);
+                            }
+                            else
+                            {
+                                highlightRect = cellRect;
+                            }
+                            DrawHollowRectangle(spriteBatch, highlightRect, _global.Palette_Pink, 1);
                         }
-                        else
-                        {
-                            highlightRect = cellRect;
-                        }
-                        DrawHollowRectangle(spriteBatch, highlightRect, _global.Palette_Pink, 1);
                     }
 
                     if (entityId == _gameState.CurrentTurnEntityId)
                     {
                         float yOffset = _animationManager.GetBobbingOffset("TurnIndicator");
-                        int indicatorSize = 8;
-                        var indicatorRect = new Rectangle(cellRect.Center.X - indicatorSize / 2, (int)(cellRect.Y - indicatorSize - 2 + yOffset), indicatorSize, indicatorSize);
-                        spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), indicatorRect, _global.Palette_Teal);
+                        var indicatorSprite = _spriteManager.TurnIndicatorSprite;
+                        if (indicatorSprite != null)
+                        {
+                            var indicatorRect = new Rectangle(
+                                cellRect.Center.X - indicatorSprite.Width / 2,
+                                (int)(cellRect.Y - indicatorSprite.Height - 2 + yOffset),
+                                indicatorSprite.Width,
+                                indicatorSprite.Height
+                            );
+                            spriteBatch.Draw(indicatorSprite, indicatorRect, Color.White);
+                        }
                     }
                 }
             }

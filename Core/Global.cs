@@ -46,6 +46,8 @@ namespace ProjectVagabond
 
         // World constants
         public const float BASE_TIME_SCALE = 0.002f; // base speed in which the time moves in the world
+        public const float FEET_PER_WORLD_TILE = 377f; // The physical distance of a single world tile
+        public const float SECONDS_PER_FOOT_SCALING_FACTOR = 360f / 754f; // Scales distance (feet) to game time (seconds).
 
         // Virtual resolution for fixed aspect ratio rendering
         public const int VIRTUAL_WIDTH = 960;
