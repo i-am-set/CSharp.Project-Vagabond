@@ -109,7 +109,7 @@ namespace ProjectVagabond
                         playerActionQueueComp.ActionQueue.Dequeue();
                         if (nextAction is MoveAction ma) _componentStore.AddComponent(playerEntityId, ma);
                         else if (nextAction is RestAction ra) _componentStore.AddComponent(playerEntityId, ra);
-                        _worldClockManager.PassTime(secondsToPass);
+                        _worldClockManager.PassTime(secondsToPass, 0.5f);
                     }
                 }
             }
@@ -256,7 +256,7 @@ namespace ProjectVagabond
                 localPosComp.LocalPosition = new Vector2(MathHelper.Clamp(newLocalPos.X, 0, Global.LOCAL_GRID_SIZE - 1), MathHelper.Clamp(newLocalPos.Y, 0, Global.LOCAL_GRID_SIZE - 1));
 
                 string moveType = action.IsRunning ? "Ran" : "Walked";
-                string timeString = _worldClockManager.GetCommaFormattedTimeFromSeconds((int)_currentActionDuration);
+                string timeString = _worldClockManager.GetPreciseFormattedTimeFromSeconds(_currentActionDuration);
                 var mapData = gameState.GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[khaki]{moveType} through[gold] {gameState.GetTerrainDescription(mapData).ToLower()}[khaki].[dim] ({timeString})" });
             }

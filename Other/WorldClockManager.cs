@@ -32,6 +32,7 @@ namespace ProjectVagabond
         private int _hour;      // 0-23
         private int _minute;    // 0-59
         private int _second;    // 0-59
+        private readonly Random _random = new();
 
         // Public properties to access time information
         public int CurrentYear => _year;
@@ -114,9 +115,18 @@ namespace ProjectVagabond
         /// Kicks off the time-lapse animation with high precision. The game will wait for this to complete.
         /// </summary>
         /// <param name="totalSecondsToPass">The total number of seconds to pass, can be a fractional value.</param>
-        public void PassTime(double totalSecondsToPass)
+        /// <param name="randomizationFactor">A factor from 0.0 to 1.0 to randomize the duration. E.g., 0.5f means +/- 50%.</param>
+        public void PassTime(double totalSecondsToPass, float randomizationFactor = 0f)
         {
             if (_isInterpolating || totalSecondsToPass <= 0) return;
+
+            if (randomizationFactor > 0f)
+            {
+                double randomizationAmount = totalSecondsToPass * randomizationFactor;
+                double minGameTimeDuration = totalSecondsToPass - randomizationAmount;
+                double maxGameTimeDuration = totalSecondsToPass + randomizationAmount;
+                totalSecondsToPass = _random.NextDouble() * (maxGameTimeDuration - minGameTimeDuration) + minGameTimeDuration;
+            }
 
             _totalSecondsPassedDuringInterpolation = totalSecondsToPass;
 
@@ -290,6 +300,23 @@ namespace ProjectVagabond
             if (timeSpan.Seconds > 0) parts.Add($"{timeSpan.Seconds} {(timeSpan.Seconds == 1 ? "second" : "seconds")}");
 
             return string.Join(", ", parts);
+        }
+
+        public string GetPreciseFormattedTimeFromSeconds(float totalSeconds)
+        {
+            if (totalSeconds <= 0.01f) return "0s";
+
+            var timeSpan = TimeSpan.FromSeconds(totalSeconds);
+            var parts = new List<string>();
+
+            if (timeSpan.Days > 0) parts.Add($"{timeSpan.Days}d");
+            if (timeSpan.Hours > 0) parts.Add($"{timeSpan.Hours}hr");
+            if (timeSpan.Minutes > 0) parts.Add($"{timeSpan.Minutes}min");
+            if (timeSpan.Seconds > 0) parts.Add($"{timeSpan.Seconds}s");
+
+            if (parts.Count == 0) return "0s";
+
+            return string.Join(" ", parts);
         }
 
         public string GetCalculatedNewTime(string currentTime, int secondsToAdd)

@@ -395,7 +395,7 @@ namespace ProjectVagabond
                     string finalETA = _worldClockManager.GetCalculatedNewTime(_worldClockManager.CurrentTime, secondsPassed);
                     finalETA = _global.Use24HourClock ? finalETA : _worldClockManager.GetConverted24hToAmPm(finalETA);
                     string formattedDuration = _worldClockManager.GetFormattedTimeFromSecondsShortHand(secondsPassed);
-                    promptBuilder.Append($"[gold]Arrival Time:[orange] {finalETA} [Palette_Gray]({formattedDuration})\n");
+                    promptBuilder.Append($"[gold]Arrival Time:[orange] ~{finalETA} [Palette_Gray](about {formattedDuration})\n");
                 }
 
                 return promptBuilder.ToString();
