@@ -19,6 +19,7 @@ using System;
 // TODO: Finish entity implimentation
 // TODO: Add settings ui in game menu corner
 // TODO: Fix player attack range being so far
+// TODO: Make "activeStatusEffectcomponent" a component that can be added to any entity, not just the player
 
 namespace ProjectVagabond
 {
