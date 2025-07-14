@@ -68,12 +68,14 @@ namespace ProjectVagabond
             _chunkManager = chunkManager;
             _global = global;
             _spriteManager = spriteManager;
+
+            EventBus.Subscribe<GameEvents.ActionQueueChanged>(e => IsActionQueueDirty = true); // Subscribe to the event to mark the queue as dirty whenever it's changed.
         }
 
         public void InitializeWorld()
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0), localPosition: new Vector2(32, 32));
-            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(37, 39));
+            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 36));
         }
 
         public void InitializeRenderableEntities()
