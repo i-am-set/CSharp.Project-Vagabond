@@ -18,6 +18,7 @@ namespace ProjectVagabond
 
         private bool _isFirstPlayerAction = true;
         private bool _localRunCostApplied = false;
+        private float _currentActionDuration = 0f;
 
         public ActionExecutionSystem()
         {
@@ -103,11 +104,12 @@ namespace ProjectVagabond
                     IAction nextAction = playerActionQueueComp.ActionQueue.Peek();
                     if (PreActionChecks(_gameState, playerEntityId, nextAction))
                     {
-                        int secondsToPass = CalculateSecondsForAction(_gameState, nextAction);
+                        float secondsToPass = CalculateSecondsForAction(_gameState, nextAction);
+                        _currentActionDuration = secondsToPass; // Store the calculated duration
                         playerActionQueueComp.ActionQueue.Dequeue();
                         if (nextAction is MoveAction ma) _componentStore.AddComponent(playerEntityId, ma);
                         else if (nextAction is RestAction ra) _componentStore.AddComponent(playerEntityId, ra);
-                        _worldClockManager.PassTime(seconds: secondsToPass);
+                        _worldClockManager.PassTime(secondsToPass);
                     }
                 }
             }
@@ -165,7 +167,7 @@ namespace ProjectVagabond
             return true;
         }
 
-        private int CalculateSecondsForAction(GameState gameState, IAction action)
+        private float CalculateSecondsForAction(GameState gameState, IAction action)
         {
             bool isLocalMove = gameState.PathExecutionMapView == MapView.Local;
 
@@ -198,7 +200,7 @@ namespace ProjectVagabond
                     float scaleFactor = gameState.GetFirstMoveTimeScaleFactor(moveDirection);
                     finalDuration *= scaleFactor;
                 }
-                return Math.Max(1, (int)Math.Ceiling(finalDuration));
+                return finalDuration;
             }
             else if (action is RestAction restAction)
             {
@@ -254,8 +256,7 @@ namespace ProjectVagabond
                 localPosComp.LocalPosition = new Vector2(MathHelper.Clamp(newLocalPos.X, 0, Global.LOCAL_GRID_SIZE - 1), MathHelper.Clamp(newLocalPos.Y, 0, Global.LOCAL_GRID_SIZE - 1));
 
                 string moveType = action.IsRunning ? "Ran" : "Walked";
-                int secondsPassedForAction = CalculateSecondsForAction(gameState, action);
-                string timeString = _worldClockManager.GetCommaFormattedTimeFromSeconds(secondsPassedForAction);
+                string timeString = _worldClockManager.GetCommaFormattedTimeFromSeconds((int)_currentActionDuration);
                 var mapData = gameState.GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[khaki]{moveType} through[gold] {gameState.GetTerrainDescription(mapData).ToLower()}[khaki].[dim] ({timeString})" });
             }

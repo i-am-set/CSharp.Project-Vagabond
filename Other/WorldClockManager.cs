@@ -48,7 +48,7 @@ namespace ProjectVagabond
         private TimeSpan _interpolationTargetTime;
         private float _interpolationDurationRealSeconds;
         private float _interpolationTimer;
-        private long _totalSecondsPassedDuringInterpolation;
+        private double _totalSecondsPassedDuringInterpolation;
 
         public bool IsInterpolatingTime => _isInterpolating;
 
@@ -102,13 +102,23 @@ namespace ProjectVagabond
 
         /// <summary>
         /// Kicks off the time-lapse animation. The game will wait for this to complete.
+        /// This overload is for convenience and backwards compatibility.
         /// </summary>
         public void PassTime(int days = 0, int hours = 0, int minutes = 0, int seconds = 0)
         {
-            if (_isInterpolating) return;
+            double totalSeconds = (double)seconds + ((double)minutes * 60) + ((double)hours * 3600) + ((double)days * 86400);
+            PassTime(totalSeconds);
+        }
 
-            _totalSecondsPassedDuringInterpolation = (long)seconds + ((long)minutes * 60) + ((long)hours * 3600) + ((long)days * 86400);
-            if (_totalSecondsPassedDuringInterpolation == 0) return;
+        /// <summary>
+        /// Kicks off the time-lapse animation with high precision. The game will wait for this to complete.
+        /// </summary>
+        /// <param name="totalSecondsToPass">The total number of seconds to pass, can be a fractional value.</param>
+        public void PassTime(double totalSecondsToPass)
+        {
+            if (_isInterpolating || totalSecondsToPass <= 0) return;
+
+            _totalSecondsPassedDuringInterpolation = totalSecondsToPass;
 
             // Store start and calculate target time. Use the high-precision CurrentTimeSpan to prevent precision loss.
             _interpolationStartTime = CurrentTimeSpan;
@@ -131,7 +141,7 @@ namespace ProjectVagabond
             else if (_totalSecondsPassedDuringInterpolation > ONE_HOUR) scaleFactor = 0.0002f;  // Fast
             else scaleFactor = Global.BASE_TIME_SCALE; // Slowest (Base Speed)
 
-            _interpolationDurationRealSeconds = Math.Clamp(minDuration + (_totalSecondsPassedDuringInterpolation * scaleFactor), minDuration, maxDuration);
+            _interpolationDurationRealSeconds = Math.Clamp(minDuration + ((float)_totalSecondsPassedDuringInterpolation * scaleFactor), minDuration, maxDuration);
 
             // Apply the time scale multiplier from the UI buttons (1x, 3x, 5x)
             if (TimeScale > 0)
