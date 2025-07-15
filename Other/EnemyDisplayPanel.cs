@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -31,6 +32,8 @@ namespace ProjectVagabond
         /// </summary>
         public void Draw(SpriteBatch spriteBatch)
         {
+            if (!_gameState.IsInCombat) return;
+
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             // Draw the border and background
@@ -43,17 +46,15 @@ namespace ProjectVagabond
             spriteBatch.Draw(pixel, borderRect, _global.Palette_White);
             spriteBatch.Draw(pixel, _bounds, _global.TerminalBg);
 
-            if (_gameState.Combatants.Count == 0) return;
+            var enemies = _gameState.Combatants.Where(id => id != _gameState.PlayerEntityId).ToList();
+            if (enemies.Count == 0) return;
 
             int cellWidth = _bounds.Width / MAX_COLS;
             int cellHeight = _bounds.Height / MAX_ROWS;
             int enemyIndex = 0;
 
-            foreach (var entityId in _gameState.Combatants)
+            foreach (var entityId in enemies)
             {
-                // Skip the player
-                if (entityId == _gameState.PlayerEntityId) continue;
-
                 // Stop if we've drawn the max number of enemies
                 if (enemyIndex >= MAX_COLS * MAX_ROWS) break;
 
@@ -108,14 +109,37 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Gets the ID of the enemy at a specific mouse position. Placeholder for now.
+        /// Gets the ID of the enemy at a specific mouse position.
         /// </summary>
         /// <param name="mousePosition">The position of the mouse cursor.</param>
         /// <returns>The entity ID of the enemy, or null if no enemy is at that position.</returns>
         public int? GetEnemyIdAt(Point mousePosition)
         {
-            // TODO: Implement logic to check which grid cell the mouse is in
-            // and return the corresponding enemy ID.
+            if (!_gameState.IsInCombat) return null;
+
+            var enemies = _gameState.Combatants.Where(id => id != _gameState.PlayerEntityId).ToList();
+            if (enemies.Count == 0) return null;
+
+            int cellWidth = _bounds.Width / MAX_COLS;
+            int cellHeight = _bounds.Height / MAX_ROWS;
+            int enemyIndex = 0;
+
+            foreach (var entityId in enemies)
+            {
+                if (enemyIndex >= MAX_COLS * MAX_ROWS) break;
+
+                int col = enemyIndex % MAX_COLS;
+                int row = enemyIndex / MAX_COLS;
+                var cellRect = new Rectangle(_bounds.X + col * cellWidth, _bounds.Y + row * cellHeight, cellWidth, cellHeight);
+
+                if (cellRect.Contains(mousePosition))
+                {
+                    return entityId;
+                }
+
+                enemyIndex++;
+            }
+
             return null;
         }
     }

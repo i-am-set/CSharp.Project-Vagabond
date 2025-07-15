@@ -25,7 +25,8 @@ namespace ProjectVagabond.Scenes
         private ImageButton _settingsButton;
         private TurnOrderPanel _turnOrderPanel;
         private PlayerStatusPanel _playerStatusPanel;
-        private TargetInfoPanel _targetInfoPanel;
+        private EnemyDisplayPanel _enemyDisplayPanel;
+        private CombatLogPanel _combatLogPanel;
         private ActionMenuPanel _actionMenuPanel;
         private PlayerCombatInputSystem _playerCombatInputSystem;
 
@@ -60,38 +61,40 @@ namespace ProjectVagabond.Scenes
             }
             _settingsButton.OnClick += OpenSettings;
 
-            if (_turnOrderPanel == null)
-            {
-                int turnOrderPanelWidth = 150;
-                int maxTurnOrderItems = 16;
-                var turnOrderPosition = new Vector2((Global.VIRTUAL_WIDTH - turnOrderPanelWidth - 10), Global.TERMINAL_Y - 23);
-                _turnOrderPanel = new TurnOrderPanel(turnOrderPosition, turnOrderPanelWidth, maxTurnOrderItems);
-            }
-
+            // --- Combat UI Panel Initialization and Layout ---
             if (_playerStatusPanel == null)
             {
-                // Define bounds for the Player Status Panel
-                int playerStatusPanelWidth = 250;
-                int playerStatusPanelHeight = 100;
-                int playerStatusPanelX = 20;
-                int playerStatusPanelY = Global.VIRTUAL_HEIGHT - playerStatusPanelHeight - 20;
-                _playerStatusPanel = new PlayerStatusPanel(new Rectangle(playerStatusPanelX, playerStatusPanelY, playerStatusPanelWidth, playerStatusPanelHeight));
+                // Define a logical layout for all combat panels
+                const int bottomPanelHeight = 150;
+                const int bottomMargin = 20;
+                int panelY = Global.VIRTUAL_HEIGHT - bottomPanelHeight - bottomMargin;
 
-                // Define bounds for the Action Menu Panel
-                int actionMenuPanelWidth = 200;
-                int actionMenuPanelHeight = 150;
-                int actionMenuPanelX = playerStatusPanelX + playerStatusPanelWidth + 10;
-                int actionMenuPanelY = Global.VIRTUAL_HEIGHT - actionMenuPanelHeight - 20;
-                _actionMenuPanel = new ActionMenuPanel(new Rectangle(actionMenuPanelX, actionMenuPanelY, actionMenuPanelWidth, actionMenuPanelHeight));
+                // Enemy Display (Top)
+                var enemyDisplayBounds = new Rectangle(20, 20, Global.VIRTUAL_WIDTH - 40, 120);
+                _enemyDisplayPanel = new EnemyDisplayPanel(enemyDisplayBounds);
 
-                // Define bounds for the Target Info Panel
-                int targetInfoPanelWidth = 250;
-                int targetInfoPanelHeight = 100;
-                int targetInfoPanelX = 375;
-                int targetInfoPanelY = 50 + ((Global.DEFAULT_TERMINAL_HEIGHT / 2) + 20) + 10;
-                _targetInfoPanel = new TargetInfoPanel(new Rectangle(targetInfoPanelX, targetInfoPanelY, targetInfoPanelWidth, targetInfoPanelHeight));
+                // Player Status (Bottom Left)
+                var playerStatusBounds = new Rectangle(20, panelY, 250, bottomPanelHeight);
+                _playerStatusPanel = new PlayerStatusPanel(playerStatusBounds);
 
-                _playerCombatInputSystem = new PlayerCombatInputSystem(_actionMenuPanel, _turnOrderPanel, _mapRenderer);
+                // Action Menu (Bottom Middle)
+                var actionMenuBounds = new Rectangle(playerStatusBounds.Right + 10, panelY, 200, bottomPanelHeight);
+                _actionMenuPanel = new ActionMenuPanel(actionMenuBounds);
+
+                // Combat Log (Bottom Right)
+                int combatLogX = actionMenuBounds.Right + 10;
+                int combatLogWidth = Global.VIRTUAL_WIDTH - combatLogX - 20;
+                var combatLogBounds = new Rectangle(combatLogX, panelY, combatLogWidth, bottomPanelHeight);
+                _combatLogPanel = new CombatLogPanel(combatLogBounds);
+
+                // Turn Order (Right Side)
+                int turnOrderPanelWidth = 150;
+                int maxTurnOrderItems = 10;
+                var turnOrderPosition = new Vector2(Global.VIRTUAL_WIDTH - turnOrderPanelWidth - 20, enemyDisplayBounds.Bottom + 20);
+                _turnOrderPanel = new TurnOrderPanel(turnOrderPosition, turnOrderPanelWidth, maxTurnOrderItems);
+
+                // Initialize the combat input system with the correct panels
+                _playerCombatInputSystem = new PlayerCombatInputSystem(_actionMenuPanel, _turnOrderPanel, _enemyDisplayPanel);
             }
         }
 
@@ -130,7 +133,6 @@ namespace ProjectVagabond.Scenes
             if (_waitDialog.IsActive) return;
 
             var currentMouseState = Mouse.GetState();
-            _settingsButton?.Update(currentMouseState);
 
             if (_coreState.IsInCombat)
             {
@@ -140,15 +142,16 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
+                _settingsButton?.Update(currentMouseState);
                 _inputHandler.HandleInput(gameTime);
                 _mapInputHandler.Update(gameTime);
+                _mapRenderer.Update(gameTime, font);
+                _statsRenderer.Update(gameTime);
+                _clockRenderer.Update(gameTime);
             }
 
-            _mapRenderer.Update(gameTime, font);
-            _statsRenderer.Update(gameTime);
             _hapticsManager.Update(gameTime);
             _worldClockManager.Update(gameTime);
-            _clockRenderer.Update(gameTime);
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -156,20 +159,25 @@ namespace ProjectVagabond.Scenes
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
             spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: shakeMatrix);
 
-            _terminalRenderer.DrawTerminal(spriteBatch, font, gameTime);
-            _mapRenderer.DrawMap(spriteBatch, font, gameTime);
-            _statsRenderer.DrawStats(spriteBatch, font);
-            _clockRenderer.DrawClock(spriteBatch, font, gameTime);
-
             if (_coreState.IsInCombat)
             {
+                // Draw the dedicated combat UI
+                _enemyDisplayPanel.Draw(spriteBatch);
                 _turnOrderPanel.Draw(spriteBatch, font, gameTime);
                 _playerStatusPanel.Draw(spriteBatch, font);
-                _targetInfoPanel.Draw(spriteBatch, font);
                 _actionMenuPanel.Draw(spriteBatch, font, gameTime);
+                _combatLogPanel.Draw(spriteBatch, font, gameTime);
+            }
+            else
+            {
+                // Draw the standard out-of-combat UI
+                _terminalRenderer.DrawTerminal(spriteBatch, font, gameTime);
+                _mapRenderer.DrawMap(spriteBatch, font, gameTime);
+                _statsRenderer.DrawStats(spriteBatch, font);
+                _clockRenderer.DrawClock(spriteBatch, font, gameTime);
+                _settingsButton?.Draw(spriteBatch, font, gameTime);
             }
 
-            _settingsButton?.Draw(spriteBatch, font, gameTime);
             spriteBatch.End();
 
             _waitDialog.Draw(spriteBatch, font, gameTime);

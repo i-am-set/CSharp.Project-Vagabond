@@ -13,18 +13,18 @@ namespace ProjectVagabond
         private readonly GameState _gameState;
         private readonly ComponentStore _componentStore;
         private readonly ArchetypeManager _archetypeManager;
-        private readonly MapRenderer _mapRenderer;
+        private readonly EnemyDisplayPanel _enemyDisplayPanel;
 
         private MouseState _previousMouseState;
         private string _selectedAttackName;
         private float _previewPathCost = 0f;
 
-        public PlayerCombatInputSystem(ActionMenuPanel actionMenuPanel, TurnOrderPanel turnOrderPanel, MapRenderer mapRenderer)
+        public PlayerCombatInputSystem(ActionMenuPanel actionMenuPanel, TurnOrderPanel turnOrderPanel, EnemyDisplayPanel enemyDisplayPanel)
         {
             _gameState = ServiceLocator.Get<GameState>();
             _componentStore = ServiceLocator.Get<ComponentStore>();
             _archetypeManager = ServiceLocator.Get<ArchetypeManager>();
-            _mapRenderer = mapRenderer;
+            _enemyDisplayPanel = enemyDisplayPanel;
 
             actionMenuPanel.OnActionSelected += ProcessMenuCommand;
             turnOrderPanel.OnTargetSelected += SelectTarget;
@@ -39,12 +39,13 @@ namespace ProjectVagabond
             }
 
             var currentMouseState = Mouse.GetState();
-            var currentKeyboardState = Keyboard.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position).ToPoint();
 
+            // Movement selection is currently disabled in the new UI layout.
+            // This section can be re-enabled if a new movement input method is designed.
             if (_gameState.UIState == CombatUIState.SelectMove)
             {
-                HandleMoveSelection(currentMouseState, currentKeyboardState, virtualMousePos);
+                // HandleMoveSelection(currentMouseState, currentKeyboardState, virtualMousePos);
             }
             else
             {
@@ -57,7 +58,8 @@ namespace ProjectVagabond
                 bool leftClicked = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
                 if (leftClicked)
                 {
-                    int? clickedEntityId = _mapRenderer.GetEntityIdAt(virtualMousePos);
+                    // Get the clicked entity from the dedicated enemy panel, not the map.
+                    int? clickedEntityId = _enemyDisplayPanel.GetEnemyIdAt(virtualMousePos);
                     if (clickedEntityId.HasValue) SelectTarget(clickedEntityId.Value);
                 }
             }
@@ -67,48 +69,8 @@ namespace ProjectVagabond
 
         private void HandleMoveSelection(MouseState currentMouseState, KeyboardState currentKeyboardState, Point virtualMousePos)
         {
-            var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
-            if (playerPosComp == null) return;
-
-            var targetTile = _mapRenderer.ScreenToLocalGrid(virtualMousePos);
-            bool isRunning = !(currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift));
-
-            if (targetTile.X >= 0)
-            {
-                var path = _gameState.GetAffordablePath(_gameState.PlayerEntityId, playerPosComp.LocalPosition, targetTile, isRunning, out _previewPathCost);
-                _gameState.CombatMovePreviewPath = path ?? new List<Vector2>();
-                _gameState.IsCombatMovePreviewRunning = isRunning;
-            }
-            else
-            {
-                _gameState.CombatMovePreviewPath.Clear();
-                _previewPathCost = 0f;
-            }
-
-            bool leftClicked = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
-            if (leftClicked && _gameState.CombatMovePreviewPath.Any())
-            {
-                var playerActionQueue = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
-                var playerTurnStats = _componentStore.GetComponent<TurnStatsComponent>(_gameState.PlayerEntityId);
-
-                if (playerActionQueue != null && playerTurnStats != null)
-                {
-                    playerTurnStats.MovementTimeUsedThisTurn += _previewPathCost;
-
-                    foreach (var step in _gameState.CombatMovePreviewPath)
-                    {
-                        playerActionQueue.ActionQueue.Enqueue(new MoveAction(_gameState.PlayerEntityId, step, isRunning));
-                    }
-                    _gameState.UIState = CombatUIState.Busy;
-                    _gameState.CombatMovePreviewPath.Clear();
-                    _previewPathCost = 0f;
-                }
-            }
-            else if (leftClicked)
-            {
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[warning]Cannot move to the selected tile." });
-                ResetToDefaultState();
-            }
+            // This method is currently unused as map-based movement is disabled in the new combat UI.
+            // A new system for selecting move targets would be needed to re-enable this.
         }
 
         private void SelectTarget(int targetId)
@@ -135,7 +97,9 @@ namespace ProjectVagabond
                     _gameState.UIState = CombatUIState.SelectAttack;
                     break;
                 case "Move":
-                    _gameState.UIState = CombatUIState.SelectMove;
+                    // Movement is currently disabled in the new UI.
+                    // _gameState.UIState = CombatUIState.SelectMove;
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[dim]Movement in combat is not yet implemented in this UI." });
                     break;
                 case "End Turn":
                     actionQueue.ActionQueue.Enqueue(new EndTurnAction(_gameState.PlayerEntityId));
