@@ -117,6 +117,10 @@ namespace ProjectVagabond
             var worldClockManager = new WorldClockManager();
             ServiceLocator.Register<WorldClockManager>(worldClockManager);
 
+            var statusEffectSystem = new StatusEffectSystem();
+            ServiceLocator.Register<StatusEffectSystem>(statusEffectSystem);
+            worldClockManager.OnTimePassed += statusEffectSystem.ProcessTimePassed;
+
             var noiseManager = new NoiseMapManager();
             ServiceLocator.Register<NoiseMapManager>(noiseManager);
 

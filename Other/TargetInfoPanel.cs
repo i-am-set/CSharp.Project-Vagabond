@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -106,6 +107,19 @@ namespace ProjectVagabond
             float distance = Vector2.Distance(playerPosComp.LocalPosition, targetPosComp.LocalPosition);
             string distanceText = $"Distance: {distance:F1}m";
             spriteBatch.DrawString(font, distanceText, new Vector2(_bounds.X + PADDING, currentY), _global.GameTextColor);
+            currentY += font.LineHeight;
+
+            // Draw Status Effects
+            var statusEffectComp = _componentStore.GetComponent<ActiveStatusEffectComponent>(targetId);
+            if (statusEffectComp != null && statusEffectComp.ActiveEffects.Any())
+            {
+                foreach (var effect in statusEffectComp.ActiveEffects)
+                {
+                    string effectText = $"{effect.BaseEffect.Name} ({effect.Duration:F0}s)";
+                    spriteBatch.DrawString(font, effectText, new Vector2(_bounds.X + PADDING, currentY), Color.LightGreen);
+                    currentY += font.LineHeight;
+                }
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ namespace ProjectVagabond
         {
             public string Name { get; set; }
             public float DamageMultiplier { get; set; }
+            public List<string> StatusEffectsToApply { get; set; } = new List<string>();
         }
 
         public List<CombatAttack> Attacks { get; set; } = new List<CombatAttack>();

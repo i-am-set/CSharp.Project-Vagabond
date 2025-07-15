@@ -52,6 +52,9 @@
       "Type": "ProjectVagabond.TurnStatsComponent, ProjectVagabond"
     },
     {
+      "Type": "ProjectVagabond.ActiveStatusEffectComponent, ProjectVagabond"
+    },
+    {
       "Type": "ProjectVagabond.AvailableAttacksComponent, ProjectVagabond",
       "Properties": {
         "Attacks": [

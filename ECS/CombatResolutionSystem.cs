@@ -48,10 +48,32 @@ namespace ProjectVagabond
                 return;
             }
 
+            var attackerStatusEffects = _componentStore.GetComponent<ActiveStatusEffectComponent>(attackerId);
+            bool isWeakened = attackerStatusEffects?.ActiveEffects.Any(e => e.BaseEffect.Name == "Weakness") ?? false;
+
             int damage = (int)(attackerCombatantComp.AttackPower * attack.DamageMultiplier);
+            if (isWeakened)
+            {
+                damage /= 2;
+            }
+
             targetHealthComp.TakeDamage(damage);
 
             EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{attackerName} attacks {targetName} with {attack.Name} for [red]{damage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining." });
+
+            if (attack.StatusEffectsToApply != null && attack.StatusEffectsToApply.Any())
+            {
+                var statusEffectSystem = ServiceLocator.Get<StatusEffectSystem>();
+                foreach (var effectName in attack.StatusEffectsToApply)
+                {
+                    var effect = statusEffectSystem.CreateEffectFromName(effectName, attack.Name);
+                    if (effect != null)
+                    {
+                        float duration = 10f; // 10 seconds
+                        statusEffectSystem.ApplyEffect(targetId, effect, duration, attackerId);
+                    }
+                }
+            }
 
             if (targetHealthComp.CurrentHealth <= 0)
             {

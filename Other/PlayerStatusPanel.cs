@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -33,9 +34,8 @@ namespace ProjectVagabond
             if (!_gameState.IsInCombat || font == null) return;
 
             var health = _componentStore.GetComponent<HealthComponent>(_gameState.PlayerEntityId);
-            var combatStats = _componentStore.GetComponent<CombatStatsComponent>(_gameState.PlayerEntityId);
 
-            if (health == null || combatStats == null) return;
+            if (health == null) return;
 
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
@@ -75,9 +75,17 @@ namespace ProjectVagabond
             }
             currentY += barHeight + PADDING;
 
-            // Action Points
-            string apText = $"AP: {combatStats.ActionPoints}";
-            spriteBatch.DrawString(font, apText, new Vector2(_bounds.X + PADDING, currentY), _global.GameTextColor);
+            // Draw Status Effects
+            var statusEffectComp = _componentStore.GetComponent<ActiveStatusEffectComponent>(_gameState.PlayerEntityId);
+            if (statusEffectComp != null && statusEffectComp.ActiveEffects.Any())
+            {
+                foreach (var effect in statusEffectComp.ActiveEffects)
+                {
+                    string effectText = $"{effect.BaseEffect.Name} ({effect.Duration:F0}s)";
+                    spriteBatch.DrawString(font, effectText, new Vector2(_bounds.X + PADDING, currentY), Color.LightGreen);
+                    currentY += font.LineHeight;
+                }
+            }
         }
     }
 }

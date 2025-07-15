@@ -56,12 +56,16 @@
       "Type": "ProjectVagabond.TurnStatsComponent, ProjectVagabond"
     },
     {
+      "Type": "ProjectVagabond.ActiveStatusEffectComponent, ProjectVagabond"
+    },
+    {
       "Type": "ProjectVagabond.AvailableAttacksComponent, ProjectVagabond",
       "Properties": {
         "Attacks": [
           {
-            "Name": "Punch",
-            "DamageMultiplier": 1.0
+            "Name": "Poisoned Shank",
+            "DamageMultiplier": 0.8,
+            "StatusEffectsToApply": [ "Poison" ]
           }
         ]
       }
