@@ -52,12 +52,21 @@ namespace ProjectVagabond
 
             // --- AI TURN PLANNING ---
             var simulatedPosition = aiPos.LocalPosition;
+            List<Vector2> pathToMove = new List<Vector2>();
+            bool isRunning = true;
 
             // ** GOAL: Move into attack range, then attack. **
-            // Pathfind to the player's position. The pathfinder is allowed to target an occupied tile.
-            var path = _gameState.GetAffordablePath(entityId, simulatedPosition, playerPos.LocalPosition, true, out float pathTimeCost);
+            // 1. Try to find an affordable running path.
+            var path = _gameState.GetAffordablePath(entityId, simulatedPosition, playerPos.LocalPosition, true, out _);
 
-            var pathToMove = new List<Vector2>();
+            // 2. If running path fails, try a walking path.
+            if (path == null || !path.Any())
+            {
+                isRunning = false;
+                path = _gameState.GetAffordablePath(entityId, simulatedPosition, playerPos.LocalPosition, false, out _);
+            }
+
+            // 3. If a path was found, prepare the movement actions.
             if (path != null && path.Any())
             {
                 // The actual path to travel is all steps except the last one (which is the target's tile).
@@ -68,26 +77,24 @@ namespace ProjectVagabond
                 }
             }
 
+            // 4. Queue the movement actions.
             if (pathToMove.Any())
             {
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} moves towards the player." });
+                string moveMode = isRunning ? "runs" : "walks";
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} {moveMode} towards the player." });
                 foreach (var step in pathToMove)
                 {
-                    actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, step, true));
+                    actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, step, isRunning));
                 }
             }
 
-            // The position the AI will be in after moving. If no move, it's the starting position.
+            // 5. Check for attack possibility from the final position.
             var finalPositionAfterMove = pathToMove.Any() ? pathToMove.Last() : simulatedPosition;
-
-            // Check if the AI's new position is in attack range of the player.
             if (Vector2.Distance(finalPositionAfterMove, playerPos.LocalPosition) <= combatant.AttackRange)
             {
                 var attack = _componentStore.GetComponent<AvailableAttacksComponent>(entityId)?.Attacks.FirstOrDefault();
                 if (attack != null)
                 {
-                    string message = pathToMove.Any() ? $"{aiName} will attack after moving." : $"{aiName} is in range and attacks!";
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = message });
                     actionQueue.ActionQueue.Enqueue(new AttackAction(entityId, _gameState.PlayerEntityId, attack.Name));
                 }
             }

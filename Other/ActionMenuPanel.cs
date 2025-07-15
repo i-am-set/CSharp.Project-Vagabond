@@ -78,9 +78,7 @@ namespace ProjectVagabond
 
                         if (option == "Move")
                         {
-                            // Movement is disabled in the current UI refactor.
-                            // This can be re-enabled when a new movement input system is designed.
-                            button.IsEnabled = false;
+                            button.IsEnabled = _gameState.CanPlayerMoveInCombat();
                         }
                         else if (option == "Attack")
                         {

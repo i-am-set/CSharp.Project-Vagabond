@@ -1,5 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using System;
 using System.Linq;
 
 namespace ProjectVagabond
@@ -14,6 +16,8 @@ namespace ProjectVagabond
         private readonly Global _global;
 
         private readonly Rectangle _bounds;
+        private int? _hoveredEnemyId;
+
         private const int PADDING = 10;
         private const int BORDER_THICKNESS = 2;
         private const int MAX_COLS = 7;
@@ -28,12 +32,28 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Updates the panel to track mouse hover state.
+        /// </summary>
+        /// <param name="currentMouseState">The current state of the mouse.</param>
+        public void Update(MouseState currentMouseState)
+        {
+            if (!_gameState.IsInCombat)
+            {
+                _hoveredEnemyId = null;
+                return;
+            }
+            var virtualMousePos = Core.TransformMouse(currentMouseState.Position).ToPoint();
+            _hoveredEnemyId = GetEnemyIdAt(virtualMousePos);
+        }
+
+        /// <summary>
         /// Draws the enemy display panel, including a grid of enemies with their health bars.
         /// </summary>
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, GameTime gameTime, MouseState currentMouseState)
         {
             if (!_gameState.IsInCombat) return;
 
+            var animationManager = ServiceLocator.Get<CombatUIAnimationManager>();
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             // Draw the border and background
@@ -74,13 +94,32 @@ namespace ProjectVagabond
 
                 // Draw sprite (or placeholder)
                 var spriteTexture = renderable.Texture ?? pixel;
-                var spriteSize = 32;
+                int spriteWidth = 32;
+                int spriteHeight = 48;
                 var spriteRect = new Rectangle(
-                    cellRect.Center.X - spriteSize / 2,
-                    cellRect.Y + PADDING,
-                    spriteSize,
-                    spriteSize
+                    cellRect.Center.X - spriteWidth / 2,
+                    cellRect.Y + (cellHeight - spriteHeight) / 2, // Center vertically in the cell
+                    spriteWidth,
+                    spriteHeight
                 );
+
+                // Draw selection effects
+                if (_gameState.UIState == CombatUIState.SelectTarget)
+                {
+                    if (_hoveredEnemyId.HasValue && _hoveredEnemyId.Value == entityId)
+                    {
+                        DrawCornerBrackets(spriteBatch, spriteRect, Color.Red, 2);
+                    }
+                    else
+                    {
+                        bool isPulsing = animationManager.IsPulsing("TargetSelector");
+                        if (isPulsing)
+                        {
+                            DrawDottedRectangle(spriteBatch, spriteRect, Color.White);
+                        }
+                    }
+                }
+
                 spriteBatch.Draw(spriteTexture, spriteRect, renderable.Color);
 
                 // Draw health bar
@@ -141,6 +180,46 @@ namespace ProjectVagabond
             }
 
             return null;
+        }
+
+        private void DrawCornerBrackets(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            int armLength = (int)(Math.Min(rect.Width, rect.Height) * 0.25f);
+            armLength = Math.Clamp(armLength, 5, 20);
+
+            // Top-left
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, armLength, thickness), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, armLength), color);
+            // Top-right
+            spriteBatch.Draw(pixel, new Rectangle(rect.Right - armLength, rect.Top, armLength, thickness), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, armLength), color);
+            // Bottom-left
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, armLength, thickness), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - armLength, thickness, armLength), color);
+            // Bottom-right
+            spriteBatch.Draw(pixel, new Rectangle(rect.Right - armLength, rect.Bottom - thickness, armLength, thickness), color);
+            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Bottom - armLength, thickness, armLength), color);
+        }
+
+        private void DrawDottedRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            int dotSize = 1;
+            int dotGap = 3; // 1 pixel dot, 2 pixels gap
+
+            // Top and Bottom borders
+            for (int x = rect.Left; x < rect.Right; x += dotGap)
+            {
+                spriteBatch.Draw(pixel, new Rectangle(x, rect.Top, dotSize, dotSize), color);
+                spriteBatch.Draw(pixel, new Rectangle(x, rect.Bottom - dotSize, dotSize, dotSize), color);
+            }
+            // Left and Right borders
+            for (int y = rect.Top; y < rect.Bottom; y += dotGap)
+            {
+                spriteBatch.Draw(pixel, new Rectangle(rect.Left, y, dotSize, dotSize), color);
+                spriteBatch.Draw(pixel, new Rectangle(rect.Right - dotSize, y, dotSize, dotSize), color);
+            }
         }
     }
 }

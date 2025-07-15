@@ -64,37 +64,37 @@ namespace ProjectVagabond.Scenes
             // --- Combat UI Panel Initialization and Layout ---
             if (_playerStatusPanel == null)
             {
-                // Define a logical layout for all combat panels
-                const int bottomPanelHeight = 150;
-                const int bottomMargin = 20;
-                int panelY = Global.VIRTUAL_HEIGHT - bottomPanelHeight - bottomMargin;
+                // This layout is designed around the MapRenderer's fixed position.
+                const int mapRightEdge = 35 + (Global.LOCAL_GRID_SIZE * Global.LOCAL_GRID_CELL_SIZE) + 10; // Map starts at 35, grid is 320, frame is 10
+                const int bottomPanelY = 380;
+                const int bottomPanelHeight = 140;
 
-                // Enemy Display (Top)
-                var enemyDisplayBounds = new Rectangle(20, 20, Global.VIRTUAL_WIDTH - 40, 120);
+                // Enemy Display (Top Right)
+                var enemyDisplayBounds = new Rectangle(mapRightEdge + 20, 50, Global.VIRTUAL_WIDTH - (mapRightEdge + 40), 120);
                 _enemyDisplayPanel = new EnemyDisplayPanel(enemyDisplayBounds);
 
+                // Turn Order (Right Side, below enemies)
+                int turnOrderPanelWidth = 150;
+                int maxTurnOrderItems = 10;
+                var turnOrderPosition = new Vector2(enemyDisplayBounds.X, enemyDisplayBounds.Bottom + 10);
+                _turnOrderPanel = new TurnOrderPanel(turnOrderPosition, turnOrderPanelWidth, maxTurnOrderItems);
+
                 // Player Status (Bottom Left)
-                var playerStatusBounds = new Rectangle(20, panelY, 250, bottomPanelHeight);
+                var playerStatusBounds = new Rectangle(35, bottomPanelY, 250, bottomPanelHeight);
                 _playerStatusPanel = new PlayerStatusPanel(playerStatusBounds);
 
                 // Action Menu (Bottom Middle)
-                var actionMenuBounds = new Rectangle(playerStatusBounds.Right + 10, panelY, 200, bottomPanelHeight);
+                var actionMenuBounds = new Rectangle(playerStatusBounds.Right + 10, bottomPanelY, 200, bottomPanelHeight);
                 _actionMenuPanel = new ActionMenuPanel(actionMenuBounds);
 
                 // Combat Log (Bottom Right)
                 int combatLogX = actionMenuBounds.Right + 10;
-                int combatLogWidth = Global.VIRTUAL_WIDTH - combatLogX - 20;
-                var combatLogBounds = new Rectangle(combatLogX, panelY, combatLogWidth, bottomPanelHeight);
+                int combatLogWidth = Global.VIRTUAL_WIDTH - combatLogX - 35;
+                var combatLogBounds = new Rectangle(combatLogX, bottomPanelY, combatLogWidth, bottomPanelHeight);
                 _combatLogPanel = new CombatLogPanel(combatLogBounds);
 
-                // Turn Order (Right Side)
-                int turnOrderPanelWidth = 150;
-                int maxTurnOrderItems = 10;
-                var turnOrderPosition = new Vector2(Global.VIRTUAL_WIDTH - turnOrderPanelWidth - 20, enemyDisplayBounds.Bottom + 20);
-                _turnOrderPanel = new TurnOrderPanel(turnOrderPosition, turnOrderPanelWidth, maxTurnOrderItems);
-
                 // Initialize the combat input system with the correct panels
-                _playerCombatInputSystem = new PlayerCombatInputSystem(_actionMenuPanel, _turnOrderPanel, _enemyDisplayPanel);
+                _playerCombatInputSystem = new PlayerCombatInputSystem(_actionMenuPanel, _turnOrderPanel, _enemyDisplayPanel, _mapRenderer);
             }
         }
 
@@ -139,6 +139,8 @@ namespace ProjectVagabond.Scenes
                 _playerCombatInputSystem.ProcessInput();
                 _actionMenuPanel.Update(gameTime, currentMouseState, font);
                 _turnOrderPanel.Update(gameTime, currentMouseState, font);
+                _mapRenderer.Update(gameTime, font);
+                _enemyDisplayPanel.Update(currentMouseState);
             }
             else
             {
@@ -157,16 +159,31 @@ namespace ProjectVagabond.Scenes
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
+            var currentMouseState = Mouse.GetState();
+
             spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: shakeMatrix);
 
             if (_coreState.IsInCombat)
             {
                 // Draw the dedicated combat UI
-                _enemyDisplayPanel.Draw(spriteBatch);
+                _mapRenderer.DrawMap(spriteBatch, font, gameTime);
+                _enemyDisplayPanel.Draw(spriteBatch, gameTime, currentMouseState);
                 _turnOrderPanel.Draw(spriteBatch, font, gameTime);
                 _playerStatusPanel.Draw(spriteBatch, font);
                 _actionMenuPanel.Draw(spriteBatch, font, gameTime);
                 _combatLogPanel.Draw(spriteBatch, font, gameTime);
+
+                // Draw focus effect for target selection
+                if (_coreState.UIState == CombatUIState.SelectTarget)
+                {
+                    var pixel = ServiceLocator.Get<Texture2D>();
+                    var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+                    spriteBatch.Draw(pixel, screenBounds, Color.Black * 0.6f);
+
+                    // Redraw the important panels on top of the overlay
+                    _enemyDisplayPanel.Draw(spriteBatch, gameTime, currentMouseState);
+                    _actionMenuPanel.Draw(spriteBatch, font, gameTime);
+                }
             }
             else
             {

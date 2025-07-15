@@ -4,6 +4,7 @@ using MonoGame.Extended.BitmapFonts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace ProjectVagabond
@@ -33,7 +34,9 @@ namespace ProjectVagabond
 
         private void HandleMessageLogged(GameEvents.CombatLogMessagePublished e)
         {
-            var coloredLine = ParseColoredText(e.Message, _global.OutputTextColor);
+            // Prepend the carat and color tags to the original message string.
+            string prefixedMessage = $"[dim]> [/]{e.Message}";
+            var coloredLine = ParseColoredText(prefixedMessage, _global.OutputTextColor);
             _unwrappedMessages.Add(coloredLine);
 
             while (_unwrappedMessages.Count > MAX_LOG_LINES)
@@ -197,115 +200,89 @@ namespace ProjectVagabond
         private List<ColoredLine> WrapColoredText(ColoredLine line, float maxWidthInPixels, BitmapFont font)
         {
             var wrappedLines = new List<ColoredLine>();
-            var currentLine = new ColoredLine { LineNumber = line.LineNumber };
-            float currentLineWidth = 0f;
+            if (!line.Segments.Any())
+            {
+                wrappedLines.Add(line);
+                return wrappedLines;
+            }
 
-            Action finishLine = () =>
+            var currentLine = new ColoredLine { LineNumber = line.LineNumber };
+            var currentLineText = new StringBuilder();
+            bool isFirstLineOfMessage = true; // Flag to track the first line of a given message.
+
+            Action finishCurrentLine = () =>
             {
                 if (currentLine.Segments.Any())
                 {
                     wrappedLines.Add(currentLine);
                 }
                 currentLine = new ColoredLine { LineNumber = 0 };
-                currentLineWidth = 0f;
+                currentLineText.Clear();
+
+                // If we just finished the first line, subsequent lines are not the first.
+                if (isFirstLineOfMessage)
+                {
+                    isFirstLineOfMessage = false;
+                }
+
+                // Add indentation to the start of the new line if it's a wrapped line.
+                if (!isFirstLineOfMessage)
+                {
+                    string indent = " ";
+                    // Use a neutral color for the indentation space.
+                    currentLine.Segments.Add(new ColoredText(indent, _global.OutputTextColor));
+                    currentLineText.Append(indent);
+                }
             };
-
-            void AddTokenToLine(string token, Color color)
-            {
-                float tokenWidth = font.MeasureString(token).Width;
-                bool isWhitespace = string.IsNullOrWhiteSpace(token);
-
-                if (!isWhitespace && currentLineWidth > 0 && currentLineWidth + tokenWidth > maxWidthInPixels)
-                {
-                    finishLine();
-                }
-
-                if (!isWhitespace && tokenWidth > maxWidthInPixels)
-                {
-                    if (currentLineWidth > 0) finishLine();
-
-                    string remainingToken = token;
-                    while (remainingToken.Length > 0)
-                    {
-                        int charsThatFit = 0;
-                        for (int i = 1; i <= remainingToken.Length; i++)
-                        {
-                            if (font.MeasureString(remainingToken.Substring(0, i)).Width > maxWidthInPixels)
-                            {
-                                break;
-                            }
-                            charsThatFit = i;
-                        }
-                        if (charsThatFit == 0 && remainingToken.Length > 0) charsThatFit = 1;
-
-                        string part = remainingToken.Substring(0, charsThatFit);
-                        remainingToken = remainingToken.Substring(charsThatFit);
-
-                        var newLine = new ColoredLine { LineNumber = 0 };
-                        newLine.Segments.Add(new ColoredText(part, color));
-                        wrappedLines.Add(newLine);
-                    }
-                    currentLineWidth = 0;
-                    return;
-                }
-
-                if (currentLine.Segments.Count > 0 && currentLine.Segments.Last().Color == color)
-                {
-                    currentLine.Segments.Last().Text += token;
-                }
-                else
-                {
-                    currentLine.Segments.Add(new ColoredText(token, color));
-                }
-                currentLineWidth += tokenWidth;
-            }
 
             foreach (var segment in line.Segments)
             {
-                string text = segment.Text;
-                Color color = segment.Color;
+                string processedText = segment.Text.Replace("\r", "");
+                var tokens = Regex.Split(processedText, @"(\s+|\n)");
 
-                var tokens = Regex.Split(text, @"(\s+)");
-
-                foreach (var token in tokens)
+                foreach (string token in tokens)
                 {
                     if (string.IsNullOrEmpty(token)) continue;
 
-                    if (token.Contains('\n'))
+                    if (token == "\n")
                     {
-                        string[] subTokens = token.Split('\n');
-                        for (int i = 0; i < subTokens.Length; i++)
-                        {
-                            string subToken = subTokens[i].Replace("\r", "");
-                            if (!string.IsNullOrEmpty(subToken))
-                            {
-                                AddTokenToLine(subToken, color);
-                            }
-
-                            if (i < subTokens.Length - 1)
-                            {
-                                finishLine();
-                            }
-                        }
+                        finishCurrentLine();
                         continue;
                     }
 
-                    AddTokenToLine(token, color);
+                    float potentialWidth = font.MeasureString(currentLineText.ToString() + token).Width;
+                    bool isWhitespace = string.IsNullOrWhiteSpace(token);
+
+                    if (currentLineText.Length > 0 && !isWhitespace && potentialWidth > maxWidthInPixels)
+                    {
+                        finishCurrentLine();
+                    }
+
+                    // Add the token to the now-current line.
+                    // Merge with the last segment if colors match.
+                    if (currentLine.Segments.Any() && currentLine.Segments.Last().Color == segment.Color)
+                    {
+                        currentLine.Segments.Last().Text += token;
+                    }
+                    else // Otherwise, create a new segment.
+                    {
+                        currentLine.Segments.Add(new ColoredText(token, segment.Color));
+                    }
+                    // Append to our text tracker for measurement.
+                    currentLineText.Append(token);
                 }
             }
 
+            // Add the last line if it has any content.
             if (currentLine.Segments.Any())
             {
                 wrappedLines.Add(currentLine);
             }
 
+            // Ensure we always return at least one line, even if it's empty.
             if (!wrappedLines.Any())
             {
                 wrappedLines.Add(new ColoredLine { LineNumber = line.LineNumber });
-            }
-            else
-            {
-                wrappedLines[0].LineNumber = line.LineNumber;
             }
 
             return wrappedLines;
