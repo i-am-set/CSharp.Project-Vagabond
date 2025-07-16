@@ -160,7 +160,7 @@ namespace ProjectVagabond
         private void DrawInstruction(SpriteBatch spriteBatch, BitmapFont font, string text)
         {
             var position = new Vector2(_bounds.X + PADDING, _bounds.Y + PADDING);
-            spriteBatch.DrawString(font, text, position, Color.Yellow);
+            spriteBatch.DrawString(font, text, position, _global.Palette_Yellow);
         }
     }
 }

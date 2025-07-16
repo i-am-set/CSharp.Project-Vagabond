@@ -99,7 +99,7 @@ namespace ProjectVagabond
                 {
                     AlignLeft = true,
                     OverflowScrollSpeed = 30f,
-                    CustomDefaultTextColor = (entityId == _gameState.PlayerEntityId) ? Color.Yellow : Color.LightGray,
+                    CustomDefaultTextColor = (entityId == _gameState.PlayerEntityId) ? _global.Palette_Yellow : Color.LightGray,
                     CustomHoverTextColor = _global.Palette_Pink
                 };
 
@@ -107,7 +107,7 @@ namespace ProjectVagabond
                 if (entityId == _gameState.PlayerEntityId)
                 {
                     button.IsEnabled = false;
-                    button.CustomDisabledTextColor = Color.Yellow;
+                    button.CustomDisabledTextColor = _global.Palette_Yellow;
                 }
 
                 int capturedId = entityId; // Capture the ID for the lambda

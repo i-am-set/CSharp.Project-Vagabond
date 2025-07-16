@@ -53,7 +53,7 @@ namespace ProjectVagabond
             float currentY = _bounds.Y + PADDING;
 
             // Player Name
-            spriteBatch.DrawString(font, "Player", new Vector2(_bounds.X + PADDING, currentY), Color.Yellow);
+            spriteBatch.DrawString(font, "Player", new Vector2(_bounds.X + PADDING, currentY), _global.Palette_Yellow);
             currentY += font.LineHeight + PADDING;
 
             // Health Bar

@@ -48,7 +48,7 @@ namespace ProjectVagabond
             if (_currentTurnIndex >= _gameState.InitiativeOrder.Count)
             {
                 _currentTurnIndex = 0; // Reset for the new round.
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[yellow]New round begins." });
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[palette_yellow]New round begins." });
                 _worldClockManager.PassTime(seconds: GameState.COMBAT_TURN_DURATION_SECONDS);
             }
 

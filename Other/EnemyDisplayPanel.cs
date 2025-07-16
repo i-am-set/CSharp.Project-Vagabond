@@ -116,34 +116,37 @@ namespace ProjectVagabond
                     barY
                 );
 
-                // Draw selection effects
-                if (_gameState.UIState == CombatUIState.SelectTarget)
-                {
-                    if (_hoveredEnemyId.HasValue && _hoveredEnemyId.Value == entityId)
-                    {
-                        DrawCornerBrackets(spriteBatch, spriteRect, Color.Red, 2);
-                    }
-                    else
-                    {
-                        bool isPulsing = animationManager.IsPulsing("TargetSelector");
-                        Rectangle dottedRect;
-                        if (isPulsing)
-                        {
-                            // Expanded state: inflated by 2 pixels
-                            dottedRect = new Rectangle(spriteRect.X - 2, spriteRect.Y - 2, spriteRect.Width + 4, spriteRect.Height + 4);
-                        }
-                        else
-                        {
-                            // Base state: inflated by 1 pixel
-                            dottedRect = new Rectangle(spriteRect.X - 1, spriteRect.Y - 1, spriteRect.Width + 2, spriteRect.Height + 2);
-                        }
-                        DrawDottedRectangle(spriteBatch, dottedRect, Color.White);
-                    }
-                }
-
                 // Draw sprite
                 var spriteTexture = renderable.Texture ?? pixel;
                 spriteBatch.Draw(spriteTexture, spriteRect, renderable.Color);
+
+                // Draw selection effects
+                if (_gameState.UIState == CombatUIState.SelectTarget)
+                {
+                    // Calculate the pulsing selector rectangle first.
+                    bool isPulsing = animationManager.IsPulsing("TargetSelector");
+                    Rectangle selectorRect;
+                    if (isPulsing)
+                    {
+                        // Expanded state: inflated by 2 pixels
+                        selectorRect = new Rectangle(spriteRect.X - 2, spriteRect.Y - 2, spriteRect.Width + 4, spriteRect.Height + 4);
+                    }
+                    else
+                    {
+                        // Base state: inflated by 1 pixel
+                        selectorRect = new Rectangle(spriteRect.X - 1, spriteRect.Y - 1, spriteRect.Width + 2, spriteRect.Height + 2);
+                    }
+
+                    // Now use the calculated selectorRect for both drawing types.
+                    if (_hoveredEnemyId.HasValue && _hoveredEnemyId.Value == entityId)
+                    {
+                        DrawCornerBrackets(spriteBatch, selectorRect, _global.Palette_Red, 2);
+                    }
+                    else
+                    {
+                        DrawDottedRectangle(spriteBatch, selectorRect, _global.Palette_BrightWhite);
+                    }
+                }
 
                 // Draw health bar
                 // Background bar
@@ -156,7 +159,7 @@ namespace ProjectVagabond
                     float healthPercentage = (float)health.CurrentHealth / health.MaxHealth;
                     int fgBarWidth = (int)(barWidth * healthPercentage);
                     var fgBarRect = new Rectangle((int)barPosition.X, (int)barPosition.Y, fgBarWidth, barHeight);
-                    spriteBatch.Draw(pixel, fgBarRect, Color.LawnGreen);
+                    spriteBatch.Draw(pixel, fgBarRect, _global.Palette_DarkGreen);
                 }
 
                 enemyIndex++;
@@ -198,6 +201,19 @@ namespace ProjectVagabond
             return null;
         }
 
+        private void DrawHollowRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            // Top
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
+            // Bottom
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
+            // Left
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
+            // Right
+            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
+        }
+
         private void DrawCornerBrackets(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -221,8 +237,8 @@ namespace ProjectVagabond
         private void DrawDottedRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            int dashLength = 2;
-            int dashThickness = 1;
+            int dashLength = 4;
+            int dashThickness = 2;
             int gapLength = 2;
             int patternLength = dashLength + gapLength;
 

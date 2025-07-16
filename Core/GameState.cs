@@ -131,14 +131,14 @@ namespace ProjectVagabond
 
             InitiativeOrder = Combatants.OrderByDescending(id => initiativeScores[id]).ToList();
 
-            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[yellow]Combat has begun! Initiative Order: " });
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[palette_yellow]Combat has begun! Initiative Order: " });
 
             var uniqueNames = EntityNamer.GetUniqueNames(InitiativeOrder);
             for (int i = 0; i < InitiativeOrder.Count; i++)
             {
                 var entityId = InitiativeOrder[i];
                 string name = uniqueNames[entityId];
-                string lineMessage = $"[yellow]  {i + 1}. {name} ({initiativeScores[entityId]})";
+                string lineMessage = $"[palette_yellow]  {i + 1}. {name} ({initiativeScores[entityId]})";
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = lineMessage });
             }
 
