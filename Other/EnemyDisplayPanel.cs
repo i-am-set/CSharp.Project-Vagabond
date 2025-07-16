@@ -21,7 +21,7 @@ namespace ProjectVagabond
         private const int PADDING = 10;
         private const int BORDER_THICKNESS = 2;
         private const int MAX_COLS = 7;
-        private const int MAX_ROWS = 2;
+        private const int MAX_ROWS = 1;
 
         public EnemyDisplayPanel(Rectangle bounds)
         {
@@ -92,15 +92,28 @@ namespace ProjectVagabond
                 int row = enemyIndex / MAX_COLS;
                 var cellRect = new Rectangle(_bounds.X + col * cellWidth, _bounds.Y + row * cellHeight, cellWidth, cellHeight);
 
-                // Draw sprite (or placeholder)
-                var spriteTexture = renderable.Texture ?? pixel;
-                int spriteWidth = 32;
-                int spriteHeight = 48;
+                // Define sprite and health bar dimensions
+                int spriteWidth = 48;
+                int spriteHeight = 80;
+                int barHeight = 8;
+                int barWidth = cellWidth - (PADDING * 2);
+
+                // Position sprite at the top of the cell with padding
                 var spriteRect = new Rectangle(
                     cellRect.Center.X - spriteWidth / 2,
-                    cellRect.Y + (cellHeight - spriteHeight) / 2, // Center vertically in the cell
+                    cellRect.Y + PADDING,
                     spriteWidth,
                     spriteHeight
+                );
+
+                // Calculate the space below the sprite
+                int spaceBelowSprite = cellRect.Bottom - PADDING - spriteRect.Bottom;
+                // Center the health bar in that space
+                int barY = spriteRect.Bottom + (spaceBelowSprite - barHeight) / 2;
+
+                var barPosition = new Vector2(
+                    cellRect.X + PADDING,
+                    barY
                 );
 
                 // Draw selection effects
@@ -113,23 +126,26 @@ namespace ProjectVagabond
                     else
                     {
                         bool isPulsing = animationManager.IsPulsing("TargetSelector");
+                        Rectangle dottedRect;
                         if (isPulsing)
                         {
-                            DrawDottedRectangle(spriteBatch, spriteRect, Color.White);
+                            // Expanded state: inflated by 2 pixels
+                            dottedRect = new Rectangle(spriteRect.X - 2, spriteRect.Y - 2, spriteRect.Width + 4, spriteRect.Height + 4);
                         }
+                        else
+                        {
+                            // Base state: inflated by 1 pixel
+                            dottedRect = new Rectangle(spriteRect.X - 1, spriteRect.Y - 1, spriteRect.Width + 2, spriteRect.Height + 2);
+                        }
+                        DrawDottedRectangle(spriteBatch, dottedRect, Color.White);
                     }
                 }
 
+                // Draw sprite
+                var spriteTexture = renderable.Texture ?? pixel;
                 spriteBatch.Draw(spriteTexture, spriteRect, renderable.Color);
 
                 // Draw health bar
-                int barHeight = 8;
-                int barWidth = cellWidth - (PADDING * 2);
-                var barPosition = new Vector2(
-                    cellRect.X + PADDING,
-                    spriteRect.Bottom + 5 // 5 pixels below the sprite
-                );
-
                 // Background bar
                 var bgBarRect = new Rectangle((int)barPosition.X, (int)barPosition.Y, barWidth, barHeight);
                 spriteBatch.Draw(pixel, bgBarRect, _global.Palette_Red);
@@ -205,20 +221,34 @@ namespace ProjectVagabond
         private void DrawDottedRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            int dotSize = 1;
-            int dotGap = 3; // 1 pixel dot, 2 pixels gap
+            int dashLength = 2;
+            int dashThickness = 1;
+            int gapLength = 2;
+            int patternLength = dashLength + gapLength;
 
-            // Top and Bottom borders
-            for (int x = rect.Left; x < rect.Right; x += dotGap)
+            // Top border
+            for (int x = rect.Left; x < rect.Right; x += patternLength)
             {
-                spriteBatch.Draw(pixel, new Rectangle(x, rect.Top, dotSize, dotSize), color);
-                spriteBatch.Draw(pixel, new Rectangle(x, rect.Bottom - dotSize, dotSize, dotSize), color);
+                int len = Math.Min(dashLength, rect.Right - x);
+                spriteBatch.Draw(pixel, new Rectangle(x, rect.Top, len, dashThickness), color);
             }
-            // Left and Right borders
-            for (int y = rect.Top; y < rect.Bottom; y += dotGap)
+            // Bottom border
+            for (int x = rect.Left; x < rect.Right; x += patternLength)
             {
-                spriteBatch.Draw(pixel, new Rectangle(rect.Left, y, dotSize, dotSize), color);
-                spriteBatch.Draw(pixel, new Rectangle(rect.Right - dotSize, y, dotSize, dotSize), color);
+                int len = Math.Min(dashLength, rect.Right - x);
+                spriteBatch.Draw(pixel, new Rectangle(x, rect.Bottom - dashThickness, len, dashThickness), color);
+            }
+            // Left border
+            for (int y = rect.Top; y < rect.Bottom; y += patternLength)
+            {
+                int len = Math.Min(dashLength, rect.Bottom - y);
+                spriteBatch.Draw(pixel, new Rectangle(rect.Left, y, dashThickness, len), color);
+            }
+            // Right border
+            for (int y = rect.Top; y < rect.Bottom; y += patternLength)
+            {
+                int len = Math.Min(dashLength, rect.Bottom - y);
+                spriteBatch.Draw(pixel, new Rectangle(rect.Right - dashThickness, y, dashThickness, len), color);
             }
         }
     }

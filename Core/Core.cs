@@ -137,7 +137,7 @@ namespace ProjectVagabond
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
 
             _combatUIAnimationManager = new CombatUIAnimationManager();
-            _combatUIAnimationManager.RegisterAnimation("TargetSelector", new PulsingAnimation(duration: 1.0f));
+            _combatUIAnimationManager.RegisterAnimation("TargetSelector", new PulsingAnimation(duration: 0.4f));
             _combatUIAnimationManager.RegisterAnimation("TurnIndicator", new BobbingAnimation(speed: 5f, amount: 1f));
             ServiceLocator.Register<CombatUIAnimationManager>(_combatUIAnimationManager);
 

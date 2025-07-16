@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 
@@ -66,6 +67,20 @@ namespace ProjectVagabond
     public class CombatUIAnimationManager
     {
         private readonly Dictionary<string, UIAnimation> _animations = new Dictionary<string, UIAnimation>();
+
+        /// <summary>
+        /// Initializes a new instance of the CombatUIAnimationManager and pre-registers
+        /// a set of standard pulsing animations with varying speeds.
+        /// </summary>
+        public CombatUIAnimationManager()
+        {
+            // Pre-register four standard pulsing animations.
+            // A shorter duration results in a faster pulse.
+            RegisterAnimation("PulseSlow", new PulsingAnimation(1.0f));
+            RegisterAnimation("PulseMedium", new PulsingAnimation(0.7f));
+            RegisterAnimation("PulseFast", new PulsingAnimation(0.4f));
+            RegisterAnimation("PulseVeryFast", new PulsingAnimation(0.2f));
+        }
 
         /// <summary>
         /// Registers a new animation with the manager.
