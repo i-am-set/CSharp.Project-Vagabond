@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -136,14 +136,26 @@ namespace ProjectVagabond.Scenes
 
             if (_coreState.IsInCombat)
             {
+                // These panels must always update during combat.
                 _playerCombatInputSystem.ProcessInput();
                 _actionMenuPanel.Update(gameTime, currentMouseState, font);
-                _turnOrderPanel.Update(gameTime, currentMouseState, font);
-                _mapRenderer.Update(gameTime, font);
                 _enemyDisplayPanel.Update(currentMouseState);
+
+                // Block TurnOrderPanel during any focus state.
+                if (_coreState.UIState != CombatUIState.SelectTarget && _coreState.UIState != CombatUIState.SelectMove)
+                {
+                    _turnOrderPanel.Update(gameTime, currentMouseState, font);
+                }
+
+                // Handle MapRenderer update separately. It should NOT update during target selection.
+                if (_coreState.UIState != CombatUIState.SelectTarget)
+                {
+                    _mapRenderer.Update(gameTime, font);
+                }
             }
             else
             {
+                // Standard out-of-combat updates
                 _settingsButton?.Update(currentMouseState);
                 _inputHandler.HandleInput(gameTime);
                 _mapInputHandler.Update(gameTime);
@@ -173,15 +185,22 @@ namespace ProjectVagabond.Scenes
                 _actionMenuPanel.Draw(spriteBatch, font, gameTime);
                 _combatLogPanel.Draw(spriteBatch, font, gameTime);
 
-                // Draw focus effect for target selection
-                if (_coreState.UIState == CombatUIState.SelectTarget)
+                // Draw focus effect for target or move selection
+                if (_coreState.UIState == CombatUIState.SelectTarget || _coreState.UIState == CombatUIState.SelectMove)
                 {
                     var pixel = ServiceLocator.Get<Texture2D>();
                     var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
                     spriteBatch.Draw(pixel, screenBounds, Color.Black * 0.6f);
 
                     // Redraw the important panels on top of the overlay
-                    _enemyDisplayPanel.Draw(spriteBatch, gameTime, currentMouseState);
+                    if (_coreState.UIState == CombatUIState.SelectTarget)
+                    {
+                        _enemyDisplayPanel.Draw(spriteBatch, gameTime, currentMouseState);
+                    }
+                    else // Must be SelectMove
+                    {
+                        _mapRenderer.DrawMap(spriteBatch, font, gameTime);
+                    }
                     _actionMenuPanel.Draw(spriteBatch, font, gameTime);
                 }
             }

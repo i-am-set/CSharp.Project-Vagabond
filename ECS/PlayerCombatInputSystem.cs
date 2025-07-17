@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,6 +44,15 @@ namespace ProjectVagabond
             var currentKeyboardState = Keyboard.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position).ToPoint();
 
+            // Universal cancel for selection modes
+            bool rightClicked = currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
+            if (rightClicked && (_gameState.UIState == CombatUIState.SelectMove || _gameState.UIState == CombatUIState.SelectTarget))
+            {
+                ProcessMenuCommand("Back");
+                _previousMouseState = currentMouseState;
+                return; // Exit early
+            }
+
             if (_gameState.UIState == CombatUIState.SelectMove)
             {
                 HandleMoveSelection(currentMouseState, currentKeyboardState, virtualMousePos);
@@ -60,7 +69,16 @@ namespace ProjectVagabond
                 if (leftClicked)
                 {
                     int? clickedEntityId = _enemyDisplayPanel.GetEnemyIdAt(virtualMousePos);
-                    if (clickedEntityId.HasValue) SelectTarget(clickedEntityId.Value);
+                    if (clickedEntityId.HasValue)
+                    {
+                        SelectTarget(clickedEntityId.Value);
+                    }
+                    else if (_gameState.UIState == CombatUIState.SelectTarget)
+                    {
+                        // If in target selection mode and the click was not on a valid target,
+                        // treat it as a click on the overlay to cancel the action.
+                        ProcessMenuCommand("Back");
+                    }
                 }
             }
 

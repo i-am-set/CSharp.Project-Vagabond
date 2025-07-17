@@ -48,7 +48,6 @@ namespace ProjectVagabond
         public bool IsActionQueueDirty { get; set; } = true;
 
         // Combat State
-        public const int COMBAT_TURN_DURATION_SECONDS = 15;
         public bool IsInCombat { get; private set; } = false;
         public List<int> Combatants { get; private set; } = new List<int>();
         public List<int> InitiativeOrder { get; private set; } = new List<int>();

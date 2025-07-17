@@ -22,6 +22,7 @@ namespace ProjectVagabond
         private const int BORDER_THICKNESS = 2;
         private const int MAX_COLS = 7;
         private const int MAX_ROWS = 1;
+        private const int HITBOX_INSET = 6; // Inset from the cell edge for hover/selection
 
         public EnemyDisplayPanel(Rectangle bounds)
         {
@@ -92,25 +93,33 @@ namespace ProjectVagabond
                 int row = enemyIndex / MAX_COLS;
                 var cellRect = new Rectangle(_bounds.X + col * cellWidth, _bounds.Y + row * cellHeight, cellWidth, cellHeight);
 
+                // Create a smaller hitbox inside the cell
+                var hitboxRect = cellRect;
+                hitboxRect.Inflate(-HITBOX_INSET, -HITBOX_INSET);
+
                 // Define sprite and health bar dimensions
                 int spriteWidth = 48;
                 int spriteHeight = 80;
                 int barHeight = 8;
                 int barWidth = cellWidth - (PADDING * 2);
+                const int spaceBetweenSpriteAndBar = 4;
 
-                // Position sprite at the top of the cell with padding
+                // Calculate total content height
+                int totalContentHeight = spriteHeight + spaceBetweenSpriteAndBar + barHeight;
+
+                // Calculate the starting Y position to center the content block within the hitbox
+                int contentStartY = hitboxRect.Y + (hitboxRect.Height - totalContentHeight) / 2;
+
+                // Position sprite
                 var spriteRect = new Rectangle(
                     cellRect.Center.X - spriteWidth / 2,
-                    cellRect.Y + PADDING,
+                    contentStartY,
                     spriteWidth,
                     spriteHeight
                 );
 
-                // Calculate the space below the sprite
-                int spaceBelowSprite = cellRect.Bottom - PADDING - spriteRect.Bottom;
-                // Center the health bar in that space
-                int barY = spriteRect.Bottom + (spaceBelowSprite - barHeight) / 2;
-
+                // Position health bar
+                int barY = spriteRect.Bottom + spaceBetweenSpriteAndBar;
                 var barPosition = new Vector2(
                     cellRect.X + PADDING,
                     barY
@@ -123,28 +132,20 @@ namespace ProjectVagabond
                 // Draw selection effects
                 if (_gameState.UIState == CombatUIState.SelectTarget)
                 {
-                    // Calculate the pulsing selector rectangle first.
-                    bool isPulsing = animationManager.IsPulsing("TargetSelector");
-                    Rectangle selectorRect;
-                    if (isPulsing)
-                    {
-                        // Expanded state: inflated by 2 pixels
-                        selectorRect = new Rectangle(spriteRect.X - 2, spriteRect.Y - 2, spriteRect.Width + 4, spriteRect.Height + 4);
-                    }
-                    else
-                    {
-                        // Base state: inflated by 1 pixel
-                        selectorRect = new Rectangle(spriteRect.X - 1, spriteRect.Y - 1, spriteRect.Width + 2, spriteRect.Height + 2);
-                    }
+                    Rectangle baseSelectorRect = hitboxRect;
 
-                    // Now use the calculated selectorRect for both drawing types.
                     if (_hoveredEnemyId.HasValue && _hoveredEnemyId.Value == entityId)
                     {
-                        DrawCornerBrackets(spriteBatch, selectorRect, _global.Palette_Red, 2);
+                        // HOVERED: Draw pulsing corner brackets
+                        bool isPulsing = animationManager.IsPulsing("TargetSelector");
+                        Rectangle pulsingRect = baseSelectorRect;
+                        pulsingRect.Inflate(isPulsing ? 2 : 1, isPulsing ? 2 : 1);
+                        DrawCornerBrackets(spriteBatch, pulsingRect, _global.CombatSelectableColor, 2);
                     }
                     else
                     {
-                        DrawDottedRectangle(spriteBatch, selectorRect, _global.Palette_BrightWhite);
+                        // NOT HOVERED (but selectable): Draw marching ants
+                        DrawDottedRectangle(spriteBatch, baseSelectorRect, _global.CombatSelectorColor, gameTime);
                     }
                 }
 
@@ -190,7 +191,11 @@ namespace ProjectVagabond
                 int row = enemyIndex / MAX_COLS;
                 var cellRect = new Rectangle(_bounds.X + col * cellWidth, _bounds.Y + row * cellHeight, cellWidth, cellHeight);
 
-                if (cellRect.Contains(mousePosition))
+                // Use a smaller hitbox inside the cell for hover detection
+                var hitboxRect = cellRect;
+                hitboxRect.Inflate(-HITBOX_INSET, -HITBOX_INSET);
+
+                if (hitboxRect.Contains(mousePosition))
                 {
                     return entityId;
                 }
@@ -234,37 +239,60 @@ namespace ProjectVagabond
             spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Bottom - armLength, thickness, armLength), color);
         }
 
-        private void DrawDottedRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color)
+        private void DrawDottedRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color, GameTime gameTime)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            int dashLength = 4;
-            int dashThickness = 2;
-            int gapLength = 2;
-            int patternLength = dashLength + gapLength;
+            const int dashLength = 2;
+            const int dashThickness = 2;
+            const int gapLength = 2;
+            const int patternLength = dashLength + gapLength;
+            const float speed = 15f; // pixels per second
 
-            // Top border
-            for (int x = rect.Left; x < rect.Right; x += patternLength)
+            // Calculate a cyclical offset based on time to create the "marching ants" effect
+            float offset = ((float)gameTime.TotalGameTime.TotalSeconds * speed) % patternLength;
+
+            // Top border (moves right)
+            for (float x = rect.Left - offset; x < rect.Right; x += patternLength)
             {
-                int len = Math.Min(dashLength, rect.Right - x);
-                spriteBatch.Draw(pixel, new Rectangle(x, rect.Top, len, dashThickness), color);
+                float startX = Math.Max(x, rect.Left);
+                float endX = Math.Min(x + dashLength, rect.Right);
+                if (endX > startX)
+                {
+                    spriteBatch.Draw(pixel, new Rectangle((int)startX, rect.Top, (int)(endX - startX), dashThickness), color);
+                }
             }
-            // Bottom border
-            for (int x = rect.Left; x < rect.Right; x += patternLength)
+
+            // Bottom border (moves left)
+            for (float x = rect.Right + offset; x > rect.Left; x -= patternLength)
             {
-                int len = Math.Min(dashLength, rect.Right - x);
-                spriteBatch.Draw(pixel, new Rectangle(x, rect.Bottom - dashThickness, len, dashThickness), color);
+                float startX = Math.Max(x - dashLength, rect.Left);
+                float endX = Math.Min(x, rect.Right);
+                if (endX > startX)
+                {
+                    spriteBatch.Draw(pixel, new Rectangle((int)startX, rect.Bottom - dashThickness, (int)(endX - startX), dashThickness), color);
+                }
             }
-            // Left border
-            for (int y = rect.Top; y < rect.Bottom; y += patternLength)
+
+            // Right border (moves down)
+            for (float y = rect.Top - offset; y < rect.Bottom; y += patternLength)
             {
-                int len = Math.Min(dashLength, rect.Bottom - y);
-                spriteBatch.Draw(pixel, new Rectangle(rect.Left, y, dashThickness, len), color);
+                float startY = Math.Max(y, rect.Top);
+                float endY = Math.Min(y + dashLength, rect.Bottom);
+                if (endY > startY)
+                {
+                    spriteBatch.Draw(pixel, new Rectangle(rect.Right - dashThickness, (int)startY, dashThickness, (int)(endY - startY)), color);
+                }
             }
-            // Right border
-            for (int y = rect.Top; y < rect.Bottom; y += patternLength)
+
+            // Left border (moves up)
+            for (float y = rect.Bottom + offset; y > rect.Top; y -= patternLength)
             {
-                int len = Math.Min(dashLength, rect.Bottom - y);
-                spriteBatch.Draw(pixel, new Rectangle(rect.Right - dashThickness, y, dashThickness, len), color);
+                float startY = Math.Max(y - dashLength, rect.Top);
+                float endY = Math.Min(y, rect.Bottom);
+                if (endY > startY)
+                {
+                    spriteBatch.Draw(pixel, new Rectangle(rect.Left, (int)startY, dashThickness, (int)(endY - startY)), color);
+                }
             }
         }
     }
