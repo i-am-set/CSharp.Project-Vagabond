@@ -79,7 +79,7 @@ namespace ProjectVagabond
         public void InitializeWorld()
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0), localPosition: new Vector2(32, 32));
-            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 47));
+            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 36));
         }
 
         public void InitializeRenderableEntities()
@@ -129,8 +129,6 @@ namespace ProjectVagabond
 
         public void InitiateCombat(List<int> initialCombatants)
         {
-            CancelExecutingActions(true);
-
             if (IsInCombat) return;
 
             EventBus.Publish(new GameEvents.CombatStateChanged { IsInCombat = true });
@@ -428,6 +426,11 @@ namespace ProjectVagabond
                     var height when height < _global.MountainsLevel => secondsPassed + 300,
                     _ => 0
                 };
+            }
+
+            if (_worldClockManager.TimeScale > 0)
+            {
+                return (secondsPassed * timeMultiplier) / _worldClockManager.TimeScale;
             }
 
             return secondsPassed * timeMultiplier;

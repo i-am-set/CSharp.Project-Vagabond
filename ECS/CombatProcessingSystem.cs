@@ -13,9 +13,11 @@ namespace ProjectVagabond
         private ComponentStore _componentStore;
         private CombatResolutionSystem _combatResolutionSystem;
         private CombatTurnSystem _combatTurnSystem;
+        private WorldClockManager _worldClockManager; // NEW
 
         private float _actionDelayTimer = 0f;
         private const float ACTION_DELAY_SECONDS = 0.15f;
+        private const float COMBAT_STEP_DURATION = 0.15f; // The visual duration of one step at 1x speed.
 
         public CombatProcessingSystem() { }
 
@@ -25,8 +27,16 @@ namespace ProjectVagabond
             _componentStore ??= ServiceLocator.Get<ComponentStore>();
             _combatResolutionSystem ??= ServiceLocator.Get<CombatResolutionSystem>();
             _combatTurnSystem ??= ServiceLocator.Get<CombatTurnSystem>();
+            _worldClockManager ??= ServiceLocator.Get<WorldClockManager>(); // Lazy load
 
             if (!_gameState.IsInCombat) return;
+
+            int currentEntityId = _gameState.CurrentTurnEntityId;
+
+            if (_componentStore.HasComponent<InterpolationComponent>(currentEntityId))
+            {
+                return;
+            }
 
             if (_actionDelayTimer > 0)
             {
@@ -34,7 +44,6 @@ namespace ProjectVagabond
                 return;
             }
 
-            int currentEntityId = _gameState.CurrentTurnEntityId;
             var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(currentEntityId);
 
             if (actionQueue != null && actionQueue.ActionQueue.TryDequeue(out IAction nextAction))
@@ -56,9 +65,12 @@ namespace ProjectVagabond
                         _combatTurnSystem.EndCurrentTurn();
                         break;
                 }
-                _actionDelayTimer = ACTION_DELAY_SECONDS;
+                // We don't set the delay for moves, as the interpolation duration serves as the delay.
+                if (!(nextAction is MoveAction))
+                {
+                    _actionDelayTimer = ACTION_DELAY_SECONDS;
+                }
 
-                // ** THE FIX IS HERE **
                 // After processing an action, check if the queue is now empty.
                 if (!actionQueue.ActionQueue.Any())
                 {
@@ -82,7 +94,8 @@ namespace ProjectVagabond
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(action.ActorId);
             if (localPosComp != null)
             {
-                var interp = new InterpolationComponent(localPosComp.LocalPosition, action.Destination, 0.15f);
+                float visualDuration = COMBAT_STEP_DURATION / _worldClockManager.TimeScale;
+                var interp = new InterpolationComponent(localPosComp.LocalPosition, action.Destination, visualDuration, action.IsRunning);
                 _componentStore.AddComponent(action.ActorId, interp);
             }
         }

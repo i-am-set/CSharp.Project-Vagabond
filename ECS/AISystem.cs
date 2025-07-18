@@ -13,8 +13,10 @@ namespace ProjectVagabond
         private GameState _gameState;
         private readonly ComponentStore _componentStore;
         private readonly ChunkManager _chunkManager;
+        private WorldClockManager _worldClockManager;
         private readonly Random _random = new();
         private const float REPATH_INTERVAL = 0.5f; // Recalculate path every half a second
+        private const float BASE_AI_STEP_DURATION = 0.15f; // AI moves slightly slower visually
         private static readonly Vector2[] _neighborOffsets = new Vector2[]
         {
             new Vector2(0, -1), new Vector2(0, 1), new Vector2(-1, 0), new Vector2(1, 0),
@@ -94,6 +96,7 @@ namespace ProjectVagabond
         public void ProcessEntities(float timeBudget)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
+            _worldClockManager ??= ServiceLocator.Get<WorldClockManager>(); // Lazy load
             if (_gameState.IsInCombat) return;
 
             foreach (var entityId in _gameState.ActiveEntities)
@@ -115,16 +118,13 @@ namespace ProjectVagabond
                 var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(entityId);
                 bool isIdle = actionQueueComp.ActionQueue.Count == 0 && !_componentStore.HasComponent<InterpolationComponent>(entityId);
 
-                // 1. DECIDE: If the AI is idle, it can make a new decision.
                 if (isIdle)
                 {
-                    // If it has no path, or it's time to re-evaluate, get a new goal.
                     if (!pathComp.HasPath() || pathComp.RepathTimer >= REPATH_INTERVAL)
                     {
                         DecideNextGoal(entityId, aiComp, pathComp);
                     }
 
-                    // If the decision resulted in a path, queue the next step.
                     if (pathComp.HasPath())
                     {
                         var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
@@ -135,7 +135,6 @@ namespace ProjectVagabond
                     }
                 }
 
-                // 2. ACT: If there's an action in the queue, try to execute it.
                 if (actionQueueComp.ActionQueue.TryPeek(out IAction nextAction))
                 {
                     float actionCost = CalculateAIActionTimeCost(entityId, nextAction);
@@ -306,10 +305,8 @@ namespace ProjectVagabond
                 var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
                 if (localPosComp != null)
                 {
-                    float duration = CalculateAIActionTimeCost(entityId, moveAction) / 15f;
-                    duration = MathHelper.Clamp(duration, 0.1f, 0.5f);
-
-                    var interp = new InterpolationComponent(localPosComp.LocalPosition, moveAction.Destination, duration);
+                    float visualDuration = BASE_AI_STEP_DURATION / _worldClockManager.TimeScale;
+                    var interp = new InterpolationComponent(localPosComp.LocalPosition, moveAction.Destination, visualDuration, moveAction.IsRunning);
                     _componentStore.AddComponent(entityId, interp);
                 }
             }
