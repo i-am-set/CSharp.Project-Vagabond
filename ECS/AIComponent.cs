@@ -19,7 +19,7 @@
         /// The amount of in-game time (in seconds) the AI has to spend on its actions.
         /// This is granted when the player performs an action.
         /// </summary>
-        public int ActionTimeBudget { get; set; } = 0;
+        public float ActionTimeBudget { get; set; } = 0;
 
         public IComponent Clone()
         {

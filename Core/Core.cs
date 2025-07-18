@@ -50,6 +50,9 @@ namespace ProjectVagabond
         private CombatProcessingSystem _combatProcessingSystem;
         private SpriteManager _spriteManager;
         private CombatUIAnimationManager _combatUIAnimationManager;
+        private PlayerLocalMovementSystem _playerLocalMovementSystem; 
+        private InterpolationSystem _interpolationSystem; 
+        private CombatInitiationSystem _combatInitiationSystem;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -96,30 +99,8 @@ namespace ProjectVagabond
             var archetypeManager = new ArchetypeManager();
             ServiceLocator.Register<ArchetypeManager>(archetypeManager);
 
-            var playerInputSystem = new PlayerInputSystem();
-            ServiceLocator.Register<PlayerInputSystem>(playerInputSystem);
-
-            _actionExecutionSystem = new ActionExecutionSystem();
-            ServiceLocator.Register<ActionExecutionSystem>(_actionExecutionSystem);
-
-            var combatTurnSystem = new CombatTurnSystem();
-            ServiceLocator.Register<CombatTurnSystem>(combatTurnSystem);
-
-            _aiSystem = new AISystem();
-            ServiceLocator.Register<AISystem>(_aiSystem);
-
-            var combatResolutionSystem = new CombatResolutionSystem();
-            ServiceLocator.Register<CombatResolutionSystem>(combatResolutionSystem);
-
-            _combatProcessingSystem = new CombatProcessingSystem();
-            ServiceLocator.Register<CombatProcessingSystem>(_combatProcessingSystem);
-
             var worldClockManager = new WorldClockManager();
             ServiceLocator.Register<WorldClockManager>(worldClockManager);
-
-            var statusEffectSystem = new StatusEffectSystem();
-            ServiceLocator.Register<StatusEffectSystem>(statusEffectSystem);
-            worldClockManager.OnTimePassed += statusEffectSystem.ProcessTimePassed;
 
             var noiseManager = new NoiseMapManager();
             ServiceLocator.Register<NoiseMapManager>(noiseManager);
@@ -143,6 +124,38 @@ namespace ProjectVagabond
 
             _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
+
+            // Now we can safely create systems that depend on GameState
+            var playerInputSystem = new PlayerInputSystem();
+            ServiceLocator.Register<PlayerInputSystem>(playerInputSystem);
+
+            _playerLocalMovementSystem = new PlayerLocalMovementSystem();
+            ServiceLocator.Register<PlayerLocalMovementSystem>(_playerLocalMovementSystem);
+
+            _actionExecutionSystem = new ActionExecutionSystem();
+            ServiceLocator.Register<ActionExecutionSystem>(_actionExecutionSystem);
+
+            var combatTurnSystem = new CombatTurnSystem();
+            ServiceLocator.Register<CombatTurnSystem>(combatTurnSystem);
+
+            _aiSystem = new AISystem();
+            ServiceLocator.Register<AISystem>(_aiSystem);
+
+            var combatResolutionSystem = new CombatResolutionSystem();
+            ServiceLocator.Register<CombatResolutionSystem>(combatResolutionSystem);
+
+            _combatProcessingSystem = new CombatProcessingSystem();
+            ServiceLocator.Register<CombatProcessingSystem>(_combatProcessingSystem);
+
+            _combatInitiationSystem = new CombatInitiationSystem();
+            ServiceLocator.Register<CombatInitiationSystem>(_combatInitiationSystem);
+
+            var statusEffectSystem = new StatusEffectSystem();
+            ServiceLocator.Register<StatusEffectSystem>(statusEffectSystem);
+            worldClockManager.OnTimePassed += statusEffectSystem.ProcessTimePassed;
+
+            _interpolationSystem = new InterpolationSystem();
+            ServiceLocator.Register<InterpolationSystem>(_interpolationSystem);
 
             var terminalRenderer = new TerminalRenderer();
             ServiceLocator.Register<TerminalRenderer>(terminalRenderer);
@@ -181,6 +194,9 @@ namespace ProjectVagabond
             ServiceLocator.Register<Texture2D>(_pixel);
 
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
+            _systemManager.RegisterSystem(_interpolationSystem, 0f);
+            _systemManager.RegisterSystem(_playerLocalMovementSystem, 0f);
+            _systemManager.RegisterSystem(_combatInitiationSystem, 0f);
             worldClockManager.OnTimePassed += _aiSystem.ProcessEntities;
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
@@ -238,6 +254,8 @@ namespace ProjectVagabond
 
             _sceneManager.Update(gameTime);
             _combatUIAnimationManager.Update(gameTime);
+
+            _combatInitiationSystem.Update(gameTime);
 
             if (_gameState.IsInCombat)
             {

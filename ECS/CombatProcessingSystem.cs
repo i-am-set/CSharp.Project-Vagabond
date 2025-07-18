@@ -82,10 +82,8 @@ namespace ProjectVagabond
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(action.ActorId);
             if (localPosComp != null)
             {
-                localPosComp.LocalPosition = new Vector2(
-                    MathHelper.Clamp(action.Destination.X, 0, Global.LOCAL_GRID_SIZE - 1),
-                    MathHelper.Clamp(action.Destination.Y, 0, Global.LOCAL_GRID_SIZE - 1)
-                );
+                var interp = new InterpolationComponent(localPosComp.LocalPosition, action.Destination, 0.15f);
+                _componentStore.AddComponent(action.ActorId, interp);
             }
         }
     }

@@ -24,7 +24,7 @@ namespace ProjectVagabond
         public event Action OnDayChanged;
         public event Action OnSeasonChanged;
         public event Action OnYearChanged;
-        public event Action<int> OnTimePassed;
+        public event Action<float> OnTimePassed;
 
         // Private fields for tracking time
         private int _year;
@@ -49,9 +49,9 @@ namespace ProjectVagabond
         private TimeSpan _interpolationTargetTime;
         private float _interpolationDurationRealSeconds;
         private float _interpolationTimer;
-        private double _totalSecondsPassedDuringInterpolation;
 
         public bool IsInterpolatingTime => _isInterpolating;
+        public float InterpolationDurationRealSeconds => _interpolationDurationRealSeconds;
 
         // Private fields for season lengths
         private const int _fallDays = 91;
@@ -87,17 +87,8 @@ namespace ProjectVagabond
 
             if (_interpolationTimer >= _interpolationDurationRealSeconds)
             {
-                // Animation Finished
+                // Visual Animation Finished
                 _isInterpolating = false;
-                SetTimeFromTimeSpan(_interpolationTargetTime);
-                FinishTimePassage();
-            }
-            else
-            {
-                // Animation in Progress
-                float progress = _interpolationTimer / _interpolationDurationRealSeconds;
-                long currentTicks = (long)MathHelper.Lerp(_interpolationStartTime.Ticks, _interpolationTargetTime.Ticks, progress);
-                SetTimeFromTimeSpan(new TimeSpan(currentTicks));
             }
         }
 
@@ -112,13 +103,14 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Kicks off the time-lapse animation with high precision. The game will wait for this to complete.
+        /// Instantly advances the logical game time and fires the OnTimePassed event.
+        /// It then starts a background visual animation for the clock face to "catch up".
         /// </summary>
         /// <param name="totalSecondsToPass">The total number of seconds to pass, can be a fractional value.</param>
         /// <param name="randomizationFactor">A factor from 0.0 to 1.0 to randomize the duration. E.g., 0.5f means +/- 50%.</param>
         public void PassTime(double totalSecondsToPass, float randomizationFactor = 0f)
         {
-            if (_isInterpolating || totalSecondsToPass <= 0) return;
+            if (totalSecondsToPass <= 0) return;
 
             if (randomizationFactor > 0f)
             {
@@ -128,73 +120,50 @@ namespace ProjectVagabond
                 totalSecondsToPass = _random.NextDouble() * (maxGameTimeDuration - minGameTimeDuration) + minGameTimeDuration;
             }
 
-            _totalSecondsPassedDuringInterpolation = totalSecondsToPass;
+            // --- LOGICAL TIME ADVANCEMENT (INSTANT) ---
+            var previousTimeSpan = CurrentTimeSpan;
+            var targetTimeSpan = previousTimeSpan.Add(TimeSpan.FromSeconds(totalSecondsToPass));
+            SetTimeFromTimeSpan(targetTimeSpan); // Update the internal time state immediately
 
-            // Store start and calculate target time. Use the high-precision CurrentTimeSpan to prevent precision loss.
-            _interpolationStartTime = CurrentTimeSpan;
-            _interpolationTargetTime = _interpolationStartTime.Add(TimeSpan.FromSeconds(_totalSecondsPassedDuringInterpolation));
+            // Fire events based on what boundaries were crossed
+            if (targetTimeSpan.Days > previousTimeSpan.Days)
+            {
+                Season previousSeason = CurrentSeasonFromDay(previousTimeSpan.Days + 1);
+                int newDayOfYear = targetTimeSpan.Days + 1;
+                int oldDayOfYear = previousTimeSpan.Days + 1;
 
-            // Tiered Animation Speed Calculation
+                if ((newDayOfYear / 365) > (oldDayOfYear / 365)) OnYearChanged?.Invoke();
+                OnDayChanged?.Invoke();
+                if (CurrentSeasonFromDay(newDayOfYear) != previousSeason) OnSeasonChanged?.Invoke();
+            }
+            OnTimeChanged?.Invoke();
+            OnTimePassed?.Invoke((float)totalSecondsToPass); // Fire the event for AI and other systems
+
+            // --- VISUAL CLOCK ANIMATION (BACKGROUND) ---
+            _interpolationStartTime = previousTimeSpan;
+            _interpolationTargetTime = targetTimeSpan;
+
             const float minDuration = 0.4f;
             const float maxDuration = 6.0f;
-
-            // Define thresholds for different time durations (in seconds)
             const long ONE_HOUR = 3600;
             const long EIGHT_HOURS = 28800;
             const long ONE_DAY = 86400;
 
-            // Select a scale factor based on the total duration of the action.
-            // A smaller scale factor results in a FASTER animation for longer waits.
             float scaleFactor;
-            if (_totalSecondsPassedDuringInterpolation > ONE_DAY) scaleFactor = 0.00005f; // Fastest
-            else if (_totalSecondsPassedDuringInterpolation > EIGHT_HOURS) scaleFactor = 0.0001f;  // Faster
-            else if (_totalSecondsPassedDuringInterpolation > ONE_HOUR) scaleFactor = 0.0002f;  // Fast
-            else scaleFactor = Global.BASE_TIME_SCALE; // Slowest (Base Speed)
+            if (totalSecondsToPass > ONE_DAY) scaleFactor = 0.00005f;
+            else if (totalSecondsToPass > EIGHT_HOURS) scaleFactor = 0.0001f;
+            else if (totalSecondsToPass > ONE_HOUR) scaleFactor = 0.0002f;
+            else scaleFactor = Global.BASE_TIME_SCALE;
 
-            _interpolationDurationRealSeconds = Math.Clamp(minDuration + ((float)_totalSecondsPassedDuringInterpolation * scaleFactor), minDuration, maxDuration);
+            _interpolationDurationRealSeconds = Math.Clamp(minDuration + ((float)totalSecondsToPass * scaleFactor), minDuration, maxDuration);
 
-            // Apply the time scale multiplier from the UI buttons (1x, 3x, 5x)
             if (TimeScale > 0)
             {
                 _interpolationDurationRealSeconds /= TimeScale;
             }
 
-            // Reset timer and set state
             _interpolationTimer = 0f;
             _isInterpolating = true;
-        }
-
-        /// <summary>
-        /// This is called when the interpolation animation is complete.
-        /// It handles event invocation and terminal messages.
-        /// </summary>
-        private void FinishTimePassage()
-        {
-            int daysPassed = (int)(_totalSecondsPassedDuringInterpolation / 86400);
-
-            if (daysPassed > 0)
-            {
-                Season previousSeason = CurrentSeason;
-                int newDayOfYear = (_dayOfYear + daysPassed);
-
-                while (newDayOfYear > 365)
-                {
-                    newDayOfYear -= 365;
-                    _year++;
-                    OnYearChanged?.Invoke();
-                }
-                _dayOfYear = newDayOfYear;
-                OnDayChanged?.Invoke();
-
-                if (CurrentSeason != previousSeason)
-                {
-                    OnSeasonChanged?.Invoke();
-                }
-            }
-
-            Debug.WriteLine($"{GetCommaFormattedTimeFromSeconds((int)_totalSecondsPassedDuringInterpolation)} passed");
-            OnTimeChanged?.Invoke();
-            OnTimePassed?.Invoke((int)_totalSecondsPassedDuringInterpolation);
         }
 
         /// <summary>
@@ -203,7 +172,9 @@ namespace ProjectVagabond
         private void SetTimeFromTimeSpan(TimeSpan time)
         {
             CurrentTimeSpan = time;
-            _dayOfYear = time.Days + 1;
+            // Handle year wrapping within the TimeSpan
+            _year = 1 + (time.Days / 365);
+            _dayOfYear = 1 + (time.Days % 365);
             _hour = time.Hours;
             _minute = time.Minutes;
             _second = time.Seconds;
@@ -233,15 +204,14 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // BASE LOGIC
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        public Season CurrentSeason
+        public Season CurrentSeason => CurrentSeasonFromDay(_dayOfYear);
+
+        private Season CurrentSeasonFromDay(int day)
         {
-            get
-            {
-                if (_dayOfYear <= _fallDays) return Season.Fall;
-                if (_dayOfYear <= _fallDays + _winterDays) return Season.Winter;
-                if (_dayOfYear <= _fallDays + _winterDays + _springDays) return Season.Spring;
-                return Season.Summer;
-            }
+            if (day <= _fallDays) return Season.Fall;
+            if (day <= _fallDays + _winterDays) return Season.Winter;
+            if (day <= _fallDays + _winterDays + _springDays) return Season.Spring;
+            return Season.Summer;
         }
 
         public int DayOfSeason

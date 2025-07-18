@@ -1,4 +1,6 @@
-﻿using Microsoft.Xna.Framework;
+﻿// --- START OF FILE SpriteManager.cs ---
+
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 
@@ -22,6 +24,7 @@ namespace ProjectVagabond
         private Texture2D _shortRestSprite;
         private Texture2D _longRestSprite;
         private Texture2D _warningMarkSprite;
+        private Texture2D _doubleWarningMarkSprite; // NEW
         private Texture2D _emptySprite;
         private Texture2D _speedMarkSprite;
         private Texture2D _worldMapHoverSelectorSprite;
@@ -43,6 +46,7 @@ namespace ProjectVagabond
         public Texture2D ShortRestSprite => _shortRestSprite;
         public Texture2D LongRestSprite => _longRestSprite;
         public Texture2D WarningMarkSprite => _warningMarkSprite;
+        public Texture2D DoubleWarningMarkSprite => _doubleWarningMarkSprite; // NEW
         public Texture2D EmptySprite => _emptySprite;
         public Texture2D SpeedMarkSprite => _speedMarkSprite;
         public Texture2D WorldMapHoverSelectorSprite => _worldMapHoverSelectorSprite;
@@ -95,8 +99,11 @@ namespace ProjectVagabond
             try { _longRestSprite = _core.Content.Load<Texture2D>("Sprites/longRest"); }
             catch { _longRestSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-            try { _warningMarkSprite = _core.Content.Load<Texture2D>("Sprites/warningMark"); }
-            catch { _warningMarkSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
+            try { _warningMarkSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_warning_mark"); }
+            catch { _warningMarkSprite = _textureFactory.CreateWarningMarkSprite(); }
+
+            try { _doubleWarningMarkSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_double_warning_mark"); }
+            catch { _doubleWarningMarkSprite = _textureFactory.CreateDoubleWarningMarkSprite(); }
 
             try { _emptySprite = _textureFactory.CreateEmptyTexture(); }
             catch { _emptySprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }

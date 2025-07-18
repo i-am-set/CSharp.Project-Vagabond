@@ -241,14 +241,17 @@ namespace ProjectVagabond
                 }
             }
 
-            // COMBAT AND AI INDICATOR DRAWING
+            // --- COMBAT AND AI INDICATOR DRAWING ---
             var entitiesToDrawOverlays = _gameState.IsInCombat ? _gameState.Combatants : _gameState.ActiveEntities;
             foreach (var entityId in entitiesToDrawOverlays)
             {
                 var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+                var interpComp = _componentStore.GetComponent<InterpolationComponent>(entityId);
                 if (localPosComp == null) continue;
 
-                Vector2? screenPos = MapCoordsToScreen(localPosComp.LocalPosition);
+                Vector2 positionToDraw = interpComp != null ? interpComp.CurrentVisualPosition : localPosComp.LocalPosition;
+
+                Vector2? screenPos = MapCoordsToScreen(positionToDraw);
                 if (!screenPos.HasValue) continue;
 
                 var cellRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
@@ -259,14 +262,20 @@ namespace ProjectVagabond
                     var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
                     if (intentComp != null && intentComp.CurrentIntent != AIIntent.None)
                     {
-                        string indicatorText = intentComp.CurrentIntent == AIIntent.Pursuing ? "!" : "!!";
-                        float yOffset = _animationManager.GetBobbingOffset("TurnIndicator"); // Reuse bobbing animation
-                        Vector2 textSize = font.MeasureString(indicatorText);
-                        var indicatorPos = new Vector2(
-                            cellRect.Center.X - textSize.X / 2,
-                            cellRect.Y - textSize.Y + yOffset
-                        );
-                        spriteBatch.DrawString(font, indicatorText, indicatorPos, _global.Palette_Red);
+                        Texture2D indicatorSprite = intentComp.CurrentIntent == AIIntent.Pursuing
+                            ? _spriteManager.WarningMarkSprite
+                            : _spriteManager.DoubleWarningMarkSprite;
+
+                        if (indicatorSprite != null)
+                        {
+                            var indicatorRect = new Rectangle(
+                                cellRect.Center.X - indicatorSprite.Width / 2,
+                                cellRect.Y - indicatorSprite.Height - 1, // 1 pixel padding
+                                indicatorSprite.Width,
+                                indicatorSprite.Height
+                            );
+                            spriteBatch.Draw(indicatorSprite, indicatorRect, Color.White);
+                        }
                     }
                 }
 
@@ -303,7 +312,6 @@ namespace ProjectVagabond
                     }
                 }
             }
-
 
             if (_gameState.IsPaused) DrawPauseIcon(spriteBatch, font);
             _contextMenu.Draw(spriteBatch, font);
@@ -492,10 +500,13 @@ namespace ProjectVagabond
             {
                 var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
                 var renderComp = _componentStore.GetComponent<RenderableComponent>(entityId);
+                var interpComp = _componentStore.GetComponent<InterpolationComponent>(entityId);
 
                 if (localPosComp != null && renderComp != null)
                 {
-                    Vector2? screenPos = MapCoordsToScreen(localPosComp.LocalPosition);
+                    Vector2 positionToDraw = interpComp != null ? interpComp.CurrentVisualPosition : localPosComp.LocalPosition;
+
+                    Vector2? screenPos = MapCoordsToScreen(positionToDraw);
                     if (screenPos.HasValue)
                     {
                         Texture2D textureToDraw = renderComp.Texture ?? pixel;

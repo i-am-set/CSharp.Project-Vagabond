@@ -14,6 +14,7 @@ namespace ProjectVagabond
         private readonly ComponentStore _componentStore;
         private readonly ChunkManager _chunkManager;
         private readonly Random _random = new();
+        private const float REPATH_INTERVAL = 0.5f; // Recalculate path every half a second
         private static readonly Vector2[] _neighborOffsets = new Vector2[]
         {
             new Vector2(0, -1), new Vector2(0, 1), new Vector2(-1, 0), new Vector2(1, 0),
@@ -26,16 +27,11 @@ namespace ProjectVagabond
             _chunkManager = ServiceLocator.Get<ChunkManager>();
         }
 
-        // This system is not updated by the SystemManager in real-time.
         public void Update(GameTime gameTime) { }
 
-        /// <summary>
-        /// Plans and queues a full turn's worth of actions for an AI entity in combat.
-        /// This function runs ONCE at the start of the AI's turn.
-        /// </summary>
-        /// <param name="entityId">The ID of the AI entity to process.</param>
         public void ProcessCombatTurn(int entityId)
         {
+            // Combat logic remains unchanged
             _gameState ??= ServiceLocator.Get<GameState>();
 
             var aiPos = _componentStore.GetComponent<LocalPositionComponent>(entityId);
@@ -48,38 +44,30 @@ namespace ProjectVagabond
             if (aiPos == null || combatant == null || actionQueue == null || stats == null || playerPos == null)
             {
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{aiName} cannot act (missing components)." });
-                actionQueue?.ActionQueue.Enqueue(new EndTurnAction(entityId)); // Ensure turn ends even on error
+                actionQueue?.ActionQueue.Enqueue(new EndTurnAction(entityId));
                 return;
             }
 
-            // --- AI TURN PLANNING ---
             var simulatedPosition = aiPos.LocalPosition;
             List<Vector2> pathToMove = new List<Vector2>();
             bool isRunning = true;
 
-            // ** GOAL: Move into attack range, then attack. **
-            // 1. Try to find an affordable running path.
             var path = _gameState.GetAffordablePath(entityId, simulatedPosition, playerPos.LocalPosition, true, out _);
 
-            // 2. If running path fails, try a walking path.
             if (path == null || !path.Any())
             {
                 isRunning = false;
                 path = _gameState.GetAffordablePath(entityId, simulatedPosition, playerPos.LocalPosition, false, out _);
             }
 
-            // 3. If a path was found, prepare the movement actions.
             if (path != null && path.Any())
             {
-                // The actual path to travel is all steps except the last one (which is the target's tile).
-                // If the path is only one step, it means we are already adjacent, so we don't move.
                 if (path.Count > 1)
                 {
                     pathToMove = path.Take(path.Count - 1).ToList();
                 }
             }
 
-            // 4. Queue the movement actions.
             if (pathToMove.Any())
             {
                 string moveMode = isRunning ? "runs" : "walks";
@@ -90,7 +78,6 @@ namespace ProjectVagabond
                 }
             }
 
-            // 5. Check for attack possibility from the final position.
             var finalPositionAfterMove = pathToMove.Any() ? pathToMove.Last() : simulatedPosition;
             if (Vector2.Distance(finalPositionAfterMove, playerPos.LocalPosition) <= combatant.AttackRange)
             {
@@ -101,12 +88,10 @@ namespace ProjectVagabond
                 }
             }
 
-            // ** Final Step: Always queue an EndTurnAction to guarantee the turn ends. **
             actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
         }
 
-        // Out of Combat Logic
-        public void ProcessEntities(int timeBudget)
+        public void ProcessEntities(float timeBudget)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.IsInCombat) return;
@@ -117,43 +102,62 @@ namespace ProjectVagabond
                 if (aiComp == null || !_componentStore.HasComponent<NPCTagComponent>(entityId)) continue;
 
                 aiComp.ActionTimeBudget += timeBudget;
-                while (aiComp.ActionTimeBudget > 0)
+
+                var pathComp = _componentStore.GetComponent<AIPathComponent>(entityId);
+                if (pathComp == null)
                 {
-                    var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(entityId);
-                    if (actionQueueComp == null) break;
-                    if (actionQueueComp.ActionQueue.Count == 0)
+                    pathComp = new AIPathComponent();
+                    _componentStore.AddComponent(entityId, pathComp);
+                }
+
+                pathComp.RepathTimer += timeBudget;
+
+                var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(entityId);
+                bool isIdle = actionQueueComp.ActionQueue.Count == 0 && !_componentStore.HasComponent<InterpolationComponent>(entityId);
+
+                // 1. DECIDE: If the AI is idle, it can make a new decision.
+                if (isIdle)
+                {
+                    // If it has no path, or it's time to re-evaluate, get a new goal.
+                    if (!pathComp.HasPath() || pathComp.RepathTimer >= REPATH_INTERVAL)
                     {
-                        DecideNextAction(entityId, aiComp);
-                    }
-                    if (actionQueueComp.ActionQueue.Count == 0)
-                    {
-                        aiComp.ActionTimeBudget = 0;
-                        break;
+                        DecideNextGoal(entityId, aiComp, pathComp);
                     }
 
-                    IAction nextAction = actionQueueComp.ActionQueue.Peek();
-                    int actionCost = CalculateAIActionCost(nextAction);
+                    // If the decision resulted in a path, queue the next step.
+                    if (pathComp.HasPath())
+                    {
+                        var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
+                        bool isRunning = intentComp?.CurrentIntent == AIIntent.Pursuing || intentComp?.CurrentIntent == AIIntent.Fleeing;
+                        var nextStep = pathComp.Path[pathComp.CurrentPathIndex];
+                        actionQueueComp.ActionQueue.Enqueue(new MoveAction(entityId, nextStep, isRunning));
+                        pathComp.CurrentPathIndex++;
+                    }
+                }
+
+                // 2. ACT: If there's an action in the queue, try to execute it.
+                if (actionQueueComp.ActionQueue.TryPeek(out IAction nextAction))
+                {
+                    float actionCost = CalculateAIActionTimeCost(entityId, nextAction);
                     if (aiComp.ActionTimeBudget >= actionCost)
                     {
                         actionQueueComp.ActionQueue.Dequeue();
                         aiComp.ActionTimeBudget -= actionCost;
                         ExecuteAIAction(entityId, nextAction);
                     }
-                    else
-                    {
-                        break;
-                    }
                 }
             }
         }
 
-        private void DecideNextAction(int entityId, AIComponent aiComp)
+        private void DecideNextGoal(int entityId, AIComponent aiComp, AIPathComponent pathComp)
         {
+            pathComp.Clear(); // Clear the old path before making a new decision.
+
             var personalityComp = _componentStore.GetComponent<AIPersonalityComponent>(entityId);
             var combatantComp = _componentStore.GetComponent<CombatantComponent>(entityId);
             if (personalityComp == null || combatantComp == null)
             {
-                Wander(entityId); // Default to wandering if no personality
+                Wander(entityId, pathComp);
                 return;
             }
 
@@ -161,84 +165,83 @@ namespace ProjectVagabond
             bool inAggroRange = distanceToPlayer <= combatantComp.AggroRange;
             bool inAttackRange = distanceToPlayer <= combatantComp.AttackRange;
 
-            // Default to no intent
             SetAIIntent(entityId, AIIntent.None);
 
             if (inAggroRange)
             {
-                // Player is in range, decide action based on personality
                 switch (personalityComp.Personality)
                 {
                     case AIPersonalityType.Aggressive:
-                        if (inAttackRange) InitiateCombat(entityId);
-                        else PursuePlayer(entityId);
+                        if (inAttackRange) InitiateCombat(entityId, aiComp);
+                        else PursuePlayer(entityId, pathComp);
                         break;
                     case AIPersonalityType.Neutral:
                         if (personalityComp.IsProvoked)
                         {
-                            if (inAttackRange) InitiateCombat(entityId);
-                            else PursuePlayer(entityId);
+                            if (inAttackRange) InitiateCombat(entityId, aiComp);
+                            else PursuePlayer(entityId, pathComp);
                         }
                         break;
                     case AIPersonalityType.Passive:
-                        if (personalityComp.IsProvoked) FleeFromPlayer(entityId);
+                        if (personalityComp.IsProvoked) FleeFromPlayer(entityId, pathComp);
                         break;
                     case AIPersonalityType.Fearful:
-                        FleeFromPlayer(entityId);
+                        FleeFromPlayer(entityId, pathComp);
                         break;
                 }
             }
             else
             {
-                // Player is not in range, just wander
-                Wander(entityId);
+                Wander(entityId, pathComp);
             }
         }
 
-        private void InitiateCombat(int aiEntityId)
+        private void InitiateCombat(int aiEntityId, AIComponent aiComp)
         {
+            SetAIIntent(aiEntityId, AIIntent.None);
+            var pathComp = _componentStore.GetComponent<AIPathComponent>(aiEntityId);
+            pathComp?.Clear();
+
             var aiName = EntityNamer.GetName(aiEntityId);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[warning]{aiName} has spotted you and is moving to attack!" });
-            _gameState.InitiateCombat(new List<int> { aiEntityId, _gameState.PlayerEntityId });
+            _gameState.RequestCombatInitiation(aiEntityId);
+            aiComp.ActionTimeBudget = 0;
         }
 
-        private void PursuePlayer(int entityId)
+        private void PursuePlayer(int entityId, AIPathComponent pathComp)
         {
             SetAIIntent(entityId, AIIntent.Pursuing);
-            var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(entityId);
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-            if (actionQueueComp == null || localPosComp == null) return;
+            if (localPosComp == null) return;
 
             var playerPos = GetPlayerRelativeLocalPosition(entityId);
             if (!playerPos.HasValue)
             {
-                Wander(entityId); // Can't see player, just wander
+                Wander(entityId, pathComp);
                 return;
             }
 
-            // Find the first step on a path to the player
-            var path = Pathfinder.FindPath(entityId, localPosComp.LocalPosition, playerPos.Value, _gameState, false, PathfindingMode.Moves, MapView.Local);
+            bool isRunning = true;
+            var path = Pathfinder.FindPath(entityId, localPosComp.LocalPosition, playerPos.Value, _gameState, isRunning, PathfindingMode.Moves, MapView.Local);
             if (path != null && path.Any())
             {
-                actionQueueComp.ActionQueue.Enqueue(new MoveAction(entityId, path.First(), false));
+                pathComp.Path = path;
             }
         }
 
-        private void FleeFromPlayer(int entityId)
+        private void FleeFromPlayer(int entityId, AIPathComponent pathComp)
         {
             SetAIIntent(entityId, AIIntent.Fleeing);
-            var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(entityId);
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-            if (actionQueueComp == null || localPosComp == null) return;
+            if (localPosComp == null) return;
 
             var playerPos = GetPlayerRelativeLocalPosition(entityId);
             if (!playerPos.HasValue)
             {
-                Wander(entityId); // Can't see player, just wander
+                Wander(entityId, pathComp);
                 return;
             }
 
-            // Find the best direction to flee
             Vector2 bestFleeDirection = Vector2.Zero;
             float maxDistance = -1;
 
@@ -259,16 +262,16 @@ namespace ProjectVagabond
 
             if (bestFleeDirection != Vector2.Zero)
             {
-                actionQueueComp.ActionQueue.Enqueue(new MoveAction(entityId, localPosComp.LocalPosition + bestFleeDirection, false));
+                pathComp.Path.Add(localPosComp.LocalPosition + bestFleeDirection);
             }
         }
 
-        private void Wander(int entityId)
+        private void Wander(int entityId, AIPathComponent pathComp)
         {
             SetAIIntent(entityId, AIIntent.None);
-            var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(entityId);
+            pathComp.Clear(); // Wandering clears any long-term path
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-            if (actionQueueComp == null || localPosComp == null) return;
+            if (localPosComp == null) return;
 
             var shuffledOffsets = _neighborOffsets.OrderBy(v => _random.Next()).ToList();
             foreach (var offset in shuffledOffsets)
@@ -276,27 +279,42 @@ namespace ProjectVagabond
                 var targetPos = localPosComp.LocalPosition + offset;
                 if (_gameState.IsPositionPassable(targetPos, MapView.Local))
                 {
-                    actionQueueComp.ActionQueue.Enqueue(new MoveAction(entityId, targetPos, false));
+                    pathComp.Path.Add(targetPos);
                     return; // Found a valid move, exit
                 }
             }
         }
 
-        private int CalculateAIActionCost(IAction action) => action is MoveAction ? 4 : 1;
+        private float CalculateAIActionTimeCost(int entityId, IAction action)
+        {
+            if (action is MoveAction moveAction)
+            {
+                var stats = _componentStore.GetComponent<StatsComponent>(entityId);
+                var localPos = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+                if (stats == null || localPos == null) return 1000;
+
+                Vector2 moveDir = moveAction.Destination - localPos.LocalPosition;
+                return _gameState.GetSecondsPassedDuringMovement(stats, moveAction.IsRunning, default, moveDir, true);
+            }
+            return 1;
+        }
 
         private void ExecuteAIAction(int entityId, IAction action)
         {
             if (action is MoveAction moveAction)
             {
                 var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-                if (localPosComp != null) localPosComp.LocalPosition = moveAction.Destination;
+                if (localPosComp != null)
+                {
+                    float duration = CalculateAIActionTimeCost(entityId, moveAction) / 15f;
+                    duration = MathHelper.Clamp(duration, 0.1f, 0.5f);
+
+                    var interp = new InterpolationComponent(localPosComp.LocalPosition, moveAction.Destination, duration);
+                    _componentStore.AddComponent(entityId, interp);
+                }
             }
         }
 
-        /// <summary>
-        /// Calculates the true distance between two entities on the local grid,
-        /// accounting for them being in different world chunks.
-        /// </summary>
         public float GetTrueLocalDistance(int entityId1, int entityId2)
         {
             var pos1 = _componentStore.GetComponent<PositionComponent>(entityId1);
@@ -309,11 +327,9 @@ namespace ProjectVagabond
                 return float.MaxValue;
             }
 
-            // Calculate the difference in world coordinates
             float worldOffsetX = (pos2.WorldPosition.X - pos1.WorldPosition.X) * Global.LOCAL_GRID_SIZE;
             float worldOffsetY = (pos2.WorldPosition.Y - pos1.WorldPosition.Y) * Global.LOCAL_GRID_SIZE;
 
-            // Calculate entity2's position as if it were on entity1's local map
             Vector2 relativePos2 = new Vector2(
                 localPos2.LocalPosition.X + worldOffsetX,
                 localPos2.LocalPosition.Y + worldOffsetY
@@ -322,9 +338,6 @@ namespace ProjectVagabond
             return Vector2.Distance(localPos1.LocalPosition, relativePos2);
         }
 
-        /// <summary>
-        /// Gets the player's position relative to the AI's local grid.
-        /// </summary>
         private Vector2? GetPlayerRelativeLocalPosition(int aiEntityId)
         {
             var aiPos = _componentStore.GetComponent<PositionComponent>(aiEntityId);
@@ -342,9 +355,6 @@ namespace ProjectVagabond
             );
         }
 
-        /// <summary>
-        /// A helper to safely get or add an AIIntentComponent and set its state.
-        /// </summary>
         private void SetAIIntent(int entityId, AIIntent intent)
         {
             var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);

@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -29,6 +29,11 @@ namespace ProjectVagabond
         private bool _isFreeMoveMode = false;
         private bool _isPaused = false;
         private readonly Random _random = new Random();
+
+        // Combat Initiation State
+        public bool IsCombatInitiationPending { get; private set; } = false;
+        public List<int> PendingCombatants { get; private set; } = new List<int>();
+
 
         public MapView PathExecutionMapView { get; private set; }
 
@@ -74,7 +79,7 @@ namespace ProjectVagabond
         public void InitializeWorld()
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0), localPosition: new Vector2(32, 32));
-            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 36));
+            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 47));
         }
 
         public void InitializeRenderableEntities()
@@ -106,6 +111,22 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // COMBAT MANAGEMENT
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        public void RequestCombatInitiation(int requestingEntityId)
+        {
+            if (IsCombatInitiationPending || IsInCombat) return;
+
+            IsCombatInitiationPending = true;
+            PendingCombatants.Clear();
+            PendingCombatants.Add(PlayerEntityId);
+            PendingCombatants.Add(requestingEntityId);
+        }
+
+        public void ClearCombatInitiationRequest()
+        {
+            IsCombatInitiationPending = false;
+            PendingCombatants.Clear();
+        }
+
         public void InitiateCombat(List<int> initialCombatants)
         {
             CancelExecutingActions(true);
@@ -280,7 +301,10 @@ namespace ProjectVagabond
             {
                 InitialActionCount = PendingActions.Count;
                 PathExecutionMapView = CurrentMapView;
-                _actionExecutionSystem.StartExecution();
+                if (PathExecutionMapView == MapView.World)
+                {
+                    _actionExecutionSystem.StartExecution();
+                }
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Executing queue of[undo] {PendingActions.Count}[gray] action(s)..." });
             }
             else
@@ -627,7 +651,7 @@ namespace ProjectVagabond
                         return entityId;
                     }
                 }
-                else
+                else // World View
                 {
                     var worldPosComp = _componentStore.GetComponent<PositionComponent>(entityId);
                     if (worldPosComp != null && (int)worldPosComp.WorldPosition.X == (int)gridPos.X && (int)worldPosComp.WorldPosition.Y == (int)gridPos.Y)

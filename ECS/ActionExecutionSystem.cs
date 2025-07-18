@@ -89,7 +89,10 @@ namespace ProjectVagabond
             _gameState ??= ServiceLocator.Get<GameState>();
             _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
-            if (_gameState.IsPaused || _gameState.IsInCombat) return;
+            if (_gameState.IsPaused || _gameState.IsInCombat || (_gameState.IsExecutingActions && _gameState.PathExecutionMapView == MapView.Local))
+            {
+                return;
+            }
 
             int playerEntityId = _gameState.PlayerEntityId;
             var playerActionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(playerEntityId);
@@ -152,11 +155,7 @@ namespace ProjectVagabond
                     gameState.CancelExecutingActions(true);
                     return false;
                 }
-                int energyCost = gameState.GetMovementEnergyCost(moveAction, gameState.PathExecutionMapView == MapView.Local);
-                if (gameState.PathExecutionMapView == MapView.Local && moveAction.IsRunning && !_localRunCostApplied)
-                {
-                    energyCost = 1;
-                }
+                int energyCost = gameState.GetMovementEnergyCost(moveAction, false); // Local moves are ignored by this system
                 if (!gameState.PlayerStats.CanExertEnergy(energyCost))
                 {
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Not enough energy to move! Need {energyCost}, have {gameState.PlayerStats.CurrentEnergyPoints}" });
@@ -169,33 +168,19 @@ namespace ProjectVagabond
 
         private float CalculateSecondsForAction(GameState gameState, IAction action)
         {
-            bool isLocalMove = gameState.PathExecutionMapView == MapView.Local;
-
+            // This system now only calculates for world moves.
             if (action is MoveAction moveAction)
             {
-                Vector2 previousPosition;
-                MapData mapData;
-                if (isLocalMove)
-                {
-                    previousPosition = gameState.PlayerLocalPos;
-                    mapData = default;
-                }
-                else
-                {
-                    previousPosition = gameState.PlayerWorldPos;
-                    mapData = gameState.GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
-                }
+                var previousPosition = gameState.PlayerWorldPos;
+                var mapData = gameState.GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
                 Vector2 moveDirection = moveAction.Destination - previousPosition;
-
-                // Get the player's stats component
                 var playerStats = gameState.PlayerStats;
-                if (playerStats == null) return 0; // Safety check
+                if (playerStats == null) return 0;
 
-                // Call the updated method signature
-                float fullDuration = gameState.GetSecondsPassedDuringMovement(playerStats, moveAction.IsRunning, mapData, moveDirection, isLocalMove);
+                float fullDuration = gameState.GetSecondsPassedDuringMovement(playerStats, moveAction.IsRunning, mapData, moveDirection, false);
 
                 float finalDuration = fullDuration;
-                if (!isLocalMove && _isFirstPlayerAction)
+                if (_isFirstPlayerAction)
                 {
                     float scaleFactor = gameState.GetFirstMoveTimeScaleFactor(moveDirection);
                     finalDuration *= scaleFactor;
@@ -222,44 +207,30 @@ namespace ProjectVagabond
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
             if (localPosComp == null) return;
 
-            bool isPlayer = entityId == gameState.PlayerEntityId;
-            bool isLocalMove = isPlayer && gameState.PathExecutionMapView == MapView.Local;
-            Vector2 nextPosition = action.Destination;
+            // This method now ONLY handles world moves.
+            int energyCost = gameState.GetMovementEnergyCost(action, false);
+            stats?.ExertEnergy(energyCost);
 
-            if (isLocalMove)
-            {
-                if (isPlayer && action.IsRunning && !_localRunCostApplied)
-                {
-                    stats?.ExertEnergy(1);
-                    _localRunCostApplied = true;
-                }
-                localPosComp.LocalPosition = new Vector2(MathHelper.Clamp(nextPosition.X, 0, Global.LOCAL_GRID_SIZE - 1), MathHelper.Clamp(nextPosition.Y, 0, Global.LOCAL_GRID_SIZE - 1));
-            }
-            else if (isPlayer)
-            {
-                int energyCost = gameState.GetMovementEnergyCost(action, false);
-                stats?.ExertEnergy(energyCost);
+            var posComp = _componentStore.GetComponent<PositionComponent>(entityId);
+            Vector2 oldWorldPos = posComp.WorldPosition;
+            posComp.WorldPosition = action.Destination;
 
-                var posComp = _componentStore.GetComponent<PositionComponent>(entityId);
-                Vector2 oldWorldPos = posComp.WorldPosition;
-                posComp.WorldPosition = nextPosition;
+            _chunkManager.UpdateEntityChunk(entityId, oldWorldPos, action.Destination);
 
-                _chunkManager.UpdateEntityChunk(entityId, oldWorldPos, nextPosition);
+            Vector2 moveDir = action.Destination - oldWorldPos;
+            Vector2 newLocalPos = new Vector2(32, 32);
+            if (moveDir.X > 0) newLocalPos.X = 0; else if (moveDir.X < 0) newLocalPos.X = 63;
+            if (moveDir.Y > 0) newLocalPos.Y = 0; else if (moveDir.Y < 0) newLocalPos.Y = 63;
+            if (moveDir.X != 0 && moveDir.Y == 0) newLocalPos.Y = 32;
+            if (moveDir.Y != 0 && moveDir.X == 0) newLocalPos.X = 32;
 
-                Vector2 moveDir = nextPosition - oldWorldPos;
-                Vector2 newLocalPos = new Vector2(32, 32);
-                if (moveDir.X > 0) newLocalPos.X = 0; else if (moveDir.X < 0) newLocalPos.X = 63;
-                if (moveDir.Y > 0) newLocalPos.Y = 0; else if (moveDir.Y < 0) newLocalPos.Y = 63;
-                if (moveDir.X != 0 && moveDir.Y == 0) newLocalPos.Y = 32;
-                if (moveDir.Y != 0 && moveDir.X == 0) newLocalPos.X = 32;
+            var interp = new InterpolationComponent(localPosComp.LocalPosition, newLocalPos, _worldClockManager.InterpolationDurationRealSeconds);
+            _componentStore.AddComponent(entityId, interp);
 
-                localPosComp.LocalPosition = new Vector2(MathHelper.Clamp(newLocalPos.X, 0, Global.LOCAL_GRID_SIZE - 1), MathHelper.Clamp(newLocalPos.Y, 0, Global.LOCAL_GRID_SIZE - 1));
-
-                string moveType = action.IsRunning ? "Ran" : "Walked";
-                string timeString = _worldClockManager.GetPreciseFormattedTimeFromSeconds(_currentActionDuration);
-                var mapData = gameState.GetMapDataAt((int)nextPosition.X, (int)nextPosition.Y);
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[khaki]{moveType} through[gold] {gameState.GetTerrainDescription(mapData).ToLower()}[khaki].[dim] ({timeString})" });
-            }
+            string moveType = action.IsRunning ? "Ran" : "Walked";
+            string timeString = _worldClockManager.GetPreciseFormattedTimeFromSeconds(_currentActionDuration);
+            var mapData = gameState.GetMapDataAt((int)action.Destination.X, (int)action.Destination.Y);
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[khaki]{moveType} through[gold] {gameState.GetTerrainDescription(mapData).ToLower()}[khaki].[dim] ({timeString})" });
         }
 
         private void ApplyRestActionEffects(GameState gameState, int entityId, RestAction action)
