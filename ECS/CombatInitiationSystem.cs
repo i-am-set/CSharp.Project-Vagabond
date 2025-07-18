@@ -26,14 +26,8 @@ namespace ProjectVagabond
                 return;
             }
 
-            // If the player is currently executing a path, cancel it immediately.
-            if (_gameState.IsExecutingActions)
-            {
-                _gameState.CancelExecutingActions(true); // true for "interrupted"
-            }
-
-            // We still wait for any final visual interpolation to finish to avoid a visual jump.
-            if (_componentStore.HasComponent<InterpolationComponent>(_gameState.PlayerEntityId))
+            // Do not start combat if the player is still executing a path or visually moving.
+            if (_gameState.IsExecutingActions || _componentStore.HasComponent<InterpolationComponent>(_gameState.PlayerEntityId))
             {
                 return;
             }

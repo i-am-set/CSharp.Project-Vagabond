@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 
 namespace ProjectVagabond
 {
@@ -13,8 +12,6 @@ namespace ProjectVagabond
         private readonly GameState _gameState;
         private readonly ComponentStore _componentStore;
         private readonly WorldClockManager _worldClockManager;
-
-        private const float BASE_STEP_DURATION = 0.1f;
 
         public PlayerLocalMovementSystem()
         {
@@ -54,13 +51,13 @@ namespace ProjectVagabond
                     var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(playerId);
                     if (localPosComp != null)
                     {
-                        // Pass time for this single step.
+                        // Calculate and pass time for this single step
                         Vector2 moveDir = moveAction.Destination - localPosComp.LocalPosition;
                         float timeCost = _gameState.GetSecondsPassedDuringMovement(_gameState.PlayerStats, moveAction.IsRunning, default, moveDir, true);
                         _worldClockManager.PassTime(timeCost);
 
-                        float visualDuration = BASE_STEP_DURATION / _worldClockManager.TimeScale;
-                        var interp = new InterpolationComponent(localPosComp.LocalPosition, moveAction.Destination, visualDuration, moveAction.IsRunning);
+                        // Trigger the visual interpolation for this step.
+                        var interp = new InterpolationComponent(localPosComp.LocalPosition, moveAction.Destination, 0.1f); // Fast local steps
                         _componentStore.AddComponent(playerId, interp);
                     }
                 }

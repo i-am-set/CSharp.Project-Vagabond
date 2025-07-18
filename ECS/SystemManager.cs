@@ -18,11 +18,6 @@ namespace ProjectVagabond
         /// <param name="updateIntervalSeconds">The desired interval between updates. 0 means every frame.</param>
         public void RegisterSystem(ISystem system, float updateIntervalSeconds = 0f)
         {
-            if (system is InterpolationSystem || system is CombatInitiationSystem)
-            {
-                // These systems are now updated directly by Core.cs and should not be in this manager.
-                return;
-            }
             _systems.Add(new SystemEntry(system, updateIntervalSeconds));
         }
 

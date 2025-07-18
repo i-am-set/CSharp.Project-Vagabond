@@ -20,7 +20,6 @@ using System;
 // TODO: Add settings ui in game menu corner
 // TODO: Fix player attack range being so far
 // TODO: Make "activeStatusEffectcomponent" a component that can be added to any entity, not just the player
-// TODO: Slow down the movement when going diagonal in combat
 
 namespace ProjectVagabond
 {
@@ -51,8 +50,8 @@ namespace ProjectVagabond
         private CombatProcessingSystem _combatProcessingSystem;
         private SpriteManager _spriteManager;
         private CombatUIAnimationManager _combatUIAnimationManager;
-        private PlayerLocalMovementSystem _playerLocalMovementSystem;
-        private InterpolationSystem _interpolationSystem;
+        private PlayerLocalMovementSystem _playerLocalMovementSystem; 
+        private InterpolationSystem _interpolationSystem; 
         private CombatInitiationSystem _combatInitiationSystem;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -126,6 +125,7 @@ namespace ProjectVagabond
             _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
 
+            // Now we can safely create systems that depend on GameState
             var playerInputSystem = new PlayerInputSystem();
             ServiceLocator.Register<PlayerInputSystem>(playerInputSystem);
 
@@ -194,6 +194,7 @@ namespace ProjectVagabond
             ServiceLocator.Register<Texture2D>(_pixel);
 
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
+            _systemManager.RegisterSystem(_interpolationSystem, 0f);
             _systemManager.RegisterSystem(_playerLocalMovementSystem, 0f);
             _systemManager.RegisterSystem(_combatInitiationSystem, 0f);
             worldClockManager.OnTimePassed += _aiSystem.ProcessEntities;
@@ -254,7 +255,6 @@ namespace ProjectVagabond
             _sceneManager.Update(gameTime);
             _combatUIAnimationManager.Update(gameTime);
 
-            _interpolationSystem.Update(gameTime);
             _combatInitiationSystem.Update(gameTime);
 
             if (_gameState.IsInCombat)

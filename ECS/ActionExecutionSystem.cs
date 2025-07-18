@@ -224,7 +224,7 @@ namespace ProjectVagabond
             if (moveDir.X != 0 && moveDir.Y == 0) newLocalPos.Y = 32;
             if (moveDir.Y != 0 && moveDir.X == 0) newLocalPos.X = 32;
 
-            var interp = new InterpolationComponent(localPosComp.LocalPosition, newLocalPos, _worldClockManager.InterpolationDurationRealSeconds, action.IsRunning); // MODIFIED
+            var interp = new InterpolationComponent(localPosComp.LocalPosition, newLocalPos, _worldClockManager.InterpolationDurationRealSeconds);
             _componentStore.AddComponent(entityId, interp);
 
             string moveType = action.IsRunning ? "Ran" : "Walked";

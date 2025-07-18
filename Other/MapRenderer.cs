@@ -478,33 +478,21 @@ namespace ProjectVagabond
                 }
             }
 
-            // --- Draw Player's Pending Path (Local View) ---
-            var playerActionQueue = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
-            var playerInterp = _componentStore.GetComponent<InterpolationComponent>(_gameState.PlayerEntityId);
-
-            if (playerActionQueue != null)
+            var allPlayerActions = new List<IAction>(_gameState.PendingActions);
+            var activePlayerAction = _componentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId);
+            if (activePlayerAction != null)
             {
-                var visualPathNodes = new List<(Vector2 Position, bool IsRunning)>();
+                allPlayerActions.Add(activePlayerAction);
+            }
 
-                // 1. Add the current interpolation destination if it exists.
-                if (playerInterp != null)
+            foreach (var action in allPlayerActions.OfType<MoveAction>())
+            {
+                Vector2? screenPos = MapCoordsToScreen(action.Destination);
+                if (screenPos.HasValue)
                 {
-                    visualPathNodes.Add((playerInterp.EndPosition, playerInterp.IsRunning));
-                }
-
-                // 2. Add all remaining steps from the logical queue.
-                visualPathNodes.AddRange(playerActionQueue.ActionQueue.OfType<MoveAction>().Select(ma => (ma.Destination, ma.IsRunning)));
-
-                // 3. Draw the combined visual path.
-                foreach (var node in visualPathNodes)
-                {
-                    Vector2? screenPos = MapCoordsToScreen(node.Position);
-                    if (screenPos.HasValue)
-                    {
-                        Texture2D texture = node.IsRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
-                        Color color = node.IsRunning ? _global.RunPathColor : _global.PathColor;
-                        elements.Add(new GridElement(texture, color, screenPos.Value));
-                    }
+                    Texture2D texture = action.IsRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
+                    Color color = action.IsRunning ? _global.RunPathColor : _global.PathColor;
+                    elements.Add(new GridElement(texture, color, screenPos.Value));
                 }
             }
 
@@ -558,9 +546,8 @@ namespace ProjectVagabond
             }
             else
             {
-                // ** THE FIX IS HERE: Use floating-point math for smooth rendering. **
-                float gridX = mapPos.X;
-                float gridY = mapPos.Y;
+                int gridX = (int)mapPos.X;
+                int gridY = (int)mapPos.Y;
                 if (gridX >= 0 && gridX < Global.LOCAL_GRID_SIZE && gridY >= 0 && gridY < Global.LOCAL_GRID_SIZE)
                 {
                     return new Vector2(_mapGridBounds.X + gridX * Global.LOCAL_GRID_CELL_SIZE, _mapGridBounds.Y + gridY * Global.LOCAL_GRID_CELL_SIZE);
