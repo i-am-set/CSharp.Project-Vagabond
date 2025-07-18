@@ -59,6 +59,20 @@ namespace ProjectVagabond
 
             targetHealthComp.TakeDamage(damage);
 
+            var playerTag = _componentStore.GetComponent<PlayerTagComponent>(attackerId);
+            if (playerTag != null)
+            {
+                var targetPersonality = _componentStore.GetComponent<AIPersonalityComponent>(targetId);
+                if (targetPersonality != null && !targetPersonality.IsProvoked)
+                {
+                    if (targetPersonality.Personality == AIPersonalityType.Neutral || targetPersonality.Personality == AIPersonalityType.Passive)
+                    {
+                        targetPersonality.IsProvoked = true;
+                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName} becomes hostile!" });
+                    }
+                }
+            }
+
             EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{attackerName} attacks {targetName} with {attack.Name} for [red]{damage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining." });
 
             if (attack.StatusEffectsToApply != null && attack.StatusEffectsToApply.Any())
@@ -69,8 +83,8 @@ namespace ProjectVagabond
                     var effect = statusEffectSystem.CreateEffectFromName(effectName, attack.Name);
                     if (effect != null)
                     {
-                        float duration = 10f; // 10 seconds
-                        statusEffectSystem.ApplyEffect(targetId, effect, duration, attackerId);
+                        float durationInRounds = 3f; // Lasts 3 rounds
+                        statusEffectSystem.ApplyEffect(targetId, effect, durationInRounds, attackerId);
                     }
                 }
             }

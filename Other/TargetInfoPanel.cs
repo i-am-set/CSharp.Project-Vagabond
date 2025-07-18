@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using System.Linq;
@@ -115,7 +115,9 @@ namespace ProjectVagabond
             {
                 foreach (var effect in statusEffectComp.ActiveEffects)
                 {
-                    string effectText = $"{effect.BaseEffect.Name} ({effect.Duration:F0}s)";
+                    int duration = (int)effect.Duration;
+                    string turnText = duration == 1 ? "turn" : "turns";
+                    string effectText = $"{effect.BaseEffect.Name} ({duration} {turnText})";
                     spriteBatch.DrawString(font, effectText, new Vector2(_bounds.X + PADDING, currentY), Color.LightGreen);
                     currentY += font.LineHeight;
                 }

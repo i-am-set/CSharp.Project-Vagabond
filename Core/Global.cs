@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -87,6 +87,9 @@ namespace ProjectVagabond
         public const int APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING = 5;
         public const float TOOLTIP_AVERAGE_POPUP_TIME = 0.5f;
         public const int TERMINAL_Y = 50;
+
+        // Combat settings Global
+        public const int COMBAT_TURN_DURATION_SECONDS = 15;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES

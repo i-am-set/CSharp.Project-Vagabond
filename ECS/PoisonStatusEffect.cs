@@ -6,7 +6,6 @@
         {
             Name = "Poison";
             Source = source;
-            TickFrequency = 3.0f;
         }
 
         public override void OnApply(int targetId, ComponentStore componentStore)
@@ -20,9 +19,10 @@
             var healthComp = componentStore.GetComponent<HealthComponent>(targetId);
             if (healthComp != null)
             {
-                healthComp.TakeDamage(1);
+                int poisonDamage = 5;
+                healthComp.TakeDamage(poisonDamage);
                 var targetName = EntityNamer.GetName(targetId);
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName} takes [green]1[/] damage from poison." });
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName} takes [green]{poisonDamage}[/] damage from poison." });
             }
         }
 

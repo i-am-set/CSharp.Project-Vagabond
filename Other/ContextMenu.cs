@@ -13,6 +13,7 @@ namespace ProjectVagabond
         public string Text { get; set; }
         public Action OnClick { get; set; }
         public Func<bool> IsVisible { get; set; } = () => true;
+        public Func<bool> IsEnabled { get; set; } = () => true;
         public Color? Color { get; set; }
     }
 
@@ -60,7 +61,7 @@ namespace ProjectVagabond
 
             if (leftClickPressed || rightClickPressed)
             {
-                if (leftClickPressed && _bounds.Contains(virtualMousePos) && _hoveredIndex != -1)
+                if (leftClickPressed && _bounds.Contains(virtualMousePos) && _hoveredIndex != -1 && _visibleItems[_hoveredIndex].IsEnabled())
                 {
                     _visibleItems[_hoveredIndex].OnClick?.Invoke();
                     Hide();
@@ -101,8 +102,13 @@ namespace ProjectVagabond
             {
                 var item = _visibleItems[i];
                 Color color;
+                bool isEnabled = item.IsEnabled();
 
-                if (i == _hoveredIndex)
+                if (!isEnabled)
+                {
+                    color = _global.Palette_Gray;
+                }
+                else if (i == _hoveredIndex)
                 {
                     color = _global.ButtonHoverColor;
                 }

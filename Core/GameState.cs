@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -229,7 +229,7 @@ namespace ProjectVagabond
 
             if (turnStats == null || playerStats == null) return false;
 
-            float remainingTime = COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
+            float remainingTime = Global.COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
 
             // Calculate the cost of the cheapest possible move (a non-diagonal walk)
             float baseTime = (Global.FEET_PER_WORLD_TILE * Global.SECONDS_PER_FOOT_SCALING_FACTOR) / playerStats.WalkSpeed;
@@ -488,7 +488,7 @@ namespace ProjectVagabond
                 return null;
             }
 
-            float timeBudget = COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
+            float timeBudget = Global.COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
             if (timeBudget <= 0)
             {
                 return new List<Vector2>();
@@ -613,6 +613,30 @@ namespace ProjectVagabond
             if (height < _global.HillsLevel) return 2;
             if (height < _global.MountainsLevel) return 4;
             return 5;
+        }
+
+        public int? GetEntityIdAtGridPos(Vector2 gridPos, MapView view)
+        {
+            foreach (var entityId in ActiveEntities)
+            {
+                if (view == MapView.Local)
+                {
+                    var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+                    if (localPosComp != null && (int)localPosComp.LocalPosition.X == (int)gridPos.X && (int)localPosComp.LocalPosition.Y == (int)gridPos.Y)
+                    {
+                        return entityId;
+                    }
+                }
+                else
+                {
+                    var worldPosComp = _componentStore.GetComponent<PositionComponent>(entityId);
+                    if (worldPosComp != null && (int)worldPosComp.WorldPosition.X == (int)gridPos.X && (int)worldPosComp.WorldPosition.Y == (int)gridPos.Y)
+                    {
+                        return entityId;
+                    }
+                }
+            }
+            return null;
         }
     }
 }

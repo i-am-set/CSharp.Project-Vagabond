@@ -19,10 +19,16 @@
       }
     },
     {
+      "Type": "ProjectVagabond.AIPersonalityComponent, ProjectVagabond",
+      "Properties": {
+        "Personality": "Aggressive"
+      }
+    },
+    {
       "Type": "ProjectVagabond.StatsComponent, ProjectVagabond",
       "Properties": {
         "Strength": 4,
-        "Agility": 4,
+        "Agility": 10,
         "Tenacity": 6,
         "Intelligence": 2,
         "Charm": 1
@@ -49,7 +55,7 @@
       "Properties": {
         "AttackPower": 5,
         "AttackRange": 1.5,
-        "AggroRange": 4.0
+        "AggroRange": 10.0
       }
     },
     {

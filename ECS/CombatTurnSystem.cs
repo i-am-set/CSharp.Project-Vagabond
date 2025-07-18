@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 
 namespace ProjectVagabond
 {
@@ -12,6 +12,7 @@ namespace ProjectVagabond
         private readonly ComponentStore _componentStore;
         private WorldClockManager _worldClockManager;
         private AISystem _aiSystem;
+        private StatusEffectSystem _statusEffectSystem;
 
         private int _currentTurnIndex = 0;
 
@@ -49,7 +50,7 @@ namespace ProjectVagabond
             {
                 _currentTurnIndex = 0; // Reset for the new round.
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[palette_yellow]New round begins." });
-                _worldClockManager.PassTime(seconds: GameState.COMBAT_TURN_DURATION_SECONDS);
+                _worldClockManager.PassTime(seconds: Global.COMBAT_TURN_DURATION_SECONDS);
             }
 
             StartNewTurn();
@@ -62,10 +63,14 @@ namespace ProjectVagabond
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             _aiSystem ??= ServiceLocator.Get<AISystem>();
+            _statusEffectSystem ??= ServiceLocator.Get<StatusEffectSystem>();
 
             // Update the GameState to reflect the new active entity for the turn.
             var newTurnEntityId = _gameState.InitiativeOrder[_currentTurnIndex];
             _gameState.SetCurrentTurnEntity(newTurnEntityId);
+
+            // Process status effects at the start of the turn (e.g., poison damage).
+            _statusEffectSystem.ProcessCombatTurnStart(newTurnEntityId);
 
             // Reset the turn-specific stats for the new entity.
             var turnStats = _componentStore.GetComponent<TurnStatsComponent>(newTurnEntityId);

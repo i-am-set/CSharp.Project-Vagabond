@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Linq;
 
 namespace ProjectVagabond
@@ -6,15 +6,21 @@ namespace ProjectVagabond
     public class StatusEffectSystem
     {
         private readonly ComponentStore _componentStore;
+        private GameState _gameState;
 
         public StatusEffectSystem()
         {
             _componentStore = ServiceLocator.Get<ComponentStore>();
         }
 
+        /// <summary>
+        /// Processes status effects for entities OUTSIDE of combat.
+        /// Ticks are based on real-time passage equivalent to combat rounds.
+        /// </summary>
         public void ProcessTimePassed(int secondsPassed)
         {
-            if (secondsPassed <= 0) return;
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (secondsPassed <= 0 || _gameState.IsInCombat) return;
 
             var entitiesWithEffects = _componentStore.GetAllEntitiesWithComponent<ActiveStatusEffectComponent>().ToList();
             var effectsToRemove = new List<(int entityId, ActiveStatusEffect effect)>();
@@ -26,25 +32,57 @@ namespace ProjectVagabond
 
                 foreach (var effect in statusEffectComp.ActiveEffects)
                 {
-                    effect.Duration -= secondsPassed;
-                    if (effect.Duration <= 0)
+                    effect.TimeSinceLastTick += secondsPassed;
+                    while (effect.TimeSinceLastTick >= Global.COMBAT_TURN_DURATION_SECONDS)
                     {
-                        effectsToRemove.Add((entityId, effect));
-                        continue;
-                    }
+                        effect.BaseEffect.OnTick(entityId, _componentStore);
+                        effect.Duration -= 1; // Duration is in rounds
+                        effect.TimeSinceLastTick -= Global.COMBAT_TURN_DURATION_SECONDS;
 
-                    if (effect.BaseEffect.TickFrequency > 0)
-                    {
-                        effect.TimeSinceLastTick += secondsPassed;
-                        while (effect.TimeSinceLastTick >= effect.BaseEffect.TickFrequency)
+                        if (effect.Duration <= 0)
                         {
-                            effect.BaseEffect.OnTick(entityId, _componentStore);
-                            effect.TimeSinceLastTick -= effect.BaseEffect.TickFrequency;
+                            effectsToRemove.Add((entityId, effect));
+                            break; // Stop processing this effect if it expired
                         }
                     }
                 }
             }
 
+            RemoveExpiredEffects(effectsToRemove);
+        }
+
+        /// <summary>
+        /// Processes status effects for a single entity at the start of its turn IN COMBAT.
+        /// </summary>
+        public void ProcessCombatTurnStart(int entityId)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (!_gameState.IsInCombat) return;
+
+            var statusEffectComp = _componentStore.GetComponent<ActiveStatusEffectComponent>(entityId);
+            if (statusEffectComp == null || !statusEffectComp.ActiveEffects.Any()) return;
+
+            var effectsToRemove = new List<(int entityId, ActiveStatusEffect effect)>();
+
+            foreach (var effect in statusEffectComp.ActiveEffects)
+            {
+                // Tick the effect at the start of the turn
+                effect.BaseEffect.OnTick(entityId, _componentStore);
+
+                // Reduce duration by one round
+                effect.Duration -= 1;
+
+                if (effect.Duration <= 0)
+                {
+                    effectsToRemove.Add((entityId, effect));
+                }
+            }
+
+            RemoveExpiredEffects(effectsToRemove);
+        }
+
+        private void RemoveExpiredEffects(List<(int entityId, ActiveStatusEffect effect)> effectsToRemove)
+        {
             foreach (var (entityId, effect) in effectsToRemove)
             {
                 var statusEffectComp = _componentStore.GetComponent<ActiveStatusEffectComponent>(entityId);
@@ -55,7 +93,7 @@ namespace ProjectVagabond
             }
         }
 
-        public void ApplyEffect(int targetId, StatusEffect effect, float duration, int sourceId)
+        public void ApplyEffect(int targetId, StatusEffect effect, float durationInRounds, int sourceId)
         {
             var statusEffectComp = _componentStore.GetComponent<ActiveStatusEffectComponent>(targetId);
             if (statusEffectComp == null)
@@ -64,9 +102,23 @@ namespace ProjectVagabond
                 _componentStore.AddComponent(targetId, statusEffectComp);
             }
 
-            var activeEffect = new ActiveStatusEffect(effect, duration, sourceId);
-            statusEffectComp.ActiveEffects.Add(activeEffect);
-            effect.OnApply(targetId, _componentStore);
+            // Check if an effect of the same type already exists.
+            var existingEffect = statusEffectComp.ActiveEffects.FirstOrDefault(e => e.BaseEffect.Name == effect.Name);
+
+            if (existingEffect != null)
+            {
+                // If it exists, just add the new duration to the current duration.
+                existingEffect.Duration += durationInRounds;
+                var targetName = EntityNamer.GetName(targetId);
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName}'s {effect.Name} has been extended." });
+            }
+            else
+            {
+                // If it's a new effect, apply it normally.
+                var activeEffect = new ActiveStatusEffect(effect, durationInRounds, sourceId);
+                statusEffectComp.ActiveEffects.Add(activeEffect);
+                effect.OnApply(targetId, _componentStore);
+            }
         }
 
         public StatusEffect CreateEffectFromName(string name, string source)

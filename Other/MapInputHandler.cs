@@ -16,6 +16,7 @@ namespace ProjectVagabond
         private readonly PlayerInputSystem _playerInputSystem;
         private readonly ContextMenu _contextMenu;
         private readonly Global _global;
+        private readonly ComponentStore _componentStore;
         private BitmapFont _font;
 
         private MouseState _currentMouseState;
@@ -37,6 +38,7 @@ namespace ProjectVagabond
             _gameState = ServiceLocator.Get<GameState>();
             _playerInputSystem = ServiceLocator.Get<PlayerInputSystem>();
             _global = ServiceLocator.Get<Global>();
+            _componentStore = ServiceLocator.Get<ComponentStore>();
 
             _previousKeyboardState = Keyboard.GetState();
 
@@ -127,7 +129,7 @@ namespace ProjectVagabond
             bool leftClickReleased = _currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool rightClickPressed = _currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
 
-            if (_gameState.IsExecutingActions) return;
+            if (_gameState.IsExecutingActions || _gameState.IsInCombat) return;
 
             Vector2? hoveredGridPos = _mapRenderer.HoveredGridPos;
 
@@ -159,7 +161,15 @@ namespace ProjectVagabond
                 }
                 if (rightClickPressed)
                 {
-                    HandleRightClickOnMap(targetPos, virtualMousePos);
+                    int? entityIdOnTile = _gameState.GetEntityIdAtGridPos(targetPos, _gameState.CurrentMapView);
+                    if (entityIdOnTile.HasValue && entityIdOnTile.Value != _gameState.PlayerEntityId)
+                    {
+                        HandleRightClickOnEntity(entityIdOnTile.Value, targetPos, virtualMousePos);
+                    }
+                    else
+                    {
+                        HandleRightClickOnTile(targetPos, virtualMousePos);
+                    }
                 }
             }
 
@@ -199,7 +209,29 @@ namespace ProjectVagabond
             }
         }
 
-        private void HandleRightClickOnMap(Vector2 targetPos, Vector2 mousePos)
+        private void HandleRightClickOnEntity(int targetId, Vector2 targetPos, Vector2 mousePos)
+        {
+            var menuItems = new List<ContextMenuItem>();
+            var playerCombatant = _componentStore.GetComponent<CombatantComponent>(_gameState.PlayerEntityId);
+            if (playerCombatant == null) return;
+
+            // Use the same cross-chunk distance logic as the AI
+            var aiSystem = ServiceLocator.Get<AISystem>();
+            float distance = aiSystem.GetTrueLocalDistance(_gameState.PlayerEntityId, targetId);
+            bool inRange = distance <= playerCombatant.AttackRange;
+
+            menuItems.Add(new ContextMenuItem
+            {
+                Text = "Attack",
+                Color = _global.Palette_Red,
+                IsEnabled = () => inRange,
+                OnClick = () => _gameState.InitiateCombat(new List<int> { _gameState.PlayerEntityId, targetId })
+            });
+
+            ShowContextMenu(targetPos, mousePos, menuItems);
+        }
+
+        private void HandleRightClickOnTile(Vector2 targetPos, Vector2 mousePos)
         {
             var menuItems = new List<ContextMenuItem>();
             bool isPassable = _gameState.IsPositionPassable(targetPos, _gameState.CurrentMapView);
@@ -270,7 +302,12 @@ namespace ProjectVagabond
             menuItems.Add(new ContextMenuItem { Text = "Long Rest", IsVisible = () => isPassable && isWorldMap, OnClick = () => queuePathAndRest(RestType.LongRest) });
             menuItems.Add(new ContextMenuItem { Text = "Clear Path", Color = _global.Palette_Yellow, IsVisible = () => pathPending, OnClick = () => _playerInputSystem.CancelPendingActions(_gameState) });
 
-            if (isWorldMap) _mapRenderer.RightClickedWorldPos = targetPos;
+            ShowContextMenu(targetPos, mousePos, menuItems);
+        }
+
+        private void ShowContextMenu(Vector2 targetPos, Vector2 mousePos, List<ContextMenuItem> menuItems)
+        {
+            if (_gameState.CurrentMapView == MapView.World) _mapRenderer.RightClickedWorldPos = targetPos;
 
             Vector2? menuScreenPos = _mapRenderer.MapCoordsToScreen(targetPos);
             Vector2 finalMenuPos;

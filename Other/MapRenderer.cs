@@ -241,33 +241,47 @@ namespace ProjectVagabond
                 }
             }
 
-            if (_gameState.IsInCombat)
+            // COMBAT AND AI INDICATOR DRAWING
+            var entitiesToDrawOverlays = _gameState.IsInCombat ? _gameState.Combatants : _gameState.ActiveEntities;
+            foreach (var entityId in entitiesToDrawOverlays)
             {
-                foreach (var entityId in _gameState.Combatants)
+                var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+                if (localPosComp == null) continue;
+
+                Vector2? screenPos = MapCoordsToScreen(localPosComp.LocalPosition);
+                if (!screenPos.HasValue) continue;
+
+                var cellRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
+
+                // Draw AI Intent Indicators (out of combat)
+                if (!_gameState.IsInCombat)
                 {
-                    var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-                    if (localPosComp == null) continue;
+                    var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
+                    if (intentComp != null && intentComp.CurrentIntent != AIIntent.None)
+                    {
+                        string indicatorText = intentComp.CurrentIntent == AIIntent.Pursuing ? "!" : "!!";
+                        float yOffset = _animationManager.GetBobbingOffset("TurnIndicator"); // Reuse bobbing animation
+                        Vector2 textSize = font.MeasureString(indicatorText);
+                        var indicatorPos = new Vector2(
+                            cellRect.Center.X - textSize.X / 2,
+                            cellRect.Y - textSize.Y + yOffset
+                        );
+                        spriteBatch.DrawString(font, indicatorText, indicatorPos, _global.Palette_Red);
+                    }
+                }
 
-                    Vector2? screenPos = MapCoordsToScreen(localPosComp.LocalPosition);
-                    if (!screenPos.HasValue) continue;
-
-                    var cellRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
-
+                // Draw Combat Indicators
+                if (_gameState.IsInCombat)
+                {
                     // Only draw the selected target highlight if it's the player's turn.
                     if (_gameState.CurrentTurnEntityId == _gameState.PlayerEntityId)
                     {
                         if (entityId == _gameState.SelectedTargetId)
                         {
                             bool isInflated = _animationManager.IsPulsing("TargetSelector");
-                            Rectangle highlightRect;
-                            if (isInflated)
-                            {
-                                highlightRect = new Rectangle(cellRect.X - 1, cellRect.Y - 1, cellRect.Width + 2, cellRect.Height + 2);
-                            }
-                            else
-                            {
-                                highlightRect = cellRect;
-                            }
+                            Rectangle highlightRect = isInflated
+                                ? new Rectangle(cellRect.X - 1, cellRect.Y - 1, cellRect.Width + 2, cellRect.Height + 2)
+                                : cellRect;
                             DrawHollowRectangle(spriteBatch, highlightRect, _global.Palette_Pink, 1);
                         }
                     }
@@ -289,6 +303,7 @@ namespace ProjectVagabond
                     }
                 }
             }
+
 
             if (_gameState.IsPaused) DrawPauseIcon(spriteBatch, font);
             _contextMenu.Draw(spriteBatch, font);
