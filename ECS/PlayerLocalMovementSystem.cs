@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 
 namespace ProjectVagabond
 {
@@ -14,7 +13,7 @@ namespace ProjectVagabond
         private readonly ComponentStore _componentStore;
         private readonly WorldClockManager _worldClockManager;
 
-        private const float BASE_STEP_DURATION = 0.1f;
+        private const float BASE_STEP_DURATION = 0.15f;
 
         public PlayerLocalMovementSystem()
         {
@@ -52,14 +51,19 @@ namespace ProjectVagabond
                 if (nextAction is MoveAction moveAction)
                 {
                     var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(playerId);
-                    if (localPosComp != null)
+                    var statsComp = _componentStore.GetComponent<StatsComponent>(playerId);
+
+                    if (localPosComp != null && statsComp != null)
                     {
-                        // Pass time for this single step.
+                        // Calculate the dynamic time cost for this step based on player speed.
                         Vector2 moveDir = moveAction.Destination - localPosComp.LocalPosition;
-                        float timeCost = _gameState.GetSecondsPassedDuringMovement(_gameState.PlayerStats, moveAction.IsRunning, default, moveDir, true);
+                        float timeCost = _gameState.GetSecondsPassedDuringMovement(statsComp, moveAction.IsRunning, default, moveDir, true);
                         _worldClockManager.PassTime(timeCost);
 
-                        float visualDuration = BASE_STEP_DURATION / _worldClockManager.TimeScale;
+                        // Visual duration is now inversely proportional to the entity's speed.
+                        float currentSpeed = moveAction.IsRunning ? statsComp.RunSpeed : statsComp.WalkSpeed;
+                        float visualDuration = (BASE_STEP_DURATION / currentSpeed) / _worldClockManager.TimeScale;
+
                         var interp = new InterpolationComponent(localPosComp.LocalPosition, moveAction.Destination, visualDuration, moveAction.IsRunning);
                         _componentStore.AddComponent(playerId, interp);
                     }

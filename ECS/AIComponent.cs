@@ -1,4 +1,6 @@
-﻿namespace ProjectVagabond
+﻿﻿using Microsoft.Xna.Framework;
+
+namespace ProjectVagabond
 {
     /// <summary>
     /// Holds state information for an AI-controlled entity.
@@ -20,6 +22,11 @@
         /// This is granted when the player performs an action.
         /// </summary>
         public float ActionTimeBudget { get; set; } = 0;
+
+        /// <summary>
+        /// The immediate next tile the AI intends to move to.
+        /// </summary>
+        public Vector2? NextStep { get; set; }
 
         public IComponent Clone()
         {

@@ -94,7 +94,11 @@ namespace ProjectVagabond
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(action.ActorId);
             if (localPosComp != null)
             {
-                float visualDuration = COMBAT_STEP_DURATION / _worldClockManager.TimeScale;
+                // Make diagonal moves take longer visually to match their increased time cost.
+                Vector2 moveDir = action.Destination - localPosComp.LocalPosition;
+                float timeMultiplier = (moveDir.X != 0 && moveDir.Y != 0) ? 1.5f : 1.0f;
+
+                float visualDuration = (COMBAT_STEP_DURATION * timeMultiplier) / _worldClockManager.TimeScale;
                 var interp = new InterpolationComponent(localPosComp.LocalPosition, action.Destination, visualDuration, action.IsRunning);
                 _componentStore.AddComponent(action.ActorId, interp);
             }
