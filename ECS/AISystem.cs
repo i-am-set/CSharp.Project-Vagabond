@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -384,6 +384,101 @@ namespace ProjectVagabond
                 _componentStore.AddComponent(entityId, intentComp);
             }
             intentComp.CurrentIntent = intent;
+        }
+
+        public Dictionary<int, List<Vector2>> SimulateMovement(float timeBudget)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            var allPreviewPaths = new Dictionary<int, List<Vector2>>();
+            if (timeBudget <= 0) return allPreviewPaths;
+
+            foreach (var entityId in _gameState.ActiveEntities)
+            {
+                if (entityId == _gameState.PlayerEntityId) continue;
+
+                var aiComp = _componentStore.GetComponent<AIComponent>(entityId);
+                var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
+                var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+
+                if (aiComp == null || statsComp == null || localPosComp == null) continue;
+
+                var entityPreviewPath = new List<Vector2>();
+                var simulatedPosition = localPosComp.LocalPosition;
+                var simulatedProgress = 0f; // A preview should always start from a clean slate.
+
+                var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
+                bool isRunning = intentComp?.CurrentIntent == AIIntent.Pursuing || intentComp?.CurrentIntent == AIIntent.Fleeing;
+                float currentSpeed = isRunning ? statsComp.RunSpeed : statsComp.WalkSpeed;
+
+                float potentialDistance = timeBudget * (currentSpeed / Global.SECONDS_PER_FOOT_SCALING_FACTOR) / (Global.FEET_PER_WORLD_TILE / Global.LOCAL_GRID_SIZE);
+                simulatedProgress += potentialDistance;
+
+                while (simulatedProgress >= 1.0f)
+                {
+                    var nextStep = GetNextStepForSimulation(entityId, simulatedPosition);
+                    if (nextStep.HasValue)
+                    {
+                        entityPreviewPath.Add(nextStep.Value);
+                        simulatedPosition = nextStep.Value;
+                        simulatedProgress -= 1.0f;
+                    }
+                    else
+                    {
+                        break; // No valid move, stop simulating for this entity
+                    }
+                }
+
+                if (entityPreviewPath.Any())
+                {
+                    allPreviewPaths[entityId] = entityPreviewPath;
+                }
+            }
+
+            return allPreviewPaths;
+        }
+
+        private Vector2? GetNextStepForSimulation(int entityId, Vector2 currentSimulatedPosition)
+        {
+            // This is a simplified version of DecideNextGoal for prediction purposes.
+            var personalityComp = _componentStore.GetComponent<AIPersonalityComponent>(entityId);
+            var combatantComp = _componentStore.GetComponent<CombatantComponent>(entityId);
+            var playerPos = GetPlayerRelativeLocalPosition(entityId);
+
+            if (playerPos.HasValue && personalityComp != null && combatantComp != null)
+            {
+                float distanceToPlayer = Vector2.Distance(currentSimulatedPosition, playerPos.Value);
+                if (distanceToPlayer <= combatantComp.AggroRange)
+                {
+                    if (personalityComp.Personality == AIPersonalityType.Aggressive || (personalityComp.Personality == AIPersonalityType.Neutral && personalityComp.IsProvoked))
+                    {
+                        // If already adjacent, don't move closer.
+                        if (distanceToPlayer <= 1.5f) // Using 1.5f to account for diagonals
+                        {
+                            return null;
+                        }
+
+                        // Pursue
+                        var path = Pathfinder.FindPath(entityId, currentSimulatedPosition, playerPos.Value, _gameState, true, PathfindingMode.Moves, MapView.Local);
+                        if (path != null && path.Any())
+                        {
+                            return path[0];
+                        }
+                    }
+                }
+            }
+
+            // Default to wandering
+            var shuffledOffsets = _neighborOffsets.OrderBy(v => _random.Next()).ToList();
+            foreach (var offset in shuffledOffsets)
+            {
+                var targetPos = currentSimulatedPosition + offset;
+                if (_gameState.IsPositionPassable(targetPos, MapView.Local))
+                {
+                    return targetPos;
+                }
+            }
+
+            return null;
         }
     }
 }

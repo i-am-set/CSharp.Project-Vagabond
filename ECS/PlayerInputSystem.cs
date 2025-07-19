@@ -12,6 +12,7 @@ namespace ProjectVagabond
     public class PlayerInputSystem : ISystem
     {
         private readonly ComponentStore _componentStore;
+        private AISystem _aiSystem; // Lazy loaded
 
         public PlayerInputSystem()
         {
@@ -43,6 +44,7 @@ namespace ProjectVagabond
                 {
                     actionQueue.Enqueue(new MoveAction(playerEntityId, pos, isRunning));
                 }
+                UpdateAIPathPreviews(gameState);
                 EventBus.Publish(new GameEvents.ActionQueueChanged());
                 return;
             }
@@ -67,6 +69,7 @@ namespace ProjectVagabond
                     else
                     {
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Cannot queue path. Not enough energy even after a short rest." });
+                        UpdateAIPathPreviews(gameState);
                         EventBus.Publish(new GameEvents.ActionQueueChanged());
                         return;
                     }
@@ -76,6 +79,7 @@ namespace ProjectVagabond
                     actionQueue.Enqueue(nextAction);
                 }
             }
+            UpdateAIPathPreviews(gameState);
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
 
@@ -83,6 +87,7 @@ namespace ProjectVagabond
         {
             var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
             actionQueue.Clear();
+            gameState.ClearAIPreviewPaths();
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Pending actions cleared." });
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
@@ -91,6 +96,7 @@ namespace ProjectVagabond
         {
             var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
             actionQueue.Clear();
+            gameState.ClearAIPreviewPaths();
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
 
@@ -108,6 +114,7 @@ namespace ProjectVagabond
             {
                 actionQueue.Enqueue(action);
             }
+            UpdateAIPathPreviews(gameState);
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
 
@@ -115,6 +122,7 @@ namespace ProjectVagabond
         {
             var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
             actionQueue.Enqueue(action);
+            UpdateAIPathPreviews(gameState);
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
 
@@ -152,6 +160,7 @@ namespace ProjectVagabond
             else restPosition = (gameState.CurrentMapView == MapView.Local ? playerLocalPos : playerWorldPos);
 
             actionQueue.Enqueue(new RestAction(playerEntityId, restType, restPosition));
+            UpdateAIPathPreviews(gameState);
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
 
@@ -294,6 +303,7 @@ namespace ProjectVagabond
             {
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[undo]Backtracked {removedSteps} time(s)" });
             }
+            UpdateAIPathPreviews(gameState);
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
 
@@ -305,6 +315,23 @@ namespace ProjectVagabond
         public void QueueWalkMovement(GameState gameState, Vector2 direction, string[] args)
         {
             QueueMovementInternal(gameState, direction, args, false);
+        }
+
+        private void UpdateAIPathPreviews(GameState gameState)
+        {
+            _aiSystem ??= ServiceLocator.Get<AISystem>();
+            gameState.ClearAIPreviewPaths();
+
+            if (gameState.CurrentMapView != MapView.Local || !gameState.PendingActions.Any())
+            {
+                return;
+            }
+
+            var simResult = gameState.SimulateActionQueueEnergy();
+            if (simResult.secondsPassed > 0)
+            {
+                gameState.AIPreviewPaths = _aiSystem.SimulateMovement(simResult.secondsPassed);
+            }
         }
     }
 }

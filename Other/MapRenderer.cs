@@ -213,6 +213,38 @@ namespace ProjectVagabond
                 DrawGridElement(spriteBatch, element, cellSize);
             }
 
+            // Draw AI Preview Paths
+            if (_gameState.AIPreviewPaths.Any())
+            {
+                foreach (var entry in _gameState.AIPreviewPaths)
+                {
+                    var path = entry.Value;
+                    if (!path.Any()) continue;
+
+                    // Draw path segments
+                    foreach (var pos in path)
+                    {
+                        Vector2? screenPos = MapCoordsToScreen(pos);
+                        if (screenPos.HasValue)
+                        {
+                            var destRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
+                            spriteBatch.Draw(_spriteManager.RunPathSprite, destRect, _global.Palette_Red * 0.4f);
+                        }
+                    }
+
+                    // Draw a distinct marker at the end of the path
+                    var endPos = path.Last();
+                    Vector2? endScreenPos = MapCoordsToScreen(endPos);
+                    if (endScreenPos.HasValue)
+                    {
+                        var destRect = new Rectangle((int)endScreenPos.Value.X, (int)endScreenPos.Value.Y, cellSize, cellSize);
+                        bool isPulsing = _animationManager.IsPulsing("PulseFast");
+                        float alpha = isPulsing ? 0.8f : 0.5f;
+                        spriteBatch.Draw(_spriteManager.PathEndSprite, destRect, _global.Palette_Red * alpha);
+                    }
+                }
+            }
+
             // Draw Combat Move Preview Path
             if (_gameState.IsInCombat && _gameState.CombatMovePreviewPath.Any())
             {

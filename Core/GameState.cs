@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -47,10 +47,11 @@ namespace ProjectVagabond
         public NoiseMapManager NoiseManager => _noiseManager;
         public StatsComponent PlayerStats => _componentStore.GetComponent<StatsComponent>(PlayerEntityId);
         public MapView CurrentMapView { get; private set; } = MapView.World;
-        public (int finalEnergy, bool possible, int secondsPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
+        public (int finalEnergy, bool possible, float secondsPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
         public List<int> ActiveEntities { get; private set; } = new List<int>();
         public int InitialActionCount { get; private set; }
         public bool IsActionQueueDirty { get; set; } = true;
+        public Dictionary<int, List<Vector2>> AIPreviewPaths { get; set; } = new Dictionary<int, List<Vector2>>();
 
         // Combat State
         public bool IsInCombat { get; private set; } = false;
@@ -312,6 +313,7 @@ namespace ProjectVagabond
             }
             _isExecutingActions = toggle;
             IsActionQueueDirty = true;
+            ClearAIPreviewPaths();
         }
 
         public void ToggleIsFreeMoveMode(bool toggle)
@@ -436,15 +438,15 @@ namespace ProjectVagabond
             return secondsPassed * timeMultiplier;
         }
 
-        public (int finalEnergy, bool possible, int secondsPassed) SimulateActionQueueEnergy(IEnumerable<IAction> customQueue = null)
+        public (int finalEnergy, bool possible, float secondsPassed) SimulateActionQueueEnergy(IEnumerable<IAction> customQueue = null)
         {
             var queueToSimulate = customQueue ?? PendingActions;
-            if (!queueToSimulate.Any()) return (PlayerStats.CurrentEnergyPoints, true, 0);
+            if (!queueToSimulate.Any()) return (PlayerStats.CurrentEnergyPoints, true, 0f);
 
             bool isLocalMove = CurrentMapView == MapView.Local;
             int finalEnergy = PlayerStats.CurrentEnergyPoints;
             int maxEnergy = PlayerStats.MaxEnergyPoints;
-            int secondsPassed = 0;
+            float secondsPassed = 0f;
             Vector2 lastPosition = isLocalMove ? PlayerLocalPos : PlayerWorldPos;
             bool isFirstMoveInQueue = true;
             bool localRunCostApplied = false;
@@ -456,12 +458,12 @@ namespace ProjectVagabond
                     Vector2 moveDirection = moveAction.Destination - lastPosition;
                     MapData mapData = isLocalMove ? default : GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
 
-                    int moveDuration = (int)GetSecondsPassedDuringMovement(PlayerStats, moveAction.IsRunning, mapData, moveDirection, isLocalMove);
+                    float moveDuration = GetSecondsPassedDuringMovement(PlayerStats, moveAction.IsRunning, mapData, moveDirection, isLocalMove);
 
                     if (!isLocalMove && isFirstMoveInQueue)
                     {
                         float scaleFactor = GetFirstMoveTimeScaleFactor(moveDirection);
-                        moveDuration = (int)Math.Ceiling(moveDuration * scaleFactor);
+                        moveDuration *= scaleFactor;
                     }
 
                     secondsPassed += moveDuration;
@@ -557,6 +559,7 @@ namespace ProjectVagabond
         public void ClearPendingActions()
         {
             PendingActions.Clear();
+            ClearAIPreviewPaths();
         }
 
         public bool CancelExecutingActions(bool interrupted = false)
@@ -664,6 +667,11 @@ namespace ProjectVagabond
                 }
             }
             return null;
+        }
+
+        public void ClearAIPreviewPaths()
+        {
+            AIPreviewPaths.Clear();
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -388,7 +388,7 @@ namespace ProjectVagabond
                 promptBuilder.Append($"[gold]Pending[orange] {string.Join(", ", details)}\n");
 
                 var simResult = _gameState.PendingQueueSimulationResult;
-                int secondsPassed = simResult.secondsPassed;
+                int secondsPassed = (int)simResult.secondsPassed;
 
                 if (secondsPassed > 0)
                 {
