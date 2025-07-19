@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -420,7 +420,7 @@ namespace ProjectVagabond
 
             if (isLocalMove)
             {
-                secondsPassed += baseTime / Global.LOCAL_GRID_SIZE;
+                secondsPassed += (baseTime / Global.LOCAL_GRID_SIZE) * Global.LOCAL_MAP_TIME_MULTIPLIER;
             }
             else
             {

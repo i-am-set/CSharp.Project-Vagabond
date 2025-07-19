@@ -17,7 +17,7 @@ namespace ProjectVagabond
 
         private float _actionDelayTimer = 0f;
         private const float ACTION_DELAY_SECONDS = 0.15f;
-        private const float COMBAT_STEP_DURATION = 0.15f; // The visual duration of one step at 1x speed.
+        private const float COMBAT_STEP_DURATION = 0.20f; // The visual duration of one step for a character with average speed.
 
         public CombatProcessingSystem() { }
 
@@ -92,13 +92,19 @@ namespace ProjectVagabond
         private void ApplyMoveActionEffects(MoveAction action)
         {
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(action.ActorId);
-            if (localPosComp != null)
+            var statsComp = _componentStore.GetComponent<StatsComponent>(action.ActorId);
+
+            if (localPosComp != null && statsComp != null)
             {
                 // Make diagonal moves take longer visually to match their increased time cost.
                 Vector2 moveDir = action.Destination - localPosComp.LocalPosition;
                 float timeMultiplier = (moveDir.X != 0 && moveDir.Y != 0) ? 1.5f : 1.0f;
 
-                float visualDuration = (COMBAT_STEP_DURATION * timeMultiplier) / _worldClockManager.TimeScale;
+                // Visual duration is now inversely proportional to the entity's speed.
+                float currentSpeed = action.IsRunning ? statsComp.RunSpeed : statsComp.WalkSpeed;
+                const float BASE_COMBAT_SPEED = 1.5f; // An "average" speed for balancing animation time.
+                float visualDuration = (COMBAT_STEP_DURATION * (BASE_COMBAT_SPEED / currentSpeed) * timeMultiplier) / _worldClockManager.TimeScale;
+
                 var interp = new InterpolationComponent(localPosComp.LocalPosition, action.Destination, visualDuration, action.IsRunning);
                 _componentStore.AddComponent(action.ActorId, interp);
             }

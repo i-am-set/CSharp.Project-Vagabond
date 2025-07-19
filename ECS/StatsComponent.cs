@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 
 namespace ProjectVagabond
 {
@@ -185,7 +184,7 @@ namespace ProjectVagabond
 
             // Move Speed 
             float weightFactor = Math.Max(0f, (_weight - 70f) * 0.01f); // Penalty for being over 70kg
-            _walkSpeed = Math.Max(0.1f, 1.0f + (Agility * 0.1f) - weightFactor);
+            _walkSpeed = Math.Max(0.1f, 1.0f + (Agility * 0.12f) - weightFactor);
             _runSpeed = _walkSpeed * 3f;
 
             // Carry Capacity = Base(20) + (Strength * 8) + (Tenacity * 3)

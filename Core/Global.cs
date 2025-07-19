@@ -69,6 +69,7 @@ namespace ProjectVagabond
         public const int DEFAULT_TERMINAL_WIDTH = 540;
         public const int DEFAULT_TERMINAL_HEIGHT = 338;
         public const int COMBAT_TERMINAL_BUFFER = 130;
+        public const float LOCAL_MAP_TIME_MULTIPLIER = 0.5f;
 
         // Player stats Global
         public const int MAX_MAX_HEALTH_ENERGY = 48;
