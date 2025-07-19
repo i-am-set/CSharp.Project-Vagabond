@@ -350,25 +350,28 @@ namespace ProjectVagabond
                 }
             }
 
-            // Combatant check (only for local view during combat)
-            if (IsInCombat && view == MapView.Local && pathfindingEntityId != -1)
+            // Entity blocking check (only for local view)
+            if (view == MapView.Local)
             {
                 // The destination tile itself is ALWAYS considered valid for the pathfinder to reach.
-                // The calling system is responsible for stopping before it if needed.
+                // This allows pathing *to* an entity. The calling system is responsible for stopping before it if needed.
                 if (position == targetDestination)
                 {
                     return true;
                 }
 
-                // Check if any other combatant (that isn't the one moving) is on this tile.
-                foreach (var combatantId in Combatants)
-                {
-                    if (combatantId == pathfindingEntityId) continue;
+                // Determine which list of entities to check against for collisions.
+                var entitiesToCheck = IsInCombat ? Combatants : ActiveEntities;
 
-                    var posComp = _componentStore.GetComponent<LocalPositionComponent>(combatantId);
+                foreach (var entityId in entitiesToCheck)
+                {
+                    // An entity doesn't block its own path.
+                    if (entityId == pathfindingEntityId) continue;
+
+                    var posComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
                     if (posComp != null && posComp.LocalPosition == position)
                     {
-                        return false; // Occupied
+                        return false; // Occupied by another entity.
                     }
                 }
             }
@@ -388,18 +391,19 @@ namespace ProjectVagabond
 
         public int GetMovementEnergyCost(MoveAction action, bool isLocalMove = false)
         {
-            if (isLocalMove || !action.IsRunning)
-            {
-                return 0;
-            }
-
             if (action.IsRunning)
             {
-                var mapData = GetMapDataAt((int)action.Destination.X, (int)action.Destination.Y);
-                return GetTerrainEnergyCost(mapData.TerrainHeight);
+                if (isLocalMove)
+                {
+                    return 1; // Running on the local map costs 1 EP per tile.
+                }
+                else // World map
+                {
+                    var mapData = GetMapDataAt((int)action.Destination.X, (int)action.Destination.Y);
+                    return GetTerrainEnergyCost(mapData.TerrainHeight);
+                }
             }
-
-            return 0;
+            return 0; // Walking is free.
         }
 
         public float GetSecondsPassedDuringMovement(StatsComponent stats, bool isRunning, MapData mapData, Vector2 moveDirection, bool isLocalMove = false)
@@ -449,7 +453,6 @@ namespace ProjectVagabond
             float secondsPassed = 0f;
             Vector2 lastPosition = isLocalMove ? PlayerLocalPos : PlayerWorldPos;
             bool isFirstMoveInQueue = true;
-            bool localRunCostApplied = false;
 
             foreach (var action in queueToSimulate)
             {
@@ -468,12 +471,6 @@ namespace ProjectVagabond
 
                     secondsPassed += moveDuration;
                     int cost = GetMovementEnergyCost(moveAction, isLocalMove);
-
-                    if (isLocalMove && moveAction.IsRunning && !localRunCostApplied)
-                    {
-                        cost = 1;
-                        localRunCostApplied = true;
-                    }
 
                     if (finalEnergy < cost)
                     {

@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -132,7 +133,7 @@ namespace ProjectVagabond
                     }
 
                     var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
-                    bool isRunning = intentComp?.CurrentIntent == AIIntent.Pursuing || intentComp?.CurrentIntent == AIIntent.Fleeing;
+                    bool isRunning = (intentComp?.CurrentIntent == AIIntent.Pursuing || intentComp?.CurrentIntent == AIIntent.Fleeing) && statsComp.CanExertEnergy(1);
                     float currentSpeed = isRunning ? statsComp.RunSpeed : statsComp.WalkSpeed;
 
                     // Calculate how much distance (in tiles) the AI could have covered
@@ -228,7 +229,12 @@ namespace ProjectVagabond
 
         private void PursuePlayer(int entityId, AIPathComponent pathComp)
         {
-            SetAIIntent(entityId, AIIntent.Pursuing);
+            var stats = _componentStore.GetComponent<StatsComponent>(entityId);
+            if (stats != null && stats.CanExertEnergy(1))
+            {
+                SetAIIntent(entityId, AIIntent.Pursuing);
+            }
+
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
             if (localPosComp == null) return;
 
@@ -239,7 +245,7 @@ namespace ProjectVagabond
                 return;
             }
 
-            bool isRunning = true;
+            bool isRunning = _componentStore.GetComponent<AIIntentComponent>(entityId)?.CurrentIntent == AIIntent.Pursuing;
             var path = Pathfinder.FindPath(entityId, localPosComp.LocalPosition, playerPos.Value, _gameState, isRunning, PathfindingMode.Moves, MapView.Local);
             if (path != null && path.Any())
             {
@@ -325,6 +331,11 @@ namespace ProjectVagabond
 
                 if (localPosComp != null && statsComp != null)
                 {
+                    if (moveAction.IsRunning)
+                    {
+                        statsComp.ExertEnergy(1);
+                    }
+
                     // Visual duration is now inversely proportional to the entity's speed.
                     float currentSpeed = moveAction.IsRunning ? statsComp.RunSpeed : statsComp.WalkSpeed;
                     float visualDuration = (BASE_AI_STEP_DURATION / currentSpeed) / _worldClockManager.TimeScale;
@@ -405,10 +416,11 @@ namespace ProjectVagabond
                 var entityPreviewPath = new List<Vector2>();
                 var simulatedPosition = localPosComp.LocalPosition;
                 var simulatedProgress = 0f; // A preview should always start from a clean slate.
+                int simulatedEnergy = statsComp.CurrentEnergyPoints;
 
                 var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
-                bool isRunning = intentComp?.CurrentIntent == AIIntent.Pursuing || intentComp?.CurrentIntent == AIIntent.Fleeing;
-                float currentSpeed = isRunning ? statsComp.RunSpeed : statsComp.WalkSpeed;
+                bool isRunning = (intentComp?.CurrentIntent == AIIntent.Pursuing || intentComp?.CurrentIntent == AIIntent.Fleeing);
+                float currentSpeed = isRunning && simulatedEnergy > 0 ? statsComp.RunSpeed : statsComp.WalkSpeed;
 
                 float potentialDistance = timeBudget * (currentSpeed / Global.SECONDS_PER_FOOT_SCALING_FACTOR) / (Global.FEET_PER_WORLD_TILE / Global.LOCAL_GRID_SIZE);
                 simulatedProgress += potentialDistance;
@@ -418,6 +430,18 @@ namespace ProjectVagabond
                     var nextStep = GetNextStepForSimulation(entityId, simulatedPosition);
                     if (nextStep.HasValue)
                     {
+                        if (isRunning)
+                        {
+                            if (simulatedEnergy > 0)
+                            {
+                                simulatedEnergy--;
+                            }
+                            else
+                            {
+                                // Ran out of energy mid-simulation, stop running.
+                                break;
+                            }
+                        }
                         entityPreviewPath.Add(nextStep.Value);
                         simulatedPosition = nextStep.Value;
                         simulatedProgress -= 1.0f;
