@@ -349,6 +349,15 @@ namespace ProjectVagabond
             return parts.Count > 0 ? string.Join(" ", parts) : "0 sec";
         }
 
+        public string GetFormattedTimeFromSecondsShortHand(float totalSeconds)
+        {
+            if (totalSeconds < 1.0f)
+            {
+                return $"{totalSeconds:F1}s";
+            }
+            return GetFormattedTimeFromSecondsShortHand((int)totalSeconds);
+        }
+
         public string GetConverted24hToAmPm(string militaryTime)
         {
             string[] timeParts = militaryTime.Split(':');

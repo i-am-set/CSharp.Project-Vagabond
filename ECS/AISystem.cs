@@ -134,11 +134,11 @@ namespace ProjectVagabond
 
                     var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
                     bool isRunning = (intentComp?.CurrentIntent == AIIntent.Pursuing || intentComp?.CurrentIntent == AIIntent.Fleeing) && statsComp.CanExertEnergy(1);
-                    float currentSpeed = isRunning ? statsComp.RunSpeed : statsComp.WalkSpeed;
+                    float currentSpeed = isRunning ? statsComp.LocalMapSpeed * 3 : statsComp.LocalMapSpeed;
 
-                    // Calculate how much distance (in tiles) the AI could have covered
-                    float potentialDistance = timeBudget * (currentSpeed / Global.SECONDS_PER_FOOT_SCALING_FACTOR) / (Global.FEET_PER_WORLD_TILE / Global.LOCAL_GRID_SIZE);
-                    progressComp.Progress += potentialDistance;
+                    // Calculate how many movement units the AI generated in the given time.
+                    float potentialProgress = timeBudget * currentSpeed;
+                    progressComp.Progress += potentialProgress;
 
                     while (progressComp.Progress >= 1.0f)
                     {
@@ -420,10 +420,10 @@ namespace ProjectVagabond
 
                 var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
                 bool isRunning = (intentComp?.CurrentIntent == AIIntent.Pursuing || intentComp?.CurrentIntent == AIIntent.Fleeing);
-                float currentSpeed = isRunning && simulatedEnergy > 0 ? statsComp.RunSpeed : statsComp.WalkSpeed;
+                float currentSpeed = isRunning && simulatedEnergy > 0 ? statsComp.LocalMapSpeed * 3 : statsComp.LocalMapSpeed;
 
-                float potentialDistance = timeBudget * (currentSpeed / Global.SECONDS_PER_FOOT_SCALING_FACTOR) / (Global.FEET_PER_WORLD_TILE / Global.LOCAL_GRID_SIZE);
-                simulatedProgress += potentialDistance;
+                float potentialProgress = timeBudget * currentSpeed;
+                simulatedProgress += potentialProgress;
 
                 while (simulatedProgress >= 1.0f)
                 {

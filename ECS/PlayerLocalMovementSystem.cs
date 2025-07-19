@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 
 namespace ProjectVagabond
 {
@@ -55,15 +55,13 @@ namespace ProjectVagabond
 
                     if (localPosComp != null && statsComp != null)
                     {
-                        // Calculate the dynamic time cost for this step based on player speed.
-                        Vector2 moveDir = moveAction.Destination - localPosComp.LocalPosition;
-                        float timeCost = _gameState.GetSecondsPassedDuringMovement(statsComp, moveAction.IsRunning, default, moveDir, true);
+                        // Calculate time passed based on how long it takes to generate 1 movement unit.
+                        float speed = moveAction.IsRunning ? statsComp.LocalMapSpeed * 3 : statsComp.LocalMapSpeed;
+                        float timeCost = 1.0f / speed;
                         _worldClockManager.PassTime(timeCost);
 
-                        // Visual duration is now inversely proportional to the entity's speed.
-                        float currentSpeed = moveAction.IsRunning ? statsComp.RunSpeed : statsComp.WalkSpeed;
-                        float visualDuration = (BASE_STEP_DURATION / currentSpeed) / _worldClockManager.TimeScale;
-
+                        // The visual duration remains short and consistent.
+                        float visualDuration = BASE_STEP_DURATION / _worldClockManager.TimeScale;
                         var interp = new InterpolationComponent(localPosComp.LocalPosition, moveAction.Destination, visualDuration, moveAction.IsRunning);
                         _componentStore.AddComponent(playerId, interp);
                     }

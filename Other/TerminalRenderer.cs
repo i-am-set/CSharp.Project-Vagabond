@@ -1,4 +1,5 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -388,11 +389,11 @@ namespace ProjectVagabond
                 promptBuilder.Append($"[gold]Pending[orange] {string.Join(", ", details)}\n");
 
                 var simResult = _gameState.PendingQueueSimulationResult;
-                int secondsPassed = (int)simResult.secondsPassed;
+                float secondsPassed = simResult.secondsPassed;
 
-                if (secondsPassed > 0)
+                if (secondsPassed > 0.01f)
                 {
-                    string finalETA = _worldClockManager.GetCalculatedNewTime(_worldClockManager.CurrentTime, secondsPassed);
+                    string finalETA = _worldClockManager.GetCalculatedNewTime(_worldClockManager.CurrentTime, (int)secondsPassed);
                     finalETA = _global.Use24HourClock ? finalETA : _worldClockManager.GetConverted24hToAmPm(finalETA);
                     string formattedDuration = _worldClockManager.GetFormattedTimeFromSecondsShortHand(secondsPassed);
                     promptBuilder.Append($"[gold]Arrival Time:[orange] ~{finalETA} [Palette_Gray](about {formattedDuration})\n");

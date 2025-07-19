@@ -58,6 +58,7 @@ namespace ProjectVagabond
         public int ShortRestEnergyRestored => (int)Math.Floor((double)_maxEnergyPoints * 0.8f);
         public int LongRestEnergyRestored => _maxEnergyPoints;
         public int FullRestEnergyRestored => _maxEnergyPoints;
+        public float LocalMapSpeed { get; private set; }
 
         // Current values (read-only)
         public int CurrentHealthPoints => _currentHealthPoints;
@@ -182,10 +183,14 @@ namespace ProjectVagabond
             int _calculatedEnergyPoints = 5 + (int)Math.Floor(Agility * 0.5f);
             _maxEnergyPoints = Math.Min(_calculatedEnergyPoints, Global.MAX_MAX_HEALTH_ENERGY);
 
-            // Move Speed 
+            // World Map Move Speed 
             float weightFactor = Math.Max(0f, (_weight - 70f) * 0.01f); // Penalty for being over 70kg
             _walkSpeed = Math.Max(0.1f, 1.0f + (Agility * 0.12f) - weightFactor);
             _runSpeed = _walkSpeed * 3f;
+
+            // Local Map Speed (Movement Units per Second)
+            // Baseline (5 Agility) = 2.5 units/sec. Max (10 Agility) = 5 units/sec.
+            LocalMapSpeed = Agility * 0.5f;
 
             // Carry Capacity = Base(20) + (Strength * 8) + (Tenacity * 3)
             _carryCapacity = 20 + (Strength * 8) + (Tenacity * 3);
