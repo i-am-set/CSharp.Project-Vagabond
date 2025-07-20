@@ -26,7 +26,7 @@ namespace ProjectVagabond
 
         public void Update(GameTime gameTime)
         {
-            if (!_gameState.IsExecutingActions || _gameState.PathExecutionMapView != MapView.Local || _gameState.IsInCombat)
+            if (!_gameState.IsExecutingActions || _gameState.PathExecutionMapView != MapView.Local || _gameState.IsInCombat || _worldClockManager.IsInterpolatingTime)
             {
                 return;
             }
@@ -47,61 +47,64 @@ namespace ProjectVagabond
             }
 
             _aiSystem ??= ServiceLocator.Get<AISystem>();
-            _aiSystem.UpdateAIBehavior();
+            // CRITICAL FIX: Tell all AIs to decide what they want to do BEFORE this tick happens.
+            _aiSystem.UpdateDecisions();
 
             // The time tick is now determined solely by the player's next action.
             var playerStats = _componentStore.GetComponent<StatsComponent>(_gameState.PlayerEntityId);
-            if (playerStats == null)
+            var playerPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
+            if (playerStats == null || playerPos == null)
             {
                 _gameState.ToggleExecutingActions(false); // Failsafe
                 return;
             }
 
-            bool isPlayerRunning = false;
-            if (playerActionQueue.ActionQueue.Peek() is MoveAction move)
+            if (playerActionQueue.ActionQueue.Peek() is MoveAction nextPlayerMove)
             {
-                isPlayerRunning = move.IsRunning;
-            }
-            float playerSpeed = isPlayerRunning ? playerStats.LocalMapSpeed * 3 : playerStats.LocalMapSpeed;
-            float timeTick = 1.0f / playerSpeed; // Time it takes the player to make one move.
+                Vector2 moveDir = nextPlayerMove.Destination - playerPos.LocalPosition;
+                float timeTick = _gameState.GetSecondsPassedDuringMovement(playerStats, nextPlayerMove.IsRunning, default, moveDir, true);
+                float realTimeDuration = timeTick / _worldClockManager.TimeScale;
 
-            _worldClockManager.PassTime(timeTick);
+                // This single call drives the entire simulation for one step.
+                // It will fire OnTimePassed, which other systems can use if needed.
+                _worldClockManager.PassTime(timeTick, realTimeDuration);
 
-            // Now, update progress and execute moves for ALL entities based on that fixed time tick.
-            foreach (var entityId in _gameState.ActiveEntities)
-            {
-                var progressComp = _componentStore.GetComponent<MovementProgressComponent>(entityId);
-                var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
-
-                if (progressComp == null)
+                // Now, update progress and execute moves for ALL entities based on that fixed time tick.
+                foreach (var entityId in _gameState.ActiveEntities)
                 {
-                    progressComp = new MovementProgressComponent();
-                    _componentStore.AddComponent(entityId, progressComp);
-                }
-                if (statsComp == null) continue;
+                    var progressComp = _componentStore.GetComponent<MovementProgressComponent>(entityId);
+                    var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
 
-                if (entityId == _gameState.PlayerEntityId)
-                {
-                    // The player always moves exactly one step per tick they initiate.
-                    progressComp.Progress = 1.0f;
-                }
-                else // It's an AI
-                {
-                    var intent = _componentStore.GetComponent<AIIntentComponent>(entityId);
-                    bool isRunning = (intent?.CurrentIntent == AIIntent.Pursuing || intent?.CurrentIntent == AIIntent.Fleeing);
-                    if (isRunning && !statsComp.CanExertEnergy(1))
+                    if (progressComp == null)
                     {
-                        isRunning = false;
+                        progressComp = new MovementProgressComponent();
+                        _componentStore.AddComponent(entityId, progressComp);
                     }
-                    float currentSpeed = isRunning ? statsComp.LocalMapSpeed * 3 : statsComp.LocalMapSpeed;
-                    progressComp.Progress += timeTick * currentSpeed;
-                }
+                    if (statsComp == null) continue;
 
-                // Execute all full moves the entity has accumulated.
-                while (progressComp.Progress >= 1.0f)
-                {
-                    progressComp.Progress -= 1.0f;
-                    ExecuteNextMove(entityId);
+                    if (entityId == _gameState.PlayerEntityId)
+                    {
+                        // The player always moves exactly one step per tick they initiate.
+                        progressComp.Progress = 1.0f;
+                    }
+                    else // It's an AI
+                    {
+                        var intent = _componentStore.GetComponent<AIIntentComponent>(entityId);
+                        bool isRunning = (intent?.CurrentIntent == AIIntent.Pursuing || intent?.CurrentIntent == AIIntent.Fleeing);
+                        if (isRunning && !statsComp.CanExertEnergy(1))
+                        {
+                            isRunning = false;
+                        }
+                        float currentSpeed = isRunning ? statsComp.LocalMapSpeed * 3 : statsComp.LocalMapSpeed;
+                        progressComp.Progress += timeTick * currentSpeed;
+                    }
+
+                    // Execute all full moves the entity has accumulated.
+                    while (progressComp.Progress >= 1.0f)
+                    {
+                        progressComp.Progress -= 1.0f;
+                        ExecuteNextMove(entityId);
+                    }
                 }
             }
         }

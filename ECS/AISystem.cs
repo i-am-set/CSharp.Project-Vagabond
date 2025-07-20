@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +29,30 @@ namespace ProjectVagabond
             _chunkManager = ServiceLocator.Get<ChunkManager>();
         }
 
-        public void Update(GameTime gameTime) { }
+        public void Update(GameTime gameTime)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.IsInCombat) return;
+
+            // This loop handles the VISUAL execution of AI actions that were queued by PlanActions.
+            foreach (var entityId in _gameState.ActiveEntities)
+            {
+                if (entityId == _gameState.PlayerEntityId || _componentStore.HasComponent<InterpolationComponent>(entityId))
+                {
+                    continue;
+                }
+
+                var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(entityId);
+                if (actionQueue != null && actionQueue.ActionQueue.TryDequeue(out IAction nextAction))
+                {
+                    if (nextAction is MoveAction moveAction)
+                    {
+                        ExecuteMove(entityId, moveAction);
+                        break; // Only execute one visual move per frame to prevent stuttering.
+                    }
+                }
+            }
+        }
 
         public void ProcessCombatTurn(int entityId)
         {
@@ -93,7 +116,7 @@ namespace ProjectVagabond
             actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
         }
 
-        public void UpdateAIBehavior()
+        public void UpdateDecisions()
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.IsInCombat) return;
@@ -198,7 +221,6 @@ namespace ProjectVagabond
             var aiName = EntityNamer.GetName(aiEntityId);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[warning]{aiName} has spotted you and is moving to attack!" });
             _gameState.RequestCombatInitiation(aiEntityId);
-            aiComp.ActionTimeBudget = 0;
         }
 
         private void PursuePlayer(int entityId, AIComponent aiComp, AIPathComponent pathComp)
@@ -284,6 +306,27 @@ namespace ProjectVagabond
             }
         }
 
+        private void ExecuteMove(int entityId, MoveAction moveAction)
+        {
+            _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
+            var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+            var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
+
+            if (localPosComp != null && statsComp != null)
+            {
+                if (moveAction.IsRunning)
+                {
+                    statsComp.ExertEnergy(1);
+                }
+
+                float currentSpeed = moveAction.IsRunning ? statsComp.RunSpeed : statsComp.WalkSpeed;
+                float visualDuration = (BASE_AI_STEP_DURATION / currentSpeed) / _worldClockManager.TimeScale;
+
+                var interp = new InterpolationComponent(localPosComp.LocalPosition, moveAction.Destination, visualDuration, moveAction.IsRunning);
+                _componentStore.AddComponent(entityId, interp);
+            }
+        }
+
         public float GetTrueLocalDistance(int entityId1, int entityId2)
         {
             var pos1 = _componentStore.GetComponent<PositionComponent>(entityId1);
@@ -353,40 +396,39 @@ namespace ProjectVagabond
 
                 var entityPreviewPath = new List<Vector2>();
                 var simulatedPosition = localPosComp.LocalPosition;
-                var simulatedProgress = 0f; // A preview should always start from a clean slate.
                 int simulatedEnergy = statsComp.CurrentEnergyPoints;
+                float remainingBudget = timeBudget;
+                var tempPathComp = new AIPathComponent(); // Use a temporary path component for simulation
 
-                var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
-                bool isRunning = (intentComp?.CurrentIntent == AIIntent.Pursuing || intentComp?.CurrentIntent == AIIntent.Fleeing);
-                float currentSpeed = isRunning && simulatedEnergy > 0 ? statsComp.LocalMapSpeed * 3 : statsComp.LocalMapSpeed;
-
-                float potentialProgress = timeBudget * currentSpeed;
-                simulatedProgress += potentialProgress;
-
-                while (simulatedProgress >= 1.0f)
+                while (remainingBudget > 0)
                 {
-                    var nextStep = GetNextStepForSimulation(entityId, simulatedPosition);
-                    if (nextStep.HasValue)
+                    DecideNextGoal(entityId, aiComp, tempPathComp);
+                    Vector2? nextStep = null;
+                    if (tempPathComp.HasPath())
                     {
-                        if (isRunning)
-                        {
-                            if (simulatedEnergy > 0)
-                            {
-                                simulatedEnergy--;
-                            }
-                            else
-                            {
-                                // Ran out of energy mid-simulation, stop running.
-                                break;
-                            }
-                        }
-                        entityPreviewPath.Add(nextStep.Value);
-                        simulatedPosition = nextStep.Value;
-                        simulatedProgress -= 1.0f;
+                        nextStep = tempPathComp.Path[0];
                     }
                     else
                     {
-                        break; // No valid move, stop simulating for this entity
+                        nextStep = aiComp.NextStep;
+                    }
+
+                    if (!nextStep.HasValue) break;
+
+                    bool isRunning = _componentStore.GetComponent<AIIntentComponent>(entityId)?.CurrentIntent == AIIntent.Pursuing && simulatedEnergy > 0;
+
+                    float moveCost = _gameState.GetSecondsPassedDuringMovement(statsComp, isRunning, default, nextStep.Value - simulatedPosition, true);
+
+                    if (remainingBudget >= moveCost)
+                    {
+                        remainingBudget -= moveCost;
+                        if (isRunning) simulatedEnergy--;
+                        entityPreviewPath.Add(nextStep.Value);
+                        simulatedPosition = nextStep.Value;
+                    }
+                    else
+                    {
+                        break;
                     }
                 }
 
@@ -397,50 +439,6 @@ namespace ProjectVagabond
             }
 
             return allPreviewPaths;
-        }
-
-        private Vector2? GetNextStepForSimulation(int entityId, Vector2 currentSimulatedPosition)
-        {
-            // This is a simplified version of DecideNextGoal for prediction purposes.
-            var personalityComp = _componentStore.GetComponent<AIPersonalityComponent>(entityId);
-            var combatantComp = _componentStore.GetComponent<CombatantComponent>(entityId);
-            var playerPos = GetPlayerRelativeLocalPosition(entityId);
-
-            if (playerPos.HasValue && personalityComp != null && combatantComp != null)
-            {
-                float distanceToPlayer = Vector2.Distance(currentSimulatedPosition, playerPos.Value);
-                if (distanceToPlayer <= combatantComp.AggroRange)
-                {
-                    if (personalityComp.Personality == AIPersonalityType.Aggressive || (personalityComp.Personality == AIPersonalityType.Neutral && personalityComp.IsProvoked))
-                    {
-                        // If already adjacent, don't move closer.
-                        if (distanceToPlayer <= 1.5f) // Using 1.5f to account for diagonals
-                        {
-                            return null;
-                        }
-
-                        // Pursue
-                        var path = Pathfinder.FindPath(entityId, currentSimulatedPosition, playerPos.Value, _gameState, true, PathfindingMode.Moves, MapView.Local);
-                        if (path != null && path.Any())
-                        {
-                            return path[0];
-                        }
-                    }
-                }
-            }
-
-            // Default to wandering
-            var shuffledOffsets = _neighborOffsets.OrderBy(v => _random.Next()).ToList();
-            foreach (var offset in shuffledOffsets)
-            {
-                var targetPos = currentSimulatedPosition + offset;
-                if (_gameState.IsPositionPassable(targetPos, MapView.Local))
-                {
-                    return targetPos;
-                }
-            }
-
-            return null;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,8 +17,6 @@ namespace ProjectVagabond
         private readonly ChunkManager _chunkManager;
 
         private bool _isFirstPlayerAction = true;
-        private bool _localRunCostApplied = false;
-        private float _currentActionDuration = 0f;
         private const float VISUAL_INTERPOLATION_DURATION = 0.2f;
 
         public ActionExecutionSystem()
@@ -30,13 +28,11 @@ namespace ProjectVagabond
         public void StartExecution()
         {
             _isFirstPlayerAction = true;
-            _localRunCostApplied = false;
         }
 
         public void StopExecution()
         {
             _isFirstPlayerAction = true;
-            _localRunCostApplied = false;
         }
 
         /// <summary>
@@ -68,38 +64,44 @@ namespace ProjectVagabond
             _gameState ??= ServiceLocator.Get<GameState>();
             _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
-            if (_gameState.IsPaused || _gameState.IsInCombat || !_gameState.IsExecutingActions || _gameState.PathExecutionMapView != MapView.World)
+            if (_gameState.IsPaused || _gameState.IsInCombat || !_gameState.IsExecutingActions || _worldClockManager.IsInterpolatingTime)
             {
                 return;
             }
 
+            // Handle World Map execution
+            if (_gameState.PathExecutionMapView == MapView.World)
+            {
+                ProcessNextActionInQueue();
+            }
+        }
+
+        private void ProcessNextActionInQueue()
+        {
             int playerEntityId = _gameState.PlayerEntityId;
             var playerActionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(playerEntityId);
 
-            // If an action is visually interpolating, wait for it to finish.
-            if (_componentStore.HasComponent<InterpolationComponent>(playerEntityId))
-            {
-                return;
-            }
-
             if (playerActionQueueComp != null && playerActionQueueComp.ActionQueue.Count > 0)
             {
-                IAction nextAction = playerActionQueueComp.ActionQueue.Peek();
-                float actionCost = CalculateSecondsForAction(_gameState, nextAction);
-
-                if (_worldClockManager.AvailableTimeBudget >= actionCost)
+                // If an action is visually interpolating, wait for it to finish.
+                if (_componentStore.HasComponent<InterpolationComponent>(playerEntityId))
                 {
-                    _worldClockManager.ConsumeTime(actionCost);
-                    playerActionQueueComp.ActionQueue.Dequeue();
+                    return;
+                }
 
-                    if (nextAction is MoveAction ma)
-                    {
-                        ApplyMoveActionEffects(_gameState, playerEntityId, ma);
-                    }
-                    else if (nextAction is RestAction ra)
-                    {
-                        ApplyRestActionEffects(_gameState, playerEntityId, ra);
-                    }
+                IAction nextAction = playerActionQueueComp.ActionQueue.Dequeue();
+                float actionCostInGameSeconds = CalculateSecondsForAction(_gameState, nextAction);
+                float realSecondsDuration = actionCostInGameSeconds / _worldClockManager.TimeScale;
+
+                _worldClockManager.PassTime(actionCostInGameSeconds, realSecondsDuration);
+
+                if (nextAction is MoveAction ma)
+                {
+                    ApplyMoveActionEffects(_gameState, playerEntityId, ma);
+                }
+                else if (nextAction is RestAction ra)
+                {
+                    ApplyRestActionEffects(_gameState, playerEntityId, ra);
                 }
             }
             else if (_gameState.IsExecutingActions)

@@ -196,6 +196,7 @@ namespace ProjectVagabond
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
             _systemManager.RegisterSystem(_localMapTurnSystem, 0f);
             _systemManager.RegisterSystem(_combatInitiationSystem, 0f);
+            _systemManager.RegisterSystem(_aiSystem, 0f);
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());

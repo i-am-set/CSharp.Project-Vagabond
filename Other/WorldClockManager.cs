@@ -33,7 +33,6 @@ namespace ProjectVagabond
         private int _minute;    // 0-59
         private int _second;    // 0-59
         private readonly Random _random = new();
-        private double _unprocessedGameTime = 0.0;
 
         // Public properties to access time information
         public int CurrentYear => _year;
@@ -43,7 +42,6 @@ namespace ProjectVagabond
         public string CurrentTime => _global.Use24HourClock ? GetTimeString() : GetConverted24hToAmPm(GetTimeString());
         public float TimeScale { get; set; } = 1.0f;
         public TimeSpan CurrentTimeSpan { get; private set; }
-        public double AvailableTimeBudget => _unprocessedGameTime;
 
         // Interpolation State Fields
         private bool _isInterpolating = false;
@@ -83,88 +81,47 @@ namespace ProjectVagabond
         public void Update(GameTime gameTime)
         {
             var gameState = ServiceLocator.Get<GameState>();
-            if (gameState.IsPaused || !gameState.IsExecutingActions)
-            {
-                _unprocessedGameTime = 0; // Clear any leftover budget when not executing.
-                return;
-            }
+            if (gameState.IsPaused) return;
 
-            // Handle visual interpolation for the clock face
+            // This Update method is now ONLY for the visual interpolation of the clock face.
+            // The logical passage of time is now driven by the ActionExecutionSystem.
             if (_isInterpolating)
             {
                 _interpolationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (_interpolationTimer >= _interpolationDurationRealSeconds)
                 {
                     _isInterpolating = false;
+                    // Snap to final time to ensure precision
+                    SetTimeFromTimeSpan(_interpolationTargetTime);
+                    OnTimeChanged?.Invoke();
                 }
-            }
-
-            // Accumulate a budget of game time based on real time.
-            // This is the new core of the time system.
-            double elapsedRealSeconds = gameTime.ElapsedGameTime.TotalSeconds;
-            double gameSecondsToPassThisFrame = elapsedRealSeconds * TimeScale * Global.GAME_SECONDS_PER_REAL_SECOND;
-
-            var previousTimeSpan = CurrentTimeSpan;
-            CurrentTimeSpan = CurrentTimeSpan.Add(TimeSpan.FromSeconds(gameSecondsToPassThisFrame));
-            _unprocessedGameTime += gameSecondsToPassThisFrame;
-
-            // Update the clock display values and fire events if boundaries are crossed.
-            if ((int)CurrentTimeSpan.TotalSeconds != (int)previousTimeSpan.TotalSeconds)
-            {
-                SetTimeFromTimeSpan(CurrentTimeSpan);
-                OnTimeChanged?.Invoke();
-                if (CurrentTimeSpan.Days > previousTimeSpan.Days)
+                else
                 {
-                    OnDayChanged?.Invoke();
-                    if (CurrentSeasonFromDay(CurrentTimeSpan.Days + 1) != CurrentSeasonFromDay(previousTimeSpan.Days + 1))
-                    {
-                        OnSeasonChanged?.Invoke();
-                    }
-                    if ((CurrentTimeSpan.Days / 365) > (previousTimeSpan.Days / 365))
-                    {
-                        OnYearChanged?.Invoke();
-                    }
+                    // Update display time based on interpolation progress
+                    float progress = _interpolationTimer / _interpolationDurationRealSeconds;
+                    var newDisplayTime = _interpolationStartTime + TimeSpan.FromTicks((long)((_interpolationTargetTime - _interpolationStartTime).Ticks * progress));
+                    SetTimeFromTimeSpan(newDisplayTime);
+                    OnTimeChanged?.Invoke();
                 }
             }
-        }
-
-        public void ConsumeTime(double secondsToConsume)
-        {
-            if (secondsToConsume > _unprocessedGameTime)
-            {
-                // This should ideally not happen if logic is correct, but as a failsafe:
-                Debug.WriteLine($"[WARNING] Attempted to consume {secondsToConsume}s, but only {_unprocessedGameTime}s was available.");
-                _unprocessedGameTime = 0;
-            }
-            else
-            {
-                _unprocessedGameTime -= secondsToConsume;
-            }
-            OnTimePassed?.Invoke((float)secondsToConsume);
         }
 
         /// <summary>
-        /// Kicks off the time-lapse animation for instant "wait" actions.
-        /// The main game loop does not use this.
+        /// Instantly advances the logical game time and fires the OnTimePassed event.
+        /// It then starts a background visual animation for the clock face to "catch up"
+        /// over a specified real-world duration.
         /// </summary>
-        public void PassTime(double totalSecondsToPass, float randomizationFactor = 0f)
+        /// <param name="gameSecondsToPass">The total number of in-game seconds to pass.</param>
+        /// <param name="realSecondsDuration">The number of real-world seconds the visual interpolation should take.</param>
+        public void PassTime(double gameSecondsToPass, float realSecondsDuration)
         {
-            if (totalSecondsToPass <= 0) return;
-
-            if (randomizationFactor > 0f)
-            {
-                double randomizationAmount = totalSecondsToPass * randomizationFactor;
-                double minGameTimeDuration = totalSecondsToPass - randomizationAmount;
-                double maxGameTimeDuration = totalSecondsToPass + randomizationAmount;
-                totalSecondsToPass = _random.NextDouble() * (maxGameTimeDuration - minGameTimeDuration) + minGameTimeDuration;
-            }
+            if (gameSecondsToPass <= 0) return;
 
             // --- LOGICAL TIME ADVANCEMENT (INSTANT) ---
             var previousTimeSpan = CurrentTimeSpan;
-            var targetTimeSpan = previousTimeSpan.Add(TimeSpan.FromSeconds(totalSecondsToPass));
-            SetTimeFromTimeSpan(targetTimeSpan); // Update the internal time state immediately
+            var targetTimeSpan = previousTimeSpan.Add(TimeSpan.FromSeconds(gameSecondsToPass));
 
-            // Fire events based on what boundaries were crossed
+            // Fire events based on what boundaries were crossed before updating the time
             if (targetTimeSpan.Days > previousTimeSpan.Days)
             {
                 Season previousSeason = CurrentSeasonFromDay(previousTimeSpan.Days + 1);
@@ -175,37 +132,14 @@ namespace ProjectVagabond
                 OnDayChanged?.Invoke();
                 if (CurrentSeasonFromDay(newDayOfYear) != previousSeason) OnSeasonChanged?.Invoke();
             }
-            OnTimeChanged?.Invoke();
-            OnTimePassed?.Invoke((float)totalSecondsToPass); // Fire the event for AI and other systems
+
+            // Fire the main event for systems like AI to react to the time budget.
+            OnTimePassed?.Invoke((float)gameSecondsToPass);
 
             // --- VISUAL CLOCK ANIMATION (BACKGROUND) ---
-            StartVisualInterpolation(previousTimeSpan, targetTimeSpan, totalSecondsToPass);
-        }
-
-        private void StartVisualInterpolation(TimeSpan start, TimeSpan end, double gameSecondsPassed)
-        {
-            _interpolationStartTime = start;
-            _interpolationTargetTime = end;
-
-            const float minDuration = 0.4f;
-            const float maxDuration = 6.0f;
-            const long ONE_HOUR = 3600;
-            const long EIGHT_HOURS = 28800;
-            const long ONE_DAY = 86400;
-
-            float scaleFactor;
-            if (gameSecondsPassed > ONE_DAY) scaleFactor = 0.00005f;
-            else if (gameSecondsPassed > EIGHT_HOURS) scaleFactor = 0.0001f;
-            else if (gameSecondsPassed > ONE_HOUR) scaleFactor = 0.0002f;
-            else scaleFactor = 0.01f; // A different base scale for instant waits
-
-            _interpolationDurationRealSeconds = Math.Clamp(minDuration + ((float)gameSecondsPassed * scaleFactor), minDuration, maxDuration);
-
-            if (TimeScale > 0)
-            {
-                _interpolationDurationRealSeconds /= TimeScale;
-            }
-
+            _interpolationStartTime = CurrentTimeSpan;
+            _interpolationTargetTime = targetTimeSpan;
+            _interpolationDurationRealSeconds = realSecondsDuration;
             _interpolationTimer = 0f;
             _isInterpolating = true;
         }
@@ -225,12 +159,14 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Immediately stops any ongoing time interpolation.
+        /// Immediately stops any ongoing time interpolation and snaps the clock to the target time.
         /// </summary>
         public void CancelInterpolation()
         {
             if (!_isInterpolating) return;
             _isInterpolating = false;
+            SetTimeFromTimeSpan(_interpolationTargetTime);
+            OnTimeChanged?.Invoke();
         }
 
         /// <summary>

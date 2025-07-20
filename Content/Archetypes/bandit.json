@@ -28,7 +28,7 @@
       "Type": "ProjectVagabond.StatsComponent, ProjectVagabond",
       "Properties": {
         "Strength": 4,
-        "Agility": 5,
+        "Agility": 3,
         "Tenacity": 6,
         "Intelligence": 2,
         "Charm": 1
