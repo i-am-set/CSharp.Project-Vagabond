@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -50,7 +50,8 @@ namespace ProjectVagabond
         // World constants
         public const float GAME_SECONDS_PER_REAL_SECOND = 8f;
         public const float FEET_PER_WORLD_TILE = 377f; // The physical distance of a single world tile
-        public const float SECONDS_PER_FOOT_SCALING_FACTOR = 360f / 754f; // Scales distance (feet) to game time (seconds).
+        public const float FEET_PER_LOCAL_TILE = FEET_PER_WORLD_TILE / LOCAL_GRID_SIZE; // Approx 5.89 feet
+        public const float FEET_PER_SECOND_PER_SPEED_UNIT = 4.0f; // A character with speed 1.0 moves at 3 ft/s.
 
         // Virtual resolution for fixed aspect ratio rendering
         public const int VIRTUAL_WIDTH = 960;
@@ -89,7 +90,7 @@ namespace ProjectVagabond
         public const int TERMINAL_Y = 50;
 
         // Combat settings Global
-        public const int COMBAT_TURN_DURATION_SECONDS = 5;
+        public const int COMBAT_TURN_DURATION_SECONDS = 15;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES
@@ -101,8 +102,8 @@ namespace ProjectVagabond
 
         // Time scale multipliers
         public float TimeScaleMultiplier1 { get; set; } = 1.0f;
-        public float TimeScaleMultiplier2 { get; set; } = 2.0f;
-        public float TimeScaleMultiplier3 { get; set; } = 3.0f;
+        public float TimeScaleMultiplier2 { get; set; } = 5.0f;
+        public float TimeScaleMultiplier3 { get; set; } = 10.0f;
 
         // Input variables
         public int previousScrollValue = Mouse.GetState().ScrollWheelValue;

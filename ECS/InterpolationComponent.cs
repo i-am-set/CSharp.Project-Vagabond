@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 
 namespace ProjectVagabond
 {
@@ -11,16 +10,16 @@ namespace ProjectVagabond
     {
         public Vector2 StartPosition { get; set; }
         public Vector2 EndPosition { get; set; }
-        public float Duration { get; set; }
+        public float GameTimeDuration { get; set; }
         public float Timer { get; set; }
         public Vector2 CurrentVisualPosition { get; set; }
         public bool IsRunning { get; }
 
-        public InterpolationComponent(Vector2 start, Vector2 end, float duration, bool isRunning = false) 
+        public InterpolationComponent(Vector2 start, Vector2 end, float gameTimeDuration, bool isRunning = false)
         {
             StartPosition = start;
             EndPosition = end;
-            Duration = duration;
+            GameTimeDuration = gameTimeDuration;
             Timer = 0f;
             CurrentVisualPosition = start;
             IsRunning = isRunning;

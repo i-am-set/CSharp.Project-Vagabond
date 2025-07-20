@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -91,9 +91,9 @@ namespace ProjectVagabond
 
                 IAction nextAction = playerActionQueueComp.ActionQueue.Dequeue();
                 float actionCostInGameSeconds = CalculateSecondsForAction(_gameState, nextAction);
-                float realSecondsDuration = actionCostInGameSeconds / _worldClockManager.TimeScale;
 
-                _worldClockManager.PassTime(actionCostInGameSeconds, realSecondsDuration);
+                // PassTime now calculates the real-world duration internally based on the current TimeScale.
+                _worldClockManager.PassTime(actionCostInGameSeconds, 0);
 
                 if (nextAction is MoveAction ma)
                 {

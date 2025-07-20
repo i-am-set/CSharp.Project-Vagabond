@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -61,22 +61,21 @@ namespace ProjectVagabond
         {
             if (selectedButton == null) return;
 
+            float newTimeScale = 1.0f;
             if (selectedButton.Text == $"{_global.TimeScaleMultiplier1}x")
             {
-                _worldClockManager.TimeScale = _global.TimeScaleMultiplier1;
+                newTimeScale = _global.TimeScaleMultiplier1;
             }
             else if (selectedButton.Text == $"{_global.TimeScaleMultiplier2}x")
             {
-                _worldClockManager.TimeScale = _global.TimeScaleMultiplier2;
+                newTimeScale = _global.TimeScaleMultiplier2;
             }
             else if (selectedButton.Text == $"{_global.TimeScaleMultiplier3}x")
             {
-                _worldClockManager.TimeScale = _global.TimeScaleMultiplier3;
+                newTimeScale = _global.TimeScaleMultiplier3;
             }
-            else // Fallback
-            {
-                _worldClockManager.TimeScale = 1.0f;
-            }
+
+            _worldClockManager.UpdateTimeScale(newTimeScale);
         }
 
         public void Update(GameTime gameTime)

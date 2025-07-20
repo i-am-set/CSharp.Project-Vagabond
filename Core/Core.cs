@@ -252,22 +252,32 @@ namespace ProjectVagabond
             _graphics.SynchronizeWithVerticalRetrace = _settings.IsVsync;
 
             _sceneManager.Update(gameTime);
-            _combatUIAnimationManager.Update(gameTime);
+            _tooltipManager.Update(gameTime); // Tooltips should always update.
 
-            _interpolationSystem.Update(gameTime);
+            // These systems handle visual updates and should be paused.
+            if (!_gameState.IsPaused)
+            {
+                _combatUIAnimationManager.Update(gameTime);
+                _interpolationSystem.Update(gameTime);
+            }
+
+            // This system handles core logic that must run even when paused (to handle interruptions).
             _combatInitiationSystem.Update(gameTime);
 
-            if (_gameState.IsInCombat)
+            // These systems handle game logic and should be paused.
+            if (!_gameState.IsPaused)
             {
-                _combatProcessingSystem.Update(gameTime);
-            }
-            else if (_sceneManager.CurrentActiveScene is TerminalMapScene)
-            {
-                _gameState.UpdateActiveEntities();
-                _systemManager.Update(gameTime);
+                if (_gameState.IsInCombat)
+                {
+                    _combatProcessingSystem.Update(gameTime);
+                }
+                else if (_sceneManager.CurrentActiveScene is TerminalMapScene)
+                {
+                    _gameState.UpdateActiveEntities();
+                    _systemManager.Update(gameTime);
+                }
             }
 
-            _tooltipManager.Update(gameTime);
             base.Update(gameTime);
         }
 

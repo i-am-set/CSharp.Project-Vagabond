@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Cryptography;
@@ -40,7 +40,7 @@ namespace ProjectVagabond
         public int CurrentMinute => _minute;
         public int CurrentSecond => _second;
         public string CurrentTime => _global.Use24HourClock ? GetTimeString() : GetConverted24hToAmPm(GetTimeString());
-        public float TimeScale { get; set; } = 1.0f;
+        public float TimeScale { get; private set; } = 1.0f;
         public TimeSpan CurrentTimeSpan { get; private set; }
 
         // Interpolation State Fields
@@ -107,6 +107,34 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Updates the time scale and dynamically adjusts any ongoing time interpolation.
+        /// </summary>
+        /// <param name="newTimeScale">The new time scale multiplier.</param>
+        public void UpdateTimeScale(float newTimeScale)
+        {
+            if (newTimeScale <= 0 || newTimeScale == this.TimeScale) return;
+
+            if (_isInterpolating)
+            {
+                // Calculate how much in-game time has already passed visually
+                double totalGameSecondsToPass = (_interpolationTargetTime - _interpolationStartTime).TotalSeconds;
+                float progress = _interpolationTimer / _interpolationDurationRealSeconds;
+                double gameSecondsPassedSoFar = totalGameSecondsToPass * progress;
+
+                // Calculate the remaining in-game time
+                double remainingGameSeconds = totalGameSecondsToPass - gameSecondsPassedSoFar;
+
+                // Calculate the new real-world duration for the remaining in-game time
+                float newRemainingRealSeconds = (float)remainingGameSeconds / newTimeScale;
+
+                // Update the total duration and the current timer to reflect the change
+                _interpolationDurationRealSeconds = _interpolationTimer + newRemainingRealSeconds;
+            }
+
+            this.TimeScale = newTimeScale;
+        }
+
+        /// <summary>
         /// Instantly advances the logical game time and fires the OnTimePassed event.
         /// It then starts a background visual animation for the clock face to "catch up"
         /// over a specified real-world duration.
@@ -139,7 +167,8 @@ namespace ProjectVagabond
             // --- VISUAL CLOCK ANIMATION (BACKGROUND) ---
             _interpolationStartTime = CurrentTimeSpan;
             _interpolationTargetTime = targetTimeSpan;
-            _interpolationDurationRealSeconds = realSecondsDuration;
+            // The real duration is now calculated based on the current time scale
+            _interpolationDurationRealSeconds = (float)gameSecondsToPass / TimeScale;
             _interpolationTimer = 0f;
             _isInterpolating = true;
         }

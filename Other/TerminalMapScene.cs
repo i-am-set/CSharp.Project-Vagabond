@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -135,7 +135,20 @@ namespace ProjectVagabond.Scenes
             _waitDialog.Update(gameTime);
             if (_waitDialog.IsActive) return;
 
+            // The input handler must run every frame to catch the unpause command.
+            // It has its own internal logic to halt other inputs when paused.
+            _inputHandler.HandleInput(gameTime);
+
+            // UI elements that should remain interactive while paused are updated here.
             var currentMouseState = Mouse.GetState();
+            _settingsButton?.Update(currentMouseState);
+            _clockRenderer.Update(gameTime); // Updates the clock's buttons
+
+            // If the game is paused, halt all other scene-specific updates.
+            if (_coreState.IsPaused)
+            {
+                return;
+            }
 
             if (_coreState.IsInCombat)
             {
@@ -159,12 +172,9 @@ namespace ProjectVagabond.Scenes
             else
             {
                 // Standard out-of-combat updates
-                _settingsButton?.Update(currentMouseState);
-                _inputHandler.HandleInput(gameTime);
                 _mapInputHandler.Update(gameTime);
                 _mapRenderer.Update(gameTime, font);
                 _statsRenderer.Update(gameTime);
-                _clockRenderer.Update(gameTime);
             }
 
             _hapticsManager.Update(gameTime);

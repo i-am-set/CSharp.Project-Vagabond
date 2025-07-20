@@ -253,9 +253,7 @@ namespace ProjectVagabond
             float remainingTime = Global.COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
 
             // Calculate the cost of the cheapest possible move (a non-diagonal walk)
-            float baseTime = (Global.FEET_PER_WORLD_TILE * Global.SECONDS_PER_FOOT_SCALING_FACTOR) / playerStats.WalkSpeed;
-            float secondsPassed = baseTime / Global.LOCAL_GRID_SIZE;
-            float cheapestMoveCost = (float)Math.Ceiling(secondsPassed * 1.0f); // timeMultiplier is 1.0 for non-diagonal
+            float cheapestMoveCost = GetSecondsPassedDuringMovement(playerStats, false, default, new Vector2(1, 0), true);
 
             return remainingTime >= cheapestMoveCost;
         }
@@ -409,26 +407,23 @@ namespace ProjectVagabond
 
         public float GetSecondsPassedDuringMovement(StatsComponent stats, bool isRunning, MapData mapData, Vector2 moveDirection, bool isLocalMove = false)
         {
-            float secondsPassed = 0;
-            float timeMultiplier = 1.0f;
+            float distanceInFeet = isLocalMove ? Global.FEET_PER_LOCAL_TILE : Global.FEET_PER_WORLD_TILE;
+            float baseSpeedStat = isRunning ? stats.RunSpeed : stats.WalkSpeed;
+            float speedInFtPerSec = baseSpeedStat * Global.FEET_PER_SECOND_PER_SPEED_UNIT;
 
+            if (speedInFtPerSec <= 0) return float.MaxValue;
+
+            float secondsPassed = distanceInFeet / speedInFtPerSec;
+
+            // Apply diagonal movement penalty
             if (moveDirection.X != 0 && moveDirection.Y != 0)
             {
-                timeMultiplier = 1.5f;
+                secondsPassed *= 1.414f; // Approx. sqrt(2)
             }
 
-            if (isLocalMove)
+            // Apply world map terrain penalties
+            if (!isLocalMove)
             {
-                float speed = isRunning ? stats.LocalMapSpeed * 3 : stats.LocalMapSpeed;
-                if (speed > 0)
-                {
-                    secondsPassed = 1.0f / speed;
-                }
-            }
-            else // World Map
-            {
-                float baseTime = (Global.FEET_PER_WORLD_TILE * Global.SECONDS_PER_FOOT_SCALING_FACTOR) / (isRunning ? stats.RunSpeed : stats.WalkSpeed);
-                secondsPassed += baseTime;
                 secondsPassed += mapData.TerrainHeight switch
                 {
                     var height when height < _global.FlatlandsLevel => 0,
@@ -438,12 +433,7 @@ namespace ProjectVagabond
                 };
             }
 
-            if (_worldClockManager.TimeScale > 0)
-            {
-                return (secondsPassed * timeMultiplier) / _worldClockManager.TimeScale;
-            }
-
-            return secondsPassed * timeMultiplier;
+            return secondsPassed;
         }
 
         public (int finalEnergy, bool possible, float secondsPassed) SimulateActionQueueEnergy(IEnumerable<IAction> customQueue = null)

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using ProjectVagabond.Scenes;
 using System;
@@ -59,6 +59,19 @@ namespace ProjectVagabond
 
             KeyboardState currentKeyboardState = Keyboard.GetState();
             MouseState currentMouseState = Mouse.GetState();
+
+            // If the game is paused, only process the unpause command and nothing else.
+            if (_gameState.IsPaused)
+            {
+                if (_gameState.IsExecutingActions && !_previousKeyboardState.IsKeyDown(Keys.Space) && currentKeyboardState.IsKeyDown(Keys.Space))
+                {
+                    _gameState.TogglePause();
+                }
+                _previousKeyboardState = currentKeyboardState;
+                _previousMouseState = currentMouseState;
+                return;
+            }
+
             Keys[] pressedKeys = currentKeyboardState.GetPressedKeys();
 
             _controlPressed = currentKeyboardState.IsKeyDown(Keys.LeftControl) || currentKeyboardState.IsKeyDown(Keys.RightControl);
