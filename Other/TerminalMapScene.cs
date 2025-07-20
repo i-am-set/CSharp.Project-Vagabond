@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -118,10 +118,11 @@ namespace ProjectVagabond.Scenes
             if (_waitDialog.IsActive || _worldClockManager.IsInterpolatingTime) return;
             _waitDialog.Show((hours, minutes, seconds) =>
             {
-                if (hours > 0 || minutes > 0 || seconds > 0)
+                double totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+                if (totalSeconds > 0)
                 {
                     _coreState.CancelExecutingActions();
-                    _worldClockManager.PassTime(0, hours, minutes, seconds);
+                    _worldClockManager.PassTime(totalSeconds);
                 }
             });
         }

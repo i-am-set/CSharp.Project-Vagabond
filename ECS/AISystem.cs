@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -94,10 +93,9 @@ namespace ProjectVagabond
             actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
         }
 
-        public void ProcessEntities(float timeBudget)
+        public void UpdateAIBehavior()
         {
             _gameState ??= ServiceLocator.Get<GameState>();
-            _worldClockManager ??= ServiceLocator.Get<WorldClockManager>(); // Lazy load
             if (_gameState.IsInCombat) return;
 
             foreach (var entityId in _gameState.ActiveEntities)
@@ -105,65 +103,41 @@ namespace ProjectVagabond
                 var aiComp = _componentStore.GetComponent<AIComponent>(entityId);
                 if (aiComp == null || !_componentStore.HasComponent<NPCTagComponent>(entityId)) continue;
 
-                aiComp.ActionTimeBudget += timeBudget;
                 var pathComp = _componentStore.GetComponent<AIPathComponent>(entityId);
-                var progressComp = _componentStore.GetComponent<MovementProgressComponent>(entityId);
-                var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
-
                 if (pathComp == null)
                 {
                     pathComp = new AIPathComponent();
                     _componentStore.AddComponent(entityId, pathComp);
                 }
-                if (progressComp == null)
-                {
-                    progressComp = new MovementProgressComponent();
-                    _componentStore.AddComponent(entityId, progressComp);
-                }
-                if (statsComp == null) continue;
 
-                pathComp.RepathTimer += timeBudget;
+                pathComp.RepathTimer += 1; // Increment a simple counter
                 bool isIdle = !_componentStore.HasComponent<InterpolationComponent>(entityId);
 
-                if (isIdle)
+                // Decide on a new goal if idle AND (the current path is finished OR it's time to repath)
+                if (isIdle && (!pathComp.HasPath() || pathComp.RepathTimer >= 5))
                 {
-                    if (!aiComp.NextStep.HasValue || !pathComp.HasPath() || pathComp.RepathTimer >= REPATH_INTERVAL)
-                    {
-                        DecideNextGoal(entityId, aiComp, pathComp);
-                    }
-
-                    var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
-                    bool isRunning = (intentComp?.CurrentIntent == AIIntent.Pursuing || intentComp?.CurrentIntent == AIIntent.Fleeing) && statsComp.CanExertEnergy(1);
-                    float currentSpeed = isRunning ? statsComp.LocalMapSpeed * 3 : statsComp.LocalMapSpeed;
-
-                    // Calculate how many movement units the AI generated in the given time.
-                    float potentialProgress = timeBudget * currentSpeed;
-                    progressComp.Progress += potentialProgress;
-
-                    while (progressComp.Progress >= 1.0f)
-                    {
-                        if (pathComp.HasPath())
-                        {
-                            aiComp.NextStep = pathComp.Path[pathComp.CurrentPathIndex];
-                            pathComp.CurrentPathIndex++;
-                        }
-
-                        if (aiComp.NextStep.HasValue)
-                        {
-                            ExecuteAIAction(entityId, new MoveAction(entityId, aiComp.NextStep.Value, isRunning));
-                            progressComp.Progress -= 1.0f;
-                            aiComp.NextStep = null; // Consume the step
-                        }
-                        else
-                        {
-                            // No next step, so can't move. Clear progress to avoid infinite loops.
-                            progressComp.Progress = 0;
-                            break;
-                        }
-                    }
+                    DecideNextGoal(entityId, aiComp, pathComp);
+                    pathComp.RepathTimer = 0;
                 }
-                aiComp.ActionTimeBudget = 0; // Budget is consumed by movement progress
             }
+        }
+
+        public Vector2? GetNextStepForExecution(int entityId)
+        {
+            var aiComp = _componentStore.GetComponent<AIComponent>(entityId);
+            var pathComp = _componentStore.GetComponent<AIPathComponent>(entityId);
+
+            if (aiComp == null || pathComp == null) return null;
+
+            if (pathComp.HasPath())
+            {
+                var nextStep = pathComp.Path[pathComp.CurrentPathIndex];
+                pathComp.CurrentPathIndex++;
+                return nextStep;
+            }
+
+            // If there's no long-term path, use the single-step decision.
+            return aiComp.NextStep;
         }
 
         private void DecideNextGoal(int entityId, AIComponent aiComp, AIPathComponent pathComp)
@@ -191,13 +165,13 @@ namespace ProjectVagabond
                 {
                     case AIPersonalityType.Aggressive:
                         if (inAttackRange) InitiateCombat(entityId, aiComp);
-                        else PursuePlayer(entityId, pathComp);
+                        else PursuePlayer(entityId, aiComp, pathComp);
                         break;
                     case AIPersonalityType.Neutral:
                         if (personalityComp.IsProvoked)
                         {
                             if (inAttackRange) InitiateCombat(entityId, aiComp);
-                            else PursuePlayer(entityId, pathComp);
+                            else PursuePlayer(entityId, aiComp, pathComp);
                         }
                         break;
                     case AIPersonalityType.Passive:
@@ -227,13 +201,9 @@ namespace ProjectVagabond
             aiComp.ActionTimeBudget = 0;
         }
 
-        private void PursuePlayer(int entityId, AIPathComponent pathComp)
+        private void PursuePlayer(int entityId, AIComponent aiComp, AIPathComponent pathComp)
         {
-            var stats = _componentStore.GetComponent<StatsComponent>(entityId);
-            if (stats != null && stats.CanExertEnergy(1))
-            {
-                SetAIIntent(entityId, AIIntent.Pursuing);
-            }
+            SetAIIntent(entityId, AIIntent.Pursuing);
 
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
             if (localPosComp == null) return;
@@ -241,15 +211,21 @@ namespace ProjectVagabond
             var playerPos = GetPlayerRelativeLocalPosition(entityId);
             if (!playerPos.HasValue)
             {
-                Wander(entityId, _componentStore.GetComponent<AIComponent>(entityId));
+                Wander(entityId, aiComp);
                 return;
             }
 
-            bool isRunning = _componentStore.GetComponent<AIIntentComponent>(entityId)?.CurrentIntent == AIIntent.Pursuing;
-            var path = Pathfinder.FindPath(entityId, localPosComp.LocalPosition, playerPos.Value, _gameState, isRunning, PathfindingMode.Moves, MapView.Local);
+            // Pathfind as if running to get the most direct route. The actual speed is determined later.
+            var path = Pathfinder.FindPath(entityId, localPosComp.LocalPosition, playerPos.Value, _gameState, true, PathfindingMode.Moves, MapView.Local);
+
             if (path != null && path.Any())
             {
                 pathComp.Path = path;
+            }
+            else
+            {
+                // If no path is found, fall back to wandering so the AI doesn't freeze.
+                Wander(entityId, aiComp);
             }
         }
 
@@ -304,44 +280,6 @@ namespace ProjectVagabond
                 {
                     aiComp.NextStep = targetPos;
                     return; // Found a valid move, exit
-                }
-            }
-        }
-
-        private float CalculateAIActionTimeCost(int entityId, IAction action)
-        {
-            if (action is MoveAction moveAction)
-            {
-                var stats = _componentStore.GetComponent<StatsComponent>(entityId);
-                var localPos = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-                if (stats == null || localPos == null) return 1000;
-
-                Vector2 moveDir = moveAction.Destination - localPos.LocalPosition;
-                return _gameState.GetSecondsPassedDuringMovement(stats, moveAction.IsRunning, default, moveDir, true);
-            }
-            return 1;
-        }
-
-        private void ExecuteAIAction(int entityId, IAction action)
-        {
-            if (action is MoveAction moveAction)
-            {
-                var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-                var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
-
-                if (localPosComp != null && statsComp != null)
-                {
-                    if (moveAction.IsRunning)
-                    {
-                        statsComp.ExertEnergy(1);
-                    }
-
-                    // Visual duration is now inversely proportional to the entity's speed.
-                    float currentSpeed = moveAction.IsRunning ? statsComp.RunSpeed : statsComp.WalkSpeed;
-                    float visualDuration = (BASE_AI_STEP_DURATION / currentSpeed) / _worldClockManager.TimeScale;
-
-                    var interp = new InterpolationComponent(localPosComp.LocalPosition, moveAction.Destination, visualDuration, moveAction.IsRunning);
-                    _componentStore.AddComponent(entityId, interp);
                 }
             }
         }

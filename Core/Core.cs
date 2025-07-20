@@ -51,7 +51,7 @@ namespace ProjectVagabond
         private CombatProcessingSystem _combatProcessingSystem;
         private SpriteManager _spriteManager;
         private CombatUIAnimationManager _combatUIAnimationManager;
-        private PlayerLocalMovementSystem _playerLocalMovementSystem;
+        private LocalMapTurnSystem _localMapTurnSystem;
         private InterpolationSystem _interpolationSystem;
         private CombatInitiationSystem _combatInitiationSystem;
 
@@ -129,8 +129,8 @@ namespace ProjectVagabond
             var playerInputSystem = new PlayerInputSystem();
             ServiceLocator.Register<PlayerInputSystem>(playerInputSystem);
 
-            _playerLocalMovementSystem = new PlayerLocalMovementSystem();
-            ServiceLocator.Register<PlayerLocalMovementSystem>(_playerLocalMovementSystem);
+            _localMapTurnSystem = new LocalMapTurnSystem();
+            ServiceLocator.Register<LocalMapTurnSystem>(_localMapTurnSystem);
 
             _actionExecutionSystem = new ActionExecutionSystem();
             ServiceLocator.Register<ActionExecutionSystem>(_actionExecutionSystem);
@@ -194,9 +194,8 @@ namespace ProjectVagabond
             ServiceLocator.Register<Texture2D>(_pixel);
 
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
-            _systemManager.RegisterSystem(_playerLocalMovementSystem, 0f);
+            _systemManager.RegisterSystem(_localMapTurnSystem, 0f);
             _systemManager.RegisterSystem(_combatInitiationSystem, 0f);
-            worldClockManager.OnTimePassed += _aiSystem.ProcessEntities;
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());

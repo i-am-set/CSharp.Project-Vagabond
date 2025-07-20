@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -48,7 +48,7 @@ namespace ProjectVagabond
         public const string GAME_VERSION = "0.1.0";
 
         // World constants
-        public const float BASE_TIME_SCALE = 0.001f; // base speed in which the time moves in the world
+        public const float GAME_SECONDS_PER_REAL_SECOND = 8f;
         public const float FEET_PER_WORLD_TILE = 377f; // The physical distance of a single world tile
         public const float SECONDS_PER_FOOT_SCALING_FACTOR = 360f / 754f; // Scales distance (feet) to game time (seconds).
 
@@ -69,7 +69,6 @@ namespace ProjectVagabond
         public const int DEFAULT_TERMINAL_WIDTH = 540;
         public const int DEFAULT_TERMINAL_HEIGHT = 338;
         public const int COMBAT_TERMINAL_BUFFER = 130;
-        public const float LOCAL_MAP_TIME_MULTIPLIER = 0.5f;
 
         // Player stats Global
         public const int MAX_MAX_HEALTH_ENERGY = 48;

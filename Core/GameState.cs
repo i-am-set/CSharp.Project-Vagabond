@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -80,7 +80,8 @@ namespace ProjectVagabond
         public void InitializeWorld()
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0), localPosition: new Vector2(32, 32));
-            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 43));
+            _componentStore.AddComponent(PlayerEntityId, new MovementProgressComponent());
+            Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 36));
         }
 
         public void InitializeRenderableEntities()
@@ -416,14 +417,17 @@ namespace ProjectVagabond
                 timeMultiplier = 1.5f;
             }
 
-            float baseTime = (Global.FEET_PER_WORLD_TILE * Global.SECONDS_PER_FOOT_SCALING_FACTOR) / (isRunning ? stats.RunSpeed : stats.WalkSpeed);
-
             if (isLocalMove)
             {
-                secondsPassed += (baseTime / Global.LOCAL_GRID_SIZE) * Global.LOCAL_MAP_TIME_MULTIPLIER;
+                float speed = isRunning ? stats.LocalMapSpeed * 3 : stats.LocalMapSpeed;
+                if (speed > 0)
+                {
+                    secondsPassed = 1.0f / speed;
+                }
             }
-            else
+            else // World Map
             {
+                float baseTime = (Global.FEET_PER_WORLD_TILE * Global.SECONDS_PER_FOOT_SCALING_FACTOR) / (isRunning ? stats.RunSpeed : stats.WalkSpeed);
                 secondsPassed += baseTime;
                 secondsPassed += mapData.TerrainHeight switch
                 {

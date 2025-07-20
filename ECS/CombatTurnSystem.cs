@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 
 namespace ProjectVagabond
 {
@@ -50,7 +50,7 @@ namespace ProjectVagabond
             {
                 _currentTurnIndex = 0; // Reset for the new round.
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[palette_yellow]New round begins." });
-                _worldClockManager.PassTime(seconds: Global.COMBAT_TURN_DURATION_SECONDS);
+                _worldClockManager.PassTime(Global.COMBAT_TURN_DURATION_SECONDS);
             }
 
             StartNewTurn();
