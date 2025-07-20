@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -222,19 +222,20 @@ namespace ProjectVagabond
                     if (!path.Any()) continue;
 
                     // Draw path segments
-                    foreach (var pos in path)
+                    foreach (var node in path)
                     {
-                        Vector2? screenPos = MapCoordsToScreen(pos);
+                        Vector2? screenPos = MapCoordsToScreen(node.Position);
                         if (screenPos.HasValue)
                         {
                             var destRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
-                            spriteBatch.Draw(_spriteManager.RunPathSprite, destRect, _global.Palette_Red * 0.4f);
+                            Texture2D texture = node.IsRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
+                            spriteBatch.Draw(texture, destRect, _global.Palette_Red * 0.4f);
                         }
                     }
 
                     // Draw a distinct marker at the end of the path
-                    var endPos = path.Last();
-                    Vector2? endScreenPos = MapCoordsToScreen(endPos);
+                    var endNode = path.Last();
+                    Vector2? endScreenPos = MapCoordsToScreen(endNode.Position);
                     if (endScreenPos.HasValue)
                     {
                         var destRect = new Rectangle((int)endScreenPos.Value.X, (int)endScreenPos.Value.Y, cellSize, cellSize);
@@ -452,31 +453,7 @@ namespace ProjectVagabond
                 allPlayerActions.Add(activePlayerAction);
             }
 
-            foreach (var action in allPlayerActions)
-            {
-                Vector2 actionPos = Vector2.Zero;
-                Texture2D actionTexture = null;
-                Color actionColor = Color.Transparent;
-
-                if (action is MoveAction moveAction)
-                {
-                    actionPos = moveAction.Destination;
-                    actionTexture = moveAction.IsRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
-                    actionColor = moveAction.IsRunning ? _global.RunPathColor : _global.PathColor;
-                }
-                else if (action is RestAction restAction)
-                {
-                    actionPos = restAction.Position;
-                    actionTexture = restAction.RestType == RestType.ShortRest ? _spriteManager.ShortRestSprite : _spriteManager.LongRestSprite;
-                    actionColor = _global.ShortRestColor;
-                }
-
-                Vector2? screenPos = MapCoordsToScreen(actionPos);
-                if (screenPos.HasValue)
-                {
-                    elements.Add(new GridElement(actionTexture, actionColor, screenPos.Value));
-                }
-            }
+            elements.AddRange(GeneratePlayerPathGridElements(allPlayerActions, isLocalPath: false));
 
             var playerRenderComp = _componentStore.GetComponent<RenderableComponent>(_gameState.PlayerEntityId);
             if (playerRenderComp != null)
@@ -512,32 +489,11 @@ namespace ProjectVagabond
 
             // --- Draw Player's Pending Path (Local View) ---
             var playerActionQueue = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
-            var playerInterp = _componentStore.GetComponent<InterpolationComponent>(_gameState.PlayerEntityId);
-
-            if (playerActionQueue != null)
+            if (playerActionQueue != null && playerActionQueue.ActionQueue.Any())
             {
-                var visualPathNodes = new List<(Vector2 Position, bool IsRunning)>();
-
-                // 1. Add the current interpolation destination if it exists.
-                if (playerInterp != null)
-                {
-                    visualPathNodes.Add((playerInterp.EndPosition, playerInterp.IsRunning));
-                }
-
-                // 2. Add all remaining steps from the logical queue.
-                visualPathNodes.AddRange(playerActionQueue.ActionQueue.OfType<MoveAction>().Select(ma => (ma.Destination, ma.IsRunning)));
-
-                // 3. Draw the combined visual path.
-                foreach (var node in visualPathNodes)
-                {
-                    Vector2? screenPos = MapCoordsToScreen(node.Position);
-                    if (screenPos.HasValue)
-                    {
-                        Texture2D texture = node.IsRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
-                        Color color = node.IsRunning ? _global.RunPathColor : _global.PathColor;
-                        elements.Add(new GridElement(texture, color, screenPos.Value));
-                    }
-                }
+                // The path preview should only show the logical future path, not the current animation step.
+                // This provides a stable list for the energy simulation and prevents flickering.
+                elements.AddRange(GeneratePlayerPathGridElements(playerActionQueue.ActionQueue, isLocalPath: true));
             }
 
             foreach (var entityId in _gameState.ActiveEntities)
@@ -563,6 +519,61 @@ namespace ProjectVagabond
                 }
             }
 
+            return elements;
+        }
+
+        /// <summary>
+        /// Generates the visual path for the player's action queue, simulating energy cost to show where they will become exhausted.
+        /// </summary>
+        private List<GridElement> GeneratePlayerPathGridElements(IEnumerable<IAction> actions, bool isLocalPath)
+        {
+            var elements = new List<GridElement>();
+            var playerStats = _gameState.PlayerStats;
+            if (playerStats == null || !actions.Any()) return elements;
+
+            int simulatedEnergy = playerStats.CurrentEnergyPoints;
+
+            foreach (var action in actions)
+            {
+                Vector2 actionPos = Vector2.Zero;
+                Texture2D actionTexture = null;
+                Color actionColor = Color.Transparent;
+
+                if (action is MoveAction moveAction)
+                {
+                    actionPos = moveAction.Destination;
+                    bool canRun = moveAction.IsRunning && simulatedEnergy >= _gameState.GetMovementEnergyCost(moveAction, isLocalPath);
+
+                    actionTexture = canRun ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
+                    actionColor = canRun ? _global.RunPathColor : _global.PathColor;
+
+                    if (moveAction.IsRunning)
+                    {
+                        simulatedEnergy -= _gameState.GetMovementEnergyCost(moveAction, isLocalPath);
+                    }
+                }
+                else if (action is RestAction restAction)
+                {
+                    actionPos = restAction.Position;
+                    actionTexture = restAction.RestType == RestType.ShortRest ? _spriteManager.ShortRestSprite : _spriteManager.LongRestSprite;
+                    actionColor = _global.ShortRestColor;
+
+                    // Simulate energy gain from the rest
+                    switch (restAction.RestType)
+                    {
+                        case RestType.ShortRest: simulatedEnergy += playerStats.ShortRestEnergyRestored; break;
+                        case RestType.LongRest: simulatedEnergy += playerStats.LongRestEnergyRestored; break;
+                        case RestType.FullRest: simulatedEnergy += playerStats.FullRestEnergyRestored; break;
+                    }
+                    simulatedEnergy = System.Math.Min(simulatedEnergy, playerStats.MaxEnergyPoints);
+                }
+
+                Vector2? screenPos = MapCoordsToScreen(actionPos);
+                if (screenPos.HasValue)
+                {
+                    elements.Add(new GridElement(actionTexture, actionColor, screenPos.Value));
+                }
+            }
             return elements;
         }
 

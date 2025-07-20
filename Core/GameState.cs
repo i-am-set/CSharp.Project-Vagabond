@@ -51,7 +51,7 @@ namespace ProjectVagabond
         public List<int> ActiveEntities { get; private set; } = new List<int>();
         public int InitialActionCount { get; private set; }
         public bool IsActionQueueDirty { get; set; } = true;
-        public Dictionary<int, List<Vector2>> AIPreviewPaths { get; set; } = new Dictionary<int, List<Vector2>>();
+        public Dictionary<int, List<(Vector2 Position, bool IsRunning)>> AIPreviewPaths { get; set; } = new Dictionary<int, List<(Vector2, bool)>>();
 
         // Combat State
         public bool IsInCombat { get; private set; } = false;

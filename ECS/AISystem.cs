@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,27 +31,11 @@ namespace ProjectVagabond
 
         public void Update(GameTime gameTime)
         {
+            // The main update loop is now handled by LocalMapTurnSystem.
+            // This method is kept to satisfy the ISystem interface, but the core logic
+            // is now in UpdateDecisions, which is called explicitly by LocalMapTurnSystem.
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.IsInCombat) return;
-
-            // This loop handles the VISUAL execution of AI actions that were queued by PlanActions.
-            foreach (var entityId in _gameState.ActiveEntities)
-            {
-                if (entityId == _gameState.PlayerEntityId || _componentStore.HasComponent<InterpolationComponent>(entityId))
-                {
-                    continue;
-                }
-
-                var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(entityId);
-                if (actionQueue != null && actionQueue.ActionQueue.TryDequeue(out IAction nextAction))
-                {
-                    if (nextAction is MoveAction moveAction)
-                    {
-                        ExecuteMove(entityId, moveAction);
-                        break; // Only execute one visual move per frame to prevent stuttering.
-                    }
-                }
-            }
         }
 
         public void ProcessCombatTurn(int entityId)
@@ -306,27 +290,6 @@ namespace ProjectVagabond
             }
         }
 
-        private void ExecuteMove(int entityId, MoveAction moveAction)
-        {
-            _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
-            var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-            var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
-
-            if (localPosComp != null && statsComp != null)
-            {
-                if (moveAction.IsRunning)
-                {
-                    statsComp.ExertEnergy(1);
-                }
-
-                float currentSpeed = moveAction.IsRunning ? statsComp.RunSpeed : statsComp.WalkSpeed;
-                float visualDuration = (BASE_AI_STEP_DURATION / currentSpeed) / _worldClockManager.TimeScale;
-
-                var interp = new InterpolationComponent(localPosComp.LocalPosition, moveAction.Destination, visualDuration, moveAction.IsRunning);
-                _componentStore.AddComponent(entityId, interp);
-            }
-        }
-
         public float GetTrueLocalDistance(int entityId1, int entityId2)
         {
             var pos1 = _componentStore.GetComponent<PositionComponent>(entityId1);
@@ -378,63 +341,63 @@ namespace ProjectVagabond
             intentComp.CurrentIntent = intent;
         }
 
-        public Dictionary<int, List<Vector2>> SimulateMovement(float timeBudget)
+        public Dictionary<int, List<(Vector2 Position, bool IsRunning)>> SimulateMovementForDuration(float timeBudget)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
-            var allPreviewPaths = new Dictionary<int, List<Vector2>>();
-            if (timeBudget <= 0) return allPreviewPaths;
+            var allPreviewPaths = new Dictionary<int, List<(Vector2, bool)>>();
+
+            var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
+            if (playerPosComp == null) return allPreviewPaths;
+            Vector2 playerCurrentPos = playerPosComp.LocalPosition;
 
             foreach (var entityId in _gameState.ActiveEntities)
             {
                 if (entityId == _gameState.PlayerEntityId) continue;
 
-                var aiComp = _componentStore.GetComponent<AIComponent>(entityId);
-                var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
+                var personality = _componentStore.GetComponent<AIPersonalityComponent>(entityId);
+                bool shouldPursue = personality != null &&
+                                    (personality.Personality == AIPersonalityType.Aggressive ||
+                                     (personality.Personality == AIPersonalityType.Neutral && personality.IsProvoked));
+
+                if (!shouldPursue) continue;
+
                 var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+                var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
+                if (localPosComp == null || statsComp == null) continue;
 
-                if (aiComp == null || statsComp == null || localPosComp == null) continue;
+                var fullPath = Pathfinder.FindPath(entityId, localPosComp.LocalPosition, playerCurrentPos, _gameState, true, PathfindingMode.Moves, MapView.Local);
 
-                var entityPreviewPath = new List<Vector2>();
-                var simulatedPosition = localPosComp.LocalPosition;
-                int simulatedEnergy = statsComp.CurrentEnergyPoints;
-                float remainingBudget = timeBudget;
-                var tempPathComp = new AIPathComponent(); // Use a temporary path component for simulation
-
-                while (remainingBudget > 0)
+                if (fullPath != null && fullPath.Any())
                 {
-                    DecideNextGoal(entityId, aiComp, tempPathComp);
-                    Vector2? nextStep = null;
-                    if (tempPathComp.HasPath())
+                    var timeLimitedPath = new List<(Vector2 Position, bool IsRunning)>();
+                    int simulatedEnergy = statsComp.CurrentEnergyPoints;
+                    float timeAccumulator = 0f;
+                    Vector2 lastPos = localPosComp.LocalPosition;
+
+                    foreach (var step in fullPath)
                     {
-                        nextStep = tempPathComp.Path[0];
+                        bool isRunning = simulatedEnergy > 0;
+                        Vector2 moveDir = step - lastPos;
+                        float stepCost = _gameState.GetSecondsPassedDuringMovement(statsComp, isRunning, default, moveDir, true);
+
+                        if (timeAccumulator + stepCost > timeBudget)
+                        {
+                            break; // Stop if this step would exceed the budget
+                        }
+
+                        timeAccumulator += stepCost;
+                        timeLimitedPath.Add((step, isRunning));
+                        if (isRunning)
+                        {
+                            simulatedEnergy--;
+                        }
+                        lastPos = step;
                     }
-                    else
+
+                    if (timeLimitedPath.Any())
                     {
-                        nextStep = aiComp.NextStep;
+                        allPreviewPaths[entityId] = timeLimitedPath;
                     }
-
-                    if (!nextStep.HasValue) break;
-
-                    bool isRunning = _componentStore.GetComponent<AIIntentComponent>(entityId)?.CurrentIntent == AIIntent.Pursuing && simulatedEnergy > 0;
-
-                    float moveCost = _gameState.GetSecondsPassedDuringMovement(statsComp, isRunning, default, nextStep.Value - simulatedPosition, true);
-
-                    if (remainingBudget >= moveCost)
-                    {
-                        remainingBudget -= moveCost;
-                        if (isRunning) simulatedEnergy--;
-                        entityPreviewPath.Add(nextStep.Value);
-                        simulatedPosition = nextStep.Value;
-                    }
-                    else
-                    {
-                        break;
-                    }
-                }
-
-                if (entityPreviewPath.Any())
-                {
-                    allPreviewPaths[entityId] = entityPreviewPath;
                 }
             }
 

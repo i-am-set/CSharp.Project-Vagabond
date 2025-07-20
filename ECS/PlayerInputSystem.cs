@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -327,10 +327,14 @@ namespace ProjectVagabond
                 return;
             }
 
-            var simResult = gameState.SimulateActionQueueEnergy();
-            if (simResult.secondsPassed > 0)
+            // 1. Calculate the total duration of the player's queued actions.
+            var playerSimResult = gameState.SimulateActionQueueEnergy();
+            float playerActionTimeBudget = playerSimResult.secondsPassed;
+
+            if (playerActionTimeBudget > 0)
             {
-                gameState.AIPreviewPaths = _aiSystem.SimulateMovement(simResult.secondsPassed);
+                // 2. Tell the AI system to simulate its movement for that same duration.
+                gameState.AIPreviewPaths = _aiSystem.SimulateMovementForDuration(playerActionTimeBudget);
             }
         }
     }
