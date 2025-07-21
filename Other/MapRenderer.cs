@@ -501,6 +501,7 @@ namespace ProjectVagabond
                 var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
                 var renderComp = _componentStore.GetComponent<RenderableComponent>(entityId);
                 var interpComp = _componentStore.GetComponent<InterpolationComponent>(entityId);
+                var corpseComp = _componentStore.GetComponent<CorpseComponent>(entityId);
 
                 if (localPosComp != null && renderComp != null)
                 {
@@ -509,7 +510,8 @@ namespace ProjectVagabond
                     Vector2? screenPos = MapCoordsToScreen(positionToDraw);
                     if (screenPos.HasValue)
                     {
-                        Texture2D textureToDraw = renderComp.Texture ?? pixel;
+                        // If it's a corpse, draw a stretched pixel. Otherwise, draw its texture.
+                        Texture2D textureToDraw = (corpseComp != null) ? pixel : (renderComp.Texture ?? pixel);
                         if (entityId == _gameState.PlayerEntityId)
                         {
                             textureToDraw = pixel;
@@ -566,6 +568,12 @@ namespace ProjectVagabond
                         case RestType.FullRest: simulatedEnergy += playerStats.FullRestEnergyRestored; break;
                     }
                     simulatedEnergy = System.Math.Min(simulatedEnergy, playerStats.MaxEnergyPoints);
+                }
+                else
+                {
+                    // If the action is not a Move or Rest action (e.g., EndTurnAction),
+                    // we don't have a visual for it, so we skip it.
+                    continue;
                 }
 
                 Vector2? screenPos = MapCoordsToScreen(actionPos);

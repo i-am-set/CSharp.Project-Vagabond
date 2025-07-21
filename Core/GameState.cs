@@ -227,9 +227,25 @@ namespace ProjectVagabond
 
         public void EndCombat()
         {
-            // Logic to clean up and end combat will be implemented later.
-            UIState = CombatUIState.Default;
+            if (!IsInCombat) return;
+
+            IsInCombat = false;
+            UIState = CombatUIState.Default; // Return control to the player
+            Combatants.Clear();
+            InitiativeOrder.Clear();
+            SelectedTargetId = null;
+
+            // FIX: Clear any leftover actions from combat and cancel any time interpolation.
+            _componentStore.GetComponent<ActionQueueComponent>(PlayerEntityId)?.ActionQueue.Clear();
+            _worldClockManager.CancelInterpolation();
+
             EventBus.Publish(new GameEvents.CombatStateChanged { IsInCombat = false });
+        }
+
+        public void RemoveEntityFromCombat(int entityId)
+        {
+            Combatants.Remove(entityId);
+            InitiativeOrder.Remove(entityId);
         }
 
         public void SetCurrentTurnEntity(int entityId)
@@ -392,9 +408,10 @@ namespace ProjectVagabond
         {
             if (action.IsRunning)
             {
-                if (isLocalMove)
+                // Running always costs 1 EP per tile on the local map, regardless of combat state.
+                if (isLocalMove || IsInCombat)
                 {
-                    return 1; // Running on the local map costs 1 EP per tile.
+                    return 1;
                 }
                 else // World map
                 {
@@ -508,6 +525,12 @@ namespace ProjectVagabond
                 return null;
             }
 
+            // FIX: Check for energy before attempting to find a running path.
+            if (isRunning && !stats.CanExertEnergy(1))
+            {
+                return new List<Vector2>(); // Cannot run if there's no energy.
+            }
+
             float timeBudget = Global.COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
             if (timeBudget <= 0)
             {
@@ -522,16 +545,23 @@ namespace ProjectVagabond
 
             var affordablePath = new List<Vector2>();
             var lastPos = start;
+            int simulatedEnergy = stats.CurrentEnergyPoints;
 
             foreach (var step in fullPath)
             {
                 var moveDirection = step - lastPos;
-                float stepCost = GetSecondsPassedDuringMovement(stats, isRunning, default, moveDirection, true);
+                // If we plan to run, check if we still have energy for this step.
+                bool canRunThisStep = isRunning && simulatedEnergy > 0;
+                float stepCost = GetSecondsPassedDuringMovement(stats, canRunThisStep, default, moveDirection, true);
 
                 if (totalTimeCost + stepCost <= timeBudget)
                 {
                     totalTimeCost += stepCost;
                     affordablePath.Add(step);
+                    if (canRunThisStep)
+                    {
+                        simulatedEnergy--;
+                    }
                     lastPos = step;
                 }
                 else

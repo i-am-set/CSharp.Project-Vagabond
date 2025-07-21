@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using System.Linq;
 
 namespace ProjectVagabond
@@ -32,10 +32,11 @@ namespace ProjectVagabond
                 _gameState.CancelExecutingActions(true); // true for "interrupted"
             }
 
-            // We still wait for any final visual interpolation to finish to avoid a visual jump.
+            // Forcefully stop any visual movement by removing the interpolation component.
+            // This ensures combat starts instantly.
             if (_componentStore.HasComponent<InterpolationComponent>(_gameState.PlayerEntityId))
             {
-                return;
+                _componentStore.RemoveComponent<InterpolationComponent>(_gameState.PlayerEntityId);
             }
 
             // It's now safe to start combat.

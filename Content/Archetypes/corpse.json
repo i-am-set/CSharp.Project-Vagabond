@@ -1,0 +1,21 @@
+{
+  "Id": "corpse",
+  "Name": "Corpse",
+  "Components": [
+    {
+      "Type": "ProjectVagabond.PositionComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.LocalPositionComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.RenderableComponent, ProjectVagabond",
+      "Properties": {
+        "Color": "Palette_Teal"
+      }
+    },
+    {
+      "Type": "ProjectVagabond.CorpseComponent, ProjectVagabond"
+    }
+  ]
+}

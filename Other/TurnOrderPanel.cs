@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -149,6 +149,12 @@ namespace ProjectVagabond
             {
                 var button = _buttons[i];
                 int listIndex = _scrollStartIndex + i;
+
+                if (listIndex >= _gameState.InitiativeOrder.Count)
+                {
+                    break; // Stop drawing if the initiative order has shrunk mid-frame.
+                }
+
                 int entityId = _gameState.InitiativeOrder[listIndex];
 
                 string indicator = (entityId == _gameState.CurrentTurnEntityId) ? ">" : (listIndex + 1).ToString();

@@ -43,6 +43,22 @@ namespace ProjectVagabond.Scenes
             _statsRenderer = ServiceLocator.Get<StatsRenderer>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _terminalRenderer = ServiceLocator.Get<TerminalRenderer>();
+
+            EventBus.Subscribe<GameEvents.EntityTookDamage>(OnEntityTookDamage);
+        }
+
+        private void OnEntityTookDamage(GameEvents.EntityTookDamage e)
+        {
+            // If the player is the one taking damage, trigger a more intense shake.
+            if (e.EntityId == _coreState.PlayerEntityId)
+            {
+                _hapticsManager.TriggerShake(8.0f, 0.3f);
+            }
+            else
+            {
+                // If an enemy takes damage, trigger the requested shake for attack feedback.
+                _hapticsManager.TriggerShake(5, 0.3f);
+            }
         }
 
         public override void Enter()
@@ -103,6 +119,7 @@ namespace ProjectVagabond.Scenes
             base.Exit();
             _clockRenderer.OnClockClicked -= ShowWaitDialog;
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
+            EventBus.Unsubscribe<GameEvents.EntityTookDamage>(OnEntityTookDamage);
         }
 
         private void OpenSettings()
@@ -183,10 +200,9 @@ namespace ProjectVagabond.Scenes
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
             var currentMouseState = Mouse.GetState();
 
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: shakeMatrix);
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
             if (_coreState.IsInCombat)
             {

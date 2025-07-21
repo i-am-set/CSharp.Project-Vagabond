@@ -1,4 +1,5 @@
 ﻿﻿﻿using Microsoft.Xna.Framework;
+using System;
 using System.Linq;
 
 namespace ProjectVagabond
@@ -139,6 +140,9 @@ namespace ProjectVagabond
                     }
                 }
             }
+
+            // After all moves for this tick have been processed, check if combat should start.
+            CheckForCombatInitiation();
         }
 
         private void ExecuteNextMove(int entityId, Vector2 nextStep, bool isRunning)
@@ -162,6 +166,38 @@ namespace ProjectVagabond
                 // Pass the IN-GAME time cost to the interpolation component.
                 var interp = new InterpolationComponent(localPosComp.LocalPosition, nextStep, timeCostOfStep, isRunning);
                 _componentStore.AddComponent(entityId, interp);
+            }
+        }
+
+        /// <summary>
+        /// Checks if the player has moved into the attack range of any hostile AI.
+        /// If so, it requests that combat be initiated.
+        /// </summary>
+        private void CheckForCombatInitiation()
+        {
+            _aiSystem ??= ServiceLocator.Get<AISystem>();
+
+            foreach (var entityId in _gameState.ActiveEntities)
+            {
+                if (entityId == _gameState.PlayerEntityId) continue;
+
+                var personality = _componentStore.GetComponent<AIPersonalityComponent>(entityId);
+                var combatant = _componentStore.GetComponent<CombatantComponent>(entityId);
+
+                bool isHostile = personality != null && combatant != null &&
+                                 (personality.Personality == AIPersonalityType.Aggressive ||
+                                  (personality.Personality == AIPersonalityType.Neutral && personality.IsProvoked));
+
+                if (isHostile)
+                {
+                    float distance = _aiSystem.GetTrueLocalDistance(entityId, _gameState.PlayerEntityId);
+                    if (distance <= Math.Ceiling(combatant.AttackRange))
+                    {
+                        _gameState.RequestCombatInitiation(entityId);
+                        // We can break here because once one AI initiates combat, the process will handle everything else.
+                        return;
+                    }
+                }
             }
         }
     }

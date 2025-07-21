@@ -299,7 +299,9 @@ namespace ProjectVagabond
 
             var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
 
-            _spriteBatch.Begin(samplerState: finalSamplerState);
+            Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
+
+            _spriteBatch.Begin(samplerState: finalSamplerState, transformMatrix: shakeMatrix);
             _spriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
             _spriteBatch.End();
 

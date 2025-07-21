@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using System.Linq;
 
 namespace ProjectVagabond
@@ -9,6 +9,8 @@ namespace ProjectVagabond
     public class CombatResolutionSystem : ISystem
     {
         private readonly ComponentStore _componentStore;
+        private GameState _gameState; // Lazy loaded
+        private EntityManager _entityManager; // Lazy loaded
 
         public CombatResolutionSystem()
         {
@@ -24,6 +26,9 @@ namespace ProjectVagabond
         /// <param name="action">The attack action to resolve.</param>
         public void ResolveAction(AttackAction action)
         {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            _entityManager ??= ServiceLocator.Get<EntityManager>();
+
             var attackerId = action.ActorId;
             var targetId = action.TargetId;
 
@@ -59,6 +64,9 @@ namespace ProjectVagabond
 
             targetHealthComp.TakeDamage(damage);
 
+            // Publish the event so other systems (like Haptics) can react.
+            EventBus.Publish(new GameEvents.EntityTookDamage { EntityId = targetId, DamageAmount = damage });
+
             var playerTag = _componentStore.GetComponent<PlayerTagComponent>(attackerId);
             if (playerTag != null)
             {
@@ -91,8 +99,39 @@ namespace ProjectVagabond
 
             if (targetHealthComp.CurrentHealth <= 0)
             {
+                // Check for player death first
+                if (targetId == _gameState.PlayerEntityId)
+                {
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[red]You have been defeated!" });
+                    _gameState.EndCombat();
+                    // TODO: Implement proper game over screen/logic
+                    return; // Stop processing, combat is over.
+                }
+
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[red]{targetName} has been defeated![/]" });
-                // TODO: Add logic to remove the entity from combat, drop loot, etc.
+
+                // Spawn a corpse
+                var worldPos = _componentStore.GetComponent<PositionComponent>(targetId)?.WorldPosition ?? Vector2.Zero;
+                var localPos = _componentStore.GetComponent<LocalPositionComponent>(targetId)?.LocalPosition ?? Vector2.Zero;
+                int corpseId = Spawner.Spawn("corpse", worldPos, localPos);
+                var corpseComp = _componentStore.GetComponent<CorpseComponent>(corpseId);
+                if (corpseComp != null)
+                {
+                    corpseComp.OriginalEntityId = targetId;
+                }
+
+                // Remove the defeated entity from the game
+                _gameState.RemoveEntityFromCombat(targetId);
+                _componentStore.EntityDestroyed(targetId);
+                _entityManager.DestroyEntity(targetId);
+
+                // Check for victory condition
+                bool enemiesRemain = _gameState.Combatants.Any(id => id != _gameState.PlayerEntityId);
+                if (!enemiesRemain)
+                {
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[palette_yellow]Victory! All enemies have been defeated." });
+                    _gameState.EndCombat();
+                }
             }
         }
     }

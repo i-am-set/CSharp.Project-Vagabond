@@ -49,9 +49,9 @@ namespace ProjectVagabond
 
         // World constants
         public const float GAME_SECONDS_PER_REAL_SECOND = 8f;
-        public const float FEET_PER_WORLD_TILE = 377f; // The physical distance of a single world tile
-        public const float FEET_PER_LOCAL_TILE = FEET_PER_WORLD_TILE / LOCAL_GRID_SIZE; // Approx 5.89 feet
-        public const float FEET_PER_SECOND_PER_SPEED_UNIT = 4.0f; // A character with speed 1.0 moves at 3 ft/s.
+        public const float FEET_PER_WORLD_TILE = 100f; // The physical distance of a single world tile
+        public const float FEET_PER_LOCAL_TILE = FEET_PER_WORLD_TILE / LOCAL_GRID_SIZE;
+        public const float FEET_PER_SECOND_PER_SPEED_UNIT = 4.0f; // A character with speed 1.0 moves at X ft/s.
 
         // Virtual resolution for fixed aspect ratio rendering
         public const int VIRTUAL_WIDTH = 960;

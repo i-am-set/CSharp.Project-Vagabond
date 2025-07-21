@@ -17,6 +17,7 @@ namespace ProjectVagabond
 
         private float _actionDelayTimer = 0f;
         private const float ACTION_DELAY_SECONDS = 0.15f;
+        private const float VISUAL_SPEED_MULTIPLIER = 0.8f; // Makes animations slightly faster than the raw time cost.
 
         public CombatProcessingSystem() { }
 
@@ -95,12 +96,19 @@ namespace ProjectVagabond
 
             if (localPosComp != null && statsComp != null)
             {
+                if (action.IsRunning)
+                {
+                    statsComp.ExertEnergy(1);
+                }
+
                 // Calculate the actual in-game time this single step will take.
                 Vector2 moveDir = action.Destination - localPosComp.LocalPosition;
                 float timeCostOfStep = _gameState.GetSecondsPassedDuringMovement(statsComp, action.IsRunning, default, moveDir, true);
 
-                // Pass the IN-GAME time cost to the interpolation component.
-                var interp = new InterpolationComponent(localPosComp.LocalPosition, action.Destination, timeCostOfStep, action.IsRunning);
+                // The visual duration is proportional to the in-game time cost, scaled by the world clock.
+                float visualDuration = (timeCostOfStep / _worldClockManager.TimeScale) * VISUAL_SPEED_MULTIPLIER;
+
+                var interp = new InterpolationComponent(localPosComp.LocalPosition, action.Destination, visualDuration, action.IsRunning);
                 _componentStore.AddComponent(action.ActorId, interp);
             }
         }

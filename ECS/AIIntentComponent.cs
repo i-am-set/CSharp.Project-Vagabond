@@ -10,6 +10,10 @@
         /// </summary>
         None,
         /// <summary>
+        /// The AI has spotted the player and is about to give chase.
+        /// </summary>
+        PreparingToPursue,
+        /// <summary>
         /// The AI is actively moving towards the player with hostile intent.
         /// </summary>
         Pursuing,
@@ -26,12 +30,14 @@
     public class AIIntentComponent : IComponent, ICloneableComponent
     {
         public AIIntent CurrentIntent { get; set; } = AIIntent.None;
+        public float IntentTimer { get; set; } = 0f;
 
         public IComponent Clone()
         {
             // This is a runtime state component, so cloning just resets it.
             var clone = (AIIntentComponent)this.MemberwiseClone();
             clone.CurrentIntent = AIIntent.None;
+            clone.IntentTimer = 0f;
             return clone;
         }
     }

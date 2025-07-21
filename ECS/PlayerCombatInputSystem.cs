@@ -1,5 +1,6 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -19,6 +20,7 @@ namespace ProjectVagabond
         private MouseState _previousMouseState;
         private string _selectedAttackName;
         private float _previewPathCost = 0f;
+        private readonly Random _random = new Random();
 
         public PlayerCombatInputSystem(ActionMenuPanel actionMenuPanel, TurnOrderPanel turnOrderPanel, EnemyDisplayPanel enemyDisplayPanel, MapRenderer mapRenderer)
         {
@@ -91,8 +93,8 @@ namespace ProjectVagabond
             if (playerPosComp == null) return;
 
             var targetTile = _mapRenderer.ScreenToLocalGrid(virtualMousePos);
-            // Invert shift logic for combat: default is run, shift is walk
-            bool isRunning = !(currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift));
+            // FIX: Default to walking, Shift enables running.
+            bool isRunning = currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift);
 
             if (targetTile.X >= 0)
             {
@@ -161,6 +163,9 @@ namespace ProjectVagabond
                     actionQueue.ActionQueue.Enqueue(new EndTurnAction(_gameState.PlayerEntityId));
                     _gameState.UIState = CombatUIState.Busy;
                     break;
+                case "Flee":
+                    AttemptToFlee();
+                    break;
                 case "Back":
                     ResetToDefaultState();
                     break;
@@ -172,6 +177,49 @@ namespace ProjectVagabond
                         EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"Player selects '{command}'. Now select a target." });
                     }
                     break;
+            }
+        }
+
+        private void AttemptToFlee()
+        {
+            var playerStats = _componentStore.GetComponent<StatsComponent>(_gameState.PlayerEntityId);
+            if (playerStats == null) return;
+
+            var enemies = _gameState.Combatants.Where(id => id != _gameState.PlayerEntityId).ToList();
+            if (!enemies.Any())
+            {
+                _gameState.EndCombat();
+                return;
+            }
+
+            int playerAgility = playerStats.Agility;
+            int maxEnemyAgility = enemies.Max(id => _componentStore.GetComponent<StatsComponent>(id)?.Agility ?? 0);
+
+            bool success = false;
+            if (playerAgility > maxEnemyAgility)
+            {
+                success = true;
+            }
+            else
+            {
+                float failChance = (maxEnemyAgility - playerAgility + 1) * 0.1f;
+                if (_random.NextDouble() >= failChance)
+                {
+                    success = true;
+                }
+            }
+
+            if (success)
+            {
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[palette_yellow]Player successfully flees from combat!" });
+                _gameState.EndCombat();
+            }
+            else
+            {
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[warning]Player fails to flee!" });
+                var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
+                actionQueue?.ActionQueue.Enqueue(new EndTurnAction(_gameState.PlayerEntityId));
+                _gameState.UIState = CombatUIState.Busy;
             }
         }
 

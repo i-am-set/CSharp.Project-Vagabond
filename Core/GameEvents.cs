@@ -38,5 +38,14 @@
             // This event can be expanded with more data if needed,
             // but for now, its existence is enough to signal a refresh.
         }
+
+        /// <summary>
+        /// Published when an entity's health is reduced.
+        /// </summary>
+        public struct EntityTookDamage
+        {
+            public int EntityId { get; set; }
+            public int DamageAmount { get; set; }
+        }
     }
 }
