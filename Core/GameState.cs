@@ -694,5 +694,18 @@ namespace ProjectVagabond
         {
             AIPreviewPaths.Clear();
         }
+
+        /// <summary>
+        /// Returns a set of all tile positions the player is queued to move to.
+        /// </summary>
+        public HashSet<Vector2> GetPlayerQueuedMovePositions()
+        {
+            var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(PlayerEntityId);
+            if (actionQueue == null)
+            {
+                return new HashSet<Vector2>();
+            }
+            return actionQueue.ActionQueue.OfType<MoveAction>().Select(ma => ma.Destination).ToHashSet();
+        }
     }
 }

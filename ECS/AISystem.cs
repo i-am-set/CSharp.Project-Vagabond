@@ -71,10 +71,10 @@ namespace ProjectVagabond
             }
 
             // 2. MOVEMENT LOGIC: If not in range, try to move one step closer.
-            // Find the best tile adjacent to the player to move towards.
+            var forbiddenTiles = _gameState.GetPlayerQueuedMovePositions();
             var validAdjacentTiles = _neighborOffsets
                 .Select(offset => playerPosComp.LocalPosition + offset)
-                .Where(tile => _gameState.IsPositionPassable(tile, MapView.Local, entityId, tile, out _))
+                .Where(tile => !forbiddenTiles.Contains(tile) && _gameState.IsPositionPassable(tile, MapView.Local, entityId, tile, out _))
                 .ToList();
 
             if (validAdjacentTiles.Any())
@@ -84,14 +84,12 @@ namespace ProjectVagabond
                 bool isRunning = stats.CanExertEnergy(1); // Prefer to run if possible.
                 var path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, isRunning, out _);
 
-                // If no running path is affordable/possible, try a walking path.
                 if (path == null || !path.Any())
                 {
                     isRunning = false;
                     path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, false, out _);
                 }
 
-                // If a path of at least one step is found, take the first step and end the turn.
                 if (path != null && path.Any())
                 {
                     string moveMode = isRunning ? "runs" : "walks";
@@ -228,16 +226,24 @@ namespace ProjectVagabond
                 return;
             }
 
-            // Pathfind as if running to get the most direct route. The actual speed is determined later.
             var path = Pathfinder.FindPath(entityId, localPosComp.LocalPosition, playerPos.Value, _gameState, true, PathfindingMode.Moves, MapView.Local);
 
             if (path != null && path.Any())
             {
-                pathComp.Path = path;
+                var forbiddenTiles = _gameState.GetPlayerQueuedMovePositions();
+                int forbiddenIndex = path.FindIndex(step => forbiddenTiles.Contains(step));
+                if (forbiddenIndex != -1)
+                {
+                    path = path.Take(forbiddenIndex).ToList();
+                }
+
+                if (path.Any())
+                {
+                    pathComp.Path = path;
+                }
             }
             else
             {
-                // If no path is found, fall back to wandering so the AI doesn't freeze.
                 Wander(entityId, aiComp);
             }
         }
@@ -257,11 +263,14 @@ namespace ProjectVagabond
 
             Vector2 bestFleeDirection = Vector2.Zero;
             float maxDistance = -1;
+            var forbiddenTiles = _gameState.GetPlayerQueuedMovePositions();
 
             var shuffledOffsets = _neighborOffsets.OrderBy(v => _random.Next()).ToList();
             foreach (var offset in shuffledOffsets)
             {
                 var targetPos = localPosComp.LocalPosition + offset;
+                if (forbiddenTiles.Contains(targetPos)) continue;
+
                 if (_gameState.IsPositionPassable(targetPos, MapView.Local))
                 {
                     float newDistance = Vector2.DistanceSquared(targetPos, playerPos.Value);
@@ -285,10 +294,13 @@ namespace ProjectVagabond
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
             if (localPosComp == null) return;
 
+            var forbiddenTiles = _gameState.GetPlayerQueuedMovePositions();
             var shuffledOffsets = _neighborOffsets.OrderBy(v => _random.Next()).ToList();
             foreach (var offset in shuffledOffsets)
             {
                 var targetPos = localPosComp.LocalPosition + offset;
+                if (forbiddenTiles.Contains(targetPos)) continue;
+
                 if (_gameState.IsPositionPassable(targetPos, MapView.Local))
                 {
                     aiComp.NextStep = targetPos;
