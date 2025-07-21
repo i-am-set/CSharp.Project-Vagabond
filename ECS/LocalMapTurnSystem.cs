@@ -36,7 +36,6 @@ namespace ProjectVagabond
                 return;
             }
 
-            // If the player's queue is empty, we are done.
             var playerActionQueue = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
             if (playerActionQueue == null || !playerActionQueue.ActionQueue.Any())
             {
@@ -46,6 +45,41 @@ namespace ProjectVagabond
             }
 
             _aiSystem ??= ServiceLocator.Get<AISystem>();
+
+            // --- PRE-EMPTIVE COMBAT CHECK ---
+            // Before any moves are made, check if the player's NEXT step will trigger combat.
+            if (playerActionQueue.ActionQueue.Peek() is MoveAction playerNextMove)
+            {
+                Vector2 playerNextStep = playerNextMove.Destination;
+                foreach (var entityId in _gameState.ActiveEntities)
+                {
+                    if (entityId == _gameState.PlayerEntityId) continue;
+
+                    var personality = _componentStore.GetComponent<AIPersonalityComponent>(entityId);
+                    var combatant = _componentStore.GetComponent<CombatantComponent>(entityId);
+                    bool isHostile = personality != null && combatant != null &&
+                                     (personality.Personality == AIPersonalityType.Aggressive ||
+                                      (personality.Personality == AIPersonalityType.Neutral && personality.IsProvoked));
+
+                    if (isHostile)
+                    {
+                        var aiPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+                        if (aiPosComp != null)
+                        {
+                            float distanceToPlayerNextStep = Vector2.Distance(aiPosComp.LocalPosition, playerNextStep);
+                            if (distanceToPlayerNextStep <= Math.Ceiling(combatant.AttackRange))
+                            {
+                                // The player is about to step into attack range. Ambush them!
+                                _aiSystem.InitiateCombat(entityId, _componentStore.GetComponent<AIComponent>(entityId));
+                                return; // Stop this tick immediately. CombatInitiationSystem will handle the interruption.
+                            }
+                        }
+                    }
+                }
+            }
+            // --- END OF PRE-EMPTIVE CHECK ---
+
+
             // CRITICAL: Tell all AIs to decide what they want to do BEFORE this tick happens.
             _aiSystem.UpdateDecisions();
 
@@ -58,10 +92,10 @@ namespace ProjectVagabond
                 return;
             }
 
-            if (playerActionQueue.ActionQueue.Peek() is MoveAction nextPlayerMove)
+            if (playerActionQueue.ActionQueue.Peek() is MoveAction nextPlayerMoveAction)
             {
-                Vector2 moveDir = nextPlayerMove.Destination - playerPos.LocalPosition;
-                float timeTick = _gameState.GetSecondsPassedDuringMovement(playerStats, nextPlayerMove.IsRunning, default, moveDir, true);
+                Vector2 moveDir = nextPlayerMoveAction.Destination - playerPos.LocalPosition;
+                float timeTick = _gameState.GetSecondsPassedDuringMovement(playerStats, nextPlayerMoveAction.IsRunning, default, moveDir, true);
 
                 // PassTime now calculates the real-world duration internally.
                 _worldClockManager.PassTime(timeTick, 0);
@@ -191,6 +225,7 @@ namespace ProjectVagabond
                 if (isHostile)
                 {
                     float distance = _aiSystem.GetTrueLocalDistance(entityId, _gameState.PlayerEntityId);
+                    // Use the ceiling of the attack range for the check.
                     if (distance <= Math.Ceiling(combatant.AttackRange))
                     {
                         _gameState.RequestCombatInitiation(entityId);

@@ -40,63 +40,70 @@ namespace ProjectVagabond
 
         public void ProcessCombatTurn(int entityId)
         {
-            // Combat logic remains unchanged
             _gameState ??= ServiceLocator.Get<GameState>();
 
-            var aiPos = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+            var aiPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
             var combatant = _componentStore.GetComponent<CombatantComponent>(entityId);
             var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(entityId);
             var stats = _componentStore.GetComponent<StatsComponent>(entityId);
-            var playerPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
+            var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
             var aiName = EntityNamer.GetName(entityId);
 
-            if (aiPos == null || combatant == null || actionQueue == null || stats == null || playerPos == null)
+            if (aiPosComp == null || combatant == null || actionQueue == null || stats == null || playerPosComp == null)
             {
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{aiName} cannot act (missing components)." });
                 actionQueue?.ActionQueue.Enqueue(new EndTurnAction(entityId));
                 return;
             }
 
-            var simulatedPosition = aiPos.LocalPosition;
-            List<Vector2> pathToMove = new List<Vector2>();
-            bool isRunning = true;
+            float distanceToPlayer = Vector2.Distance(aiPosComp.LocalPosition, playerPosComp.LocalPosition);
 
-            var path = _gameState.GetAffordablePath(entityId, simulatedPosition, playerPos.LocalPosition, true, out _);
-
-            if (path == null || !path.Any())
-            {
-                isRunning = false;
-                path = _gameState.GetAffordablePath(entityId, simulatedPosition, playerPos.LocalPosition, false, out _);
-            }
-
-            if (path != null && path.Any())
-            {
-                if (path.Count > 1)
-                {
-                    pathToMove = path.Take(path.Count - 1).ToList();
-                }
-            }
-
-            if (pathToMove.Any())
-            {
-                string moveMode = isRunning ? "runs" : "walks";
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} {moveMode} towards the player." });
-                foreach (var step in pathToMove)
-                {
-                    actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, step, isRunning));
-                }
-            }
-
-            var finalPositionAfterMove = pathToMove.Any() ? pathToMove.Last() : simulatedPosition;
-            if (Vector2.Distance(finalPositionAfterMove, playerPos.LocalPosition) <= combatant.AttackRange)
+            // 1. ATTACK LOGIC: If in range, attack and end turn.
+            if (distanceToPlayer <= combatant.AttackRange)
             {
                 var attack = _componentStore.GetComponent<AvailableAttacksComponent>(entityId)?.Attacks.FirstOrDefault();
                 if (attack != null)
                 {
                     actionQueue.ActionQueue.Enqueue(new AttackAction(entityId, _gameState.PlayerEntityId, attack.Name));
                 }
+                actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
+                return;
             }
 
+            // 2. MOVEMENT LOGIC: If not in range, try to move one step closer.
+            // Find the best tile adjacent to the player to move towards.
+            var validAdjacentTiles = _neighborOffsets
+                .Select(offset => playerPosComp.LocalPosition + offset)
+                .Where(tile => _gameState.IsPositionPassable(tile, MapView.Local, entityId, tile, out _))
+                .ToList();
+
+            if (validAdjacentTiles.Any())
+            {
+                var bestTargetTile = validAdjacentTiles.OrderBy(tile => Vector2.DistanceSquared(aiPosComp.LocalPosition, tile)).First();
+
+                bool isRunning = stats.CanExertEnergy(1); // Prefer to run if possible.
+                var path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, isRunning, out _);
+
+                // If no running path is affordable/possible, try a walking path.
+                if (path == null || !path.Any())
+                {
+                    isRunning = false;
+                    path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, false, out _);
+                }
+
+                // If a path of at least one step is found, take the first step and end the turn.
+                if (path != null && path.Any())
+                {
+                    string moveMode = isRunning ? "runs" : "walks";
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} {moveMode} towards the player." });
+                    actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, path[0], isRunning));
+                    actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
+                    return;
+                }
+            }
+
+            // 3. IDLE LOGIC: If unable to attack or move, just end the turn.
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} waits." });
             actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
         }
 
@@ -195,7 +202,7 @@ namespace ProjectVagabond
             }
         }
 
-        private void InitiateCombat(int aiEntityId, AIComponent aiComp)
+        public void InitiateCombat(int aiEntityId, AIComponent aiComp)
         {
             SetAIIntent(aiEntityId, AIIntent.None);
             var pathComp = _componentStore.GetComponent<AIPathComponent>(aiEntityId);
