@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System;
 using System.Linq;
 
@@ -67,7 +67,8 @@ namespace ProjectVagabond
                         if (aiPosComp != null)
                         {
                             float distanceToPlayerNextStep = Vector2.Distance(aiPosComp.LocalPosition, playerNextStep);
-                            if (distanceToPlayerNextStep <= Math.Ceiling(combatant.AttackRange))
+                            float initiationRange = (float)Math.Ceiling(combatant.AttackRange) + 1;
+                            if (distanceToPlayerNextStep <= initiationRange)
                             {
                                 // The player is about to step into attack range. Ambush them!
                                 _aiSystem.InitiateCombat(entityId, _componentStore.GetComponent<AIComponent>(entityId));
@@ -95,7 +96,7 @@ namespace ProjectVagabond
             if (playerActionQueue.ActionQueue.Peek() is MoveAction nextPlayerMoveAction)
             {
                 Vector2 moveDir = nextPlayerMoveAction.Destination - playerPos.LocalPosition;
-                float timeTick = _gameState.GetSecondsPassedDuringMovement(playerStats, nextPlayerMoveAction.IsRunning, default, moveDir, true);
+                float timeTick = _gameState.GetSecondsPassedDuringMovement(playerStats, nextPlayerMoveAction.Mode, default, moveDir, true);
 
                 // PassTime now calculates the real-world duration internally.
                 _worldClockManager.PassTime(timeTick, 0);
@@ -121,10 +122,10 @@ namespace ProjectVagabond
                     else // It's an AI
                     {
                         var intent = _componentStore.GetComponent<AIIntentComponent>(entityId);
-                        bool isRunning = (intent?.CurrentIntent == AIIntent.Pursuing || intent?.CurrentIntent == AIIntent.Fleeing);
-                        if (isRunning && !statsComp.CanExertEnergy(1))
+                        var moveMode = MovementMode.Walk;
+                        if (intent?.CurrentIntent == AIIntent.Pursuing || intent?.CurrentIntent == AIIntent.Fleeing)
                         {
-                            isRunning = false;
+                            moveMode = statsComp.CanExertEnergy(1) ? MovementMode.Run : MovementMode.Jog;
                         }
 
                         _aiSystem ??= ServiceLocator.Get<AISystem>();
@@ -136,7 +137,7 @@ namespace ProjectVagabond
                         if (aiPos != null && aiNextStepPeek.HasValue)
                         {
                             Vector2 aiMoveDir = aiNextStepPeek.Value - aiPos.LocalPosition;
-                            float aiStepTime = _gameState.GetSecondsPassedDuringMovement(statsComp, isRunning, default, aiMoveDir, true);
+                            float aiStepTime = _gameState.GetSecondsPassedDuringMovement(statsComp, moveMode, default, aiMoveDir, true);
 
                             if (aiStepTime > 0)
                             {
@@ -150,26 +151,29 @@ namespace ProjectVagabond
                     {
                         progressComp.Progress -= 1.0f;
                         Vector2? nextStep = null;
-                        bool isRunning = false;
+                        MovementMode moveMode = MovementMode.Walk;
 
                         if (entityId == _gameState.PlayerEntityId)
                         {
                             if (playerActionQueue.ActionQueue.TryDequeue(out IAction action) && action is MoveAction move)
                             {
                                 nextStep = move.Destination;
-                                isRunning = move.IsRunning;
+                                moveMode = move.Mode;
                             }
                         }
                         else
                         {
                             nextStep = _aiSystem.GetNextStepForExecution(entityId);
                             var intent = _componentStore.GetComponent<AIIntentComponent>(entityId);
-                            isRunning = (intent?.CurrentIntent == AIIntent.Pursuing || intent?.CurrentIntent == AIIntent.Fleeing);
+                            if (intent?.CurrentIntent == AIIntent.Pursuing || intent?.CurrentIntent == AIIntent.Fleeing)
+                            {
+                                moveMode = statsComp.CanExertEnergy(1) ? MovementMode.Run : MovementMode.Jog;
+                            }
                         }
 
                         if (nextStep.HasValue)
                         {
-                            ExecuteNextMove(entityId, nextStep.Value, isRunning);
+                            ExecuteNextMove(entityId, nextStep.Value, moveMode);
                         }
                     }
                 }
@@ -179,26 +183,31 @@ namespace ProjectVagabond
             CheckForCombatInitiation();
         }
 
-        private void ExecuteNextMove(int entityId, Vector2 nextStep, bool isRunning)
+        private void ExecuteNextMove(int entityId, Vector2 nextStep, MovementMode mode)
         {
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
             var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
             if (localPosComp != null && statsComp != null)
             {
-                if (isRunning && statsComp.CanExertEnergy(1))
+                int energyCost = _gameState.GetMovementEnergyCost(new MoveAction(entityId, nextStep, mode), true);
+                if (statsComp.CanExertEnergy(energyCost))
                 {
-                    statsComp.ExertEnergy(1);
+                    statsComp.ExertEnergy(energyCost);
                 }
                 else
                 {
-                    isRunning = false; // Ensure we don't run without energy
+                    // If the AI intended to run but can't, downgrade to jog.
+                    if (mode == MovementMode.Run)
+                    {
+                        mode = MovementMode.Jog;
+                    }
                 }
 
                 Vector2 moveDir = nextStep - localPosComp.LocalPosition;
-                float timeCostOfStep = _gameState.GetSecondsPassedDuringMovement(statsComp, isRunning, default, moveDir, true);
+                float timeCostOfStep = _gameState.GetSecondsPassedDuringMovement(statsComp, mode, default, moveDir, true);
 
                 // Pass the IN-GAME time cost to the interpolation component.
-                var interp = new InterpolationComponent(localPosComp.LocalPosition, nextStep, timeCostOfStep, isRunning);
+                var interp = new InterpolationComponent(localPosComp.LocalPosition, nextStep, timeCostOfStep, mode);
                 _componentStore.AddComponent(entityId, interp);
             }
         }
@@ -225,8 +234,8 @@ namespace ProjectVagabond
                 if (isHostile)
                 {
                     float distance = _aiSystem.GetTrueLocalDistance(entityId, _gameState.PlayerEntityId);
-                    // Use the ceiling of the attack range for the check.
-                    if (distance <= Math.Ceiling(combatant.AttackRange))
+                    float initiationRange = (float)Math.Ceiling(combatant.AttackRange) + 1;
+                    if (distance <= initiationRange)
                     {
                         _gameState.RequestCombatInitiation(entityId);
                         // We can break here because once one AI initiates combat, the process will handle everything else.

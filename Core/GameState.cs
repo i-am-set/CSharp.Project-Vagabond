@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -22,7 +22,6 @@ namespace ProjectVagabond
 
         // Lazyloaded System Dependencies
         private ActionExecutionSystem _actionExecutionSystem;
-        private AISystem _aiSystem;
         private CombatTurnSystem _combatTurnSystem;
 
         private bool _isExecutingActions = false;
@@ -51,7 +50,7 @@ namespace ProjectVagabond
         public List<int> ActiveEntities { get; private set; } = new List<int>();
         public int InitialActionCount { get; private set; }
         public bool IsActionQueueDirty { get; set; } = true;
-        public Dictionary<int, List<(Vector2 Position, bool IsRunning)>> AIPreviewPaths { get; set; } = new Dictionary<int, List<(Vector2, bool)>>();
+        public Dictionary<int, List<(Vector2 Position, MovementMode Mode)>> AIPreviewPaths { get; set; } = new Dictionary<int, List<(Vector2, MovementMode)>>();
 
         // Combat State
         public bool IsInCombat { get; private set; } = false;
@@ -61,7 +60,7 @@ namespace ProjectVagabond
         public CombatUIState UIState { get; set; } = CombatUIState.Default;
         public int? SelectedTargetId { get; set; } = null;
         public List<Vector2> CombatMovePreviewPath { get; set; } = new List<Vector2>();
-        public bool IsCombatMovePreviewRunning { get; set; } = false;
+        public MovementMode CombatMovePreviewMode { get; set; } = MovementMode.Walk;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -269,7 +268,7 @@ namespace ProjectVagabond
             float remainingTime = Global.COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
 
             // Calculate the cost of the cheapest possible move (a non-diagonal walk)
-            float cheapestMoveCost = GetSecondsPassedDuringMovement(playerStats, false, default, new Vector2(1, 0), true);
+            float cheapestMoveCost = GetSecondsPassedDuringMovement(playerStats, MovementMode.Walk, default, new Vector2(1, 0), true);
 
             return remainingTime >= cheapestMoveCost;
         }
@@ -406,26 +405,33 @@ namespace ProjectVagabond
 
         public int GetMovementEnergyCost(MoveAction action, bool isLocalMove = false)
         {
-            if (action.IsRunning)
+            if (action.Mode != MovementMode.Run)
             {
-                // Running always costs 1 EP per tile on the local map, regardless of combat state.
-                if (isLocalMove || IsInCombat)
-                {
-                    return 1;
-                }
-                else // World map
-                {
-                    var mapData = GetMapDataAt((int)action.Destination.X, (int)action.Destination.Y);
-                    return GetTerrainEnergyCost(mapData.TerrainHeight);
-                }
+                return 0; // Walking and Jogging are free.
             }
-            return 0; // Walking is free.
+
+            // Only running costs energy.
+            if (isLocalMove || IsInCombat)
+            {
+                return 1; // Running costs 1 EP per tile on the local map.
+            }
+            else // World map
+            {
+                var mapData = GetMapDataAt((int)action.Destination.X, (int)action.Destination.Y);
+                return GetTerrainEnergyCost(mapData.TerrainHeight); // Running cost is based on terrain.
+            }
         }
 
-        public float GetSecondsPassedDuringMovement(StatsComponent stats, bool isRunning, MapData mapData, Vector2 moveDirection, bool isLocalMove = false)
+        public float GetSecondsPassedDuringMovement(StatsComponent stats, MovementMode mode, MapData mapData, Vector2 moveDirection, bool isLocalMove = false)
         {
             float distanceInFeet = isLocalMove ? Global.FEET_PER_LOCAL_TILE : Global.FEET_PER_WORLD_TILE;
-            float baseSpeedStat = isRunning ? stats.RunSpeed : stats.WalkSpeed;
+            float baseSpeedStat = mode switch
+            {
+                MovementMode.Walk => stats.WalkSpeed,
+                MovementMode.Jog => stats.JogSpeed,
+                MovementMode.Run => stats.RunSpeed,
+                _ => stats.WalkSpeed
+            };
             float speedInFtPerSec = baseSpeedStat * Global.FEET_PER_SECOND_PER_SPEED_UNIT;
 
             if (speedInFtPerSec <= 0) return float.MaxValue;
@@ -469,25 +475,36 @@ namespace ProjectVagabond
             {
                 if (action is MoveAction moveAction)
                 {
+                    // Determine the actual mode of movement based on available energy
+                    MovementMode actualMode = moveAction.Mode;
+                    int energyCost = GetMovementEnergyCost(moveAction, isLocalMove);
+                    if (moveAction.Mode == MovementMode.Run && finalEnergy < energyCost)
+                    {
+                        actualMode = MovementMode.Jog;
+                    }
+
+                    // Check if the originally intended action is possible (for world map auto-resting)
+                    if (finalEnergy < energyCost && !isLocalMove)
+                    {
+                        return (finalEnergy, false, secondsPassed);
+                    }
+
+                    // Calculate time passed based on the actual movement mode
                     Vector2 moveDirection = moveAction.Destination - lastPosition;
                     MapData mapData = isLocalMove ? default : GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
-
-                    float moveDuration = GetSecondsPassedDuringMovement(PlayerStats, moveAction.IsRunning, mapData, moveDirection, isLocalMove);
+                    float moveDuration = GetSecondsPassedDuringMovement(PlayerStats, actualMode, mapData, moveDirection, isLocalMove);
 
                     if (!isLocalMove && isFirstMoveInQueue)
                     {
                         float scaleFactor = GetFirstMoveTimeScaleFactor(moveDirection);
                         moveDuration *= scaleFactor;
                     }
-
                     secondsPassed += moveDuration;
-                    int cost = GetMovementEnergyCost(moveAction, isLocalMove);
 
-                    if (finalEnergy < cost)
-                    {
-                        return (finalEnergy, false, secondsPassed);
-                    }
-                    finalEnergy -= cost;
+                    // Deduct energy based on the actual movement mode
+                    int actualEnergyCost = GetMovementEnergyCost(new MoveAction(moveAction.ActorId, moveAction.Destination, actualMode), isLocalMove);
+                    finalEnergy -= actualEnergyCost;
+
                     lastPosition = moveAction.Destination;
                 }
                 else if (action is RestAction restAction)
@@ -515,7 +532,7 @@ namespace ProjectVagabond
             return (finalEnergy, true, secondsPassed);
         }
 
-        public List<Vector2> GetAffordablePath(int entityId, Vector2 start, Vector2 end, bool isRunning, out float totalTimeCost)
+        public List<Vector2> GetAffordablePath(int entityId, Vector2 start, Vector2 end, MovementMode mode, out float totalTimeCost)
         {
             totalTimeCost = 0f;
             var stats = _componentStore.GetComponent<StatsComponent>(entityId);
@@ -525,10 +542,13 @@ namespace ProjectVagabond
                 return null;
             }
 
-            // FIX: Check for energy before attempting to find a running path.
-            if (isRunning && !stats.CanExertEnergy(1))
+            if (mode == MovementMode.Run)
             {
-                return new List<Vector2>(); // Cannot run if there's no energy.
+                int energyCostPerStep = GetMovementEnergyCost(new MoveAction(entityId, Vector2.Zero, mode), true);
+                if (!stats.CanExertEnergy(energyCostPerStep))
+                {
+                    return new List<Vector2>(); // Cannot run if there's no energy.
+                }
             }
 
             float timeBudget = Global.COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
@@ -537,7 +557,7 @@ namespace ProjectVagabond
                 return new List<Vector2>();
             }
 
-            var fullPath = Pathfinder.FindPath(entityId, start, end, this, isRunning, PathfindingMode.Time, MapView.Local);
+            var fullPath = Pathfinder.FindPath(entityId, start, end, this, mode, PathfindingMode.Time, MapView.Local);
             if (fullPath == null || !fullPath.Any())
             {
                 return null;
@@ -550,17 +570,23 @@ namespace ProjectVagabond
             foreach (var step in fullPath)
             {
                 var moveDirection = step - lastPos;
-                // If we plan to run, check if we still have energy for this step.
-                bool canRunThisStep = isRunning && simulatedEnergy > 0;
-                float stepCost = GetSecondsPassedDuringMovement(stats, canRunThisStep, default, moveDirection, true);
+                var currentMode = mode;
+                int energyCostPerStep = GetMovementEnergyCost(new MoveAction(entityId, Vector2.Zero, currentMode), true);
+
+                if (currentMode == MovementMode.Run && simulatedEnergy < energyCostPerStep)
+                {
+                    currentMode = MovementMode.Jog; // Downgrade to jog if out of energy for a run
+                }
+
+                float stepCost = GetSecondsPassedDuringMovement(stats, currentMode, default, moveDirection, true);
 
                 if (totalTimeCost + stepCost <= timeBudget)
                 {
                     totalTimeCost += stepCost;
                     affordablePath.Add(step);
-                    if (canRunThisStep)
+                    if (currentMode == MovementMode.Run)
                     {
-                        simulatedEnergy--;
+                        simulatedEnergy -= energyCostPerStep;
                     }
                     lastPos = step;
                 }

@@ -49,7 +49,7 @@ namespace ProjectVagabond
 
         // World constants
         public const float GAME_SECONDS_PER_REAL_SECOND = 8f;
-        public const float FEET_PER_WORLD_TILE = 100f; // The physical distance of a single world tile
+        public const float FEET_PER_WORLD_TILE = 200f; // The physical distance of a single world tile
         public const float FEET_PER_LOCAL_TILE = FEET_PER_WORLD_TILE / LOCAL_GRID_SIZE;
         public const float FEET_PER_SECOND_PER_SPEED_UNIT = 4.0f; // A character with speed 1.0 moves at X ft/s.
 
@@ -102,8 +102,8 @@ namespace ProjectVagabond
 
         // Time scale multipliers
         public float TimeScaleMultiplier1 { get; set; } = 1.0f;
-        public float TimeScaleMultiplier2 { get; set; } = 5.0f;
-        public float TimeScaleMultiplier3 { get; set; } = 10.0f;
+        public float TimeScaleMultiplier2 { get; set; } = 2.0f;
+        public float TimeScaleMultiplier3 { get; set; } = 5.0f;
 
         // Input variables
         public int previousScrollValue = Mouse.GetState().ScrollWheelValue;

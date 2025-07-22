@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,14 +21,14 @@ namespace ProjectVagabond
 
         public void Update(GameTime gameTime) { }
 
-        public void QueueNewPath(GameState gameState, List<Vector2> path, bool isRunning)
+        public void QueueNewPath(GameState gameState, List<Vector2> path, MovementMode mode)
         {
             CancelPendingActions(gameState);
-            AppendPath(gameState, path, isRunning);
+            AppendPath(gameState, path, mode);
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
 
-        public void AppendPath(GameState gameState, List<Vector2> path, bool isRunning)
+        public void AppendPath(GameState gameState, List<Vector2> path, MovementMode mode)
         {
             if (path == null) return;
 
@@ -38,11 +38,11 @@ namespace ProjectVagabond
 
             bool isLocalPath = gameState.CurrentMapView == MapView.Local;
 
-            if (!isRunning || isLocalPath)
+            if (mode != MovementMode.Run || isLocalPath)
             {
                 foreach (var pos in path)
                 {
-                    actionQueue.Enqueue(new MoveAction(playerEntityId, pos, isRunning));
+                    actionQueue.Enqueue(new MoveAction(playerEntityId, pos, mode));
                 }
                 UpdateAIPathPreviews(gameState);
                 EventBus.Publish(new GameEvents.ActionQueueChanged());
@@ -51,7 +51,7 @@ namespace ProjectVagabond
 
             foreach (var nextPos in path)
             {
-                var nextAction = new MoveAction(playerEntityId, nextPos, true);
+                var nextAction = new MoveAction(playerEntityId, nextPos, mode);
                 var tempQueue = new List<IAction>(actionQueue) { nextAction };
                 var simulationResult = gameState.SimulateActionQueueEnergy(tempQueue);
 
@@ -164,7 +164,7 @@ namespace ProjectVagabond
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
 
-        private void QueueMovementInternal(GameState gameState, Vector2 direction, string[] args, bool isRunning)
+        private void QueueMovementInternal(GameState gameState, Vector2 direction, string[] args, MovementMode mode)
         {
             if (gameState.IsExecutingActions)
             {
@@ -185,15 +185,12 @@ namespace ProjectVagabond
                 count = Math.Max(1, Math.Min(Global.MAX_SINGLE_MOVE_LIMIT, parsedCount));
             }
 
-            if (isLocalMove && isRunning)
+            if (isLocalMove && mode == MovementMode.Run)
             {
-                if (!actionQueue.Any(a => a is MoveAction ma && ma.IsRunning))
+                if (!playerStats.CanExertEnergy(1))
                 {
-                    if (!playerStats.CanExertEnergy(1))
-                    {
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Not enough energy to start a local run! <Requires 1 EP>" });
-                        return;
-                    }
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Not enough energy to start a run! <Requires 1 EP>" });
+                    return;
                 }
             }
 
@@ -252,7 +249,7 @@ namespace ProjectVagabond
                         break;
                     }
 
-                    var nextAction = new MoveAction(playerEntityId, nextPos, isRunning);
+                    var nextAction = new MoveAction(playerEntityId, nextPos, mode);
                     var tempQueue = new List<IAction>(actionQueue) { nextAction };
                     var simulationResult = gameState.SimulateActionQueueEnergy(tempQueue);
 
@@ -278,7 +275,6 @@ namespace ProjectVagabond
                         else
                         {
                             int stepCost = gameState.GetMovementEnergyCost(nextAction, isLocalMove);
-                            if (isLocalMove && isRunning) stepCost = 1;
                             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Cannot move here... Not enough energy! <Requires {stepCost} EP>" });
                             break;
                         }
@@ -290,7 +286,7 @@ namespace ProjectVagabond
 
                 if (validSteps > 0)
                 {
-                    string moveType = isRunning ? "run" : "walk";
+                    string moveType = mode.ToString().ToLower();
                     if (removedSteps > 0) EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[undo]Backtracked {removedSteps} time(s), added {validSteps} {moveType}(s)" });
                     else EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Queued {moveType} {validSteps} {args[0].ToLower()}" });
                 }
@@ -309,12 +305,17 @@ namespace ProjectVagabond
 
         public void QueueRunMovement(GameState gameState, Vector2 direction, string[] args)
         {
-            QueueMovementInternal(gameState, direction, args, true);
+            QueueMovementInternal(gameState, direction, args, MovementMode.Run);
+        }
+
+        public void QueueJogMovement(GameState gameState, Vector2 direction, string[] args)
+        {
+            QueueMovementInternal(gameState, direction, args, MovementMode.Jog);
         }
 
         public void QueueWalkMovement(GameState gameState, Vector2 direction, string[] args)
         {
-            QueueMovementInternal(gameState, direction, args, false);
+            QueueMovementInternal(gameState, direction, args, MovementMode.Walk);
         }
 
         private void UpdateAIPathPreviews(GameState gameState)

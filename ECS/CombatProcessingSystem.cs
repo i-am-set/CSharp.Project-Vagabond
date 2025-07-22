@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System.Linq;
 
 namespace ProjectVagabond
@@ -96,19 +96,19 @@ namespace ProjectVagabond
 
             if (localPosComp != null && statsComp != null)
             {
-                if (action.IsRunning)
+                if (action.Mode != MovementMode.Walk)
                 {
                     statsComp.ExertEnergy(1);
                 }
 
                 // Calculate the actual in-game time this single step will take.
                 Vector2 moveDir = action.Destination - localPosComp.LocalPosition;
-                float timeCostOfStep = _gameState.GetSecondsPassedDuringMovement(statsComp, action.IsRunning, default, moveDir, true);
+                float timeCostOfStep = _gameState.GetSecondsPassedDuringMovement(statsComp, action.Mode, default, moveDir, true);
 
                 // The visual duration is proportional to the in-game time cost, scaled by the world clock.
                 float visualDuration = (timeCostOfStep / _worldClockManager.TimeScale) * VISUAL_SPEED_MULTIPLIER;
 
-                var interp = new InterpolationComponent(localPosComp.LocalPosition, action.Destination, visualDuration, action.IsRunning);
+                var interp = new InterpolationComponent(localPosComp.LocalPosition, action.Destination, visualDuration, action.Mode);
                 _componentStore.AddComponent(action.ActorId, interp);
             }
         }

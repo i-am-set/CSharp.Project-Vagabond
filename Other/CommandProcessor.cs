@@ -101,6 +101,36 @@ namespace ProjectVagabond
                 return new List<string>();
             });
 
+            _commands["jog"] = new Command("jog", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (args.Length < 2)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]No jog direction given (up, down, left, right, up-left, etc.)." });
+                    return;
+                }
+                string direction = args[1].ToLower();
+                string[] movementArgs = args.Skip(1).ToArray();
+                switch (direction)
+                {
+                    case "up": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(0, -1), movementArgs); break;
+                    case "down": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(0, 1), movementArgs); break;
+                    case "left": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, 0), movementArgs); break;
+                    case "right": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, 0), movementArgs); break;
+                    case "up-left": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, -1), movementArgs); break;
+                    case "up-right": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, -1), movementArgs); break;
+                    case "down-left": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, 1), movementArgs); break;
+                    case "down-right": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, 1), movementArgs); break;
+                    default: EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unknown direction for jog: '{direction}'." }); break;
+                }
+            },
+            "jog <dir> <count?> [gray]- Queue a jog (default speed).",
+            (args) =>
+            {
+                if (args.Length == 0) return new List<string> { "up", "down", "left", "right", "up-left", "up-right", "down-left", "down-right" };
+                return new List<string>();
+            });
+
             _commands["walk"] = new Command("walk", (args) =>
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
@@ -124,21 +154,21 @@ namespace ProjectVagabond
                     default: EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unknown direction for walk: '{direction}'." }); break;
                 }
             },
-            "walk <dir> <count?> [gray]- Queue a walk.",
+            "walk <dir> <count?> [gray]- Queue a walk (slow speed).",
             (args) =>
             {
                 if (args.Length == 0) return new List<string> { "up", "down", "left", "right", "up-left", "up-right", "down-left", "down-right" };
                 return new List<string>();
             });
 
-            _commands["up"] = new Command("up", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(0, -1), args); }, "up <count?> [gray]- Queue a walk up.");
-            _commands["down"] = new Command("down", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(0, 1), args); }, "down <count?> [gray]- Queue a walk down.");
-            _commands["left"] = new Command("left", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, 0), args); }, "left <count?> [gray]- Queue a walk left.");
-            _commands["right"] = new Command("right", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, 0), args); }, "right <count?> [gray]- Queue a walk right.");
-            _commands["up-left"] = new Command("up-left", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, -1), args); }, "up-left <count?> [gray]- Queue a walk up-left.");
-            _commands["up-right"] = new Command("up-right", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, -1), args); }, "up-right <count?> [gray]- Queue a walk up-right.");
-            _commands["down-left"] = new Command("down-left", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, 1), args); }, "down-left <count?> [gray]- Queue a walk down-left.");
-            _commands["down-right"] = new Command("down-right", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, 1), args); }, "down-right <count?> [gray]- Queue a walk down-right.");
+            _commands["up"] = new Command("up", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(0, -1), args); }, "up <count?> [gray]- Queue a jog up.");
+            _commands["down"] = new Command("down", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(0, 1), args); }, "down <count?> [gray]- Queue a jog down.");
+            _commands["left"] = new Command("left", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, 0), args); }, "left <count?> [gray]- Queue a jog left.");
+            _commands["right"] = new Command("right", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, 0), args); }, "right <count?> [gray]- Queue a jog right.");
+            _commands["up-left"] = new Command("up-left", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, -1), args); }, "up-left <count?> [gray]- Queue a jog up-left.");
+            _commands["up-right"] = new Command("up-right", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, -1), args); }, "up-right <count?> [gray]- Queue a jog up-right.");
+            _commands["down-left"] = new Command("down-left", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, 1), args); }, "down-left <count?> [gray]- Queue a jog down-left.");
+            _commands["down-right"] = new Command("down-right", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, 1), args); }, "down-right <count?> [gray]- Queue a jog down-right.");
 
             _commands["cancel"] = new Command("cancel", (args) =>
             {

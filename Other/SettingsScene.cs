@@ -13,7 +13,6 @@ namespace ProjectVagabond.Scenes
     {
         private readonly GameSettings _settings;
         private readonly SceneManager _sceneManager;
-        private readonly Core _core;
         private readonly GraphicsDeviceManager _graphics;
         private readonly Global _global;
 
@@ -42,7 +41,6 @@ namespace ProjectVagabond.Scenes
         {
             _settings = ServiceLocator.Get<GameSettings>();
             _sceneManager = ServiceLocator.Get<SceneManager>();
-            _core = ServiceLocator.Get<Core>();
             _graphics = ServiceLocator.Get<GraphicsDeviceManager>();
             _global = ServiceLocator.Get<Global>();
         }

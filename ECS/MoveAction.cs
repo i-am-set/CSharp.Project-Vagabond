@@ -3,6 +3,16 @@
 namespace ProjectVagabond
 {
     /// <summary>
+    /// Defines the different modes of movement available.
+    /// </summary>
+    public enum MovementMode
+    {
+        Walk,
+        Jog,
+        Run
+    }
+
+    /// <summary>
     /// An action representing an entity moving to a new position.
     /// </summary>
     public class MoveAction : IAction
@@ -16,15 +26,15 @@ namespace ProjectVagabond
         public Vector2 Destination { get; }
 
         /// <summary>
-        /// A flag indicating if the movement is a run.
+        /// The mode of movement (Walk, Jog, Run).
         /// </summary>
-        public bool IsRunning { get; }
+        public MovementMode Mode { get; }
 
-        public MoveAction(int actorId, Vector2 destination, bool isRunning)
+        public MoveAction(int actorId, Vector2 destination, MovementMode mode)
         {
             ActorId = actorId;
             Destination = destination;
-            IsRunning = isRunning;
+            Mode = mode;
             IsComplete = false;
         }
     }

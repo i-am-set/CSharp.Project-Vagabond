@@ -24,7 +24,7 @@ namespace ProjectVagabond
             new Vector2(1, 1)   // Down-Right
         };
 
-        public static List<Vector2> FindPath(int pathfindingEntityId, Vector2 start, Vector2 end, GameState gameState, bool isRunning, PathfindingMode mode, MapView mapView)
+        public static List<Vector2> FindPath(int pathfindingEntityId, Vector2 start, Vector2 end, GameState gameState, MovementMode mode, PathfindingMode pathfindingMode, MapView mapView)
         {
             var openQueue = new PriorityQueue<Vector2, float>();
             openQueue.Enqueue(start, 0);
@@ -60,7 +60,7 @@ namespace ProjectVagabond
                     }
 
                     float moveCost;
-                    if (mode == PathfindingMode.Moves)
+                    if (pathfindingMode == PathfindingMode.Moves)
                     {
                         moveCost = isDiagonal ? 1.414f : 1f;
                     }
@@ -70,7 +70,7 @@ namespace ProjectVagabond
                         // We use player stats here because pathfinder doesn't know which entity is pathing.
                         // The cost is relative, so this is acceptable for finding the "fastest" path.
                         // The actual time cost is calculated later when truncating the path.
-                        moveCost = gameState.GetSecondsPassedDuringMovement(gameState.PlayerStats, isRunning, mapData, moveDir, mapView == MapView.Local);
+                        moveCost = gameState.GetSecondsPassedDuringMovement(gameState.PlayerStats, mode, mapData, moveDir, mapView == MapView.Local);
                     }
 
                     float tentative_gScore = current_gScore + moveCost;

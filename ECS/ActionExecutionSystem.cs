@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +17,6 @@ namespace ProjectVagabond
         private readonly ChunkManager _chunkManager;
 
         private bool _isFirstPlayerAction = true;
-        private const float VISUAL_INTERPOLATION_DURATION = 0.2f;
 
         public ActionExecutionSystem()
         {
@@ -97,7 +96,7 @@ namespace ProjectVagabond
 
                 if (nextAction is MoveAction ma)
                 {
-                    ApplyMoveActionEffects(_gameState, playerEntityId, ma);
+                    ApplyMoveActionEffects(_gameState, playerEntityId, ma, actionCostInGameSeconds);
                 }
                 else if (nextAction is RestAction ra)
                 {
@@ -121,7 +120,7 @@ namespace ProjectVagabond
                 var playerStats = gameState.PlayerStats;
                 if (playerStats == null) return 0;
 
-                float fullDuration = gameState.GetSecondsPassedDuringMovement(playerStats, moveAction.IsRunning, mapData, moveDirection, false);
+                float fullDuration = gameState.GetSecondsPassedDuringMovement(playerStats, moveAction.Mode, mapData, moveDirection, false);
 
                 float finalDuration = fullDuration;
                 if (_isFirstPlayerAction)
@@ -143,7 +142,7 @@ namespace ProjectVagabond
             return 0;
         }
 
-        private void ApplyMoveActionEffects(GameState gameState, int entityId, MoveAction action)
+        private void ApplyMoveActionEffects(GameState gameState, int entityId, MoveAction action, float actionCostInGameSeconds)
         {
             var stats = _componentStore.GetComponent<StatsComponent>(entityId);
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
@@ -165,7 +164,7 @@ namespace ProjectVagabond
             if (moveDir.X != 0 && moveDir.Y == 0) newLocalPos.Y = 32;
             if (moveDir.Y != 0 && moveDir.X == 0) newLocalPos.X = 32;
 
-            var interp = new InterpolationComponent(localPosComp.LocalPosition, newLocalPos, VISUAL_INTERPOLATION_DURATION, action.IsRunning);
+            var interp = new InterpolationComponent(localPosComp.LocalPosition, newLocalPos, actionCostInGameSeconds, action.Mode);
             _componentStore.AddComponent(entityId, interp);
 
             _isFirstPlayerAction = false;

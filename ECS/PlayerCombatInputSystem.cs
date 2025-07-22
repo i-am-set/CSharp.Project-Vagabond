@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
@@ -93,14 +93,18 @@ namespace ProjectVagabond
             if (playerPosComp == null) return;
 
             var targetTile = _mapRenderer.ScreenToLocalGrid(virtualMousePos);
-            // FIX: Default to walking, Shift enables running.
-            bool isRunning = currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift);
+
+            var movementMode = MovementMode.Jog; // Default to Jog
+            if (currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift))
+            {
+                movementMode = MovementMode.Run;
+            }
 
             if (targetTile.X >= 0)
             {
-                var path = _gameState.GetAffordablePath(_gameState.PlayerEntityId, playerPosComp.LocalPosition, targetTile, isRunning, out _previewPathCost);
+                var path = _gameState.GetAffordablePath(_gameState.PlayerEntityId, playerPosComp.LocalPosition, targetTile, movementMode, out _previewPathCost);
                 _gameState.CombatMovePreviewPath = path ?? new List<Vector2>();
-                _gameState.IsCombatMovePreviewRunning = isRunning;
+                _gameState.CombatMovePreviewMode = movementMode;
             }
             else
             {
@@ -120,7 +124,7 @@ namespace ProjectVagabond
 
                     foreach (var step in _gameState.CombatMovePreviewPath)
                     {
-                        playerActionQueue.ActionQueue.Enqueue(new MoveAction(_gameState.PlayerEntityId, step, isRunning));
+                        playerActionQueue.ActionQueue.Enqueue(new MoveAction(_gameState.PlayerEntityId, step, movementMode));
                     }
                     _gameState.UIState = CombatUIState.Busy;
                     _gameState.CombatMovePreviewPath.Clear();
@@ -256,7 +260,7 @@ namespace ProjectVagabond
             _gameState.UIState = CombatUIState.Default;
             _gameState.SelectedTargetId = null;
             _gameState.CombatMovePreviewPath.Clear();
-            _gameState.IsCombatMovePreviewRunning = false;
+            _gameState.CombatMovePreviewMode = MovementMode.Walk;
             _previewPathCost = 0f;
         }
     }

@@ -11,7 +11,6 @@ namespace ProjectVagabond.Scenes
     public class MainMenuScene : GameScene
     {
         private readonly SceneManager _sceneManager;
-        private readonly Core _core;
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
 
@@ -27,7 +26,6 @@ namespace ProjectVagabond.Scenes
         public MainMenuScene()
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
-            _core = ServiceLocator.Get<Core>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
         }

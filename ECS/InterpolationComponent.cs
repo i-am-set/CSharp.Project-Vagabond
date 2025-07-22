@@ -13,16 +13,16 @@ namespace ProjectVagabond
         public float GameTimeDuration { get; set; }
         public float Timer { get; set; }
         public Vector2 CurrentVisualPosition { get; set; }
-        public bool IsRunning { get; }
+        public MovementMode Mode { get; }
 
-        public InterpolationComponent(Vector2 start, Vector2 end, float gameTimeDuration, bool isRunning = false)
+        public InterpolationComponent(Vector2 start, Vector2 end, float gameTimeDuration, MovementMode mode = MovementMode.Walk)
         {
             StartPosition = start;
             EndPosition = end;
             GameTimeDuration = gameTimeDuration;
             Timer = 0f;
             CurrentVisualPosition = start;
-            IsRunning = isRunning;
+            Mode = mode;
         }
 
         public IComponent Clone()

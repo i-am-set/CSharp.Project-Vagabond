@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +13,6 @@ namespace ProjectVagabond
         private GameState _gameState;
         private readonly ComponentStore _componentStore;
         private readonly ChunkManager _chunkManager;
-        private WorldClockManager _worldClockManager;
         private readonly Random _random = new();
         private const float REPATH_INTERVAL = 0.5f; // Recalculate path every half a second
         private const float BASE_AI_STEP_DURATION = 0.15f; // AI moves slightly slower visually
@@ -81,20 +80,27 @@ namespace ProjectVagabond
             {
                 var bestTargetTile = validAdjacentTiles.OrderBy(tile => Vector2.DistanceSquared(aiPosComp.LocalPosition, tile)).First();
 
-                bool isRunning = stats.CanExertEnergy(1); // Prefer to run if possible.
-                var path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, isRunning, out _);
+                // Prioritize running if possible, then jogging, then walking.
+                var moveMode = MovementMode.Run;
+                var path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, moveMode, out _);
 
                 if (path == null || !path.Any())
                 {
-                    isRunning = false;
-                    path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, false, out _);
+                    moveMode = MovementMode.Jog;
+                    path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, moveMode, out _);
+                }
+
+                if (path == null || !path.Any())
+                {
+                    moveMode = MovementMode.Walk;
+                    path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, moveMode, out _);
                 }
 
                 if (path != null && path.Any())
                 {
-                    string moveMode = isRunning ? "runs" : "walks";
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} {moveMode} towards the player." });
-                    actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, path[0], isRunning));
+                    string moveModeString = moveMode.ToString().ToLower() + "s";
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} {moveModeString} towards the player." });
+                    actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, path[0], moveMode));
                     actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
                     return;
                 }
@@ -167,7 +173,8 @@ namespace ProjectVagabond
 
             float distanceToPlayer = GetTrueLocalDistance(entityId, _gameState.PlayerEntityId);
             bool inAggroRange = distanceToPlayer <= combatantComp.AggroRange;
-            bool inAttackRange = distanceToPlayer <= combatantComp.AttackRange;
+            float initiationRange = (float)Math.Ceiling(combatantComp.AttackRange) + 1;
+            bool inInitiationRange = distanceToPlayer <= initiationRange;
 
             SetAIIntent(entityId, AIIntent.None);
 
@@ -176,13 +183,13 @@ namespace ProjectVagabond
                 switch (personalityComp.Personality)
                 {
                     case AIPersonalityType.Aggressive:
-                        if (inAttackRange) InitiateCombat(entityId, aiComp);
+                        if (inInitiationRange) InitiateCombat(entityId, aiComp);
                         else PursuePlayer(entityId, aiComp, pathComp);
                         break;
                     case AIPersonalityType.Neutral:
                         if (personalityComp.IsProvoked)
                         {
-                            if (inAttackRange) InitiateCombat(entityId, aiComp);
+                            if (inInitiationRange) InitiateCombat(entityId, aiComp);
                             else PursuePlayer(entityId, aiComp, pathComp);
                         }
                         break;
@@ -226,7 +233,7 @@ namespace ProjectVagabond
                 return;
             }
 
-            var path = Pathfinder.FindPath(entityId, localPosComp.LocalPosition, playerPos.Value, _gameState, true, PathfindingMode.Moves, MapView.Local);
+            var path = Pathfinder.FindPath(entityId, localPosComp.LocalPosition, playerPos.Value, _gameState, MovementMode.Run, PathfindingMode.Moves, MapView.Local);
 
             if (path != null && path.Any())
             {
@@ -360,10 +367,10 @@ namespace ProjectVagabond
             intentComp.CurrentIntent = intent;
         }
 
-        public Dictionary<int, List<(Vector2 Position, bool IsRunning)>> SimulateMovementForDuration(float timeBudget)
+        public Dictionary<int, List<(Vector2 Position, MovementMode Mode)>> SimulateMovementForDuration(float timeBudget)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
-            var allPreviewPaths = new Dictionary<int, List<(Vector2, bool)>>();
+            var allPreviewPaths = new Dictionary<int, List<(Vector2, MovementMode)>>();
 
             var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
             if (playerPosComp == null) return allPreviewPaths;
@@ -384,20 +391,20 @@ namespace ProjectVagabond
                 var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
                 if (localPosComp == null || statsComp == null) continue;
 
-                var fullPath = Pathfinder.FindPath(entityId, localPosComp.LocalPosition, playerCurrentPos, _gameState, true, PathfindingMode.Moves, MapView.Local);
+                var fullPath = Pathfinder.FindPath(entityId, localPosComp.LocalPosition, playerCurrentPos, _gameState, MovementMode.Run, PathfindingMode.Moves, MapView.Local);
 
                 if (fullPath != null && fullPath.Any())
                 {
-                    var timeLimitedPath = new List<(Vector2 Position, bool IsRunning)>();
+                    var timeLimitedPath = new List<(Vector2 Position, MovementMode Mode)>();
                     int simulatedEnergy = statsComp.CurrentEnergyPoints;
                     float timeAccumulator = 0f;
                     Vector2 lastPos = localPosComp.LocalPosition;
 
                     foreach (var step in fullPath)
                     {
-                        bool isRunning = simulatedEnergy > 0;
+                        var moveMode = (simulatedEnergy > 0) ? MovementMode.Run : MovementMode.Jog;
                         Vector2 moveDir = step - lastPos;
-                        float stepCost = _gameState.GetSecondsPassedDuringMovement(statsComp, isRunning, default, moveDir, true);
+                        float stepCost = _gameState.GetSecondsPassedDuringMovement(statsComp, moveMode, default, moveDir, true);
 
                         if (timeAccumulator + stepCost > timeBudget)
                         {
@@ -405,8 +412,8 @@ namespace ProjectVagabond
                         }
 
                         timeAccumulator += stepCost;
-                        timeLimitedPath.Add((step, isRunning));
-                        if (isRunning)
+                        timeLimitedPath.Add((step, moveMode));
+                        if (moveMode == MovementMode.Run)
                         {
                             simulatedEnergy--;
                         }

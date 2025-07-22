@@ -1,4 +1,4 @@
-﻿﻿using System;
+﻿using System;
 
 namespace ProjectVagabond
 {
@@ -15,6 +15,7 @@ namespace ProjectVagabond
         private int _maxHealthPoints;
         private int _maxEnergyPoints;
         private float _walkSpeed;
+        private float _jogSpeed;
         private float _runSpeed;
         private int _carryCapacity;
         private int _mentalResistance;
@@ -48,6 +49,7 @@ namespace ProjectVagabond
         public int MaxHealthPoints => _maxHealthPoints;
         public int MaxEnergyPoints => _maxEnergyPoints;
         public float WalkSpeed => _walkSpeed;
+        public float JogSpeed => _jogSpeed;
         public float RunSpeed => _runSpeed;
         public int CarryCapacity => _carryCapacity;
         public int MentalResistance => _mentalResistance;
@@ -184,8 +186,9 @@ namespace ProjectVagabond
 
             // World Map Move Speed 
             float weightFactor = Math.Max(0f, (_weight - 70f) * 0.01f); // Penalty for being over 70kg
-            _walkSpeed = Math.Max(0.1f, 1.0f + (Agility * 0.12f) - weightFactor);
-            _runSpeed = _walkSpeed * 3f;
+            _walkSpeed = Math.Max(0.1f, 1.0f + (Agility * 0.08f) - weightFactor);
+            _jogSpeed = Math.Max(0.1f, 1.0f + (Agility * 0.15f) - weightFactor);
+            _runSpeed = _jogSpeed * 2.0f;
 
             // Carry Capacity = Base(20) + (Strength * 8) + (Tenacity * 3)
             _carryCapacity = 20 + (Strength * 8) + (Tenacity * 3);

@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using ProjectVagabond.Scenes;
 using System;
@@ -176,7 +176,7 @@ namespace ProjectVagabond
                 }
                 else
                 {
-                    _playerInputSystem.QueueWalkMovement(_gameState, moveDir, args);
+                    _playerInputSystem.QueueJogMovement(_gameState, moveDir, args);
                 }
             }
             else if (!_previousKeyboardState.IsKeyDown(Keys.Enter) && currentKeyboardState.IsKeyDown(Keys.Enter))

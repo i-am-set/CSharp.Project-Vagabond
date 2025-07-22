@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -228,7 +228,7 @@ namespace ProjectVagabond
                         if (screenPos.HasValue)
                         {
                             var destRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
-                            Texture2D texture = node.IsRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
+                            Texture2D texture = node.Mode == MovementMode.Run ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
                             spriteBatch.Draw(texture, destRect, _global.Palette_Red * 0.4f);
                         }
                     }
@@ -254,7 +254,7 @@ namespace ProjectVagabond
                     Vector2? screenPos = MapCoordsToScreen(pos);
                     if (screenPos.HasValue)
                     {
-                        bool isRunning = _gameState.IsCombatMovePreviewRunning;
+                        bool isRunning = _gameState.CombatMovePreviewMode == MovementMode.Run;
                         Texture2D texture = isRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
                         Color color = (isRunning ? _global.RunPathColor : _global.PathColor) * 0.6f; // Use transparency for preview
 
@@ -421,7 +421,7 @@ namespace ProjectVagabond
             Vector2 scale = new Vector2(5, 5);
             Vector2 textSize = font.MeasureString(pauseText) * scale;
             Vector2 textPosition = new Vector2(_mapGridBounds.Center.X - textSize.X / 2, _mapGridBounds.Center.Y - textSize.Y / 2);
-            spriteBatch.DrawString(font, pauseText, textPosition, Color.White * 0.7f, 0, Vector2.Zero, scale, SpriteEffects.None, 0);
+            spriteBatch.DrawString(font, pauseText, textPosition, Color.White * 0.7f, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
         }
 
         private List<GridElement> GenerateWorldMapGridElements()
@@ -544,12 +544,13 @@ namespace ProjectVagabond
                 if (action is MoveAction moveAction)
                 {
                     actionPos = moveAction.Destination;
-                    bool canRun = moveAction.IsRunning && simulatedEnergy >= _gameState.GetMovementEnergyCost(moveAction, isLocalPath);
+                    bool isRunning = moveAction.Mode == MovementMode.Run;
+                    bool canRun = isRunning && simulatedEnergy >= _gameState.GetMovementEnergyCost(moveAction, isLocalPath);
 
                     actionTexture = canRun ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
                     actionColor = canRun ? _global.RunPathColor : _global.PathColor;
 
-                    if (moveAction.IsRunning)
+                    if (isRunning)
                     {
                         simulatedEnergy -= _gameState.GetMovementEnergyCost(moveAction, isLocalPath);
                     }
