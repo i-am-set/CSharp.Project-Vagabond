@@ -42,72 +42,74 @@ namespace ProjectVagabond
             _gameState ??= ServiceLocator.Get<GameState>();
 
             var aiPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-            var combatant = _componentStore.GetComponent<CombatantComponent>(entityId);
             var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(entityId);
             var stats = _componentStore.GetComponent<StatsComponent>(entityId);
             var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
             var aiName = EntityNamer.GetName(entityId);
 
-            if (aiPosComp == null || combatant == null || actionQueue == null || stats == null || playerPosComp == null)
+            // Failsafe for missing components
+            if (aiPosComp == null || actionQueue == null || stats == null || playerPosComp == null)
             {
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{aiName} cannot act (missing components)." });
                 actionQueue?.ActionQueue.Enqueue(new EndTurnAction(entityId));
                 return;
             }
 
-            float distanceToPlayer = Vector2.Distance(aiPosComp.LocalPosition, playerPosComp.LocalPosition);
+            // Find a path to the player.
+            var path = Pathfinder.FindPath(entityId, aiPosComp.LocalPosition, playerPosComp.LocalPosition, _gameState, MovementMode.Run, PathfindingMode.Moves, MapView.Local);
 
-            // 1. ATTACK LOGIC: If in range, attack and end turn.
-            if (distanceToPlayer <= combatant.AttackRange)
+            if (path != null && path.Any())
             {
-                var attack = _componentStore.GetComponent<AvailableAttacksComponent>(entityId)?.Attacks.FirstOrDefault();
-                if (attack != null)
+                float timeUsedThisTurn = 0f;
+                int simulatedEnergy = stats.CurrentEnergyPoints;
+                Vector2 lastStepPosition = aiPosComp.LocalPosition;
+                int movesQueued = 0;
+
+                // Loop through the path and queue as many moves as possible within the time budget.
+                foreach (var step in path)
                 {
-                    actionQueue.ActionQueue.Enqueue(new AttackAction(entityId, _gameState.PlayerEntityId, attack.Name));
-                }
-                actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
-                return;
-            }
+                    // Determine movement mode based on simulated energy for this turn.
+                    int runCost = _gameState.GetMovementEnergyCost(new MoveAction(entityId, step, MovementMode.Run), true);
+                    var moveMode = (simulatedEnergy >= runCost) ? MovementMode.Run : MovementMode.Jog;
 
-            // 2. MOVEMENT LOGIC: If not in range, try to move one step closer.
-            var forbiddenTiles = _gameState.GetPlayerQueuedMovePositions();
-            var validAdjacentTiles = _neighborOffsets
-                .Select(offset => playerPosComp.LocalPosition + offset)
-                .Where(tile => !forbiddenTiles.Contains(tile) && _gameState.IsPositionPassable(tile, MapView.Local, entityId, tile, out _))
-                .ToList();
+                    // Calculate the time cost for this specific step.
+                    Vector2 moveDir = step - lastStepPosition;
+                    float stepTimeCost = _gameState.GetSecondsPassedDuringMovement(stats, moveMode, default, moveDir, true);
 
-            if (validAdjacentTiles.Any())
-            {
-                var bestTargetTile = validAdjacentTiles.OrderBy(tile => Vector2.DistanceSquared(aiPosComp.LocalPosition, tile)).First();
+                    // Check if this move fits within the turn's time budget.
+                    if (timeUsedThisTurn + stepTimeCost > Global.COMBAT_TURN_DURATION_SECONDS)
+                    {
+                        break; // Can't afford this move, stop planning.
+                    }
 
-                // Prioritize running if possible, then jogging, then walking.
-                var moveMode = MovementMode.Run;
-                var path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, moveMode, out _);
+                    // If affordable, queue the action and update simulated state.
+                    timeUsedThisTurn += stepTimeCost;
+                    actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, step, moveMode));
+                    movesQueued++;
 
-                if (path == null || !path.Any())
-                {
-                    moveMode = MovementMode.Jog;
-                    path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, moveMode, out _);
-                }
-
-                if (path == null || !path.Any())
-                {
-                    moveMode = MovementMode.Walk;
-                    path = _gameState.GetAffordablePath(entityId, aiPosComp.LocalPosition, bestTargetTile, moveMode, out _);
+                    if (moveMode == MovementMode.Run)
+                    {
+                        simulatedEnergy -= runCost;
+                    }
+                    lastStepPosition = step;
                 }
 
-                if (path != null && path.Any())
+                if (movesQueued > 0)
                 {
-                    string moveModeString = moveMode.ToString().ToLower() + "s";
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} {moveModeString} towards the player." });
-                    actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, path[0], moveMode));
-                    actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
-                    return;
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} moves towards the player." });
+                }
+                else
+                {
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} waits." });
                 }
             }
+            else
+            {
+                // If no path is possible, the AI waits.
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} waits." });
+            }
 
-            // 3. IDLE LOGIC: If unable to attack or move, just end the turn.
-            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} waits." });
+            // Always end the turn after planning moves.
             actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
         }
 

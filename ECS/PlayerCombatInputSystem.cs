@@ -187,7 +187,15 @@ namespace ProjectVagabond
         private void AttemptToFlee()
         {
             var playerStats = _componentStore.GetComponent<StatsComponent>(_gameState.PlayerEntityId);
-            if (playerStats == null) return;
+            var turnStats = _componentStore.GetComponent<TurnStatsComponent>(_gameState.PlayerEntityId);
+
+            if (playerStats == null || turnStats == null) return;
+
+            if (!turnStats.IsPristineForTurn)
+            {
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[warning]Cannot flee after taking an action." });
+                return;
+            }
 
             var enemies = _gameState.Combatants.Where(id => id != _gameState.PlayerEntityId).ToList();
             if (!enemies.Any())

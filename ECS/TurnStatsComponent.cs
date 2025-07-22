@@ -24,6 +24,11 @@
         /// </summary>
         public float MovementTimeUsedThisTurn { get; set; } = 0f;
 
+        /// <summary>
+        /// Returns true if the entity has not yet used its primary action or moved this turn.
+        /// </summary>
+        public bool IsPristineForTurn => HasPrimaryAction && MovementTimeUsedThisTurn == 0f;
+
         public IComponent Clone()
         {
             return (IComponent)this.MemberwiseClone();

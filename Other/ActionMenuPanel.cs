@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -104,6 +104,10 @@ namespace ProjectVagabond
                         else if (option == "Attack")
                         {
                             button.IsEnabled = turnStats?.HasPrimaryAction ?? false;
+                        }
+                        else if (option == "Flee")
+                        {
+                            button.IsEnabled = turnStats?.IsPristineForTurn ?? false;
                         }
 
                         button.OnClick += () => OnActionSelected?.Invoke(option);
