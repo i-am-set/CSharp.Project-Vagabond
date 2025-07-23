@@ -13,6 +13,7 @@ namespace ProjectVagabond.Particles
         private readonly Particle[] _particles;
         private int _nextParticleIndex = 0;
         private float _emissionTimer = 0f;
+        public float BurstTimer { get; set; } = 0f;
         private readonly Random _random;
 
         public ParticleEmitter(ParticleEmitterSettings settings)
@@ -68,12 +69,29 @@ namespace ProjectVagabond.Particles
 
                 // Physics
                 p.Velocity += (p.Acceleration + Settings.Gravity) * deltaTime;
+
+                // Apply drag to slow the particle down
+                if (Settings.Drag > 0)
+                {
+                    p.Velocity *= Math.Max(0, 1.0f - Settings.Drag * deltaTime);
+                }
+
                 p.Position += p.Velocity * deltaTime;
                 p.Rotation += p.RotationSpeed * deltaTime;
 
                 // Over-lifetime changes
                 p.Color = Color.Lerp(Settings.StartColor, Settings.EndColor, lifeRatio);
-                p.Alpha = MathHelper.Lerp(Settings.StartAlpha, Settings.EndAlpha, lifeRatio);
+
+                if (Settings.AlphaFadeInAndOut)
+                {
+                    // Parabolic curve: y = 1 - (2x - 1)^2, peaks at 1 when x is 0.5
+                    float curve = 1.0f - MathF.Pow(2.0f * lifeRatio - 1.0f, 2.0f);
+                    p.Alpha = MathHelper.Lerp(0, Settings.StartAlpha, curve); // Use StartAlpha as the peak
+                }
+                else
+                {
+                    p.Alpha = MathHelper.Lerp(Settings.StartAlpha, Settings.EndAlpha, lifeRatio);
+                }
             }
         }
 
@@ -106,7 +124,25 @@ namespace ProjectVagabond.Particles
             p.IsAlive = true;
             p.Age = 0;
             p.Lifetime = Settings.Lifetime.GetValue(_random);
-            p.Position = Position;
+
+            p.Position = Position; // Start at emitter center
+            switch (Settings.Shape)
+            {
+                case EmitterShape.Circle:
+                    float radius = Settings.EmitterSize.X / 2f;
+                    if (radius > 0)
+                    {
+                        float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
+                        float distance = radius;
+                        if (Settings.EmitFrom == EmissionSource.Volume)
+                        {
+                            distance *= (float)_random.NextDouble();
+                        }
+                        p.Position += new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle)) * distance;
+                    }
+                    break;
+            }
+
             p.Velocity = new Vector2(Settings.InitialVelocityX.GetValue(_random), Settings.InitialVelocityY.GetValue(_random));
             p.Acceleration = new Vector2(Settings.InitialAccelerationX.GetValue(_random), Settings.InitialAccelerationY.GetValue(_random));
             p.Size = Settings.InitialSize.GetValue(_random);

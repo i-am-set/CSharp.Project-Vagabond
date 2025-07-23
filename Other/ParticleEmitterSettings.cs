@@ -30,10 +30,12 @@ namespace ProjectVagabond.Particles
 
         // Over Lifetime Properties
         public Vector2 Gravity { get; set; }
+        public float Drag { get; set; } = 0f;
         public Color StartColor { get; set; }
         public Color EndColor { get; set; }
         public float StartAlpha { get; set; }
         public float EndAlpha { get; set; }
+        public bool AlphaFadeInAndOut { get; set; } = false;
 
         // Rendering Properties
         public Texture2D Texture { get; set; }
@@ -73,10 +75,12 @@ namespace ProjectVagabond.Particles
 
                 // Over Lifetime
                 Gravity = Vector2.Zero,
+                Drag = 0f,
                 StartColor = Color.White,
                 EndColor = Color.White,
                 StartAlpha = 1.0f,
                 EndAlpha = 0.0f,
+                AlphaFadeInAndOut = false,
 
                 // Rendering
                 Texture = ServiceLocator.Get<Texture2D>(), // Default 1x1 white pixel

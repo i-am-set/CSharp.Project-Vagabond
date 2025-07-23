@@ -56,18 +56,32 @@ namespace ProjectVagabond
                     interpComp.CurrentVisualPosition = Vector2.Lerp(interpComp.StartPosition, interpComp.EndPosition, progress);
 
                     // --- NEW: Trigger Particle Emission ---
-                    TriggerMovementParticles(entityId, interpComp);
+                    TriggerMovementParticles(entityId, interpComp, gameTime);
                 }
             }
         }
 
-        private void TriggerMovementParticles(int entityId, InterpolationComponent interpComp)
+        private void TriggerMovementParticles(int entityId, InterpolationComponent interpComp, GameTime gameTime)
         {
+            // Only emit particles when running.
+            if (interpComp.Mode != MovementMode.Run)
+            {
+                return;
+            }
+
             var emitterComp = _componentStore.GetComponent<ParticleEmitterComponent>(entityId);
             if (emitterComp == null || !emitterComp.Emitters.TryGetValue("DirtSpray", out var emitter))
             {
                 return;
             }
+
+            // Update burst timer
+            emitter.BurstTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (emitter.BurstTimer < 0.35f) // Check if it's time to burst
+            {
+                return;
+            }
+            emitter.BurstTimer -= 0.35f; // Reset timer, keeping remainder
 
             // Convert the entity's current visual position (local grid coords) to screen coords
             Vector2? screenPos = _mapRenderer.MapCoordsToScreen(interpComp.CurrentVisualPosition);
@@ -84,8 +98,8 @@ namespace ProjectVagabond
                 Vector2 emitDirection = -Vector2.Normalize(moveDirection);
                 float baseAngle = (float)Math.Atan2(emitDirection.Y, emitDirection.X);
 
-                // Emit a small burst of particles
-                int particleCount = (interpComp.Mode == MovementMode.Run) ? 2 : 1;
+                // Emit a burst of particles
+                int particleCount = (interpComp.Mode == MovementMode.Run) ? _random.Next(6, 10) : _random.Next(3, 5);
                 for (int i = 0; i < particleCount; i++)
                 {
                     // Find an available particle
@@ -95,7 +109,7 @@ namespace ProjectVagabond
                     ref var p = ref emitter.GetParticle(particleIndex);
 
                     // Apply velocity based on movement direction
-                    float spread = MathHelper.ToRadians(30); // 30 degree cone
+                    float spread = MathHelper.ToRadians(45); // Wider spread for dust
                     float angle = baseAngle + (float)(_random.NextDouble() * 2 - 1) * spread;
                     float speed = emitter.Settings.InitialVelocityX.GetValue(_random); // Using X as speed
 
