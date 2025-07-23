@@ -1,6 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Particles; // Added using directive
 using ProjectVagabond.Scenes;
 using System;
 
@@ -54,6 +55,7 @@ namespace ProjectVagabond
         private LocalMapTurnSystem _localMapTurnSystem;
         private InterpolationSystem _interpolationSystem;
         private CombatInitiationSystem _combatInitiationSystem;
+        private ParticleSystemManager _particleSystemManager; // NEW
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -122,6 +124,9 @@ namespace ProjectVagabond
             _combatUIAnimationManager.RegisterAnimation("TargetSelector", new PulsingAnimation(duration: 0.4f));
             _combatUIAnimationManager.RegisterAnimation("TurnIndicator", new BobbingAnimation(speed: 5f, amount: 1f));
             ServiceLocator.Register<CombatUIAnimationManager>(_combatUIAnimationManager);
+
+            _particleSystemManager = new ParticleSystemManager(); // NEW
+            ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager); // NEW
 
             _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
@@ -253,6 +258,7 @@ namespace ProjectVagabond
 
             _sceneManager.Update(gameTime);
             _tooltipManager.Update(gameTime); // Tooltips should always update.
+            _particleSystemManager.Update(gameTime); // NEW: Update particles
 
             // These systems handle visual updates and should be paused.
             if (!_gameState.IsPaused)
@@ -287,6 +293,10 @@ namespace ProjectVagabond
             GraphicsDevice.Clear(Color.Transparent);
 
             _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime);
+
+            // NEW: Draw particles. This is done after the main scene draw
+            // but before the tooltip draw, so particles appear over the game world.
+            _particleSystemManager.Draw(_spriteBatch);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _tooltipManager.Draw(_spriteBatch, _defaultFont);
