@@ -1,7 +1,8 @@
-﻿﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Particles;
 using ProjectVagabond.UI;
 using System;
 
@@ -20,6 +21,7 @@ namespace ProjectVagabond.Scenes
         private readonly StatsRenderer _statsRenderer;
         private readonly HapticsManager _hapticsManager;
         private readonly TerminalRenderer _terminalRenderer;
+        private readonly ParticleSystemManager _particleSystemManager;
 
         private WaitDialog _waitDialog;
         private ImageButton _settingsButton;
@@ -43,6 +45,7 @@ namespace ProjectVagabond.Scenes
             _statsRenderer = ServiceLocator.Get<StatsRenderer>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _terminalRenderer = ServiceLocator.Get<TerminalRenderer>();
+            _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
 
             EventBus.Subscribe<GameEvents.EntityTookDamage>(OnEntityTookDamage);
         }
@@ -204,10 +207,25 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
+            // --- Draw World/Map Content ---
+            if (_coreState.CurrentMapView == MapView.Local)
+            {
+                _mapRenderer.DrawLocalMapBackground(spriteBatch, font, gameTime);
+
+                spriteBatch.End();
+                _particleSystemManager.Draw(spriteBatch);
+                spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+                _mapRenderer.DrawLocalMapEntities(spriteBatch, font, gameTime);
+            }
+            else // World Map
+            {
+                _mapRenderer.DrawMap(spriteBatch, font, gameTime);
+            }
+
+            // --- Draw UI Panels ---
             if (_coreState.IsInCombat)
             {
-                // Draw the dedicated combat UI
-                _mapRenderer.DrawMap(spriteBatch, font, gameTime);
                 _enemyDisplayPanel.Draw(spriteBatch, gameTime, currentMouseState);
                 _turnOrderPanel.Draw(spriteBatch, font, gameTime);
                 _playerStatusPanel.Draw(spriteBatch, font);
@@ -228,16 +246,16 @@ namespace ProjectVagabond.Scenes
                     }
                     else // Must be SelectMove
                     {
-                        _mapRenderer.DrawMap(spriteBatch, font, gameTime);
+                        // Redraw the map with entities to see where you're moving
+                        _mapRenderer.DrawLocalMapBackground(spriteBatch, font, gameTime);
+                        _mapRenderer.DrawLocalMapEntities(spriteBatch, font, gameTime);
                     }
                     _actionMenuPanel.Draw(spriteBatch, font, gameTime);
                 }
             }
             else
             {
-                // Draw the standard out-of-combat UI
                 _terminalRenderer.DrawTerminal(spriteBatch, font, gameTime);
-                _mapRenderer.DrawMap(spriteBatch, font, gameTime);
                 _statsRenderer.DrawStats(spriteBatch, font);
                 _clockRenderer.DrawClock(spriteBatch, font, gameTime);
                 _settingsButton?.Draw(spriteBatch, font, gameTime);

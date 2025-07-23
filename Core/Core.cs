@@ -294,10 +294,6 @@ namespace ProjectVagabond
 
             _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime);
 
-            // NEW: Draw particles. This is done after the main scene draw
-            // but before the tooltip draw, so particles appear over the game world.
-            _particleSystemManager.Draw(_spriteBatch);
-
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _tooltipManager.Draw(_spriteBatch, _defaultFont);
             _spriteBatch.End();

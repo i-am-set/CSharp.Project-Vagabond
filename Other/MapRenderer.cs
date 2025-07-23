@@ -147,6 +147,7 @@ namespace ProjectVagabond
             {
                 DrawLocalMap(spriteBatch, font, gameTime);
             }
+            _contextMenu.Draw(spriteBatch, font);
         }
 
         private void DrawWorldMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -190,10 +191,15 @@ namespace ProjectVagabond
             }
 
             if (_gameState.IsPaused) DrawPauseIcon(spriteBatch, font);
-            _contextMenu.Draw(spriteBatch, font);
         }
 
         private void DrawLocalMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            DrawLocalMapBackground(spriteBatch, font, gameTime);
+            DrawLocalMapEntities(spriteBatch, font, gameTime);
+        }
+
+        public void DrawLocalMapBackground(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             int cellSize = Global.LOCAL_GRID_CELL_SIZE;
             int gridSize = Global.LOCAL_GRID_SIZE;
@@ -207,8 +213,8 @@ namespace ProjectVagabond
 
             DrawMapFrame(spriteBatch, font, mapStartX, mapStartY, mapWidth, mapHeight, gameTime);
 
-            var gridElements = GenerateLocalMapGridElements();
-            foreach (var element in gridElements)
+            var backgroundElements = GenerateLocalMapBackgroundElements();
+            foreach (var element in backgroundElements)
             {
                 DrawGridElement(spriteBatch, element, cellSize);
             }
@@ -272,6 +278,17 @@ namespace ProjectVagabond
                     Rectangle indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
                     spriteBatch.Draw(_spriteManager.LocalMapHoverSelectorSprite, indicatorRect, Color.Lime * 0.5f);
                 }
+            }
+        }
+
+        public void DrawLocalMapEntities(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            int cellSize = Global.LOCAL_GRID_CELL_SIZE;
+
+            var entityElements = GenerateLocalMapEntityElements();
+            foreach (var element in entityElements)
+            {
+                DrawGridElement(spriteBatch, element, cellSize);
             }
 
             // --- COMBAT AND AI INDICATOR DRAWING ---
@@ -347,7 +364,6 @@ namespace ProjectVagabond
             }
 
             if (_gameState.IsPaused) DrawPauseIcon(spriteBatch, font);
-            _contextMenu.Draw(spriteBatch, font);
         }
 
         private void DrawMapFrame(SpriteBatch spriteBatch, BitmapFont font, int mapStartX, int mapStartY, int mapWidth, int mapHeight, GameTime gameTime)
@@ -468,7 +484,7 @@ namespace ProjectVagabond
             return elements;
         }
 
-        private List<GridElement> GenerateLocalMapGridElements()
+        private List<GridElement> GenerateLocalMapBackgroundElements()
         {
             var elements = new List<GridElement>();
             int gridSize = Global.LOCAL_GRID_SIZE;
@@ -491,10 +507,16 @@ namespace ProjectVagabond
             var playerActionQueue = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
             if (playerActionQueue != null && playerActionQueue.ActionQueue.Any())
             {
-                // The path preview should only show the logical future path, not the current animation step.
-                // This provides a stable list for the energy simulation and prevents flickering.
                 elements.AddRange(GeneratePlayerPathGridElements(playerActionQueue.ActionQueue, isLocalPath: true));
             }
+
+            return elements;
+        }
+
+        private List<GridElement> GenerateLocalMapEntityElements()
+        {
+            var elements = new List<GridElement>();
+            Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             foreach (var entityId in _gameState.ActiveEntities)
             {
@@ -510,7 +532,6 @@ namespace ProjectVagabond
                     Vector2? screenPos = MapCoordsToScreen(positionToDraw);
                     if (screenPos.HasValue)
                     {
-                        // If it's a corpse, draw a stretched pixel. Otherwise, draw its texture.
                         Texture2D textureToDraw = (corpseComp != null) ? pixel : (renderComp.Texture ?? pixel);
                         if (entityId == _gameState.PlayerEntityId)
                         {
@@ -520,7 +541,6 @@ namespace ProjectVagabond
                     }
                 }
             }
-
             return elements;
         }
 
