@@ -90,7 +90,7 @@ namespace ProjectVagabond
         public const int TERMINAL_Y = 50;
 
         // Combat settings Global
-        public const int COMBAT_TURN_DURATION_SECONDS = 15;
+        public const int COMBAT_TURN_DURATION_SECONDS = 5;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES

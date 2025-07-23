@@ -136,6 +136,10 @@ namespace ProjectVagabond
             IsInCombat = true;
             CurrentMapView = MapView.Local;
             Combatants = new List<int>(initialCombatants);
+
+            // Resolve any positional overlaps before starting combat.
+            ResolveCombatantOverlaps();
+
             InitiativeOrder.Clear();
 
             var initiativeScores = new Dictionary<int, int>();
@@ -217,6 +221,81 @@ namespace ProjectVagabond
 
             _combatTurnSystem ??= ServiceLocator.Get<CombatTurnSystem>();
             _combatTurnSystem.StartCombat();
+        }
+
+        private void ResolveCombatantOverlaps()
+        {
+            bool overlapsResolved = false;
+            int safetyBreak = 0; // To prevent infinite loops in edge cases
+            bool loggedMessage = false;
+
+            while (!overlapsResolved && safetyBreak < 10)
+            {
+                overlapsResolved = true; // Assume resolved until an overlap is found
+                var occupiedTiles = new Dictionary<Vector2, int>();
+
+                foreach (var entityId in Combatants)
+                {
+                    var posComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+                    if (posComp == null) continue;
+
+                    if (occupiedTiles.ContainsKey(posComp.LocalPosition))
+                    {
+                        // Overlap detected!
+                        overlapsResolved = false;
+                        if (!loggedMessage)
+                        {
+                            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[dim]Adjusting starting positions to avoid overlap." });
+                            loggedMessage = true;
+                        }
+
+                        // Find a new position for the current entity
+                        var newPos = FindUnoccupiedNeighbor(posComp.LocalPosition, occupiedTiles.Keys);
+                        if (newPos.HasValue)
+                        {
+                            posComp.LocalPosition = newPos.Value;
+                        }
+                        else
+                        {
+                            // This is a fallback, should rarely happen.
+                            // If no free space, just move it one tile right.
+                            // The next loop iteration will resolve this new potential conflict.
+                            posComp.LocalPosition = new Vector2(posComp.LocalPosition.X + 1, posComp.LocalPosition.Y);
+                        }
+                    }
+                    occupiedTiles[posComp.LocalPosition] = entityId;
+                }
+                safetyBreak++;
+            }
+        }
+
+        private Vector2? FindUnoccupiedNeighbor(Vector2 origin, ICollection<Vector2> occupiedTiles)
+        {
+            var neighborOffsets = new Vector2[]
+            {
+                new Vector2(0, -1), new Vector2(0, 1), new Vector2(-1, 0), new Vector2(1, 0),
+                new Vector2(-1, -1), new Vector2(1, -1), new Vector2(-1, 1), new Vector2(1, 1)
+            }.OrderBy(v => _random.Next()).ToList();
+
+            foreach (var offset in neighborOffsets)
+            {
+                var potentialPos = origin + offset;
+
+                // Check bounds
+                if (potentialPos.X < 0 || potentialPos.X >= Global.LOCAL_GRID_SIZE ||
+                    potentialPos.Y < 0 || potentialPos.Y >= Global.LOCAL_GRID_SIZE)
+                {
+                    continue;
+                }
+
+                // Check if occupied
+                if (!occupiedTiles.Contains(potentialPos))
+                {
+                    return potentialPos;
+                }
+            }
+
+            return null; // No free neighbor found
         }
 
         public void AddEntityToCombat(int entityId)
