@@ -28,6 +28,7 @@
     <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Content\Models\" />
     <Folder Include="Content\Sprites\UI\KeyPrompts\" />
   </ItemGroup>
   <ItemGroup>

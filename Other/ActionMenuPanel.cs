@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -23,6 +24,9 @@ namespace ProjectVagabond
         private readonly Button _endTurnButton;
         private CombatUIState _lastUIState = CombatUIState.Busy;
         private int _lastTurnEntityId = -1;
+
+        private float _rebuildTimer = 0f;
+        private const float REBUILD_INTERVAL = 0.5f; // Re-check conditions every half-second for responsiveness.
 
         private const int PADDING = 10;
         private const int BORDER_THICKNESS = 2;
@@ -53,12 +57,21 @@ namespace ProjectVagabond
         {
             if (!_gameState.IsInCombat) return;
 
-            // Rebuild buttons if the UI state OR the current turn entity has changed.
-            if (_gameState.UIState != _lastUIState || _gameState.CurrentTurnEntityId != _lastTurnEntityId)
+            _rebuildTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Rebuild buttons if the UI state OR the current turn entity has changed, OR if the timer has elapsed.
+            bool stateChanged = _gameState.UIState != _lastUIState || _gameState.CurrentTurnEntityId != _lastTurnEntityId;
+            bool timerElapsed = _rebuildTimer >= REBUILD_INTERVAL && _gameState.UIState == CombatUIState.Default;
+
+            if (stateChanged || timerElapsed)
             {
                 RebuildButtons(font);
                 _lastUIState = _gameState.UIState;
                 _lastTurnEntityId = _gameState.CurrentTurnEntityId;
+                if (timerElapsed)
+                {
+                    _rebuildTimer = 0f;
+                }
             }
 
             foreach (var button in _actionButtons)
@@ -92,6 +105,30 @@ namespace ProjectVagabond
                     var mainOptions = new List<string> { "Attack", "Move", "Flee" };
                     var turnStats = _componentStore.GetComponent<TurnStatsComponent>(_gameState.PlayerEntityId);
 
+                    // --- Check if any enemy is in attack range ---
+                    bool isAnyEnemyInRange = false;
+                    var playerCombatant = _componentStore.GetComponent<CombatantComponent>(_gameState.PlayerEntityId);
+                    var playerPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
+
+                    if (playerCombatant != null && playerPos != null)
+                    {
+                        var enemies = _gameState.Combatants.Where(id => id != _gameState.PlayerEntityId);
+                        foreach (var enemyId in enemies)
+                        {
+                            var enemyPos = _componentStore.GetComponent<LocalPositionComponent>(enemyId);
+                            if (enemyPos != null)
+                            {
+                                float distance = Vector2.Distance(playerPos.LocalPosition, enemyPos.LocalPosition);
+                                if (distance <= playerCombatant.AttackRange)
+                                {
+                                    isAnyEnemyInRange = true;
+                                    break; // Found one, no need to check further
+                                }
+                            }
+                        }
+                    }
+                    // --- End of range check ---
+
                     foreach (var option in mainOptions)
                     {
                         var buttonBounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
@@ -100,14 +137,29 @@ namespace ProjectVagabond
                         if (option == "Move")
                         {
                             button.IsEnabled = _gameState.CanPlayerMoveInCombat();
+                            if (!button.IsEnabled)
+                            {
+                                // If the player can't move, it's because they've used up their turn's time budget.
+                                button.Strikethrough = StrikethroughType.Exhausted;
+                            }
                         }
                         else if (option == "Attack")
                         {
-                            button.IsEnabled = turnStats?.HasPrimaryAction ?? false;
+                            bool hasAction = turnStats?.HasPrimaryAction ?? false;
+                            button.IsEnabled = hasAction && isAnyEnemyInRange;
+                            if (!hasAction) // Action has been used up.
+                            {
+                                button.Strikethrough = StrikethroughType.Exhausted;
+                            }
                         }
                         else if (option == "Flee")
                         {
                             button.IsEnabled = turnStats?.IsPristineForTurn ?? false;
+                            if (!button.IsEnabled)
+                            {
+                                // If the turn is not pristine, an action has been used.
+                                button.Strikethrough = StrikethroughType.Exhausted;
+                            }
                         }
 
                         button.OnClick += () => OnActionSelected?.Invoke(option);

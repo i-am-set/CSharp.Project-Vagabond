@@ -52,17 +52,20 @@ namespace ProjectVagabond
             // This must be checked even when the UIState is Busy.
             if (currentKeyboardState.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape))
             {
-                if (_gameState.UIState == CombatUIState.Busy)
+                // Only cancel if a move is actually in progress (indicated by InterpolationComponent).
+                if (_gameState.UIState == CombatUIState.Busy && _componentStore.HasComponent<InterpolationComponent>(_gameState.PlayerEntityId))
                 {
-                    // With the "pay-as-you-go" model, cancellation is simple.
-                    // The MovementTimeUsedThisTurn is already correct. We just stop what's happening.
                     var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
-                    actionQueueComp?.ActionQueue.Clear();
+                    if (actionQueueComp != null)
+                    {
+                        // Clear any future moves, but let the current one finish.
+                        actionQueueComp.ActionQueue.Clear();
 
-                    _componentStore.RemoveComponent<InterpolationComponent>(_gameState.PlayerEntityId);
-                    _gameState.UIState = CombatUIState.Default;
-                    ResetToDefaultState();
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[cancel]Movement canceled." });
+                        // Immediately return UI control to the player so they can see the menu.
+                        _gameState.UIState = CombatUIState.Default;
+
+                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[cancel]Movement will stop after the current step." });
+                    }
 
                     // Update state and exit to prevent further processing this frame.
                     _previousMouseState = currentMouseState;

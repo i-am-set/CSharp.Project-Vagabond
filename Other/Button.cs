@@ -6,6 +6,18 @@ using System;
 
 namespace ProjectVagabond.UI
 {
+    /// <summary>
+    /// Defines the reason a button might have a strikethrough.
+    /// </summary>
+    public enum StrikethroughType
+    {
+        None,
+        /// <summary>
+        /// Disabled because the action has been used up for the turn. Uses a distinct red color.
+        /// </summary>
+        Exhausted
+    }
+
     public class Button
     {
         protected readonly Global _global;
@@ -21,6 +33,7 @@ namespace ProjectVagabond.UI
         public bool UseScreenCoordinates { get; set; } = false;
         public bool AlignLeft { get; set; } = false;
         public float OverflowScrollSpeed { get; set; } = 0f;
+        public StrikethroughType Strikethrough { get; set; } = StrikethroughType.None;
 
         public event Action OnClick;
 
@@ -142,6 +155,30 @@ namespace ProjectVagabond.UI
                     textPosition = new Vector2(Bounds.X + (Bounds.Width - textSize.X) / 2 + xOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
                 }
                 spriteBatch.DrawString(font, Text, textPosition, textColor);
+
+                // --- DIAGONAL STRIKETHROUGH LOGIC ---
+                if (Strikethrough == StrikethroughType.Exhausted)
+                {
+                    Color strikethroughColor = _global.Palette_Red;
+                    var pixel = ServiceLocator.Get<Texture2D>();
+
+                    // Calculate diagonal properties
+                    float length = (float)Math.Sqrt(textSize.X * textSize.X + textSize.Y * textSize.Y);
+                    float angle = (float)Math.Atan2(textSize.Y, textSize.X);
+
+                    // Draw the rotated line starting from the top-left of the text
+                    spriteBatch.Draw(
+                        texture: pixel,
+                        position: textPosition,
+                        sourceRectangle: null,
+                        color: strikethroughColor,
+                        rotation: angle,
+                        origin: new Vector2(0, 0.5f), // Center the line vertically on the start point
+                        scale: new Vector2(length, 1), // Scale the 1x1 pixel to the correct length and 1px thickness
+                        effects: SpriteEffects.None,
+                        layerDepth: 0
+                    );
+                }
             }
 
             spriteBatch.End();
