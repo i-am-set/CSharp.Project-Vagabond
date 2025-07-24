@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System.Linq;
 
 namespace ProjectVagabond
@@ -32,11 +32,33 @@ namespace ProjectVagabond
                 _gameState.CancelExecutingActions(true); // true for "interrupted"
             }
 
-            // Forcefully stop any visual movement by removing the interpolation component.
-            // This ensures combat starts instantly.
-            if (_componentStore.HasComponent<InterpolationComponent>(_gameState.PlayerEntityId))
+            // Forcefully stop any visual movement for all pending combatants.
+            foreach (var entityId in _gameState.PendingCombatants)
             {
-                _componentStore.RemoveComponent<InterpolationComponent>(_gameState.PlayerEntityId);
+                // Stop visual movement
+                if (_componentStore.HasComponent<InterpolationComponent>(entityId))
+                {
+                    _componentStore.RemoveComponent<InterpolationComponent>(entityId);
+                }
+
+                // If it's an AI, clear its brain to prevent lingering actions.
+                if (entityId != _gameState.PlayerEntityId)
+                {
+                    // Clear any planned paths or single-step actions
+                    var pathComp = _componentStore.GetComponent<AIPathComponent>(entityId);
+                    pathComp?.Clear();
+
+                    var aiComp = _componentStore.GetComponent<AIComponent>(entityId);
+                    if (aiComp != null)
+                    {
+                        aiComp.ActionTimeBudget = 0;
+                        aiComp.NextStep = null;
+                    }
+
+                    // Clear the action queue as a failsafe
+                    var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(entityId);
+                    actionQueueComp?.ActionQueue.Clear();
+                }
             }
 
             // It's now safe to start combat.

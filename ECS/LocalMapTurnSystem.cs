@@ -108,6 +108,9 @@ namespace ProjectVagabond
 
                 // Execute the player's move.
                 ExecuteNextMove(_gameState.PlayerEntityId, nextPlayerMoveAction.Destination, nextPlayerMoveAction.Mode);
+
+                // Announce the player's new position to all listeners (like the AI system).
+                EventBus.Publish(new GameEvents.PlayerMoved { NewPosition = nextPlayerMoveAction.Destination, Map = MapView.Local });
             }
 
             // After the player's move has been processed, check if combat should start.
