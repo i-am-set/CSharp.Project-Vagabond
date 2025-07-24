@@ -1,4 +1,4 @@
-﻿﻿﻿using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Cryptography;
@@ -14,6 +14,15 @@ namespace ProjectVagabond
         Summer
     }
 
+    public enum ActivityType
+    {
+        Waiting,
+        Walking,
+        Jogging,
+        Running,
+        Combat
+    }
+
     public class WorldClockManager
     {
         // Injected Dependencies
@@ -24,7 +33,7 @@ namespace ProjectVagabond
         public event Action OnDayChanged;
         public event Action OnSeasonChanged;
         public event Action OnYearChanged;
-        public event Action<float> OnTimePassed;
+        public event Action<float, ActivityType> OnTimePassed;
 
         // Private fields for tracking time
         private int _year;
@@ -141,7 +150,8 @@ namespace ProjectVagabond
         /// </summary>
         /// <param name="gameSecondsToPass">The total number of in-game seconds to pass.</param>
         /// <param name="realSecondsDuration">The number of real-world seconds the visual interpolation should take.</param>
-        public void PassTime(double gameSecondsToPass, float realSecondsDuration)
+        /// <param name="activity">The type of activity that caused time to pass.</param>
+        public void PassTime(double gameSecondsToPass, float realSecondsDuration, ActivityType activity)
         {
             if (gameSecondsToPass <= 0) return;
 
@@ -162,7 +172,7 @@ namespace ProjectVagabond
             }
 
             // Fire the main event for systems like AI to react to the time budget.
-            OnTimePassed?.Invoke((float)gameSecondsToPass);
+            OnTimePassed?.Invoke((float)gameSecondsToPass, activity);
 
             // --- VISUAL CLOCK ANIMATION (BACKGROUND) ---
             _interpolationStartTime = CurrentTimeSpan;

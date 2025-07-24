@@ -159,6 +159,9 @@ namespace ProjectVagabond
             ServiceLocator.Register<StatusEffectSystem>(statusEffectSystem);
             worldClockManager.OnTimePassed += statusEffectSystem.ProcessTimePassed;
 
+            var energySystem = new EnergySystem();
+            ServiceLocator.Register<EnergySystem>(energySystem);
+
             _interpolationSystem = new InterpolationSystem();
             ServiceLocator.Register<InterpolationSystem>(_interpolationSystem);
 
@@ -202,6 +205,7 @@ namespace ProjectVagabond
             _systemManager.RegisterSystem(_localMapTurnSystem, 0f);
             _systemManager.RegisterSystem(_combatInitiationSystem, 0f);
             _systemManager.RegisterSystem(_aiSystem, 0f);
+            _systemManager.RegisterSystem(energySystem, 0f);
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());

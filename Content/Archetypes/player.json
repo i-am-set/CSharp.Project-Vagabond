@@ -15,7 +15,8 @@
         "Agility": 5,
         "Tenacity": 5,
         "Intelligence": 5,
-        "Charm": 5
+        "Charm": 5,
+        "SecondsPerEnergyPoint": 5.0
       }
     },
     {
@@ -64,6 +65,9 @@
           }
         ]
       }
+    },
+    {
+      "Type": "ProjectVagabond.EnergyRegenComponent, ProjectVagabond"
     }
   ]
 }

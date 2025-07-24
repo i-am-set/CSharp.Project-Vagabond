@@ -144,7 +144,7 @@ namespace ProjectVagabond.Scenes
                     _coreState.CancelExecutingActions();
                     // The real-world duration is proportional to the in-game duration, but capped.
                     float realDuration = Math.Clamp((float)totalSeconds * 0.1f, 0.5f, 5.0f);
-                    _worldClockManager.PassTime(totalSeconds, realDuration);
+                    _worldClockManager.PassTime(totalSeconds, realDuration, ActivityType.Waiting);
                 }
             });
         }

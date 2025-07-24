@@ -91,17 +91,26 @@ namespace ProjectVagabond
                 IAction nextAction = playerActionQueueComp.ActionQueue.Dequeue();
                 float actionCostInGameSeconds = CalculateSecondsForAction(_gameState, nextAction);
 
-                // PassTime now calculates the real-world duration internally based on the current TimeScale.
-                _worldClockManager.PassTime(actionCostInGameSeconds, 0);
-
+                ActivityType activity = ActivityType.Waiting;
                 if (nextAction is MoveAction ma)
                 {
+                    activity = ma.Mode switch
+                    {
+                        MovementMode.Walk => ActivityType.Walking,
+                        MovementMode.Jog => ActivityType.Jogging,
+                        MovementMode.Run => ActivityType.Running,
+                        _ => ActivityType.Waiting
+                    };
                     ApplyMoveActionEffects(_gameState, playerEntityId, ma, actionCostInGameSeconds);
                 }
                 else if (nextAction is RestAction ra)
                 {
+                    activity = ActivityType.Waiting;
                     ApplyRestActionEffects(_gameState, playerEntityId, ra);
                 }
+
+                // PassTime now calculates the real-world duration internally based on the current TimeScale.
+                _worldClockManager.PassTime(actionCostInGameSeconds, 0, activity);
             }
             else if (_gameState.IsExecutingActions)
             {

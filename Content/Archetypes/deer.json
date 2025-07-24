@@ -19,7 +19,8 @@
         "Agility": 8,
         "Tenacity": 3,
         "Intelligence": 1,
-        "Charm": 2
+        "Charm": 2,
+        "SecondsPerEnergyPoint": 3.0
       }
     },
     { "Type": "ProjectVagabond.NPCTagComponent, ProjectVagabond" },
@@ -41,6 +42,9 @@
         "AttackRange": 0,
         "AggroRange": 6.0
       }
+    },
+    {
+      "Type": "ProjectVagabond.EnergyRegenComponent, ProjectVagabond"
     }
   ]
 }

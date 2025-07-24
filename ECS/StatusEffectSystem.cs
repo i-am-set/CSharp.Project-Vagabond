@@ -17,7 +17,7 @@ namespace ProjectVagabond
         /// Processes status effects for entities OUTSIDE of combat.
         /// Ticks are based on real-time passage equivalent to combat rounds.
         /// </summary>
-        public void ProcessTimePassed(float secondsPassed)
+        public void ProcessTimePassed(float secondsPassed, ActivityType activity)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             if (secondsPassed <= 0 || _gameState.IsInCombat) return;

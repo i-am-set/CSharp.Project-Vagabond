@@ -44,6 +44,7 @@ namespace ProjectVagabond
 
         // New Time Variance Property
         public float TimeVariance { get; set; } = 0.2f;
+        public float SecondsPerEnergyPoint { get; set; }
 
         // Secondary stats (read-only)
         public int MaxHealthPoints => _maxHealthPoints;
@@ -89,6 +90,7 @@ namespace ProjectVagabond
             _weight = 70f; // kg
             _age = 25;
             _background = "Wanderer";
+            SecondsPerEnergyPoint = 10f; // Default value
         }
 
         /// <summary>

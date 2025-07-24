@@ -51,7 +51,7 @@ namespace ProjectVagabond
                 _currentTurnIndex = 0; // Reset for the new round.
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[palette_yellow]New round begins." });
                 // A combat round has a fixed, short real-world duration for its time-pass effect.
-                _worldClockManager.PassTime(Global.COMBAT_TURN_DURATION_SECONDS, 0.5f);
+                _worldClockManager.PassTime(Global.COMBAT_TURN_DURATION_SECONDS, 0.5f, ActivityType.Combat);
             }
 
             StartNewTurn();

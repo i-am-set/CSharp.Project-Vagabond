@@ -13,6 +13,7 @@ namespace ProjectVagabond
         private GameState _gameState;
         private readonly ComponentStore _componentStore;
         private readonly ChunkManager _chunkManager;
+        private readonly WorldClockManager _worldClockManager;
         private readonly Random _random = new();
         private const float REPATH_INTERVAL = 0.5f; // Recalculate path every half a second
         private const float BASE_AI_STEP_DURATION = 0.15f; // AI moves slightly slower visually
@@ -26,15 +27,106 @@ namespace ProjectVagabond
         {
             _componentStore = ServiceLocator.Get<ComponentStore>();
             _chunkManager = ServiceLocator.Get<ChunkManager>();
+            _worldClockManager = ServiceLocator.Get<WorldClockManager>();
+            _worldClockManager.OnTimePassed += HandleTimePassed;
+        }
+
+        private void HandleTimePassed(float secondsPassed, ActivityType activity)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.IsInCombat) return;
+
+            foreach (var entityId in _gameState.ActiveEntities)
+            {
+                var aiComp = _componentStore.GetComponent<AIComponent>(entityId);
+                if (aiComp != null && _componentStore.HasComponent<NPCTagComponent>(entityId))
+                {
+                    aiComp.ActionTimeBudget += secondsPassed;
+                }
+            }
         }
 
         public void Update(GameTime gameTime)
         {
-            // The main update loop is now handled by LocalMapTurnSystem.
-            // This method is kept to satisfy the ISystem interface, but the core logic
-            // is now in UpdateDecisions, which is called explicitly by LocalMapTurnSystem.
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.IsInCombat) return;
+
+            foreach (var entityId in _gameState.ActiveEntities)
+            {
+                if (!_componentStore.HasComponent<AIComponent>(entityId) || !_componentStore.HasComponent<NPCTagComponent>(entityId)) continue;
+                if (_componentStore.HasComponent<InterpolationComponent>(entityId)) continue;
+
+                var aiComp = _componentStore.GetComponent<AIComponent>(entityId);
+                if (aiComp.ActionTimeBudget <= 0) continue;
+
+                var pathComp = _componentStore.GetComponent<AIPathComponent>(entityId);
+                if (pathComp == null)
+                {
+                    pathComp = new AIPathComponent();
+                    _componentStore.AddComponent(entityId, pathComp);
+                }
+
+                // Decide on a new goal if the current one is complete
+                if (!pathComp.HasPath())
+                {
+                    DecideNextGoal(entityId, aiComp, pathComp);
+                }
+
+                // Try to execute the next step of the goal
+                Vector2? nextStep = null;
+                if (pathComp.HasPath())
+                {
+                    nextStep = pathComp.Path[pathComp.CurrentPathIndex];
+                }
+                else
+                {
+                    nextStep = aiComp.NextStep;
+                }
+
+                if (nextStep.HasValue)
+                {
+                    var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+                    var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
+                    if (localPosComp == null || statsComp == null) continue;
+
+                    var intent = _componentStore.GetComponent<AIIntentComponent>(entityId);
+                    var moveMode = MovementMode.Walk;
+                    if (intent?.CurrentIntent == AIIntent.Pursuing || intent?.CurrentIntent == AIIntent.Fleeing)
+                    {
+                        moveMode = statsComp.CanExertEnergy(1) ? MovementMode.Run : MovementMode.Jog;
+                    }
+
+                    Vector2 moveDir = nextStep.Value - localPosComp.LocalPosition;
+                    float timeCost = _gameState.GetSecondsPassedDuringMovement(statsComp, moveMode, default, moveDir, true);
+
+                    if (timeCost > 0 && timeCost <= aiComp.ActionTimeBudget)
+                    {
+                        aiComp.ActionTimeBudget -= timeCost;
+
+                        int energyCost = _gameState.GetMovementEnergyCost(new MoveAction(entityId, nextStep.Value, moveMode), true);
+                        if (statsComp.CanExertEnergy(energyCost))
+                        {
+                            statsComp.ExertEnergy(energyCost);
+                        }
+                        else if (moveMode == MovementMode.Run)
+                        {
+                            moveMode = MovementMode.Jog; // Downgrade if can't afford run
+                        }
+
+                        var interp = new InterpolationComponent(localPosComp.LocalPosition, nextStep.Value, timeCost, moveMode);
+                        _componentStore.AddComponent(entityId, interp);
+
+                        if (pathComp.HasPath())
+                        {
+                            pathComp.CurrentPathIndex++;
+                        }
+                        else
+                        {
+                            aiComp.NextStep = null;
+                        }
+                    }
+                }
+            }
         }
 
         public void ProcessCombatTurn(int entityId)

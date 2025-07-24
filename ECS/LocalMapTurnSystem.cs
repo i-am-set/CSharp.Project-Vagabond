@@ -81,9 +81,6 @@ namespace ProjectVagabond
             // --- END OF PRE-EMPTIVE CHECK ---
 
 
-            // CRITICAL: Tell all AIs to decide what they want to do BEFORE this tick happens.
-            _aiSystem.UpdateDecisions();
-
             // The time tick is now determined solely by the player's next action.
             var playerStats = _componentStore.GetComponent<StatsComponent>(_gameState.PlayerEntityId);
             var playerPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
@@ -93,93 +90,27 @@ namespace ProjectVagabond
                 return;
             }
 
-            if (playerActionQueue.ActionQueue.Peek() is MoveAction nextPlayerMoveAction)
+            if (playerActionQueue.ActionQueue.TryDequeue(out IAction action) && action is MoveAction nextPlayerMoveAction)
             {
                 Vector2 moveDir = nextPlayerMoveAction.Destination - playerPos.LocalPosition;
                 float timeTick = _gameState.GetSecondsPassedDuringMovement(playerStats, nextPlayerMoveAction.Mode, default, moveDir, true);
 
-                // PassTime now calculates the real-world duration internally.
-                _worldClockManager.PassTime(timeTick, 0);
-
-                // Now, update progress and execute moves for ALL entities based on that fixed time tick.
-                foreach (var entityId in _gameState.ActiveEntities)
+                ActivityType activity = nextPlayerMoveAction.Mode switch
                 {
-                    var progressComp = _componentStore.GetComponent<MovementProgressComponent>(entityId);
-                    var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
+                    MovementMode.Walk => ActivityType.Walking,
+                    MovementMode.Jog => ActivityType.Jogging,
+                    MovementMode.Run => ActivityType.Running,
+                    _ => ActivityType.Walking
+                };
 
-                    if (progressComp == null)
-                    {
-                        progressComp = new MovementProgressComponent();
-                        _componentStore.AddComponent(entityId, progressComp);
-                    }
-                    if (statsComp == null) continue;
+                // Pass time, which will give AI their action budget via the OnTimePassed event.
+                _worldClockManager.PassTime(timeTick, 0, activity);
 
-                    if (entityId == _gameState.PlayerEntityId)
-                    {
-                        // The player always moves exactly one step per tick they initiate.
-                        progressComp.Progress = 1.0f;
-                    }
-                    else // It's an AI
-                    {
-                        var intent = _componentStore.GetComponent<AIIntentComponent>(entityId);
-                        var moveMode = MovementMode.Walk;
-                        if (intent?.CurrentIntent == AIIntent.Pursuing || intent?.CurrentIntent == AIIntent.Fleeing)
-                        {
-                            moveMode = statsComp.CanExertEnergy(1) ? MovementMode.Run : MovementMode.Jog;
-                        }
-
-                        _aiSystem ??= ServiceLocator.Get<AISystem>();
-                        var aiPos = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-                        var aiPathComp = _componentStore.GetComponent<AIPathComponent>(entityId);
-                        Vector2? aiNextStepPeek = aiPathComp.HasPath() ? aiPathComp.Path[aiPathComp.CurrentPathIndex] : _componentStore.GetComponent<AIComponent>(entityId)?.NextStep;
-
-
-                        if (aiPos != null && aiNextStepPeek.HasValue)
-                        {
-                            Vector2 aiMoveDir = aiNextStepPeek.Value - aiPos.LocalPosition;
-                            float aiStepTime = _gameState.GetSecondsPassedDuringMovement(statsComp, moveMode, default, aiMoveDir, true);
-
-                            if (aiStepTime > 0)
-                            {
-                                progressComp.Progress += timeTick / aiStepTime;
-                            }
-                        }
-                    }
-
-                    // Execute all full moves the entity has accumulated.
-                    while (progressComp.Progress >= 1.0f)
-                    {
-                        progressComp.Progress -= 1.0f;
-                        Vector2? nextStep = null;
-                        MovementMode moveMode = MovementMode.Walk;
-
-                        if (entityId == _gameState.PlayerEntityId)
-                        {
-                            if (playerActionQueue.ActionQueue.TryDequeue(out IAction action) && action is MoveAction move)
-                            {
-                                nextStep = move.Destination;
-                                moveMode = move.Mode;
-                            }
-                        }
-                        else
-                        {
-                            nextStep = _aiSystem.GetNextStepForExecution(entityId);
-                            var intent = _componentStore.GetComponent<AIIntentComponent>(entityId);
-                            if (intent?.CurrentIntent == AIIntent.Pursuing || intent?.CurrentIntent == AIIntent.Fleeing)
-                            {
-                                moveMode = statsComp.CanExertEnergy(1) ? MovementMode.Run : MovementMode.Jog;
-                            }
-                        }
-
-                        if (nextStep.HasValue)
-                        {
-                            ExecuteNextMove(entityId, nextStep.Value, moveMode);
-                        }
-                    }
-                }
+                // Execute the player's move.
+                ExecuteNextMove(_gameState.PlayerEntityId, nextPlayerMoveAction.Destination, nextPlayerMoveAction.Mode);
             }
 
-            // After all moves for this tick have been processed, check if combat should start.
+            // After the player's move has been processed, check if combat should start.
             CheckForCombatInitiation();
         }
 
