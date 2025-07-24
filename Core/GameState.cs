@@ -63,7 +63,7 @@ namespace ProjectVagabond
         public int CurrentTurnEntityId { get; private set; }
         public CombatUIState UIState { get; set; } = CombatUIState.Default;
         public int? SelectedTargetId { get; set; } = null;
-        public List<Vector2> CombatMovePreviewPath { get; set; } = new List<Vector2>();
+        public List<(Vector2 Position, MovementMode Mode)> CombatMovePreviewPath { get; set; } = new List<(Vector2, MovementMode)>();
         public MovementMode CombatMovePreviewMode { get; set; } = MovementMode.Walk;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -628,7 +628,7 @@ namespace ProjectVagabond
             return (finalEnergy, true, secondsPassed);
         }
 
-        public List<Vector2> GetAffordablePath(int entityId, Vector2 start, Vector2 end, MovementMode mode, out float totalTimeCost)
+        public List<(Vector2 Position, MovementMode Mode)> GetAffordablePath(int entityId, Vector2 start, Vector2 end, MovementMode mode, out float totalTimeCost)
         {
             totalTimeCost = 0f;
             var stats = _componentStore.GetComponent<StatsComponent>(entityId);
@@ -638,19 +638,10 @@ namespace ProjectVagabond
                 return null;
             }
 
-            if (mode == MovementMode.Run)
-            {
-                int energyCostPerStep = GetMovementEnergyCost(new MoveAction(entityId, Vector2.Zero, mode), true);
-                if (!stats.CanExertEnergy(energyCostPerStep))
-                {
-                    return new List<Vector2>(); // Cannot run if there's no energy.
-                }
-            }
-
             float timeBudget = Global.COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
             if (timeBudget <= 0)
             {
-                return new List<Vector2>();
+                return new List<(Vector2, MovementMode)>();
             }
 
             var fullPath = Pathfinder.FindPath(entityId, start, end, this, mode, PathfindingMode.Time, MapView.Local);
@@ -659,7 +650,7 @@ namespace ProjectVagabond
                 return null;
             }
 
-            var affordablePath = new List<Vector2>();
+            var affordablePath = new List<(Vector2 Position, MovementMode Mode)>();
             var lastPos = start;
             int simulatedEnergy = stats.CurrentEnergyPoints;
 
@@ -667,11 +658,11 @@ namespace ProjectVagabond
             {
                 var moveDirection = step - lastPos;
                 var currentMode = mode;
-                int energyCostPerStep = GetMovementEnergyCost(new MoveAction(entityId, Vector2.Zero, currentMode), true);
 
-                if (currentMode == MovementMode.Run && simulatedEnergy < energyCostPerStep)
+                int energyCostForRun = GetMovementEnergyCost(new MoveAction(entityId, step, MovementMode.Run), true);
+                if (currentMode == MovementMode.Run && simulatedEnergy < energyCostForRun)
                 {
-                    currentMode = MovementMode.Jog; // Downgrade to jog if out of energy for a run
+                    currentMode = MovementMode.Jog;
                 }
 
                 float stepCost = GetSecondsPassedDuringMovement(stats, currentMode, default, moveDirection, true);
@@ -679,10 +670,10 @@ namespace ProjectVagabond
                 if (totalTimeCost + stepCost <= timeBudget)
                 {
                     totalTimeCost += stepCost;
-                    affordablePath.Add(step);
+                    affordablePath.Add((step, currentMode));
                     if (currentMode == MovementMode.Run)
                     {
-                        simulatedEnergy -= energyCostPerStep;
+                        simulatedEnergy -= energyCostForRun;
                     }
                     lastPos = step;
                 }

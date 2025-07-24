@@ -112,9 +112,10 @@ namespace ProjectVagabond
 
             if (localPosComp != null && statsComp != null && turnStatsComp != null)
             {
-                if (action.Mode != MovementMode.Walk)
+                if (action.Mode == MovementMode.Run)
                 {
-                    statsComp.ExertEnergy(1);
+                    int energyCost = _gameState.GetMovementEnergyCost(action, true);
+                    statsComp.ExertEnergy(energyCost);
                 }
 
                 // Calculate the actual in-game time this single step will take.

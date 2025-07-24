@@ -140,8 +140,7 @@ namespace ProjectVagabond
             if (targetTile.X >= 0)
             {
                 var path = _gameState.GetAffordablePath(_gameState.PlayerEntityId, playerPosComp.LocalPosition, targetTile, movementMode, out _previewPathCost);
-                _gameState.CombatMovePreviewPath = path ?? new List<Vector2>();
-                _gameState.CombatMovePreviewMode = movementMode;
+                _gameState.CombatMovePreviewPath = path ?? new List<(Vector2, MovementMode)>();
             }
             else
             {
@@ -155,12 +154,9 @@ namespace ProjectVagabond
                 var playerActionQueue = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
                 if (playerActionQueue != null)
                 {
-                    // REMOVED: We no longer pre-pay the movement cost.
-                    // It will be added step-by-step in the CombatProcessingSystem.
-
-                    foreach (var step in _gameState.CombatMovePreviewPath)
+                    foreach (var (step, stepMode) in _gameState.CombatMovePreviewPath)
                     {
-                        playerActionQueue.ActionQueue.Enqueue(new MoveAction(_gameState.PlayerEntityId, step, movementMode));
+                        playerActionQueue.ActionQueue.Enqueue(new MoveAction(_gameState.PlayerEntityId, step, stepMode));
                     }
                     _gameState.UIState = CombatUIState.Busy;
                     _gameState.CombatMovePreviewPath.Clear();
@@ -304,7 +300,6 @@ namespace ProjectVagabond
             _gameState.UIState = CombatUIState.Default;
             _gameState.SelectedTargetId = null;
             _gameState.CombatMovePreviewPath.Clear();
-            _gameState.CombatMovePreviewMode = MovementMode.Walk;
             _previewPathCost = 0f;
         }
 

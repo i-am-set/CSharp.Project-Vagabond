@@ -255,12 +255,12 @@ namespace ProjectVagabond
             // Draw Combat Move Preview Path
             if (_gameState.IsInCombat && _gameState.CombatMovePreviewPath.Any())
             {
-                foreach (var pos in _gameState.CombatMovePreviewPath)
+                foreach (var (pos, mode) in _gameState.CombatMovePreviewPath)
                 {
                     Vector2? screenPos = MapCoordsToScreen(pos);
                     if (screenPos.HasValue)
                     {
-                        bool isRunning = _gameState.CombatMovePreviewMode == MovementMode.Run;
+                        bool isRunning = mode == MovementMode.Run;
                         Texture2D texture = isRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
                         Color color = (isRunning ? _global.RunPathColor : _global.PathColor) * 0.6f; // Use transparency for preview
 
