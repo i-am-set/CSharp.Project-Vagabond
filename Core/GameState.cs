@@ -8,7 +8,11 @@ using System.Text;
 
 namespace ProjectVagabond
 {
-    public enum MapView { World, Local }
+    public enum MapView
+    {
+        World,
+        Local
+    }
 
     public class GameState
     {

@@ -108,8 +108,9 @@ namespace ProjectVagabond
         {
             var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(action.ActorId);
             var statsComp = _componentStore.GetComponent<StatsComponent>(action.ActorId);
+            var turnStatsComp = _componentStore.GetComponent<TurnStatsComponent>(action.ActorId);
 
-            if (localPosComp != null && statsComp != null)
+            if (localPosComp != null && statsComp != null && turnStatsComp != null)
             {
                 if (action.Mode != MovementMode.Walk)
                 {
@@ -119,6 +120,9 @@ namespace ProjectVagabond
                 // Calculate the actual in-game time this single step will take.
                 Vector2 moveDir = action.Destination - localPosComp.LocalPosition;
                 float timeCostOfStep = _gameState.GetSecondsPassedDuringMovement(statsComp, action.Mode, default, moveDir, true);
+
+                // ADDED: Increment the turn's movement time by the cost of this single step.
+                turnStatsComp.MovementTimeUsedThisTurn += timeCostOfStep;
 
                 // The visual duration is proportional to the in-game time cost, scaled by the world clock.
                 float visualDuration = (timeCostOfStep / _worldClockManager.TimeScale) * VISUAL_SPEED_MULTIPLIER;

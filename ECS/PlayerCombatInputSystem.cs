@@ -18,6 +18,7 @@ namespace ProjectVagabond
         private readonly MapRenderer _mapRenderer;
 
         private MouseState _previousMouseState;
+        private KeyboardState _previousKeyboardState;
         private string _selectedAttackName;
         private float _previewPathCost = 0f;
         private readonly Random _random = new Random();
@@ -36,14 +37,48 @@ namespace ProjectVagabond
 
         public void ProcessInput()
         {
-            if (!_gameState.IsInCombat || _gameState.CurrentTurnEntityId != _gameState.PlayerEntityId || _gameState.UIState == CombatUIState.Busy)
+            // Don't process any input if not in combat or not the player's turn.
+            if (!_gameState.IsInCombat || _gameState.CurrentTurnEntityId != _gameState.PlayerEntityId)
             {
                 _previousMouseState = Mouse.GetState();
+                _previousKeyboardState = Keyboard.GetState();
                 return;
             }
 
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
+
+            // Handle Escape key press to cancel an ongoing action (like movement).
+            // This must be checked even when the UIState is Busy.
+            if (currentKeyboardState.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape))
+            {
+                if (_gameState.UIState == CombatUIState.Busy)
+                {
+                    // With the "pay-as-you-go" model, cancellation is simple.
+                    // The MovementTimeUsedThisTurn is already correct. We just stop what's happening.
+                    var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
+                    actionQueueComp?.ActionQueue.Clear();
+
+                    _componentStore.RemoveComponent<InterpolationComponent>(_gameState.PlayerEntityId);
+                    _gameState.UIState = CombatUIState.Default;
+                    ResetToDefaultState();
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[cancel]Movement canceled." });
+
+                    // Update state and exit to prevent further processing this frame.
+                    _previousMouseState = currentMouseState;
+                    _previousKeyboardState = currentKeyboardState;
+                    return;
+                }
+            }
+
+            // If the UI is busy and the escape key wasn't pressed, do nothing else.
+            if (_gameState.UIState == CombatUIState.Busy)
+            {
+                _previousMouseState = currentMouseState;
+                _previousKeyboardState = currentKeyboardState;
+                return;
+            }
+
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position).ToPoint();
 
             // Universal cancel for selection modes
@@ -52,6 +87,7 @@ namespace ProjectVagabond
             {
                 ProcessMenuCommand("Back");
                 _previousMouseState = currentMouseState;
+                _previousKeyboardState = currentKeyboardState;
                 return; // Exit early
             }
 
@@ -85,6 +121,7 @@ namespace ProjectVagabond
             }
 
             _previousMouseState = currentMouseState;
+            _previousKeyboardState = currentKeyboardState;
         }
 
         private void HandleMoveSelection(MouseState currentMouseState, KeyboardState currentKeyboardState, Point virtualMousePos)
@@ -116,11 +153,10 @@ namespace ProjectVagabond
             if (leftClicked && _gameState.CombatMovePreviewPath.Any())
             {
                 var playerActionQueue = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
-                var playerTurnStats = _componentStore.GetComponent<TurnStatsComponent>(_gameState.PlayerEntityId);
-
-                if (playerActionQueue != null && playerTurnStats != null)
+                if (playerActionQueue != null)
                 {
-                    playerTurnStats.MovementTimeUsedThisTurn += _previewPathCost;
+                    // REMOVED: We no longer pre-pay the movement cost.
+                    // It will be added step-by-step in the CombatProcessingSystem.
 
                     foreach (var step in _gameState.CombatMovePreviewPath)
                     {
@@ -270,6 +306,38 @@ namespace ProjectVagabond
             _gameState.CombatMovePreviewPath.Clear();
             _gameState.CombatMovePreviewMode = MovementMode.Walk;
             _previewPathCost = 0f;
+        }
+
+        // This method is no longer needed here as the refund logic is obsolete.
+        // It is kept for historical reference but is not called.
+        private float CalculatePathCost(IEnumerable<IAction> path, Vector2 startPosition)
+        {
+            if (path == null || !path.Any())
+            {
+                return 0f;
+            }
+
+            float totalCost = 0f;
+            var playerStats = _componentStore.GetComponent<StatsComponent>(_gameState.PlayerEntityId);
+
+            if (playerStats == null)
+            {
+                Console.WriteLine("[ERROR] PlayerCombatInputSystem.CalculatePathCost: Player is missing StatsComponent.");
+                return 0f;
+            }
+
+            Vector2 lastKnownPosition = startPosition;
+
+            foreach (var action in path)
+            {
+                if (action is MoveAction moveAction)
+                {
+                    Vector2 moveDir = moveAction.Destination - lastKnownPosition;
+                    totalCost += _gameState.GetSecondsPassedDuringMovement(playerStats, moveAction.Mode, default, moveDir, true);
+                    lastKnownPosition = moveAction.Destination; // Update for the next step in the calculation
+                }
+            }
+            return totalCost;
         }
     }
 }
