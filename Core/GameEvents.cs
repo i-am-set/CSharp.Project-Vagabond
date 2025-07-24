@@ -47,5 +47,14 @@
             public int EntityId { get; set; }
             public int DamageAmount { get; set; }
         }
+
+        /// <summary>
+        /// Published when the player entity completes a move to a new tile.
+        /// </summary>
+        public struct PlayerMoved
+        {
+            public Microsoft.Xna.Framework.Vector2 NewPosition { get; set; }
+            public MapView Map { get; set; }
+        }
     }
 }
