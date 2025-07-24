@@ -22,6 +22,10 @@ namespace ProjectVagabond
         private readonly List<Button> _actionButtons = new List<Button>();
         private readonly Button _backButton;
         private readonly Button _endTurnButton;
+        private readonly Button _attackButton;
+        private readonly Button _moveButton;
+        private readonly Button _fleeButton;
+
         private CombatUIState _lastUIState = CombatUIState.Busy;
         private int _lastTurnEntityId = -1;
 
@@ -42,6 +46,15 @@ namespace ProjectVagabond
             _global = ServiceLocator.Get<Global>();
 
             // Create persistent buttons once to preserve their internal state (like previousMouseState)
+            _attackButton = new Button(Rectangle.Empty, "Attack");
+            _attackButton.OnClick += () => OnActionSelected?.Invoke("Attack");
+
+            _moveButton = new Button(Rectangle.Empty, "Move");
+            _moveButton.OnClick += () => OnActionSelected?.Invoke("Move");
+
+            _fleeButton = new Button(Rectangle.Empty, "Flee");
+            _fleeButton.OnClick += () => OnActionSelected?.Invoke("Flee");
+
             _backButton = new Button(Rectangle.Empty, "Back")
             {
                 CustomDefaultTextColor = _global.Palette_Red,
@@ -102,7 +115,6 @@ namespace ProjectVagabond
             switch (_gameState.UIState)
             {
                 case CombatUIState.Default:
-                    var mainOptions = new List<string> { "Attack", "Move", "Flee" };
                     var turnStats = _componentStore.GetComponent<TurnStatsComponent>(_gameState.PlayerEntityId);
 
                     // --- Check if any enemy is in attack range ---
@@ -122,50 +134,34 @@ namespace ProjectVagabond
                                 if (distance <= playerCombatant.AttackRange)
                                 {
                                     isAnyEnemyInRange = true;
-                                    break; // Found one, no need to check further
+                                    break;
                                 }
                             }
                         }
                     }
                     // --- End of range check ---
 
-                    foreach (var option in mainOptions)
-                    {
-                        var buttonBounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
-                        var button = new Button(buttonBounds, option);
+                    // Update and add Attack button
+                    _attackButton.Bounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
+                    bool hasAction = turnStats?.HasPrimaryAction ?? false;
+                    _attackButton.IsEnabled = hasAction && isAnyEnemyInRange;
+                    _attackButton.Strikethrough = !hasAction ? StrikethroughType.Exhausted : StrikethroughType.None;
+                    _actionButtons.Add(_attackButton);
+                    currentY += BUTTON_HEIGHT;
 
-                        if (option == "Move")
-                        {
-                            button.IsEnabled = _gameState.CanPlayerMoveInCombat();
-                            if (!button.IsEnabled)
-                            {
-                                // If the player can't move, it's because they've used up their turn's time budget.
-                                button.Strikethrough = StrikethroughType.Exhausted;
-                            }
-                        }
-                        else if (option == "Attack")
-                        {
-                            bool hasAction = turnStats?.HasPrimaryAction ?? false;
-                            button.IsEnabled = hasAction && isAnyEnemyInRange;
-                            if (!hasAction) // Action has been used up.
-                            {
-                                button.Strikethrough = StrikethroughType.Exhausted;
-                            }
-                        }
-                        else if (option == "Flee")
-                        {
-                            button.IsEnabled = turnStats?.IsPristineForTurn ?? false;
-                            if (!button.IsEnabled)
-                            {
-                                // If the turn is not pristine, an action has been used.
-                                button.Strikethrough = StrikethroughType.Exhausted;
-                            }
-                        }
+                    // Update and add Move button
+                    _moveButton.Bounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
+                    _moveButton.IsEnabled = _gameState.CanPlayerMoveInCombat();
+                    _moveButton.Strikethrough = !_moveButton.IsEnabled ? StrikethroughType.Exhausted : StrikethroughType.None;
+                    _actionButtons.Add(_moveButton);
+                    currentY += BUTTON_HEIGHT;
 
-                        button.OnClick += () => OnActionSelected?.Invoke(option);
-                        _actionButtons.Add(button);
-                        currentY += BUTTON_HEIGHT;
-                    }
+                    // Update and add Flee button
+                    _fleeButton.Bounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
+                    _fleeButton.IsEnabled = turnStats?.IsPristineForTurn ?? false;
+                    _fleeButton.Strikethrough = !_fleeButton.IsEnabled ? StrikethroughType.Exhausted : StrikethroughType.None;
+                    _actionButtons.Add(_fleeButton);
+                    currentY += BUTTON_HEIGHT;
 
                     _endTurnButton.Bounds = bottomButtonBounds;
                     _endTurnButton.IsEnabled = true;

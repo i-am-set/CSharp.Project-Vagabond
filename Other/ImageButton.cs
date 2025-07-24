@@ -20,9 +20,14 @@ namespace ProjectVagabond.UI
         private readonly Texture2D _disabledTexture;
 
         private bool _isHeldDown;
+        private float _swayTimer = 0f;
+        private bool _wasHoveredLastFrame = false;
 
-        public ImageButton(Rectangle bounds, Texture2D defaultTexture = null, Texture2D hoverTexture = null, Texture2D clickedTexture = null, Texture2D disabledTexture = null)
-            : base(bounds, "")
+        private const float SWAY_SPEED = 4f;
+        private const float SWAY_AMOUNT = 2f;
+
+        public ImageButton(Rectangle bounds, Texture2D defaultTexture = null, Texture2D hoverTexture = null, Texture2D clickedTexture = null, Texture2D disabledTexture = null, bool enableHoverSway = true)
+            : base(bounds, "", enableHoverSway: enableHoverSway)
         {
             _defaultTexture = defaultTexture;
             _hoverTexture = hoverTexture;
@@ -70,14 +75,32 @@ namespace ProjectVagabond.UI
                 textureToDraw = _hoverTexture;
             }
 
+            float swayOffset = 0f;
+            if (isActivated && EnableHoverSway)
+            {
+                if (!_wasHoveredLastFrame)
+                {
+                    _swayTimer = 0f; // Reset timer on new hover.
+                }
+                _swayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                swayOffset = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT;
+            }
+            else
+            {
+                _swayTimer = 0f; // Reset if not hovered.
+            }
+            _wasHoveredLastFrame = isActivated;
+
+            var swayedBounds = new Rectangle(Bounds.X + (int)swayOffset, Bounds.Y, Bounds.Width, Bounds.Height);
+
             if (textureToDraw != null)
             {
-                spriteBatch.Draw(textureToDraw, Bounds, Color.White);
+                spriteBatch.Draw(textureToDraw, swayedBounds, Color.White);
             }
 
             if (isActivated && _hoverTexture == null)
             {
-                DrawCornerBrackets(spriteBatch, ServiceLocator.Get<Texture2D>(), Bounds, BorderThickness, HoverBorderColor);
+                DrawCornerBrackets(spriteBatch, ServiceLocator.Get<Texture2D>(), swayedBounds, BorderThickness, HoverBorderColor);
             }
         }
 

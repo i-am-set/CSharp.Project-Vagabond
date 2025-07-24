@@ -34,15 +34,21 @@ namespace ProjectVagabond.UI
         public bool AlignLeft { get; set; } = false;
         public float OverflowScrollSpeed { get; set; } = 0f;
         public StrikethroughType Strikethrough { get; set; } = StrikethroughType.None;
+        public bool EnableHoverSway { get; set; } = true;
 
         public event Action OnClick;
 
         protected MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
         private float _scrollPosition = 0f;
+        private float _swayTimer = 0f;
+        private bool _wasHoveredLastFrame = false;
+
+        private const float SWAY_SPEED = 4f;
+        private const float SWAY_AMOUNT = 2f;
 
 #nullable enable
-        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f)
+        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true)
         {
             _global = ServiceLocator.Get<Global>();
 
@@ -59,6 +65,7 @@ namespace ProjectVagabond.UI
             CustomDisabledTextColor = customDisabledTextColor;
             AlignLeft = alignLeft;
             OverflowScrollSpeed = overflowScrollSpeed;
+            EnableHoverSway = enableHoverSway;
         }
 #nullable restore
 
@@ -117,7 +124,26 @@ namespace ProjectVagabond.UI
                     : (CustomDefaultTextColor ?? _global.Palette_BrightWhite);
             }
 
-            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            float swayOffset = 0f;
+
+            if (isActivated && EnableHoverSway)
+            {
+                if (!_wasHoveredLastFrame)
+                {
+                    _swayTimer = 0f; // Reset timer on new hover to start animation from the beginning.
+                }
+                _swayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                swayOffset = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT;
+            }
+            else
+            {
+                _swayTimer = 0f; // Reset if not hovered.
+            }
+            _wasHoveredLastFrame = isActivated;
+
+            float totalXOffset = hopOffset + swayOffset;
+
             Vector2 textSize = font.MeasureString(Text);
 
             var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
@@ -148,11 +174,11 @@ namespace ProjectVagabond.UI
                 Vector2 textPosition;
                 if (AlignLeft)
                 {
-                    textPosition = new Vector2(Bounds.X + xOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
+                    textPosition = new Vector2(Bounds.X + totalXOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
                 }
                 else
                 {
-                    textPosition = new Vector2(Bounds.X + (Bounds.Width - textSize.X) / 2 + xOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
+                    textPosition = new Vector2(Bounds.X + (Bounds.Width - textSize.X) / 2 + totalXOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
                 }
                 spriteBatch.DrawString(font, Text, textPosition, textColor);
 
