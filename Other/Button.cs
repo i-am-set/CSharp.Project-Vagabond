@@ -47,6 +47,8 @@ namespace ProjectVagabond.UI
         private const float SWAY_SPEED = 4f;
         private const float SWAY_AMOUNT = 2f;
 
+        private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
+
 #nullable enable
         public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true)
         {
@@ -148,10 +150,9 @@ namespace ProjectVagabond.UI
 
             var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
             var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
-            var clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
             spriteBatch.End();
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp, rasterizerState: clipRasterizerState);
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp, rasterizerState: _clipRasterizerState);
 
             spriteBatch.GraphicsDevice.ScissorRectangle = Bounds;
 
