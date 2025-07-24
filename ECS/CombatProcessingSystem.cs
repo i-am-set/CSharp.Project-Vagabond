@@ -16,7 +16,7 @@ namespace ProjectVagabond
         private WorldClockManager _worldClockManager;
 
         private float _actionDelayTimer = 0f;
-        private const float ACTION_DELAY_SECONDS = 0.5f; // A standard delay between distinct actions.
+        private const float ACTION_DELAY_SECONDS = 0.15f;
         private const float VISUAL_SPEED_MULTIPLIER = 0.8f; // Makes animations slightly faster than the raw time cost.
 
         public CombatProcessingSystem() { }
@@ -33,14 +33,11 @@ namespace ProjectVagabond
 
             int currentEntityId = _gameState.CurrentTurnEntityId;
 
-            // If the entity is currently moving, wait for the animation to finish.
-            // This takes priority over the action delay timer.
             if (_componentStore.HasComponent<InterpolationComponent>(currentEntityId))
             {
                 return;
             }
 
-            // If we are in a post-action delay, count it down.
             if (_actionDelayTimer > 0)
             {
                 _actionDelayTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -68,23 +65,11 @@ namespace ProjectVagabond
                         _combatTurnSystem.EndCurrentTurn();
                         break;
                 }
-
-                // A delay is needed unless the action just processed was a move
-                // AND the next action in the queue is also a move.
-                bool isConsecutiveMove = false;
-                if (nextAction is MoveAction)
-                {
-                    if (actionQueue.ActionQueue.TryPeek(out IAction peekedAction) && peekedAction is MoveAction)
-                    {
-                        isConsecutiveMove = true;
-                    }
-                }
-
-                if (!isConsecutiveMove)
+                // We don't set the delay for moves, as the interpolation duration serves as the delay.
+                if (!(nextAction is MoveAction))
                 {
                     _actionDelayTimer = ACTION_DELAY_SECONDS;
                 }
-
 
                 // After processing an action, check if the queue is now empty.
                 if (!actionQueue.ActionQueue.Any())

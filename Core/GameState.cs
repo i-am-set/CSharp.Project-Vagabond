@@ -426,33 +426,47 @@ namespace ProjectVagabond
         {
             mapData = default;
 
-            // 1. Bounds Check
+            // Basic terrain/bounds checks
             if (view == MapView.Local)
             {
                 if (!(position.X >= 0 && position.X < Global.LOCAL_GRID_SIZE && position.Y >= 0 && position.Y < Global.LOCAL_GRID_SIZE))
-                    return false;
+                {
+                    return false; // Out of bounds
+                }
             }
-
-            // 2. Terrain Check
-            if (view == MapView.World)
+            else // World view
             {
                 mapData = GetMapDataAt((int)position.X, (int)position.Y);
                 if (!(mapData.TerrainHeight >= _global.WaterLevel && mapData.TerrainHeight < _global.MountainsLevel))
-                    return false;
+                {
+                    return false; // Impassable terrain
+                }
             }
 
-            // 3. Entity Blocking Check
-            // An entity can always path *to* the target destination, even if it's occupied.
-            // The logic that *uses* the path is responsible for stopping before the final tile if needed.
-            if (position == targetDestination)
+            // Entity blocking check (only for local view)
+            if (view == MapView.Local)
             {
-                return true;
-            }
+                // The destination tile itself is ALWAYS considered valid for the pathfinder to reach.
+                // This allows pathing *to* an entity. The calling system is responsible for stopping before it if needed.
+                if (position == targetDestination)
+                {
+                    return true;
+                }
 
-            // Check if any *other* entity occupies this tile.
-            if (IsTileOccupied(position, pathfindingEntityId, view))
-            {
-                return false;
+                // Determine which list of entities to check against for collisions.
+                var entitiesToCheck = IsInCombat ? Combatants : ActiveEntities;
+
+                foreach (var entityId in entitiesToCheck)
+                {
+                    // An entity doesn't block its own path.
+                    if (entityId == pathfindingEntityId) continue;
+
+                    var posComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
+                    if (posComp != null && posComp.LocalPosition == position)
+                    {
+                        return false; // Occupied by another entity.
+                    }
+                }
             }
 
             return true; // All checks passed
@@ -466,33 +480,6 @@ namespace ProjectVagabond
         public bool IsPositionPassable(Vector2 position, MapView view)
         {
             return IsPositionPassable(position, view, out _);
-        }
-
-        public bool IsTileOccupied(Vector2 position, int askingEntityId, MapView view)
-        {
-            var entitiesToCheck = IsInCombat ? Combatants : ActiveEntities;
-            foreach (var entityId in entitiesToCheck)
-            {
-                if (entityId == askingEntityId) continue;
-
-                if (view == MapView.Local)
-                {
-                    var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-                    if (localPosComp != null && localPosComp.LocalPosition == position)
-                    {
-                        return true; // Blocked by another entity.
-                    }
-                }
-                else // World View
-                {
-                    var worldPosComp = _componentStore.GetComponent<PositionComponent>(entityId);
-                    if (worldPosComp != null && worldPosComp.WorldPosition == position)
-                    {
-                        return true; // Blocked by another entity.
-                    }
-                }
-            }
-            return false;
         }
 
         public int GetMovementEnergyCost(MoveAction action, bool isLocalMove = false)

@@ -29,7 +29,6 @@ namespace ProjectVagabond
             _chunkManager = ServiceLocator.Get<ChunkManager>();
             _worldClockManager = ServiceLocator.Get<WorldClockManager>();
             _worldClockManager.OnTimePassed += HandleTimePassed;
-            EventBus.Subscribe<GameEvents.PlayerMoved>(HandlePlayerMoved);
         }
 
         private void HandleTimePassed(float secondsPassed, ActivityType activity)
@@ -43,23 +42,6 @@ namespace ProjectVagabond
                 if (aiComp != null && _componentStore.HasComponent<NPCTagComponent>(entityId))
                 {
                     aiComp.ActionTimeBudget += secondsPassed;
-                }
-            }
-        }
-
-        private void HandlePlayerMoved(GameEvents.PlayerMoved e)
-        {
-            if (e.Map != MapView.Local) return;
-
-            _gameState ??= ServiceLocator.Get<GameState>();
-
-            foreach (var entityId in _gameState.ActiveEntities)
-            {
-                var intentComp = _componentStore.GetComponent<AIIntentComponent>(entityId);
-                if (intentComp != null && intentComp.CurrentIntent == AIIntent.Pursuing)
-                {
-                    var pathComp = _componentStore.GetComponent<AIPathComponent>(entityId);
-                    pathComp?.Clear(); // Invalidate the current path, forcing a recalculation on the next AI update tick.
                 }
             }
         }
@@ -103,14 +85,6 @@ namespace ProjectVagabond
 
                 if (nextStep.HasValue)
                 {
-                    // Final check: ensure the target tile isn't occupied by another entity right now.
-                    if (_gameState.IsTileOccupied(nextStep.Value, entityId, MapView.Local))
-                    {
-                        pathComp.Clear(); // Path is blocked, recalculate next time.
-                        aiComp.NextStep = null;
-                        continue;
-                    }
-
                     var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
                     var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
                     if (localPosComp == null || statsComp == null) continue;
@@ -160,126 +134,75 @@ namespace ProjectVagabond
             _gameState ??= ServiceLocator.Get<GameState>();
 
             var aiPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-            var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
             var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(entityId);
             var stats = _componentStore.GetComponent<StatsComponent>(entityId);
-            var turnStats = _componentStore.GetComponent<TurnStatsComponent>(entityId);
-            var combatant = _componentStore.GetComponent<CombatantComponent>(entityId);
-            var attacks = _componentStore.GetComponent<AvailableAttacksComponent>(entityId);
+            var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
             var aiName = EntityNamer.GetName(entityId);
 
-            if (aiPosComp == null || playerPosComp == null || actionQueue == null || stats == null || turnStats == null || combatant == null || attacks == null)
+            // Failsafe for missing components
+            if (aiPosComp == null || actionQueue == null || stats == null || playerPosComp == null)
             {
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{aiName} cannot act (missing components)." });
                 actionQueue?.ActionQueue.Enqueue(new EndTurnAction(entityId));
                 return;
             }
 
-            Vector2 finalPositionAfterMove = aiPosComp.LocalPosition;
+            // Find a path to the player.
+            var path = Pathfinder.FindPath(entityId, aiPosComp.LocalPosition, playerPosComp.LocalPosition, _gameState, MovementMode.Run, PathfindingMode.Moves, MapView.Local);
 
-            // --- MOVEMENT PHASE ---
-            float distanceToPlayer = Vector2.Distance(aiPosComp.LocalPosition, playerPosComp.LocalPosition);
-            if (distanceToPlayer > combatant.AttackRange)
+            if (path != null && path.Any())
             {
-                Vector2? destination = FindBestAdjacentTile(playerPosComp.LocalPosition, aiPosComp.LocalPosition, entityId);
+                float timeUsedThisTurn = 0f;
+                int simulatedEnergy = stats.CurrentEnergyPoints;
+                Vector2 lastStepPosition = aiPosComp.LocalPosition;
+                int movesQueued = 0;
 
-                if (destination.HasValue)
+                // Loop through the path and queue as many moves as possible within the time budget.
+                foreach (var step in path)
                 {
-                    var path = Pathfinder.FindPath(entityId, aiPosComp.LocalPosition, destination.Value, _gameState, MovementMode.Run, PathfindingMode.Moves, MapView.Local);
+                    // Determine movement mode based on simulated energy for this turn.
+                    int runCost = _gameState.GetMovementEnergyCost(new MoveAction(entityId, step, MovementMode.Run), true);
+                    var moveMode = (simulatedEnergy >= runCost) ? MovementMode.Run : MovementMode.Jog;
 
-                    if (path != null && path.Any())
+                    // Calculate the time cost for this specific step.
+                    Vector2 moveDir = step - lastStepPosition;
+                    float stepTimeCost = _gameState.GetSecondsPassedDuringMovement(stats, moveMode, default, moveDir, true);
+
+                    // Check if this move fits within the turn's time budget.
+                    if (timeUsedThisTurn + stepTimeCost > Global.COMBAT_TURN_DURATION_SECONDS)
                     {
-                        QueueMovementAlongPath(entityId, path, actionQueue, stats, turnStats);
-                        var lastMove = actionQueue.ActionQueue.OfType<MoveAction>().LastOrDefault();
-                        if (lastMove != null)
-                        {
-                            finalPositionAfterMove = lastMove.Destination;
-                        }
+                        break; // Can't afford this move, stop planning.
                     }
-                    else
+
+                    // If affordable, queue the action and update simulated state.
+                    timeUsedThisTurn += stepTimeCost;
+                    actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, step, moveMode));
+                    movesQueued++;
+
+                    if (moveMode == MovementMode.Run)
                     {
-                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} cannot find a path and waits." });
+                        simulatedEnergy -= runCost;
                     }
+                    lastStepPosition = step;
+                }
+
+                if (movesQueued > 0)
+                {
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} moves towards the player." });
                 }
                 else
                 {
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} is blocked and waits." });
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} waits." });
                 }
             }
-
-            // --- ACTION PHASE ---
-            float finalDistanceToPlayer = Vector2.Distance(finalPositionAfterMove, playerPosComp.LocalPosition);
-            if (finalDistanceToPlayer <= combatant.AttackRange && turnStats.HasPrimaryAction && attacks.Attacks.Any())
+            else
             {
-                var attackToUse = attacks.Attacks.First();
-                actionQueue.ActionQueue.Enqueue(new AttackAction(entityId, _gameState.PlayerEntityId, attackToUse.Name));
-                turnStats.HasPrimaryAction = false;
+                // If no path is possible, the AI waits.
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} waits." });
             }
 
-            // --- END TURN ---
+            // Always end the turn after planning moves.
             actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
-        }
-
-        private Vector2? FindBestAdjacentTile(Vector2 targetPosition, Vector2 seekerPosition, int seekerId)
-        {
-            var validNeighbors = new List<Vector2>();
-            foreach (var offset in _neighborOffsets)
-            {
-                var neighbor = targetPosition + offset;
-                // Check if the tile is within bounds and not occupied by anyone.
-                if (_gameState.IsPositionPassable(neighbor, MapView.Local) && !_gameState.IsTileOccupied(neighbor, -1, MapView.Local))
-                {
-                    validNeighbors.Add(neighbor);
-                }
-            }
-
-            if (!validNeighbors.Any())
-            {
-                return null; // Target is completely surrounded.
-            }
-
-            // Return the valid neighbor that is closest to the seeker's current position.
-            return validNeighbors.OrderBy(n => Vector2.DistanceSquared(seekerPosition, n)).First();
-        }
-
-        private void QueueMovementAlongPath(int entityId, List<Vector2> path, ActionQueueComponent actionQueue, StatsComponent stats, TurnStatsComponent turnStats)
-        {
-            float timeUsedThisTurn = turnStats.MovementTimeUsedThisTurn;
-            int simulatedEnergy = stats.CurrentEnergyPoints;
-            Vector2 lastStepPosition = _componentStore.GetComponent<LocalPositionComponent>(entityId).LocalPosition;
-            int movesQueued = 0;
-
-            foreach (var step in path)
-            {
-                int runCost = _gameState.GetMovementEnergyCost(new MoveAction(entityId, step, MovementMode.Run), true);
-                var moveMode = (simulatedEnergy >= runCost) ? MovementMode.Run : MovementMode.Jog;
-
-                Vector2 moveDir = step - lastStepPosition;
-                float stepTimeCost = _gameState.GetSecondsPassedDuringMovement(stats, moveMode, default, moveDir, true);
-
-                if (timeUsedThisTurn + stepTimeCost > Global.COMBAT_TURN_DURATION_SECONDS)
-                {
-                    break; // Can't afford this move, stop planning.
-                }
-
-                timeUsedThisTurn += stepTimeCost;
-                actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, step, moveMode));
-                movesQueued++;
-
-                if (moveMode == MovementMode.Run)
-                {
-                    simulatedEnergy -= runCost;
-                }
-                lastStepPosition = step;
-            }
-
-            turnStats.MovementTimeUsedThisTurn = timeUsedThisTurn;
-
-            if (movesQueued > 0)
-            {
-                var aiName = EntityNamer.GetName(entityId);
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} moves towards the player." });
-            }
         }
 
         public void UpdateDecisions()
@@ -449,7 +372,7 @@ namespace ProjectVagabond
                 var targetPos = localPosComp.LocalPosition + offset;
                 if (forbiddenTiles.Contains(targetPos)) continue;
 
-                if (_gameState.IsPositionPassable(targetPos, MapView.Local) && !_gameState.IsTileOccupied(targetPos, entityId, MapView.Local))
+                if (_gameState.IsPositionPassable(targetPos, MapView.Local))
                 {
                     float newDistance = Vector2.DistanceSquared(targetPos, playerPos.Value);
                     if (newDistance > maxDistance)
@@ -479,7 +402,7 @@ namespace ProjectVagabond
                 var targetPos = localPosComp.LocalPosition + offset;
                 if (forbiddenTiles.Contains(targetPos)) continue;
 
-                if (_gameState.IsPositionPassable(targetPos, MapView.Local) && !_gameState.IsTileOccupied(targetPos, entityId, MapView.Local))
+                if (_gameState.IsPositionPassable(targetPos, MapView.Local))
                 {
                     aiComp.NextStep = targetPos;
                     return; // Found a valid move, exit
