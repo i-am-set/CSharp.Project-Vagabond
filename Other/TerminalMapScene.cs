@@ -2,9 +2,13 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.UI;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Scenes
 {
@@ -22,6 +26,7 @@ namespace ProjectVagabond.Scenes
         private readonly HapticsManager _hapticsManager;
         private readonly TerminalRenderer _terminalRenderer;
         private readonly ParticleSystemManager _particleSystemManager;
+        private readonly DiceRollingSystem _diceRollingSystem;
 
         private WaitDialog _waitDialog;
         private ImageButton _settingsButton;
@@ -31,6 +36,7 @@ namespace ProjectVagabond.Scenes
         private CombatLogPanel _combatLogPanel;
         private ActionMenuPanel _actionMenuPanel;
         private PlayerCombatInputSystem _playerCombatInputSystem;
+        private KeyboardState _previousKeyboardState;
 
         public TerminalMapScene()
         {
@@ -46,6 +52,7 @@ namespace ProjectVagabond.Scenes
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _terminalRenderer = ServiceLocator.Get<TerminalRenderer>();
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
+            _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
 
             EventBus.Subscribe<GameEvents.EntityTookDamage>(OnEntityTookDamage);
         }
@@ -70,6 +77,7 @@ namespace ProjectVagabond.Scenes
             _core.IsMouseVisible = true;
             _waitDialog = new WaitDialog(this);
             _clockRenderer.OnClockClicked += ShowWaitDialog;
+            _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
 
             if (_settingsButton == null)
             {
@@ -115,6 +123,7 @@ namespace ProjectVagabond.Scenes
                 // Initialize the combat input system with the correct panels
                 _playerCombatInputSystem = new PlayerCombatInputSystem(_actionMenuPanel, _turnOrderPanel, _enemyDisplayPanel, _mapRenderer);
             }
+            _previousKeyboardState = Keyboard.GetState();
         }
 
         public override void Exit()
@@ -123,6 +132,17 @@ namespace ProjectVagabond.Scenes
             _clockRenderer.OnClockClicked -= ShowWaitDialog;
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
             EventBus.Unsubscribe<GameEvents.EntityTookDamage>(OnEntityTookDamage);
+            _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
+        }
+
+        private void OnDiceRollCompleted(List<int> results)
+        {
+            var sb = new StringBuilder();
+            sb.Append("You rolled: ");
+            sb.Append(string.Join(", ", results));
+            sb.Append($" (Total: {results.Sum()})");
+
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = sb.ToString() });
         }
 
         private void OpenSettings()
@@ -151,6 +171,15 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
+            var currentKeyboardState = Keyboard.GetState();
+            _diceRollingSystem.Update(gameTime);
+
+            // Temporary input for testing dice rolls, changed to Tilde key
+            if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && !_previousKeyboardState.IsKeyDown(Keys.OemTilde))
+            {
+                _diceRollingSystem.Roll(2);
+            }
+
             var font = ServiceLocator.Get<BitmapFont>();
             _waitDialog.Update(gameTime);
             if (_waitDialog.IsActive) return;
@@ -167,6 +196,7 @@ namespace ProjectVagabond.Scenes
             // If the game is paused, halt all other scene-specific updates.
             if (_coreState.IsPaused)
             {
+                _previousKeyboardState = currentKeyboardState;
                 return;
             }
 
@@ -199,6 +229,7 @@ namespace ProjectVagabond.Scenes
 
             _hapticsManager.Update(gameTime);
             _worldClockManager.Update(gameTime);
+            _previousKeyboardState = currentKeyboardState;
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

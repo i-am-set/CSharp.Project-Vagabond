@@ -1,7 +1,8 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Particles; // Added using directive
+using ProjectVagabond.Dice; // Added using directive
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using System;
 
@@ -55,7 +56,8 @@ namespace ProjectVagabond
         private LocalMapTurnSystem _localMapTurnSystem;
         private InterpolationSystem _interpolationSystem;
         private CombatInitiationSystem _combatInitiationSystem;
-        private ParticleSystemManager _particleSystemManager; // NEW
+        private ParticleSystemManager _particleSystemManager;
+        private DiceRollingSystem _diceRollingSystem;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -125,8 +127,11 @@ namespace ProjectVagabond
             _combatUIAnimationManager.RegisterAnimation("TurnIndicator", new BobbingAnimation(speed: 5f, amount: 1f));
             ServiceLocator.Register<CombatUIAnimationManager>(_combatUIAnimationManager);
 
-            _particleSystemManager = new ParticleSystemManager(); // NEW
-            ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager); // NEW
+            _particleSystemManager = new ParticleSystemManager();
+            ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
+
+            _diceRollingSystem = new DiceRollingSystem();
+            ServiceLocator.Register<DiceRollingSystem>(_diceRollingSystem);
 
             _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
@@ -240,6 +245,7 @@ namespace ProjectVagabond
             }
 
             _spriteManager.LoadSpriteContent();
+            _diceRollingSystem.Initialize(GraphicsDevice, Content);
             ServiceLocator.Get<ArchetypeManager>().LoadArchetypes("Content/Archetypes");
             _gameState.InitializeWorld();
             _gameState.InitializeRenderableEntities();
@@ -262,7 +268,7 @@ namespace ProjectVagabond
 
             _sceneManager.Update(gameTime);
             _tooltipManager.Update(gameTime); // Tooltips should always update.
-            _particleSystemManager.Update(gameTime); // NEW: Update particles
+            _particleSystemManager.Update(gameTime);
 
             // These systems handle visual updates and should be paused.
             if (!_gameState.IsPaused)
@@ -293,6 +299,7 @@ namespace ProjectVagabond
 
         protected override void Draw(GameTime gameTime)
         {
+            // --- 1. Draw the main 2D scene to a render target ---
             GraphicsDevice.SetRenderTarget(_renderTarget);
             GraphicsDevice.Clear(Color.Transparent);
 
@@ -302,18 +309,30 @@ namespace ProjectVagabond
             _tooltipManager.Draw(_spriteBatch, _defaultFont);
             _spriteBatch.End();
 
+            // --- 2. Draw the 3D dice to their own render target ---
+            var diceTexture = _diceRollingSystem.Draw();
+
+            // --- 3. Draw everything to the screen ---
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(_global.GameBg);
 
             _sceneManager.DrawUnderlay(_spriteBatch, _defaultFont, gameTime);
 
             var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
-
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
 
+            // Draw the main 2D scene
             _spriteBatch.Begin(samplerState: finalSamplerState, transformMatrix: shakeMatrix);
             _spriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
             _spriteBatch.End();
+
+            // Draw the dice texture on top of the 2D scene
+            if (diceTexture != null)
+            {
+                _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: finalSamplerState, transformMatrix: shakeMatrix);
+                _spriteBatch.Draw(diceTexture, _finalRenderRectangle, Color.White);
+                _spriteBatch.End();
+            }
 
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
 
