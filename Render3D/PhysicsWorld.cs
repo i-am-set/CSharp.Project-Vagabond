@@ -33,10 +33,9 @@ namespace ProjectVagabond.Physics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties material) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            // <<< BOUNCINESS AND FRICTION ARE CONTROLLED HERE. >>>
             // FrictionCoefficient: Reduced for a slightly more slidy feel.
             // SpringSettings DampingRatio: Lowered significantly for a much more exaggerated bounce.
-            material = new PairMaterialProperties { FrictionCoefficient = 0.6f, MaximumRecoveryVelocity = 2f, SpringSettings = new SpringSettings(30, 0.1f) };
+            material = new PairMaterialProperties { FrictionCoefficient = 2f, MaximumRecoveryVelocity = 2f, SpringSettings = new SpringSettings(30, 0.1f) };
             return true;
         }
 
@@ -101,9 +100,9 @@ namespace ProjectVagabond.Physics
         /// Initializes a new instance of the PhysicsWorld class.
         /// Sets up the simulation, thread dispatcher, and the static environment.
         /// </summary>
-        /// <param name="viewWidth">The width of the visible area for physics.</param>
-        /// <param name="viewHeight">The height of the visible area for physics.</param>
-        public PhysicsWorld(float viewWidth, float viewHeight)
+        /// <param name="worldWidth">The width of the physics play area.</param>
+        /// <param name="worldHeight">The height of the physics play area.</param>
+        public PhysicsWorld(float worldWidth, float worldHeight)
         {
             BufferPool = new BufferPool();
 
@@ -113,25 +112,27 @@ namespace ProjectVagabond.Physics
 
             // <<< "HEAVINESS" IS CONTROLLED HERE. >>>
             // Gravity has been reduced from -1000 to -600 to make the dice feel lighter.
-            Simulation = Simulation.Create(BufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(new Vector3(0, -600, 0)), new SolveDescription(24, 1));
+            // --- Increased solver iterations for more stable collisions ---
+            // The first parameter (VelocityIterationCount) is increased from 24 to 32.
+            Simulation = Simulation.Create(BufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(new Vector3(0, -100, 0)), new SolveDescription(32, 1));
 
-            CreateEnvironment(viewWidth, viewHeight);
+            CreateEnvironment(worldWidth, worldHeight);
         }
 
         /// <summary>
         /// Creates the static colliders that form the container for the physics objects.
         /// This includes a floor plane and four invisible walls sized to the camera's view.
         /// </summary>
-        /// <param name="viewWidth">The width of the visible area.</param>
-        /// <param name="viewHeight">The height of the visible area.</param>
-        private void CreateEnvironment(float viewWidth, float viewHeight)
+        /// <param name="worldWidth">The width of the visible area.</param>
+        /// <param name="worldHeight">The height of the visible area.</param>
+        private void CreateEnvironment(float worldWidth, float worldHeight)
         {
             // Center the physics world around the origin of the view space
-            float centerX = viewWidth / 2f;
-            float centerZ = viewHeight / 2f;
+            float centerX = worldWidth / 2f;
+            float centerZ = worldHeight / 2f;
 
-            // Create the floor as a large, thin box at Y=0
-            var floorShape = new Box(viewWidth * 2, 1, viewHeight * 2);
+            // Create the floor, sized to match the play area.
+            var floorShape = new Box(worldWidth, 1, worldHeight);
             var floorShapeIndex = Simulation.Shapes.Add(floorShape);
             var floorDescription = new StaticDescription(new Vector3(centerX, -0.5f, centerZ), floorShapeIndex);
             Simulation.Statics.Add(floorDescription);
@@ -140,25 +141,27 @@ namespace ProjectVagabond.Physics
             const float wallHeight = 200f;
             const float wallThickness = 50f;
 
-            // Create the four containing walls, positioned just outside the view
-            // Left Wall
-            var leftWallShapeIndex = Simulation.Shapes.Add(new Box(wallThickness, wallHeight, viewHeight));
+            // Create the four containing walls. They are positioned such that their inner faces
+            // form a perfect boundary at X=0, X=worldWidth, Z=0, and Z=worldHeight.
+
+            // Left Wall (Inner face at X=0)
+            var leftWallShapeIndex = Simulation.Shapes.Add(new Box(wallThickness, wallHeight, worldHeight));
             var leftWallDesc = new StaticDescription(new Vector3(-wallThickness / 2f, wallHeight / 2f, centerZ), leftWallShapeIndex);
             Simulation.Statics.Add(leftWallDesc);
 
-            // Right Wall
-            var rightWallShapeIndex = Simulation.Shapes.Add(new Box(wallThickness, wallHeight, viewHeight));
-            var rightWallDesc = new StaticDescription(new Vector3(viewWidth + wallThickness / 2f, wallHeight / 2f, centerZ), rightWallShapeIndex);
+            // Right Wall (Inner face at X=worldWidth)
+            var rightWallShapeIndex = Simulation.Shapes.Add(new Box(wallThickness, wallHeight, worldHeight));
+            var rightWallDesc = new StaticDescription(new Vector3(worldWidth + wallThickness / 2f, wallHeight / 2f, centerZ), rightWallShapeIndex);
             Simulation.Statics.Add(rightWallDesc);
 
-            // Top Wall (Far Z)
-            var topWallShapeIndex = Simulation.Shapes.Add(new Box(viewWidth, wallHeight, wallThickness));
+            // Top Wall (Far Z) (Inner face at Z=0)
+            var topWallShapeIndex = Simulation.Shapes.Add(new Box(worldWidth, wallHeight, wallThickness));
             var topWallDesc = new StaticDescription(new Vector3(centerX, wallHeight / 2f, -wallThickness / 2f), topWallShapeIndex);
             Simulation.Statics.Add(topWallDesc);
 
-            // Bottom Wall (Near Z)
-            var bottomWallShapeIndex = Simulation.Shapes.Add(new Box(viewWidth, wallHeight, wallThickness));
-            var bottomWallDesc = new StaticDescription(new Vector3(centerX, wallHeight / 2f, viewHeight + wallThickness / 2f), bottomWallShapeIndex);
+            // Bottom Wall (Near Z) (Inner face at Z=worldHeight)
+            var bottomWallShapeIndex = Simulation.Shapes.Add(new Box(worldWidth, wallHeight, wallThickness));
+            var bottomWallDesc = new StaticDescription(new Vector3(centerX, wallHeight / 2f, worldHeight + wallThickness / 2f), bottomWallShapeIndex);
             Simulation.Statics.Add(bottomWallDesc);
         }
 

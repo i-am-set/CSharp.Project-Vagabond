@@ -118,25 +118,25 @@ namespace ProjectVagabond.Dice
                 }
             }
 
-            // Define the smaller viewport for the dice
-            _viewWidth = Global.VIRTUAL_WIDTH / 12f;
-            _viewHeight = Global.VIRTUAL_HEIGHT / 12f;
+            // --- Reduce the view area to make dice appear larger and walls effective ---
+            float aspectRatio = (float)_renderTarget.Width / _renderTarget.Height;
+            _viewHeight = 35f; // This value controls the "zoom". A smaller value makes everything bigger.
+            _viewWidth = _viewHeight * aspectRatio; // Calculate width to maintain the correct aspect ratio.
 
-            // Create the physics world with the exact dimensions of our camera view
+            // Create the physics world with the new, smaller, aspect-ratio-correct dimensions.
             _physicsWorld = new PhysicsWorld(_viewWidth, _viewHeight);
 
-            // Set up the 3D camera (orthographic, top-down view)
-            // Center the camera on the new smaller world space
-            var cameraPosition = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, 150, _viewHeight / 2f);
+            // Set up the 3D camera to look at the entire smaller play area.
+            var cameraPosition = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, 60f, _viewHeight / 2f); // Lowered camera to match smaller world
             var cameraTarget = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, 0, _viewHeight / 2f);
             _view = Matrix.CreateLookAt(cameraPosition, cameraTarget, Microsoft.Xna.Framework.Vector3.Forward);
 
-            // Reduce the projection size to "zoom in" on the dice
+            // Create an orthographic projection that exactly matches the size and aspect ratio of our physics world.
             _projection = Matrix.CreateOrthographic(
-                _viewWidth,
-                _viewHeight,
-                1f,
-                1000f);
+                _viewWidth,  // The calculated width of the area to view
+                _viewHeight, // The chosen height of the area to view
+                1f,          // Near clipping plane
+                200f);       // Far clipping plane
         }
 
         /// <summary>
@@ -153,7 +153,7 @@ namespace ProjectVagabond.Dice
             _bodyToDieMap.Clear();
             _renderableDice.Clear();
 
-            // --- CRITICAL FIX: Create a physically beveled Convex Hull for the die shape ---
+            // --- Create a physically beveled Convex Hull for the die shape ---
             const float size = 1f; // Half-width of the die
             const float bevelAmount = size * 0.2f; // How much to shave off the corners
             var points = new List<System.Numerics.Vector3>();
@@ -171,7 +171,12 @@ namespace ProjectVagabond.Dice
             var dieShape = new ConvexHull(points.ToArray(), _physicsWorld.BufferPool, out _);
             var dieInertia = dieShape.ComputeInertia(1);
             var shapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);
-            // --- END OF SHAPE FIX ---
+            // --- END OF SHAPE CREATION ---
+
+            // Define spawn boundaries and height, adjusted for the smaller world
+            float padding = 3f;
+            float spawnHeightMin = 15f;
+            float spawnHeightMax = 25f;
 
             for (int i = 0; i < numberOfDice; i++)
             {
@@ -179,15 +184,25 @@ namespace ProjectVagabond.Dice
                 var renderableDie = new RenderableDie(_dieModel, points);
                 _renderableDice.Add(renderableDie);
 
-                // Create a corresponding physics body with random initial state within the smaller spawn area
+                // Create a corresponding physics body, spawned randomly within the viewable area.
                 var bodyDescription = BodyDescription.CreateDynamic(
                     new System.Numerics.Vector3(
-                        _random.Next(20, (int)_viewWidth - 20),
-                        _random.Next(80, 120), // Spawn closer to the ground
-                        _random.Next(20, (int)_viewHeight - 20)),
+                        (float)(_random.NextDouble() * (_viewWidth - padding * 2) + padding),
+                        (float)(_random.NextDouble() * (spawnHeightMax - spawnHeightMin) + spawnHeightMin),
+                        (float)(_random.NextDouble() * (_viewHeight - padding * 2) + padding)),
                     dieInertia,
                     shapeIndex,
-                    new BodyActivityDescription(0.001f));
+                    new BodyActivityDescription(0.01f));
+
+                // --- FIX: Set Continuous Collision Detection properly for BepuPhysics v2 ---
+                // In BepuPhysics v2, CCD is controlled via the Collidable.Continuity property
+                // which expects a ContinuousDetection struct, not ContinuousDetectionSettings
+                bodyDescription.Collidable.Continuity = new ContinuousDetection
+                {
+                    Mode = ContinuousDetectionMode.Continuous,
+                    MinimumSweepTimestep = 1e-3f,
+                    SweepConvergenceThreshold = 1e-3f
+                };
 
                 bodyDescription.Pose.Orientation = System.Numerics.Quaternion.Normalize(new System.Numerics.Quaternion(
                     (float)_random.NextDouble() * 2 - 1,
