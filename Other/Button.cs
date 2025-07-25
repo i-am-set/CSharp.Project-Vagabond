@@ -44,8 +44,9 @@ namespace ProjectVagabond.UI
         private float _swayTimer = 0f;
         private bool _wasHoveredLastFrame = false;
 
-        private const float SWAY_SPEED = 4f;
-        private const float SWAY_AMOUNT = 2f;
+        private const float SWAY_SPEED = 3f;
+        private const float SWAY_AMOUNT_X = 1f;
+        private const float SWAY_AMOUNT_Y = 1f;
 
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
@@ -127,7 +128,8 @@ namespace ProjectVagabond.UI
             }
 
             float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
-            float swayOffset = 0f;
+            float swayOffsetX = 0f;
+            float swayOffsetY = 0f;
 
             if (isActivated && EnableHoverSway)
             {
@@ -136,7 +138,9 @@ namespace ProjectVagabond.UI
                     _swayTimer = 0f; // Reset timer on new hover to start animation from the beginning.
                 }
                 _swayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                swayOffset = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT;
+                // Use sine waves with different frequencies for a figure-eight motion
+                swayOffsetX = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT_X;
+                swayOffsetY = (float)Math.Sin(_swayTimer * SWAY_SPEED * 2) * SWAY_AMOUNT_Y;
             }
             else
             {
@@ -144,12 +148,13 @@ namespace ProjectVagabond.UI
             }
             _wasHoveredLastFrame = isActivated;
 
-            float totalXOffset = hopOffset + swayOffset;
+            float totalXOffset = hopOffset + swayOffsetX;
 
             Vector2 textSize = font.MeasureString(Text);
 
             var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
             var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
+            var clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
             spriteBatch.End();
             spriteBatch.Begin(samplerState: SamplerState.PointClamp, rasterizerState: _clipRasterizerState);
@@ -175,11 +180,11 @@ namespace ProjectVagabond.UI
                 Vector2 textPosition;
                 if (AlignLeft)
                 {
-                    textPosition = new Vector2(Bounds.X + totalXOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
+                    textPosition = new Vector2(Bounds.X + totalXOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2 + swayOffsetY);
                 }
                 else
                 {
-                    textPosition = new Vector2(Bounds.X + (Bounds.Width - textSize.X) / 2 + totalXOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
+                    textPosition = new Vector2(Bounds.X + (Bounds.Width - textSize.X) / 2 + totalXOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2 + swayOffsetY);
                 }
                 spriteBatch.DrawString(font, Text, textPosition, textColor);
 

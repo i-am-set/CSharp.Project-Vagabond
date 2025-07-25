@@ -23,8 +23,9 @@ namespace ProjectVagabond.UI
         private float _swayTimer = 0f;
         private bool _wasHoveredLastFrame = false;
 
-        private const float SWAY_SPEED = 4f;
-        private const float SWAY_AMOUNT = 2f;
+        private const float SWAY_SPEED = 3f;
+        private const float SWAY_AMOUNT_X = 2f;
+        private const float SWAY_AMOUNT_Y = 1f;
 
         public ImageButton(Rectangle bounds, Texture2D defaultTexture = null, Texture2D hoverTexture = null, Texture2D clickedTexture = null, Texture2D disabledTexture = null, bool enableHoverSway = true)
             : base(bounds, "", enableHoverSway: enableHoverSway)
@@ -75,7 +76,8 @@ namespace ProjectVagabond.UI
                 textureToDraw = _hoverTexture;
             }
 
-            float swayOffset = 0f;
+            float swayOffsetX = 0f;
+            float swayOffsetY = 0f;
             if (isActivated && EnableHoverSway)
             {
                 if (!_wasHoveredLastFrame)
@@ -83,7 +85,8 @@ namespace ProjectVagabond.UI
                     _swayTimer = 0f; // Reset timer on new hover.
                 }
                 _swayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                swayOffset = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT;
+                swayOffsetX = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT_X;
+                swayOffsetY = (float)Math.Sin(_swayTimer * SWAY_SPEED * 2) * SWAY_AMOUNT_Y;
             }
             else
             {
@@ -91,7 +94,7 @@ namespace ProjectVagabond.UI
             }
             _wasHoveredLastFrame = isActivated;
 
-            var swayedBounds = new Rectangle(Bounds.X + (int)swayOffset, Bounds.Y, Bounds.Width, Bounds.Height);
+            var swayedBounds = new Rectangle(Bounds.X + (int)swayOffsetX, Bounds.Y + (int)swayOffsetY, Bounds.Width, Bounds.Height);
 
             if (textureToDraw != null)
             {

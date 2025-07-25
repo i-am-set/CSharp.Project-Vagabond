@@ -117,7 +117,7 @@ namespace ProjectVagabond
                 case CombatUIState.Default:
                     var turnStats = _componentStore.GetComponent<TurnStatsComponent>(_gameState.PlayerEntityId);
 
-                    // --- Check if any enemy is in attack range ---
+                    // Check if any enemy is in attack range
                     bool isAnyEnemyInRange = false;
                     var playerCombatant = _componentStore.GetComponent<CombatantComponent>(_gameState.PlayerEntityId);
                     var playerPos = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
@@ -139,7 +139,6 @@ namespace ProjectVagabond
                             }
                         }
                     }
-                    // --- End of range check ---
 
                     // Update and add Attack button
                     _attackButton.Bounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
