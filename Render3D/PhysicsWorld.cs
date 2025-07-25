@@ -38,17 +38,17 @@ namespace ProjectVagabond.Physics
             {
                 // Controls the "slipperiness" of surfaces. Higher values create more friction,
                 // making dice stop rolling sooner. Lower values make them feel more like ice.
-                FrictionCoefficient = 2f,
+                FrictionCoefficient = 1.5f,
 
                 // Controls the bounciness of a collision. A value of 0 means no bounce (inelastic),
                 // while a value of 1 would be a perfectly elastic bounce. Higher values here make dice bounce more.
-                MaximumRecoveryVelocity = 2f,
+                MaximumRecoveryVelocity = 10f,
 
                 // Defines spring-like physics for the collision, affecting how "hard" or "soft" the contact is.
                 // Frequency: Higher values make the connection stiffer, like a hard rubber ball.
                 // DampingRatio: Controls how quickly the bounce dissipates. A low value (like 0.1f) creates a
                 // very bouncy, exaggerated effect. A value of 1 is critically damped (no oscillation).
-                SpringSettings = new SpringSettings(30, 0.1f)
+                SpringSettings = new SpringSettings(20, 0.1f)
             };
             return true;
         }
@@ -133,7 +133,8 @@ namespace ProjectVagabond.Physics
             // VelocityIterationCount: More iterations lead to more stable and accurate collision responses,
             // especially with many objects, but at a higher performance cost.
             // SubstepCount: More substeps can improve stability for very fast-moving objects.
-            var solveDescription = new SolveDescription(32, 1);
+            // A higher substep count (e.g., 8) is crucial for preventing fast objects from "tunneling" through walls.
+            var solveDescription = new SolveDescription(32, 8);
 
             Simulation = Simulation.Create(BufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(gravity), solveDescription);
 
@@ -142,7 +143,7 @@ namespace ProjectVagabond.Physics
 
         /// <summary>
         /// Creates the static colliders that form the container for the physics objects.
-        /// This includes a floor plane and four invisible walls sized to the camera's view.
+        /// This includes a floor plane, four invisible walls, and an invisible ceiling.
         /// </summary>
         /// <param name="worldWidth">The width of the visible area.</param>
         /// <param name="worldHeight">The height of the visible area.</param>
@@ -152,7 +153,7 @@ namespace ProjectVagabond.Physics
             float centerX = worldWidth / 2f;
             float centerZ = worldHeight / 2f;
 
-            // Create the floor, sized to match the play area.
+            // Create the floor, sized to match the play area. Its top surface is at Y=0.
             var floorShape = new Box(worldWidth, 1, worldHeight);
             var floorShapeIndex = Simulation.Shapes.Add(floorShape);
             var floorDescription = new StaticDescription(new Vector3(centerX, -0.5f, centerZ), floorShapeIndex);
@@ -166,6 +167,7 @@ namespace ProjectVagabond.Physics
 
             // Create the four containing walls. They are positioned such that their inner faces
             // form a perfect boundary at X=0, X=worldWidth, Z=0, and Z=worldHeight.
+            // Their centers are at Y=wallHeight/2, so they extend from Y=0 to Y=wallHeight.
 
             // Left Wall (Inner face at X=0)
             var leftWallShapeIndex = Simulation.Shapes.Add(new Box(wallThickness, wallHeight, worldHeight));
@@ -186,6 +188,13 @@ namespace ProjectVagabond.Physics
             var bottomWallShapeIndex = Simulation.Shapes.Add(new Box(worldWidth, wallHeight, wallThickness));
             var bottomWallDesc = new StaticDescription(new Vector3(centerX, wallHeight / 2f, worldHeight + wallThickness / 2f), bottomWallShapeIndex);
             Simulation.Statics.Add(bottomWallDesc);
+
+            // Create the ceiling to prevent dice from bouncing out of the top of the container.
+            // Its bottom surface is positioned at Y=wallHeight.
+            var ceilingShape = new Box(worldWidth, 1, worldHeight);
+            var ceilingShapeIndex = Simulation.Shapes.Add(ceilingShape);
+            var ceilingDesc = new StaticDescription(new Vector3(centerX, wallHeight + 0.5f, centerZ), ceilingShapeIndex);
+            Simulation.Statics.Add(ceilingDesc);
         }
 
         /// <summary>

@@ -53,6 +53,10 @@ namespace ProjectVagabond
         public const float FEET_PER_LOCAL_TILE = FEET_PER_WORLD_TILE / LOCAL_GRID_SIZE;
         public const float FEET_PER_SECOND_PER_SPEED_UNIT = 4.0f; // A character with speed 1.0 moves at X ft/s.
 
+        // Physics constants
+        public const float PHYSICS_UPDATES_PER_SECOND = 30f;
+        public const float FIXED_PHYSICS_TIMESTEP = 1f / PHYSICS_UPDATES_PER_SECOND;
+
         // Virtual resolution for fixed aspect ratio rendering
         public const int VIRTUAL_WIDTH = 960;
         public const int VIRTUAL_HEIGHT = 540;

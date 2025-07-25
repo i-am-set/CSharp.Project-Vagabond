@@ -63,6 +63,9 @@ namespace ProjectVagabond
         // Input State
         private KeyboardState _previousKeyboardState;
 
+        // Physics Timestep
+        private float _physicsTimeAccumulator = 0f;
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public Core()
@@ -280,10 +283,22 @@ namespace ProjectVagabond
             }
             _previousKeyboardState = currentKeyboardState;
 
+            // --- Fixed-Rate Physics Update ---
+            // This ensures physics calculations are stable and not dependent on the frame rate.
+            _physicsTimeAccumulator += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            while (_physicsTimeAccumulator >= Global.FIXED_PHYSICS_TIMESTEP)
+            {
+                // Run a single, fixed-step physics update for any relevant systems.
+                _diceRollingSystem.PhysicsStep(Global.FIXED_PHYSICS_TIMESTEP);
 
+                _physicsTimeAccumulator -= Global.FIXED_PHYSICS_TIMESTEP;
+            }
+
+            // --- Frame-Rate Dependent Updates ---
             _sceneManager.Update(gameTime);
             _tooltipManager.Update(gameTime); // Tooltips should always update.
             _particleSystemManager.Update(gameTime);
+            _diceRollingSystem.Update(gameTime); // Update dice visuals and game logic every frame.
 
             // These systems handle visual updates and should be paused.
             if (!_gameState.IsPaused)

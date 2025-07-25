@@ -41,12 +41,16 @@ namespace ProjectVagabond.Dice
 
         // Physics and Rendering Link
         private readonly Dictionary<BodyHandle, RenderableDie> _bodyToDieMap = new Dictionary<BodyHandle, RenderableDie>();
+        private TypedIndex _dieShapeIndex;
+        private BodyInertia _dieInertia;
+        private List<System.Numerics.Vector3> _dieColliderVertices;
+
 
         // State Tracking
         private bool _wasRollingLastFrame = false;
         private bool _isWaitingForSettle = false;
         private float _settleTimer = 0f;
-        private const float SettleDelay = 1.0f; // How long to wait after dice stop before checking for cantering.
+        private const float SettleDelay = 0.5f; // How long to wait after dice stop before checking for cantering.
 
         /// <summary>
         /// If true, the physics colliders will be rendered as debug visuals.
@@ -133,6 +137,28 @@ namespace ProjectVagabond.Dice
             // Create the physics world with the new, smaller, aspect-ratio-correct dimensions.
             _physicsWorld = new PhysicsWorld(_viewWidth, _viewHeight);
 
+            // --- Create and store the die's physical shape and inertia once ---
+            // This avoids re-calculating it on every roll.
+            const float size = 1f;
+            const float bevelAmount = size * 0.2f;
+            var points = new List<System.Numerics.Vector3>();
+            for (int i = 0; i < 8; ++i)
+            {
+                var corner = new System.Numerics.Vector3(
+                    (i & 1) == 0 ? -size : size,
+                    (i & 2) == 0 ? -size : size,
+                    (i & 4) == 0 ? -size : size);
+                points.Add(corner + new System.Numerics.Vector3(Math.Sign(corner.X) * -bevelAmount, 0, 0));
+                points.Add(corner + new System.Numerics.Vector3(0, Math.Sign(corner.Y) * -bevelAmount, 0));
+                points.Add(corner + new System.Numerics.Vector3(0, 0, Math.Sign(corner.Z) * -bevelAmount));
+            }
+            _dieColliderVertices = points;
+
+            var dieShape = new ConvexHull(_dieColliderVertices.ToArray(), _physicsWorld.BufferPool, out _);
+            _dieInertia = dieShape.ComputeInertia(1);
+            _dieShapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);
+
+
             // Set up the 3D camera to look at the entire smaller play area.
             // The Y value of cameraPosition determines its height. Higher is more top-down.
             var cameraPosition = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, 60f, _viewHeight / 2f);
@@ -150,7 +176,7 @@ namespace ProjectVagabond.Dice
         }
 
         /// <summary>
-        /// Clears existing dice and rolls a new set.
+        /// Clears existing dice and rolls a new set, throwing them from off-screen.
         /// </summary>
         /// <param name="numberOfDice">The number of dice to roll.</param>
         public void Roll(int numberOfDice)
@@ -163,80 +189,14 @@ namespace ProjectVagabond.Dice
             _bodyToDieMap.Clear();
             _renderableDice.Clear();
 
-            // --- Create a physically beveled Convex Hull for the die shape ---
-            // This is the half-width of the die. A larger value makes the die physically bigger.
-            const float size = 1f;
-            // This controls how much the corners are "shaved off".
-            // A larger value results in a more rounded, less sharp die, which can affect how it tumbles.
-            const float bevelAmount = size * 0.2f;
-            var points = new List<System.Numerics.Vector3>();
-            for (int i = 0; i < 8; ++i)
-            {
-                var corner = new System.Numerics.Vector3(
-                    (i & 1) == 0 ? -size : size,
-                    (i & 2) == 0 ? -size : size,
-                    (i & 4) == 0 ? -size : size);
-                points.Add(corner + new System.Numerics.Vector3(Math.Sign(corner.X) * -bevelAmount, 0, 0));
-                points.Add(corner + new System.Numerics.Vector3(0, Math.Sign(corner.Y) * -bevelAmount, 0));
-                points.Add(corner + new System.Numerics.Vector3(0, 0, Math.Sign(corner.Z) * -bevelAmount));
-            }
-
-            var dieShape = new ConvexHull(points.ToArray(), _physicsWorld.BufferPool, out _);
-            var dieInertia = dieShape.ComputeInertia(1);
-            var shapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);
-            // --- END OF SHAPE CREATION ---
-
-            // Defines the margin from the edges of the play area where dice can spawn.
-            float padding = 3f;
-            // Defines the height range from which dice are dropped. Higher values mean a more energetic initial roll.
-            float spawnHeightMin = 15f;
-            float spawnHeightMax = 25f;
-
             for (int i = 0; i < numberOfDice; i++)
             {
                 // Create a renderable die, passing the collider vertices for debug rendering
-                var renderableDie = new RenderableDie(_dieModel, points);
+                var renderableDie = new RenderableDie(_dieModel, _dieColliderVertices);
                 _renderableDice.Add(renderableDie);
 
-                // Create a corresponding physics body, spawned randomly within the viewable area.
-                var bodyDescription = BodyDescription.CreateDynamic(
-                    new System.Numerics.Vector3(
-                        (float)(_random.NextDouble() * (_viewWidth - padding * 2) + padding),
-                        (float)(_random.NextDouble() * (spawnHeightMax - spawnHeightMin) + spawnHeightMin),
-                        (float)(_random.NextDouble() * (_viewHeight - padding * 2) + padding)),
-                    dieInertia,
-                    shapeIndex,
-                    new BodyActivityDescription(0.01f));
-
-                // --- FIX: Set Continuous Collision Detection properly for BepuPhysics v2 ---
-                // In BepuPhysics v2, CCD is controlled via the Collidable.Continuity property
-                // which expects a ContinuousDetection struct, not ContinuousDetectionSettings
-                bodyDescription.Collidable.Continuity = new ContinuousDetection
-                {
-                    Mode = ContinuousDetectionMode.Continuous,
-                    MinimumSweepTimestep = 1e-3f,
-                    SweepConvergenceThreshold = 1e-3f
-                };
-
-                bodyDescription.Pose.Orientation = System.Numerics.Quaternion.Normalize(new System.Numerics.Quaternion(
-                    (float)_random.NextDouble() * 2 - 1,
-                    (float)_random.NextDouble() * 2 - 1,
-                    (float)_random.NextDouble() * 2 - 1,
-                    (float)_random.NextDouble() * 2 - 1));
-
-                // Controls the initial sideways velocity. Higher values give a stronger "throw".
-                bodyDescription.Velocity.Linear = new System.Numerics.Vector3(
-                    (float)(_random.NextDouble() * 100 - 50),
-                    -100, // Initial downward velocity. More negative means a harder drop.
-                    (float)(_random.NextDouble() * 100 - 50));
-
-                // Controls the initial spin of the die. Higher values create a faster, more chaotic tumble.
-                bodyDescription.Velocity.Angular = new System.Numerics.Vector3(
-                    (float)(_random.NextDouble() * 40 - 20),
-                    (float)(_random.NextDouble() * 40 - 20),
-                    (float)(_random.NextDouble() * 40 - 20));
-
-                var handle = _physicsWorld.AddBody(bodyDescription);
+                // Create a corresponding physics body by throwing it from off-screen
+                var handle = ThrowDieFromOffscreen(renderableDie);
                 _bodyToDieMap.Add(handle, renderableDie);
             }
 
@@ -245,13 +205,104 @@ namespace ProjectVagabond.Dice
         }
 
         /// <summary>
-        /// Updates the physics simulation and synchronizes the visual models.
+        /// Creates a physics body for a die, positions it off-screen, and gives it velocity to enter the view.
+        /// </summary>
+        /// <param name="renderableDie">The visual die to create a physics body for.</param>
+        /// <returns>The BodyHandle of the newly created physics body.</returns>
+        private BodyHandle ThrowDieFromOffscreen(RenderableDie renderableDie)
+        {
+            // Defines how far off-screen the dice will spawn.
+            const float offscreenMargin = 5f;
+            // Defines the height range from which dice are dropped.
+            const float spawnHeightMin = 15f;
+            const float spawnHeightMax = 25f;
+
+            System.Numerics.Vector3 spawnPos;
+            int side = _random.Next(4); // 0: Left, 1: Right, 2: Top, 3: Bottom
+
+            switch (side)
+            {
+                case 0: // Left
+                    spawnPos = new System.Numerics.Vector3(
+                        -offscreenMargin,
+                        (float)(_random.NextDouble() * (spawnHeightMax - spawnHeightMin) + spawnHeightMin),
+                        (float)(_random.NextDouble() * _viewHeight));
+                    break;
+                case 1: // Right
+                    spawnPos = new System.Numerics.Vector3(
+                        _viewWidth + offscreenMargin,
+                        (float)(_random.NextDouble() * (spawnHeightMax - spawnHeightMin) + spawnHeightMin),
+                        (float)(_random.NextDouble() * _viewHeight));
+                    break;
+                case 2: // Top (Far Z)
+                    spawnPos = new System.Numerics.Vector3(
+                        (float)(_random.NextDouble() * _viewWidth),
+                        (float)(_random.NextDouble() * (spawnHeightMax - spawnHeightMin) + spawnHeightMin),
+                        -offscreenMargin);
+                    break;
+                default: // Bottom (Near Z)
+                    spawnPos = new System.Numerics.Vector3(
+                        (float)(_random.NextDouble() * _viewWidth),
+                        (float)(_random.NextDouble() * (spawnHeightMax - spawnHeightMin) + spawnHeightMin),
+                        _viewHeight + offscreenMargin);
+                    break;
+            }
+
+            // Define a central target area for the dice to be thrown towards.
+            float targetPadding = 0.05f; // Throws will be aimed within the
+            var targetPos = new System.Numerics.Vector3(
+                (float)(_random.NextDouble() * (_viewWidth * (1 - targetPadding * 2)) + _viewWidth * targetPadding),
+                0,
+                (float)(_random.NextDouble() * (_viewHeight * (1 - targetPadding * 2)) + _viewHeight * targetPadding));
+
+            var direction = System.Numerics.Vector3.Normalize(targetPos - spawnPos);
+            float throwForce = (float)(_random.NextDouble() * 50 + 100); // Randomize throw strength
+
+            var bodyDescription = BodyDescription.CreateDynamic(
+                spawnPos,
+                _dieInertia,
+                _dieShapeIndex,
+                new BodyActivityDescription(0.01f));
+
+            bodyDescription.Collidable.Continuity = new ContinuousDetection
+            {
+                Mode = ContinuousDetectionMode.Continuous,
+                MinimumSweepTimestep = 1e-4f,
+                SweepConvergenceThreshold = 1e-4f
+            };
+
+            bodyDescription.Pose.Orientation = System.Numerics.Quaternion.Normalize(new System.Numerics.Quaternion(
+                (float)_random.NextDouble() * 2 - 1,
+                (float)_random.NextDouble() * 2 - 1,
+                (float)_random.NextDouble() * 2 - 1,
+                (float)_random.NextDouble() * 2 - 1));
+
+            bodyDescription.Velocity.Linear = direction * throwForce;
+            bodyDescription.Velocity.Angular = new System.Numerics.Vector3(
+                (float)(_random.NextDouble() * 40 - 20),
+                (float)(_random.NextDouble() * 40 - 20),
+                (float)(_random.NextDouble() * 40 - 20));
+
+            return _physicsWorld.AddBody(bodyDescription);
+        }
+
+        /// <summary>
+        /// Advances the physics simulation by one fixed time step.
+        /// This should be called from a fixed-rate loop in Core.cs.
+        /// </summary>
+        /// <param name="deltaTime">The fixed time step duration.</param>
+        public void PhysicsStep(float deltaTime)
+        {
+            _physicsWorld.Update(deltaTime);
+        }
+
+        /// <summary>
+        /// Updates the visual models and game logic based on the current physics state.
+        /// This should be called every frame from Core.Update().
         /// </summary>
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         public void Update(GameTime gameTime)
         {
-            _physicsWorld.Update((float)gameTime.ElapsedGameTime.TotalSeconds);
-
             // Synchronize renderable dice with their physics bodies
             foreach (var pair in _bodyToDieMap)
             {
@@ -292,49 +343,80 @@ namespace ProjectVagabond.Dice
                     // If the timer has elapsed, it's time to check the dice state.
                     if (_settleTimer >= SettleDelay)
                     {
-                        // How flat a die must be to be considered settled. 1.0 is perfectly flat.
-                        // A lower value like 0.98 is more lenient. A higher value like 0.999 is very strict.
-                        const float rerollThreshold = 0.99f;
-                        bool needsReroll = false;
-
-                        foreach (var die in _renderableDice)
+                        // --- CHECK 1: Re-roll any dice that are off-screen ---
+                        var offscreenDice = new List<BodyHandle>();
+                        foreach (var pair in _bodyToDieMap)
                         {
-                            var (_, alignment) = DiceResultHelper.GetUpFaceValueAndAlignment(die.World);
-                            if (alignment < rerollThreshold)
+                            var bodyRef = _physicsWorld.Simulation.Bodies.GetBodyReference(pair.Key);
+                            var pos = bodyRef.Pose.Position;
+                            if (pos.X < 0 || pos.X > _viewWidth || pos.Z < 0 || pos.Z > _viewHeight)
                             {
-                                needsReroll = true;
-                                break; // One cantered die is enough to trigger a reroll for all.
+                                offscreenDice.Add(pair.Key);
                             }
                         }
 
-                        if (needsReroll)
+                        if (offscreenDice.Any())
                         {
-                            // Nudge all dice to get them rolling again.
-                            foreach (var handle in _bodyToDieMap.Keys)
+                            var diceToReThrow = new List<RenderableDie>();
+                            foreach (var handle in offscreenDice)
                             {
-                                var body = _physicsWorld.Simulation.Bodies.GetBodyReference(handle);
-                                if (!body.Awake) body.Awake = true;
+                                if (_bodyToDieMap.TryGetValue(handle, out var renderableDie))
+                                {
+                                    diceToReThrow.Add(renderableDie);
+                                    _physicsWorld.RemoveBody(handle);
+                                    _bodyToDieMap.Remove(handle);
+                                }
+                            }
 
-                                body.Velocity.Linear += new System.Numerics.Vector3(
-                                    (float)(_random.NextDouble() * 20 - 10),
-                                    (float)(_random.NextDouble() * 20 + 10),
-                                    (float)(_random.NextDouble() * 20 - 10));
-
-                                body.Velocity.Angular += new System.Numerics.Vector3(
-                                    (float)(_random.NextDouble() * 30 - 15),
-                                    (float)(_random.NextDouble() * 30 - 15),
-                                    (float)(_random.NextDouble() * 30 - 15));
+                            foreach (var renderableDie in diceToReThrow)
+                            {
+                                var newHandle = ThrowDieFromOffscreen(renderableDie);
+                                _bodyToDieMap.Add(newHandle, renderableDie);
                             }
                         }
                         else
                         {
-                            // All dice are settled and flat. The roll is complete.
-                            var results = new List<int>();
-                            foreach (var die in _renderableDice)
+                            // --- CHECK 2: Nudge any dice that are cantered ---
+                            const float rerollThreshold = 0.99f;
+                            var canteredDiceHandles = new List<BodyHandle>();
+
+                            foreach (var pair in _bodyToDieMap)
                             {
-                                results.Add(DiceResultHelper.GetUpFaceValue(die.World));
+                                var (_, alignment) = DiceResultHelper.GetUpFaceValueAndAlignment(pair.Value.World);
+                                if (alignment < rerollThreshold)
+                                {
+                                    canteredDiceHandles.Add(pair.Key);
+                                }
                             }
-                            OnRollCompleted?.Invoke(results);
+
+                            if (canteredDiceHandles.Any())
+                            {
+                                foreach (var handle in canteredDiceHandles)
+                                {
+                                    var body = _physicsWorld.Simulation.Bodies.GetBodyReference(handle);
+                                    if (!body.Awake) body.Awake = true;
+
+                                    body.Velocity.Linear += new System.Numerics.Vector3(
+                                        (float)(_random.NextDouble() * 20 - 10),
+                                        (float)(_random.NextDouble() * 20 + 10),
+                                        (float)(_random.NextDouble() * 20 - 10));
+
+                                    body.Velocity.Angular += new System.Numerics.Vector3(
+                                        (float)(_random.NextDouble() * 30 - 15),
+                                        (float)(_random.NextDouble() * 30 - 15),
+                                        (float)(_random.NextDouble() * 30 - 15));
+                                }
+                            }
+                            else
+                            {
+                                // --- All checks passed: The roll is complete ---
+                                var results = new List<int>();
+                                foreach (var die in _renderableDice)
+                                {
+                                    results.Add(DiceResultHelper.GetUpFaceValue(die.World));
+                                }
+                                OnRollCompleted?.Invoke(results);
+                            }
                         }
 
                         // The check is complete, so reset the waiting state.
