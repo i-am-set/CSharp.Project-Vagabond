@@ -57,7 +57,7 @@ namespace ProjectVagabond.Dice
         private const float RollTimeout = 4.5f; // After this many seconds, check for stuck dice.
         private List<int> _rerollAttempts; // Tracks failsafe rerolls per die slot.
         private const int MaxRerollAttempts = 5; // Max attempts before forcing a result.
-        private Dictionary<int, int> _forcedResults; // Maps a die slot index to a forced result.
+        private Dictionary<int, int> _forcedResults = new Dictionary<int, int>(); // Maps a die slot index to a forced result.
 
         /// <summary>
         /// If true, the physics colliders will be rendered as debug visuals.
@@ -162,9 +162,9 @@ namespace ProjectVagabond.Dice
             _dieColliderVertices = points;
 
             var dieShape = new ConvexHull(_dieColliderVertices.ToArray(), _physicsWorld.BufferPool, out _);
-
-            _dieInertia = dieShape.ComputeInertia(1f);
-
+            
+            _dieInertia = dieShape.ComputeInertia(1f); 
+            
             _dieShapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);
 
 
@@ -201,7 +201,7 @@ namespace ProjectVagabond.Dice
             // Reset failsafe mechanisms
             _rollInProgressTimer = 0f;
             _rerollAttempts = new List<int>(new int[numberOfDice]);
-            _forcedResults = new Dictionary<int, int>();
+            _forcedResults.Clear(); // Clear the dictionary instead of re-creating it.
 
             for (int i = 0; i < numberOfDice; i++)
             {
@@ -268,7 +268,7 @@ namespace ProjectVagabond.Dice
             var targetPos = new System.Numerics.Vector3(_viewWidth / 2f, 0, _viewHeight / 2f);
 
             var direction = System.Numerics.Vector3.Normalize(targetPos - spawnPos);
-            float throwForce = (float)(_random.NextDouble() * 25 + 50); // Randomize throw strength
+            float throwForce = (float)(_random.NextDouble() * 50 + 100); // Randomize throw strength
 
             var bodyDescription = BodyDescription.CreateDynamic(
                 spawnPos,
@@ -330,9 +330,22 @@ namespace ProjectVagabond.Dice
                 pair.Value.World = Matrix.CreateFromQuaternion(orientation) * Matrix.CreateTranslation(position);
             }
 
+            // PRIMARY FAILSAFE: Instantly detect and replace any missing dice
+            // This check is only necessary if a roll is supposed to be in progress.
+            if (_renderableDice.Any())
+            {
+                int expectedDiceCount = _renderableDice.Count;
+                int activeDiceCount = _bodyToDieMap.Count + _forcedResults.Count;
+                if (activeDiceCount < expectedDiceCount)
+                {
+                    HandleMissingDice();
+                    return; // End the update for this frame to allow the new die to enter the simulation.
+                }
+            }
+
             bool isCurrentlyRolling = this.IsRolling;
 
-            // If dice are rolling, increment the failsafe timer.
+            // If dice are rolling, increment the timeout timer.
             if (isCurrentlyRolling)
             {
                 _rollInProgressTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -342,11 +355,10 @@ namespace ProjectVagabond.Dice
                 _rollInProgressTimer = 0f;
             }
 
-            // If the failsafe timer exceeds the timeout, check for and handle any stuck dice.
+            // SECONDARY FAILSAFE: If the roll takes too long, check for and handle any stuck dice 
             if (_rollInProgressTimer > RollTimeout)
             {
                 HandleStuckDice();
-                _rollInProgressTimer = 0f; // Reset timer to give new dice a full timeout period.
                 return; // Skip the normal settle check for this frame.
             }
 
@@ -374,7 +386,7 @@ namespace ProjectVagabond.Dice
                     // If the timer has elapsed, it's time to check the dice state.
                     if (_settleTimer >= SettleDelay)
                     {
-                        // --- CHECK 1: Re-roll any dice that are off-screen ---
+                        // CHECK 1: Re-roll any dice that are off-screen
                         var offscreenDice = new List<BodyHandle>();
                         foreach (var pair in _bodyToDieMap)
                         {
@@ -404,10 +416,11 @@ namespace ProjectVagabond.Dice
                                 var newHandle = ThrowDieFromOffscreen(renderableDie);
                                 _bodyToDieMap.Add(newHandle, renderableDie);
                             }
+                            _rollInProgressTimer = 0f; // Reset timeout since we initiated a re-roll.
                         }
                         else
                         {
-                            // --- CHECK 2: Nudge any dice that are cantered ---
+                            // CHECK 2: Nudge any dice that are cantered
                             const float rerollThreshold = 0.99f;
                             var canteredDiceHandles = new List<BodyHandle>();
 
@@ -437,6 +450,7 @@ namespace ProjectVagabond.Dice
                                         (float)(_random.NextDouble() * 30 - 15),
                                         (float)(_random.NextDouble() * 30 - 15));
                                 }
+                                _rollInProgressTimer = 0f; // Reset timeout since we initiated a re-roll.
                             }
                             else
                             {
@@ -450,6 +464,8 @@ namespace ProjectVagabond.Dice
                                     }
                                     else
                                     {
+                                        // This assumes the die at _renderableDice[i] is the one that settled.
+                                        // This is safe because the only way to get here is if all dice are present and settled.
                                         results.Add(DiceResultHelper.GetUpFaceValue(_renderableDice[i].World));
                                     }
                                 }
@@ -489,27 +505,64 @@ namespace ProjectVagabond.Dice
 
             foreach (var (handle, die) in stuckDiceInfo)
             {
-                // Find the "slot" for this die to track its attempts.
-                int slotIndex = _renderableDice.IndexOf(die);
-                if (slotIndex == -1) continue; // Should not happen
+                HandleReroll(die, handle);
+            }
+            _rollInProgressTimer = 0f; // Reset timeout since we initiated a re-roll.
+        }
 
-                _rerollAttempts[slotIndex]++;
+        /// <summary>
+        /// Instantly detects which die slots are missing a physics body and triggers a re-roll for them.
+        /// </summary>
+        private void HandleMissingDice()
+        {
+            var activeRenderableDice = _bodyToDieMap.Values.ToHashSet();
 
-                // Remove the stuck die from the simulation.
-                _physicsWorld.RemoveBody(handle);
-                _bodyToDieMap.Remove(handle);
+            for (int i = 0; i < _renderableDice.Count; i++)
+            {
+                // If a die slot has a forced result, it's accounted for.
+                if (_forcedResults.ContainsKey(i)) continue;
 
-                if (_rerollAttempts[slotIndex] >= MaxRerollAttempts)
+                // If the renderable die for this slot isn't in the active physics simulation, it's missing.
+                var renderableDie = _renderableDice[i];
+                if (!activeRenderableDice.Contains(renderableDie))
                 {
-                    // Too many attempts, force the result to 3.
-                    _forcedResults[slotIndex] = 3;
+                    HandleReroll(renderableDie);
                 }
-                else
-                {
-                    // Re-throw the die for another attempt.
-                    var newHandle = ThrowDieFromOffscreen(die);
-                    _bodyToDieMap.Add(newHandle, die);
-                }
+            }
+            _rollInProgressTimer = 0f; // Reset timeout since we initiated a re-roll.
+        }
+
+        /// <summary>
+        /// Centralized logic for handling a re-roll attempt for a specific die.
+        /// Increments the attempt counter and either re-throws the die or forces its result.
+        /// </summary>
+        /// <param name="die">The renderable die to be re-rolled.</param>
+        /// <param name="handleToRemove">Optional handle of the old physics body to remove.</param>
+        private void HandleReroll(RenderableDie die, BodyHandle? handleToRemove = null)
+        {
+            // Find the "slot" for this die to track its attempts.
+            int slotIndex = _renderableDice.IndexOf(die);
+            if (slotIndex == -1) return; // Should not happen
+
+            _rerollAttempts[slotIndex]++;
+
+            // If there's an old physics body, remove it.
+            if (handleToRemove.HasValue)
+            {
+                _physicsWorld.RemoveBody(handleToRemove.Value);
+                _bodyToDieMap.Remove(handleToRemove.Value);
+            }
+
+            if (_rerollAttempts[slotIndex] >= MaxRerollAttempts)
+            {
+                // Too many attempts, force the result to 3.
+                _forcedResults[slotIndex] = 3;
+            }
+            else
+            {
+                // Re-throw the die for another attempt.
+                var newHandle = ThrowDieFromOffscreen(die);
+                _bodyToDieMap.Add(newHandle, die);
             }
         }
 
