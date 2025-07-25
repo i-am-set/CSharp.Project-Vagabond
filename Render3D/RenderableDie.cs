@@ -47,6 +47,8 @@ namespace ProjectVagabond.Dice
             };
 
             // Create the vertices for a small 3-axis cross (X, Y, Z) to be drawn at each collider point.
+            // This value controls the size of the R/G/B axis lines drawn in debug mode.
+            // A larger value makes the debug markers bigger and easier to see.
             const float axisSize = 0.5f;
             _debugAxisVertices = new[]
             {

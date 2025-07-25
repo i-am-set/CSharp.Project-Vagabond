@@ -44,6 +44,9 @@ namespace ProjectVagabond.Dice
 
         // State Tracking
         private bool _wasRollingLastFrame = false;
+        private bool _isWaitingForSettle = false;
+        private float _settleTimer = 0f;
+        private const float SettleDelay = 1.0f; // How long to wait after dice stop before checking for cantering.
 
         /// <summary>
         /// If true, the physics colliders will be rendered as debug visuals.
@@ -69,7 +72,9 @@ namespace ProjectVagabond.Dice
                     return false;
                 }
 
-                // Increased threshold to be less sensitive to tiny movements
+                // The sleep threshold determines how much movement is considered "stopped".
+                // A higher value means the dice will be considered "stopped" even with tiny jitters.
+                // A lower value is more sensitive and requires dice to be almost perfectly still.
                 const float sleepThreshold = 0.2f;
 
                 foreach (var handle in _bodyToDieMap.Keys)
@@ -120,18 +125,23 @@ namespace ProjectVagabond.Dice
 
             // --- Reduce the view area to make dice appear larger and walls effective ---
             float aspectRatio = (float)_renderTarget.Width / _renderTarget.Height;
-            _viewHeight = 35f; // This value controls the "zoom". A smaller value makes everything bigger.
+            // This value controls the "zoom" level of the camera.
+            // A smaller value makes the dice and the rolling area appear larger on screen.
+            _viewHeight = 20f;
             _viewWidth = _viewHeight * aspectRatio; // Calculate width to maintain the correct aspect ratio.
 
             // Create the physics world with the new, smaller, aspect-ratio-correct dimensions.
             _physicsWorld = new PhysicsWorld(_viewWidth, _viewHeight);
 
             // Set up the 3D camera to look at the entire smaller play area.
-            var cameraPosition = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, 60f, _viewHeight / 2f); // Lowered camera to match smaller world
+            // The Y value of cameraPosition determines its height. Higher is more top-down.
+            var cameraPosition = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, 60f, _viewHeight / 2f);
+            // The target should be the center of the play area.
             var cameraTarget = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, 0, _viewHeight / 2f);
             _view = Matrix.CreateLookAt(cameraPosition, cameraTarget, Microsoft.Xna.Framework.Vector3.Forward);
 
             // Create an orthographic projection that exactly matches the size and aspect ratio of our physics world.
+            // The near (1f) and far (200f) clipping planes define the visible depth range.
             _projection = Matrix.CreateOrthographic(
                 _viewWidth,  // The calculated width of the area to view
                 _viewHeight, // The chosen height of the area to view
@@ -154,8 +164,11 @@ namespace ProjectVagabond.Dice
             _renderableDice.Clear();
 
             // --- Create a physically beveled Convex Hull for the die shape ---
-            const float size = 1f; // Half-width of the die
-            const float bevelAmount = size * 0.2f; // How much to shave off the corners
+            // This is the half-width of the die. A larger value makes the die physically bigger.
+            const float size = 1f;
+            // This controls how much the corners are "shaved off".
+            // A larger value results in a more rounded, less sharp die, which can affect how it tumbles.
+            const float bevelAmount = size * 0.2f;
             var points = new List<System.Numerics.Vector3>();
             for (int i = 0; i < 8; ++i)
             {
@@ -173,8 +186,9 @@ namespace ProjectVagabond.Dice
             var shapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);
             // --- END OF SHAPE CREATION ---
 
-            // Define spawn boundaries and height, adjusted for the smaller world
+            // Defines the margin from the edges of the play area where dice can spawn.
             float padding = 3f;
+            // Defines the height range from which dice are dropped. Higher values mean a more energetic initial roll.
             float spawnHeightMin = 15f;
             float spawnHeightMax = 25f;
 
@@ -210,12 +224,13 @@ namespace ProjectVagabond.Dice
                     (float)_random.NextDouble() * 2 - 1,
                     (float)_random.NextDouble() * 2 - 1));
 
+                // Controls the initial sideways velocity. Higher values give a stronger "throw".
                 bodyDescription.Velocity.Linear = new System.Numerics.Vector3(
                     (float)(_random.NextDouble() * 100 - 50),
-                    -100,
+                    -100, // Initial downward velocity. More negative means a harder drop.
                     (float)(_random.NextDouble() * 100 - 50));
 
-                // Increased angular velocity for a better tumble
+                // Controls the initial spin of the die. Higher values create a faster, more chaotic tumble.
                 bodyDescription.Velocity.Angular = new System.Numerics.Vector3(
                     (float)(_random.NextDouble() * 40 - 20),
                     (float)(_random.NextDouble() * 40 - 20),
@@ -251,20 +266,88 @@ namespace ProjectVagabond.Dice
                 pair.Value.World = Matrix.CreateFromQuaternion(orientation) * Matrix.CreateTranslation(position);
             }
 
-            // Check if the roll has just completed
             bool isCurrentlyRolling = this.IsRolling;
+
+            // If the dice were rolling but have just stopped, start the settle timer.
             if (_wasRollingLastFrame && !isCurrentlyRolling)
             {
-                var results = new List<int>();
-                foreach (var die in _renderableDice)
-                {
-                    int result = DiceResultHelper.GetUpFaceValue(die.World);
-                    results.Add(result);
-                }
-                OnRollCompleted?.Invoke(results);
+                _isWaitingForSettle = true;
+                _settleTimer = 0f;
             }
+
+            // If we are in the "waiting to settle" state...
+            if (_isWaitingForSettle)
+            {
+                // If the dice start moving again (e.g., from a physics glitch), cancel the settle check.
+                if (isCurrentlyRolling)
+                {
+                    _isWaitingForSettle = false;
+                    _settleTimer = 0f;
+                }
+                else
+                {
+                    // Otherwise, increment the timer.
+                    _settleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+                    // If the timer has elapsed, it's time to check the dice state.
+                    if (_settleTimer >= SettleDelay)
+                    {
+                        // How flat a die must be to be considered settled. 1.0 is perfectly flat.
+                        // A lower value like 0.98 is more lenient. A higher value like 0.999 is very strict.
+                        const float rerollThreshold = 0.99f;
+                        bool needsReroll = false;
+
+                        foreach (var die in _renderableDice)
+                        {
+                            var (_, alignment) = DiceResultHelper.GetUpFaceValueAndAlignment(die.World);
+                            if (alignment < rerollThreshold)
+                            {
+                                needsReroll = true;
+                                break; // One cantered die is enough to trigger a reroll for all.
+                            }
+                        }
+
+                        if (needsReroll)
+                        {
+                            // Nudge all dice to get them rolling again.
+                            foreach (var handle in _bodyToDieMap.Keys)
+                            {
+                                var body = _physicsWorld.Simulation.Bodies.GetBodyReference(handle);
+                                if (!body.Awake) body.Awake = true;
+
+                                body.Velocity.Linear += new System.Numerics.Vector3(
+                                    (float)(_random.NextDouble() * 20 - 10),
+                                    (float)(_random.NextDouble() * 20 + 10),
+                                    (float)(_random.NextDouble() * 20 - 10));
+
+                                body.Velocity.Angular += new System.Numerics.Vector3(
+                                    (float)(_random.NextDouble() * 30 - 15),
+                                    (float)(_random.NextDouble() * 30 - 15),
+                                    (float)(_random.NextDouble() * 30 - 15));
+                            }
+                        }
+                        else
+                        {
+                            // All dice are settled and flat. The roll is complete.
+                            var results = new List<int>();
+                            foreach (var die in _renderableDice)
+                            {
+                                results.Add(DiceResultHelper.GetUpFaceValue(die.World));
+                            }
+                            OnRollCompleted?.Invoke(results);
+                        }
+
+                        // The check is complete, so reset the waiting state.
+                        _isWaitingForSettle = false;
+                        _settleTimer = 0f;
+                    }
+                }
+            }
+
+            // Update the state for the next frame.
             _wasRollingLastFrame = isCurrentlyRolling;
         }
+
 
         /// <summary>
         /// Draws the 3D dice scene to an off-screen texture.

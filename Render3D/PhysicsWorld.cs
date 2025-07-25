@@ -33,9 +33,23 @@ namespace ProjectVagabond.Physics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties material) where TManifold : unmanaged, IContactManifold<TManifold>
         {
-            // FrictionCoefficient: Reduced for a slightly more slidy feel.
-            // SpringSettings DampingRatio: Lowered significantly for a much more exaggerated bounce.
-            material = new PairMaterialProperties { FrictionCoefficient = 2f, MaximumRecoveryVelocity = 2f, SpringSettings = new SpringSettings(30, 0.1f) };
+            // These material properties define how two objects interact upon collision.
+            material = new PairMaterialProperties
+            {
+                // Controls the "slipperiness" of surfaces. Higher values create more friction,
+                // making dice stop rolling sooner. Lower values make them feel more like ice.
+                FrictionCoefficient = 2f,
+
+                // Controls the bounciness of a collision. A value of 0 means no bounce (inelastic),
+                // while a value of 1 would be a perfectly elastic bounce. Higher values here make dice bounce more.
+                MaximumRecoveryVelocity = 2f,
+
+                // Defines spring-like physics for the collision, affecting how "hard" or "soft" the contact is.
+                // Frequency: Higher values make the connection stiffer, like a hard rubber ball.
+                // DampingRatio: Controls how quickly the bounce dissipates. A low value (like 0.1f) creates a
+                // very bouncy, exaggerated effect. A value of 1 is critically damped (no oscillation).
+                SpringSettings = new SpringSettings(30, 0.1f)
+            };
             return true;
         }
 
@@ -110,11 +124,18 @@ namespace ProjectVagabond.Physics
             int threadCount = Math.Max(1, Environment.ProcessorCount > 4 ? Environment.ProcessorCount - 2 : 1);
             _threadDispatcher = new ThreadDispatcher(threadCount);
 
-            // <<< "HEAVINESS" IS CONTROLLED HERE. >>>
-            // Gravity has been reduced from -1000 to -600 to make the dice feel lighter.
-            // --- Increased solver iterations for more stable collisions ---
-            // The first parameter (VelocityIterationCount) is increased from 24 to 32.
-            Simulation = Simulation.Create(BufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(new Vector3(0, -100, 0)), new SolveDescription(32, 1));
+            // The gravity vector determines the "down" direction and its strength.
+            // A larger negative Y value (e.g., -200) makes dice feel heavier and fall faster.
+            // A smaller negative Y value (e.g., -50) makes them feel lighter and more "floaty".
+            var gravity = new Vector3(0, -100, 0);
+
+            // The SolveDescription controls the solver's precision.
+            // VelocityIterationCount: More iterations lead to more stable and accurate collision responses,
+            // especially with many objects, but at a higher performance cost.
+            // SubstepCount: More substeps can improve stability for very fast-moving objects.
+            var solveDescription = new SolveDescription(32, 1);
+
+            Simulation = Simulation.Create(BufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(gravity), solveDescription);
 
             CreateEnvironment(worldWidth, worldHeight);
         }
@@ -138,7 +159,9 @@ namespace ProjectVagabond.Physics
             Simulation.Statics.Add(floorDescription);
 
             // Define wall properties
+            // Controls how high the invisible containing walls are. Should be high enough that dice can't bounce out.
             const float wallHeight = 200f;
+            // Controls how thick the invisible walls are. This is mostly for stability and doesn't affect visuals.
             const float wallThickness = 50f;
 
             // Create the four containing walls. They are positioned such that their inner faces
