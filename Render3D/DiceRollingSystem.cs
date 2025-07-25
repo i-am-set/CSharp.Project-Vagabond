@@ -268,7 +268,7 @@ namespace ProjectVagabond.Dice
             var targetPos = new System.Numerics.Vector3(_viewWidth / 2f, 0, _viewHeight / 2f);
 
             var direction = System.Numerics.Vector3.Normalize(targetPos - spawnPos);
-            float throwForce = (float)(_random.NextDouble() * 50 + 100); // Randomize throw strength
+            float throwForce = (float)(_random.NextDouble() * 25 + 50); // Randomize throw strength
 
             var bodyDescription = BodyDescription.CreateDynamic(
                 spawnPos,
@@ -290,10 +290,11 @@ namespace ProjectVagabond.Dice
                 (float)_random.NextDouble() * 2 - 1));
 
             bodyDescription.Velocity.Linear = direction * throwForce;
+            // Increased angular velocity for a much faster, more chaotic tumble.
             bodyDescription.Velocity.Angular = new System.Numerics.Vector3(
-                (float)(_random.NextDouble() * 40 - 20),
-                (float)(_random.NextDouble() * 40 - 20),
-                (float)(_random.NextDouble() * 40 - 20));
+                (float)(_random.NextDouble() * 100 - 50),
+                (float)(_random.NextDouble() * 100 - 50),
+                (float)(_random.NextDouble() * 100 - 50));
 
             return _physicsWorld.AddBody(bodyDescription);
         }

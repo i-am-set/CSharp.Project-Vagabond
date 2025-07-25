@@ -283,7 +283,6 @@ namespace ProjectVagabond
             }
             _previousKeyboardState = currentKeyboardState;
 
-            // --- Fixed-Rate Physics Update ---
             // This ensures physics calculations are stable and not dependent on the frame rate.
             _physicsTimeAccumulator += (float)gameTime.ElapsedGameTime.TotalSeconds;
             while (_physicsTimeAccumulator >= Global.FIXED_PHYSICS_TIMESTEP)
