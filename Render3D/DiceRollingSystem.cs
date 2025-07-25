@@ -54,7 +54,7 @@ namespace ProjectVagabond.Dice
 
         // Failsafe State
         private float _rollInProgressTimer;
-        private const float RollTimeout = 4.5f; // After this many seconds, check for stuck dice.
+        private const float RollTimeout = 5f; // After this many seconds, check for stuck dice.
         private List<int> _rerollAttempts; // Tracks failsafe rerolls per die slot.
         private const int MaxRerollAttempts = 5; // Max attempts before forcing a result.
         private Dictionary<int, int> _forcedResults = new Dictionary<int, int>(); // Maps a die slot index to a forced result.
