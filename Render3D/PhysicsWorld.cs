@@ -36,7 +36,7 @@ namespace ProjectVagabond.Physics
             // <<< BOUNCINESS AND FRICTION ARE CONTROLLED HERE. >>>
             // FrictionCoefficient: Reduced for a slightly more slidy feel.
             // SpringSettings DampingRatio: Lowered significantly for a much more exaggerated bounce.
-            material = new PairMaterialProperties { FrictionCoefficient = 0.6f, MaximumRecoveryVelocity = 2f, SpringSettings = new SpringSettings(30, 1f) };
+            material = new PairMaterialProperties { FrictionCoefficient = 0.6f, MaximumRecoveryVelocity = 2f, SpringSettings = new SpringSettings(30, 0.1f) };
             return true;
         }
 

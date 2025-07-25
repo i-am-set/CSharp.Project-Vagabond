@@ -46,6 +46,12 @@ namespace ProjectVagabond.Dice
         private bool _wasRollingLastFrame = false;
 
         /// <summary>
+        /// If true, the physics colliders will be rendered as debug visuals.
+        /// Can be toggled at runtime (e.g., via a key press in Core.cs).
+        /// </summary>
+        public bool DebugShowColliders { get; set; } = false;
+
+        /// <summary>
         /// Fired once when all dice in a roll have come to a complete stop.
         /// The payload is a list of integers representing the face value of each die.
         /// </summary>
@@ -148,8 +154,8 @@ namespace ProjectVagabond.Dice
             _renderableDice.Clear();
 
             // --- CRITICAL FIX: Create a physically beveled Convex Hull for the die shape ---
-            const float size = 10f; // Half-width of the die
-            const float bevelAmount = 2.5f; // How much to shave off the corners
+            const float size = 1f; // Half-width of the die
+            const float bevelAmount = size * 0.2f; // How much to shave off the corners
             var points = new List<System.Numerics.Vector3>();
             for (int i = 0; i < 8; ++i)
             {
@@ -169,8 +175,8 @@ namespace ProjectVagabond.Dice
 
             for (int i = 0; i < numberOfDice; i++)
             {
-                // Create a renderable die
-                var renderableDie = new RenderableDie(_dieModel);
+                // Create a renderable die, passing the collider vertices for debug rendering
+                var renderableDie = new RenderableDie(_dieModel, points);
                 _renderableDice.Add(renderableDie);
 
                 // Create a corresponding physics body with random initial state within the smaller spawn area
@@ -268,6 +274,23 @@ namespace ProjectVagabond.Dice
             foreach (var die in _renderableDice)
             {
                 die.Draw(_view, _projection);
+            }
+
+            // If debug mode is enabled, draw the collider vertices on top.
+            if (DebugShowColliders)
+            {
+                // Store the current depth state
+                var originalDepthState = _graphicsDevice.DepthStencilState;
+                // Disable depth testing so our debug lines draw on top of the model
+                _graphicsDevice.DepthStencilState = DepthStencilState.None;
+
+                foreach (var die in _renderableDice)
+                {
+                    die.DrawDebug(_view, _projection);
+                }
+
+                // Restore the original depth state for the next draw cycle
+                _graphicsDevice.DepthStencilState = originalDepthState;
             }
 
             // --- Return the result ---

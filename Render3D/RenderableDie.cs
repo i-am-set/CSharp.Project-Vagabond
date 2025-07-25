@@ -1,5 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Collections.Generic;
+using System.Linq;
+using BepuNumeric = System.Numerics; // Alias Bepu's Vector3 to avoid conflict
 
 namespace ProjectVagabond.Dice
 {
@@ -10,6 +13,10 @@ namespace ProjectVagabond.Dice
     public class RenderableDie
     {
         private readonly Model _dieModel;
+        private readonly List<BepuNumeric.Vector3> _colliderVertices;
+        private readonly VertexPositionColor[] _debugAxisVertices;
+        private readonly BasicEffect _debugEffect;
+        private readonly GraphicsDevice _graphicsDevice;
 
         /// <summary>
         /// Gets or sets the world transformation matrix for this die, which defines
@@ -21,10 +28,38 @@ namespace ProjectVagabond.Dice
         /// Initializes a new instance of the RenderableDie class.
         /// </summary>
         /// <param name="model">The MonoGame Model to be used for rendering this die.</param>
-        public RenderableDie(Model model)
+        /// <param name="colliderVertices">A list of vertices defining the physics collider for debug visualization.</param>
+        public RenderableDie(Model model, List<BepuNumeric.Vector3> colliderVertices)
         {
             _dieModel = model;
+            _colliderVertices = colliderVertices;
             World = Matrix.Identity;
+
+            // We can get the graphics device from the model itself.
+            _graphicsDevice = _dieModel.Meshes[0].MeshParts[0].VertexBuffer.GraphicsDevice;
+
+            // Initialize the effect used for drawing debug shapes.
+            _debugEffect = new BasicEffect(_graphicsDevice)
+            {
+                VertexColorEnabled = true,
+                LightingEnabled = false,
+                TextureEnabled = false
+            };
+
+            // Create the vertices for a small 3-axis cross (X, Y, Z) to be drawn at each collider point.
+            const float axisSize = 0.5f;
+            _debugAxisVertices = new[]
+            {
+                // X-axis (Red)
+                new VertexPositionColor(new Vector3(-axisSize, 0, 0), Color.Red),
+                new VertexPositionColor(new Vector3(axisSize, 0, 0), Color.Red),
+                // Y-axis (Green)
+                new VertexPositionColor(new Vector3(0, -axisSize, 0), Color.Green),
+                new VertexPositionColor(new Vector3(0, axisSize, 0), Color.Green),
+                // Z-axis (Blue)
+                new VertexPositionColor(new Vector3(0, 0, -axisSize), Color.Blue),
+                new VertexPositionColor(new Vector3(0, 0, axisSize), Color.Blue)
+            };
         }
 
         /// <summary>
@@ -78,6 +113,41 @@ namespace ProjectVagabond.Dice
                         part.StartIndex,
                         part.PrimitiveCount);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Draws a debug visualization of the collider's vertices.
+        /// </summary>
+        /// <param name="view">The camera's view matrix.</param>
+        /// <param name="projection">The camera's projection matrix.</param>
+        public void DrawDebug(Matrix view, Matrix projection)
+        {
+            if (_colliderVertices == null || !_colliderVertices.Any())
+            {
+                return;
+            }
+
+            _debugEffect.View = view;
+            _debugEffect.Projection = projection;
+
+            foreach (var vertex in _colliderVertices)
+            {
+                // Convert the BEPU vector to an XNA vector for matrix transformation.
+                var xnaVertex = new Vector3(vertex.X, vertex.Y, vertex.Z);
+
+                // Create a world matrix for the debug axis shape.
+                // This matrix will position the small axis cross at the vertex's location,
+                // relative to the die's overall position and rotation.
+                _debugEffect.World = Matrix.CreateTranslation(xnaVertex) * World;
+
+                // Apply the effect and draw the lines.
+                _debugEffect.CurrentTechnique.Passes[0].Apply();
+                _graphicsDevice.DrawUserPrimitives(
+                    PrimitiveType.LineList,
+                    _debugAxisVertices,
+                    0,
+                    3); // 3 pairs of vertices for 3 lines
             }
         }
     }

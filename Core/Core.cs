@@ -1,5 +1,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input; // Added for Keyboard state
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Dice; // Added using directive
 using ProjectVagabond.Particles;
@@ -59,6 +60,9 @@ namespace ProjectVagabond
         private ParticleSystemManager _particleSystemManager;
         private DiceRollingSystem _diceRollingSystem;
 
+        // Input State
+        private KeyboardState _previousKeyboardState;
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public Core()
@@ -106,6 +110,8 @@ namespace ProjectVagabond
 
             var worldClockManager = new WorldClockManager();
             ServiceLocator.Register<WorldClockManager>(worldClockManager);
+
+
 
             var noiseManager = new NoiseMapManager();
             ServiceLocator.Register<NoiseMapManager>(noiseManager);
@@ -265,6 +271,15 @@ namespace ProjectVagabond
                 IsFixedTimeStep = false;
             }
             _graphics.SynchronizeWithVerticalRetrace = _settings.IsVsync;
+
+            // Handle debug input
+            KeyboardState currentKeyboardState = Keyboard.GetState();
+            if (currentKeyboardState.IsKeyDown(Keys.F1) && _previousKeyboardState.IsKeyUp(Keys.F1))
+            {
+                _diceRollingSystem.DebugShowColliders = !_diceRollingSystem.DebugShowColliders;
+            }
+            _previousKeyboardState = currentKeyboardState;
+
 
             _sceneManager.Update(gameTime);
             _tooltipManager.Update(gameTime); // Tooltips should always update.
