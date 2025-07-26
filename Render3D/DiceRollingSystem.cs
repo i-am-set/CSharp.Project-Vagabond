@@ -29,8 +29,10 @@ namespace ProjectVagabond.Dice
         private readonly Random _random = new Random();
         private readonly Global _global;
 
-        // Rendering
-        private readonly List<RenderableDie> _renderableDice = new List<RenderableDie>();
+        // Rendering & Object Pooling
+        private const int InitialPoolSize = 10; // Start with a small pool to avoid startup hitch.
+        private readonly List<RenderableDie> _activeDice = new List<RenderableDie>();
+        private readonly List<RenderableDie> _diePool = new List<RenderableDie>();
         private Model _dieModel;
         private Texture2D _dieTexture;
 
@@ -56,12 +58,10 @@ namespace ProjectVagabond.Dice
         private float _settleTimer = 0f;
         // SettleDelay is now in Global.cs
 
-        // Failsafe State
+        // Failsafe State (reused to avoid allocations)
         private float _rollInProgressTimer;
-        // RollTimeout is now in Global.cs
-        private Dictionary<RenderableDie, int> _rerollAttempts; // Tracks failsafe rerolls per die.
-        // MaxRerollAttempts is now in Global.cs
-        private Dictionary<RenderableDie, int> _forcedResults = new Dictionary<RenderableDie, int>(); // Maps a die object to a forced result.
+        private readonly Dictionary<RenderableDie, int> _rerollAttempts = new Dictionary<RenderableDie, int>();
+        private readonly Dictionary<RenderableDie, int> _forcedResults = new Dictionary<RenderableDie, int>();
 
         /// <summary>
         /// If true, the physics colliders will be rendered as debug visuals.
@@ -129,7 +129,6 @@ namespace ProjectVagabond.Dice
                 DepthFormat.Depth24);
 
             // Load the 3D model and its texture for the dice.
-            // These files must be present in the Content project.
             _dieModel = content.Load<Model>("Models/die");
             _dieTexture = content.Load<Texture2D>("Textures/die_texture");
 
@@ -148,14 +147,12 @@ namespace ProjectVagabond.Dice
             float aspectRatio = (float)_renderTarget.Width / _renderTarget.Height;
 
             // --- Create a single, fixed-size physics world large enough for any roll ---
-            // We'll use the largest potential zoom level (e.g., 40f for >20 dice) to define the physics bounds.
             const float maxCameraZoom = 40f;
             _physicsWorldHeight = maxCameraZoom;
             _physicsWorldWidth = _physicsWorldHeight * aspectRatio;
             _physicsWorld = new PhysicsWorld(_physicsWorldWidth, _physicsWorldHeight);
 
             // --- Create and store the die's physical shape and inertia once ---
-            // This avoids re-calculating it on every roll.
             float size = _global.DiceColliderSize;
             float bevelAmount = size * _global.DiceColliderBevelRatio;
             var points = new List<System.Numerics.Vector3>();
@@ -175,23 +172,21 @@ namespace ProjectVagabond.Dice
             _dieInertia = dieShape.ComputeInertia(_global.DiceMass);
             _dieShapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);
 
+            // --- Pre-populate the RenderableDie object pool with an initial small amount ---
+            for (int i = 0; i < InitialPoolSize; i++)
+            {
+                _diePool.Add(new RenderableDie(_dieModel, _dieColliderVertices, _global.DiceDebugAxisLineSize, Color.White, ""));
+            }
+
             // --- Set up the initial 3D camera view and projection ---
-            _viewHeight = _global.DiceCameraZoom; // Default zoom (e.g., 20f)
+            _viewHeight = _global.DiceCameraZoom;
             _viewWidth = _viewHeight * aspectRatio;
 
-            // The camera is positioned above the center of the large, static physics world.
             var cameraPosition = new Microsoft.Xna.Framework.Vector3(_physicsWorldWidth / 2f, _global.DiceCameraHeight, _physicsWorldHeight / 2f);
             var cameraTarget = new Microsoft.Xna.Framework.Vector3(_physicsWorldWidth / 2f, 0, _physicsWorldHeight / 2f);
             _view = Matrix.CreateLookAt(cameraPosition, cameraTarget, Microsoft.Xna.Framework.Vector3.Forward);
 
-            // Create an orthographic projection that matches the initial view size. This will be updated per-roll.
-            _projection = Matrix.CreateOrthographic(
-                _viewWidth,  // The calculated width of the area to view
-                _viewHeight, // The chosen height of the area to view
-                1f,          // Near clipping plane
-                200f);       // Far clipping plane
-
-            // Set the initial positions of the kinematic walls to match the default view.
+            _projection = Matrix.CreateOrthographic(_viewWidth, _viewHeight, 1f, 200f);
             _physicsWorld.UpdateBoundaryPositions(_viewWidth, _viewHeight);
         }
 
@@ -201,69 +196,62 @@ namespace ProjectVagabond.Dice
         /// <param name="rollGroups">A list of DiceGroup objects, each defining a set of dice to roll.</param>
         public void Roll(List<DiceGroup> rollGroups)
         {
+            // --- Return previously active dice to the pool and clear physics bodies ---
+            foreach (var pair in _bodyToDieMap)
+            {
+                _physicsWorld.RemoveBody(pair.Key);
+                _diePool.Add(pair.Value);
+            }
+            _activeDice.Clear();
+            _bodyToDieMap.Clear();
+
+            // --- Reset state and clear collections to avoid new allocations ---
+            _rollInProgressTimer = 0f;
+            _rerollAttempts.Clear();
+            _forcedResults.Clear();
+            _currentRollGroups = rollGroups;
+
             // --- Dynamic Camera Zoom ---
             int totalDice = rollGroups.Sum(g => g.NumberOfDice);
-
-            float requiredZoom;
-            if (totalDice <= 8)
-            {
-                requiredZoom = 20f;
-            }
-            else if (totalDice <= 20)
-            {
-                requiredZoom = 30f;
-            }
-            else
-            {
-                requiredZoom = 40f;
-            }
-
-            // Update the camera's view dimensions and projection matrix for the current roll.
+            float requiredZoom = totalDice <= 8 ? 20f : (totalDice <= 20 ? 30f : 40f);
             float aspectRatio = (float)_renderTarget.Width / _renderTarget.Height;
             _viewHeight = requiredZoom;
             _viewWidth = _viewHeight * aspectRatio;
 
-            // Update the projection matrix to change the zoom level. This is a cheap operation.
-            _projection = Matrix.CreateOrthographic(
-                _viewWidth,  // Use the new calculated width
-                _viewHeight, // Use the new calculated height
-                1f,          // Near clipping plane
-                200f);       // Far clipping plane
-
-            // Move the kinematic walls to match the new view boundaries. This is also cheap.
+            _projection = Matrix.CreateOrthographic(_viewWidth, _viewHeight, 1f, 200f);
             _physicsWorld.UpdateBoundaryPositions(_viewWidth, _viewHeight);
 
-            // --- Roll Setup ---
-            // Clear previous roll data from the existing simulation.
-            foreach (var handle in _bodyToDieMap.Keys)
-            {
-                _physicsWorld.RemoveBody(handle);
-            }
-            _bodyToDieMap.Clear();
-            _renderableDice.Clear();
-
-            // Reset failsafe mechanisms
-            _rollInProgressTimer = 0f;
-            _rerollAttempts = new Dictionary<RenderableDie, int>();
-            _forcedResults = new Dictionary<RenderableDie, int>();
-            _currentRollGroups = rollGroups;
-
-            // Loop through the requested groups and spawn the dice for each.
+            // --- Get dice from the pool or create new ones if needed (growable pool) ---
             foreach (var group in rollGroups)
             {
                 for (int i = 0; i < group.NumberOfDice; i++)
                 {
-                    // Create a renderable die, passing the group's properties.
-                    var renderableDie = new RenderableDie(_dieModel, _dieColliderVertices, _global.DiceDebugAxisLineSize, group.Tint, group.GroupId);
-                    _renderableDice.Add(renderableDie);
+                    RenderableDie renderableDie;
 
-                    // Create a corresponding physics body by throwing it from off-screen
+                    if (_diePool.Count > 0)
+                    {
+                        // Get a die from the pool
+                        renderableDie = _diePool.Last();
+                        _diePool.RemoveAt(_diePool.Count - 1);
+                    }
+                    else
+                    {
+                        // Pool is empty, "hot add" a new die. This will cause a small, one-time hitch
+                        // only when a new maximum number of dice is needed.
+                        renderableDie = new RenderableDie(_dieModel, _dieColliderVertices, _global.DiceDebugAxisLineSize, Color.White, "");
+                    }
+
+                    // Configure the recycled die for its new role
+                    renderableDie.GroupId = group.GroupId;
+                    renderableDie.Tint = group.Tint;
+                    _activeDice.Add(renderableDie);
+
+                    // Create a corresponding physics body
                     var handle = ThrowDieFromOffscreen(renderableDie);
                     _bodyToDieMap.Add(handle, renderableDie);
                 }
             }
 
-            // Set the state to indicate a roll is in progress.
             _wasRollingLastFrame = true;
         }
 
@@ -388,10 +376,9 @@ namespace ProjectVagabond.Dice
             }
 
             // PRIMARY FAILSAFE: Instantly detect and replace any missing dice
-            // This check is only necessary if a roll is supposed to be in progress.
-            if (_renderableDice.Any())
+            if (_activeDice.Any())
             {
-                int expectedDiceCount = _renderableDice.Count;
+                int expectedDiceCount = _activeDice.Count;
                 int activeDiceCount = _bodyToDieMap.Count + _forcedResults.Count;
                 if (activeDiceCount < expectedDiceCount)
                 {
@@ -530,7 +517,7 @@ namespace ProjectVagabond.Dice
                                 var rawResults = new Dictionary<string, List<int>>();
 
                                 // 1. Gather raw face values from all dice, including forced ones.
-                                foreach (var die in _renderableDice)
+                                foreach (var die in _activeDice)
                                 {
                                     if (!rawResults.ContainsKey(die.GroupId))
                                     {
@@ -612,7 +599,7 @@ namespace ProjectVagabond.Dice
             var activeRenderableDice = _bodyToDieMap.Values.ToHashSet();
 
             // Find any die from our master list that is not currently in the physics simulation.
-            var missingDice = _renderableDice.Where(d => !activeRenderableDice.Contains(d) && !_forcedResults.ContainsKey(d)).ToList();
+            var missingDice = _activeDice.Where(d => !activeRenderableDice.Contains(d) && !_forcedResults.ContainsKey(d)).ToList();
 
             foreach (var die in missingDice)
             {
@@ -650,8 +637,6 @@ namespace ProjectVagabond.Dice
             if (_rerollAttempts[die] >= _global.DiceMaxRerollAttempts)
             {
                 // Too many attempts, force the result.
-                // The die's physics body is already removed (or was never there).
-                // We just record the forced result. The die will no longer be updated or drawn.
                 _forcedResults[die] = _global.DiceForcedResultValue;
             }
             else
@@ -669,7 +654,7 @@ namespace ProjectVagabond.Dice
         /// <returns>The RenderTarget2D containing the rendered dice scene.</returns>
         public RenderTarget2D Draw()
         {
-            if (_renderableDice.Count == 0)
+            if (_activeDice.Count == 0)
             {
                 return null;
             }
@@ -683,7 +668,7 @@ namespace ProjectVagabond.Dice
             // Use Opaque blend state to draw the solid dice onto the transparent background
             _graphicsDevice.BlendState = BlendState.Opaque;
 
-            foreach (var die in _renderableDice)
+            foreach (var die in _activeDice)
             {
                 // Don't draw dice that have been culled by the failsafe.
                 if (_forcedResults.ContainsKey(die))
@@ -701,7 +686,7 @@ namespace ProjectVagabond.Dice
                 // Disable depth testing so our debug lines draw on top of the model
                 _graphicsDevice.DepthStencilState = DepthStencilState.None;
 
-                foreach (var die in _renderableDice)
+                foreach (var die in _activeDice)
                 {
                     // Also skip drawing debug info for culled dice.
                     if (_forcedResults.ContainsKey(die))

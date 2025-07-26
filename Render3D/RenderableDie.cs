@@ -30,9 +30,10 @@ namespace ProjectVagabond.Dice
         public Color Tint { get; set; }
 
         /// <summary>
-        /// The identifier for the group this die belongs to.
+        /// The identifier for the group this die belongs to. This is now settable
+        /// to support object pooling.
         /// </summary>
-        public string GroupId { get; }
+        public string GroupId { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the RenderableDie class.
