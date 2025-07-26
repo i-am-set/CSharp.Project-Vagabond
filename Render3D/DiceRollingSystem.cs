@@ -27,6 +27,7 @@ namespace ProjectVagabond.Dice
         private PhysicsWorld _physicsWorld;
         private RenderTarget2D _renderTarget;
         private readonly Random _random = new Random();
+        private readonly Global _global;
 
         // Rendering
         private readonly List<RenderableDie> _renderableDice = new List<RenderableDie>();
@@ -44,20 +45,21 @@ namespace ProjectVagabond.Dice
         private TypedIndex _dieShapeIndex;
         private BodyInertia _dieInertia;
         private List<System.Numerics.Vector3> _dieColliderVertices;
+        private List<DiceGroup> _currentRollGroups;
 
 
         // State Tracking
         private bool _wasRollingLastFrame = false;
         private bool _isWaitingForSettle = false;
         private float _settleTimer = 0f;
-        private const float SettleDelay = 0.5f; // How long to wait after dice stop before checking for cantering.
+        // SettleDelay is now in Global.cs
 
         // Failsafe State
         private float _rollInProgressTimer;
-        private const float RollTimeout = 5f; // After this many seconds, check for stuck dice.
-        private List<int> _rerollAttempts; // Tracks failsafe rerolls per die slot.
-        private const int MaxRerollAttempts = 5; // Max attempts before forcing a result.
-        private Dictionary<int, int> _forcedResults = new Dictionary<int, int>(); // Maps a die slot index to a forced result.
+        // RollTimeout is now in Global.cs
+        private Dictionary<RenderableDie, int> _rerollAttempts; // Tracks failsafe rerolls per die.
+        // MaxRerollAttempts is now in Global.cs
+        private Dictionary<RenderableDie, int> _forcedResults = new Dictionary<RenderableDie, int>(); // Maps a die object to a forced result.
 
         /// <summary>
         /// If true, the physics colliders will be rendered as debug visuals.
@@ -67,9 +69,9 @@ namespace ProjectVagabond.Dice
 
         /// <summary>
         /// Fired once when all dice in a roll have come to a complete stop.
-        /// The payload is a list of integers representing the face value of each die.
+        /// The payload is a structured result object containing the outcome for each group.
         /// </summary>
-        public event Action<List<int>> OnRollCompleted;
+        public event Action<DiceRollResult> OnRollCompleted;
 
         /// <summary>
         /// Gets a value indicating whether any dice are currently in motion.
@@ -83,10 +85,8 @@ namespace ProjectVagabond.Dice
                     return false;
                 }
 
-                // The sleep threshold determines how much movement is considered "stopped".
-                // A higher value means the dice will be considered "stopped" even with tiny jitters.
-                // A lower value is more sensitive and requires dice to be almost perfectly still.
-                const float sleepThreshold = 0.2f;
+                // The sleep threshold is now configured in the global settings.
+                float sleepThreshold = _global.DiceSleepThreshold;
 
                 foreach (var handle in _bodyToDieMap.Keys)
                 {
@@ -101,7 +101,16 @@ namespace ProjectVagabond.Dice
         }
 
         /// <summary>
-        /// Initializes the dice rolling system, loading content and setting up the physics world.
+        /// Initializes the DiceRollingSystem.
+        /// </summary>
+        public DiceRollingSystem()
+        {
+            // Assign the readonly field in the constructor.
+            _global = ServiceLocator.Get<Global>();
+        }
+
+        /// <summary>
+        /// Loads content and sets up the physics world.
         /// </summary>
         /// <param name="graphicsDevice">The game's GraphicsDevice.</param>
         /// <param name="content">The game's ContentManager.</param>
@@ -136,9 +145,8 @@ namespace ProjectVagabond.Dice
 
             // --- Reduce the view area to make dice appear larger and walls effective ---
             float aspectRatio = (float)_renderTarget.Width / _renderTarget.Height;
-            // This value controls the "zoom" level of the camera.
-            // A smaller value makes the dice and the rolling area appear larger on screen.
-            _viewHeight = 20f;
+            // The camera zoom level is now controlled by the global settings.
+            _viewHeight = _global.DiceCameraZoom;
             _viewWidth = _viewHeight * aspectRatio; // Calculate width to maintain the correct aspect ratio.
 
             // Create the physics world with the new, smaller, aspect-ratio-correct dimensions.
@@ -146,8 +154,8 @@ namespace ProjectVagabond.Dice
 
             // --- Create and store the die's physical shape and inertia once ---
             // This avoids re-calculating it on every roll.
-            const float size = 1f;
-            const float bevelAmount = size * 0.2f;
+            float size = _global.DiceColliderSize;
+            float bevelAmount = size * _global.DiceColliderBevelRatio;
             var points = new List<System.Numerics.Vector3>();
             for (int i = 0; i < 8; ++i)
             {
@@ -162,15 +170,15 @@ namespace ProjectVagabond.Dice
             _dieColliderVertices = points;
 
             var dieShape = new ConvexHull(_dieColliderVertices.ToArray(), _physicsWorld.BufferPool, out _);
-            
-            _dieInertia = dieShape.ComputeInertia(1f); 
-            
+
+            _dieInertia = dieShape.ComputeInertia(_global.DiceMass);
+
             _dieShapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);
 
 
             // Set up the 3D camera to look at the entire smaller play area.
-            // The Y value of cameraPosition determines its height. Higher is more top-down.
-            var cameraPosition = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, 60f, _viewHeight / 2f);
+            // The camera height is now controlled by the global settings.
+            var cameraPosition = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, _global.DiceCameraHeight, _viewHeight / 2f);
             // The target should be the center of the play area.
             var cameraTarget = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, 0, _viewHeight / 2f);
             _view = Matrix.CreateLookAt(cameraPosition, cameraTarget, Microsoft.Xna.Framework.Vector3.Forward);
@@ -185,10 +193,10 @@ namespace ProjectVagabond.Dice
         }
 
         /// <summary>
-        /// Clears existing dice and rolls a new set, throwing them from off-screen.
+        /// Clears existing dice and rolls a new set based on a list of dice groups.
         /// </summary>
-        /// <param name="numberOfDice">The number of dice to roll.</param>
-        public void Roll(int numberOfDice)
+        /// <param name="rollGroups">A list of DiceGroup objects, each defining a set of dice to roll.</param>
+        public void Roll(List<DiceGroup> rollGroups)
         {
             // Clear previous roll
             foreach (var handle in _bodyToDieMap.Keys)
@@ -200,18 +208,23 @@ namespace ProjectVagabond.Dice
 
             // Reset failsafe mechanisms
             _rollInProgressTimer = 0f;
-            _rerollAttempts = new List<int>(new int[numberOfDice]);
-            _forcedResults.Clear(); // Clear the dictionary instead of re-creating it.
+            _rerollAttempts = new Dictionary<RenderableDie, int>();
+            _forcedResults = new Dictionary<RenderableDie, int>();
+            _currentRollGroups = rollGroups;
 
-            for (int i = 0; i < numberOfDice; i++)
+            // Loop through the requested groups and spawn the dice for each.
+            foreach (var group in rollGroups)
             {
-                // Create a renderable die, passing the collider vertices for debug rendering
-                var renderableDie = new RenderableDie(_dieModel, _dieColliderVertices);
-                _renderableDice.Add(renderableDie);
+                for (int i = 0; i < group.NumberOfDice; i++)
+                {
+                    // Create a renderable die, passing the group's properties.
+                    var renderableDie = new RenderableDie(_dieModel, _dieColliderVertices, _global.DiceDebugAxisLineSize, group.Tint, group.GroupId);
+                    _renderableDice.Add(renderableDie);
 
-                // Create a corresponding physics body by throwing it from off-screen
-                var handle = ThrowDieFromOffscreen(renderableDie);
-                _bodyToDieMap.Add(handle, renderableDie);
+                    // Create a corresponding physics body by throwing it from off-screen
+                    var handle = ThrowDieFromOffscreen(renderableDie);
+                    _bodyToDieMap.Add(handle, renderableDie);
+                }
             }
 
             // Set the state to indicate a roll is in progress.
@@ -225,13 +238,11 @@ namespace ProjectVagabond.Dice
         /// <returns>The BodyHandle of the newly created physics body.</returns>
         private BodyHandle ThrowDieFromOffscreen(RenderableDie renderableDie)
         {
-            // Defines how far off-screen the dice will spawn.
-            const float offscreenMargin = 5f;
-            // Defines the height range from which dice are dropped.
-            const float spawnHeightMin = 15f;
-            const float spawnHeightMax = 25f;
-            // Defines a "no-spawn zone" at the ends of each edge to prevent getting caught on corners.
-            const float spawnEdgePadding = 5f;
+            // Spawning parameters are now pulled from global settings.
+            float offscreenMargin = _global.DiceSpawnOffscreenMargin;
+            float spawnHeightMin = _global.DiceSpawnHeightMin;
+            float spawnHeightMax = _global.DiceSpawnHeightMax;
+            float spawnEdgePadding = _global.DiceSpawnEdgePadding;
 
             System.Numerics.Vector3 spawnPos;
             int side = _random.Next(4); // 0: Left, 1: Right, 2: Top, 3: Bottom
@@ -268,7 +279,8 @@ namespace ProjectVagabond.Dice
             var targetPos = new System.Numerics.Vector3(_viewWidth / 2f, 0, _viewHeight / 2f);
 
             var direction = System.Numerics.Vector3.Normalize(targetPos - spawnPos);
-            float throwForce = (float)(_random.NextDouble() * 25 + 50); // Randomize throw strength
+            // Throw force is randomized within the range defined in global settings.
+            float throwForce = (float)(_random.NextDouble() * (_global.DiceThrowForceMax - _global.DiceThrowForceMin) + _global.DiceThrowForceMin);
 
             var bodyDescription = BodyDescription.CreateDynamic(
                 spawnPos,
@@ -290,11 +302,12 @@ namespace ProjectVagabond.Dice
                 (float)_random.NextDouble() * 2 - 1));
 
             bodyDescription.Velocity.Linear = direction * throwForce;
-            // Increased angular velocity for a much faster, more chaotic tumble.
+            // Angular velocity is randomized based on the max value in global settings.
+            float maxAngVel = _global.DiceInitialAngularVelocityMax;
             bodyDescription.Velocity.Angular = new System.Numerics.Vector3(
-                (float)(_random.NextDouble() * 100 - 50),
-                (float)(_random.NextDouble() * 100 - 50),
-                (float)(_random.NextDouble() * 100 - 50));
+                (float)(_random.NextDouble() * maxAngVel * 2 - maxAngVel),
+                (float)(_random.NextDouble() * maxAngVel * 2 - maxAngVel),
+                (float)(_random.NextDouble() * maxAngVel * 2 - maxAngVel));
 
             return _physicsWorld.AddBody(bodyDescription);
         }
@@ -356,7 +369,7 @@ namespace ProjectVagabond.Dice
             }
 
             // SECONDARY FAILSAFE: If the roll takes too long, check for and handle any stuck dice 
-            if (_rollInProgressTimer > RollTimeout)
+            if (_rollInProgressTimer > _global.DiceRollTimeout)
             {
                 HandleStuckDice();
                 return; // Skip the normal settle check for this frame.
@@ -384,7 +397,7 @@ namespace ProjectVagabond.Dice
                     _settleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
                     // If the timer has elapsed, it's time to check the dice state.
-                    if (_settleTimer >= SettleDelay)
+                    if (_settleTimer >= _global.DiceSettleDelay)
                     {
                         // CHECK 1: Re-roll any dice that are off-screen
                         var offscreenDice = new List<BodyHandle>();
@@ -421,7 +434,7 @@ namespace ProjectVagabond.Dice
                         else
                         {
                             // CHECK 2: Nudge any dice that are cantered
-                            const float rerollThreshold = 0.99f;
+                            float rerollThreshold = _global.DiceCantingRerollThreshold;
                             var canteredDiceHandles = new List<BodyHandle>();
 
                             foreach (var pair in _bodyToDieMap)
@@ -440,36 +453,66 @@ namespace ProjectVagabond.Dice
                                     var body = _physicsWorld.Simulation.Bodies.GetBodyReference(handle);
                                     if (!body.Awake) body.Awake = true;
 
+                                    // Nudge forces are now pulled from global settings for fine-tuning.
+                                    float nudgeForceMin = _global.DiceNudgeForceMin;
+                                    float nudgeForceMax = _global.DiceNudgeForceMax;
+                                    float nudgeUpMin = _global.DiceNudgeUpwardForceMin;
+                                    float nudgeUpMax = _global.DiceNudgeUpwardForceMax;
+                                    float nudgeTorqueMax = _global.DiceNudgeTorqueMax;
+
                                     body.Velocity.Linear += new System.Numerics.Vector3(
-                                        (float)(_random.NextDouble() * 20 - 10),
-                                        (float)(_random.NextDouble() * 20 + 10),
-                                        (float)(_random.NextDouble() * 20 - 10));
+                                        (float)(_random.NextDouble() * (nudgeForceMax - nudgeForceMin) + nudgeForceMin),
+                                        (float)(_random.NextDouble() * (nudgeUpMax - nudgeUpMin) + nudgeUpMin),
+                                        (float)(_random.NextDouble() * (nudgeForceMax - nudgeForceMin) + nudgeForceMin));
 
                                     body.Velocity.Angular += new System.Numerics.Vector3(
-                                        (float)(_random.NextDouble() * 30 - 15),
-                                        (float)(_random.NextDouble() * 30 - 15),
-                                        (float)(_random.NextDouble() * 30 - 15));
+                                        (float)(_random.NextDouble() * nudgeTorqueMax * 2 - nudgeTorqueMax),
+                                        (float)(_random.NextDouble() * nudgeTorqueMax * 2 - nudgeTorqueMax),
+                                        (float)(_random.NextDouble() * nudgeTorqueMax * 2 - nudgeTorqueMax));
                                 }
                                 _rollInProgressTimer = 0f; // Reset timeout since we initiated a re-roll.
                             }
                             else
                             {
-                                // --- All checks passed: The roll is complete ---
-                                var results = new List<int>();
-                                for (int i = 0; i < _renderableDice.Count; i++)
+                                // === All checks passed: The roll is complete ===
+                                var result = new DiceRollResult();
+                                var rawResults = new Dictionary<string, List<int>>();
+
+                                // 1. Gather raw face values from all dice, including forced ones.
+                                foreach (var die in _renderableDice)
                                 {
-                                    if (_forcedResults.TryGetValue(i, out int forcedValue))
+                                    if (!rawResults.ContainsKey(die.GroupId))
                                     {
-                                        results.Add(forcedValue);
+                                        rawResults[die.GroupId] = new List<int>();
+                                    }
+
+                                    if (_forcedResults.TryGetValue(die, out int forcedValue))
+                                    {
+                                        rawResults[die.GroupId].Add(forcedValue);
                                     }
                                     else
                                     {
-                                        // This assumes the die at _renderableDice[i] is the one that settled.
-                                        // This is safe because the only way to get here is if all dice are present and settled.
-                                        results.Add(DiceResultHelper.GetUpFaceValue(_renderableDice[i].World));
+                                        rawResults[die.GroupId].Add(DiceResultHelper.GetUpFaceValue(die.World));
                                     }
                                 }
-                                OnRollCompleted?.Invoke(results);
+
+                                // 2. Process the raw results according to the rules of each group.
+                                foreach (var group in _currentRollGroups)
+                                {
+                                    if (rawResults.TryGetValue(group.GroupId, out var values))
+                                    {
+                                        if (group.ResultProcessing == DiceResultProcessing.Sum)
+                                        {
+                                            result.ResultsByGroup[group.GroupId] = new List<int> { values.Sum() };
+                                        }
+                                        else // IndividualValues
+                                        {
+                                            result.ResultsByGroup[group.GroupId] = values;
+                                        }
+                                    }
+                                }
+
+                                OnRollCompleted?.Invoke(result);
                             }
                         }
 
@@ -517,19 +560,18 @@ namespace ProjectVagabond.Dice
         {
             var activeRenderableDice = _bodyToDieMap.Values.ToHashSet();
 
-            for (int i = 0; i < _renderableDice.Count; i++)
-            {
-                // If a die slot has a forced result, it's accounted for.
-                if (_forcedResults.ContainsKey(i)) continue;
+            // Find any die from our master list that is not currently in the physics simulation.
+            var missingDice = _renderableDice.Where(d => !activeRenderableDice.Contains(d) && !_forcedResults.ContainsKey(d)).ToList();
 
-                // If the renderable die for this slot isn't in the active physics simulation, it's missing.
-                var renderableDie = _renderableDice[i];
-                if (!activeRenderableDice.Contains(renderableDie))
-                {
-                    HandleReroll(renderableDie);
-                }
+            foreach (var die in missingDice)
+            {
+                HandleReroll(die);
             }
-            _rollInProgressTimer = 0f; // Reset timeout since we initiated a re-roll.
+
+            if (missingDice.Any())
+            {
+                _rollInProgressTimer = 0f; // Reset timeout since we initiated a re-roll.
+            }
         }
 
         /// <summary>
@@ -540,11 +582,12 @@ namespace ProjectVagabond.Dice
         /// <param name="handleToRemove">Optional handle of the old physics body to remove.</param>
         private void HandleReroll(RenderableDie die, BodyHandle? handleToRemove = null)
         {
-            // Find the "slot" for this die to track its attempts.
-            int slotIndex = _renderableDice.IndexOf(die);
-            if (slotIndex == -1) return; // Should not happen
-
-            _rerollAttempts[slotIndex]++;
+            // Increment attempt counter for this specific die instance.
+            if (!_rerollAttempts.ContainsKey(die))
+            {
+                _rerollAttempts[die] = 0;
+            }
+            _rerollAttempts[die]++;
 
             // If there's an old physics body, remove it.
             if (handleToRemove.HasValue)
@@ -553,10 +596,12 @@ namespace ProjectVagabond.Dice
                 _bodyToDieMap.Remove(handleToRemove.Value);
             }
 
-            if (_rerollAttempts[slotIndex] >= MaxRerollAttempts)
+            if (_rerollAttempts[die] >= _global.DiceMaxRerollAttempts)
             {
-                // Too many attempts, force the result to 3.
-                _forcedResults[slotIndex] = 3;
+                // Too many attempts, force the result.
+                // The die's physics body is already removed (or was never there).
+                // We just record the forced result. The die will no longer be updated or drawn.
+                _forcedResults[die] = _global.DiceForcedResultValue;
             }
             else
             {
@@ -590,9 +635,7 @@ namespace ProjectVagabond.Dice
             foreach (var die in _renderableDice)
             {
                 // Don't draw dice that have been culled by the failsafe.
-                // We can check if its corresponding slot has a forced result.
-                int slotIndex = _renderableDice.IndexOf(die);
-                if (slotIndex != -1 && _forcedResults.ContainsKey(slotIndex))
+                if (_forcedResults.ContainsKey(die))
                 {
                     continue;
                 }
@@ -610,8 +653,7 @@ namespace ProjectVagabond.Dice
                 foreach (var die in _renderableDice)
                 {
                     // Also skip drawing debug info for culled dice.
-                    int slotIndex = _renderableDice.IndexOf(die);
-                    if (slotIndex != -1 && _forcedResults.ContainsKey(slotIndex))
+                    if (_forcedResults.ContainsKey(die))
                     {
                         continue;
                     }

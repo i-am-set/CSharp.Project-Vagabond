@@ -6,6 +6,9 @@ using ProjectVagabond.Dice; // Added using directive
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using System;
+using System.Collections.Generic; // Added for List
+using System.Diagnostics;       // Added for Debug.WriteLine
+using System.Text;              // Added for StringBuilder
 
 // TODO: generate different noise maps to generate different map things
 // TODO: add a way to generate different map elements based on the noise map
@@ -118,6 +121,8 @@ namespace ProjectVagabond
 
             var noiseManager = new NoiseMapManager();
             ServiceLocator.Register<NoiseMapManager>(noiseManager);
+
+
 
             var textureFactory = new TextureFactory();
             ServiceLocator.Register<TextureFactory>(textureFactory);
@@ -255,11 +260,29 @@ namespace ProjectVagabond
 
             _spriteManager.LoadSpriteContent();
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
+            _diceRollingSystem.OnRollCompleted += HandleRollCompleted; // Subscribe to the new event
             ServiceLocator.Get<ArchetypeManager>().LoadArchetypes("Content/Archetypes");
             _gameState.InitializeWorld();
             _gameState.InitializeRenderableEntities();
 
             _sceneManager.ChangeScene(GameSceneState.MainMenu, fade_duration: 0.5f);
+        }
+
+        /// <summary>
+        /// Handles the result of a completed dice roll.
+        /// </summary>
+        /// <param name="result">The structured result of the roll.</param>
+        private void HandleRollCompleted(DiceRollResult result)
+        {
+            Debug.WriteLine("---------- ROLL COMPLETED ----------");
+            var sb = new StringBuilder();
+            foreach (var groupResult in result.ResultsByGroup)
+            {
+                sb.Clear();
+                sb.Append(string.Join(", ", groupResult.Value));
+                Debug.WriteLine($"Group '{groupResult.Key}' Results: [ {sb} ]");
+            }
+            Debug.WriteLine("------------------------------------");
         }
 
         protected override void Update(GameTime gameTime)
@@ -281,6 +304,33 @@ namespace ProjectVagabond
             {
                 _diceRollingSystem.DebugShowColliders = !_diceRollingSystem.DebugShowColliders;
             }
+
+            // Use F2 to trigger a sample grouped dice roll for demonstration.
+            if (currentKeyboardState.IsKeyDown(Keys.F2) && _previousKeyboardState.IsKeyUp(Keys.F2))
+            {
+                // 1. Define the groups for the roll.
+                var rollRequest = new List<DiceGroup>
+                {
+                    new DiceGroup
+                    {
+                        GroupId = "damage",
+                        NumberOfDice = 2,
+                        Tint = Color.Red,
+                        ResultProcessing = DiceResultProcessing.Sum
+                    },
+                    new DiceGroup
+                    {
+                        GroupId = "status_effect",
+                        NumberOfDice = 1,
+                        Tint = Color.Blue,
+                        ResultProcessing = DiceResultProcessing.IndividualValues
+                    }
+                };
+
+                // 2. Call the roll method with the request.
+                _diceRollingSystem.Roll(rollRequest);
+            }
+
             _previousKeyboardState = currentKeyboardState;
 
             // This ensures physics calculations are stable and not dependent on the frame rate.

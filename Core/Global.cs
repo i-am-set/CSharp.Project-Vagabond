@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using System.Numerics;
 
 namespace ProjectVagabond
 {
@@ -167,5 +168,218 @@ namespace ProjectVagabond
         public Color CombatSelectorColor { get; set; }
         public Color CombatSelectableColor { get; set; }
         public Color CombatInstructionColor { get; set; }
+
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        // DICE SYSTEM SETTINGS
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+        // Physics Material Properties 
+
+        /// <summary>
+        /// Controls the "slipperiness" of surfaces (both dice and the floor).
+        /// How to use: Higher values create more friction, making dice stop rolling sooner. Lower values make them feel more like ice.
+        /// Example: 0.1f is very slippery, 2.0f is very rough.
+        /// </summary>
+        public float DiceFrictionCoefficient { get; set; } = 1.5f;
+
+        /// <summary>
+        /// Controls the bounciness of a collision.
+        /// How to use: This is the maximum speed at which a contact point can separate after a collision. A value of 0 means no bounce (inelastic). Higher values allow for more significant bounces.
+        /// Example: 2.0f is a small bounce, 10.0f is a very noticeable bounce.
+        /// </summary>
+        public float DiceBounciness { get; set; } = 10f;
+
+        /// <summary>
+        /// Defines how "hard" or "soft" a collision is, like a spring.
+        /// How to use: Higher values make the connection stiffer, like a hard rubber ball hitting concrete. Lower values make it feel softer, like a bouncy ball.
+        /// Example: 5 is soft, 30 is very hard.
+        /// </summary>
+        public float DiceSpringStiffness { get; set; } = 20f;
+
+        /// <summary>
+        /// Controls how quickly the bounce effect from a collision dissipates.
+        /// How to use: This is a ratio. A value of 1.0 is "critically damped," meaning it stops bouncing immediately. A low value (close to 0) creates a very bouncy, oscillating effect. A value greater than 1 will feel sluggish and overdamped.
+        /// Example: 0.1f is very bouncy, 1.0f has no oscillation.
+        /// </summary>
+        public float DiceSpringDamping { get; set; } = 0.1f;
+
+        // World & Simulation Properties 
+
+        /// <summary>
+        /// The gravity vector for the physics simulation. Determines the "down" direction and its strength.
+        /// How to use: A larger negative Y value makes dice feel heavier and fall faster. A smaller negative Y value makes them feel lighter and more "floaty".
+        /// Example: A Y of -20 is light gravity, a Y of -200 is heavy gravity.
+        /// </summary>
+        public System.Numerics.Vector3 DiceGravity { get; set; } = new System.Numerics.Vector3(0, -100, 0);
+
+        /// <summary>
+        /// The number of velocity iterations the physics solver will perform per step.
+        /// How to use: More iterations lead to more stable and accurate collision responses, especially with many stacked objects, but at a higher performance cost.
+        /// Limitations: Values are typically powers of 2. 8 is usually fine, 32 is very stable.
+        /// </summary>
+        public int DiceSolverIterations { get; set; } = 32;
+
+        /// <summary>
+        /// The number of substeps the solver takes.
+        /// How to use: More substeps improve stability for very fast-moving objects, preventing them from "tunneling" (passing through) other objects like walls.
+        /// Example: 4 is standard, 8 is very robust for fast objects.
+        /// </summary>
+        public int DiceSolverSubsteps { get; set; } = 8;
+
+        /// <summary>
+        /// Controls how high the invisible containing walls are.
+        /// How to use: This should be high enough that dice cannot bounce out of the play area. It is measured in the same units as the camera height and spawn height.
+        /// </summary>
+        public float DiceContainerWallHeight { get; set; } = 200f;
+
+        /// <summary>
+        /// Controls how thick the invisible containing walls are.
+        /// How to use: This is mostly for physics stability and does not affect visuals. A thicker wall is harder for objects to tunnel through.
+        /// </summary>
+        public float DiceContainerWallThickness { get; set; } = 500f;
+
+        // Camera & View Properties 
+
+        /// <summary>
+        /// Controls the "zoom" level of the camera. This is the vertical size of the visible play area.
+        /// How to use: A smaller value makes the dice and the rolling area appear larger on screen. A larger value makes them appear smaller.
+        /// Example: 15 is very zoomed in, 40 is zoomed out.
+        /// </summary>
+        public float DiceCameraZoom { get; set; } = 20f;
+
+        /// <summary>
+        /// Determines the height of the camera over the play area.
+        /// How to use: A higher value gives a more top-down "orthographic" view. A lower value provides a more angled "perspective" view.
+        /// Example: 80 is very top-down, 30 is more angled.
+        /// </summary>
+        public float DiceCameraHeight { get; set; } = 60f;
+
+        // Die Properties & Initial State 
+
+        /// <summary>
+        /// The physical mass of a single die.
+        /// How to use: Affects how the die reacts to forces and gravity. A higher mass will make it feel heavier and harder to push.
+        /// </summary>
+        public float DiceMass { get; set; } = 1f;
+
+        /// <summary>
+        /// The base size of the die's physics collider before beveling.
+        /// How to use: This should generally match the visual size of your die model.
+        /// </summary>
+        public float DiceColliderSize { get; set; } = 1f;
+
+        /// <summary>
+        /// The amount of beveling on the collider's corners, as a percentage of the die's size.
+        /// How to use: This creates a more realistic "rounded cube" shape for physics, which helps the die tumble more naturally. A value of 0 would be a perfect, sharp cube.
+        /// Example: 0.2 means the corners are beveled by 20% of the die's size.
+        /// </summary>
+        public float DiceColliderBevelRatio { get; set; } = 0.2f;
+
+        /// <summary>
+        /// The minimum height from which dice are dropped into the scene.
+        /// </summary>
+        public float DiceSpawnHeightMin { get; set; } = 15f;
+
+        /// <summary>
+        /// The maximum height from which dice are dropped into the scene.
+        /// </summary>
+        public float DiceSpawnHeightMax { get; set; } = 25f;
+
+        /// <summary>
+        /// How far off-screen (laterally) the dice will spawn before being thrown into view.
+        /// </summary>
+        public float DiceSpawnOffscreenMargin { get; set; } = 5f;
+
+        /// <summary>
+        /// A "no-spawn zone" at the ends of each edge to prevent dice from spawning too close to a corner and getting stuck.
+        /// </summary>
+        public float DiceSpawnEdgePadding { get; set; } = 5f;
+
+        /// <summary>
+        /// The minimum force applied to a die when it is thrown into the scene.
+        /// </summary>
+        public float DiceThrowForceMin { get; set; } = 10f;
+
+        /// <summary>
+        /// The maximum force applied to a die when it is thrown into the scene.
+        /// </summary>
+        public float DiceThrowForceMax { get; set; } = 75f;
+
+        /// <summary>
+        /// The maximum angular velocity (spin) applied to a die on any axis when thrown. The actual spin will be a random value between -Max and +Max.
+        /// How to use: Higher values create a much faster, more chaotic tumble.
+        /// Example: 20 is a gentle tumble, 100 is a very fast spin.
+        /// </summary>
+        public float DiceInitialAngularVelocityMax { get; set; } = 100f;
+
+        // Roll Resolution & Failsafe Properties 
+
+        /// <summary>
+        /// How long (in seconds) the system waits after all dice have stopped moving before checking their final state. This helps prevent misreads from tiny jitters.
+        /// </summary>
+        public float DiceSettleDelay { get; set; } = 0.5f;
+
+        /// <summary>
+        /// The maximum time (in seconds) a roll can be in progress. If dice are still moving after this time, the failsafe for stuck dice is triggered.
+        /// </summary>
+        public float DiceRollTimeout { get; set; } = 5f;
+
+        /// <summary>
+        /// The maximum number of times the system will try to re-roll a single stuck or canted die before giving up and forcing a result.
+        /// </summary>
+        public int DiceMaxRerollAttempts { get; set; } = 5;
+
+        /// <summary>
+        /// If a die fails all re-roll attempts, this is the face value it will be assigned.
+        /// </summary>
+        public int DiceForcedResultValue { get; set; } = 3;
+
+        /// <summary>
+        /// The motion threshold for determining if a die is "stopped" or "asleep".
+        /// How to use: This is the squared length of the velocity vector. A higher value means the dice will be considered "stopped" even with tiny jitters. A lower value is more sensitive and requires dice to be almost perfectly still.
+        /// </summary>
+        public float DiceSleepThreshold { get; set; } = 0.2f;
+
+        /// <summary>
+        /// The alignment threshold for determining if a die is "canted" (resting on an edge or corner).
+        /// How to use: This is the dot product of the die's up-facing vector and the world's up vector. A value of 1.0 means it's perfectly flat. Values below this threshold will trigger a re-roll nudge.
+        /// Example: 0.99f is very strict, 0.95f is more lenient.
+        /// </summary>
+        public float DiceCantingRerollThreshold { get; set; } = 0.99f;
+
+        /// <summary>
+        /// The minimum sideways force applied to a canted die to nudge it.
+        /// </summary>
+        public float DiceNudgeForceMin { get; set; } = -10f;
+
+        /// <summary>
+        /// The maximum sideways force applied to a canted die to nudge it.
+        /// </summary>
+        public float DiceNudgeForceMax { get; set; } = 10f;
+
+        /// <summary>
+        /// The minimum upward force applied to a canted die to nudge it.
+        /// </summary>
+        public float DiceNudgeUpwardForceMin { get; set; } = 10f;
+
+        /// <summary>
+        /// The maximum upward force applied to a canted die to nudge it.
+        /// </summary>
+        public float DiceNudgeUpwardForceMax { get; set; } = 20f;
+
+        /// <summary>
+        /// The maximum torque (spin) applied to a canted die to nudge it. The actual torque will be a random value between -Max and +Max.
+        /// </summary>
+        public float DiceNudgeTorqueMax { get; set; } = 15f;
+
+        // Dice Debugging 
+
+        /// <summary>
+        /// Controls the size of the R/G/B axis lines drawn at each vertex of the physics collider in debug mode.
+        /// How to use: A larger value makes the debug markers bigger and easier to see.
+        /// </summary>
+        public float DiceDebugAxisLineSize { get; set; } = 0.5f;
+
     }
 }

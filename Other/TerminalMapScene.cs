@@ -135,14 +135,14 @@ namespace ProjectVagabond.Scenes
             _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
         }
 
-        private void OnDiceRollCompleted(List<int> results)
+        private void OnDiceRollCompleted(DiceRollResult result)
         {
-            var sb = new StringBuilder();
-            sb.Append("You rolled: ");
-            sb.Append(string.Join(", ", results));
-            sb.Append($" (Total: {results.Sum()})");
+            foreach (var groupResult in result.ResultsByGroup)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{groupResult.Key} dice : Sum = {groupResult.Value.Sum()}" });
+            }
 
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = sb.ToString() });
+            
         }
 
         private void OpenSettings()
@@ -177,7 +177,24 @@ namespace ProjectVagabond.Scenes
             // Temporary input for testing dice rolls, changed to Tilde key
             if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && !_previousKeyboardState.IsKeyDown(Keys.OemTilde))
             {
-                _diceRollingSystem.Roll(2);
+                var rollRequest = new List<DiceGroup>
+                {
+                    new DiceGroup
+                    {
+                        GroupId = "test_sum",
+                        NumberOfDice = 40,
+                        Tint = Color.Goldenrod,
+                        ResultProcessing = DiceResultProcessing.Sum
+                    },
+                    new DiceGroup
+                    {
+                        GroupId = "test_individual",
+                        NumberOfDice = 2,
+                        Tint = Color.MediumPurple,
+                        ResultProcessing = DiceResultProcessing.IndividualValues
+                    }
+                };
+                _diceRollingSystem.Roll(rollRequest);
             }
 
             var font = ServiceLocator.Get<BitmapFont>();

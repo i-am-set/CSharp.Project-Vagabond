@@ -25,15 +25,30 @@ namespace ProjectVagabond.Dice
         public Matrix World { get; set; }
 
         /// <summary>
+        /// The color to tint this die's model.
+        /// </summary>
+        public Color Tint { get; set; }
+
+        /// <summary>
+        /// The identifier for the group this die belongs to.
+        /// </summary>
+        public string GroupId { get; }
+
+        /// <summary>
         /// Initializes a new instance of the RenderableDie class.
         /// </summary>
         /// <param name="model">The MonoGame Model to be used for rendering this die.</param>
         /// <param name="colliderVertices">A list of vertices defining the physics collider for debug visualization.</param>
-        public RenderableDie(Model model, List<BepuNumeric.Vector3> colliderVertices)
+        /// <param name="debugAxisSize">The size of the axis lines drawn in debug mode.</param>
+        /// <param name="tint">The color to tint this die's model.</param>
+        /// <param name="groupId">The identifier for the group this die belongs to.</param>
+        public RenderableDie(Model model, List<BepuNumeric.Vector3> colliderVertices, float debugAxisSize, Color tint, string groupId)
         {
             _dieModel = model;
             _colliderVertices = colliderVertices;
             World = Matrix.Identity;
+            Tint = tint;
+            GroupId = groupId;
 
             // We can get the graphics device from the model itself.
             _graphicsDevice = _dieModel.Meshes[0].MeshParts[0].VertexBuffer.GraphicsDevice;
@@ -47,20 +62,18 @@ namespace ProjectVagabond.Dice
             };
 
             // Create the vertices for a small 3-axis cross (X, Y, Z) to be drawn at each collider point.
-            // This value controls the size of the R/G/B axis lines drawn in debug mode.
-            // A larger value makes the debug markers bigger and easier to see.
-            const float axisSize = 0.5f;
+            // The size of the debug markers is now passed in from the DiceRollingSystem.
             _debugAxisVertices = new[]
             {
                 // X-axis (Red)
-                new VertexPositionColor(new Vector3(-axisSize, 0, 0), Color.Red),
-                new VertexPositionColor(new Vector3(axisSize, 0, 0), Color.Red),
+                new VertexPositionColor(new Vector3(-debugAxisSize, 0, 0), Color.Red),
+                new VertexPositionColor(new Vector3(debugAxisSize, 0, 0), Color.Red),
                 // Y-axis (Green)
-                new VertexPositionColor(new Vector3(0, -axisSize, 0), Color.Green),
-                new VertexPositionColor(new Vector3(0, axisSize, 0), Color.Green),
+                new VertexPositionColor(new Vector3(0, -debugAxisSize, 0), Color.Green),
+                new VertexPositionColor(new Vector3(0, debugAxisSize, 0), Color.Green),
                 // Z-axis (Blue)
-                new VertexPositionColor(new Vector3(0, 0, -axisSize), Color.Blue),
-                new VertexPositionColor(new Vector3(0, 0, axisSize), Color.Blue)
+                new VertexPositionColor(new Vector3(0, 0, -debugAxisSize), Color.Blue),
+                new VertexPositionColor(new Vector3(0, 0, debugAxisSize), Color.Blue)
             };
         }
 
@@ -99,6 +112,9 @@ namespace ProjectVagabond.Dice
 
                         // Enable texturing to see the die faces.
                         effect.TextureEnabled = true;
+
+                        // Apply the tint color to the model's material.
+                        effect.DiffuseColor = this.Tint.ToVector3();
 
                         // Apply the effect changes before drawing.
                         effect.CurrentTechnique.Passes[0].Apply();

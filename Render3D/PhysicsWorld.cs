@@ -16,7 +16,15 @@ namespace ProjectVagabond.Physics
 
     public struct NarrowPhaseCallbacks : INarrowPhaseCallbacks
     {
-        public void Initialize(Simulation simulation) { }
+        // Removed 'readonly' to allow assignment in the Initialize method.
+        private Global _global;
+
+        public void Initialize(Simulation simulation)
+        {
+            // This struct is created by the simulation, so we can't use a constructor.
+            // We fetch the global instance here.
+            _global = ServiceLocator.Get<Global>();
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
@@ -36,19 +44,14 @@ namespace ProjectVagabond.Physics
             // These material properties define how two objects interact upon collision.
             material = new PairMaterialProperties
             {
-                // Controls the "slipperiness" of surfaces. Higher values create more friction,
-                // making dice stop rolling sooner. Lower values make them feel more like ice.
-                FrictionCoefficient = 1.5f,
+                // Controls the "slipperiness" of surfaces.
+                FrictionCoefficient = _global.DiceFrictionCoefficient,
 
-                // Controls the bounciness of a collision. A value of 0 means no bounce (inelastic),
-                // while a value of 1 would be a perfectly elastic bounce. Higher values here make dice bounce more.
-                MaximumRecoveryVelocity = 10f,
+                // Controls the bounciness of a collision.
+                MaximumRecoveryVelocity = _global.DiceBounciness,
 
                 // Defines spring-like physics for the collision, affecting how "hard" or "soft" the contact is.
-                // Frequency: Higher values make the connection stiffer, like a hard rubber ball.
-                // DampingRatio: Controls how quickly the bounce dissipates. A low value (like 0.1f) creates a
-                // very bouncy, exaggerated effect. A value of 1 is critically damped (no oscillation).
-                SpringSettings = new SpringSettings(20, 0.1f)
+                SpringSettings = new SpringSettings(_global.DiceSpringStiffness, _global.DiceSpringDamping)
             };
             return true;
         }
@@ -67,6 +70,7 @@ namespace ProjectVagabond.Physics
         public Vector3 Gravity;
         private Vector3Wide gravityDt;
 
+        // The constructor now takes the gravity from the global settings.
         public PoseIntegratorCallbacks(Vector3 gravity)
         {
             Gravity = gravity;
@@ -109,6 +113,7 @@ namespace ProjectVagabond.Physics
         public BufferPool BufferPool { get; }
 
         private readonly ThreadDispatcher _threadDispatcher;
+        private readonly Global _global;
 
         /// <summary>
         /// Initializes a new instance of the PhysicsWorld class.
@@ -118,23 +123,18 @@ namespace ProjectVagabond.Physics
         /// <param name="worldHeight">The height of the physics play area.</param>
         public PhysicsWorld(float worldWidth, float worldHeight)
         {
+            _global = ServiceLocator.Get<Global>();
             BufferPool = new BufferPool();
 
             // Use the number of available hardware threads for the simulation
             int threadCount = Math.Max(1, Environment.ProcessorCount > 4 ? Environment.ProcessorCount - 2 : 1);
             _threadDispatcher = new ThreadDispatcher(threadCount);
 
-            // The gravity vector determines the "down" direction and its strength.
-            // A larger negative Y value (e.g., -200) makes dice feel heavier and fall faster.
-            // A smaller negative Y value (e.g., -50) makes them feel lighter and more "floaty".
-            var gravity = new Vector3(0, -100, 0);
+            // The gravity vector is now pulled from the global settings.
+            var gravity = _global.DiceGravity;
 
-            // The SolveDescription controls the solver's precision.
-            // VelocityIterationCount: More iterations lead to more stable and accurate collision responses,
-            // especially with many objects, but at a higher performance cost.
-            // SubstepCount: More substeps can improve stability for very fast-moving objects.
-            // A higher substep count (e.g., 8) is crucial for preventing fast objects from "tunneling" through walls.
-            var solveDescription = new SolveDescription(32, 8);
+            // The SolveDescription is now configured from the global settings.
+            var solveDescription = new SolveDescription(_global.DiceSolverIterations, _global.DiceSolverSubsteps);
 
             Simulation = Simulation.Create(BufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(gravity), solveDescription);
 
@@ -159,11 +159,9 @@ namespace ProjectVagabond.Physics
             var floorDescription = new StaticDescription(new Vector3(centerX, -0.5f, centerZ), floorShapeIndex);
             Simulation.Statics.Add(floorDescription);
 
-            // Define wall properties
-            // Controls how high the invisible containing walls are. Should be high enough that dice can't bounce out.
-            const float wallHeight = 200f;
-            // Controls how thick the invisible walls are. This is mostly for stability and doesn't affect visuals.
-            const float wallThickness = 50f;
+            // Define wall properties from global settings
+            float wallHeight = _global.DiceContainerWallHeight;
+            float wallThickness = _global.DiceContainerWallThickness;
 
             // Create the four containing walls. They are positioned such that their inner faces
             // form a perfect boundary at X=0, X=worldWidth, Z=0, and Z=worldHeight.
