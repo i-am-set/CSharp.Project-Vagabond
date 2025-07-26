@@ -224,6 +224,9 @@ namespace ProjectVagabond.Dice
             // --- Get dice from the pool or create new ones if needed (growable pool) ---
             foreach (var group in rollGroups)
             {
+                // Determine a single spawn side for this entire group.
+                int spawnSideForGroup = _random.Next(4);
+
                 for (int i = 0; i < group.NumberOfDice; i++)
                 {
                     RenderableDie renderableDie;
@@ -236,8 +239,7 @@ namespace ProjectVagabond.Dice
                     }
                     else
                     {
-                        // Pool is empty, "hot add" a new die. This will cause a small, one-time hitch
-                        // only when a new maximum number of dice is needed.
+                        // Pool is empty, "hot add" a new die.
                         renderableDie = new RenderableDie(_dieModel, _dieColliderVertices, _global.DiceDebugAxisLineSize, Color.White, "");
                     }
 
@@ -246,8 +248,8 @@ namespace ProjectVagabond.Dice
                     renderableDie.Tint = group.Tint;
                     _activeDice.Add(renderableDie);
 
-                    // Create a corresponding physics body
-                    var handle = ThrowDieFromOffscreen(renderableDie);
+                    // Create a corresponding physics body, using the pre-determined side for the group.
+                    var handle = ThrowDieFromOffscreen(renderableDie, spawnSideForGroup);
                     _bodyToDieMap.Add(handle, renderableDie);
                 }
             }
@@ -259,8 +261,9 @@ namespace ProjectVagabond.Dice
         /// Creates a physics body for a die, positions it off-screen, and gives it velocity to enter the view.
         /// </summary>
         /// <param name="renderableDie">The visual die to create a physics body for.</param>
+        /// <param name="spawnSide">The side to spawn from (0:Left, 1:Right, 2:Top, 3:Bottom).</param>
         /// <returns>The BodyHandle of the newly created physics body.</returns>
-        private BodyHandle ThrowDieFromOffscreen(RenderableDie renderableDie)
+        private BodyHandle ThrowDieFromOffscreen(RenderableDie renderableDie, int spawnSide)
         {
             // Spawning parameters are now pulled from global settings.
             float offscreenMargin = _global.DiceSpawnOffscreenMargin;
@@ -269,7 +272,6 @@ namespace ProjectVagabond.Dice
             float spawnEdgePadding = _global.DiceSpawnEdgePadding;
 
             System.Numerics.Vector3 spawnPos;
-            int side = _random.Next(4); // 0: Left, 1: Right, 2: Top, 3: Bottom
 
             // Calculate the bounds of the current visible area within the larger physics world.
             float centerX = _physicsWorldWidth / 2f;
@@ -279,7 +281,7 @@ namespace ProjectVagabond.Dice
             float visibleMinZ = centerZ - _viewHeight / 2f;
             float visibleMaxZ = centerZ + _viewHeight / 2f;
 
-            switch (side)
+            switch (spawnSide)
             {
                 case 0: // Left
                     spawnPos = new System.Numerics.Vector3(
@@ -462,9 +464,11 @@ namespace ProjectVagabond.Dice
                                 }
                             }
 
+                            // Re-throw the dice. We need to know which group they belonged to.
+                            // We can determine a new random side for this re-throw.
                             foreach (var renderableDie in diceToReThrow)
                             {
-                                var newHandle = ThrowDieFromOffscreen(renderableDie);
+                                var newHandle = ThrowDieFromOffscreen(renderableDie, _random.Next(4));
                                 _bodyToDieMap.Add(newHandle, renderableDie);
                             }
                             _rollInProgressTimer = 0f; // Reset timeout since we initiated a re-roll.
@@ -641,8 +645,8 @@ namespace ProjectVagabond.Dice
             }
             else
             {
-                // Re-throw the die for another attempt.
-                var newHandle = ThrowDieFromOffscreen(die);
+                // Re-throw the die for another attempt, giving it a new random side.
+                var newHandle = ThrowDieFromOffscreen(die, _random.Next(4));
                 _bodyToDieMap.Add(newHandle, die);
             }
         }
