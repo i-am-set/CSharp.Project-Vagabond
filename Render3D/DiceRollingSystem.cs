@@ -39,6 +39,8 @@ namespace ProjectVagabond.Dice
         private Matrix _projection;
         private float _viewWidth;
         private float _viewHeight;
+        private float _physicsWorldWidth;
+        private float _physicsWorldHeight;
 
         // Physics and Rendering Link
         private readonly Dictionary<BodyHandle, RenderableDie> _bodyToDieMap = new Dictionary<BodyHandle, RenderableDie>();
@@ -143,14 +145,14 @@ namespace ProjectVagabond.Dice
                 }
             }
 
-            // --- Reduce the view area to make dice appear larger and walls effective ---
             float aspectRatio = (float)_renderTarget.Width / _renderTarget.Height;
-            // The camera zoom level is now controlled by the global settings.
-            _viewHeight = _global.DiceCameraZoom;
-            _viewWidth = _viewHeight * aspectRatio; // Calculate width to maintain the correct aspect ratio.
 
-            // Create the physics world with the new, smaller, aspect-ratio-correct dimensions.
-            _physicsWorld = new PhysicsWorld(_viewWidth, _viewHeight);
+            // --- Create a single, fixed-size physics world large enough for any roll ---
+            // We'll use the largest potential zoom level (e.g., 40f for >20 dice) to define the physics bounds.
+            const float maxCameraZoom = 40f;
+            _physicsWorldHeight = maxCameraZoom;
+            _physicsWorldWidth = _physicsWorldHeight * aspectRatio;
+            _physicsWorld = new PhysicsWorld(_physicsWorldWidth, _physicsWorldHeight);
 
             // --- Create and store the die's physical shape and inertia once ---
             // This avoids re-calculating it on every roll.
@@ -170,26 +172,27 @@ namespace ProjectVagabond.Dice
             _dieColliderVertices = points;
 
             var dieShape = new ConvexHull(_dieColliderVertices.ToArray(), _physicsWorld.BufferPool, out _);
-
             _dieInertia = dieShape.ComputeInertia(_global.DiceMass);
-
             _dieShapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);
 
+            // --- Set up the initial 3D camera view and projection ---
+            _viewHeight = _global.DiceCameraZoom; // Default zoom (e.g., 20f)
+            _viewWidth = _viewHeight * aspectRatio;
 
-            // Set up the 3D camera to look at the entire smaller play area.
-            // The camera height is now controlled by the global settings.
-            var cameraPosition = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, _global.DiceCameraHeight, _viewHeight / 2f);
-            // The target should be the center of the play area.
-            var cameraTarget = new Microsoft.Xna.Framework.Vector3(_viewWidth / 2f, 0, _viewHeight / 2f);
+            // The camera is positioned above the center of the large, static physics world.
+            var cameraPosition = new Microsoft.Xna.Framework.Vector3(_physicsWorldWidth / 2f, _global.DiceCameraHeight, _physicsWorldHeight / 2f);
+            var cameraTarget = new Microsoft.Xna.Framework.Vector3(_physicsWorldWidth / 2f, 0, _physicsWorldHeight / 2f);
             _view = Matrix.CreateLookAt(cameraPosition, cameraTarget, Microsoft.Xna.Framework.Vector3.Forward);
 
-            // Create an orthographic projection that exactly matches the size and aspect ratio of our physics world.
-            // The near (1f) and far (200f) clipping planes define the visible depth range.
+            // Create an orthographic projection that matches the initial view size. This will be updated per-roll.
             _projection = Matrix.CreateOrthographic(
                 _viewWidth,  // The calculated width of the area to view
                 _viewHeight, // The chosen height of the area to view
                 1f,          // Near clipping plane
                 200f);       // Far clipping plane
+
+            // Set the initial positions of the kinematic walls to match the default view.
+            _physicsWorld.UpdateBoundaryPositions(_viewWidth, _viewHeight);
         }
 
         /// <summary>
@@ -198,7 +201,40 @@ namespace ProjectVagabond.Dice
         /// <param name="rollGroups">A list of DiceGroup objects, each defining a set of dice to roll.</param>
         public void Roll(List<DiceGroup> rollGroups)
         {
-            // Clear previous roll
+            // --- Dynamic Camera Zoom ---
+            int totalDice = rollGroups.Sum(g => g.NumberOfDice);
+
+            float requiredZoom;
+            if (totalDice <= 8)
+            {
+                requiredZoom = 20f;
+            }
+            else if (totalDice <= 20)
+            {
+                requiredZoom = 30f;
+            }
+            else
+            {
+                requiredZoom = 40f;
+            }
+
+            // Update the camera's view dimensions and projection matrix for the current roll.
+            float aspectRatio = (float)_renderTarget.Width / _renderTarget.Height;
+            _viewHeight = requiredZoom;
+            _viewWidth = _viewHeight * aspectRatio;
+
+            // Update the projection matrix to change the zoom level. This is a cheap operation.
+            _projection = Matrix.CreateOrthographic(
+                _viewWidth,  // Use the new calculated width
+                _viewHeight, // Use the new calculated height
+                1f,          // Near clipping plane
+                200f);       // Far clipping plane
+
+            // Move the kinematic walls to match the new view boundaries. This is also cheap.
+            _physicsWorld.UpdateBoundaryPositions(_viewWidth, _viewHeight);
+
+            // --- Roll Setup ---
+            // Clear previous roll data from the existing simulation.
             foreach (var handle in _bodyToDieMap.Keys)
             {
                 _physicsWorld.RemoveBody(handle);
@@ -247,36 +283,44 @@ namespace ProjectVagabond.Dice
             System.Numerics.Vector3 spawnPos;
             int side = _random.Next(4); // 0: Left, 1: Right, 2: Top, 3: Bottom
 
+            // Calculate the bounds of the current visible area within the larger physics world.
+            float centerX = _physicsWorldWidth / 2f;
+            float centerZ = _physicsWorldHeight / 2f;
+            float visibleMinX = centerX - _viewWidth / 2f;
+            float visibleMaxX = centerX + _viewWidth / 2f;
+            float visibleMinZ = centerZ - _viewHeight / 2f;
+            float visibleMaxZ = centerZ + _viewHeight / 2f;
+
             switch (side)
             {
                 case 0: // Left
                     spawnPos = new System.Numerics.Vector3(
-                        -offscreenMargin,
+                        visibleMinX - offscreenMargin,
                         (float)(_random.NextDouble() * (spawnHeightMax - spawnHeightMin) + spawnHeightMin),
-                        (float)(_random.NextDouble() * (_viewHeight - spawnEdgePadding * 2) + spawnEdgePadding));
+                        (float)(_random.NextDouble() * (_viewHeight - spawnEdgePadding * 2) + visibleMinZ + spawnEdgePadding));
                     break;
                 case 1: // Right
                     spawnPos = new System.Numerics.Vector3(
-                        _viewWidth + offscreenMargin,
+                        visibleMaxX + offscreenMargin,
                         (float)(_random.NextDouble() * (spawnHeightMax - spawnHeightMin) + spawnHeightMin),
-                        (float)(_random.NextDouble() * (_viewHeight - spawnEdgePadding * 2) + spawnEdgePadding));
+                        (float)(_random.NextDouble() * (_viewHeight - spawnEdgePadding * 2) + visibleMinZ + spawnEdgePadding));
                     break;
                 case 2: // Top (Far Z)
                     spawnPos = new System.Numerics.Vector3(
-                        (float)(_random.NextDouble() * (_viewWidth - spawnEdgePadding * 2) + spawnEdgePadding),
+                        (float)(_random.NextDouble() * (_viewWidth - spawnEdgePadding * 2) + visibleMinX + spawnEdgePadding),
                         (float)(_random.NextDouble() * (spawnHeightMax - spawnHeightMin) + spawnHeightMin),
-                        -offscreenMargin);
+                        visibleMinZ - offscreenMargin);
                     break;
                 default: // Bottom (Near Z)
                     spawnPos = new System.Numerics.Vector3(
-                        (float)(_random.NextDouble() * (_viewWidth - spawnEdgePadding * 2) + spawnEdgePadding),
+                        (float)(_random.NextDouble() * (_viewWidth - spawnEdgePadding * 2) + visibleMinX + spawnEdgePadding),
                         (float)(_random.NextDouble() * (spawnHeightMax - spawnHeightMin) + spawnHeightMin),
-                        _viewHeight + offscreenMargin);
+                        visibleMaxZ + offscreenMargin);
                     break;
             }
 
-            // The target is always the center of the play area.
-            var targetPos = new System.Numerics.Vector3(_viewWidth / 2f, 0, _viewHeight / 2f);
+            // The target is always the center of the physics world (and thus the center of the view).
+            var targetPos = new System.Numerics.Vector3(centerX, 0, centerZ);
 
             var direction = System.Numerics.Vector3.Normalize(targetPos - spawnPos);
             // Throw force is randomized within the range defined in global settings.
@@ -401,11 +445,18 @@ namespace ProjectVagabond.Dice
                     {
                         // CHECK 1: Re-roll any dice that are off-screen
                         var offscreenDice = new List<BodyHandle>();
+                        float centerX = _physicsWorldWidth / 2f;
+                        float centerZ = _physicsWorldHeight / 2f;
+                        float visibleMinX = centerX - _viewWidth / 2f;
+                        float visibleMaxX = centerX + _viewWidth / 2f;
+                        float visibleMinZ = centerZ - _viewHeight / 2f;
+                        float visibleMaxZ = centerZ + _viewHeight / 2f;
+
                         foreach (var pair in _bodyToDieMap)
                         {
                             var bodyRef = _physicsWorld.Simulation.Bodies.GetBodyReference(pair.Key);
                             var pos = bodyRef.Pose.Position;
-                            if (pos.X < 0 || pos.X > _viewWidth || pos.Z < 0 || pos.Z > _viewHeight)
+                            if (pos.X < visibleMinX || pos.X > visibleMaxX || pos.Z < visibleMinZ || pos.Z > visibleMaxZ)
                             {
                                 offscreenDice.Add(pair.Key);
                             }

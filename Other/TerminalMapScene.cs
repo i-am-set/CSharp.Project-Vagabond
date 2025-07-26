@@ -177,20 +177,29 @@ namespace ProjectVagabond.Scenes
             // Temporary input for testing dice rolls, changed to Tilde key
             if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && !_previousKeyboardState.IsKeyDown(Keys.OemTilde))
             {
+                Global _global = ServiceLocator.Get<Global>();
+
                 var rollRequest = new List<DiceGroup>
                 {
                     new DiceGroup
                     {
                         GroupId = "test_sum",
-                        NumberOfDice = 40,
-                        Tint = Color.Goldenrod,
+                        NumberOfDice = 4,
+                        Tint = _global.Palette_BrightWhite,
                         ResultProcessing = DiceResultProcessing.Sum
                     },
                     new DiceGroup
                     {
                         GroupId = "test_individual",
                         NumberOfDice = 2,
-                        Tint = Color.MediumPurple,
+                        Tint = _global.Palette_DarkGreen,
+                        ResultProcessing = DiceResultProcessing.IndividualValues
+                    },
+                    new DiceGroup
+                    {
+                        GroupId = "test_third",
+                        NumberOfDice = 2,
+                        Tint = _global.Palette_Yellow,
                         ResultProcessing = DiceResultProcessing.IndividualValues
                     }
                 };

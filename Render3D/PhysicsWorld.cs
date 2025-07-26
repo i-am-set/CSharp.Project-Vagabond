@@ -29,7 +29,8 @@ namespace ProjectVagabond.Physics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
         {
-            return a.Mobility == CollidableMobility.Dynamic || b.Mobility == CollidableMobility.Dynamic;
+            // Allow contact generation for all pairs, including kinematic-dynamic.
+            return true;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -91,7 +92,10 @@ namespace ProjectVagabond.Physics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<float> dt, ref BodyVelocityWide velocity)
         {
-            velocity.Linear += gravityDt;
+            // Apply gravity only to dynamic bodies. The integrationMask is -1 for dynamics and 0 for kinematics.
+            // We use ConditionalSelect to apply the change only where the mask is set.
+            var newLinearVelocity = velocity.Linear + gravityDt;
+            Vector3Wide.ConditionalSelect(integrationMask, newLinearVelocity, velocity.Linear, out velocity.Linear);
         }
     }
 
@@ -114,16 +118,26 @@ namespace ProjectVagabond.Physics
 
         private readonly ThreadDispatcher _threadDispatcher;
         private readonly Global _global;
+        private readonly float _worldWidth;
+        private readonly float _worldHeight;
+
+        // Handles for the kinematic walls, allowing them to be moved.
+        private BodyHandle _leftWallHandle;
+        private BodyHandle _rightWallHandle;
+        private BodyHandle _topWallHandle;
+        private BodyHandle _bottomWallHandle;
 
         /// <summary>
         /// Initializes a new instance of the PhysicsWorld class.
         /// Sets up the simulation, thread dispatcher, and the static environment.
         /// </summary>
-        /// <param name="worldWidth">The width of the physics play area.</param>
-        /// <param name="worldHeight">The height of the physics play area.</param>
+        /// <param name="worldWidth">The maximum width of the physics play area.</param>
+        /// <param name="worldHeight">The maximum height of the physics play area.</param>
         public PhysicsWorld(float worldWidth, float worldHeight)
         {
             _global = ServiceLocator.Get<Global>();
+            _worldWidth = worldWidth;
+            _worldHeight = worldHeight;
             BufferPool = new BufferPool();
 
             // Use the number of available hardware threads for the simulation
@@ -138,61 +152,75 @@ namespace ProjectVagabond.Physics
 
             Simulation = Simulation.Create(BufferPool, new NarrowPhaseCallbacks(), new PoseIntegratorCallbacks(gravity), solveDescription);
 
-            CreateEnvironment(worldWidth, worldHeight);
+            CreateEnvironment();
         }
 
         /// <summary>
-        /// Creates the static colliders that form the container for the physics objects.
-        /// This includes a floor plane, four invisible walls, and an invisible ceiling.
+        /// Creates the static floor and kinematic walls that form the container for the physics objects.
         /// </summary>
-        /// <param name="worldWidth">The width of the visible area.</param>
-        /// <param name="worldHeight">The height of the visible area.</param>
-        private void CreateEnvironment(float worldWidth, float worldHeight)
+        private void CreateEnvironment()
         {
-            // Center the physics world around the origin of the view space
-            float centerX = worldWidth / 2f;
-            float centerZ = worldHeight / 2f;
-
-            // Create the floor, sized to match the play area. Its top surface is at Y=0.
-            var floorShape = new Box(worldWidth, 1, worldHeight);
+            // The floor is static and covers the entire maximum possible area.
+            var floorShape = new Box(_worldWidth, 1, _worldHeight);
             var floorShapeIndex = Simulation.Shapes.Add(floorShape);
-            var floorDescription = new StaticDescription(new Vector3(centerX, -0.5f, centerZ), floorShapeIndex);
+            var floorDescription = new StaticDescription(new Vector3(_worldWidth / 2f, -0.5f, _worldHeight / 2f), floorShapeIndex);
             Simulation.Statics.Add(floorDescription);
 
             // Define wall properties from global settings
             float wallHeight = _global.DiceContainerWallHeight;
             float wallThickness = _global.DiceContainerWallThickness;
 
-            // Create the four containing walls. They are positioned such that their inner faces
-            // form a perfect boundary at X=0, X=worldWidth, Z=0, and Z=worldHeight.
-            // Their centers are at Y=wallHeight/2, so they extend from Y=0 to Y=wallHeight.
+            // Create shapes for the walls, sized to span the maximum possible dimensions.
+            var sideWallShape = Simulation.Shapes.Add(new Box(wallThickness, wallHeight, _worldHeight)); // For Left/Right
+            var endWallShape = Simulation.Shapes.Add(new Box(_worldWidth, wallHeight, wallThickness));   // For Top/Bottom
 
-            // Left Wall (Inner face at X=0)
-            var leftWallShapeIndex = Simulation.Shapes.Add(new Box(wallThickness, wallHeight, worldHeight));
-            var leftWallDesc = new StaticDescription(new Vector3(-wallThickness / 2f, wallHeight / 2f, centerZ), leftWallShapeIndex);
-            Simulation.Statics.Add(leftWallDesc);
+            // Create the walls as KINEMATIC bodies. Their initial positions don't matter as they will be set immediately.
+            // Kinematic bodies do not take an inertia parameter.
+            var speculativeMargin = 0.01f;
+            _leftWallHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(), sideWallShape, speculativeMargin));
+            _rightWallHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(), sideWallShape, speculativeMargin));
+            _topWallHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(), endWallShape, speculativeMargin));
+            _bottomWallHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(), endWallShape, speculativeMargin));
 
-            // Right Wall (Inner face at X=worldWidth)
-            var rightWallShapeIndex = Simulation.Shapes.Add(new Box(wallThickness, wallHeight, worldHeight));
-            var rightWallDesc = new StaticDescription(new Vector3(worldWidth + wallThickness / 2f, wallHeight / 2f, centerZ), rightWallShapeIndex);
-            Simulation.Statics.Add(rightWallDesc);
-
-            // Top Wall (Far Z) (Inner face at Z=0)
-            var topWallShapeIndex = Simulation.Shapes.Add(new Box(worldWidth, wallHeight, wallThickness));
-            var topWallDesc = new StaticDescription(new Vector3(centerX, wallHeight / 2f, -wallThickness / 2f), topWallShapeIndex);
-            Simulation.Statics.Add(topWallDesc);
-
-            // Bottom Wall (Near Z) (Inner face at Z=worldHeight)
-            var bottomWallShapeIndex = Simulation.Shapes.Add(new Box(worldWidth, wallHeight, wallThickness));
-            var bottomWallDesc = new StaticDescription(new Vector3(centerX, wallHeight / 2f, worldHeight + wallThickness / 2f), bottomWallShapeIndex);
-            Simulation.Statics.Add(bottomWallDesc);
-
-            // Create the ceiling to prevent dice from bouncing out of the top of the container.
-            // Its bottom surface is positioned at Y=wallHeight.
-            var ceilingShape = new Box(worldWidth, 1, worldHeight);
+            // Create the ceiling as a static object, as it never needs to move.
+            var ceilingShape = new Box(_worldWidth, 1, _worldHeight);
             var ceilingShapeIndex = Simulation.Shapes.Add(ceilingShape);
-            var ceilingDesc = new StaticDescription(new Vector3(centerX, wallHeight + 0.5f, centerZ), ceilingShapeIndex);
+            var ceilingDesc = new StaticDescription(new Vector3(_worldWidth / 2f, wallHeight + 0.5f, _worldHeight / 2f), ceilingShapeIndex);
             Simulation.Statics.Add(ceilingDesc);
+        }
+
+        /// <summary>
+        /// Repositions the kinematic walls to form a boundary around the specified view dimensions.
+        /// </summary>
+        /// <param name="viewWidth">The width of the visible area.</param>
+        /// <param name="viewHeight">The height of the visible area.</param>
+        public void UpdateBoundaryPositions(float viewWidth, float viewHeight)
+        {
+            float wallHeight = _global.DiceContainerWallHeight;
+            float wallThickness = _global.DiceContainerWallThickness;
+
+            // The visible area is always centered within the larger physics world.
+            float centerX = _worldWidth / 2f;
+            float centerZ = _worldHeight / 2f;
+
+            // Calculate the edges of the visible area.
+            float minX = centerX - viewWidth / 2f;
+            float maxX = centerX + viewWidth / 2f;
+            float minZ = centerZ - viewHeight / 2f;
+            float maxZ = centerZ + viewHeight / 2f;
+
+            // Get references to the wall bodies and update their poses.
+            var leftWall = Simulation.Bodies.GetBodyReference(_leftWallHandle);
+            leftWall.Pose.Position = new Vector3(minX - wallThickness / 2f, wallHeight / 2f, centerZ);
+
+            var rightWall = Simulation.Bodies.GetBodyReference(_rightWallHandle);
+            rightWall.Pose.Position = new Vector3(maxX + wallThickness / 2f, wallHeight / 2f, centerZ);
+
+            var topWall = Simulation.Bodies.GetBodyReference(_topWallHandle);
+            topWall.Pose.Position = new Vector3(centerX, wallHeight / 2f, minZ - wallThickness / 2f);
+
+            var bottomWall = Simulation.Bodies.GetBodyReference(_bottomWallHandle);
+            bottomWall.Pose.Position = new Vector3(centerX, wallHeight / 2f, maxZ + wallThickness / 2f);
         }
 
         /// <summary>
