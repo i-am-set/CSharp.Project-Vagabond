@@ -323,10 +323,17 @@ namespace ProjectVagabond
         /// <summary>
         /// The maximum time (in seconds) a roll can be in progress. If dice are still moving after this time, the failsafe for stuck dice is triggered.
         /// </summary>
-        public float DiceRollTimeout { get; set; } = 5f;
+        public float DiceRollTimeout { get; set; } = 8f;
+
+        /// <summary>
+        /// The absolute maximum time (in seconds) a roll can be in progress before all dice are re-rolled.
+        /// This is a failsafe for a completely hung simulation where no result is being determined.
+        /// </summary>
+        public float DiceCompleteRollTimeout { get; set; } = 10f;
 
         /// <summary>
         /// The maximum number of times the system will try to re-roll a single stuck or canted die before giving up and forcing a result.
+        /// This is also used as the limit for complete, simulation-wide re-rolls.
         /// </summary>
         public int DiceMaxRerollAttempts { get; set; } = 5;
 
@@ -356,22 +363,22 @@ namespace ProjectVagabond
         /// <summary>
         /// The maximum sideways force applied to a canted die to nudge it.
         /// </summary>
-        public float DiceNudgeForceMax { get; set; } = 10f;
+        public float DiceNudgeForceMax { get; set; } = 20f;
 
         /// <summary>
         /// The minimum upward force applied to a canted die to nudge it.
         /// </summary>
-        public float DiceNudgeUpwardForceMin { get; set; } = 10f;
+        public float DiceNudgeUpwardForceMin { get; set; } = 20f;
 
         /// <summary>
         /// The maximum upward force applied to a canted die to nudge it.
         /// </summary>
-        public float DiceNudgeUpwardForceMax { get; set; } = 20f;
+        public float DiceNudgeUpwardForceMax { get; set; } = 30f;
 
         /// <summary>
         /// The maximum torque (spin) applied to a canted die to nudge it. The actual torque will be a random value between -Max and +Max.
         /// </summary>
-        public float DiceNudgeTorqueMax { get; set; } = 15f;
+        public float DiceNudgeTorqueMax { get; set; } = 25f;
 
         // Dice Debugging 
 

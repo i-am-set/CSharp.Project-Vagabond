@@ -184,7 +184,7 @@ namespace ProjectVagabond.Scenes
                     new DiceGroup
                     {
                         GroupId = "test_sum",
-                        NumberOfDice = 4,
+                        NumberOfDice = 40,
                         Tint = _global.Palette_BrightWhite,
                         ResultProcessing = DiceResultProcessing.Sum
                     },

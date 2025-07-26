@@ -62,6 +62,7 @@ namespace ProjectVagabond.Dice
         private float _rollInProgressTimer;
         private readonly Dictionary<RenderableDie, int> _rerollAttempts = new Dictionary<RenderableDie, int>();
         private readonly Dictionary<RenderableDie, int> _forcedResults = new Dictionary<RenderableDie, int>();
+        private int _completeRerollAttempts;
 
         /// <summary>
         /// If true, the physics colliders will be rendered as debug visuals.
@@ -209,6 +210,7 @@ namespace ProjectVagabond.Dice
             _rollInProgressTimer = 0f;
             _rerollAttempts.Clear();
             _forcedResults.Clear();
+            _completeRerollAttempts = 0;
             _currentRollGroups = rollGroups;
 
             // --- Dynamic Camera Zoom ---
@@ -401,6 +403,13 @@ namespace ProjectVagabond.Dice
                 _rollInProgressTimer = 0f;
             }
 
+            // TERTIARY FAILSAFE: If the entire roll is taking too long, re-roll everything.
+            if (_rollInProgressTimer > _global.DiceCompleteRollTimeout)
+            {
+                HandleCompleteReroll();
+                return; // End update for this frame.
+            }
+
             // SECONDARY FAILSAFE: If the roll takes too long, check for and handle any stuck dice 
             if (_rollInProgressTimer > _global.DiceRollTimeout)
             {
@@ -517,44 +526,7 @@ namespace ProjectVagabond.Dice
                             else
                             {
                                 // === All checks passed: The roll is complete ===
-                                var result = new DiceRollResult();
-                                var rawResults = new Dictionary<string, List<int>>();
-
-                                // 1. Gather raw face values from all dice, including forced ones.
-                                foreach (var die in _activeDice)
-                                {
-                                    if (!rawResults.ContainsKey(die.GroupId))
-                                    {
-                                        rawResults[die.GroupId] = new List<int>();
-                                    }
-
-                                    if (_forcedResults.TryGetValue(die, out int forcedValue))
-                                    {
-                                        rawResults[die.GroupId].Add(forcedValue);
-                                    }
-                                    else
-                                    {
-                                        rawResults[die.GroupId].Add(DiceResultHelper.GetUpFaceValue(die.World));
-                                    }
-                                }
-
-                                // 2. Process the raw results according to the rules of each group.
-                                foreach (var group in _currentRollGroups)
-                                {
-                                    if (rawResults.TryGetValue(group.GroupId, out var values))
-                                    {
-                                        if (group.ResultProcessing == DiceResultProcessing.Sum)
-                                        {
-                                            result.ResultsByGroup[group.GroupId] = new List<int> { values.Sum() };
-                                        }
-                                        else // IndividualValues
-                                        {
-                                            result.ResultsByGroup[group.GroupId] = values;
-                                        }
-                                    }
-                                }
-
-                                OnRollCompleted?.Invoke(result);
+                                FinalizeAndReportResults();
                             }
                         }
 
@@ -567,6 +539,51 @@ namespace ProjectVagabond.Dice
 
             // Update the state for the next frame.
             _wasRollingLastFrame = isCurrentlyRolling;
+        }
+
+        /// <summary>
+        /// Gathers results from all dice (physical and forced), processes them, and invokes the OnRollCompleted event.
+        /// </summary>
+        private void FinalizeAndReportResults()
+        {
+            var result = new DiceRollResult();
+            var rawResults = new Dictionary<string, List<int>>();
+
+            // 1. Gather raw face values from all dice, including forced ones.
+            foreach (var die in _activeDice)
+            {
+                if (!rawResults.ContainsKey(die.GroupId))
+                {
+                    rawResults[die.GroupId] = new List<int>();
+                }
+
+                if (_forcedResults.TryGetValue(die, out int forcedValue))
+                {
+                    rawResults[die.GroupId].Add(forcedValue);
+                }
+                else
+                {
+                    rawResults[die.GroupId].Add(DiceResultHelper.GetUpFaceValue(die.World));
+                }
+            }
+
+            // 2. Process the raw results according to the rules of each group.
+            foreach (var group in _currentRollGroups)
+            {
+                if (rawResults.TryGetValue(group.GroupId, out var values))
+                {
+                    if (group.ResultProcessing == DiceResultProcessing.Sum)
+                    {
+                        result.ResultsByGroup[group.GroupId] = new List<int> { values.Sum() };
+                    }
+                    else // IndividualValues
+                    {
+                        result.ResultsByGroup[group.GroupId] = values;
+                    }
+                }
+            }
+
+            OnRollCompleted?.Invoke(result);
         }
 
         /// <summary>
@@ -649,6 +666,73 @@ namespace ProjectVagabond.Dice
                 var newHandle = ThrowDieFromOffscreen(die, _random.Next(4));
                 _bodyToDieMap.Add(newHandle, die);
             }
+        }
+
+        /// <summary>
+        /// A major failsafe that re-rolls all dice in the simulation. This is triggered
+        /// when the roll takes an exceptionally long time to resolve.
+        /// </summary>
+        private void HandleCompleteReroll()
+        {
+            _completeRerollAttempts++;
+
+            // If we've exceeded the max attempts for a complete reroll, force the entire roll to end.
+            if (_completeRerollAttempts >= _global.DiceMaxRerollAttempts)
+            {
+                HandleForcedCompletion();
+                return;
+            }
+
+            // --- Re-roll all dice ---
+            // 1. Clear all existing physics bodies
+            foreach (var handle in _bodyToDieMap.Keys)
+            {
+                _physicsWorld.RemoveBody(handle);
+            }
+            _bodyToDieMap.Clear();
+            _forcedResults.Clear(); // Clear any previously forced results
+
+            // 2. Re-throw each active die
+            foreach (var die in _activeDice)
+            {
+                var newHandle = ThrowDieFromOffscreen(die, _random.Next(4));
+                _bodyToDieMap.Add(newHandle, die);
+            }
+
+            // 3. Reset timers and state for the new attempt
+            _rollInProgressTimer = 0f;
+            _wasRollingLastFrame = true;
+            _isWaitingForSettle = false;
+            _settleTimer = 0f;
+        }
+
+        /// <summary>
+        /// A final failsafe that ends the roll immediately, assigning a forced value to all dice.
+        /// This is triggered after the maximum number of complete re-rolls has been attempted.
+        /// </summary>
+        private void HandleForcedCompletion()
+        {
+            // 1. Clear all physics bodies to stop the simulation
+            foreach (var handle in _bodyToDieMap.Keys)
+            {
+                _physicsWorld.RemoveBody(handle);
+            }
+            _bodyToDieMap.Clear();
+            _forcedResults.Clear();
+
+            // 2. Force a result for every single active die
+            foreach (var die in _activeDice)
+            {
+                _forcedResults[die] = _global.DiceForcedResultValue;
+            }
+
+            // 3. Immediately process and fire the OnRollCompleted event
+            FinalizeAndReportResults();
+
+            // 4. Reset state to prevent further updates on this roll
+            _wasRollingLastFrame = false;
+            _isWaitingForSettle = false;
+            _rollInProgressTimer = 0f;
         }
 
 
