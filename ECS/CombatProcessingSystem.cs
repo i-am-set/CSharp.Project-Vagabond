@@ -18,6 +18,7 @@ namespace ProjectVagabond
         private float _actionDelayTimer = 0f;
         private const float ACTION_DELAY_SECONDS = 0.5f; // A standard delay between distinct actions.
         private const float VISUAL_SPEED_MULTIPLIER = 0.8f; // Makes animations slightly faster than the raw time cost.
+        private bool _isWaitingForDiceResult = false;
 
         public CombatProcessingSystem() { }
 
@@ -25,11 +26,23 @@ namespace ProjectVagabond
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             _componentStore ??= ServiceLocator.Get<ComponentStore>();
-            _combatResolutionSystem ??= ServiceLocator.Get<CombatResolutionSystem>();
             _combatTurnSystem ??= ServiceLocator.Get<CombatTurnSystem>();
             _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
+            // Lazy-subscribe to the event to avoid initialization order issues.
+            if (_combatResolutionSystem == null)
+            {
+                _combatResolutionSystem = ServiceLocator.Get<CombatResolutionSystem>();
+                _combatResolutionSystem.OnAttackResolved += OnAttackResolved;
+            }
+
             if (!_gameState.IsInCombat) return;
+
+            // If we are waiting for a dice roll to resolve, do nothing else.
+            if (_isWaitingForDiceResult)
+            {
+                return;
+            }
 
             int currentEntityId = _gameState.CurrentTurnEntityId;
 
@@ -61,7 +74,8 @@ namespace ProjectVagabond
                         break;
 
                     case AttackAction attackAction:
-                        _combatResolutionSystem.ResolveAction(attackAction);
+                        _isWaitingForDiceResult = true; // Enter wait state
+                        _combatResolutionSystem.InitiateAttackResolution(attackAction);
                         break;
 
                     case EndTurnAction:
@@ -102,6 +116,13 @@ namespace ProjectVagabond
                 // Safety net: If an AI's queue is somehow empty at the start of its processing, end its turn.
                 _combatTurnSystem.EndCurrentTurn();
             }
+        }
+
+        private void OnAttackResolved()
+        {
+            _isWaitingForDiceResult = false;
+            // Reset the action delay timer to make the game feel more responsive after a roll.
+            _actionDelayTimer = 0f;
         }
 
         private void ApplyMoveActionEffects(MoveAction action)

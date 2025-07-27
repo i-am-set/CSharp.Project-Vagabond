@@ -54,7 +54,7 @@
     {
       "Type": "ProjectVagabond.CombatantComponent, ProjectVagabond",
       "Properties": {
-        "AttackPower": 5,
+        "AttackPower": "1d6",
         "AttackRange": 1.5,
         "AggroRange": 30.0
       }

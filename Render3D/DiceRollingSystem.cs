@@ -35,6 +35,8 @@ namespace ProjectVagabond.Dice
             GatheringResults,
             SpawningNewSum,
             PostSumDelay,
+            FinalSumHold,
+            SequentialFadeOut,
             Complete
         }
 
@@ -59,6 +61,8 @@ namespace ProjectVagabond.Dice
             public bool ImpactEffectTriggered;
             public bool IsAnimatingScale;
             public bool IsVisible; // Controls whether the text is rendered
+            public bool IsFadingOut;
+            public float FadeOutProgress;
         }
 
         // Core Components
@@ -119,6 +123,7 @@ namespace ProjectVagabond.Dice
         private int _currentGroupSum;
         private readonly List<FloatingResultText> _floatingResults = new List<FloatingResultText>();
         private readonly List<FloatingResultText> _groupSumResults = new List<FloatingResultText>();
+        private int _fadingSumIndex;
 
 
         /// <summary>
@@ -484,6 +489,14 @@ namespace ProjectVagabond.Dice
                 case RollState.PostSumDelay:
                     UpdatePostSumDelayState(deltaTime);
                     break;
+
+                case RollState.FinalSumHold:
+                    UpdateFinalSumHoldState(deltaTime);
+                    break;
+
+                case RollState.SequentialFadeOut:
+                    UpdateSequentialFadeOutState(deltaTime);
+                    break;
             }
         }
 
@@ -661,9 +674,9 @@ namespace ProjectVagabond.Dice
             }
             else
             {
-                // All groups have been processed. Finalize the results.
-                _currentState = RollState.Complete;
-                FinalizeAndReportResults();
+                // All groups have been processed. Hold the final sums on screen.
+                _currentState = RollState.FinalSumHold;
+                _animationTimer = 0f;
             }
         }
 
@@ -937,6 +950,37 @@ namespace ProjectVagabond.Dice
             }
         }
 
+        private void UpdateFinalSumHoldState(float deltaTime)
+        {
+            _animationTimer += deltaTime;
+            if (_animationTimer >= _global.DiceFinalSumLifetime)
+            {
+                _currentState = RollState.SequentialFadeOut;
+                _animationTimer = 0f; // Reset timer for the sequential delay
+                _fadingSumIndex = 0;
+            }
+        }
+
+        private void UpdateSequentialFadeOutState(float deltaTime)
+        {
+            // If all sums have faded out, the roll is complete.
+            if (!_groupSumResults.Any())
+            {
+                _currentState = RollState.Complete;
+                FinalizeAndReportResults();
+                return;
+            }
+
+            _animationTimer += deltaTime;
+
+            // Check if it's time to trigger the next fade-out.
+            if (_fadingSumIndex < _groupSumResults.Count && _animationTimer >= _global.DiceFinalSumSequentialFadeDelay)
+            {
+                _groupSumResults[_fadingSumIndex].IsFadingOut = true;
+                _fadingSumIndex++;
+                _animationTimer = 0f; // Reset delay for the next sum.
+            }
+        }
 
         private void UpdateFloatingResults(GameTime gameTime)
         {
@@ -953,9 +997,24 @@ namespace ProjectVagabond.Dice
 
                 if (result.IsGroupSum)
                 {
-                    // Animate the group sum text (position, scale, shake).
-                    if (result.IsAnimating)
+                    if (result.IsFadingOut)
                     {
+                        // Handle the shrinking/fade-out animation.
+                        result.FadeOutProgress += deltaTime / _global.DiceFinalSumFadeOutDuration;
+                        result.FadeOutProgress = Math.Clamp(result.FadeOutProgress, 0f, 1f);
+                        float easedProgress = Easing.EaseInOutQuint(result.FadeOutProgress);
+                        result.Scale = MathHelper.Lerp(3.5f, 0.0f, easedProgress);
+
+                        if (result.FadeOutProgress >= 1.0f)
+                        {
+                            // Remove from the main list once animation is complete.
+                            // Iterating backwards makes this safe.
+                            _groupSumResults.Remove(result);
+                        }
+                    }
+                    else if (result.IsAnimating)
+                    {
+                        // Animate the group sum text (position, scale, shake).
                         float easedProgress = Easing.EaseOutCirc(result.AnimationProgress);
                         result.CurrentPosition = Vector2.Lerp(result.StartPosition, result.TargetPosition, easedProgress);
 

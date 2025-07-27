@@ -1,4 +1,4 @@
-﻿﻿using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -355,11 +355,6 @@ namespace ProjectVagabond
         public float DiceGatheringDuration { get; set; } = 0.5f;
 
         /// <summary>
-        /// The total vertical distance (in screen pixels) the final sum number will float upwards as it fades out.
-        /// </summary>
-        public float DiceFinalSumFloatHeight { get; set; } = 30f;
-
-        /// <summary>
         /// The duration in seconds for the pause after a sum animation is complete, before the next group is processed.
         /// </summary>
         public float DicePostSumDelayDuration { get; set; } = 0.75f;
@@ -373,6 +368,21 @@ namespace ProjectVagabond
         /// The duration in seconds for a new sum to animate from the center to its final position in the list.
         /// </summary>
         public float DiceNewSumAnimationDuration { get; set; } = 0.5f;
+
+        /// <summary>
+        /// The time in seconds that final sum results will remain on screen before starting to fade out.
+        /// </summary>
+        public float DiceFinalSumLifetime { get; set; } = 1.0f;
+
+        /// <summary>
+        /// The duration in seconds of the shrinking animation when a final sum disappears.
+        /// </summary>
+        public float DiceFinalSumFadeOutDuration { get; set; } = 0.5f;
+
+        /// <summary>
+        /// The delay in seconds between each sum fading out when multiple sums are on screen.
+        /// </summary>
+        public float DiceFinalSumSequentialFadeDelay { get; set; } = 0.25f;
 
         // --- Roll Resolution & Failsafes ---
 
