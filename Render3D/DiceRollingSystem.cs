@@ -1,4 +1,4 @@
-﻿using BepuPhysics;
+﻿﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -102,9 +102,11 @@ namespace ProjectVagabond.Dice
         private float _enumerationTimer;
         private int _runningTotal;
         private readonly List<FloatingResultText> _floatingResults = new List<FloatingResultText>();
-        private const float ENUMERATION_STEP_DURATION = 0.35f; // Duration for each die's animation
+        private const float ENUMERATION_STEP_DURATION = 0.15f; // Duration for each die's animation
         private const float ENUMERATION_FLASH_DURATION = 0.1f;
-        private const float ENUMERATION_NUMBER_LIFETIME = 0.6f;
+        private const float ENUMERATION_NUMBER_LIFETIME = 0.5f;
+        private const float ENUMERATION_MAX_SCALE = 1.25f;
+
 
         /// <summary>
         /// If true, the physics colliders will be rendered as debug visuals.
@@ -270,6 +272,7 @@ namespace ProjectVagabond.Dice
             foreach (var pair in _bodyToDieMap)
             {
                 _physicsWorld.RemoveBody(pair.Key);
+                pair.Value.Reset(); // Reset visual state
                 _diePool.Add(pair.Value);
             }
             _activeDice.Clear();
@@ -664,9 +667,31 @@ namespace ProjectVagabond.Dice
         {
             _enumerationTimer += deltaTime;
 
-            // Handle the white flash effect
             if (_currentlyEnumeratingDie != null)
             {
+                // Handle the visual scale animation
+                float progress = Math.Clamp(_enumerationTimer / ENUMERATION_STEP_DURATION, 0f, 1f);
+                float scale;
+                float baseScale = 1.0f;
+                float scaleRange = ENUMERATION_MAX_SCALE - baseScale;
+
+                // Use a split easing function for a smooth scale-up and scale-down motion
+                if (progress < 0.5f)
+                {
+                    // First half: scaling up, using EaseOut
+                    float upProgress = progress * 2f; // remap 0 -> 0.5 to 0 -> 1
+                    scale = baseScale + scaleRange * Easing.EaseOutCubic(upProgress);
+                }
+                else
+                {
+                    // Second half: scaling down, using EaseIn
+                    float downProgress = (progress - 0.5f) * 2f; // remap 0.5 -> 1 to 0 -> 1
+                    scale = baseScale + scaleRange * (1 - Easing.EaseInCubic(downProgress));
+                }
+                _currentlyEnumeratingDie.VisualScale = scale;
+
+
+                // Handle the white flash effect
                 if (_enumerationTimer < ENUMERATION_FLASH_DURATION)
                 {
                     _currentlyEnumeratingDie.IsHighlighted = true;
@@ -687,6 +712,7 @@ namespace ProjectVagabond.Dice
                 if (_currentlyEnumeratingDie != null)
                 {
                     _currentlyEnumeratingDie.IsHighlighted = false;
+                    _currentlyEnumeratingDie.VisualScale = 1.0f;
                 }
                 ProcessNextEnumerationStep();
             }
@@ -703,32 +729,28 @@ namespace ProjectVagabond.Dice
 
                 _runningTotal += dieValue;
 
-                // Apply a small bounce effect
-                var bodyHandle = _bodyToDieMap.FirstOrDefault(kvp => kvp.Value == _currentlyEnumeratingDie).Key;
-                if (bodyHandle.Value != 0)
-                {
-                    var body = _physicsWorld.Simulation.Bodies.GetBodyReference(bodyHandle);
-                    if (!body.Awake) body.Awake = true;
-                    body.Velocity.Linear += new System.Numerics.Vector3(0, 15f, 0); // Bounce force
-                    body.Velocity.Angular += new System.Numerics.Vector3(
-                        (float)(_random.NextDouble() * 10f - 5f),
-                        (float)(_random.NextDouble() * 10f - 5f),
-                        (float)(_random.NextDouble() * 10f - 5f));
-                }
-
                 // Create the floating number text
-                var worldPos = new Microsoft.Xna.Framework.Vector3(
-                    _currentlyEnumeratingDie.World.Translation.X,
-                    _currentlyEnumeratingDie.World.Translation.Y + 2f, // Position text slightly above the die
-                    _currentlyEnumeratingDie.World.Translation.Z);
-
+                var font = ServiceLocator.Get<BitmapFont>();
+                var dieWorldPos = _currentlyEnumeratingDie.World.Translation;
                 var viewport = new Viewport(_renderTarget.Bounds);
-                var screenPos3D = viewport.Project(worldPos, _projection, _view, Matrix.Identity);
+                var dieScreenPos = viewport.Project(dieWorldPos, _projection, _view, Matrix.Identity);
+                var dieScreenPos2D = new Vector2(dieScreenPos.X, dieScreenPos.Y);
+
+                var text = _runningTotal.ToString();
+                var textSize = font.MeasureString(text);
+                var screenOffset = new Vector2(0, -(textSize.Width + 15)); // 15px padding above die
+                var desiredTextPos = dieScreenPos2D + screenOffset;
+
+                // Boundary check: if text would go off the top of the screen, flip it to be below the die
+                if (desiredTextPos.Y - (textSize.Width / 2) < 0)
+                {
+                    desiredTextPos = dieScreenPos2D - screenOffset;
+                }
 
                 _floatingResults.Add(new FloatingResultText
                 {
-                    Text = _runningTotal.ToString(),
-                    ScreenPosition = new Vector2(screenPos3D.X, screenPos3D.Y),
+                    Text = text,
+                    ScreenPosition = desiredTextPos,
                     Age = 0,
                     Lifetime = ENUMERATION_NUMBER_LIFETIME,
                     Alpha = 1f,
@@ -756,10 +778,10 @@ namespace ProjectVagabond.Dice
                 }
                 else
                 {
-                    // Fade out and shrink
+                    // Fade out and grow
                     float lifeRatio = result.Age / result.Lifetime;
                     result.Alpha = 1.0f - lifeRatio;
-                    result.Scale = 1.0f + lifeRatio * 0.5f; // Grow slightly as it fades
+                    result.Scale = 1.0f + lifeRatio * 0.5f;
                 }
             }
         }

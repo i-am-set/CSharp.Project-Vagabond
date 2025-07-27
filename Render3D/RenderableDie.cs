@@ -1,15 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Dice;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Scenes;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using BepuNumeric = System.Numerics; // Alias Bepu's Vector3 to avoid conflict
 
 namespace ProjectVagabond.Dice
@@ -23,7 +15,6 @@ namespace ProjectVagabond.Dice
         private readonly Model _dieModel;
         private readonly List<BepuNumeric.Vector3> _colliderVertices;
         private readonly GraphicsDevice _graphicsDevice;
-
         /// <summary>
         /// Gets or sets the world transformation matrix for this die, which defines
         /// its position, rotation, and scale in 3D space.
@@ -51,6 +42,18 @@ namespace ProjectVagabond.Dice
         /// </summary>
         public Color HighlightColor { get; set; } = Color.White;
 
+        /// <summary>
+        /// A temporary visual-only offset applied to the die's position, used for animations like bouncing.
+        /// This does not affect the physics body.
+        /// </summary>
+        public Vector3 VisualOffset { get; set; } = Vector3.Zero;
+
+        /// <summary>
+        /// A temporary visual-only scale multiplier applied to the die, used for animations.
+        /// This does not affect the physics body.
+        /// </summary>
+        public float VisualScale { get; set; } = 1.0f;
+
 
         /// <summary>
         /// Initializes a new instance of the RenderableDie class.
@@ -72,6 +75,17 @@ namespace ProjectVagabond.Dice
         }
 
         /// <summary>
+        /// Resets the visual state of the die, typically when it's returned to an object pool.
+        /// </summary>
+        public void Reset()
+        {
+            IsHighlighted = false;
+            VisualOffset = Vector3.Zero;
+            HighlightColor = Color.White;
+            VisualScale = 1.0f;
+        }
+
+        /// <summary>
         /// Draws the die model to the screen.
         /// </summary>
         /// <param name="view">The camera's view matrix.</param>
@@ -87,6 +101,9 @@ namespace ProjectVagabond.Dice
             // We can get it from the model's vertex buffer.
             var graphicsDevice = _dieModel.Meshes[0].MeshParts[0].VertexBuffer.GraphicsDevice;
 
+            // Apply the visual offset and scale for animations. Scale is applied first to scale around the object's origin.
+            Matrix finalWorld = Matrix.CreateScale(VisualScale) * Matrix.CreateTranslation(VisualOffset) * World;
+
             // Iterate through each mesh in the model. A die model will likely have only one.
             foreach (var mesh in _dieModel.Meshes)
             {
@@ -97,7 +114,7 @@ namespace ProjectVagabond.Dice
                     if (part.Effect is BasicEffect effect)
                     {
                         // Assign the world, view, and projection matrices to the effect.
-                        effect.World = World;
+                        effect.World = finalWorld;
                         effect.View = view;
                         effect.Projection = projection;
 
@@ -156,6 +173,9 @@ namespace ProjectVagabond.Dice
             debugEffect.View = view;
             debugEffect.Projection = projection;
 
+            // Apply the visual offset and scale to the base world matrix for debug drawing
+            Matrix finalWorld = Matrix.CreateScale(VisualScale) * Matrix.CreateTranslation(VisualOffset) * World;
+
             foreach (var vertex in _colliderVertices)
             {
                 // Convert the BEPU vector to an XNA vector for matrix transformation.
@@ -164,7 +184,7 @@ namespace ProjectVagabond.Dice
                 // Create a world matrix for the debug axis shape.
                 // This matrix will position the small axis cross at the vertex's location,
                 // relative to the die's overall position and rotation.
-                debugEffect.World = Matrix.CreateTranslation(xnaVertex) * World;
+                debugEffect.World = Matrix.CreateTranslation(xnaVertex) * finalWorld;
 
                 // Apply the effect and draw the lines.
                 debugEffect.CurrentTechnique.Passes[0].Apply();
