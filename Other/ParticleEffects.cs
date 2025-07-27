@@ -85,5 +85,46 @@ namespace ProjectVagabond.Particles
 
             return settings;
         }
+
+        /// <summary>
+        /// Creates the settings for a white, explosive impact effect.
+        /// </summary>
+        public static ParticleEmitterSettings CreateSumImpact()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            // Emitter
+            settings.Shape = EmitterShape.Circle;
+            settings.EmitFrom = EmissionSource.Center;
+            settings.EmitterSize = new Vector2(10, 10);
+            settings.EmissionRate = 0; // Burst only
+            settings.MaxParticles = 20;
+
+            // Initial Particle
+            settings.Lifetime = new FloatRange(0.5f, 1.0f);
+            settings.InitialVelocityX = new FloatRange(-50f, 50f); // Symmetrical radial explosion
+            settings.InitialVelocityY = new FloatRange(-50f, 50f); // Symmetrical radial explosion
+            settings.InitialSize = new FloatRange(0.1f, 2f);
+            settings.EndSize = new FloatRange(5f, 8f);
+            settings.InterpolateSize = true;
+            settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
+            settings.InitialRotationSpeed = new FloatRange(-MathHelper.Pi, MathHelper.Pi);
+
+            // Over Lifetime
+            settings.Gravity = Vector2.Zero; // No gravity for a top-down effect
+            settings.Drag = 2f; // Particles slow down significantly
+            settings.StartColor = Color.White;
+            settings.EndColor = Color.White;
+            settings.StartAlpha = 0.6f;
+            settings.EndAlpha = 0.0f;
+
+            // Rendering
+            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 white pixel
+            settings.BlendMode = BlendState.AlphaBlend;
+            settings.LayerDepth = 0.8f;
+
+            return settings;
+        }
     }
 }

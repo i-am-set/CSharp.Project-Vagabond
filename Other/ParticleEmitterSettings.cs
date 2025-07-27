@@ -25,6 +25,8 @@ namespace ProjectVagabond.Particles
         public FloatRange InitialAccelerationX { get; set; }
         public FloatRange InitialAccelerationY { get; set; }
         public FloatRange InitialSize { get; set; }
+        public FloatRange EndSize { get; set; }
+        public bool InterpolateSize { get; set; }
         public FloatRange InitialRotation { get; set; } // In radians
         public FloatRange InitialRotationSpeed { get; set; } // In radians/sec
 
@@ -70,6 +72,8 @@ namespace ProjectVagabond.Particles
                 InitialAccelerationX = new FloatRange(0f),
                 InitialAccelerationY = new FloatRange(0f),
                 InitialSize = new FloatRange(1f, 3f),
+                EndSize = new FloatRange(1f, 3f),
+                InterpolateSize = false,
                 InitialRotation = new FloatRange(0f),
                 InitialRotationSpeed = new FloatRange(0f),
 

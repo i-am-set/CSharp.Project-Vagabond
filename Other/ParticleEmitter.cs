@@ -86,6 +86,11 @@ namespace ProjectVagabond.Particles
                 // Over-lifetime changes
                 p.Color = Color.Lerp(Settings.StartColor, Settings.EndColor, lifeRatio);
 
+                if (Settings.InterpolateSize)
+                {
+                    p.Size = MathHelper.Lerp(p.StartSize, p.EndSize, lifeRatio);
+                }
+
                 if (Settings.AlphaFadeInAndOut)
                 {
                     // Parabolic curve: y = 1 - (2x - 1)^2, peaks at 1 when x is 0.5
@@ -152,7 +157,9 @@ namespace ProjectVagabond.Particles
 
             p.Velocity = new Vector2(Settings.InitialVelocityX.GetValue(_random), Settings.InitialVelocityY.GetValue(_random));
             p.Acceleration = new Vector2(Settings.InitialAccelerationX.GetValue(_random), Settings.InitialAccelerationY.GetValue(_random));
-            p.Size = Settings.InitialSize.GetValue(_random);
+            p.StartSize = Settings.InitialSize.GetValue(_random);
+            p.EndSize = Settings.EndSize.GetValue(_random);
+            p.Size = p.StartSize;
             p.Rotation = Settings.InitialRotation.GetValue(_random);
             p.RotationSpeed = Settings.InitialRotationSpeed.GetValue(_random);
             p.Color = Settings.StartColor;
@@ -181,7 +188,7 @@ namespace ProjectVagabond.Particles
                 var color = p.Color * p.Alpha;
 
                 // --- MODIFIED: Trail Rendering Logic ---
-                if (p.Velocity.LengthSquared() > 1f) // Only draw trails for moving particles
+                if (p.Velocity.LengthSquared() > 1f && Settings.BlendMode == BlendState.Additive) // Only draw trails for sparks
                 {
                     float speed = p.Velocity.Length();
                     // Trail length is based on speed, clamped to prevent extreme lengths
@@ -206,10 +213,10 @@ namespace ProjectVagabond.Particles
                         Settings.LayerDepth
                     );
                 }
-                else // Fallback for nearly stationary particles to draw them as points
+                else // Fallback for other particles to draw them as points/squares
                 {
-                    var origin = new Vector2(Settings.Texture.Width / 2f, Settings.Texture.Height / 2f);
-                    var scale = p.Size / Settings.Texture.Width;
+                    var origin = new Vector2(0.5f, 0.5f); // Center of the 1x1 pixel
+                    var scale = p.Size;
 
                     spriteBatch.Draw(
                         Settings.Texture,

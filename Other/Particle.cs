@@ -20,6 +20,9 @@ namespace ProjectVagabond.Particles
         public float Age;
         public float Lifetime;
 
+        public float StartSize;
+        public float EndSize;
+
         /// <summary>
         /// Resets the particle to a default state, ready for emission.
         /// </summary>

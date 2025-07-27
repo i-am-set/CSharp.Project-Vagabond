@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
@@ -51,7 +51,8 @@ namespace ProjectVagabond.Particles
             // Render each batch
             foreach (var batch in _renderBatches)
             {
-                spriteBatch.Begin(blendState: batch.Key, samplerState: SamplerState.PointClamp);
+                // Use BackToFront sorting to respect the LayerDepth of each particle effect.
+                spriteBatch.Begin(sortMode: SpriteSortMode.BackToFront, blendState: batch.Key, samplerState: SamplerState.PointClamp);
                 foreach (var emitter in batch.Value)
                 {
                     emitter.Draw(spriteBatch);

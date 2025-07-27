@@ -1,4 +1,4 @@
-﻿using BepuPhysics;
+﻿﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -327,7 +327,7 @@ namespace ProjectVagabond
         /// <summary>
         /// The duration in seconds for each die's "pop" animation during the counting sequence.
         /// </summary>
-        public float DiceEnumerationStepDuration { get; set; } = 0.15f;
+        public float DiceEnumerationStepDuration { get; set; } = 0.2f;
 
         /// <summary>
         /// The duration in seconds of the white flash at the start of a die's enumeration animation.
@@ -347,22 +347,32 @@ namespace ProjectVagabond
         /// <summary>
         /// The delay in seconds after all dice have been counted before the result numbers start moving to the center.
         /// </summary>
-        public float DicePostEnumerationDelay { get; set; } = 0.75f;
+        public float DicePostEnumerationDelay { get; set; } = 0.3f;
 
         /// <summary>
         /// The duration in seconds of the animation where individual result numbers fly to the center of the screen.
         /// </summary>
-        public float DiceGatheringDuration { get; set; } = 0.75f;
-
-        /// <summary>
-        /// The duration in seconds that the final sum total is displayed on screen before fading out.
-        /// </summary>
-        public float DiceFinalSumLifetime { get; set; } = 3.5f;
+        public float DiceGatheringDuration { get; set; } = 0.5f;
 
         /// <summary>
         /// The total vertical distance (in screen pixels) the final sum number will float upwards as it fades out.
         /// </summary>
         public float DiceFinalSumFloatHeight { get; set; } = 30f;
+
+        /// <summary>
+        /// The duration in seconds for the pause after a sum animation is complete, before the next group is processed.
+        /// </summary>
+        public float DicePostSumDelayDuration { get; set; } = 0.75f;
+
+        /// <summary>
+        /// The duration in seconds for existing sums to slide over to make room for a new sum.
+        /// </summary>
+        public float DiceSumShiftDuration { get; set; } = 0.4f;
+
+        /// <summary>
+        /// The duration in seconds for a new sum to animate from the center to its final position in the list.
+        /// </summary>
+        public float DiceNewSumAnimationDuration { get; set; } = 0.5f;
 
         // --- Roll Resolution & Failsafes ---
 

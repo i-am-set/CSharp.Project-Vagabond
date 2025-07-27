@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,6 +54,11 @@ namespace ProjectVagabond.Dice
         /// </summary>
         public float VisualScale { get; set; } = 1.0f;
 
+        /// <summary>
+        /// If true, this die has been "counted" and should no longer be rendered.
+        /// </summary>
+        public bool IsDespawned { get; set; } = false;
+
 
         /// <summary>
         /// Initializes a new instance of the RenderableDie class.
@@ -83,6 +88,7 @@ namespace ProjectVagabond.Dice
             VisualOffset = Vector3.Zero;
             HighlightColor = Color.White;
             VisualScale = 1.0f;
+            IsDespawned = false;
         }
 
         /// <summary>
