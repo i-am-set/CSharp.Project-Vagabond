@@ -995,7 +995,7 @@ namespace ProjectVagabond.Dice
                     if (result.ShouldPopOnAnimate && result.AnimationProgress >= 1.0f && !result.ImpactEffectTriggered)
                     {
                         _sumImpactEmitter.Position = result.CurrentPosition;
-                        _sumImpactEmitter.EmitBurst(20);
+                        _sumImpactEmitter.EmitBurst(50);
                         result.ImpactEffectTriggered = true;
                     }
                 }

@@ -96,10 +96,10 @@ namespace ProjectVagabond.Particles
 
             // Emitter
             settings.Shape = EmitterShape.Circle;
-            settings.EmitFrom = EmissionSource.Center;
-            settings.EmitterSize = new Vector2(10, 10);
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(40f, 40f);
             settings.EmissionRate = 0; // Burst only
-            settings.MaxParticles = 20;
+            settings.MaxParticles = 25;
 
             // Initial Particle
             settings.Lifetime = new FloatRange(0.5f, 1.0f);
@@ -116,7 +116,7 @@ namespace ProjectVagabond.Particles
             settings.Drag = 2f; // Particles slow down significantly
             settings.StartColor = Color.White;
             settings.EndColor = Color.White;
-            settings.StartAlpha = 0.6f;
+            settings.StartAlpha = 0.35f;
             settings.EndAlpha = 0.0f;
 
             // Rendering
