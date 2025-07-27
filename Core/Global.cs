@@ -370,6 +370,16 @@ namespace ProjectVagabond
         public float DiceNewSumAnimationDuration { get; set; } = 0.5f;
 
         /// <summary>
+        /// The duration in seconds for the multiplier animation phase.
+        /// </summary>
+        public float DiceMultiplierAnimationDuration { get; set; } = 0.75f;
+
+        /// <summary>
+        /// The duration in seconds for the modifier animation phase.
+        /// </summary>
+        public float DiceModifierAnimationDuration { get; set; } = 0.75f;
+
+        /// <summary>
         /// The time in seconds that final sum results will remain on screen before starting to fade out.
         /// </summary>
         public float DiceFinalSumLifetime { get; set; } = 1.0f;

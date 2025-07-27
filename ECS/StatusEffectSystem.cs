@@ -35,7 +35,7 @@ namespace ProjectVagabond
                     effect.TimeSinceLastTick += secondsPassed;
                     while (effect.TimeSinceLastTick >= Global.COMBAT_TURN_DURATION_SECONDS)
                     {
-                        effect.BaseEffect.OnTick(entityId, _componentStore);
+                        effect.BaseEffect.OnTick(entityId, _componentStore, effect.Amount);
                         effect.Duration -= 1; // Duration is in rounds
                         effect.TimeSinceLastTick -= Global.COMBAT_TURN_DURATION_SECONDS;
 
@@ -67,7 +67,7 @@ namespace ProjectVagabond
             foreach (var effect in statusEffectComp.ActiveEffects)
             {
                 // Tick the effect at the start of the turn
-                effect.BaseEffect.OnTick(entityId, _componentStore);
+                effect.BaseEffect.OnTick(entityId, _componentStore, effect.Amount);
 
                 // Reduce duration by one round
                 effect.Duration -= 1;
@@ -93,7 +93,7 @@ namespace ProjectVagabond
             }
         }
 
-        public void ApplyEffect(int targetId, StatusEffect effect, float durationInRounds, int sourceId)
+        public void ApplyEffect(int targetId, StatusEffect effect, float durationInRounds, int sourceId, int amount)
         {
             var statusEffectComp = _componentStore.GetComponent<ActiveStatusEffectComponent>(targetId);
             if (statusEffectComp == null)
@@ -107,17 +107,18 @@ namespace ProjectVagabond
 
             if (existingEffect != null)
             {
-                // If it exists, just add the new duration to the current duration.
+                // If it exists, refresh its duration and stack the amount.
                 existingEffect.Duration += durationInRounds;
+                existingEffect.Amount += amount;
                 var targetName = EntityNamer.GetName(targetId);
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName}'s {effect.Name} has been extended." });
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName}'s {effect.Name} has been intensified and extended." });
             }
             else
             {
                 // If it's a new effect, apply it normally.
-                var activeEffect = new ActiveStatusEffect(effect, durationInRounds, sourceId);
+                var activeEffect = new ActiveStatusEffect(effect, durationInRounds, sourceId, amount);
                 statusEffectComp.ActiveEffects.Add(activeEffect);
-                effect.OnApply(targetId, _componentStore);
+                effect.OnApply(targetId, _componentStore, amount);
             }
         }
 

@@ -9,12 +9,12 @@
             TickFrequency = 0; // No ticking behavior
         }
 
-        public override void OnApply(int targetId, ComponentStore componentStore)
+        public override void OnApply(int targetId, ComponentStore componentStore, int amount)
         {
             // No immediate effect on apply
         }
 
-        public override void OnTick(int targetId, ComponentStore componentStore)
+        public override void OnTick(int targetId, ComponentStore componentStore, int amount)
         {
             // No ticking behavior
         }

@@ -8,18 +8,18 @@
             Source = source;
         }
 
-        public override void OnApply(int targetId, ComponentStore componentStore)
+        public override void OnApply(int targetId, ComponentStore componentStore, int amount)
         {
             var targetName = EntityNamer.GetName(targetId);
-            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName} is poisoned!" });
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName} is poisoned for {amount} damage per turn!" });
         }
 
-        public override void OnTick(int targetId, ComponentStore componentStore)
+        public override void OnTick(int targetId, ComponentStore componentStore, int amount)
         {
             var healthComp = componentStore.GetComponent<HealthComponent>(targetId);
             if (healthComp != null)
             {
-                int poisonDamage = 5;
+                int poisonDamage = amount;
                 healthComp.TakeDamage(poisonDamage);
                 var targetName = EntityNamer.GetName(targetId);
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName} takes [green]{poisonDamage}[/] damage from poison." });

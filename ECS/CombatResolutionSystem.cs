@@ -3,7 +3,6 @@ using ProjectVagabond.Dice;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond
 {
@@ -19,6 +18,7 @@ namespace ProjectVagabond
         private readonly Global _global;
 
         private AttackAction _pendingAttackAction;
+        private Dictionary<string, int> _flatModifiers = new Dictionary<string, int>();
         public event Action OnAttackResolved;
 
         public CombatResolutionSystem()
@@ -33,42 +33,80 @@ namespace ProjectVagabond
         public void Update(GameTime gameTime) { }
 
         /// <summary>
-        /// Initiates an attack by requesting a dice roll. The actual damage resolution
-        /// will occur once the dice roll is complete.
+        /// Initiates an attack by parsing all dice notations, requesting a dice roll for non-flat values,
+        /// and preparing for the result.
         /// </summary>
-        /// <param name="action">The attack action to resolve.</param>
         public void InitiateAttackResolution(AttackAction action)
         {
             _pendingAttackAction = action;
+            _flatModifiers.Clear();
+            var rollRequest = new List<DiceGroup>();
 
             var attackerCombatantComp = _componentStore.GetComponent<CombatantComponent>(action.ActorId);
-            if (attackerCombatantComp == null || string.IsNullOrWhiteSpace(attackerCombatantComp.AttackPower))
-            {
-                // Failsafe: if no attack power, resolve immediately with 0 damage.
-                ResolveZeroDamageAttack();
-                return;
-            }
+            var attackerAttacksComp = _componentStore.GetComponent<AvailableAttacksComponent>(action.ActorId);
+            var attack = attackerAttacksComp?.Attacks.FirstOrDefault(a => a.Name == action.AttackName);
 
-            var (numDice, numSides) = ParseDiceString(attackerCombatantComp.AttackPower);
-            if (numDice <= 0)
+            if (attackerCombatantComp == null || attack == null)
             {
                 ResolveZeroDamageAttack();
                 return;
             }
 
-            // For now, we assume all attacks are red "damage" dice. This could be expanded later.
-            var rollRequest = new List<DiceGroup>
+            // 1. Process Base Damage
+            ProcessNotation(attackerCombatantComp.AttackPower, "damage", _global.Palette_Red, rollRequest, attack.DamageMultiplier);
+
+            // 2. Process Status Effect Amounts
+            if (attack.StatusEffectsToApply != null)
             {
-                new DiceGroup
+                for (int i = 0; i < attack.StatusEffectsToApply.Count; i++)
                 {
-                    GroupId = "damage", // A specific ID for this roll type
-                    NumberOfDice = numDice,
-                    Tint = _global.Palette_Red,
-                    ResultProcessing = DiceResultProcessing.Sum
+                    var effectApp = attack.StatusEffectsToApply[i];
+                    string groupId = $"{effectApp.EffectName.ToLower()}_amount_{i}";
+                    // This could be expanded to have different colors per effect type
+                    Color tint = effectApp.EffectName.ToLower() == "poison" ? _global.Palette_DarkGreen : _global.Palette_LightPurple;
+                    ProcessNotation(effectApp.Amount, groupId, tint, rollRequest);
                 }
-            };
+            }
 
-            _diceRollingSystem.Roll(rollRequest);
+            // 3. Submit the roll request or resolve immediately if no dice were needed
+            if (rollRequest.Any())
+            {
+                _diceRollingSystem.Roll(rollRequest);
+            }
+            else
+            {
+                // No dice to roll, all values are flat modifiers. Resolve immediately.
+                HandleDiceRollCompleted(new DiceRollResult());
+            }
+        }
+
+        /// <summary>
+        /// Helper to parse a notation string and either add a dice group to the request
+        /// or store a flat modifier value.
+        /// </summary>
+        private void ProcessNotation(string notation, string groupId, Color tint, List<DiceGroup> rollRequest, float multiplier = 1.0f)
+        {
+            var (numDice, numSides, modifier) = DiceParser.Parse(notation);
+
+            if (numDice > 0 && numSides > 0)
+            {
+                rollRequest.Add(new DiceGroup
+                {
+                    GroupId = groupId,
+                    NumberOfDice = numDice,
+                    Tint = tint,
+                    ResultProcessing = DiceResultProcessing.Sum,
+                    Multiplier = multiplier,
+                    Modifier = modifier
+                });
+            }
+            else
+            {
+                // If there are no dice, the "modifier" is the entire flat value.
+                // We apply the multiplier to it directly here.
+                int finalValue = (int)Math.Ceiling(modifier * multiplier);
+                _flatModifiers[groupId] = finalValue;
+            }
         }
 
         private void ResolveZeroDamageAttack()
@@ -83,12 +121,7 @@ namespace ProjectVagabond
 
         private void HandleDiceRollCompleted(DiceRollResult result)
         {
-            // This handler might be called for other dice rolls in the game.
-            // We must check if it's the one we're waiting for.
-            if (_pendingAttackAction == null || !result.ResultsByGroup.ContainsKey("damage"))
-            {
-                return;
-            }
+            if (_pendingAttackAction == null) return;
 
             _gameState ??= ServiceLocator.Get<GameState>();
             _entityManager ??= ServiceLocator.Get<EntityManager>();
@@ -99,45 +132,54 @@ namespace ProjectVagabond
 
             var attackerAttacksComp = _componentStore.GetComponent<AvailableAttacksComponent>(attackerId);
             var targetHealthComp = _componentStore.GetComponent<HealthComponent>(targetId);
-
             var attackerName = EntityNamer.GetName(attackerId);
             var targetName = EntityNamer.GetName(targetId);
 
             if (attackerAttacksComp == null || targetHealthComp == null)
             {
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]Could not resolve attack for {attackerName}. Missing components." });
-                _pendingAttackAction = null;
-                OnAttackResolved?.Invoke();
+                CleanupAndSignalCompletion();
                 return;
             }
 
             var attack = attackerAttacksComp.Attacks.FirstOrDefault(a => a.Name == attackName);
-
             if (attack == null)
             {
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{attackerName} tried to use an unknown attack: {attackName}" });
-                _pendingAttackAction = null;
-                OnAttackResolved?.Invoke();
+                CleanupAndSignalCompletion();
                 return;
             }
 
-            // Get the base damage from the dice roll result.
-            int baseDamage = result.ResultsByGroup["damage"].Sum();
-
+            // --- DAMAGE RESOLUTION ---
+            int finalDamage = GetResolvedValue("damage", result);
             var attackerStatusEffects = _componentStore.GetComponent<ActiveStatusEffectComponent>(attackerId);
             bool isWeakened = attackerStatusEffects?.ActiveEffects.Any(e => e.BaseEffect.Name == "Weakness") ?? false;
-
-            int finalDamage = (int)(baseDamage * attack.DamageMultiplier);
-            if (isWeakened)
-            {
-                finalDamage /= 2;
-            }
+            if (isWeakened) finalDamage /= 2;
 
             targetHealthComp.TakeDamage(finalDamage);
-
-            // Publish the event so other systems (like Haptics) can react.
             EventBus.Publish(new GameEvents.EntityTookDamage { EntityId = targetId, DamageAmount = finalDamage });
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{attackerName} attacks {targetName} with {attack.Name} for [red]{finalDamage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining." });
 
+            // --- STATUS EFFECT RESOLUTION ---
+            if (attack.StatusEffectsToApply != null && attack.StatusEffectsToApply.Any())
+            {
+                var statusEffectSystem = ServiceLocator.Get<StatusEffectSystem>();
+                for (int i = 0; i < attack.StatusEffectsToApply.Count; i++)
+                {
+                    var effectApp = attack.StatusEffectsToApply[i];
+                    string groupId = $"{effectApp.EffectName.ToLower()}_amount_{i}";
+                    int effectAmount = GetResolvedValue(groupId, result);
+
+                    var effect = statusEffectSystem.CreateEffectFromName(effectApp.EffectName, attack.Name);
+                    if (effect != null && effectAmount > 0)
+                    {
+                        float durationInRounds = 3f; // This could also be made data-driven
+                        statusEffectSystem.ApplyEffect(targetId, effect, durationInRounds, attackerId, effectAmount);
+                    }
+                }
+            }
+
+            // --- PROVOKE & DEATH CHECKS ---
             var playerTag = _componentStore.GetComponent<PlayerTagComponent>(attackerId);
             if (playerTag != null)
             {
@@ -152,99 +194,60 @@ namespace ProjectVagabond
                 }
             }
 
-            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{attackerName} attacks {targetName} with {attack.Name} for [red]{finalDamage}[/] damage! ({baseDamage} base) {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining." });
-
-            if (attack.StatusEffectsToApply != null && attack.StatusEffectsToApply.Any())
-            {
-                var statusEffectSystem = ServiceLocator.Get<StatusEffectSystem>();
-                foreach (var effectName in attack.StatusEffectsToApply)
-                {
-                    var effect = statusEffectSystem.CreateEffectFromName(effectName, attack.Name);
-                    if (effect != null)
-                    {
-                        float durationInRounds = 3f; // Lasts 3 rounds
-                        statusEffectSystem.ApplyEffect(targetId, effect, durationInRounds, attackerId);
-                    }
-                }
-            }
-
             if (targetHealthComp.CurrentHealth <= 0)
             {
-                // Check for player death first
-                if (targetId == _gameState.PlayerEntityId)
-                {
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[red]You have been defeated!" });
-                    _gameState.EndCombat();
-                    // TODO: Implement proper game over screen/logic
-                    _pendingAttackAction = null;
-                    OnAttackResolved?.Invoke();
-                    return; // Stop processing, combat is over.
-                }
-
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[red]{targetName} has been defeated![/]" });
-
-                // Spawn a corpse
-                var worldPos = _componentStore.GetComponent<PositionComponent>(targetId)?.WorldPosition ?? Vector2.Zero;
-                var localPos = _componentStore.GetComponent<LocalPositionComponent>(targetId)?.LocalPosition ?? Vector2.Zero;
-                int corpseId = Spawner.Spawn("corpse", worldPos, localPos);
-                var corpseComp = _componentStore.GetComponent<CorpseComponent>(corpseId);
-                if (corpseComp != null)
-                {
-                    corpseComp.OriginalEntityId = targetId;
-                }
-
-                // Remove the defeated entity from the game
-                _gameState.RemoveEntityFromCombat(targetId);
-                _componentStore.EntityDestroyed(targetId);
-                _entityManager.DestroyEntity(targetId);
-
-                // Check for victory condition
-                bool enemiesRemain = _gameState.Combatants.Any(id => id != _gameState.PlayerEntityId);
-                if (!enemiesRemain)
-                {
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[palette_yellow]Victory! All enemies have been defeated." });
-                    _gameState.EndCombat();
-                }
+                HandleTargetDeath(targetId, targetName);
             }
 
-            // Clean up and signal that the resolution is complete.
-            _pendingAttackAction = null;
-            OnAttackResolved?.Invoke();
+            CleanupAndSignalCompletion();
         }
 
-        private (int numDice, int numSides) ParseDiceString(string diceNotation)
+        private int GetResolvedValue(string groupId, DiceRollResult result)
         {
-            if (string.IsNullOrWhiteSpace(diceNotation))
+            // The final value is the sum of the dice roll for that group (or 0 if none)
+            // plus any flat modifier stored for that group.
+            int rolledValue = result.ResultsByGroup.ContainsKey(groupId) ? result.ResultsByGroup[groupId].Sum() : 0;
+            int modifierValue = _flatModifiers.ContainsKey(groupId) ? _flatModifiers[groupId] : 0;
+            return rolledValue + modifierValue;
+        }
+
+        private void HandleTargetDeath(int targetId, string targetName)
+        {
+            if (targetId == _gameState.PlayerEntityId)
             {
-                return (0, 0);
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[red]You have been defeated!" });
+                _gameState.EndCombat();
+                return;
             }
 
-            // Make it case-insensitive
-            diceNotation = diceNotation.ToLower();
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[red]{targetName} has been defeated![/]" });
 
-            // Handle cases like "d6" which implies "1d6"
-            if (diceNotation.StartsWith("d"))
+            var worldPos = _componentStore.GetComponent<PositionComponent>(targetId)?.WorldPosition ?? Vector2.Zero;
+            var localPos = _componentStore.GetComponent<LocalPositionComponent>(targetId)?.LocalPosition ?? Vector2.Zero;
+            int corpseId = Spawner.Spawn("corpse", worldPos, localPos);
+            var corpseComp = _componentStore.GetComponent<CorpseComponent>(corpseId);
+            if (corpseComp != null)
             {
-                diceNotation = "1" + diceNotation;
+                corpseComp.OriginalEntityId = targetId;
             }
 
-            var match = Regex.Match(diceNotation, @"(\d+)d(\d+)");
+            _gameState.RemoveEntityFromCombat(targetId);
+            _componentStore.EntityDestroyed(targetId);
+            _entityManager.DestroyEntity(targetId);
 
-            if (match.Success && match.Groups.Count == 3)
+            bool enemiesRemain = _gameState.Combatants.Any(id => id != _gameState.PlayerEntityId);
+            if (!enemiesRemain)
             {
-                if (int.TryParse(match.Groups[1].Value, out int numDice) &&
-                    int.TryParse(match.Groups[2].Value, out int numSides))
-                {
-                    // For now, we only support d6, but the parser is ready for more.
-                    if (numSides == 6)
-                    {
-                        return (numDice, numSides);
-                    }
-                }
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[palette_yellow]Victory! All enemies have been defeated." });
+                _gameState.EndCombat();
             }
+        }
 
-            // Return 0 if parsing fails
-            return (0, 0);
+        private void CleanupAndSignalCompletion()
+        {
+            _pendingAttackAction = null;
+            _flatModifiers.Clear();
+            OnAttackResolved?.Invoke();
         }
     }
 }

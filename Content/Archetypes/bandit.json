@@ -72,7 +72,12 @@
           {
             "Name": "Poisoned Shank",
             "DamageMultiplier": 0.8,
-            "StatusEffectsToApply": [ "Poison" ]
+            "StatusEffectsToApply": [
+              {
+                "EffectName": "Poison",
+                "Amount": "1d6"
+              }
+            ]
           }
         ]
       }

@@ -44,6 +44,16 @@ namespace ProjectVagabond.Dice
         /// Determines how the final results for this group are calculated (e.g., summed or returned individually).
         /// </summary>
         public DiceResultProcessing ResultProcessing { get; set; }
+
+        /// <summary>
+        /// A multiplier to apply to the final sum of this group. Defaults to 1.0.
+        /// </summary>
+        public float Multiplier { get; set; } = 1.0f;
+
+        /// <summary>
+        /// A flat modifier to add to the final sum of this group. Defaults to 0.
+        /// </summary>
+        public int Modifier { get; set; } = 0;
     }
 
     /// <summary>
