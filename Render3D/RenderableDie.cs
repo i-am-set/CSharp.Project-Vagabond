@@ -1,7 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using BepuNumeric = System.Numerics; // Alias Bepu's Vector3 to avoid conflict
 
 namespace ProjectVagabond.Dice
@@ -14,8 +22,6 @@ namespace ProjectVagabond.Dice
     {
         private readonly Model _dieModel;
         private readonly List<BepuNumeric.Vector3> _colliderVertices;
-        private readonly VertexPositionColor[] _debugAxisVertices;
-        private readonly BasicEffect _debugEffect;
         private readonly GraphicsDevice _graphicsDevice;
 
         /// <summary>
@@ -36,14 +42,24 @@ namespace ProjectVagabond.Dice
         public string GroupId { get; set; }
 
         /// <summary>
+        /// If true, the die will be rendered with a special highlight effect.
+        /// </summary>
+        public bool IsHighlighted { get; set; } = false;
+
+        /// <summary>
+        /// The color to use for the highlight effect.
+        /// </summary>
+        public Color HighlightColor { get; set; } = Color.White;
+
+
+        /// <summary>
         /// Initializes a new instance of the RenderableDie class.
         /// </summary>
         /// <param name="model">The MonoGame Model to be used for rendering this die.</param>
         /// <param name="colliderVertices">A list of vertices defining the physics collider for debug visualization.</param>
-        /// <param name="debugAxisSize">The size of the axis lines drawn in debug mode.</param>
         /// <param name="tint">The color to tint this die's model.</param>
         /// <param name="groupId">The identifier for the group this die belongs to.</param>
-        public RenderableDie(Model model, List<BepuNumeric.Vector3> colliderVertices, float debugAxisSize, Color tint, string groupId)
+        public RenderableDie(Model model, List<BepuNumeric.Vector3> colliderVertices, Color tint, string groupId)
         {
             _dieModel = model;
             _colliderVertices = colliderVertices;
@@ -53,29 +69,6 @@ namespace ProjectVagabond.Dice
 
             // We can get the graphics device from the model itself.
             _graphicsDevice = _dieModel.Meshes[0].MeshParts[0].VertexBuffer.GraphicsDevice;
-
-            // Initialize the effect used for drawing debug shapes.
-            _debugEffect = new BasicEffect(_graphicsDevice)
-            {
-                VertexColorEnabled = true,
-                LightingEnabled = false,
-                TextureEnabled = false
-            };
-
-            // Create the vertices for a small 3-axis cross (X, Y, Z) to be drawn at each collider point.
-            // The size of the debug markers is now passed in from the DiceRollingSystem.
-            _debugAxisVertices = new[]
-            {
-                // X-axis (Red)
-                new VertexPositionColor(new Vector3(-debugAxisSize, 0, 0), Color.Red),
-                new VertexPositionColor(new Vector3(debugAxisSize, 0, 0), Color.Red),
-                // Y-axis (Green)
-                new VertexPositionColor(new Vector3(0, -debugAxisSize, 0), Color.Green),
-                new VertexPositionColor(new Vector3(0, debugAxisSize, 0), Color.Green),
-                // Z-axis (Blue)
-                new VertexPositionColor(new Vector3(0, 0, -debugAxisSize), Color.Blue),
-                new VertexPositionColor(new Vector3(0, 0, debugAxisSize), Color.Blue)
-            };
         }
 
         /// <summary>
@@ -114,8 +107,19 @@ namespace ProjectVagabond.Dice
                         // Enable texturing to see the die faces.
                         effect.TextureEnabled = true;
 
-                        // Apply the tint color to the model's material.
-                        effect.DiffuseColor = this.Tint.ToVector3();
+                        // Apply the tint color or highlight to the model's material.
+                        if (IsHighlighted)
+                        {
+                            effect.DiffuseColor = this.HighlightColor.ToVector3();
+                            // Add a subtle emissive color to make the highlight "pop"
+                            effect.EmissiveColor = this.HighlightColor.ToVector3() * 0.25f;
+                        }
+                        else
+                        {
+                            effect.DiffuseColor = this.Tint.ToVector3();
+                            effect.EmissiveColor = Vector3.Zero; // No glow when not highlighted
+                        }
+
 
                         // Apply the effect changes before drawing.
                         effect.CurrentTechnique.Passes[0].Apply();
@@ -140,15 +144,17 @@ namespace ProjectVagabond.Dice
         /// </summary>
         /// <param name="view">The camera's view matrix.</param>
         /// <param name="projection">The camera's projection matrix.</param>
-        public void DrawDebug(Matrix view, Matrix projection)
+        /// <param name="debugEffect">The shared BasicEffect for drawing debug lines.</param>
+        /// <param name="debugAxisVertices">The shared vertex array for the axis lines.</param>
+        public void DrawDebug(Matrix view, Matrix projection, BasicEffect debugEffect, VertexPositionColor[] debugAxisVertices)
         {
-            if (_colliderVertices == null || !_colliderVertices.Any())
+            if (_colliderVertices == null || !_colliderVertices.Any() || debugEffect == null || debugAxisVertices == null)
             {
                 return;
             }
 
-            _debugEffect.View = view;
-            _debugEffect.Projection = projection;
+            debugEffect.View = view;
+            debugEffect.Projection = projection;
 
             foreach (var vertex in _colliderVertices)
             {
@@ -158,13 +164,13 @@ namespace ProjectVagabond.Dice
                 // Create a world matrix for the debug axis shape.
                 // This matrix will position the small axis cross at the vertex's location,
                 // relative to the die's overall position and rotation.
-                _debugEffect.World = Matrix.CreateTranslation(xnaVertex) * World;
+                debugEffect.World = Matrix.CreateTranslation(xnaVertex) * World;
 
                 // Apply the effect and draw the lines.
-                _debugEffect.CurrentTechnique.Passes[0].Apply();
+                debugEffect.CurrentTechnique.Passes[0].Apply();
                 _graphicsDevice.DrawUserPrimitives(
                     PrimitiveType.LineList,
-                    _debugAxisVertices,
+                    debugAxisVertices,
                     0,
                     3); // 3 pairs of vertices for 3 lines
             }

@@ -389,7 +389,7 @@ namespace ProjectVagabond
             _spriteBatch.End();
 
             // --- 2. Draw the 3D dice to their own render target ---
-            var diceTexture = _diceRollingSystem.Draw();
+            var diceTexture = _diceRollingSystem.Draw(_defaultFont);
 
             // --- 3. Draw everything to the screen ---
             GraphicsDevice.SetRenderTarget(null);

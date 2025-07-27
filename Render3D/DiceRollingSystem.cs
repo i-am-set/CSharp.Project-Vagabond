@@ -10,6 +10,7 @@ using System.Linq;
 using System.Numerics; // Required for BEPUphysics types
 using BepuUtilities.Memory; // Required for ConvexHull
 using ProjectVagabond.Particles;
+using MonoGame.Extended.BitmapFonts;
 
 // Explicitly alias the XNA Quaternion to avoid ambiguity
 using XnaQuaternion = Microsoft.Xna.Framework.Quaternion;
@@ -24,6 +25,27 @@ namespace ProjectVagabond.Dice
     /// </summary>
     public class DiceRollingSystem
     {
+        // Internal state for the dice roll lifecycle
+        private enum RollState
+        {
+            Idle,
+            Rolling,
+            Settling,
+            Enumerating,
+            Complete
+        }
+
+        // A small helper class to manage the animated numbers shown during enumeration.
+        private class FloatingResultText
+        {
+            public string Text;
+            public Vector2 ScreenPosition;
+            public float Alpha;
+            public float Age;
+            public float Lifetime;
+            public float Scale;
+        }
+
         // Core Components
         private GraphicsDevice _graphicsDevice;
         private PhysicsWorld _physicsWorld;
@@ -43,6 +65,10 @@ namespace ProjectVagabond.Dice
         private ParticleEmitter _sparkEmitter;
         private SpriteBatch _particleSpriteBatch;
 
+        // Shared Debug Resources (to prevent hitches)
+        private BasicEffect _debugEffect;
+        private VertexPositionColor[] _debugAxisVertices;
+
         // Camera
         private Matrix _view;
         private Matrix _projection;
@@ -60,8 +86,7 @@ namespace ProjectVagabond.Dice
 
 
         // State Tracking
-        private bool _wasRollingLastFrame = false;
-        private bool _isWaitingForSettle = false;
+        private RollState _currentState = RollState.Idle;
         private float _settleTimer = 0f;
         // SettleDelay is now in Global.cs
 
@@ -70,6 +95,16 @@ namespace ProjectVagabond.Dice
         private readonly Dictionary<RenderableDie, int> _rerollAttempts = new Dictionary<RenderableDie, int>();
         private readonly Dictionary<RenderableDie, int> _forcedResults = new Dictionary<RenderableDie, int>();
         private int _completeRerollAttempts;
+
+        // --- NEW: State for Enumeration Animation ---
+        private readonly Queue<RenderableDie> _enumerationQueue = new Queue<RenderableDie>();
+        private RenderableDie _currentlyEnumeratingDie;
+        private float _enumerationTimer;
+        private int _runningTotal;
+        private readonly List<FloatingResultText> _floatingResults = new List<FloatingResultText>();
+        private const float ENUMERATION_STEP_DURATION = 0.35f; // Duration for each die's animation
+        private const float ENUMERATION_FLASH_DURATION = 0.1f;
+        private const float ENUMERATION_NUMBER_LIFETIME = 0.6f;
 
         /// <summary>
         /// If true, the physics colliders will be rendered as debug visuals.
@@ -183,7 +218,7 @@ namespace ProjectVagabond.Dice
             // --- Pre-populate the RenderableDie object pool with an initial small amount ---
             for (int i = 0; i < InitialPoolSize; i++)
             {
-                _diePool.Add(new RenderableDie(_dieModel, _dieColliderVertices, _global.DiceDebugAxisLineSize, Color.White, ""));
+                _diePool.Add(new RenderableDie(_dieModel, _dieColliderVertices, Color.White, ""));
             }
 
             // --- Set up the initial 3D camera view and projection ---
@@ -202,6 +237,27 @@ namespace ProjectVagabond.Dice
             _sparkEmitter = _particleManager.CreateEmitter(ParticleEffects.CreateSparks());
             _particleSpriteBatch = new SpriteBatch(_graphicsDevice);
             EventBus.Subscribe<GameEvents.DiceCollisionOccurred>(HandleDiceCollision);
+
+            // --- OPTIMIZATION: Create shared debug resources once ---
+            _debugEffect = new BasicEffect(_graphicsDevice)
+            {
+                VertexColorEnabled = true,
+                LightingEnabled = false,
+                TextureEnabled = false
+            };
+            float debugAxisSize = _global.DiceDebugAxisLineSize;
+            _debugAxisVertices = new[]
+            {
+                // X-axis (Red)
+                new VertexPositionColor(new Microsoft.Xna.Framework.Vector3(-debugAxisSize, 0, 0), Color.Red),
+                new VertexPositionColor(new Microsoft.Xna.Framework.Vector3(debugAxisSize, 0, 0), Color.Red),
+                // Y-axis (Green)
+                new VertexPositionColor(new Microsoft.Xna.Framework.Vector3(0, -debugAxisSize, 0), Color.Green),
+                new VertexPositionColor(new Microsoft.Xna.Framework.Vector3(0, debugAxisSize, 0), Color.Green),
+                // Z-axis (Blue)
+                new VertexPositionColor(new Microsoft.Xna.Framework.Vector3(0, 0, -debugAxisSize), Color.Blue),
+                new VertexPositionColor(new Microsoft.Xna.Framework.Vector3(0, 0, debugAxisSize), Color.Blue)
+            };
         }
 
         /// <summary>
@@ -225,6 +281,9 @@ namespace ProjectVagabond.Dice
             _forcedResults.Clear();
             _completeRerollAttempts = 0;
             _currentRollGroups = rollGroups;
+            _floatingResults.Clear();
+            _enumerationQueue.Clear();
+            _currentlyEnumeratingDie = null;
 
             // --- Dynamic Camera Zoom ---
             int totalDice = rollGroups.Sum(g => g.NumberOfDice);
@@ -255,7 +314,8 @@ namespace ProjectVagabond.Dice
                     else
                     {
                         // Pool is empty, "hot add" a new die.
-                        renderableDie = new RenderableDie(_dieModel, _dieColliderVertices, _global.DiceDebugAxisLineSize, Color.White, "");
+                        // This is now a very fast operation.
+                        renderableDie = new RenderableDie(_dieModel, _dieColliderVertices, Color.White, "");
                     }
 
                     // Configure the recycled die for its new role
@@ -269,7 +329,7 @@ namespace ProjectVagabond.Dice
                 }
             }
 
-            _wasRollingLastFrame = true;
+            _currentState = RollState.Rolling;
         }
 
         /// <summary>
@@ -378,8 +438,13 @@ namespace ProjectVagabond.Dice
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         public void Update(GameTime gameTime)
         {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
             // Update the particle system for this simulation
             _particleManager.Update(gameTime);
+
+            // Update floating result text animations
+            UpdateFloatingResults(deltaTime);
 
             // Synchronize renderable dice with their physics bodies
             foreach (var pair in _bodyToDieMap)
@@ -395,6 +460,29 @@ namespace ProjectVagabond.Dice
                 pair.Value.World = Matrix.CreateFromQuaternion(orientation) * Matrix.CreateTranslation(position);
             }
 
+            // --- Main State Machine ---
+            switch (_currentState)
+            {
+                case RollState.Idle:
+                case RollState.Complete:
+                    return; // Do nothing until a new roll is requested.
+
+                case RollState.Rolling:
+                    UpdateRollingState(deltaTime);
+                    break;
+
+                case RollState.Settling:
+                    UpdateSettlingState(deltaTime);
+                    break;
+
+                case RollState.Enumerating:
+                    UpdateEnumeratingState(deltaTime);
+                    break;
+            }
+        }
+
+        private void UpdateRollingState(float deltaTime)
+        {
             // PRIMARY FAILSAFE: Instantly detect and replace any missing dice
             if (_activeDice.Any())
             {
@@ -412,7 +500,7 @@ namespace ProjectVagabond.Dice
             // If dice are rolling, increment the timeout timer.
             if (isCurrentlyRolling)
             {
-                _rollInProgressTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _rollInProgressTimer += deltaTime;
             }
             else
             {
@@ -426,7 +514,7 @@ namespace ProjectVagabond.Dice
                 return; // End update for this frame.
             }
 
-            // SECONDARY FAILSAFE: If the roll takes too long, check for and handle any stuck dice 
+            // SECONDARY FAILSAFE: If the roll takes too long, check for and handle any stuck dice
             if (_rollInProgressTimer > _global.DiceRollTimeout)
             {
                 HandleStuckDice();
@@ -434,127 +522,246 @@ namespace ProjectVagabond.Dice
             }
 
             // If the dice were rolling but have just stopped, start the settle timer.
-            if (_wasRollingLastFrame && !isCurrentlyRolling)
+            if (!isCurrentlyRolling)
             {
-                _isWaitingForSettle = true;
+                _currentState = RollState.Settling;
                 _settleTimer = 0f;
             }
+        }
 
-            // If we are in the "waiting to settle" state...
-            if (_isWaitingForSettle)
+        private void UpdateSettlingState(float deltaTime)
+        {
+            // If the dice start moving again (e.g., from a physics glitch), go back to rolling state.
+            if (this.IsRolling)
             {
-                // If the dice start moving again (e.g., from a physics glitch), cancel the settle check.
-                if (isCurrentlyRolling)
+                _currentState = RollState.Rolling;
+                _settleTimer = 0f;
+                return;
+            }
+
+            _settleTimer += deltaTime;
+
+            // If the timer has elapsed, it's time to check the dice state.
+            if (_settleTimer >= _global.DiceSettleDelay)
+            {
+                // CHECK 1: Re-roll any dice that are off-screen
+                var offscreenDice = new List<BodyHandle>();
+                float centerX = _physicsWorldWidth / 2f;
+                float centerZ = _physicsWorldHeight / 2f;
+                float visibleMinX = centerX - _viewWidth / 2f;
+                float visibleMaxX = centerX + _viewWidth / 2f;
+                float visibleMinZ = centerZ - _viewHeight / 2f;
+                float visibleMaxZ = centerZ + _viewHeight / 2f;
+
+                foreach (var pair in _bodyToDieMap)
                 {
-                    _isWaitingForSettle = false;
-                    _settleTimer = 0f;
+                    var bodyRef = _physicsWorld.Simulation.Bodies.GetBodyReference(pair.Key);
+                    var pos = bodyRef.Pose.Position;
+                    if (pos.X < visibleMinX || pos.X > visibleMaxX || pos.Z < visibleMinZ || pos.Z > visibleMaxZ)
+                    {
+                        offscreenDice.Add(pair.Key);
+                    }
+                }
+
+                if (offscreenDice.Any())
+                {
+                    var diceToReThrow = new List<RenderableDie>();
+                    foreach (var handle in offscreenDice)
+                    {
+                        if (_bodyToDieMap.TryGetValue(handle, out var renderableDie))
+                        {
+                            diceToReThrow.Add(renderableDie);
+                            _physicsWorld.RemoveBody(handle);
+                            _bodyToDieMap.Remove(handle);
+                        }
+                    }
+                    foreach (var renderableDie in diceToReThrow)
+                    {
+                        var newHandle = ThrowDieFromOffscreen(renderableDie, _random.Next(4));
+                        _bodyToDieMap.Add(newHandle, renderableDie);
+                    }
+                    _rollInProgressTimer = 0f;
+                    _currentState = RollState.Rolling;
                 }
                 else
                 {
-                    // Otherwise, increment the timer.
-                    _settleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    // CHECK 2: Nudge any dice that are cantered
+                    float rerollThreshold = _global.DiceCantingRerollThreshold;
+                    var canteredDiceHandles = new List<BodyHandle>();
 
-                    // If the timer has elapsed, it's time to check the dice state.
-                    if (_settleTimer >= _global.DiceSettleDelay)
+                    foreach (var pair in _bodyToDieMap)
                     {
-                        // CHECK 1: Re-roll any dice that are off-screen
-                        var offscreenDice = new List<BodyHandle>();
-                        float centerX = _physicsWorldWidth / 2f;
-                        float centerZ = _physicsWorldHeight / 2f;
-                        float visibleMinX = centerX - _viewWidth / 2f;
-                        float visibleMaxX = centerX + _viewWidth / 2f;
-                        float visibleMinZ = centerZ - _viewHeight / 2f;
-                        float visibleMaxZ = centerZ + _viewHeight / 2f;
-
-                        foreach (var pair in _bodyToDieMap)
+                        var (_, alignment) = DiceResultHelper.GetUpFaceValueAndAlignment(pair.Value.World);
+                        if (alignment < rerollThreshold)
                         {
-                            var bodyRef = _physicsWorld.Simulation.Bodies.GetBodyReference(pair.Key);
-                            var pos = bodyRef.Pose.Position;
-                            if (pos.X < visibleMinX || pos.X > visibleMaxX || pos.Z < visibleMinZ || pos.Z > visibleMaxZ)
-                            {
-                                offscreenDice.Add(pair.Key);
-                            }
+                            canteredDiceHandles.Add(pair.Key);
                         }
-
-                        if (offscreenDice.Any())
-                        {
-                            var diceToReThrow = new List<RenderableDie>();
-                            foreach (var handle in offscreenDice)
-                            {
-                                if (_bodyToDieMap.TryGetValue(handle, out var renderableDie))
-                                {
-                                    diceToReThrow.Add(renderableDie);
-                                    _physicsWorld.RemoveBody(handle);
-                                    _bodyToDieMap.Remove(handle);
-                                }
-                            }
-
-                            // Re-throw the dice. We need to know which group they belonged to.
-                            // We can determine a new random side for this re-throw.
-                            foreach (var renderableDie in diceToReThrow)
-                            {
-                                var newHandle = ThrowDieFromOffscreen(renderableDie, _random.Next(4));
-                                _bodyToDieMap.Add(newHandle, renderableDie);
-                            }
-                            _rollInProgressTimer = 0f; // Reset timeout since we initiated a re-roll.
-                        }
-                        else
-                        {
-                            // CHECK 2: Nudge any dice that are cantered
-                            float rerollThreshold = _global.DiceCantingRerollThreshold;
-                            var canteredDiceHandles = new List<BodyHandle>();
-
-                            foreach (var pair in _bodyToDieMap)
-                            {
-                                var (_, alignment) = DiceResultHelper.GetUpFaceValueAndAlignment(pair.Value.World);
-                                if (alignment < rerollThreshold)
-                                {
-                                    canteredDiceHandles.Add(pair.Key);
-                                }
-                            }
-
-                            if (canteredDiceHandles.Any())
-                            {
-                                foreach (var handle in canteredDiceHandles)
-                                {
-                                    var body = _physicsWorld.Simulation.Bodies.GetBodyReference(handle);
-                                    if (!body.Awake) body.Awake = true;
-
-                                    // Nudge forces are now pulled from global settings for fine-tuning.
-                                    float nudgeForceMin = _global.DiceNudgeForceMin;
-                                    float nudgeForceMax = _global.DiceNudgeForceMax;
-                                    float nudgeUpMin = _global.DiceNudgeUpwardForceMin;
-                                    float nudgeUpMax = _global.DiceNudgeUpwardForceMax;
-                                    float nudgeTorqueMax = _global.DiceNudgeTorqueMax;
-
-                                    body.Velocity.Linear += new System.Numerics.Vector3(
-                                        (float)(_random.NextDouble() * (nudgeForceMax - nudgeForceMin) + nudgeForceMin),
-                                        (float)(_random.NextDouble() * (nudgeUpMax - nudgeUpMin) + nudgeUpMin),
-                                        (float)(_random.NextDouble() * (nudgeForceMax - nudgeForceMin) + nudgeForceMin));
-
-                                    body.Velocity.Angular += new System.Numerics.Vector3(
-                                        (float)(_random.NextDouble() * nudgeTorqueMax * 2 - nudgeTorqueMax),
-                                        (float)(_random.NextDouble() * nudgeTorqueMax * 2 - nudgeTorqueMax),
-                                        (float)(_random.NextDouble() * nudgeTorqueMax * 2 - nudgeTorqueMax));
-                                }
-                                _rollInProgressTimer = 0f; // Reset timeout since we initiated a re-roll.
-                            }
-                            else
-                            {
-                                // === All checks passed: The roll is complete ===
-                                FinalizeAndReportResults();
-                            }
-                        }
-
-                        // The check is complete, so reset the waiting state.
-                        _isWaitingForSettle = false;
-                        _settleTimer = 0f;
                     }
+
+                    if (canteredDiceHandles.Any())
+                    {
+                        foreach (var handle in canteredDiceHandles)
+                        {
+                            var body = _physicsWorld.Simulation.Bodies.GetBodyReference(handle);
+                            if (!body.Awake) body.Awake = true;
+
+                            float nudgeForceMin = _global.DiceNudgeForceMin;
+                            float nudgeForceMax = _global.DiceNudgeForceMax;
+                            float nudgeUpMin = _global.DiceNudgeUpwardForceMin;
+                            float nudgeUpMax = _global.DiceNudgeUpwardForceMax;
+                            float nudgeTorqueMax = _global.DiceNudgeTorqueMax;
+
+                            body.Velocity.Linear += new System.Numerics.Vector3(
+                                (float)(_random.NextDouble() * (nudgeForceMax - nudgeForceMin) + nudgeForceMin),
+                                (float)(_random.NextDouble() * (nudgeUpMax - nudgeUpMin) + nudgeUpMin),
+                                (float)(_random.NextDouble() * (nudgeForceMax - nudgeForceMin) + nudgeForceMin));
+
+                            body.Velocity.Angular += new System.Numerics.Vector3(
+                                (float)(_random.NextDouble() * nudgeTorqueMax * 2 - nudgeTorqueMax),
+                                (float)(_random.NextDouble() * nudgeTorqueMax * 2 - nudgeTorqueMax),
+                                (float)(_random.NextDouble() * nudgeTorqueMax * 2 - nudgeTorqueMax));
+                        }
+                        _rollInProgressTimer = 0f;
+                        _currentState = RollState.Rolling;
+                    }
+                    else
+                    {
+                        // === All checks passed: The roll is ready for enumeration ===
+                        StartEnumeration();
+                    }
+                }
+                _settleTimer = 0f;
+            }
+        }
+
+        private void StartEnumeration()
+        {
+            _currentState = RollState.Enumerating;
+            _runningTotal = 0;
+            _enumerationTimer = 0f;
+            _enumerationQueue.Clear();
+
+            // Sort dice by their X position on the screen to count from left to right.
+            var sortedDice = _activeDice
+                .Where(d => !_forcedResults.ContainsKey(d)) // Exclude dice that were forced
+                .OrderBy(d => d.World.Translation.X)
+                .ToList();
+
+            // Add forced dice to the end of the queue
+            var forcedDice = _activeDice.Where(d => _forcedResults.ContainsKey(d));
+            sortedDice.AddRange(forcedDice);
+
+            foreach (var die in sortedDice)
+            {
+                _enumerationQueue.Enqueue(die);
+            }
+
+            // Start the first enumeration step immediately
+            ProcessNextEnumerationStep();
+        }
+
+        private void UpdateEnumeratingState(float deltaTime)
+        {
+            _enumerationTimer += deltaTime;
+
+            // Handle the white flash effect
+            if (_currentlyEnumeratingDie != null)
+            {
+                if (_enumerationTimer < ENUMERATION_FLASH_DURATION)
+                {
+                    _currentlyEnumeratingDie.IsHighlighted = true;
+                    _currentlyEnumeratingDie.HighlightColor = Color.White;
+                }
+                else
+                {
+                    // After the flash, keep it highlighted with its tint
+                    _currentlyEnumeratingDie.IsHighlighted = true;
+                    _currentlyEnumeratingDie.HighlightColor = _currentlyEnumeratingDie.Tint;
                 }
             }
 
-            // Update the state for the next frame.
-            _wasRollingLastFrame = isCurrentlyRolling;
+            if (_enumerationTimer >= ENUMERATION_STEP_DURATION)
+            {
+                // Reset the timer and process the next die in the queue
+                _enumerationTimer = 0f;
+                if (_currentlyEnumeratingDie != null)
+                {
+                    _currentlyEnumeratingDie.IsHighlighted = false;
+                }
+                ProcessNextEnumerationStep();
+            }
+        }
+
+        private void ProcessNextEnumerationStep()
+        {
+            if (_enumerationQueue.TryDequeue(out _currentlyEnumeratingDie))
+            {
+                // Get the result of this die
+                int dieValue = _forcedResults.TryGetValue(_currentlyEnumeratingDie, out int forcedValue)
+                    ? forcedValue
+                    : DiceResultHelper.GetUpFaceValue(_currentlyEnumeratingDie.World);
+
+                _runningTotal += dieValue;
+
+                // Apply a small bounce effect
+                var bodyHandle = _bodyToDieMap.FirstOrDefault(kvp => kvp.Value == _currentlyEnumeratingDie).Key;
+                if (bodyHandle.Value != 0)
+                {
+                    var body = _physicsWorld.Simulation.Bodies.GetBodyReference(bodyHandle);
+                    if (!body.Awake) body.Awake = true;
+                    body.Velocity.Linear += new System.Numerics.Vector3(0, 15f, 0); // Bounce force
+                    body.Velocity.Angular += new System.Numerics.Vector3(
+                        (float)(_random.NextDouble() * 10f - 5f),
+                        (float)(_random.NextDouble() * 10f - 5f),
+                        (float)(_random.NextDouble() * 10f - 5f));
+                }
+
+                // Create the floating number text
+                var worldPos = new Microsoft.Xna.Framework.Vector3(
+                    _currentlyEnumeratingDie.World.Translation.X,
+                    _currentlyEnumeratingDie.World.Translation.Y + 2f, // Position text slightly above the die
+                    _currentlyEnumeratingDie.World.Translation.Z);
+
+                var viewport = new Viewport(_renderTarget.Bounds);
+                var screenPos3D = viewport.Project(worldPos, _projection, _view, Matrix.Identity);
+
+                _floatingResults.Add(new FloatingResultText
+                {
+                    Text = _runningTotal.ToString(),
+                    ScreenPosition = new Vector2(screenPos3D.X, screenPos3D.Y),
+                    Age = 0,
+                    Lifetime = ENUMERATION_NUMBER_LIFETIME,
+                    Alpha = 1f,
+                    Scale = 1f
+                });
+            }
+            else
+            {
+                // Queue is empty, enumeration is complete
+                _currentlyEnumeratingDie = null;
+                _currentState = RollState.Complete;
+                FinalizeAndReportResults();
+            }
+        }
+
+        private void UpdateFloatingResults(float deltaTime)
+        {
+            for (int i = _floatingResults.Count - 1; i >= 0; i--)
+            {
+                var result = _floatingResults[i];
+                result.Age += deltaTime;
+                if (result.Age >= result.Lifetime)
+                {
+                    _floatingResults.RemoveAt(i);
+                }
+                else
+                {
+                    // Fade out and shrink
+                    float lifeRatio = result.Age / result.Lifetime;
+                    result.Alpha = 1.0f - lifeRatio;
+                    result.Scale = 1.0f + lifeRatio * 0.5f; // Grow slightly as it fades
+                }
+            }
         }
 
         /// <summary>
@@ -576,7 +783,7 @@ namespace ProjectVagabond.Dice
             // Set the emitter's 2D position and fire a burst of particles.
             _sparkEmitter.Position = new Vector2(screenPos3D.X, screenPos3D.Y);
 
-            // --- MODIFIED: Emit a large, explosive burst of particles all at once. ---
+            // --- Emit a large, explosive burst of particles all at once. ---
             int burstCount = _random.Next(40, 71); // Emit 40 to 70 particles for a big impact.
             for (int i = 0; i < burstCount; i++)
             {
@@ -634,6 +841,7 @@ namespace ProjectVagabond.Dice
             }
 
             OnRollCompleted?.Invoke(result);
+            _currentState = RollState.Idle; // Ready for the next roll
         }
 
         /// <summary>
@@ -751,9 +959,7 @@ namespace ProjectVagabond.Dice
 
             // 3. Reset timers and state for the new attempt
             _rollInProgressTimer = 0f;
-            _wasRollingLastFrame = true;
-            _isWaitingForSettle = false;
-            _settleTimer = 0f;
+            _currentState = RollState.Rolling;
         }
 
         /// <summary>
@@ -780,8 +986,7 @@ namespace ProjectVagabond.Dice
             FinalizeAndReportResults();
 
             // 4. Reset state to prevent further updates on this roll
-            _wasRollingLastFrame = false;
-            _isWaitingForSettle = false;
+            _currentState = RollState.Idle;
             _rollInProgressTimer = 0f;
         }
 
@@ -789,8 +994,9 @@ namespace ProjectVagabond.Dice
         /// <summary>
         /// Draws the 3D dice scene to an off-screen texture.
         /// </summary>
+        /// <param name="font">The font to use for drawing result numbers.</param>
         /// <returns>The RenderTarget2D containing the rendered dice scene.</returns>
-        public RenderTarget2D Draw()
+        public RenderTarget2D Draw(BitmapFont font)
         {
             if (_activeDice.Count == 0)
             {
@@ -831,15 +1037,30 @@ namespace ProjectVagabond.Dice
                     {
                         continue;
                     }
-                    die.DrawDebug(_view, _projection);
+                    // MODIFIED: Pass the shared debug resources to the draw call.
+                    die.DrawDebug(_view, _projection, _debugEffect, _debugAxisVertices);
                 }
 
                 // Restore the original depth state for the next draw cycle
                 _graphicsDevice.DepthStencilState = originalDepthState;
             }
 
-            // --- Draw 2D Particle Effects on top of the 3D scene ---
+            // --- Draw 2D Particle Effects and Floating Numbers on top of the 3D scene ---
             _particleManager.Draw(_particleSpriteBatch);
+
+            // Draw the floating result numbers during enumeration
+            if (_floatingResults.Any() && font != null)
+            {
+                _particleSpriteBatch.Begin(samplerState: SamplerState.PointClamp);
+                foreach (var result in _floatingResults)
+                {
+                    Vector2 textSize = font.MeasureString(result.Text) * result.Scale;
+                    Vector2 textOrigin = new Vector2(textSize.X / (2 * result.Scale), textSize.Y / (2 * result.Scale));
+                    _particleSpriteBatch.DrawString(font, result.Text, result.ScreenPosition, Color.White * result.Alpha, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
+                }
+                _particleSpriteBatch.End();
+            }
+
 
             // --- Return the result ---
             _graphicsDevice.SetRenderTarget(null);
