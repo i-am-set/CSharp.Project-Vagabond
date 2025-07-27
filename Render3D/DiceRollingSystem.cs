@@ -41,8 +41,8 @@ namespace ProjectVagabond.Dice
         private class FloatingResultText
         {
             public string Text;
-            public int DieValue;
-            public Vector2 StartPosition;
+            public Vector2 StartPosition; // Center of the die OR final resting place
+            public Vector2 TargetPosition; // Final resting place OR center of screen
             public Vector2 CurrentPosition;
             public Color CurrentColor;
             public float Scale;
@@ -748,10 +748,13 @@ namespace ProjectVagabond.Dice
                 _floatingResults.Add(new FloatingResultText
                 {
                     Text = dieValue.ToString(),
-                    DieValue = dieValue,
                     StartPosition = dieScreenPos2D,
+                    TargetPosition = dieScreenPos2D, // Start and Target are the same
                     CurrentPosition = dieScreenPos2D,
-                    Scale = 1.2f
+                    Scale = 0.1f, // Start at a small scale
+                    Age = 0f,
+                    Lifetime = _global.DiceEnumerationStepDuration,
+                    IsFinalSum = false
                 });
             }
             else
@@ -770,6 +773,12 @@ namespace ProjectVagabond.Dice
             {
                 _currentState = RollState.GatheringResults;
                 _gatheringTimer = 0f; // Reset for the gathering animation
+
+                // Update the StartPosition for the gathering animation to be the current (final resting) position of the text.
+                foreach (var result in _floatingResults)
+                {
+                    result.StartPosition = result.CurrentPosition;
+                }
             }
         }
 
@@ -777,7 +786,7 @@ namespace ProjectVagabond.Dice
         {
             _gatheringTimer += deltaTime;
             float progress = Math.Clamp(_gatheringTimer / _global.DiceGatheringDuration, 0f, 1f);
-            float easedProgress = Easing.EaseInCirc(progress);
+            float easedProgress = Easing.EaseInQuint(progress);
 
             var screenCenter = new Vector2(_renderTarget.Width / 2f, _renderTarget.Height / 2f);
 
@@ -793,7 +802,7 @@ namespace ProjectVagabond.Dice
                 {
                     Text = _finalSum.ToString(),
                     CurrentPosition = screenCenter,
-                    Scale = 2.5f,
+                    Scale = 3.5f,
                     IsFinalSum = true,
                     Age = 0,
                     Lifetime = _global.DiceFinalSumLifetime
@@ -813,10 +822,11 @@ namespace ProjectVagabond.Dice
             for (int i = _floatingResults.Count - 1; i >= 0; i--)
             {
                 var result = _floatingResults[i];
+                result.Age += deltaTime;
 
                 if (result.IsFinalSum)
                 {
-                    result.Age += deltaTime;
+                    // Handle final sum animation (fade out, float up, and scale up)
                     if (result.Age >= result.Lifetime)
                     {
                         _floatingResults.RemoveAt(i);
@@ -824,17 +834,31 @@ namespace ProjectVagabond.Dice
                     else
                     {
                         float lifeRatio = result.Age / result.Lifetime;
-                        // Fade out
+                        float easedProgress = Easing.EaseOutSine(lifeRatio);
+
+                        // Fade out (this alpha will be used for both outline and fill)
                         result.CurrentColor = Color.White * (1.0f - lifeRatio);
+
                         // Float upwards
-                        float easedProgress = Easing.EaseOutCirc(lifeRatio);
                         var screenCenter = new Vector2(_renderTarget.Width / 2f, _renderTarget.Height / 2f);
                         result.CurrentPosition = new Vector2(screenCenter.X, screenCenter.Y - (_global.DiceFinalSumFloatHeight * easedProgress));
+
+                        // Scale up
+                        const float initialSumScale = 3.5f;
+                        const float finalSumScale = initialSumScale * 1.5f; // Gets larger
+                        result.Scale = initialSumScale + (finalSumScale - initialSumScale) * easedProgress;
                     }
                 }
-                else
+                else // Individual die result
                 {
-                    // Pulsing color effect
+                    // Animate scale using EaseOutBack for a "pop" effect
+                    float progress = Math.Clamp(result.Age / result.Lifetime, 0f, 1f);
+                    float easedScaleProgress = Easing.EaseOutBack(progress);
+                    const float initialDieScale = 0.1f;
+                    const float finalDieScale = 2.0f;
+                    result.Scale = initialDieScale + (finalDieScale - initialDieScale) * easedScaleProgress;
+
+                    // Pulsing color effect for the fill
                     float pulseValue = (float)(Math.Sin(totalTime * 15f) + 1) / 2.0f;
                     result.CurrentColor = Color.Lerp(Color.Black, Color.White, pulseValue);
                 }
@@ -1133,7 +1157,41 @@ namespace ProjectVagabond.Dice
                 {
                     Vector2 textSize = font.MeasureString(result.Text) * result.Scale;
                     Vector2 textOrigin = new Vector2(textSize.X / (2 * result.Scale), textSize.Y / (2 * result.Scale));
-                    _particleSpriteBatch.DrawString(font, result.Text, result.CurrentPosition, result.CurrentColor, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
+
+                    // --- New Color & Outline Logic ---
+                    float alpha = result.CurrentColor.A / 255f;
+                    Color outlineColor;
+                    Color mainTextColor;
+
+                    if (result.IsFinalSum)
+                    {
+                        // The final sum has a white outline that fades.
+                        outlineColor = Color.White * alpha;
+                        // The final sum has a black fill that fades.
+                        mainTextColor = Color.Black * alpha;
+                    }
+                    else
+                    {
+                        // Individual results have a solid black outline.
+                        outlineColor = Color.Black;
+                        // Individual results use the pulsing color from the update loop.
+                        mainTextColor = result.CurrentColor;
+                    }
+
+                    int outlineOffset = 1; // Use a 1-pixel integer offset for crispness
+
+                    // Draw outline text at 8 surrounding positions for a complete, solid outline.
+                    _particleSpriteBatch.DrawString(font, result.Text, result.CurrentPosition + new Vector2(-outlineOffset, -outlineOffset), outlineColor, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
+                    _particleSpriteBatch.DrawString(font, result.Text, result.CurrentPosition + new Vector2(0, -outlineOffset), outlineColor, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
+                    _particleSpriteBatch.DrawString(font, result.Text, result.CurrentPosition + new Vector2(outlineOffset, -outlineOffset), outlineColor, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
+                    _particleSpriteBatch.DrawString(font, result.Text, result.CurrentPosition + new Vector2(-outlineOffset, 0), outlineColor, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
+                    _particleSpriteBatch.DrawString(font, result.Text, result.CurrentPosition + new Vector2(outlineOffset, 0), outlineColor, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
+                    _particleSpriteBatch.DrawString(font, result.Text, result.CurrentPosition + new Vector2(-outlineOffset, outlineOffset), outlineColor, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
+                    _particleSpriteBatch.DrawString(font, result.Text, result.CurrentPosition + new Vector2(0, outlineOffset), outlineColor, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
+                    _particleSpriteBatch.DrawString(font, result.Text, result.CurrentPosition + new Vector2(outlineOffset, outlineOffset), outlineColor, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
+
+                    // Draw the main text on top of the outline.
+                    _particleSpriteBatch.DrawString(font, result.Text, result.CurrentPosition, mainTextColor, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
                 }
                 _particleSpriteBatch.End();
             }

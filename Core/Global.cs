@@ -340,24 +340,29 @@ namespace ProjectVagabond
         public float DiceEnumerationMaxScale { get; set; } = 1.25f;
 
         /// <summary>
+        /// The vertical distance (in screen pixels) that the result number appears above or below the die during enumeration.
+        /// </summary>
+        public float DiceResultTextYOffset { get; set; } = 45f;
+
+        /// <summary>
         /// The delay in seconds after all dice have been counted before the result numbers start moving to the center.
         /// </summary>
-        public float DicePostEnumerationDelay { get; set; } = 0.25f;
+        public float DicePostEnumerationDelay { get; set; } = 0.75f;
 
         /// <summary>
         /// The duration in seconds of the animation where individual result numbers fly to the center of the screen.
         /// </summary>
-        public float DiceGatheringDuration { get; set; } = 0.5f;
+        public float DiceGatheringDuration { get; set; } = 0.75f;
 
         /// <summary>
         /// The duration in seconds that the final sum total is displayed on screen before fading out.
         /// </summary>
-        public float DiceFinalSumLifetime { get; set; } = 1.5f;
+        public float DiceFinalSumLifetime { get; set; } = 3.5f;
 
         /// <summary>
         /// The total vertical distance (in screen pixels) the final sum number will float upwards as it fades out.
         /// </summary>
-        public float DiceFinalSumFloatHeight { get; set; } = 50f;
+        public float DiceFinalSumFloatHeight { get; set; } = 30f;
 
         // --- Roll Resolution & Failsafes ---
 
