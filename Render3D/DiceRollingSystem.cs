@@ -1,4 +1,4 @@
-﻿﻿using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -32,6 +32,8 @@ namespace ProjectVagabond.Dice
             Rolling,
             Settling,
             Enumerating,
+            PostEnumerationDelay,
+            GatheringResults,
             Complete
         }
 
@@ -39,11 +41,14 @@ namespace ProjectVagabond.Dice
         private class FloatingResultText
         {
             public string Text;
-            public Vector2 ScreenPosition;
-            public float Alpha;
+            public int DieValue;
+            public Vector2 StartPosition;
+            public Vector2 CurrentPosition;
+            public Color CurrentColor;
+            public float Scale;
+            public bool IsFinalSum;
             public float Age;
             public float Lifetime;
-            public float Scale;
         }
 
         // Core Components
@@ -96,16 +101,13 @@ namespace ProjectVagabond.Dice
         private readonly Dictionary<RenderableDie, int> _forcedResults = new Dictionary<RenderableDie, int>();
         private int _completeRerollAttempts;
 
-        // --- NEW: State for Enumeration Animation ---
+        // --- NEW: State for Enumeration & Gathering Animation ---
         private readonly Queue<RenderableDie> _enumerationQueue = new Queue<RenderableDie>();
         private RenderableDie _currentlyEnumeratingDie;
         private float _enumerationTimer;
-        private int _runningTotal;
+        private int _finalSum;
         private readonly List<FloatingResultText> _floatingResults = new List<FloatingResultText>();
-        private const float ENUMERATION_STEP_DURATION = 0.15f; // Duration for each die's animation
-        private const float ENUMERATION_FLASH_DURATION = 0.1f;
-        private const float ENUMERATION_NUMBER_LIFETIME = 0.5f;
-        private const float ENUMERATION_MAX_SCALE = 1.25f;
+        private float _gatheringTimer;
 
 
         /// <summary>
@@ -447,7 +449,7 @@ namespace ProjectVagabond.Dice
             _particleManager.Update(gameTime);
 
             // Update floating result text animations
-            UpdateFloatingResults(deltaTime);
+            UpdateFloatingResults(gameTime);
 
             // Synchronize renderable dice with their physics bodies
             foreach (var pair in _bodyToDieMap)
@@ -480,6 +482,14 @@ namespace ProjectVagabond.Dice
 
                 case RollState.Enumerating:
                     UpdateEnumeratingState(deltaTime);
+                    break;
+
+                case RollState.PostEnumerationDelay:
+                    UpdatePostEnumerationDelayState(deltaTime);
+                    break;
+
+                case RollState.GatheringResults:
+                    UpdateGatheringState(deltaTime);
                     break;
             }
         }
@@ -640,7 +650,7 @@ namespace ProjectVagabond.Dice
         private void StartEnumeration()
         {
             _currentState = RollState.Enumerating;
-            _runningTotal = 0;
+            _finalSum = 0;
             _enumerationTimer = 0f;
             _enumerationQueue.Clear();
 
@@ -670,10 +680,10 @@ namespace ProjectVagabond.Dice
             if (_currentlyEnumeratingDie != null)
             {
                 // Handle the visual scale animation
-                float progress = Math.Clamp(_enumerationTimer / ENUMERATION_STEP_DURATION, 0f, 1f);
+                float progress = Math.Clamp(_enumerationTimer / _global.DiceEnumerationStepDuration, 0f, 1f);
                 float scale;
                 float baseScale = 1.0f;
-                float scaleRange = ENUMERATION_MAX_SCALE - baseScale;
+                float scaleRange = _global.DiceEnumerationMaxScale - baseScale;
 
                 // Use a split easing function for a smooth scale-up and scale-down motion
                 if (progress < 0.5f)
@@ -692,7 +702,7 @@ namespace ProjectVagabond.Dice
 
 
                 // Handle the white flash effect
-                if (_enumerationTimer < ENUMERATION_FLASH_DURATION)
+                if (_enumerationTimer < _global.DiceEnumerationFlashDuration)
                 {
                     _currentlyEnumeratingDie.IsHighlighted = true;
                     _currentlyEnumeratingDie.HighlightColor = Color.White;
@@ -705,7 +715,7 @@ namespace ProjectVagabond.Dice
                 }
             }
 
-            if (_enumerationTimer >= ENUMERATION_STEP_DURATION)
+            if (_enumerationTimer >= _global.DiceEnumerationStepDuration)
             {
                 // Reset the timer and process the next die in the queue
                 _enumerationTimer = 0f;
@@ -727,61 +737,106 @@ namespace ProjectVagabond.Dice
                     ? forcedValue
                     : DiceResultHelper.GetUpFaceValue(_currentlyEnumeratingDie.World);
 
-                _runningTotal += dieValue;
+                _finalSum += dieValue;
 
                 // Create the floating number text
-                var font = ServiceLocator.Get<BitmapFont>();
                 var dieWorldPos = _currentlyEnumeratingDie.World.Translation;
                 var viewport = new Viewport(_renderTarget.Bounds);
                 var dieScreenPos = viewport.Project(dieWorldPos, _projection, _view, Matrix.Identity);
                 var dieScreenPos2D = new Vector2(dieScreenPos.X, dieScreenPos.Y);
 
-                var text = _runningTotal.ToString();
-                var textSize = font.MeasureString(text);
-                var screenOffset = new Vector2(0, -(textSize.Width + 15)); // 15px padding above die
-                var desiredTextPos = dieScreenPos2D + screenOffset;
-
-                // Boundary check: if text would go off the top of the screen, flip it to be below the die
-                if (desiredTextPos.Y - (textSize.Width / 2) < 0)
-                {
-                    desiredTextPos = dieScreenPos2D - screenOffset;
-                }
-
                 _floatingResults.Add(new FloatingResultText
                 {
-                    Text = text,
-                    ScreenPosition = desiredTextPos,
-                    Age = 0,
-                    Lifetime = ENUMERATION_NUMBER_LIFETIME,
-                    Alpha = 1f,
-                    Scale = 1f
+                    Text = dieValue.ToString(),
+                    DieValue = dieValue,
+                    StartPosition = dieScreenPos2D,
+                    CurrentPosition = dieScreenPos2D,
+                    Scale = 1.2f
                 });
             }
             else
             {
-                // Queue is empty, enumeration is complete
+                // Queue is empty, enumeration is complete, start the delay
                 _currentlyEnumeratingDie = null;
+                _currentState = RollState.PostEnumerationDelay;
+                _gatheringTimer = 0f; // Reuse this timer for the delay
+            }
+        }
+
+        private void UpdatePostEnumerationDelayState(float deltaTime)
+        {
+            _gatheringTimer += deltaTime;
+            if (_gatheringTimer >= _global.DicePostEnumerationDelay)
+            {
+                _currentState = RollState.GatheringResults;
+                _gatheringTimer = 0f; // Reset for the gathering animation
+            }
+        }
+
+        private void UpdateGatheringState(float deltaTime)
+        {
+            _gatheringTimer += deltaTime;
+            float progress = Math.Clamp(_gatheringTimer / _global.DiceGatheringDuration, 0f, 1f);
+            float easedProgress = Easing.EaseInCirc(progress);
+
+            var screenCenter = new Vector2(_renderTarget.Width / 2f, _renderTarget.Height / 2f);
+
+            foreach (var result in _floatingResults)
+            {
+                result.CurrentPosition = Vector2.Lerp(result.StartPosition, screenCenter, easedProgress);
+            }
+
+            if (progress >= 1.0f)
+            {
+                _floatingResults.Clear();
+                _floatingResults.Add(new FloatingResultText
+                {
+                    Text = _finalSum.ToString(),
+                    CurrentPosition = screenCenter,
+                    Scale = 2.5f,
+                    IsFinalSum = true,
+                    Age = 0,
+                    Lifetime = _global.DiceFinalSumLifetime
+                });
+
                 _currentState = RollState.Complete;
                 FinalizeAndReportResults();
             }
         }
 
-        private void UpdateFloatingResults(float deltaTime)
+
+        private void UpdateFloatingResults(GameTime gameTime)
         {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float totalTime = (float)gameTime.TotalGameTime.TotalSeconds;
+
             for (int i = _floatingResults.Count - 1; i >= 0; i--)
             {
                 var result = _floatingResults[i];
-                result.Age += deltaTime;
-                if (result.Age >= result.Lifetime)
+
+                if (result.IsFinalSum)
                 {
-                    _floatingResults.RemoveAt(i);
+                    result.Age += deltaTime;
+                    if (result.Age >= result.Lifetime)
+                    {
+                        _floatingResults.RemoveAt(i);
+                    }
+                    else
+                    {
+                        float lifeRatio = result.Age / result.Lifetime;
+                        // Fade out
+                        result.CurrentColor = Color.White * (1.0f - lifeRatio);
+                        // Float upwards
+                        float easedProgress = Easing.EaseOutCirc(lifeRatio);
+                        var screenCenter = new Vector2(_renderTarget.Width / 2f, _renderTarget.Height / 2f);
+                        result.CurrentPosition = new Vector2(screenCenter.X, screenCenter.Y - (_global.DiceFinalSumFloatHeight * easedProgress));
+                    }
                 }
                 else
                 {
-                    // Fade out and grow
-                    float lifeRatio = result.Age / result.Lifetime;
-                    result.Alpha = 1.0f - lifeRatio;
-                    result.Scale = 1.0f + lifeRatio * 0.5f;
+                    // Pulsing color effect
+                    float pulseValue = (float)(Math.Sin(totalTime * 15f) + 1) / 2.0f;
+                    result.CurrentColor = Color.Lerp(Color.Black, Color.White, pulseValue);
                 }
             }
         }
@@ -1078,7 +1133,7 @@ namespace ProjectVagabond.Dice
                 {
                     Vector2 textSize = font.MeasureString(result.Text) * result.Scale;
                     Vector2 textOrigin = new Vector2(textSize.X / (2 * result.Scale), textSize.Y / (2 * result.Scale));
-                    _particleSpriteBatch.DrawString(font, result.Text, result.ScreenPosition, Color.White * result.Alpha, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
+                    _particleSpriteBatch.DrawString(font, result.Text, result.CurrentPosition, result.CurrentColor, 0f, textOrigin, result.Scale, SpriteEffects.None, 0f);
                 }
                 _particleSpriteBatch.End();
             }

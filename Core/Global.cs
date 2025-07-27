@@ -1,7 +1,14 @@
-﻿using Microsoft.Xna.Framework;
+﻿using BepuPhysics;
+using BepuPhysics.Collidables;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Physics;
+using System;
+using System.Collections.Generic;
 using System.Numerics;
 
 namespace ProjectVagabond
@@ -174,7 +181,28 @@ namespace ProjectVagabond
         // DICE SYSTEM SETTINGS
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        // Physics Material Properties 
+        // --- Physics & Simulation ---
+
+        /// <summary>
+        /// The gravity vector for the physics simulation. Determines the "down" direction and its strength.
+        /// How to use: A larger negative Y value makes dice feel heavier and fall faster. A smaller negative Y value makes them feel lighter and more "floaty".
+        /// Example: A Y of -20 is light gravity, a Y of -200 is heavy gravity.
+        /// </summary>
+        public System.Numerics.Vector3 DiceGravity { get; set; } = new System.Numerics.Vector3(0, -100, 0);
+
+        /// <summary>
+        /// The number of velocity iterations the physics solver will perform per step.
+        /// How to use: More iterations lead to more stable and accurate collision responses, especially with many stacked objects, but at a higher performance cost.
+        /// Limitations: Values are typically powers of 2. 8 is usually fine, 32 is very stable.
+        /// </summary>
+        public int DiceSolverIterations { get; set; } = 32;
+
+        /// <summary>
+        /// The number of substeps the solver takes.
+        /// How to use: More substeps improve stability for very fast-moving objects, preventing them from "tunneling" (passing through) other objects like walls.
+        /// Example: 4 is standard, 8 is very robust for fast objects.
+        /// </summary>
+        public int DiceSolverSubsteps { get; set; } = 8;
 
         /// <summary>
         /// Controls the "slipperiness" of surfaces (both dice and the floor).
@@ -204,29 +232,6 @@ namespace ProjectVagabond
         /// </summary>
         public float DiceSpringDamping { get; set; } = 0.1f;
 
-        // World & Simulation Properties 
-
-        /// <summary>
-        /// The gravity vector for the physics simulation. Determines the "down" direction and its strength.
-        /// How to use: A larger negative Y value makes dice feel heavier and fall faster. A smaller negative Y value makes them feel lighter and more "floaty".
-        /// Example: A Y of -20 is light gravity, a Y of -200 is heavy gravity.
-        /// </summary>
-        public System.Numerics.Vector3 DiceGravity { get; set; } = new System.Numerics.Vector3(0, -100, 0);
-
-        /// <summary>
-        /// The number of velocity iterations the physics solver will perform per step.
-        /// How to use: More iterations lead to more stable and accurate collision responses, especially with many stacked objects, but at a higher performance cost.
-        /// Limitations: Values are typically powers of 2. 8 is usually fine, 32 is very stable.
-        /// </summary>
-        public int DiceSolverIterations { get; set; } = 32;
-
-        /// <summary>
-        /// The number of substeps the solver takes.
-        /// How to use: More substeps improve stability for very fast-moving objects, preventing them from "tunneling" (passing through) other objects like walls.
-        /// Example: 4 is standard, 8 is very robust for fast objects.
-        /// </summary>
-        public int DiceSolverSubsteps { get; set; } = 8;
-
         /// <summary>
         /// Controls how high the invisible containing walls are.
         /// How to use: This should be high enough that dice cannot bounce out of the play area. It is measured in the same units as the camera height and spawn height.
@@ -239,23 +244,7 @@ namespace ProjectVagabond
         /// </summary>
         public float DiceContainerWallThickness { get; set; } = 500f;
 
-        // Camera & View Properties 
-
-        /// <summary>
-        /// Controls the "zoom" level of the camera. This is the vertical size of the visible play area.
-        /// How to use: A smaller value makes the dice and the rolling area appear larger on screen. A larger value makes them appear smaller.
-        /// Example: 15 is very zoomed in, 40 is zoomed out.
-        /// </summary>
-        public float DiceCameraZoom { get; set; } = 20f;
-
-        /// <summary>
-        /// Determines the height of the camera over the play area.
-        /// How to use: A higher value gives a more top-down "orthographic" view. A lower value provides a more angled "perspective" view.
-        /// Example: 80 is very top-down, 30 is more angled.
-        /// </summary>
-        public float DiceCameraHeight { get; set; } = 60f;
-
-        // Die Properties & Initial State 
+        // --- Spawning & Initial State ---
 
         /// <summary>
         /// The physical mass of a single die.
@@ -313,13 +302,64 @@ namespace ProjectVagabond
         /// </summary>
         public float DiceInitialAngularVelocityMax { get; set; } = 100f;
 
-        // Roll Resolution & Failsafe Properties 
+        // --- Visuals & Animation ---
+
+        /// <summary>
+        /// Controls the "zoom" level of the camera. This is the vertical size of the visible play area.
+        /// How to use: A smaller value makes the dice and the rolling area appear larger on screen. A larger value makes them appear smaller.
+        /// Example: 15 is very zoomed in, 40 is zoomed out.
+        /// </summary>
+        public float DiceCameraZoom { get; set; } = 20f;
+
+        /// <summary>
+        /// Determines the height of the camera over the play area.
+        /// How to use: A higher value gives a more top-down "orthographic" view. A lower value provides a more angled "perspective" view.
+        /// Example: 80 is very top-down, 30 is more angled.
+        /// </summary>
+        public float DiceCameraHeight { get; set; } = 60f;
 
         /// <summary>
         /// The minimum closing velocity between two colliding dice required to generate a spark particle effect.
         /// How to use: Higher values mean only very fast, hard impacts will create sparks. Lower values will make sparks more frequent.
         /// </summary>
         public float DiceSparkVelocityThreshold { get; set; } = 25f;
+
+        /// <summary>
+        /// The duration in seconds for each die's "pop" animation during the counting sequence.
+        /// </summary>
+        public float DiceEnumerationStepDuration { get; set; } = 0.15f;
+
+        /// <summary>
+        /// The duration in seconds of the white flash at the start of a die's enumeration animation.
+        /// </summary>
+        public float DiceEnumerationFlashDuration { get; set; } = 0.08f;
+
+        /// <summary>
+        /// The maximum amount a die scales up during its enumeration "pop" animation (e.g., 1.25f is 125% of its normal size).
+        /// </summary>
+        public float DiceEnumerationMaxScale { get; set; } = 1.25f;
+
+        /// <summary>
+        /// The delay in seconds after all dice have been counted before the result numbers start moving to the center.
+        /// </summary>
+        public float DicePostEnumerationDelay { get; set; } = 0.25f;
+
+        /// <summary>
+        /// The duration in seconds of the animation where individual result numbers fly to the center of the screen.
+        /// </summary>
+        public float DiceGatheringDuration { get; set; } = 0.5f;
+
+        /// <summary>
+        /// The duration in seconds that the final sum total is displayed on screen before fading out.
+        /// </summary>
+        public float DiceFinalSumLifetime { get; set; } = 1.5f;
+
+        /// <summary>
+        /// The total vertical distance (in screen pixels) the final sum number will float upwards as it fades out.
+        /// </summary>
+        public float DiceFinalSumFloatHeight { get; set; } = 50f;
+
+        // --- Roll Resolution & Failsafes ---
 
         /// <summary>
         /// How long (in seconds) the system waits after all dice have stopped moving before checking their final state. This helps prevent misreads from tiny jitters.
@@ -386,7 +426,7 @@ namespace ProjectVagabond
         /// </summary>
         public float DiceNudgeTorqueMax { get; set; } = 25f;
 
-        // Dice Debugging 
+        // --- Debugging ---
 
         /// <summary>
         /// Controls the size of the R/G/B axis lines drawn at each vertex of the physics collider in debug mode.
