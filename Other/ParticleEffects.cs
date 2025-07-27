@@ -45,5 +45,45 @@ namespace ProjectVagabond.Particles
 
             return settings;
         }
+
+        /// <summary>
+        /// Creates the settings for a bright, sharp spark effect.
+        /// </summary>
+        public static ParticleEmitterSettings CreateSparks()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            // Emitter
+            settings.Shape = EmitterShape.Point;
+            settings.EmissionRate = 0; // Burst only
+            settings.MaxParticles = 20;
+
+            // Initial Particle
+            settings.Lifetime = new FloatRange(0.1f, 0.25f); // Slightly longer lifetime for visible trails
+            // Velocity is set manually in the handler for a radial burst.
+            // We set a speed range here that the handler can use.
+            settings.InitialVelocityX = new FloatRange(250f, 400f); // Represents higher speed
+            settings.InitialVelocityY = new FloatRange(0f);
+            settings.InitialSize = new FloatRange(1f, 2f); // This will now be the trail's thickness
+            settings.InitialRotation = new FloatRange(0f);
+            settings.InitialRotationSpeed = new FloatRange(0f);
+
+            // Over Lifetime
+            settings.Gravity = new Vector2(0, 50f); // A little gravity
+            settings.Drag = 2.5f; // High drag to stop sparks quickly
+            settings.StartColor = Color.White; // Start as pure white
+            settings.EndColor = global.Palette_LightYellow; // Fade to a pale yellow to simulate cooling
+            settings.StartAlpha = 1.0f; // Fully opaque at start
+            settings.EndAlpha = 0.5f;
+            settings.AlphaFadeInAndOut = false;
+
+            // Rendering
+            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 white pixel
+            settings.BlendMode = BlendState.Additive; // Crucial for a bright, glowing effect
+            settings.LayerDepth = 0.9f; // Draw on top
+
+            return settings;
+        }
     }
 }

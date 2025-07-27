@@ -9,9 +9,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics; // Required for BEPUphysics types
 using BepuUtilities.Memory; // Required for ConvexHull
+using ProjectVagabond.Particles;
 
 // Explicitly alias the XNA Quaternion to avoid ambiguity
 using XnaQuaternion = Microsoft.Xna.Framework.Quaternion;
+using Vector2 = Microsoft.Xna.Framework.Vector2;
 
 namespace ProjectVagabond.Dice
 {
@@ -35,6 +37,11 @@ namespace ProjectVagabond.Dice
         private readonly List<RenderableDie> _diePool = new List<RenderableDie>();
         private Model _dieModel;
         private Texture2D _dieTexture;
+
+        // Particle Effects
+        private ParticleSystemManager _particleManager;
+        private ParticleEmitter _sparkEmitter;
+        private SpriteBatch _particleSpriteBatch;
 
         // Camera
         private Matrix _view;
@@ -189,6 +196,12 @@ namespace ProjectVagabond.Dice
 
             _projection = Matrix.CreateOrthographic(_viewWidth, _viewHeight, 1f, 200f);
             _physicsWorld.UpdateBoundaryPositions(_viewWidth, _viewHeight);
+
+            // --- Initialize Particle System for Sparks ---
+            _particleManager = new ParticleSystemManager();
+            _sparkEmitter = _particleManager.CreateEmitter(ParticleEffects.CreateSparks());
+            _particleSpriteBatch = new SpriteBatch(_graphicsDevice);
+            EventBus.Subscribe<GameEvents.DiceCollisionOccurred>(HandleDiceCollision);
         }
 
         /// <summary>
@@ -365,6 +378,9 @@ namespace ProjectVagabond.Dice
         /// <param name="gameTime">Provides a snapshot of timing values.</param>
         public void Update(GameTime gameTime)
         {
+            // Update the particle system for this simulation
+            _particleManager.Update(gameTime);
+
             // Synchronize renderable dice with their physics bodies
             foreach (var pair in _bodyToDieMap)
             {
@@ -539,6 +555,40 @@ namespace ProjectVagabond.Dice
 
             // Update the state for the next frame.
             _wasRollingLastFrame = isCurrentlyRolling;
+        }
+
+        /// <summary>
+        /// Handles a DiceCollisionOccurred event, spawning spark particles at the collision point.
+        /// </summary>
+        private void HandleDiceCollision(GameEvents.DiceCollisionOccurred e)
+        {
+            // Convert the 3D world position from the physics engine to a 2D screen position on our render target.
+            var worldPos = new Microsoft.Xna.Framework.Vector3(e.WorldPosition.X, e.WorldPosition.Y, e.WorldPosition.Z);
+            var viewport = new Viewport(_renderTarget.Bounds);
+            var screenPos3D = viewport.Project(worldPos, _projection, _view, Matrix.Identity);
+
+            // The projection can result in a point outside the viewport; we don't need sparks for those.
+            if (screenPos3D.Z < 0 || screenPos3D.Z > 1)
+            {
+                return;
+            }
+
+            // Set the emitter's 2D position and fire a burst of particles.
+            _sparkEmitter.Position = new Vector2(screenPos3D.X, screenPos3D.Y);
+
+            // --- MODIFIED: Emit a large, explosive burst of particles all at once. ---
+            int burstCount = _random.Next(40, 71); // Emit 40 to 70 particles for a big impact.
+            for (int i = 0; i < burstCount; i++)
+            {
+                int pIndex = _sparkEmitter.EmitParticleAndGetIndex();
+                if (pIndex == -1) break; // Emitter is full
+
+                // Manually set the particle's velocity for a radial burst effect.
+                ref var p = ref _sparkEmitter.GetParticle(pIndex);
+                float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
+                float speed = _sparkEmitter.Settings.InitialVelocityX.GetValue(_random); // Using X as speed range
+                p.Velocity = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle)) * speed;
+            }
         }
 
         /// <summary>
@@ -787,6 +837,9 @@ namespace ProjectVagabond.Dice
                 // Restore the original depth state for the next draw cycle
                 _graphicsDevice.DepthStencilState = originalDepthState;
             }
+
+            // --- Draw 2D Particle Effects on top of the 3D scene ---
+            _particleManager.Draw(_particleSpriteBatch);
 
             // --- Return the result ---
             _graphicsDevice.SetRenderTarget(null);

@@ -56,5 +56,16 @@
             public Microsoft.Xna.Framework.Vector2 NewPosition { get; set; }
             public MapView Map { get; set; }
         }
+
+        /// <summary>
+        /// Published by the physics system when two dice colliders make contact.
+        /// </summary>
+        public struct DiceCollisionOccurred
+        {
+            /// <summary>
+            /// The position of the collision in 3D world space.
+            /// </summary>
+            public System.Numerics.Vector3 WorldPosition;
+        }
     }
 }

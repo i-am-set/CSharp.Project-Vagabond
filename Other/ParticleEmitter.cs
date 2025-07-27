@@ -27,7 +27,11 @@ namespace ProjectVagabond.Particles
             _random = new Random();
         }
 
-        // NEW: Helper to get a reference to a particle for modification
+        /// <summary>
+        /// Gets a reference to a particle in the pool, allowing for direct modification.
+        /// </summary>
+        /// <param name="index">The index of the particle.</param>
+        /// <returns>A reference to the particle struct.</returns>
         public ref Particle GetParticle(int index)
         {
             return ref _particles[index];
@@ -103,7 +107,10 @@ namespace ProjectVagabond.Particles
             }
         }
 
-        // MODIFIED: This now returns the index of the emitted particle
+        /// <summary>
+        /// Finds an available particle, initializes it with the emitter's settings, and returns its index.
+        /// </summary>
+        /// <returns>The index of the newly emitted particle, or -1 if the pool is full.</returns>
         public int EmitParticleAndGetIndex()
         {
             int particleIndex = -1;
@@ -154,6 +161,9 @@ namespace ProjectVagabond.Particles
             return particleIndex;
         }
 
+        /// <summary>
+        /// Emits a single particle using the emitter's settings.
+        /// </summary>
         public void EmitParticle()
         {
             EmitParticleAndGetIndex();
@@ -163,27 +173,56 @@ namespace ProjectVagabond.Particles
         {
             if (Settings.Texture == null) return;
 
-            var origin = new Vector2(Settings.Texture.Width / 2f, Settings.Texture.Height / 2f);
-
             for (int i = 0; i < _particles.Length; i++)
             {
                 if (!_particles[i].IsAlive) continue;
 
                 ref var p = ref _particles[i];
                 var color = p.Color * p.Alpha;
-                var scale = p.Size / Settings.Texture.Width;
 
-                spriteBatch.Draw(
-                    Settings.Texture,
-                    p.Position,
-                    null,
-                    color,
-                    p.Rotation,
-                    origin,
-                    scale,
-                    SpriteEffects.None,
-                    Settings.LayerDepth
-                );
+                // --- MODIFIED: Trail Rendering Logic ---
+                if (p.Velocity.LengthSquared() > 1f) // Only draw trails for moving particles
+                {
+                    float speed = p.Velocity.Length();
+                    // Trail length is based on speed, clamped to prevent extreme lengths
+                    float trailLength = Math.Clamp(speed * 0.08f, p.Size, p.Size * 6);
+                    float thickness = p.Size;
+
+                    // Assuming a 1x1 pixel texture, the scale vector directly controls width and height.
+                    var scale = new Vector2(trailLength, thickness);
+                    var rotation = (float)Math.Atan2(p.Velocity.Y, p.Velocity.X);
+                    // Rotate around the leading edge's vertical center to make it look like it's shooting forward.
+                    var trailOrigin = new Vector2(0, 0.5f);
+
+                    spriteBatch.Draw(
+                        Settings.Texture,
+                        p.Position,
+                        null,
+                        color,
+                        rotation,
+                        trailOrigin,
+                        scale,
+                        SpriteEffects.None,
+                        Settings.LayerDepth
+                    );
+                }
+                else // Fallback for nearly stationary particles to draw them as points
+                {
+                    var origin = new Vector2(Settings.Texture.Width / 2f, Settings.Texture.Height / 2f);
+                    var scale = p.Size / Settings.Texture.Width;
+
+                    spriteBatch.Draw(
+                        Settings.Texture,
+                        p.Position,
+                        null,
+                        color,
+                        p.Rotation,
+                        origin,
+                        scale,
+                        SpriteEffects.None,
+                        Settings.LayerDepth
+                    );
+                }
             }
         }
     }

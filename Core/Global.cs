@@ -316,6 +316,12 @@ namespace ProjectVagabond
         // Roll Resolution & Failsafe Properties 
 
         /// <summary>
+        /// The minimum closing velocity between two colliding dice required to generate a spark particle effect.
+        /// How to use: Higher values mean only very fast, hard impacts will create sparks. Lower values will make sparks more frequent.
+        /// </summary>
+        public float DiceSparkVelocityThreshold { get; set; } = 25f;
+
+        /// <summary>
         /// How long (in seconds) the system waits after all dice have stopped moving before checking their final state. This helps prevent misreads from tiny jitters.
         /// </summary>
         public float DiceSettleDelay { get; set; } = 0.5f;
