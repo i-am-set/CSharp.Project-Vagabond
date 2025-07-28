@@ -23,10 +23,9 @@ using System.Text;              // Added for StringBuilder
 // TODO: Impliment combat logic into combat scene
 // TODO: Convert display to have larger map, smaller terminal, with the terminal input being hidden unless the player presses ~ to "open console"
 // TODO: Finish entity implimentation
-// TODO: Add settings ui in game menu corner
-// TODO: Fix player attack range being so far
+
 // TODO: Make "activeStatusEffectcomponent" a component that can be added to any entity, not just the player
-// TODO: Slow down the movement when going diagonal in combat
+// TODO: Make secondary dice in combat smaller
 
 namespace ProjectVagabond
 {

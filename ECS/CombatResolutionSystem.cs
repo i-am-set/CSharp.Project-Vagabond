@@ -53,7 +53,7 @@ namespace ProjectVagabond
             }
 
             // 1. Process Base Damage
-            ProcessNotation(attackerCombatantComp.AttackPower, "damage", _global.Palette_Red, rollRequest, attack.DamageMultiplier);
+            ProcessNotation(attackerCombatantComp.AttackPower, "damage", _global.Palette_BrightWhite, rollRequest, attack.DamageMultiplier);
 
             // 2. Process Status Effect Amounts
             if (attack.StatusEffectsToApply != null)
@@ -168,13 +168,21 @@ namespace ProjectVagabond
                 {
                     var effectApp = attack.StatusEffectsToApply[i];
                     string groupId = $"{effectApp.EffectName.ToLower()}_amount_{i}";
-                    int effectAmount = GetResolvedValue(groupId, result);
+                    int effectValue = GetResolvedValue(groupId, result);
 
                     var effect = statusEffectSystem.CreateEffectFromName(effectApp.EffectName, attack.Name);
-                    if (effect != null && effectAmount > 0)
+                    if (effect != null && effectValue > 0)
                     {
-                        float durationInRounds = 3f; // This could also be made data-driven
-                        statusEffectSystem.ApplyEffect(targetId, effect, durationInRounds, attackerId, effectAmount);
+                        // For poison, the rolled amount is the duration.
+                        if (effect.Name == "Poison")
+                        {
+                            statusEffectSystem.ApplyEffect(targetId, effect, effectValue, attackerId, effectValue);
+                        }
+                        else
+                        {
+                            // For other effects, it might be a fixed duration with a variable amount.
+                            statusEffectSystem.ApplyEffect(targetId, effect, 3f, attackerId, effectValue);
+                        }
                     }
                 }
             }

@@ -372,7 +372,7 @@ namespace ProjectVagabond
         /// <summary>
         /// The duration in seconds for the multiplier animation phase.
         /// </summary>
-        public float DiceMultiplierAnimationDuration { get; set; } = 0.75f;
+        public float DiceMultiplierAnimationDuration { get; set; } = 0.9f;
 
         /// <summary>
         /// The duration in seconds for the modifier animation phase.

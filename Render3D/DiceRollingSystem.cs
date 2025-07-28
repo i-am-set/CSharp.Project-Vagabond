@@ -35,6 +35,8 @@ namespace ProjectVagabond.Dice
             GatheringResults,
             SpawningNewSum,
             PostSumDelay,
+            ApplyingMultipliers,
+            ApplyingModifiers,
             FinalSumHold,
             SequentialFadeOut,
             Complete
@@ -43,6 +45,8 @@ namespace ProjectVagabond.Dice
         // A small helper class to manage the animated numbers shown during enumeration.
         private class FloatingResultText
         {
+            public enum TextType { IndividualDie, GroupSum, Multiplier, Modifier }
+
             public string Text;
             public Vector2 StartPosition;
             public Vector2 TargetPosition;
@@ -52,7 +56,8 @@ namespace ProjectVagabond.Dice
             public Color TintColor;
             public float Scale;
             public float Rotation; // For pivot shake animation
-            public bool IsGroupSum;
+            public TextType Type;
+            public string GroupId; // Links multipliers/modifiers to their sum
             public float Age;
             public float Lifetime;
             public float AnimationProgress;
@@ -63,6 +68,11 @@ namespace ProjectVagabond.Dice
             public bool IsVisible; // Controls whether the text is rendered
             public bool IsFadingOut;
             public float FadeOutProgress;
+
+            // For collision animations
+            public bool IsAwaitingCollision;
+            public bool IsColliding;
+            public float CollisionProgress;
         }
 
         // Core Components
@@ -123,6 +133,7 @@ namespace ProjectVagabond.Dice
         private int _currentGroupSum;
         private readonly List<FloatingResultText> _floatingResults = new List<FloatingResultText>();
         private readonly List<FloatingResultText> _groupSumResults = new List<FloatingResultText>();
+        private readonly List<FloatingResultText> _activeModifiers = new List<FloatingResultText>();
         private int _fadingSumIndex;
 
 
@@ -291,6 +302,7 @@ namespace ProjectVagabond.Dice
             _currentRollGroups = rollGroups;
             _floatingResults.Clear();
             _groupSumResults.Clear();
+            _activeModifiers.Clear();
             _enumerationQueue.Clear();
             _groupQueue.Clear();
             _currentlyEnumeratingDie = null;
@@ -490,6 +502,14 @@ namespace ProjectVagabond.Dice
                     UpdatePostSumDelayState(deltaTime);
                     break;
 
+                case RollState.ApplyingMultipliers:
+                    UpdateApplyingMultipliersState(deltaTime);
+                    break;
+
+                case RollState.ApplyingModifiers:
+                    UpdateApplyingModifiersState(deltaTime);
+                    break;
+
                 case RollState.FinalSumHold:
                     UpdateFinalSumHoldState(deltaTime);
                     break;
@@ -674,9 +694,10 @@ namespace ProjectVagabond.Dice
             }
             else
             {
-                // All groups have been processed. Hold the final sums on screen.
-                _currentState = RollState.FinalSumHold;
+                // All groups have been processed. Start applying multipliers.
+                _currentState = RollState.ApplyingMultipliers;
                 _animationTimer = 0f;
+                PrepareMultipliers();
             }
         }
 
@@ -785,7 +806,7 @@ namespace ProjectVagabond.Dice
                     Scale = 0.0f,
                     Age = 0f,
                     Lifetime = _global.DiceGatheringDuration,
-                    IsGroupSum = false,
+                    Type = FloatingResultText.TextType.IndividualDie,
                     IsAnimatingScale = true,
                     CurrentColor = Color.White, // Set initial color to solid white
                     IsVisible = true
@@ -813,7 +834,8 @@ namespace ProjectVagabond.Dice
                 var newSum = new FloatingResultText
                 {
                     Text = newSumText,
-                    IsGroupSum = true,
+                    Type = FloatingResultText.TextType.GroupSum,
+                    GroupId = _currentGroup.GroupId,
                     TintColor = _currentGroup.Tint,
                     Scale = 3.5f,
                     IsVisible = false // It starts invisible.
@@ -950,6 +972,147 @@ namespace ProjectVagabond.Dice
             }
         }
 
+        private void PrepareMultipliers()
+        {
+            _activeModifiers.Clear();
+            foreach (var sum in _groupSumResults)
+            {
+                var group = _currentRollGroups.FirstOrDefault(g => g.GroupId == sum.GroupId);
+                if (group != null && group.Multiplier != 1.0f)
+                {
+                    var multiplierText = new FloatingResultText
+                    {
+                        Text = $"x{group.Multiplier:0.0#}",
+                        Type = FloatingResultText.TextType.Multiplier,
+                        GroupId = sum.GroupId,
+                        Scale = 0f, // Start at scale 0 for pop-in
+                        TintColor = _global.Palette_Red,
+                        IsVisible = true,
+                        StartPosition = sum.CurrentPosition + new Vector2(0, -60),
+                        TargetPosition = sum.CurrentPosition,
+                        CurrentPosition = sum.CurrentPosition + new Vector2(0, -60),
+                        IsAnimating = true,
+                        AnimationProgress = 0f
+                    };
+                    _activeModifiers.Add(multiplierText);
+                    sum.IsAwaitingCollision = true;
+                }
+            }
+
+            if (!_activeModifiers.Any())
+            {
+                // No multipliers to apply, skip to modifiers.
+                _currentState = RollState.ApplyingModifiers;
+                _animationTimer = 0f;
+                PrepareModifiers();
+            }
+        }
+
+        private void UpdateApplyingMultipliersState(float deltaTime)
+        {
+            _animationTimer += deltaTime;
+            float progress = Math.Clamp(_animationTimer / _global.DiceMultiplierAnimationDuration, 0f, 1f);
+
+            bool allDone = true;
+            foreach (var multiplier in _activeModifiers.Where(m => m.Type == FloatingResultText.TextType.Multiplier))
+            {
+                if (!multiplier.IsVisible) continue;
+                allDone = false;
+                multiplier.AnimationProgress = progress;
+            }
+
+            if (progress >= 1.0f && !allDone)
+            {
+                // This ensures the collision is triggered only once when the animation completes.
+                foreach (var multiplier in _activeModifiers.Where(m => m.Type == FloatingResultText.TextType.Multiplier && m.IsVisible))
+                {
+                    multiplier.IsVisible = false;
+                    var targetSum = _groupSumResults.FirstOrDefault(s => s.GroupId == multiplier.GroupId);
+                    if (targetSum != null)
+                    {
+                        targetSum.IsColliding = true;
+                        targetSum.CollisionProgress = 0f;
+                    }
+                }
+            }
+
+            // The state transitions once all sums have finished their collision animations.
+            if (allDone && _groupSumResults.All(s => !s.IsColliding))
+            {
+                _currentState = RollState.ApplyingModifiers;
+                _animationTimer = 0f;
+                PrepareModifiers();
+            }
+        }
+
+        private void PrepareModifiers()
+        {
+            _activeModifiers.Clear();
+            foreach (var sum in _groupSumResults)
+            {
+                var group = _currentRollGroups.FirstOrDefault(g => g.GroupId == sum.GroupId);
+                if (group != null && group.Modifier != 0)
+                {
+                    var modifierText = new FloatingResultText
+                    {
+                        Text = group.Modifier > 0 ? $"+{group.Modifier}" : group.Modifier.ToString(),
+                        Type = FloatingResultText.TextType.Modifier,
+                        GroupId = sum.GroupId,
+                        Scale = 0f,
+                        TintColor = group.Modifier > 0 ? _global.Palette_LightGreen : _global.Palette_LightBlue,
+                        IsVisible = true,
+                        StartPosition = sum.CurrentPosition + new Vector2(0, -60),
+                        TargetPosition = sum.CurrentPosition,
+                        CurrentPosition = sum.CurrentPosition + new Vector2(0, -60),
+                        IsAnimating = true,
+                        AnimationProgress = 0f
+                    };
+                    _activeModifiers.Add(modifierText);
+                    sum.IsAwaitingCollision = true;
+                }
+            }
+
+            if (!_activeModifiers.Any())
+            {
+                _currentState = RollState.FinalSumHold;
+                _animationTimer = 0f;
+            }
+        }
+
+        private void UpdateApplyingModifiersState(float deltaTime)
+        {
+            _animationTimer += deltaTime;
+            float progress = Math.Clamp(_animationTimer / _global.DiceModifierAnimationDuration, 0f, 1f);
+
+            bool allDone = true;
+            foreach (var modifier in _activeModifiers.Where(m => m.Type == FloatingResultText.TextType.Modifier))
+            {
+                if (!modifier.IsVisible) continue;
+                allDone = false;
+                modifier.AnimationProgress = progress;
+            }
+
+            if (progress >= 1.0f && !allDone)
+            {
+                foreach (var modifier in _activeModifiers.Where(m => m.Type == FloatingResultText.TextType.Modifier && m.IsVisible))
+                {
+                    modifier.IsVisible = false;
+                    var targetSum = _groupSumResults.FirstOrDefault(s => s.GroupId == modifier.GroupId);
+                    if (targetSum != null)
+                    {
+                        targetSum.IsColliding = true;
+                        targetSum.CollisionProgress = 0f;
+                    }
+                }
+            }
+
+            if (allDone && _groupSumResults.All(s => !s.IsColliding))
+            {
+                _currentState = RollState.FinalSumHold;
+                _animationTimer = 0f;
+            }
+        }
+
         private void UpdateFinalSumHoldState(float deltaTime)
         {
             _animationTimer += deltaTime;
@@ -963,22 +1126,28 @@ namespace ProjectVagabond.Dice
 
         private void UpdateSequentialFadeOutState(float deltaTime)
         {
-            // If all sums have faded out, the roll is complete.
-            if (!_groupSumResults.Any())
+            // If all sums have started fading, we just wait for them to finish.
+            if (_fadingSumIndex >= _groupSumResults.Count)
             {
-                _currentState = RollState.Complete;
-                FinalizeAndReportResults();
+                if (!_groupSumResults.Any(s => s.IsFadingOut))
+                {
+                    _currentState = RollState.Complete;
+                    FinalizeAndReportResults();
+                }
                 return;
             }
 
             _animationTimer += deltaTime;
 
             // Check if it's time to trigger the next fade-out.
-            if (_fadingSumIndex < _groupSumResults.Count && _animationTimer >= _global.DiceFinalSumSequentialFadeDelay)
+            if (_animationTimer >= _global.DiceFinalSumSequentialFadeDelay)
             {
-                _groupSumResults[_fadingSumIndex].IsFadingOut = true;
-                _fadingSumIndex++;
-                _animationTimer = 0f; // Reset delay for the next sum.
+                if (_fadingSumIndex < _groupSumResults.Count)
+                {
+                    _groupSumResults[_fadingSumIndex].IsFadingOut = true;
+                    _fadingSumIndex++;
+                    _animationTimer = 0f; // Reset delay for the next sum.
+                }
             }
         }
 
@@ -986,7 +1155,7 @@ namespace ProjectVagabond.Dice
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            var allResults = _floatingResults.Concat(_groupSumResults).ToList();
+            var allResults = _floatingResults.Concat(_groupSumResults).Concat(_activeModifiers).ToList();
 
             for (int i = allResults.Count - 1; i >= 0; i--)
             {
@@ -995,7 +1164,36 @@ namespace ProjectVagabond.Dice
                 result.ShakeOffset = Vector2.Zero;
                 result.Rotation = 0f;
 
-                if (result.IsGroupSum)
+                if (result.Type == FloatingResultText.TextType.Multiplier || result.Type == FloatingResultText.TextType.Modifier)
+                {
+                    if (result.IsAnimating)
+                    {
+                        const float popInDuration = 0.3f;
+                        const float holdDuration = 0.5f;
+                        float flyInDuration = _global.DiceMultiplierAnimationDuration - popInDuration - holdDuration;
+
+                        float popInEnd = popInDuration / _global.DiceMultiplierAnimationDuration;
+                        float holdEnd = (popInDuration + holdDuration) / _global.DiceMultiplierAnimationDuration;
+
+                        if (result.AnimationProgress < popInEnd) // Phase 1: Pop-in
+                        {
+                            float phaseProgress = result.AnimationProgress / popInEnd;
+                            result.Scale = 2.5f * Easing.EaseOutBack(phaseProgress);
+                        }
+                        else if (result.AnimationProgress < holdEnd) // Phase 2: Hold
+                        {
+                            result.Scale = 2.5f;
+                        }
+                        else // Phase 3: Fly-in
+                        {
+                            float phaseProgress = (result.AnimationProgress - holdEnd) / (1.0f - holdEnd);
+                            float easedProgress = Easing.EaseInQuint(phaseProgress);
+                            result.CurrentPosition = Vector2.Lerp(result.StartPosition, result.TargetPosition, easedProgress);
+                            result.Scale = MathHelper.Lerp(2.5f, 0f, easedProgress);
+                        }
+                    }
+                }
+                else if (result.Type == FloatingResultText.TextType.GroupSum)
                 {
                     if (result.IsFadingOut)
                     {
@@ -1007,9 +1205,58 @@ namespace ProjectVagabond.Dice
 
                         if (result.FadeOutProgress >= 1.0f)
                         {
-                            // Remove from the main list once animation is complete.
-                            // Iterating backwards makes this safe.
+                            result.IsFadingOut = false; // Stop processing
+                            result.IsVisible = false;
                             _groupSumResults.Remove(result);
+                        }
+                    }
+                    else if (result.IsColliding)
+                    {
+                        result.CollisionProgress += deltaTime / 0.4f; // 0.4s collision animation
+                        result.CollisionProgress = Math.Clamp(result.CollisionProgress, 0f, 1f);
+                        float popProgress = result.CollisionProgress;
+                        const float baseScale = 3.5f;
+                        const float minScale = baseScale * 0.5f;
+
+                        if (popProgress < 0.5f)
+                        {
+                            result.Scale = MathHelper.Lerp(baseScale, minScale, Easing.EaseInCubic(popProgress * 2f));
+                        }
+                        else
+                        {
+                            if (result.IsAwaitingCollision)
+                            {
+                                result.IsAwaitingCollision = false;
+                                var group = _currentRollGroups.FirstOrDefault(g => g.GroupId == result.GroupId);
+                                if (group != null)
+                                {
+                                    int currentVal = int.Parse(result.Text);
+                                    if (_activeModifiers.Any(m => m.GroupId == result.GroupId && m.Type == FloatingResultText.TextType.Multiplier))
+                                    {
+                                        float multipliedValue = currentVal * group.Multiplier;
+                                        if (group.Multiplier < 1.0f)
+                                        {
+                                            currentVal = (int)Math.Floor(multipliedValue);
+                                        }
+                                        else
+                                        {
+                                            currentVal = (int)Math.Ceiling(multipliedValue);
+                                        }
+                                    }
+                                    else if (_activeModifiers.Any(m => m.GroupId == result.GroupId && m.Type == FloatingResultText.TextType.Modifier))
+                                    {
+                                        currentVal += group.Modifier;
+                                    }
+                                    result.Text = currentVal.ToString();
+                                }
+                            }
+                            result.Scale = MathHelper.Lerp(minScale, baseScale, Easing.EaseOutBack((popProgress - 0.5f) * 2f));
+                        }
+
+                        if (result.CollisionProgress >= 1.0f)
+                        {
+                            result.IsColliding = false;
+                            result.Scale = baseScale;
                         }
                     }
                     else if (result.IsAnimating)
@@ -1049,8 +1296,6 @@ namespace ProjectVagabond.Dice
                         result.Scale = 3.5f;
                     }
 
-                    // This check is moved outside the `if (result.IsAnimating)` block to fix a race condition.
-                    // It now triggers on the frame the animation is marked as complete.
                     if (result.ShouldPopOnAnimate && result.AnimationProgress >= 1.0f && !result.ImpactEffectTriggered)
                     {
                         _sumImpactEmitter.Position = result.CurrentPosition;
@@ -1118,7 +1363,18 @@ namespace ProjectVagabond.Dice
                 {
                     if (group.ResultProcessing == DiceResultProcessing.Sum)
                     {
-                        result.ResultsByGroup[group.GroupId] = new List<int> { values.Sum() };
+                        int sum = values.Sum();
+                        float multipliedValue = sum * group.Multiplier;
+                        if (group.Multiplier < 1.0f)
+                        {
+                            sum = (int)Math.Floor(multipliedValue);
+                        }
+                        else
+                        {
+                            sum = (int)Math.Ceiling(multipliedValue);
+                        }
+                        sum += group.Modifier;
+                        result.ResultsByGroup[group.GroupId] = new List<int> { sum };
                     }
                     else
                     {
@@ -1301,7 +1557,7 @@ namespace ProjectVagabond.Dice
             _particleManager.Draw(_particleSpriteBatch);
 
             // Draw all animated text elements (individual results and group sums).
-            var allFloatingText = _floatingResults.Concat(_groupSumResults).ToList();
+            var allFloatingText = _floatingResults.Concat(_groupSumResults).Concat(_activeModifiers).ToList();
             if (allFloatingText.Any() && font != null)
             {
                 // Use BackToFront sorting to ensure particles (high depth) draw under text (low depth).
@@ -1315,7 +1571,7 @@ namespace ProjectVagabond.Dice
                     Vector2 textOrigin = new Vector2(textSize.X / (2 * result.Scale), textSize.Y / (2 * result.Scale));
 
                     Color outlineColor = Color.Black;
-                    Color mainTextColor = result.IsGroupSum ? result.TintColor : result.CurrentColor;
+                    Color mainTextColor = result.TintColor != default ? result.TintColor : result.CurrentColor;
                     float rotation = result.Rotation;
                     int outlineOffset = 1;
 

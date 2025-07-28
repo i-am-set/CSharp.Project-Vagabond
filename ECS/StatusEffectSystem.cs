@@ -35,7 +35,8 @@ namespace ProjectVagabond
                     effect.TimeSinceLastTick += secondsPassed;
                     while (effect.TimeSinceLastTick >= Global.COMBAT_TURN_DURATION_SECONDS)
                     {
-                        effect.BaseEffect.OnTick(entityId, _componentStore, effect.Amount);
+                        // Pass the remaining duration as the 'amount' for scaling effects like poison.
+                        effect.BaseEffect.OnTick(entityId, _componentStore, (int)effect.Duration);
                         effect.Duration -= 1; // Duration is in rounds
                         effect.TimeSinceLastTick -= Global.COMBAT_TURN_DURATION_SECONDS;
 
@@ -66,8 +67,8 @@ namespace ProjectVagabond
 
             foreach (var effect in statusEffectComp.ActiveEffects)
             {
-                // Tick the effect at the start of the turn
-                effect.BaseEffect.OnTick(entityId, _componentStore, effect.Amount);
+                // Tick the effect at the start of the turn, passing the remaining duration as the 'amount'.
+                effect.BaseEffect.OnTick(entityId, _componentStore, (int)effect.Duration);
 
                 // Reduce duration by one round
                 effect.Duration -= 1;

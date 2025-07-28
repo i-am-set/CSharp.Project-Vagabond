@@ -11,7 +11,7 @@
         public override void OnApply(int targetId, ComponentStore componentStore, int amount)
         {
             var targetName = EntityNamer.GetName(targetId);
-            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName} is poisoned for {amount} damage per turn!" });
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName} is poisoned for {amount} turns!" });
         }
 
         public override void OnTick(int targetId, ComponentStore componentStore, int amount)
@@ -19,6 +19,7 @@
             var healthComp = componentStore.GetComponent<HealthComponent>(targetId);
             if (healthComp != null)
             {
+                // The 'amount' passed to OnTick is now the remaining duration of the effect.
                 int poisonDamage = amount;
                 healthComp.TakeDamage(poisonDamage);
                 var targetName = EntityNamer.GetName(targetId);
