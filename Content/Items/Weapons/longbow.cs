@@ -1,0 +1,8 @@
+﻿{
+    "Id": "longbow",
+  "Name": "Longbow",
+  "Damage": "2d6",
+  "Range": 50.0,
+  "Type": "Ranged",
+  "StatusEffectsToApply": []
+}

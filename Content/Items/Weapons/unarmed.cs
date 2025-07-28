@@ -1,0 +1,8 @@
+﻿{
+    "Id": "unarmed",
+  "Name": "Unarmed",
+  "Damage": "0",
+  "Range": 1.5,
+  "Type": "Melee",
+  "StatusEffectsToApply": []
+}
