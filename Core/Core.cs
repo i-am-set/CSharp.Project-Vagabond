@@ -319,14 +319,16 @@ namespace ProjectVagabond
                         GroupId = "damage",
                         NumberOfDice = 2,
                         Tint = Color.Red,
-                        ResultProcessing = DiceResultProcessing.Sum
+                        ResultProcessing = DiceResultProcessing.Sum,
+                        Scale = 1.0f // Normal size
                     },
                     new DiceGroup
                     {
                         GroupId = "status_effect",
                         NumberOfDice = 1,
                         Tint = Color.Blue,
-                        ResultProcessing = DiceResultProcessing.IndividualValues
+                        ResultProcessing = DiceResultProcessing.IndividualValues,
+                        Scale = 0.6f // Smaller die
                     }
                 };
 

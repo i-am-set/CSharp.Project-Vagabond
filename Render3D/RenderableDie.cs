@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +13,6 @@ namespace ProjectVagabond.Dice
     public class RenderableDie
     {
         private readonly Model _dieModel;
-        private readonly List<BepuNumeric.Vector3> _colliderVertices;
         private readonly GraphicsDevice _graphicsDevice;
         /// <summary>
         /// Gets or sets the world transformation matrix for this die, which defines
@@ -31,6 +30,11 @@ namespace ProjectVagabond.Dice
         /// to support object pooling.
         /// </summary>
         public string GroupId { get; set; }
+
+        /// <summary>
+        /// The base scale of this die, determined by its group.
+        /// </summary>
+        public float BaseScale { get; set; } = 1.0f;
 
         /// <summary>
         /// If true, the die will be rendered with a special highlight effect.
@@ -64,13 +68,11 @@ namespace ProjectVagabond.Dice
         /// Initializes a new instance of the RenderableDie class.
         /// </summary>
         /// <param name="model">The MonoGame Model to be used for rendering this die.</param>
-        /// <param name="colliderVertices">A list of vertices defining the physics collider for debug visualization.</param>
         /// <param name="tint">The color to tint this die's model.</param>
         /// <param name="groupId">The identifier for the group this die belongs to.</param>
-        public RenderableDie(Model model, List<BepuNumeric.Vector3> colliderVertices, Color tint, string groupId)
+        public RenderableDie(Model model, Color tint, string groupId)
         {
             _dieModel = model;
-            _colliderVertices = colliderVertices;
             World = Matrix.Identity;
             Tint = tint;
             GroupId = groupId;
@@ -89,6 +91,7 @@ namespace ProjectVagabond.Dice
             VisualOffset = Vector3.Zero;
             HighlightColor = Color.White;
             VisualScale = 1.0f;
+            BaseScale = 1.0f;
             IsDespawned = false;
         }
 
@@ -109,7 +112,7 @@ namespace ProjectVagabond.Dice
             var graphicsDevice = _dieModel.Meshes[0].MeshParts[0].VertexBuffer.GraphicsDevice;
 
             // Apply the visual offset and scale for animations. Scale is applied first to scale around the object's origin.
-            Matrix finalWorld = Matrix.CreateScale(VisualScale) * Matrix.CreateTranslation(VisualOffset) * World;
+            Matrix finalWorld = Matrix.CreateScale(VisualScale * BaseScale) * Matrix.CreateTranslation(VisualOffset) * World;
 
             // Iterate through each mesh in the model. A die model will likely have only one.
             foreach (var mesh in _dieModel.Meshes)
@@ -170,9 +173,10 @@ namespace ProjectVagabond.Dice
         /// <param name="projection">The camera's projection matrix.</param>
         /// <param name="debugEffect">The shared BasicEffect for drawing debug lines.</param>
         /// <param name="debugAxisVertices">The shared vertex array for the axis lines.</param>
-        public void DrawDebug(Matrix view, Matrix projection, BasicEffect debugEffect, VertexPositionColor[] debugAxisVertices)
+        /// <param name="colliderVertices">The list of vertices for the specific collider shape being used.</param>
+        public void DrawDebug(Matrix view, Matrix projection, BasicEffect debugEffect, VertexPositionColor[] debugAxisVertices, List<BepuNumeric.Vector3> colliderVertices)
         {
-            if (_colliderVertices == null || !_colliderVertices.Any() || debugEffect == null || debugAxisVertices == null)
+            if (colliderVertices == null || !colliderVertices.Any() || debugEffect == null || debugAxisVertices == null)
             {
                 return;
             }
@@ -181,9 +185,9 @@ namespace ProjectVagabond.Dice
             debugEffect.Projection = projection;
 
             // Apply the visual offset and scale to the base world matrix for debug drawing
-            Matrix finalWorld = Matrix.CreateScale(VisualScale) * Matrix.CreateTranslation(VisualOffset) * World;
+            Matrix finalWorld = Matrix.CreateScale(VisualScale * BaseScale) * Matrix.CreateTranslation(VisualOffset) * World;
 
-            foreach (var vertex in _colliderVertices)
+            foreach (var vertex in colliderVertices)
             {
                 // Convert the BEPU vector to an XNA vector for matrix transformation.
                 var xnaVertex = new Vector3(vertex.X, vertex.Y, vertex.Z);

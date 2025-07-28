@@ -137,15 +137,42 @@ namespace ProjectVagabond
 
             var effectiveStats = GetEffectiveAttackStats(action.ActorId);
 
-            // 1. Process Damage
-            // Split combined damage string into individual dice terms (e.g., "1d4+1d6" becomes "1d4" and "1d6")
+            // 1. Process Damage by combining all sources into a single group.
+            int totalDamageDice = 0;
+            int totalDamageModifier = 0;
             string[] damageTerms = effectiveStats.DamageNotation.Split('+', StringSplitOptions.RemoveEmptyEntries);
-            for (int i = 0; i < damageTerms.Length; i++)
+
+            foreach (var term in damageTerms)
             {
-                ProcessNotation(damageTerms[i], $"damage_{i}", _global.Palette_BrightWhite, rollRequest);
+                var (numDice, numSides, modifier) = DiceParser.Parse(term);
+                // We assume all damage dice can be grouped (e.g., they are all d6s).
+                // The parser handles flat numbers as modifiers with 0 dice.
+                if (numDice > 0)
+                {
+                    totalDamageDice += numDice;
+                }
+                totalDamageModifier += modifier;
             }
 
-            // 2. Process Status Effect Amounts
+            if (totalDamageDice > 0)
+            {
+                rollRequest.Add(new DiceGroup
+                {
+                    GroupId = "damage",
+                    NumberOfDice = totalDamageDice,
+                    Tint = _global.Palette_BrightWhite,
+                    Scale = 1.0f,
+                    ResultProcessing = DiceResultProcessing.Sum,
+                    Modifier = totalDamageModifier
+                });
+            }
+            else if (totalDamageModifier > 0)
+            {
+                _flatModifiers["damage"] = totalDamageModifier;
+            }
+
+
+            // 2. Process Status Effect Amounts as separate, smaller dice groups.
             if (effectiveStats.StatusEffects != null)
             {
                 for (int i = 0; i < effectiveStats.StatusEffects.Count; i++)
@@ -153,7 +180,7 @@ namespace ProjectVagabond
                     var effectApp = effectiveStats.StatusEffects[i];
                     string groupId = $"{effectApp.EffectName.ToLower()}_amount_{i}";
                     Color tint = effectApp.EffectName.ToLower() == "poison" ? _global.Palette_DarkGreen : _global.Palette_LightPurple;
-                    ProcessNotation(effectApp.Amount, groupId, tint, rollRequest);
+                    ProcessNotation(effectApp.Amount, groupId, tint, 0.6f, rollRequest);
                 }
             }
 
@@ -173,7 +200,7 @@ namespace ProjectVagabond
         /// Helper to parse a notation string and either add a dice group to the request
         /// or store a flat modifier value.
         /// </summary>
-        private void ProcessNotation(string notation, string groupId, Color tint, List<DiceGroup> rollRequest)
+        private void ProcessNotation(string notation, string groupId, Color tint, float scale, List<DiceGroup> rollRequest)
         {
             var (numDice, numSides, modifier) = DiceParser.Parse(notation);
 
@@ -184,6 +211,7 @@ namespace ProjectVagabond
                     GroupId = groupId,
                     NumberOfDice = numDice,
                     Tint = tint,
+                    Scale = scale,
                     ResultProcessing = DiceResultProcessing.Sum,
                     Modifier = modifier
                 });
@@ -228,22 +256,8 @@ namespace ProjectVagabond
             }
 
             // --- DAMAGE RESOLUTION ---
-            // Sum up all damage-related results from both dice rolls and flat modifiers.
-            int finalDamage = 0;
-            foreach (var pair in result.ResultsByGroup)
-            {
-                if (pair.Key.StartsWith("damage"))
-                {
-                    finalDamage += pair.Value.Sum();
-                }
-            }
-            foreach (var pair in _flatModifiers)
-            {
-                if (pair.Key.StartsWith("damage"))
-                {
-                    finalDamage += pair.Value;
-                }
-            }
+            // Get the final value from the single, consolidated "damage" group.
+            int finalDamage = GetResolvedValue("damage", result);
 
             var attackerStatusEffects = _componentStore.GetComponent<ActiveStatusEffectComponent>(attackerId);
             bool isWeakened = attackerStatusEffects?.ActiveEffects.Any(e => e.BaseEffect.Name == "Weakness") ?? false;

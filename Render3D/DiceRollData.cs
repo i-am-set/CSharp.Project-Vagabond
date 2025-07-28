@@ -41,6 +41,11 @@ namespace ProjectVagabond.Dice
         public Color Tint { get; set; }
 
         /// <summary>
+        /// A multiplier for the visual and physical scale of the dice in this group. Defaults to 1.0f.
+        /// </summary>
+        public float Scale { get; set; } = 1.0f;
+
+        /// <summary>
         /// Determines how the final results for this group are calculated (e.g., summed or returned individually).
         /// </summary>
         public DiceResultProcessing ResultProcessing { get; set; }

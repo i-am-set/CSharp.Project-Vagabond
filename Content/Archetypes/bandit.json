@@ -62,7 +62,7 @@
     {
       "Type": "ProjectVagabond.EquipmentComponent, ProjectVagabond",
       "Properties": {
-        "EquippedWeaponId": "dagger"
+        "EquippedWeaponId": "poison_dagger"
       }
     },
     {

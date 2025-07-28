@@ -109,9 +109,7 @@ namespace ProjectVagabond.Dice
 
         // Physics and Rendering Link
         private readonly Dictionary<BodyHandle, RenderableDie> _bodyToDieMap = new Dictionary<BodyHandle, RenderableDie>();
-        private TypedIndex _dieShapeIndex;
-        private BodyInertia _dieInertia;
-        private List<System.Numerics.Vector3> _dieColliderVertices;
+        private readonly Dictionary<float, (TypedIndex ShapeIndex, BodyInertia Inertia, List<System.Numerics.Vector3> Vertices)> _shapeCache = new();
         private List<DiceGroup> _currentRollGroups;
 
         // State Tracking
@@ -216,30 +214,13 @@ namespace ProjectVagabond.Dice
             _physicsWorldWidth = _physicsWorldHeight * aspectRatio;
             _physicsWorld = new PhysicsWorld(_physicsWorldWidth, _physicsWorldHeight);
 
-            // Create the die's physical shape and inertia once to be reused.
-            float size = _global.DiceColliderSize;
-            float bevelAmount = size * _global.DiceColliderBevelRatio;
-            var points = new List<System.Numerics.Vector3>();
-            for (int i = 0; i < 8; ++i)
-            {
-                var corner = new System.Numerics.Vector3(
-                    (i & 1) == 0 ? -size : size,
-                    (i & 2) == 0 ? -size : size,
-                    (i & 4) == 0 ? -size : size);
-                points.Add(corner + new System.Numerics.Vector3(Math.Sign(corner.X) * -bevelAmount, 0, 0));
-                points.Add(corner + new System.Numerics.Vector3(0, Math.Sign(corner.Y) * -bevelAmount, 0));
-                points.Add(corner + new System.Numerics.Vector3(0, 0, Math.Sign(corner.Z) * -bevelAmount));
-            }
-            _dieColliderVertices = points;
-
-            var dieShape = new ConvexHull(_dieColliderVertices.ToArray(), _physicsWorld.BufferPool, out _);
-            _dieInertia = dieShape.ComputeInertia(_global.DiceMass);
-            _dieShapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);
+            // Pre-cache the default 1.0 scale shape.
+            CacheShapeForScale(1.0f);
 
             // Pre-populate the object pool to avoid allocations during gameplay.
             for (int i = 0; i < InitialPoolSize; i++)
             {
-                _diePool.Add(new RenderableDie(_dieModel, _dieColliderVertices, Color.White, ""));
+                _diePool.Add(new RenderableDie(_dieModel, Color.White, ""));
             }
 
             // Set up the 3D camera.
@@ -280,6 +261,38 @@ namespace ProjectVagabond.Dice
         }
 
         /// <summary>
+        /// Creates and caches a physics shape and inertia for a given scale if it doesn't already exist.
+        /// </summary>
+        private void CacheShapeForScale(float scale)
+        {
+            if (_shapeCache.ContainsKey(scale))
+            {
+                return;
+            }
+
+            float size = _global.DiceColliderSize * scale;
+            float bevelAmount = size * _global.DiceColliderBevelRatio;
+            var points = new List<System.Numerics.Vector3>();
+            for (int i = 0; i < 8; ++i)
+            {
+                var corner = new System.Numerics.Vector3(
+                    (i & 1) == 0 ? -size : size,
+                    (i & 2) == 0 ? -size : size,
+                    (i & 4) == 0 ? -size : size);
+                points.Add(corner + new System.Numerics.Vector3(Math.Sign(corner.X) * -bevelAmount, 0, 0));
+                points.Add(corner + new System.Numerics.Vector3(0, Math.Sign(corner.Y) * -bevelAmount, 0));
+                points.Add(corner + new System.Numerics.Vector3(0, 0, Math.Sign(corner.Z) * -bevelAmount));
+            }
+
+            var dieShape = new ConvexHull(points.ToArray(), _physicsWorld.BufferPool, out _);
+            float scaledMass = _global.DiceMass * (scale * scale * scale);
+            var dieInertia = dieShape.ComputeInertia(scaledMass);
+            var dieShapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);
+
+            _shapeCache[scale] = (dieShapeIndex, dieInertia, points);
+        }
+
+        /// <summary>
         /// Clears existing dice and rolls a new set based on a list of dice groups.
         /// </summary>
         public void Roll(List<DiceGroup> rollGroups)
@@ -311,6 +324,7 @@ namespace ProjectVagabond.Dice
             foreach (var group in rollGroups)
             {
                 _groupQueue.Enqueue(group);
+                CacheShapeForScale(group.Scale); // Ensure a shape for this scale exists.
             }
 
             // Dynamically adjust camera zoom based on the number of dice.
@@ -340,14 +354,15 @@ namespace ProjectVagabond.Dice
                     else
                     {
                         // The pool is empty; create a new die instance as a fallback.
-                        renderableDie = new RenderableDie(_dieModel, _dieColliderVertices, Color.White, "");
+                        renderableDie = new RenderableDie(_dieModel, Color.White, "");
                     }
 
                     renderableDie.GroupId = group.GroupId;
                     renderableDie.Tint = group.Tint;
+                    renderableDie.BaseScale = group.Scale;
                     _activeDice.Add(renderableDie);
 
-                    var handle = ThrowDieFromOffscreen(renderableDie, spawnSideForGroup);
+                    var handle = ThrowDieFromOffscreen(renderableDie, group, spawnSideForGroup);
                     _bodyToDieMap.Add(handle, renderableDie);
                 }
             }
@@ -358,7 +373,7 @@ namespace ProjectVagabond.Dice
         /// <summary>
         /// Creates a physics body for a die, positions it off-screen, and gives it velocity to enter the view.
         /// </summary>
-        private BodyHandle ThrowDieFromOffscreen(RenderableDie renderableDie, int spawnSide)
+        private BodyHandle ThrowDieFromOffscreen(RenderableDie renderableDie, DiceGroup group, int spawnSide)
         {
             float offscreenMargin = _global.DiceSpawnOffscreenMargin;
             float spawnHeightMin = _global.DiceSpawnHeightMin;
@@ -406,10 +421,12 @@ namespace ProjectVagabond.Dice
             var direction = System.Numerics.Vector3.Normalize(targetPos - spawnPos);
             float throwForce = (float)(_random.NextDouble() * (_global.DiceThrowForceMax - _global.DiceThrowForceMin) + _global.DiceThrowForceMin);
 
+            var shapeData = _shapeCache[group.Scale];
+
             var bodyDescription = BodyDescription.CreateDynamic(
                 spawnPos,
-                _dieInertia,
-                _dieShapeIndex,
+                shapeData.Inertia,
+                shapeData.ShapeIndex,
                 new BodyActivityDescription(0.01f));
 
             bodyDescription.Collidable.Continuity = new ContinuousDetection
@@ -615,7 +632,8 @@ namespace ProjectVagabond.Dice
                     }
                     foreach (var renderableDie in diceToReThrow)
                     {
-                        var newHandle = ThrowDieFromOffscreen(renderableDie, _random.Next(4));
+                        var group = _currentRollGroups.First(g => g.GroupId == renderableDie.GroupId);
+                        var newHandle = ThrowDieFromOffscreen(renderableDie, group, _random.Next(4));
                         _bodyToDieMap.Add(newHandle, renderableDie);
                     }
                     _rollInProgressTimer = 0f;
@@ -1456,7 +1474,8 @@ namespace ProjectVagabond.Dice
             else
             {
                 // Re-throw the die for another attempt.
-                var newHandle = ThrowDieFromOffscreen(die, _random.Next(4));
+                var group = _currentRollGroups.First(g => g.GroupId == die.GroupId);
+                var newHandle = ThrowDieFromOffscreen(die, group, _random.Next(4));
                 _bodyToDieMap.Add(newHandle, die);
             }
         }
@@ -1483,7 +1502,8 @@ namespace ProjectVagabond.Dice
 
             foreach (var die in _activeDice)
             {
-                var newHandle = ThrowDieFromOffscreen(die, _random.Next(4));
+                var group = _currentRollGroups.First(g => g.GroupId == die.GroupId);
+                var newHandle = ThrowDieFromOffscreen(die, group, _random.Next(4));
                 _bodyToDieMap.Add(newHandle, die);
             }
 
@@ -1549,7 +1569,8 @@ namespace ProjectVagabond.Dice
                     {
                         continue;
                     }
-                    die.DrawDebug(_view, _projection, _debugEffect, _debugAxisVertices);
+                    var shapeData = _shapeCache[die.BaseScale];
+                    die.DrawDebug(_view, _projection, _debugEffect, _debugAxisVertices, shapeData.Vertices);
                 }
 
                 _graphicsDevice.DepthStencilState = originalDepthState;
