@@ -60,27 +60,16 @@
       }
     },
     {
+      "Type": "ProjectVagabond.EquipmentComponent, ProjectVagabond",
+      "Properties": {
+        "EquippedWeaponId": "dagger"
+      }
+    },
+    {
       "Type": "ProjectVagabond.TurnStatsComponent, ProjectVagabond"
     },
     {
       "Type": "ProjectVagabond.ActiveStatusEffectComponent, ProjectVagabond"
-    },
-    {
-      "Type": "ProjectVagabond.AvailableAttacksComponent, ProjectVagabond",
-      "Properties": {
-        "Attacks": [
-          {
-            "Name": "Poisoned Shank",
-            "DamageMultiplier": 0.8,
-            "StatusEffectsToApply": [
-              {
-                "EffectName": "Poison",
-                "Amount": "1d6"
-              }
-            ]
-          }
-        ]
-      }
     },
     {
       "Type": "ProjectVagabond.EnergyRegenComponent, ProjectVagabond"

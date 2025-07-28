@@ -113,6 +113,9 @@ namespace ProjectVagabond
             var archetypeManager = new ArchetypeManager();
             ServiceLocator.Register<ArchetypeManager>(archetypeManager);
 
+            var itemManager = new ItemManager();
+            ServiceLocator.Register<ItemManager>(itemManager);
+
             var worldClockManager = new WorldClockManager();
             ServiceLocator.Register<WorldClockManager>(worldClockManager);
 
@@ -258,6 +261,7 @@ namespace ProjectVagabond
             }
 
             _spriteManager.LoadSpriteContent();
+            ServiceLocator.Get<ItemManager>().LoadWeapons("Content/Items/Weapons");
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
             _diceRollingSystem.OnRollCompleted += HandleRollCompleted; // Subscribe to the new event
             ServiceLocator.Get<ArchetypeManager>().LoadArchetypes("Content/Archetypes");

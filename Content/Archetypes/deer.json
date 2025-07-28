@@ -38,9 +38,15 @@
     {
       "Type": "ProjectVagabond.CombatantComponent, ProjectVagabond",
       "Properties": {
-        "AttackPower": 0,
+        "AttackPower": "0",
         "AttackRange": 0,
         "AggroRange": 6.0
+      }
+    },
+    {
+      "Type": "ProjectVagabond.EquipmentComponent, ProjectVagabond",
+      "Properties": {
+        "EquippedWeaponId": "unarmed"
       }
     },
     {

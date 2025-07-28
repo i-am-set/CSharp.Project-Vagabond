@@ -44,9 +44,15 @@
     {
       "Type": "ProjectVagabond.CombatantComponent, ProjectVagabond",
       "Properties": {
-        "AttackPower": "2d6",
+        "AttackPower": "1d6",
         "AttackRange": 1.5,
         "AggroRange": 0.0
+      }
+    },
+    {
+      "Type": "ProjectVagabond.EquipmentComponent, ProjectVagabond",
+      "Properties": {
+        "EquippedWeaponId": "unarmed"
       }
     },
     {
@@ -54,17 +60,6 @@
     },
     {
       "Type": "ProjectVagabond.ActiveStatusEffectComponent, ProjectVagabond"
-    },
-    {
-      "Type": "ProjectVagabond.AvailableAttacksComponent, ProjectVagabond",
-      "Properties": {
-        "Attacks": [
-          {
-            "Name": "Punch",
-            "DamageMultiplier": 1.0
-          }
-        ]
-      }
     },
     {
       "Type": "ProjectVagabond.EnergyRegenComponent, ProjectVagabond"
