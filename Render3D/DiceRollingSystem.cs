@@ -1205,9 +1205,10 @@ namespace ProjectVagabond.Dice
 
                         if (result.FadeOutProgress >= 1.0f)
                         {
-                            result.IsFadingOut = false; // Stop processing
+                            result.IsFadingOut = false; // Stop processing this animation
                             result.IsVisible = false;
-                            _groupSumResults.Remove(result);
+                            // DO NOT remove from the list here. It disrupts the sequential fade logic.
+                            // The list will be cleared at the start of the next roll.
                         }
                     }
                     else if (result.IsColliding)
