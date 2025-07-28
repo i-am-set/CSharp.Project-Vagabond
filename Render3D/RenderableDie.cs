@@ -84,6 +84,7 @@ namespace ProjectVagabond.Dice
         /// </summary>
         public void Reset()
         {
+            World = Matrix.Identity;
             IsHighlighted = false;
             VisualOffset = Vector3.Zero;
             HighlightColor = Color.White;
