@@ -193,7 +193,9 @@ namespace ProjectVagabond
             switch (command)
             {
                 case "Attack":
-                    _gameState.UIState = CombatUIState.SelectAttack;
+                    _selectedAttackName = "Attack"; // Generic name, logic is handled by equipment
+                    _gameState.UIState = CombatUIState.SelectTarget;
+                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "Player prepares to attack. Now select a target." });
                     break;
                 case "Move":
                     _gameState.UIState = CombatUIState.SelectMove;
@@ -207,14 +209,6 @@ namespace ProjectVagabond
                     break;
                 case "Back":
                     ResetToDefaultState();
-                    break;
-                default:
-                    if (_gameState.UIState == CombatUIState.SelectAttack)
-                    {
-                        _selectedAttackName = command;
-                        _gameState.UIState = CombatUIState.SelectTarget;
-                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"Player selects '{command}'. Now select a target." });
-                    }
                     break;
             }
         }

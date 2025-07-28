@@ -50,6 +50,6 @@ namespace ProjectVagabond
         /// <summary>
         /// A list of status effects that this weapon applies on a successful hit.
         /// </summary>
-        public List<AvailableAttacksComponent.StatusEffectApplication> StatusEffectsToApply { get; set; } = new List<AvailableAttacksComponent.StatusEffectApplication>();
+        public List<StatusEffectApplication> StatusEffectsToApply { get; set; } = new List<StatusEffectApplication>();
     }
 }

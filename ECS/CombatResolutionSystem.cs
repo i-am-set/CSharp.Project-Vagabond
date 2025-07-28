@@ -16,10 +16,22 @@ namespace ProjectVagabond
         private EntityManager _entityManager; // Lazy loaded
         private readonly DiceRollingSystem _diceRollingSystem;
         private readonly Global _global;
+        private ItemManager _itemManager;
 
         private AttackAction _pendingAttackAction;
         private Dictionary<string, int> _flatModifiers = new Dictionary<string, int>();
         public event Action OnAttackResolved;
+
+        /// <summary>
+        /// A temporary data structure to hold the combined, final stats for a single attack.
+        /// </summary>
+        private struct EffectiveAttackStats
+        {
+            public string DamageNotation;
+            public float Range;
+            public List<StatusEffectApplication> StatusEffects;
+            public string WeaponName;
+        }
 
         public CombatResolutionSystem()
         {
@@ -33,6 +45,87 @@ namespace ProjectVagabond
         public void Update(GameTime gameTime) { }
 
         /// <summary>
+        /// Calculates the final attack stats for an entity by combining its base stats
+        /// with the properties of its equipped weapon.
+        /// </summary>
+        /// <param name="attackerId">The ID of the attacking entity.</param>
+        /// <returns>A struct containing the effective stats for the attack.</returns>
+        private EffectiveAttackStats GetEffectiveAttackStats(int attackerId)
+        {
+            _itemManager ??= ServiceLocator.Get<ItemManager>();
+
+            var combatantComp = _componentStore.GetComponent<CombatantComponent>(attackerId);
+            var equipmentComp = _componentStore.GetComponent<EquipmentComponent>(attackerId);
+
+            // Default to unarmed stats if components are missing
+            if (combatantComp == null)
+            {
+                return new EffectiveAttackStats
+                {
+                    DamageNotation = "0",
+                    Range = 0,
+                    StatusEffects = new List<StatusEffectApplication>(),
+                    WeaponName = "Fists"
+                };
+            }
+
+            string weaponId = equipmentComp?.EquippedWeaponId ?? "unarmed";
+            var weapon = _itemManager.GetWeapon(weaponId) ?? _itemManager.GetWeapon("unarmed");
+
+            if (weapon == null) // Failsafe if even "unarmed" is missing
+            {
+                return new EffectiveAttackStats
+                {
+                    DamageNotation = combatantComp.AttackPower,
+                    Range = combatantComp.AttackRange,
+                    StatusEffects = new List<StatusEffectApplication>(),
+                    WeaponName = "Fists"
+                };
+            }
+
+            // --- Hybrid Logic Implementation ---
+            string finalDamage;
+            if (weapon.Type == WeaponType.Ranged)
+            {
+                // Ranged weapons completely override base damage.
+                finalDamage = weapon.Damage;
+            }
+            else // Melee
+            {
+                // Melee weapons add their damage to the wielder's base damage.
+                string baseDamage = combatantComp.AttackPower;
+                string weaponDamage = weapon.Damage;
+
+                if (string.IsNullOrWhiteSpace(baseDamage) || baseDamage == "0")
+                {
+                    finalDamage = weaponDamage;
+                }
+                else if (string.IsNullOrWhiteSpace(weaponDamage) || weaponDamage == "0")
+                {
+                    finalDamage = baseDamage;
+                }
+                else
+                {
+                    finalDamage = $"{baseDamage}+{weaponDamage}";
+                }
+            }
+
+            // Range is overridden by the weapon if specified.
+            float finalRange = weapon.Range > 0 ? weapon.Range : combatantComp.AttackRange;
+
+            // Status effects are taken directly from the weapon.
+            var finalStatusEffects = new List<StatusEffectApplication>(weapon.StatusEffectsToApply);
+
+            return new EffectiveAttackStats
+            {
+                DamageNotation = finalDamage,
+                Range = finalRange,
+                StatusEffects = finalStatusEffects,
+                WeaponName = weapon.Name
+            };
+        }
+
+        /// <summary>
         /// Initiates an attack by parsing all dice notations, requesting a dice roll for non-flat values,
         /// and preparing for the result.
         /// </summary>
@@ -42,27 +135,23 @@ namespace ProjectVagabond
             _flatModifiers.Clear();
             var rollRequest = new List<DiceGroup>();
 
-            var attackerCombatantComp = _componentStore.GetComponent<CombatantComponent>(action.ActorId);
-            var attackerAttacksComp = _componentStore.GetComponent<AvailableAttacksComponent>(action.ActorId);
-            var attack = attackerAttacksComp?.Attacks.FirstOrDefault(a => a.Name == action.AttackName);
+            var effectiveStats = GetEffectiveAttackStats(action.ActorId);
 
-            if (attackerCombatantComp == null || attack == null)
+            // 1. Process Damage
+            // Split combined damage string into individual dice terms (e.g., "1d4+1d6" becomes "1d4" and "1d6")
+            string[] damageTerms = effectiveStats.DamageNotation.Split('+', StringSplitOptions.RemoveEmptyEntries);
+            for (int i = 0; i < damageTerms.Length; i++)
             {
-                ResolveZeroDamageAttack();
-                return;
+                ProcessNotation(damageTerms[i], $"damage_{i}", _global.Palette_BrightWhite, rollRequest);
             }
 
-            // 1. Process Base Damage
-            ProcessNotation(attackerCombatantComp.AttackPower, "damage", _global.Palette_BrightWhite, rollRequest, attack.DamageMultiplier);
-
             // 2. Process Status Effect Amounts
-            if (attack.StatusEffectsToApply != null)
+            if (effectiveStats.StatusEffects != null)
             {
-                for (int i = 0; i < attack.StatusEffectsToApply.Count; i++)
+                for (int i = 0; i < effectiveStats.StatusEffects.Count; i++)
                 {
-                    var effectApp = attack.StatusEffectsToApply[i];
+                    var effectApp = effectiveStats.StatusEffects[i];
                     string groupId = $"{effectApp.EffectName.ToLower()}_amount_{i}";
-                    // This could be expanded to have different colors per effect type
                     Color tint = effectApp.EffectName.ToLower() == "poison" ? _global.Palette_DarkGreen : _global.Palette_LightPurple;
                     ProcessNotation(effectApp.Amount, groupId, tint, rollRequest);
                 }
@@ -84,7 +173,7 @@ namespace ProjectVagabond
         /// Helper to parse a notation string and either add a dice group to the request
         /// or store a flat modifier value.
         /// </summary>
-        private void ProcessNotation(string notation, string groupId, Color tint, List<DiceGroup> rollRequest, float multiplier = 1.0f)
+        private void ProcessNotation(string notation, string groupId, Color tint, List<DiceGroup> rollRequest)
         {
             var (numDice, numSides, modifier) = DiceParser.Parse(notation);
 
@@ -96,16 +185,13 @@ namespace ProjectVagabond
                     NumberOfDice = numDice,
                     Tint = tint,
                     ResultProcessing = DiceResultProcessing.Sum,
-                    Multiplier = multiplier,
                     Modifier = modifier
                 });
             }
             else
             {
                 // If there are no dice, the "modifier" is the entire flat value.
-                // We apply the multiplier to it directly here.
-                int finalValue = (int)Math.Ceiling(modifier * multiplier);
-                _flatModifiers[groupId] = finalValue;
+                _flatModifiers[groupId] = modifier;
             }
         }
 
@@ -128,49 +214,56 @@ namespace ProjectVagabond
 
             var attackerId = _pendingAttackAction.ActorId;
             var targetId = _pendingAttackAction.TargetId;
-            var attackName = _pendingAttackAction.AttackName;
 
-            var attackerAttacksComp = _componentStore.GetComponent<AvailableAttacksComponent>(attackerId);
+            var effectiveStats = GetEffectiveAttackStats(attackerId);
             var targetHealthComp = _componentStore.GetComponent<HealthComponent>(targetId);
             var attackerName = EntityNamer.GetName(attackerId);
             var targetName = EntityNamer.GetName(targetId);
 
-            if (attackerAttacksComp == null || targetHealthComp == null)
+            if (targetHealthComp == null)
             {
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]Could not resolve attack for {attackerName}. Missing components." });
-                CleanupAndSignalCompletion();
-                return;
-            }
-
-            var attack = attackerAttacksComp.Attacks.FirstOrDefault(a => a.Name == attackName);
-            if (attack == null)
-            {
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{attackerName} tried to use an unknown attack: {attackName}" });
+                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]Could not resolve attack for {attackerName}. Target missing components." });
                 CleanupAndSignalCompletion();
                 return;
             }
 
             // --- DAMAGE RESOLUTION ---
-            int finalDamage = GetResolvedValue("damage", result);
+            // Sum up all damage-related results from both dice rolls and flat modifiers.
+            int finalDamage = 0;
+            foreach (var pair in result.ResultsByGroup)
+            {
+                if (pair.Key.StartsWith("damage"))
+                {
+                    finalDamage += pair.Value.Sum();
+                }
+            }
+            foreach (var pair in _flatModifiers)
+            {
+                if (pair.Key.StartsWith("damage"))
+                {
+                    finalDamage += pair.Value;
+                }
+            }
+
             var attackerStatusEffects = _componentStore.GetComponent<ActiveStatusEffectComponent>(attackerId);
             bool isWeakened = attackerStatusEffects?.ActiveEffects.Any(e => e.BaseEffect.Name == "Weakness") ?? false;
             if (isWeakened) finalDamage /= 2;
 
             targetHealthComp.TakeDamage(finalDamage);
             EventBus.Publish(new GameEvents.EntityTookDamage { EntityId = targetId, DamageAmount = finalDamage });
-            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{attackerName} attacks {targetName} with {attack.Name} for [red]{finalDamage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining." });
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{attackerName} attacks {targetName} with {effectiveStats.WeaponName} for [red]{finalDamage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining." });
 
             // --- STATUS EFFECT RESOLUTION ---
-            if (attack.StatusEffectsToApply != null && attack.StatusEffectsToApply.Any())
+            if (effectiveStats.StatusEffects != null && effectiveStats.StatusEffects.Any())
             {
                 var statusEffectSystem = ServiceLocator.Get<StatusEffectSystem>();
-                for (int i = 0; i < attack.StatusEffectsToApply.Count; i++)
+                for (int i = 0; i < effectiveStats.StatusEffects.Count; i++)
                 {
-                    var effectApp = attack.StatusEffectsToApply[i];
+                    var effectApp = effectiveStats.StatusEffects[i];
                     string groupId = $"{effectApp.EffectName.ToLower()}_amount_{i}";
                     int effectValue = GetResolvedValue(groupId, result);
 
-                    var effect = statusEffectSystem.CreateEffectFromName(effectApp.EffectName, attack.Name);
+                    var effect = statusEffectSystem.CreateEffectFromName(effectApp.EffectName, effectiveStats.WeaponName);
                     if (effect != null && effectValue > 0)
                     {
                         // For poison, the rolled amount is the duration.

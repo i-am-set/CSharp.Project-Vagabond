@@ -165,10 +165,10 @@ namespace ProjectVagabond
             var stats = _componentStore.GetComponent<StatsComponent>(entityId);
             var turnStats = _componentStore.GetComponent<TurnStatsComponent>(entityId);
             var combatant = _componentStore.GetComponent<CombatantComponent>(entityId);
-            var attacks = _componentStore.GetComponent<AvailableAttacksComponent>(entityId);
+            var equipment = _componentStore.GetComponent<EquipmentComponent>(entityId);
             var aiName = EntityNamer.GetName(entityId);
 
-            if (aiPosComp == null || playerPosComp == null || actionQueue == null || stats == null || turnStats == null || combatant == null || attacks == null)
+            if (aiPosComp == null || playerPosComp == null || actionQueue == null || stats == null || turnStats == null || combatant == null || equipment == null)
             {
                 EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{aiName} cannot act (missing components)." });
                 actionQueue?.ActionQueue.Enqueue(new EndTurnAction(entityId));
@@ -209,10 +209,9 @@ namespace ProjectVagabond
 
             // --- ACTION PHASE ---
             float finalDistanceToPlayer = Vector2.Distance(finalPositionAfterMove, playerPosComp.LocalPosition);
-            if (finalDistanceToPlayer <= combatant.AttackRange && turnStats.HasPrimaryAction && attacks.Attacks.Any())
+            if (finalDistanceToPlayer <= combatant.AttackRange && turnStats.HasPrimaryAction)
             {
-                var attackToUse = attacks.Attacks.First();
-                actionQueue.ActionQueue.Enqueue(new AttackAction(entityId, _gameState.PlayerEntityId, attackToUse.Name));
+                actionQueue.ActionQueue.Enqueue(new AttackAction(entityId, _gameState.PlayerEntityId, "Attack"));
                 turnStats.HasPrimaryAction = false;
             }
 

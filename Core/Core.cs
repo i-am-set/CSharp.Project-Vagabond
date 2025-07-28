@@ -23,9 +23,9 @@ using System.Text;              // Added for StringBuilder
 // TODO: Impliment combat logic into combat scene
 // TODO: Convert display to have larger map, smaller terminal, with the terminal input being hidden unless the player presses ~ to "open console"
 // TODO: Finish entity implimentation
-
 // TODO: Make "activeStatusEffectcomponent" a component that can be added to any entity, not just the player
 // TODO: Make secondary dice in combat smaller
+// TODO: Add a 1d4, 1d6, 1d8, 1d10, 1d12, and 1d20 to the dice rolling system; one at a time since its complex to impliment
 
 namespace ProjectVagabond
 {

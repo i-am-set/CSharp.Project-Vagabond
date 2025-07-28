@@ -166,23 +166,6 @@ namespace ProjectVagabond
                     _endTurnButton.IsEnabled = true;
                     break;
 
-                case CombatUIState.SelectAttack:
-                    var attacksComp = _componentStore.GetComponent<AvailableAttacksComponent>(_gameState.PlayerEntityId);
-                    if (attacksComp != null)
-                    {
-                        foreach (var attack in attacksComp.Attacks)
-                        {
-                            var buttonBounds = new Rectangle(_bounds.X + PADDING, currentY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
-                            var button = new Button(buttonBounds, attack.Name);
-                            button.OnClick += () => OnActionSelected?.Invoke(attack.Name);
-                            _actionButtons.Add(button);
-                            currentY += BUTTON_HEIGHT;
-                        }
-                    }
-                    _backButton.Bounds = bottomButtonBounds;
-                    _backButton.IsEnabled = true;
-                    break;
-
                 case CombatUIState.SelectTarget:
                 case CombatUIState.SelectMove:
                     _backButton.Bounds = bottomButtonBounds;
