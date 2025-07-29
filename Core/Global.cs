@@ -5,11 +5,16 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Physics;
+using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Numerics;
+using System.Text;
 
 namespace ProjectVagabond
 {
@@ -182,6 +187,13 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         // --- Physics & Simulation ---
+
+        /// <summary>
+        /// A multiplier for the physics simulation time.
+        /// How to use: A value of 1.0 is normal speed. A value of 2.0 will make the dice settle twice as fast.
+        /// This does not affect the quality of the simulation (the fixed timestep), only how many steps are run per frame.
+        /// </summary>
+        public float DiceSimulationSpeedMultiplier { get; set; } = 2.0f;
 
         /// <summary>
         /// The gravity vector for the physics simulation. Determines the "down" direction and its strength.

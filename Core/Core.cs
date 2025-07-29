@@ -1,6 +1,4 @@
-using BepuPhysics;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input; // Added for Keyboard state
 using MonoGame.Extended.BitmapFonts;
@@ -10,7 +8,6 @@ using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic; // Added for List
 using System.Diagnostics;       // Added for Debug.WriteLine
-using System.Linq;
 using System.Text;              // Added for StringBuilder
 
 // TODO: generate different noise maps to generate different map things
@@ -359,7 +356,10 @@ namespace ProjectVagabond
             _previousKeyboardState = currentKeyboardState;
 
             // This ensures physics calculations are stable and not dependent on the frame rate.
-            _physicsTimeAccumulator += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            // We multiply by the simulation speed to "fast forward" the physics time.
+            float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _physicsTimeAccumulator += elapsedSeconds * _global.DiceSimulationSpeedMultiplier;
+
             while (_physicsTimeAccumulator >= Global.FIXED_PHYSICS_TIMESTEP)
             {
                 // Run a single, fixed-step physics update for any relevant systems.

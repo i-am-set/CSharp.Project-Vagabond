@@ -187,19 +187,21 @@ namespace ProjectVagabond.Dice
                             Vector2 endPoint = result.TrailPoints[i + 1];
 
                             Vector2 delta = endPoint - startPoint;
+                            if (delta.LengthSquared() < 0.01f) continue; // Skip zero-length segments
+
                             float distance = delta.Length();
                             float angle = (float)Math.Atan2(delta.Y, delta.X);
 
                             // Taper the thickness and fade the color along the trail's length
                             float progress = (float)i / result.TrailPoints.Count;
-                            float thickness = MathHelper.Lerp(1f, 8f, progress);
-                            Color trailColor = Color.Lerp(result.TintColor, Color.Transparent, progress);
+                            float thickness = MathHelper.Lerp(1f, 8f, progress); // Reversed taper as requested
+                            Color trailColor = Color.Lerp(result.TintColor, Color.Transparent, progress * progress); // Fade faster
 
                             spriteBatch.Draw(
                                 pixel,
                                 startPoint,
                                 null,
-                                trailColor,
+                                trailColor * 0.7f, // Make trail slightly transparent
                                 angle,
                                 new Vector2(0, 0.5f), // Origin at the start-center of the line
                                 new Vector2(distance, thickness),
