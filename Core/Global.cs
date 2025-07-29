@@ -272,6 +272,12 @@ namespace ProjectVagabond
         public float DiceD4ColliderBevelRatio { get; set; } = 0.15f;
 
         /// <summary>
+        /// The flatness tolerance for a D4. If the vertical distance between the 3 lowest vertices is less than this, the die is considered flat.
+        /// How to use: A smaller value is stricter. This value should be small but greater than zero to account for floating-point inaccuracies.
+        /// </summary>
+        public float DiceD4FlatnessThreshold { get; set; } = 0.05f;
+
+        /// <summary>
         /// The minimum height from which dice are dropped into the scene.
         /// </summary>
         public float DiceSpawnHeightMin { get; set; } = 15f;

@@ -739,7 +739,13 @@ namespace ProjectVagabond.Dice
                     foreach (var pair in _bodyToDieMap)
                     {
                         var renderableDie = pair.Value;
-                        var (_, alignment) = DiceResultHelper.GetFaceValueAndAlignment(renderableDie.DieType, renderableDie.World);
+                        List<System.Numerics.Vector3> vertices = null;
+                        if (renderableDie.DieType == DieType.D4)
+                        {
+                            var shapeData = _shapeCache[(renderableDie.DieType, renderableDie.BaseScale)];
+                            vertices = shapeData.Vertices;
+                        }
+                        var (_, alignment) = DiceResultHelper.GetFaceValueAndAlignment(renderableDie.DieType, renderableDie.World, vertices);
                         if (alignment < rerollThreshold)
                         {
                             canteredDiceHandles.Add(pair.Key);
@@ -895,9 +901,14 @@ namespace ProjectVagabond.Dice
         {
             if (_enumerationQueue.TryDequeue(out _currentlyEnumeratingDie))
             {
+                List<System.Numerics.Vector3> vertices = null;
+                if (_currentlyEnumeratingDie.DieType == DieType.D4)
+                {
+                    vertices = _shapeCache[(_currentlyEnumeratingDie.DieType, _currentlyEnumeratingDie.BaseScale)].Vertices;
+                }
                 int dieValue = _forcedResults.TryGetValue(_currentlyEnumeratingDie, out int forcedValue)
                     ? forcedValue
-                    : DiceResultHelper.GetFaceValue(_currentlyEnumeratingDie.DieType, _currentlyEnumeratingDie.World);
+                    : DiceResultHelper.GetFaceValue(_currentlyEnumeratingDie.DieType, _currentlyEnumeratingDie.World, vertices);
 
                 _currentGroupSum += dieValue;
 
@@ -1464,7 +1475,12 @@ namespace ProjectVagabond.Dice
                 }
                 else
                 {
-                    rawResults[die.GroupId].Add(DiceResultHelper.GetFaceValue(die.DieType, die.World));
+                    List<System.Numerics.Vector3> vertices = null;
+                    if (die.DieType == DieType.D4)
+                    {
+                        vertices = _shapeCache[(die.DieType, die.BaseScale)].Vertices;
+                    }
+                    rawResults[die.GroupId].Add(DiceResultHelper.GetFaceValue(die.DieType, die.World, vertices));
                 }
             }
 

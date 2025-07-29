@@ -1,5 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using BepuNumeric = System.Numerics;
 
 namespace ProjectVagabond.Dice
 {
@@ -32,12 +35,18 @@ namespace ProjectVagabond.Dice
         /// </summary>
         /// <param name="dieType">The type of die (D6, D4, etc.).</param>
         /// <param name="orientation">The final world transformation matrix of the die.</param>
+        /// <param name="vertices">The local-space vertices of the die's collider, used for robust D4 checking.</param>
         /// <returns>A tuple containing the integer face value and the alignment (dot product, 1.0 is perfectly flat).</returns>
-        public static (int value, float alignment) GetFaceValueAndAlignment(DieType dieType, Matrix orientation)
+        public static (int value, float alignment) GetFaceValueAndAlignment(DieType dieType, Matrix orientation, List<BepuNumeric.Vector3> vertices = null)
         {
             switch (dieType)
             {
                 case DieType.D4:
+                    // If vertices are provided, use the new robust method. Otherwise, fall back to the old one.
+                    if (vertices != null && vertices.Any())
+                    {
+                        return GetD4ValueAndAlignmentByVertices(orientation, vertices);
+                    }
                     return GetD4DownFaceValueAndAlignment(orientation);
                 case DieType.D6:
                 default:
@@ -51,10 +60,11 @@ namespace ProjectVagabond.Dice
         /// </summary>
         /// <param name="dieType">The type of die (D6, D4, etc.).</param>
         /// <param name="orientation">The final world transformation matrix of the die.</param>
+        /// <param name="vertices">The local-space vertices of the die's collider, used for robust D4 checking.</param>
         /// <returns>An integer representing the resulting face.</returns>
-        public static int GetFaceValue(DieType dieType, Matrix orientation)
+        public static int GetFaceValue(DieType dieType, Matrix orientation, List<BepuNumeric.Vector3> vertices = null)
         {
-            return GetFaceValueAndAlignment(dieType, orientation).value;
+            return GetFaceValueAndAlignment(dieType, orientation, vertices).value;
         }
 
         /// <summary>
@@ -117,6 +127,56 @@ namespace ProjectVagabond.Dice
             }
 
             return (bestFace.value, maxDot);
+        }
+
+        /// <summary>
+        /// Calculates the face value and alignment of a D4 by analyzing the world position of its collider vertices.
+        /// This method is more robust for checking if the die is resting flat on a face.
+        /// </summary>
+        private static (int value, float alignment) GetD4ValueAndAlignmentByVertices(Matrix orientation, List<BepuNumeric.Vector3> localVertices)
+        {
+            var global = ServiceLocator.Get<Global>();
+
+            // 1. Transform all local vertices into world space, keeping track of the original local vertex.
+            var worldVertices = localVertices.Select(lv => new
+            {
+                Local = new Vector3(lv.X, lv.Y, lv.Z), // Convert to XNA Vector3
+                World = Vector3.Transform(new Vector3(lv.X, lv.Y, lv.Z), orientation)
+            }).ToList();
+
+            // 2. Sort vertices by their world Y coordinate to find the lowest three and the top one.
+            var sortedVertices = worldVertices.OrderBy(v => v.World.Y).ToList();
+
+            var lowestThree = sortedVertices.Take(3).ToList();
+            var topVertex = sortedVertices.Last();
+
+            // 3. Calculate alignment based on the flatness of the bottom three vertices.
+            float minY = lowestThree.Min(v => v.World.Y);
+            float maxY = lowestThree.Max(v => v.World.Y);
+            float deltaY = maxY - minY;
+
+            // If the vertical distance between the lowest 3 points is below a threshold, it's flat.
+            float alignment = (deltaY < global.DiceD4FlatnessThreshold) ? 1.0f : 0.0f;
+
+            // 4. Determine the face value. The value of the bottom face is determined by the vertex pointing up.
+            // We find which of the canonical D4 face normals is most aligned with our top vertex's local position vector.
+            var topVertexLocalNormalized = Vector3.Normalize(topVertex.Local);
+
+            var bestFace = D4Faces[0];
+            float maxDot = Vector3.Dot(topVertexLocalNormalized, bestFace.axis);
+
+            for (int i = 1; i < D4Faces.Length; i++)
+            {
+                var currentFace = D4Faces[i];
+                float currentDot = Vector3.Dot(topVertexLocalNormalized, currentFace.axis);
+                if (currentDot > maxDot)
+                {
+                    maxDot = currentDot;
+                    bestFace = currentFace;
+                }
+            }
+
+            return (bestFace.value, alignment);
         }
     }
 }
