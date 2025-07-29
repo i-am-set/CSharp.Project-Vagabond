@@ -193,7 +193,7 @@ namespace ProjectVagabond
         /// How to use: A value of 1.0 is normal speed. A value of 2.0 will make the dice settle twice as fast.
         /// This does not affect the quality of the simulation (the fixed timestep), only how many steps are run per frame.
         /// </summary>
-        public float DiceSimulationSpeedMultiplier { get; set; } = 2.0f;
+        public float DiceSimulationSpeedMultiplier { get; set; } = 1.5f;
 
         /// <summary>
         /// The gravity vector for the physics simulation. Determines the "down" direction and its strength.
@@ -312,12 +312,12 @@ namespace ProjectVagabond
         /// <summary>
         /// The minimum force applied to a die when it is thrown into the scene.
         /// </summary>
-        public float DiceThrowForceMin { get; set; } = 10f;
+        public float DiceThrowForceMin { get; set; } = 20f;
 
         /// <summary>
         /// The maximum force applied to a die when it is thrown into the scene.
         /// </summary>
-        public float DiceThrowForceMax { get; set; } = 75f;
+        public float DiceThrowForceMax { get; set; } = 50f;
 
         /// <summary>
         /// The maximum angular velocity (spin) applied to a die on any axis when thrown. The actual spin will be a random value between -Max and +Max.
@@ -356,7 +356,7 @@ namespace ProjectVagabond
         /// <summary>
         /// The duration in seconds of the white flash at the start of a die's enumeration animation.
         /// </summary>
-        public float DiceEnumerationFlashDuration { get; set; } = 0.08f;
+        public float DiceEnumerationFlashDuration { get; set; } = 0.1f;
 
         /// <summary>
         /// The maximum amount a die scales up during its enumeration "pop" animation (e.g., 1.25f is 125% of its normal size).
@@ -371,17 +371,17 @@ namespace ProjectVagabond
         /// <summary>
         /// The delay in seconds after all dice have been counted before the result numbers start moving to the center.
         /// </summary>
-        public float DicePostEnumerationDelay { get; set; } = 0.3f;
+        public float DicePostEnumerationDelay { get; set; } = 0.5f;
 
         /// <summary>
         /// The duration in seconds of the animation where individual result numbers fly to the center of the screen.
         /// </summary>
-        public float DiceGatheringDuration { get; set; } = 0.5f;
+        public float DiceGatheringDuration { get; set; } = 0.75f;
 
         /// <summary>
         /// The duration in seconds for the pause after a sum animation is complete, before the next group is processed.
         /// </summary>
-        public float DicePostSumDelayDuration { get; set; } = 0.75f;
+        public float DicePostSumDelayDuration { get; set; } = 0.25f;
 
         /// <summary>
         /// The duration in seconds for existing sums to slide over to make room for a new sum.
@@ -396,12 +396,12 @@ namespace ProjectVagabond
         /// <summary>
         /// The duration in seconds for the multiplier animation phase.
         /// </summary>
-        public float DiceMultiplierAnimationDuration { get; set; } = 0.9f;
+        public float DiceMultiplierAnimationDuration { get; set; } = 1.5f;
 
         /// <summary>
         /// The duration in seconds for the modifier animation phase.
         /// </summary>
-        public float DiceModifierAnimationDuration { get; set; } = 0.75f;
+        public float DiceModifierAnimationDuration { get; set; } = 1.5f;
 
         /// <summary>
         /// The time in seconds that final sum results will remain on screen before starting to fade out.
@@ -423,18 +423,18 @@ namespace ProjectVagabond
         /// <summary>
         /// How long (in seconds) the system waits after all dice have stopped moving before checking their final state. This helps prevent misreads from tiny jitters.
         /// </summary>
-        public float DiceSettleDelay { get; set; } = 0.5f;
+        public float DiceSettleDelay { get; set; } = 0.45f;
 
         /// <summary>
         /// The maximum time (in seconds) a roll can be in progress. If dice are still moving after this time, the failsafe for stuck dice is triggered.
         /// </summary>
-        public float DiceRollTimeout { get; set; } = 8f;
+        public float DiceRollTimeout { get; set; } = 4f;
 
         /// <summary>
         /// The absolute maximum time (in seconds) a roll can be in progress before all dice are re-rolled.
         /// This is a failsafe for a completely hung simulation where no result is being determined.
         /// </summary>
-        public float DiceCompleteRollTimeout { get; set; } = 10f;
+        public float DiceCompleteRollTimeout { get; set; } = 8f;
 
         /// <summary>
         /// The maximum number of times the system will try to re-roll a single stuck or canted die before giving up and forcing a result.

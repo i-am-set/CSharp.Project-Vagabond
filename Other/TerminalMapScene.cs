@@ -62,12 +62,12 @@ namespace ProjectVagabond.Scenes
             // If the player is the one taking damage, trigger a more intense shake.
             if (e.EntityId == _coreState.PlayerEntityId)
             {
-                _hapticsManager.TriggerShake(16.0f, 0.3f);
+                _hapticsManager.TriggerShake(10.0f, 0.35f);
             }
             else
             {
                 // If an enemy takes damage, trigger the requested shake for attack feedback.
-                _hapticsManager.TriggerShake(10, 0.3f);
+                _hapticsManager.TriggerShake(6, 0.35f);
             }
         }
 

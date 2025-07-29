@@ -22,6 +22,7 @@ namespace ProjectVagabond
         private readonly HapticEffect _wobble = new(HapticType.Wobble);
         private readonly HapticEffect _drift = new(HapticType.Drift);
         private readonly HapticEffect _bounce = new(HapticType.Bounce);
+        private Global _global;
 
         public HapticsManager()
         {
@@ -87,7 +88,21 @@ namespace ProjectVagabond
         public Matrix GetHapticsMatrix()
         {
             Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset;
-            return Matrix.CreateTranslation(totalOffset.X, totalOffset.Y, 0);
+            float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation;
+
+            Matrix offsetMatrix = Matrix.CreateTranslation(totalOffset.X, totalOffset.Y, 0);
+            Matrix rotationMatrix = Matrix.Identity;
+
+            if (Math.Abs(totalRotation) > float.Epsilon)
+            {
+                var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+                rotationMatrix = Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
+                                 Matrix.CreateRotationZ(totalRotation) *
+                                 Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0);
+            }
+
+            // Apply rotation first, then the translation offset.
+            return rotationMatrix * offsetMatrix;
         }
 
         public bool IsAnyHapticActive()
@@ -109,6 +124,7 @@ namespace ProjectVagabond
             private Vector2 _direction;
             private bool _decayed, _active;
             private Vector2 _offset;
+            private float _rotation;
 
             public HapticEffect(HapticType type)
             {
@@ -118,6 +134,7 @@ namespace ProjectVagabond
 
             public bool Active => _active;
             public Vector2 Offset => _offset;
+            public float Rotation => _rotation;
 
             public void Trigger(float intensity, float duration, bool decayed = true, float frequency = 0f, Vector2 direction = default)
             {
@@ -138,6 +155,7 @@ namespace ProjectVagabond
                 _frequency = 0f;
                 _direction = Vector2.Zero;
                 _offset = Vector2.Zero;
+                _rotation = 0f;
                 _active = false;
                 _decayed = true;
             }
@@ -145,8 +163,10 @@ namespace ProjectVagabond
             public void Update(GameTime gameTime, Random random)
             {
                 if (!_active) return;
+
                 float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
                 float progress = _duration > 0 ? 1.0f - (_timer / _duration) : 1.0f;
+
                 switch (_type)
                 {
                     case HapticType.Shake:
@@ -155,13 +175,12 @@ namespace ProjectVagabond
                             float offsetX = (float)(random.NextDouble() * 2 - 1) * _intensity;
                             float offsetY = (float)(random.NextDouble() * 2 - 1) * _intensity;
                             _offset = new Vector2(offsetX, offsetY);
+
+                            float maxRotation = _intensity * 0.005f;
+                            _rotation = (float)(random.NextDouble() * 2 - 1) * maxRotation;
+
                             if (_decayed && _timer > 0)
                                 _intensity *= (1.0f - deltaTime / _timer);
-                        }
-                        else
-                        {
-                            _offset = Vector2.Zero;
-                            _active = false;
                         }
                         break;
                     case HapticType.Hop:
@@ -169,11 +188,6 @@ namespace ProjectVagabond
                         {
                             float easeOut = 1.0f - (float)Math.Pow(1.0f - progress, 3);
                             _offset = new Vector2(0, _intensity * (1.0f - easeOut));
-                        }
-                        else
-                        {
-                            _offset = Vector2.Zero;
-                            _active = false;
                         }
                         break;
                     case HapticType.Pulse:
@@ -186,11 +200,6 @@ namespace ProjectVagabond
                                 (float)Math.Sin(angle) * pulseValue
                             );
                         }
-                        else
-                        {
-                            _offset = Vector2.Zero;
-                            _active = false;
-                        }
                         break;
                     case HapticType.Wobble:
                         if (_timer > 0)
@@ -201,11 +210,6 @@ namespace ProjectVagabond
                                 (float)Math.Sin(time * _frequency * MathHelper.TwoPi) * decayedIntensity,
                                 (float)Math.Cos(time * _frequency * MathHelper.TwoPi * 0.7f) * decayedIntensity * 0.5f
                             );
-                        }
-                        else
-                        {
-                            _offset = Vector2.Zero;
-                            _active = false;
                         }
                         break;
                     case HapticType.Drift:
@@ -219,11 +223,6 @@ namespace ProjectVagabond
                                 : _intensity * (1.0f - smoothProgress);
                             _offset = _direction * driftAmount;
                         }
-                        else
-                        {
-                            _offset = Vector2.Zero;
-                            _active = false;
-                        }
                         break;
                     case HapticType.Bounce:
                         if (_timer > 0)
@@ -231,15 +230,14 @@ namespace ProjectVagabond
                             float bounceValue = (float)(Math.Sin(progress * Math.PI * 6) * Math.Exp(-progress * 4)) * _intensity;
                             _offset = _direction * bounceValue;
                         }
-                        else
-                        {
-                            _offset = Vector2.Zero;
-                            _active = false;
-                        }
                         break;
                 }
+
                 _timer -= deltaTime;
-                if (_timer <= 0) { _active = false; _offset = Vector2.Zero; }
+                if (_timer <= 0)
+                {
+                    Reset();
+                }
             }
         }
     }
