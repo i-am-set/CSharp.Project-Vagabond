@@ -58,6 +58,13 @@ namespace ProjectVagabond.Dice
             public bool IsAwaitingCollision;
             public bool IsColliding;
             public float CollisionProgress;
+
+            // Properties for the box and trail animation
+            public bool IsBox;
+            public float ShrinkProgress;
+            public float BoxRotation;
+            public List<Vector2> TrailPoints = new List<Vector2>();
+            public const int MaxTrailPoints = 15;
         }
 
         // Dependencies
@@ -164,27 +171,87 @@ namespace ProjectVagabond.Dice
             var allFloatingText = _floatingResults.Concat(_groupSumResults).Concat(_activeModifiers).ToList();
             if (allFloatingText.Any() && font != null)
             {
-                spriteBatch.Begin(sortMode: SpriteSortMode.BackToFront, samplerState: SamplerState.PointClamp);
+                spriteBatch.Begin(sortMode: SpriteSortMode.BackToFront, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+                var pixel = ServiceLocator.Get<Texture2D>();
+
                 foreach (var result in allFloatingText)
                 {
                     if (!result.IsVisible) continue;
 
-                    Vector2 drawPosition = result.CurrentPosition + result.ShakeOffset;
-                    Vector2 textSize = font.MeasureString(result.Text) * result.Scale;
-                    Vector2 textOrigin = new Vector2(textSize.X / (2 * result.Scale), textSize.Y / (2 * result.Scale));
-                    Color outlineColor = Color.Black;
-                    Color mainTextColor = result.TintColor != default ? result.TintColor : result.CurrentColor;
-                    float rotation = result.Rotation;
-                    int outlineOffset = 1;
+                    // --- NEW: Trail Drawing Logic ---
+                    if (result.IsBox && result.TrailPoints.Count > 1)
+                    {
+                        for (int i = 0; i < result.TrailPoints.Count - 1; i++)
+                        {
+                            Vector2 startPoint = result.TrailPoints[i];
+                            Vector2 endPoint = result.TrailPoints[i + 1];
 
-                    // Outline
-                    for (int x = -1; x <= 1; x++)
-                        for (int y = -1; y <= 1; y++)
-                            if (x != 0 || y != 0)
-                                spriteBatch.DrawString(font, result.Text, drawPosition + new Vector2(x * outlineOffset, y * outlineOffset), outlineColor, rotation, textOrigin, result.Scale, SpriteEffects.None, 0.1f);
+                            Vector2 delta = endPoint - startPoint;
+                            float distance = delta.Length();
+                            float angle = (float)Math.Atan2(delta.Y, delta.X);
 
-                    // Main text
-                    spriteBatch.DrawString(font, result.Text, drawPosition, mainTextColor, rotation, textOrigin, result.Scale, SpriteEffects.None, 0f);
+                            // Taper the thickness and fade the color along the trail's length
+                            float progress = (float)i / result.TrailPoints.Count;
+                            float thickness = MathHelper.Lerp(1f, 8f, progress);
+                            Color trailColor = Color.Lerp(result.TintColor, Color.Transparent, progress);
+
+                            spriteBatch.Draw(
+                                pixel,
+                                startPoint,
+                                null,
+                                trailColor,
+                                angle,
+                                new Vector2(0, 0.5f), // Origin at the start-center of the line
+                                new Vector2(distance, thickness),
+                                SpriteEffects.None,
+                                0.2f // Draw trail behind the box
+                            );
+                        }
+                    }
+
+                    if (result.Type == FloatingResultText.TextType.IndividualDie && result.IsBox)
+                    {
+                        // Draw the rotating 8x8 box
+                        spriteBatch.Draw(
+                            pixel,
+                            result.CurrentPosition,
+                            null,
+                            result.TintColor,
+                            result.BoxRotation,
+                            new Vector2(0.5f), // Center of the 1x1 pixel
+                            8f, // Scale to 8x8
+                            SpriteEffects.None,
+                            0.1f // Draw box on top of trail
+                        );
+                    }
+                    else
+                    {
+                        // Draw as text (handles shrinking text and other text types)
+                        float currentScale = result.Scale;
+                        if (result.Type == FloatingResultText.TextType.IndividualDie)
+                        {
+                            currentScale = MathHelper.Lerp(4.0f, 0.0f, Easing.EaseInCubic(result.ShrinkProgress));
+                        }
+
+                        if (currentScale <= 0.01f) continue; // Don't draw if invisible
+
+                        Vector2 drawPosition = result.CurrentPosition + result.ShakeOffset;
+                        Vector2 textSize = font.MeasureString(result.Text) * currentScale;
+                        Vector2 textOrigin = new Vector2(textSize.X / (2 * currentScale), textSize.Y / (2 * currentScale));
+                        Color outlineColor = Color.Black;
+                        Color mainTextColor = result.TintColor != default ? result.TintColor : result.CurrentColor;
+                        float rotation = result.Rotation;
+                        int outlineOffset = 1;
+
+                        // Outline
+                        for (int x = -1; x <= 1; x++)
+                            for (int y = -1; y <= 1; y++)
+                                if (x != 0 || y != 0)
+                                    spriteBatch.DrawString(font, result.Text, drawPosition + new Vector2(x * outlineOffset, y * outlineOffset), outlineColor, rotation, textOrigin, currentScale, SpriteEffects.None, 0.1f);
+
+                        // Main text
+                        spriteBatch.DrawString(font, result.Text, drawPosition, mainTextColor, rotation, textOrigin, currentScale, SpriteEffects.None, 0f);
+                    }
                 }
                 spriteBatch.End();
             }
@@ -272,6 +339,7 @@ namespace ProjectVagabond.Dice
                     Type = FloatingResultText.TextType.IndividualDie,
                     IsAnimatingScale = true,
                     CurrentColor = Color.White,
+                    TintColor = item.die.Tint,
                     IsVisible = true
                 });
             }
@@ -333,7 +401,21 @@ namespace ProjectVagabond.Dice
         private void UpdatePostEnumerationDelayState(float deltaTime, RenderTarget2D renderTarget)
         {
             _animationTimer += deltaTime;
-            if (_animationTimer >= _global.DicePostEnumerationDelay)
+            float shrinkDuration = 0.3f; // Give it a bit of time to shrink
+            float progress = Math.Clamp(_animationTimer / shrinkDuration, 0f, 1f);
+
+            bool allShrunk = progress >= 1.0f;
+
+            foreach (var result in _floatingResults)
+            {
+                result.ShrinkProgress = progress;
+                if (allShrunk)
+                {
+                    result.IsBox = true;
+                }
+            }
+
+            if (allShrunk)
             {
                 var font = ServiceLocator.Get<BitmapFont>();
                 int totalModifier = _currentGroupsForDisplay.Sum(g => g.Modifier);
@@ -378,12 +460,31 @@ namespace ProjectVagabond.Dice
             float progress = Math.Clamp(_animationTimer / _global.DiceGatheringDuration, 0f, 1f);
             float easedProgress = Easing.EaseInQuint(progress);
             var targetPosition = _groupSumResults.Last().TargetPosition;
+
             foreach (var result in _floatingResults)
             {
                 result.CurrentPosition = Vector2.Lerp(result.StartPosition, targetPosition, easedProgress);
-                result.Scale = MathHelper.Lerp(4.0f, 0.0f, easedProgress);
+                result.BoxRotation += 10f * deltaTime; // Spin the box
+
+                // Update the trail
+                result.TrailPoints.Add(result.CurrentPosition);
+                if (result.TrailPoints.Count > FloatingResultText.MaxTrailPoints)
+                {
+                    result.TrailPoints.RemoveAt(0);
+                }
             }
-            if (progress >= 1.0f) { _floatingResults.Clear(); _animationTimer = 0f; _currentState = AnimationState.SpawningNewSum; }
+
+            if (progress >= 1.0f)
+            {
+                // Clear trails and results
+                foreach (var result in _floatingResults)
+                {
+                    result.TrailPoints.Clear();
+                }
+                _floatingResults.Clear();
+                _animationTimer = 0f;
+                _currentState = AnimationState.SpawningNewSum;
+            }
         }
 
         private void UpdateSpawningNewSumState(float deltaTime)
