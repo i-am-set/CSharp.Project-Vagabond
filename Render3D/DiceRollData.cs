@@ -4,6 +4,15 @@ using System.Collections.Generic;
 namespace ProjectVagabond.Dice
 {
     /// <summary>
+    /// The geometric type of the die.
+    /// </summary>
+    public enum DieType
+    {
+        D6,
+        D4
+    }
+
+    /// <summary>
     /// Defines how the results of a dice group should be processed.
     /// </summary>
     public enum DiceResultProcessing
@@ -44,6 +53,11 @@ namespace ProjectVagabond.Dice
         /// A multiplier for the visual and physical scale of the dice in this group. Defaults to 1.0f.
         /// </summary>
         public float Scale { get; set; } = 1.0f;
+
+        /// <summary>
+        /// The type of die to roll (e.g., D6, D4). This determines the physics shape and result calculation.
+        /// </summary>
+        public DieType DieType { get; set; } = DieType.D6;
 
         /// <summary>
         /// Determines how the final results for this group are calculated (e.g., summed or returned individually).

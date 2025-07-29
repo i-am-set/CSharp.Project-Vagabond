@@ -320,6 +320,7 @@ namespace ProjectVagabond
                         NumberOfDice = 2,
                         Tint = Color.Red,
                         ResultProcessing = DiceResultProcessing.Sum,
+                        DieType = DieType.D6, // Explicitly a D6
                         Scale = 1.0f // Normal size
                     },
                     new DiceGroup
@@ -328,7 +329,17 @@ namespace ProjectVagabond
                         NumberOfDice = 1,
                         Tint = Color.Blue,
                         ResultProcessing = DiceResultProcessing.IndividualValues,
+                        DieType = DieType.D6, // Explicitly a D6
                         Scale = 0.6f // Smaller die
+                    },
+                    new DiceGroup
+                    {
+                        GroupId = "poison_damage",
+                        NumberOfDice = 1,
+                        Tint = Color.Green,
+                        ResultProcessing = DiceResultProcessing.Sum,
+                        DieType = DieType.D4, // This is our new D4
+                        Scale = 1.0f
                     }
                 };
 

@@ -86,8 +86,12 @@ namespace ProjectVagabond.Dice
         private const int InitialPoolSize = 10;
         private readonly List<RenderableDie> _activeDice = new List<RenderableDie>();
         private readonly List<RenderableDie> _diePool = new List<RenderableDie>();
-        private Model _dieModel;
-        private Texture2D _dieTexture;
+        private Model _d6Model;
+        private Texture2D _d6Texture;
+        private Model _d4Model;
+        private Texture2D _d4Texture;
+        private List<System.Numerics.Vector3> _d4ModelVertices;
+
 
         // Particle Effects
         private ParticleSystemManager _particleManager;
@@ -109,7 +113,7 @@ namespace ProjectVagabond.Dice
 
         // Physics and Rendering Link
         private readonly Dictionary<BodyHandle, RenderableDie> _bodyToDieMap = new Dictionary<BodyHandle, RenderableDie>();
-        private readonly Dictionary<float, (TypedIndex ShapeIndex, BodyInertia Inertia, List<System.Numerics.Vector3> Vertices)> _shapeCache = new();
+        private readonly Dictionary<(DieType, float), (TypedIndex ShapeIndex, BodyInertia Inertia, List<System.Numerics.Vector3> Vertices)> _shapeCache = new();
         private List<DiceGroup> _currentRollGroups;
 
         // State Tracking
@@ -193,18 +197,53 @@ namespace ProjectVagabond.Dice
                 _graphicsDevice.PresentationParameters.BackBufferFormat,
                 DepthFormat.Depth24);
 
-            _dieModel = content.Load<Model>("Models/die");
-            _dieTexture = content.Load<Texture2D>("Textures/die_texture");
+            // Load models and textures for each die type
+            _d6Model = content.Load<Model>("Models/die");
+            _d6Texture = content.Load<Texture2D>("Textures/die_texture");
+            _d4Model = content.Load<Model>("Models/die_d4");
+            _d4Texture = content.Load<Texture2D>("Textures/die_d4_texture");
 
-            foreach (var mesh in _dieModel.Meshes)
+            // Apply D6 texture to D6 model
+            foreach (var mesh in _d6Model.Meshes)
             {
                 foreach (var part in mesh.MeshParts)
                 {
                     if (part.Effect is BasicEffect effect)
                     {
-                        effect.Texture = _dieTexture;
+                        effect.Texture = _d6Texture;
                     }
                 }
+            }
+
+            // Apply D4 texture to D4 model
+            foreach (var mesh in _d4Model.Meshes)
+            {
+                foreach (var part in mesh.MeshParts)
+                {
+                    if (part.Effect is BasicEffect effect)
+                    {
+                        effect.Texture = _d4Texture;
+                    }
+                }
+            }
+
+            _d4ModelVertices = new List<System.Numerics.Vector3>();
+            var uniqueVertices = new HashSet<Microsoft.Xna.Framework.Vector3>();
+            foreach (var mesh in _d4Model.Meshes)
+            {
+                foreach (var part in mesh.MeshParts)
+                {
+                    var vertices = new VertexPositionNormalTexture[part.NumVertices];
+                    part.VertexBuffer.GetData(part.VertexOffset * part.VertexBuffer.VertexDeclaration.VertexStride, vertices, 0, part.NumVertices, part.VertexBuffer.VertexDeclaration.VertexStride);
+                    foreach (var vertex in vertices)
+                    {
+                        uniqueVertices.Add(vertex.Position);
+                    }
+                }
+            }
+            foreach (var vertex in uniqueVertices)
+            {
+                _d4ModelVertices.Add(new System.Numerics.Vector3(vertex.X, vertex.Y, vertex.Z));
             }
 
             float aspectRatio = (float)_renderTarget.Width / _renderTarget.Height;
@@ -214,13 +253,13 @@ namespace ProjectVagabond.Dice
             _physicsWorldWidth = _physicsWorldHeight * aspectRatio;
             _physicsWorld = new PhysicsWorld(_physicsWorldWidth, _physicsWorldHeight);
 
-            // Pre-cache the default 1.0 scale shape.
-            CacheShapeForScale(1.0f);
+            // Pre-cache the default D6 shape.
+            CacheShapeForScale(DieType.D6, 1.0f);
 
             // Pre-populate the object pool to avoid allocations during gameplay.
             for (int i = 0; i < InitialPoolSize; i++)
             {
-                _diePool.Add(new RenderableDie(_dieModel, Color.White, ""));
+                _diePool.Add(new RenderableDie(_graphicsDevice, Color.White, ""));
             }
 
             // Set up the 3D camera.
@@ -261,35 +300,73 @@ namespace ProjectVagabond.Dice
         }
 
         /// <summary>
-        /// Creates and caches a physics shape and inertia for a given scale if it doesn't already exist.
+        /// Creates and caches a physics shape and inertia for a given die type and scale if it doesn't already exist.
         /// </summary>
-        private void CacheShapeForScale(float scale)
+        private void CacheShapeForScale(DieType dieType, float scale)
         {
-            if (_shapeCache.ContainsKey(scale))
+            if (_shapeCache.ContainsKey((dieType, scale)))
             {
                 return;
             }
 
-            float size = _global.DiceColliderSize * scale;
-            float bevelAmount = size * _global.DiceColliderBevelRatio;
             var points = new List<System.Numerics.Vector3>();
-            for (int i = 0; i < 8; ++i)
+            ConvexHull dieShape;
+
+            switch (dieType)
             {
-                var corner = new System.Numerics.Vector3(
-                    (i & 1) == 0 ? -size : size,
-                    (i & 2) == 0 ? -size : size,
-                    (i & 4) == 0 ? -size : size);
-                points.Add(corner + new System.Numerics.Vector3(Math.Sign(corner.X) * -bevelAmount, 0, 0));
-                points.Add(corner + new System.Numerics.Vector3(0, Math.Sign(corner.Y) * -bevelAmount, 0));
-                points.Add(corner + new System.Numerics.Vector3(0, 0, Math.Sign(corner.Z) * -bevelAmount));
+                case DieType.D4:
+                    // A perfect tetrahedron has infinitely sharp points, which are unstable for physics solvers.
+                    // We "shave off" the points by creating new vertices along the edges leading to each point.
+                    // This creates small, flat triangular faces in place of the sharp vertices, which is much more stable.
+                    var beveledPoints = new List<System.Numerics.Vector3>();
+                    var originalVertices = new List<System.Numerics.Vector3>();
+                    foreach (var vertex in _d4ModelVertices)
+                    {
+                        originalVertices.Add(vertex * scale);
+                    }
+
+                    float bevelRatio = _global.DiceD4ColliderBevelRatio;
+
+                    // For each vertex, find the edges connected to it and create new points along them.
+                    for (int i = 0; i < originalVertices.Count; i++)
+                    {
+                        var currentVertex = originalVertices[i];
+                        for (int j = 0; j < originalVertices.Count; j++)
+                        {
+                            if (i == j) continue;
+                            var otherVertex = originalVertices[j];
+                            // Create a new point beveled away from the current vertex towards the other.
+                            var newPoint = currentVertex + (otherVertex - currentVertex) * bevelRatio;
+                            beveledPoints.Add(newPoint);
+                        }
+                    }
+                    points.AddRange(beveledPoints.Distinct()); // Use distinct to avoid duplicate points
+                    break;
+
+                case DieType.D6:
+                default:
+                    // A beveled cube's vertices.
+                    float size = _global.DiceColliderSize * scale;
+                    float bevelAmount = size * _global.DiceColliderBevelRatio;
+                    for (int i = 0; i < 8; ++i)
+                    {
+                        var corner = new System.Numerics.Vector3(
+                            (i & 1) == 0 ? -size : size,
+                            (i & 2) == 0 ? -size : size,
+                            (i & 4) == 0 ? -size : size);
+                        points.Add(corner + new System.Numerics.Vector3(Math.Sign(corner.X) * -bevelAmount, 0, 0));
+                        points.Add(corner + new System.Numerics.Vector3(0, Math.Sign(corner.Y) * -bevelAmount, 0));
+                        points.Add(corner + new System.Numerics.Vector3(0, 0, Math.Sign(corner.Z) * -bevelAmount));
+                    }
+                    break;
             }
 
-            var dieShape = new ConvexHull(points.ToArray(), _physicsWorld.BufferPool, out _);
+            dieShape = new ConvexHull(points.ToArray(), _physicsWorld.BufferPool, out _);
             float scaledMass = _global.DiceMass * (scale * scale * scale);
             var dieInertia = dieShape.ComputeInertia(scaledMass);
             var dieShapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);
 
-            _shapeCache[scale] = (dieShapeIndex, dieInertia, points);
+            _shapeCache[(dieType, scale)] = (dieShapeIndex, dieInertia, points);
         }
 
         /// <summary>
@@ -324,7 +401,7 @@ namespace ProjectVagabond.Dice
             foreach (var group in rollGroups)
             {
                 _groupQueue.Enqueue(group);
-                CacheShapeForScale(group.Scale); // Ensure a shape for this scale exists.
+                CacheShapeForScale(group.DieType, group.Scale); // Ensure a shape for this type and scale exists.
             }
 
             // Dynamically adjust camera zoom based on the number of dice.
@@ -354,12 +431,14 @@ namespace ProjectVagabond.Dice
                     else
                     {
                         // The pool is empty; create a new die instance as a fallback.
-                        renderableDie = new RenderableDie(_dieModel, Color.White, "");
+                        renderableDie = new RenderableDie(_graphicsDevice, Color.White, "");
                     }
 
                     renderableDie.GroupId = group.GroupId;
                     renderableDie.Tint = group.Tint;
                     renderableDie.BaseScale = group.Scale;
+                    renderableDie.DieType = group.DieType; // Assign the die type
+                    renderableDie.CurrentModel = group.DieType == DieType.D4 ? _d4Model : _d6Model; // Assign the correct model
                     _activeDice.Add(renderableDie);
 
                     var handle = ThrowDieFromOffscreen(renderableDie, group, spawnSideForGroup);
@@ -421,20 +500,28 @@ namespace ProjectVagabond.Dice
             var direction = System.Numerics.Vector3.Normalize(targetPos - spawnPos);
             float throwForce = (float)(_random.NextDouble() * (_global.DiceThrowForceMax - _global.DiceThrowForceMin) + _global.DiceThrowForceMin);
 
-            var shapeData = _shapeCache[group.Scale];
+            var shapeData = _shapeCache[(group.DieType, group.Scale)];
+
+            var collidable = new CollidableDescription(shapeData.ShapeIndex, 0.01f);
 
             var bodyDescription = BodyDescription.CreateDynamic(
                 spawnPos,
                 shapeData.Inertia,
-                shapeData.ShapeIndex,
+                collidable,
                 new BodyActivityDescription(0.01f));
 
+            // --- MODIFIED: Increased the precision of Continuous Collision Detection (CCD). ---
+            // This is the primary fix for the D4 "exploding" on its first collision.
+            // By making the timestep and convergence threshold smaller, we force the physics engine
+            // to be much more careful when calculating the exact time of impact for fast-moving objects.
+            // This prevents tunneling and the resulting unstable, explosive reactions.
             bodyDescription.Collidable.Continuity = new ContinuousDetection
             {
                 Mode = ContinuousDetectionMode.Continuous,
-                MinimumSweepTimestep = 1e-4f,
-                SweepConvergenceThreshold = 1e-4f
+                MinimumSweepTimestep = 1e-5f,
+                SweepConvergenceThreshold = 1e-5f
             };
+            // --- END MODIFIED ---
 
             bodyDescription.Pose.Orientation = System.Numerics.Quaternion.Normalize(new System.Numerics.Quaternion(
                 (float)_random.NextDouble() * 2 - 1,
@@ -476,7 +563,11 @@ namespace ProjectVagabond.Dice
                 var body = _physicsWorld.Simulation.Bodies.GetBodyReference(pair.Key);
                 var pose = body.Pose;
                 var position = new Microsoft.Xna.Framework.Vector3(pose.Position.X, pose.Position.Y, pose.Position.Z);
+                // --- MODIFIED: Corrected the quaternion component mapping. ---
+                // The previous version had incorrect swizzling (Y, Z, W, X), which would cause visual
+                // and logical errors. This restores the correct 1-to-1 mapping.
                 var orientation = new XnaQuaternion(pose.Orientation.X, pose.Orientation.Y, pose.Orientation.Z, pose.Orientation.W);
+                // --- END MODIFIED ---
                 pair.Value.World = Matrix.CreateFromQuaternion(orientation) * Matrix.CreateTranslation(position);
             }
 
@@ -647,7 +738,8 @@ namespace ProjectVagabond.Dice
 
                     foreach (var pair in _bodyToDieMap)
                     {
-                        var (_, alignment) = DiceResultHelper.GetUpFaceValueAndAlignment(pair.Value.World);
+                        var renderableDie = pair.Value;
+                        var (_, alignment) = DiceResultHelper.GetFaceValueAndAlignment(renderableDie.DieType, renderableDie.World);
                         if (alignment < rerollThreshold)
                         {
                             canteredDiceHandles.Add(pair.Key);
@@ -805,7 +897,7 @@ namespace ProjectVagabond.Dice
             {
                 int dieValue = _forcedResults.TryGetValue(_currentlyEnumeratingDie, out int forcedValue)
                     ? forcedValue
-                    : DiceResultHelper.GetUpFaceValue(_currentlyEnumeratingDie.World);
+                    : DiceResultHelper.GetFaceValue(_currentlyEnumeratingDie.DieType, _currentlyEnumeratingDie.World);
 
                 _currentGroupSum += dieValue;
 
@@ -1372,7 +1464,7 @@ namespace ProjectVagabond.Dice
                 }
                 else
                 {
-                    rawResults[die.GroupId].Add(DiceResultHelper.GetUpFaceValue(die.World));
+                    rawResults[die.GroupId].Add(DiceResultHelper.GetFaceValue(die.DieType, die.World));
                 }
             }
 
@@ -1569,7 +1661,7 @@ namespace ProjectVagabond.Dice
                     {
                         continue;
                     }
-                    var shapeData = _shapeCache[die.BaseScale];
+                    var shapeData = _shapeCache[(die.DieType, die.BaseScale)];
                     die.DrawDebug(_view, _projection, _debugEffect, _debugAxisVertices, shapeData.Vertices);
                 }
 

@@ -216,21 +216,20 @@ namespace ProjectVagabond
         /// How to use: This is the maximum speed at which a contact point can separate after a collision. A value of 0 means no bounce (inelastic). Higher values allow for more significant bounces.
         /// Example: 2.0f is a small bounce, 10.0f is a very noticeable bounce.
         /// </summary>
-        public float DiceBounciness { get; set; } = 10f;
+        public float DiceBounciness { get; set; } = 2f;
 
         /// <summary>
         /// Defines how "hard" or "soft" a collision is, like a spring.
         /// How to use: Higher values make the connection stiffer, like a hard rubber ball hitting concrete. Lower values make it feel softer, like a bouncy ball.
         /// Example: 5 is soft, 30 is very hard.
         /// </summary>
-        public float DiceSpringStiffness { get; set; } = 20f;
+        public float DiceSpringStiffness { get; set; } = 30f;
 
         /// <summary>
         /// Controls how quickly the bounce effect from a collision dissipates.
-        /// How to use: This is a ratio. A value of 1.0 is "critically damped," meaning it stops bouncing immediately. A low value (close to 0) creates a very bouncy, oscillating effect. A value greater than 1 will feel sluggish and overdamped.
-        /// Example: 0.1f is very bouncy, 1.0f has no oscillation.
+        /// How to use: This is a ratio. A value of 1.0 is "critically damped," meaning it stops bouncing immediately without oscillation. A low value (close to 0) creates a very bouncy, oscillating effect that can lead to instability. A value greater than 1 will feel sluggish and overdamped.
         /// </summary>
-        public float DiceSpringDamping { get; set; } = 0.1f;
+        public float DiceSpringDamping { get; set; } = 1f;
 
         /// <summary>
         /// Controls how high the invisible containing walls are.
@@ -259,11 +258,18 @@ namespace ProjectVagabond
         public float DiceColliderSize { get; set; } = 1f;
 
         /// <summary>
-        /// The amount of beveling on the collider's corners, as a percentage of the die's size.
+        /// The amount of beveling on the D6 collider's corners, as a percentage of the die's size.
         /// How to use: This creates a more realistic "rounded cube" shape for physics, which helps the die tumble more naturally. A value of 0 would be a perfect, sharp cube.
         /// Example: 0.2 means the corners are beveled by 20% of the die's size.
         /// </summary>
         public float DiceColliderBevelRatio { get; set; } = 0.2f;
+
+        /// <summary>
+        /// The amount of beveling on the D4 collider's vertices, as a percentage of the edge length.
+        /// How to use: This "shaves off" the sharp points of the tetrahedron to create a more stable physics shape. A value of 0 would be a perfect, sharp tetrahedron.
+        /// Example: 0.15 means the new beveled faces start 15% of the way down each edge from the original vertex.
+        /// </summary>
+        public float DiceD4ColliderBevelRatio { get; set; } = 0.15f;
 
         /// <summary>
         /// The minimum height from which dice are dropped into the scene.

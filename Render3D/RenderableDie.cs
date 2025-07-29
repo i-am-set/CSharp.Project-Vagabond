@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,8 +12,14 @@ namespace ProjectVagabond.Dice
     /// </summary>
     public class RenderableDie
     {
-        private readonly Model _dieModel;
         private readonly GraphicsDevice _graphicsDevice;
+
+        /// <summary>
+        /// The 3D model to be rendered for this die. This is set when the die is
+        /// retrieved from the object pool.
+        /// </summary>
+        public Model CurrentModel { get; set; }
+
         /// <summary>
         /// Gets or sets the world transformation matrix for this die, which defines
         /// its position, rotation, and scale in 3D space.
@@ -30,6 +36,12 @@ namespace ProjectVagabond.Dice
         /// to support object pooling.
         /// </summary>
         public string GroupId { get; set; }
+
+        /// <summary>
+        /// The type of die (D6, D4, etc.). This is used to determine which physics
+        /// shape and result calculation logic to use.
+        /// </summary>
+        public DieType DieType { get; set; }
 
         /// <summary>
         /// The base scale of this die, determined by its group.
@@ -67,18 +79,16 @@ namespace ProjectVagabond.Dice
         /// <summary>
         /// Initializes a new instance of the RenderableDie class.
         /// </summary>
-        /// <param name="model">The MonoGame Model to be used for rendering this die.</param>
+        /// <param name="graphicsDevice">The GraphicsDevice to be used for rendering.</param>
         /// <param name="tint">The color to tint this die's model.</param>
         /// <param name="groupId">The identifier for the group this die belongs to.</param>
-        public RenderableDie(Model model, Color tint, string groupId)
+        public RenderableDie(GraphicsDevice graphicsDevice, Color tint, string groupId)
         {
-            _dieModel = model;
+            _graphicsDevice = graphicsDevice;
             World = Matrix.Identity;
             Tint = tint;
             GroupId = groupId;
-
-            // We can get the graphics device from the model itself.
-            _graphicsDevice = _dieModel.Meshes[0].MeshParts[0].VertexBuffer.GraphicsDevice;
+            DieType = DieType.D6; // Default value
         }
 
         /// <summary>
@@ -86,6 +96,7 @@ namespace ProjectVagabond.Dice
         /// </summary>
         public void Reset()
         {
+            CurrentModel = null;
             World = Matrix.Identity;
             IsHighlighted = false;
             VisualOffset = Vector3.Zero;
@@ -93,6 +104,7 @@ namespace ProjectVagabond.Dice
             VisualScale = 1.0f;
             BaseScale = 1.0f;
             IsDespawned = false;
+            DieType = DieType.D6; // Reset to default
         }
 
         /// <summary>
@@ -102,20 +114,16 @@ namespace ProjectVagabond.Dice
         /// <param name="projection">The camera's projection matrix.</param>
         public void Draw(Matrix view, Matrix projection)
         {
-            if (_dieModel == null)
+            if (CurrentModel == null)
             {
                 return;
             }
-
-            // The GraphicsDevice is needed to set the vertex and index buffers.
-            // We can get it from the model's vertex buffer.
-            var graphicsDevice = _dieModel.Meshes[0].MeshParts[0].VertexBuffer.GraphicsDevice;
 
             // Apply the visual offset and scale for animations. Scale is applied first to scale around the object's origin.
             Matrix finalWorld = Matrix.CreateScale(VisualScale * BaseScale) * Matrix.CreateTranslation(VisualOffset) * World;
 
             // Iterate through each mesh in the model. A die model will likely have only one.
-            foreach (var mesh in _dieModel.Meshes)
+            foreach (var mesh in CurrentModel.Meshes)
             {
                 // Iterate through each part of the mesh. A simple cube might have one part.
                 foreach (var part in mesh.MeshParts)
@@ -153,11 +161,11 @@ namespace ProjectVagabond.Dice
                     }
 
                     // Set the vertex and index buffers for the graphics device.
-                    graphicsDevice.SetVertexBuffer(part.VertexBuffer);
-                    graphicsDevice.Indices = part.IndexBuffer;
+                    _graphicsDevice.SetVertexBuffer(part.VertexBuffer);
+                    _graphicsDevice.Indices = part.IndexBuffer;
 
                     // Draw the mesh part using its vertex and index data.
-                    graphicsDevice.DrawIndexedPrimitives(
+                    _graphicsDevice.DrawIndexedPrimitives(
                         PrimitiveType.TriangleList,
                         part.VertexOffset,
                         part.StartIndex,
