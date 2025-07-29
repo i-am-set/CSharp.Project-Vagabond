@@ -126,5 +126,48 @@ namespace ProjectVagabond.Particles
 
             return settings;
         }
+
+        /// <summary>
+        /// Creates the settings for a generic, fiery UI effect.
+        /// The color and emitter size should be set on the emitter instance.
+        /// </summary>
+        public static ParticleEmitterSettings CreateUIFire()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            // Emitter
+            settings.Shape = EmitterShape.Circle;
+            settings.EmitFrom = EmissionSource.Volume;
+            settings.EmitterSize = new Vector2(8f, 8f); // Default size, should be overridden
+            settings.EmissionRate = 150f; // Continuous emission while active
+            settings.MaxParticles = 100;
+
+            // Initial Particle
+            settings.Lifetime = new FloatRange(0.3f, 0.6f);
+            settings.InitialVelocityX = new FloatRange(-15f, 15f); // Horizontal spread
+            settings.InitialVelocityY = new FloatRange(-50f, -30f); // Upward velocity
+            settings.InitialSize = new FloatRange(1f, 2.5f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+            settings.InitialRotation = new FloatRange(0f);
+            settings.InitialRotationSpeed = new FloatRange(0f);
+
+            // Over Lifetime
+            settings.Gravity = new Vector2(0, 10f); // Slight downward pull
+            settings.Drag = 1.0f;
+            // Colors will be set dynamically on the emitter instance.
+            settings.StartColor = global.Palette_Orange;
+            settings.EndColor = global.Palette_Orange; // Fade to same color (alpha handles transparency)
+            settings.StartAlpha = 0.8f;
+            settings.EndAlpha = 0.0f;
+
+            // Rendering
+            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 white pixel
+            settings.BlendMode = BlendState.Additive; // For a fiery glow
+            settings.LayerDepth = 0.3f; // Draw behind the box itself
+
+            return settings;
+        }
     }
 }

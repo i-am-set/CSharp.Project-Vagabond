@@ -15,7 +15,7 @@ namespace ProjectVagabond
         private readonly ComponentStore _componentStore;
         private readonly Global _global;
         private readonly Rectangle _bounds;
-        private int? _hoveredEnemyId;
+        public int? HoveredEnemyId { get; private set; }
         private int? _previousHoveredEnemyId;
         private float _hoverAnimationStartTime;
 
@@ -40,18 +40,18 @@ namespace ProjectVagabond
         /// <param name="currentMouseState">The current state of the mouse.</param>
         public void Update(GameTime gameTime, MouseState currentMouseState)
         {
-            _previousHoveredEnemyId = _hoveredEnemyId;
+            _previousHoveredEnemyId = HoveredEnemyId;
 
             if (!_gameState.IsInCombat)
             {
-                _hoveredEnemyId = null;
+                HoveredEnemyId = null;
                 return;
             }
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position).ToPoint();
-            _hoveredEnemyId = GetEnemyIdAt(virtualMousePos);
+            HoveredEnemyId = GetEnemyIdAt(virtualMousePos);
 
             // If the hovered enemy has changed, reset the animation start time.
-            if (_hoveredEnemyId.HasValue && _hoveredEnemyId != _previousHoveredEnemyId)
+            if (HoveredEnemyId.HasValue && HoveredEnemyId != _previousHoveredEnemyId)
             {
                 _hoverAnimationStartTime = (float)gameTime.TotalGameTime.TotalSeconds;
             }
@@ -144,7 +144,7 @@ namespace ProjectVagabond
                 {
                     Rectangle baseSelectorRect = hitboxRect;
 
-                    if (_hoveredEnemyId.HasValue && _hoveredEnemyId.Value == entityId)
+                    if (HoveredEnemyId.HasValue && HoveredEnemyId.Value == entityId)
                     {
                         // HOVERED: Draw the new animated outline effect
                         DrawAnimatedOutline(spriteBatch, baseSelectorRect, _global.CombatSelectableColor, gameTime, _hoverAnimationStartTime);

@@ -299,6 +299,26 @@ namespace ProjectVagabond.Scenes
                     if (_coreState.UIState == CombatUIState.SelectTarget)
                     {
                         _enemyDisplayPanel.Draw(spriteBatch, gameTime, currentMouseState);
+
+                        // If an enemy is hovered in the panel, highlight them on the map.
+                        if (_enemyDisplayPanel.HoveredEnemyId.HasValue)
+                        {
+                            int hoveredId = _enemyDisplayPanel.HoveredEnemyId.Value;
+                            var componentStore = ServiceLocator.Get<ComponentStore>();
+                            var localPosComp = componentStore.GetComponent<LocalPositionComponent>(hoveredId);
+                            var renderComp = componentStore.GetComponent<RenderableComponent>(hoveredId);
+
+                            if (localPosComp != null && renderComp != null)
+                            {
+                                Vector2? screenPos = _mapRenderer.MapCoordsToScreen(localPosComp.LocalPosition);
+                                if (screenPos.HasValue)
+                                {
+                                    int cellSize = Global.LOCAL_GRID_CELL_SIZE;
+                                    var destRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
+                                    spriteBatch.Draw(renderComp.Texture ?? pixel, destRect, renderComp.Color);
+                                }
+                            }
+                        }
                     }
                     else // Must be SelectMove
                     {

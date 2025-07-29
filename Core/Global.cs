@@ -396,17 +396,17 @@ namespace ProjectVagabond
         /// <summary>
         /// The duration in seconds for the "inflate" part of the new sum's pop animation.
         /// </summary>
-        public float DiceNewSumInflateDuration { get; set; } = 0.2f;
+        public float DiceNewSumInflateDuration { get; set; } = 0.05f;
 
         /// <summary>
         /// The duration in seconds for the "hold" part of the new sum's pop animation, where it shakes.
         /// </summary>
-        public float DiceNewSumHoldDuration { get; set; } = 0.25f;
+        public float DiceNewSumHoldDuration { get; set; } = 0f;
 
         /// <summary>
         /// The duration in seconds for the "deflate" part of the new sum's pop animation.
         /// </summary>
-        public float DiceNewSumDeflateDuration { get; set; } = 0.3f;
+        public float DiceNewSumDeflateDuration { get; set; } = 0f;
 
         /// <summary>
         /// The duration in seconds for the multiplier animation phase.
@@ -443,13 +443,13 @@ namespace ProjectVagabond
         /// <summary>
         /// The maximum time (in seconds) a roll can be in progress. If dice are still moving after this time, the failsafe for stuck dice is triggered.
         /// </summary>
-        public float DiceRollTimeout { get; set; } = 4f;
+        public float DiceRollTimeout { get; set; } = 6f;
 
         /// <summary>
         /// The absolute maximum time (in seconds) a roll can be in progress before all dice are re-rolled.
         /// This is a failsafe for a completely hung simulation where no result is being determined.
         /// </summary>
-        public float DiceCompleteRollTimeout { get; set; } = 8f;
+        public float DiceCompleteRollTimeout { get; set; } = 10f;
 
         /// <summary>
         /// The maximum number of times the system will try to re-roll a single stuck or canted die before giving up and forcing a result.

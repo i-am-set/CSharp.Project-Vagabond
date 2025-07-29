@@ -232,5 +232,21 @@ namespace ProjectVagabond.Particles
                 }
             }
         }
+
+        /// <summary>
+        /// Immediately deactivates all particles in the emitter's pool.
+        /// </summary>
+        public void Clear()
+        {
+            for (int i = 0; i < _particles.Length; i++)
+            {
+                // By setting IsAlive to false, we ensure it's not drawn.
+                // By resetting position, we prevent a one-frame flicker at the old location
+                // if the emitter is re-activated and drawn before its particles are updated.
+                _particles[i].IsAlive = false;
+                _particles[i].Position = Vector2.Zero;
+            }
+            _emissionTimer = 0f;
+        }
     }
 }

@@ -76,6 +76,9 @@ namespace ProjectVagabond.Dice
         private ParticleSystemManager _particleManager;
         private ParticleEmitter _sparkEmitter;
         private ParticleEmitter _sumImpactEmitter;
+        private readonly List<ParticleEmitter> _activeBoxEmitters = new List<ParticleEmitter>();
+        private readonly Queue<ParticleEmitter> _pooledBoxEmitters = new Queue<ParticleEmitter>();
+        private const float BOX_FIRE_EMISSION_RATE = 150f;
 
         // State
         private AnimationState _currentState = AnimationState.Idle;
@@ -112,10 +115,27 @@ namespace ProjectVagabond.Dice
             // Emitter creation is deferred to here, when we know the Texture2D service is available.
             _sparkEmitter = _particleManager.CreateEmitter(ParticleEffects.CreateSparks());
             _sumImpactEmitter = _particleManager.CreateEmitter(ParticleEffects.CreateSumImpact());
+
+            // Create a pool of emitters for the box fire effect.
+            for (int i = 0; i < 15; i++)
+            {
+                var settings = ParticleEffects.CreateUIFire();
+                settings.EmissionRate = 0; // Start inactive
+                _pooledBoxEmitters.Enqueue(_particleManager.CreateEmitter(settings));
+            }
         }
 
         public void Start(List<(RenderableDie die, int value)> settledDice, List<DiceGroup> rollGroups, RenderTarget2D renderTarget)
         {
+            // Return any lingering emitters to the pool from a previous, unfinished animation.
+            foreach (var emitter in _activeBoxEmitters)
+            {
+                emitter.Settings.EmissionRate = 0;
+                emitter.Clear(); // Kill any remaining particles
+                _pooledBoxEmitters.Enqueue(emitter);
+            }
+            _activeBoxEmitters.Clear();
+
             _currentRollGroups = rollGroups;
             _floatingResults.Clear();
             _groupSumResults.Clear();
@@ -384,7 +404,7 @@ namespace ProjectVagabond.Dice
                 else
                 {
                     if (resultText != null && resultText.IsAnimatingScale)
-                        resultText.Scale = 4.0f * Easing.EaseOutCubic((progress - shrinkPhaseEnd) / (1.0f - shrinkPhaseEnd));
+                        resultText.Scale = 4.0f * Easing.EaseOutBack((progress - shrinkPhaseEnd) / (1.0f - shrinkPhaseEnd));
                 }
             }
 
@@ -421,6 +441,24 @@ namespace ProjectVagabond.Dice
 
             if (allShrunk)
             {
+                // Activate an emitter for each new box
+                foreach (var result in _floatingResults)
+                {
+                    if (_pooledBoxEmitters.TryDequeue(out var emitter))
+                    {
+                        // Configure the emitter instance for this specific box
+                        emitter.Settings.StartColor = result.TintColor;
+                        emitter.Settings.EndColor = result.TintColor; // Fade to same color (alpha handles transparency)
+                        emitter.Settings.EmitterSize = new Vector2(8f, 8f); // Size of the box
+                        emitter.Settings.EmissionRate = BOX_FIRE_EMISSION_RATE;
+
+                        // Set initial position
+                        emitter.Position = result.CurrentPosition;
+
+                        _activeBoxEmitters.Add(emitter);
+                    }
+                }
+
                 var font = ServiceLocator.Get<BitmapFont>();
                 int totalModifier = _currentGroupsForDisplay.Sum(g => g.Modifier);
                 string newSumText = (_currentGroupSum + totalModifier).ToString();
@@ -450,16 +488,31 @@ namespace ProjectVagabond.Dice
         {
             _animationTimer += deltaTime;
             float progress = Math.Clamp(_animationTimer / _global.DiceSumShiftDuration, 0f, 1f);
+
+            // Animate existing sums shifting
             foreach (var sum in _groupSumResults.Where(s => s.IsVisible && s.IsAnimating))
             {
                 sum.AnimationProgress = progress;
                 if (progress >= 1.0f) sum.IsAnimating = false;
             }
+
+            // Add slow spin to the new boxes while they wait
+            foreach (var result in _floatingResults.Where(r => r.IsBox))
+            {
+                result.BoxRotation += 5f * deltaTime; // Half speed spin
+            }
+
             if (progress >= 1.0f) { _animationTimer = 0f; _currentState = AnimationState.GatheringResults; }
         }
 
         private void UpdateGatheringState(float deltaTime)
         {
+            // Update emitter positions to match their boxes
+            for (int i = 0; i < _floatingResults.Count && i < _activeBoxEmitters.Count; i++)
+            {
+                _activeBoxEmitters[i].Position = _floatingResults[i].CurrentPosition;
+            }
+
             _animationTimer += deltaTime;
             float progress = Math.Clamp(_animationTimer / _global.DiceGatheringDuration, 0f, 1f);
             float easedProgress = Easing.EaseInQuint(progress);
@@ -480,6 +533,15 @@ namespace ProjectVagabond.Dice
 
             if (progress >= 1.0f)
             {
+                // Deactivate and pool the emitters
+                foreach (var emitter in _activeBoxEmitters)
+                {
+                    emitter.Settings.EmissionRate = 0;
+                    emitter.Clear(); // Kill any remaining particles
+                    _pooledBoxEmitters.Enqueue(emitter);
+                }
+                _activeBoxEmitters.Clear();
+
                 // Clear trails and results
                 foreach (var result in _floatingResults)
                 {
