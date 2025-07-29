@@ -1,4 +1,6 @@
+using BepuPhysics;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input; // Added for Keyboard state
 using MonoGame.Extended.BitmapFonts;
@@ -8,6 +10,7 @@ using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic; // Added for List
 using System.Diagnostics;       // Added for Debug.WriteLine
+using System.Linq;
 using System.Text;              // Added for StringBuilder
 
 // TODO: generate different noise maps to generate different map things
@@ -146,6 +149,12 @@ namespace ProjectVagabond
             _particleSystemManager = new ParticleSystemManager();
             ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
 
+            // Instantiate and register the individual dice controllers first.
+            ServiceLocator.Register<DicePhysicsController>(new DicePhysicsController());
+            ServiceLocator.Register<DiceSceneRenderer>(new DiceSceneRenderer());
+            ServiceLocator.Register<DiceAnimationController>(new DiceAnimationController());
+
+            // Now the DiceRollingSystem can be created and it will fetch its dependencies.
             _diceRollingSystem = new DiceRollingSystem();
             ServiceLocator.Register<DiceRollingSystem>(_diceRollingSystem);
 
