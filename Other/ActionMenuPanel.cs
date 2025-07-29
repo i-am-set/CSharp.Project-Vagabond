@@ -87,12 +87,11 @@ namespace ProjectVagabond
                 }
             }
 
+            // Only update the buttons that are currently active and in the list.
             foreach (var button in _actionButtons)
             {
                 button.Update(currentMouseState);
             }
-            _backButton.Update(currentMouseState);
-            _endTurnButton.Update(currentMouseState);
         }
 
         private void RebuildButtons(BitmapFont font)
@@ -107,10 +106,6 @@ namespace ProjectVagabond
             int currentY = _bounds.Y + PADDING;
             int bottomButtonY = _bounds.Bottom - PADDING - BUTTON_HEIGHT;
             var bottomButtonBounds = new Rectangle(_bounds.X + PADDING, bottomButtonY, _bounds.Width - (PADDING * 2), BUTTON_HEIGHT);
-
-            // Default visibility
-            _backButton.IsEnabled = false;
-            _endTurnButton.IsEnabled = false;
 
             switch (_gameState.UIState)
             {
@@ -162,14 +157,18 @@ namespace ProjectVagabond
                     _actionButtons.Add(_fleeButton);
                     currentY += BUTTON_HEIGHT;
 
+                    // Configure and add the End Turn button to the active list
                     _endTurnButton.Bounds = bottomButtonBounds;
                     _endTurnButton.IsEnabled = true;
+                    _actionButtons.Add(_endTurnButton);
                     break;
 
                 case CombatUIState.SelectTarget:
                 case CombatUIState.SelectMove:
+                    // Configure and add the Back button to the active list
                     _backButton.Bounds = bottomButtonBounds;
                     _backButton.IsEnabled = true;
+                    _actionButtons.Add(_backButton);
                     break;
             }
         }
@@ -187,12 +186,11 @@ namespace ProjectVagabond
             // Only draw buttons and instructions if it's the player's turn.
             if (_gameState.CurrentTurnEntityId == _gameState.PlayerEntityId)
             {
+                // Only draw the buttons that are currently active and in the list.
                 foreach (var button in _actionButtons)
                 {
                     button.Draw(spriteBatch, font, gameTime);
                 }
-                if (_backButton.IsEnabled) _backButton.Draw(spriteBatch, font, gameTime);
-                if (_endTurnButton.IsEnabled) _endTurnButton.Draw(spriteBatch, font, gameTime);
 
                 switch (_gameState.UIState)
                 {

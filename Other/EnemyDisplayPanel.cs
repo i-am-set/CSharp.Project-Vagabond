@@ -14,9 +14,10 @@ namespace ProjectVagabond
         private readonly GameState _gameState;
         private readonly ComponentStore _componentStore;
         private readonly Global _global;
-
         private readonly Rectangle _bounds;
         private int? _hoveredEnemyId;
+        private int? _previousHoveredEnemyId;
+        private float _hoverAnimationStartTime;
 
         private const int PADDING = 10;
         private const int BORDER_THICKNESS = 2;
@@ -35,9 +36,12 @@ namespace ProjectVagabond
         /// <summary>
         /// Updates the panel to track mouse hover state.
         /// </summary>
+        /// <param name="gameTime">Provides a snapshot of timing values.</param>
         /// <param name="currentMouseState">The current state of the mouse.</param>
-        public void Update(MouseState currentMouseState)
+        public void Update(GameTime gameTime, MouseState currentMouseState)
         {
+            _previousHoveredEnemyId = _hoveredEnemyId;
+
             if (!_gameState.IsInCombat)
             {
                 _hoveredEnemyId = null;
@@ -45,6 +49,12 @@ namespace ProjectVagabond
             }
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position).ToPoint();
             _hoveredEnemyId = GetEnemyIdAt(virtualMousePos);
+
+            // If the hovered enemy has changed, reset the animation start time.
+            if (_hoveredEnemyId.HasValue && _hoveredEnemyId != _previousHoveredEnemyId)
+            {
+                _hoverAnimationStartTime = (float)gameTime.TotalGameTime.TotalSeconds;
+            }
         }
 
         /// <summary>
@@ -136,11 +146,8 @@ namespace ProjectVagabond
 
                     if (_hoveredEnemyId.HasValue && _hoveredEnemyId.Value == entityId)
                     {
-                        // HOVERED: Draw pulsing corner brackets
-                        bool isPulsing = animationManager.IsPulsing("TargetSelector");
-                        Rectangle pulsingRect = baseSelectorRect;
-                        pulsingRect.Inflate(isPulsing ? 2 : 1, isPulsing ? 2 : 1);
-                        DrawCornerBrackets(spriteBatch, pulsingRect, _global.CombatSelectableColor, 2);
+                        // HOVERED: Draw the new animated outline effect
+                        DrawAnimatedOutline(spriteBatch, baseSelectorRect, _global.CombatSelectableColor, gameTime, _hoverAnimationStartTime);
                     }
                     else
                     {
@@ -294,6 +301,123 @@ namespace ProjectVagabond
                     spriteBatch.Draw(pixel, new Rectangle(rect.Left, (int)startY, dashThickness, (int)(endY - startY)), color);
                 }
             }
+        }
+
+        private void DrawAnimatedOutline(SpriteBatch spriteBatch, Rectangle rect, Color color, GameTime gameTime, float animationStartTime)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            const float duration = 1.5f;
+            const int tailSegments = 120; // Much longer tail
+            const float tailProgressLength = 0.4f; // The tail will cover 40% of the perimeter
+
+            float elapsedTime = (float)gameTime.TotalGameTime.TotalSeconds - animationStartTime;
+            // Add half the duration to the elapsed time to start the animation at the halfway point.
+            float timeOffset = elapsedTime + (duration / 2.0f);
+            float linearHeadProgress = (timeOffset % duration) / duration;
+
+            Vector2 lastPosition = GetPositionOnRectPerimeter(rect, CalculateFinalProgress(linearHeadProgress));
+
+            for (int i = 1; i <= tailSegments; i++)
+            {
+                // Calculate the progress of the current segment along the tail
+                float linearSegmentProgress = linearHeadProgress - (i * (tailProgressLength / tailSegments));
+
+                // Wrap progress if it's negative
+                if (linearSegmentProgress < 0)
+                {
+                    linearSegmentProgress += 1.0f;
+                }
+
+                Vector2 currentPosition = GetPositionOnRectPerimeter(rect, CalculateFinalProgress(linearSegmentProgress));
+
+                // Calculate distance and angle between the last point and the current point
+                Vector2 delta = currentPosition - lastPosition;
+                float distance = delta.Length();
+                float angle = (float)Math.Atan2(delta.Y, delta.X);
+
+                // Fade the tail along its length
+                float alpha = 1.0f - ((float)i / tailSegments);
+
+                // Make the tail thinner towards the end
+                float thickness = 2.0f * (1.0f - ((float)i / (tailSegments * 1.5f)));
+
+                // Draw a line segment
+                if (distance > 0) // Avoid drawing zero-length lines
+                {
+                    spriteBatch.Draw(
+                        pixel,
+                        lastPosition,
+                        null,
+                        color * alpha,
+                        angle,
+                        new Vector2(0, 0.5f), // Origin at the left-center of the 1x1 pixel
+                        new Vector2(distance, thickness),
+                        SpriteEffects.None,
+                        0
+                    );
+                }
+
+                lastPosition = currentPosition;
+            }
+        }
+
+        /// <summary>
+        /// Calculates the final progress along the perimeter by blending linear and eased motion.
+        /// </summary>
+        /// <param name="linearProgress">The raw, linear progress (0 to 1).</param>
+        /// <returns>The final progress value to use for positioning.</returns>
+        private float CalculateFinalProgress(float linearProgress)
+        {
+            const float minSpeedRatio = 0.1f; // 10% minimum speed
+            float easedProgress = Easing.EaseInOutCirc(linearProgress);
+            // Lerp between linear and eased progress. The weight on the eased progress determines the curve's influence.
+            // A weight of 1.0 would be pure easing, 0.0 would be pure linear.
+            // By using 1.0 - minSpeedRatio, we ensure that at least minSpeedRatio of the linear speed is always present.
+            return MathHelper.Lerp(linearProgress, easedProgress, 1.0f - minSpeedRatio);
+        }
+
+        private Vector2 GetPositionOnRectPerimeter(Rectangle rect, float progress)
+        {
+            // Perimeter segments (clockwise from bottom-center)
+            float bottomHalf1 = rect.Width / 2f;
+            float rightSide = rect.Height;
+            float topSide = rect.Width;
+            float leftSide = rect.Height;
+            float bottomHalf2 = rect.Width / 2f;
+
+            float perimeter = bottomHalf1 + rightSide + topSide + leftSide + bottomHalf2;
+            float distance = progress * perimeter;
+
+            // Bottom edge, center to right
+            if (distance <= bottomHalf1)
+            {
+                return new Vector2(rect.Center.X + distance, rect.Bottom);
+            }
+            distance -= bottomHalf1;
+
+            // Right edge, bottom to top
+            if (distance <= rightSide)
+            {
+                return new Vector2(rect.Right, rect.Bottom - distance);
+            }
+            distance -= rightSide;
+
+            // Top edge, right to left
+            if (distance <= topSide)
+            {
+                return new Vector2(rect.Right - distance, rect.Top);
+            }
+            distance -= topSide;
+
+            // Left edge, top to bottom
+            if (distance <= leftSide)
+            {
+                return new Vector2(rect.Left, rect.Top + distance);
+            }
+            distance -= leftSide;
+
+            // Bottom edge, left to center
+            return new Vector2(rect.Left + distance, rect.Bottom);
         }
     }
 }

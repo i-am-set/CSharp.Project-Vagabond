@@ -25,7 +25,10 @@ using System.Text;              // Added for StringBuilder
 // TODO: Finish entity implimentation
 // TODO: Make "activeStatusEffectcomponent" a component that can be added to any entity, not just the player
 // TODO: Make secondary dice in combat smaller
-// TODO: Add a 1d4, 1d6, 1d8, 1d10, 1d12, and 1d20 to the dice rolling system; one at a time since its complex to impliment
+// TODO: Add a 1d6, 1d8, 1d10, 1d12, and 1d20 to the dice rolling system; one at a time since its complex to impliment
+// TODO: MAke the result number pop in since it does pop out at the end of its lifetime
+// TODO: Add a delay after the final sum impact before the next die group is counted
+// TODO: When hovering an enemy in the enemydisplaypanel, make their entity on the map display over the gray filter so its highlighted
 
 namespace ProjectVagabond
 {

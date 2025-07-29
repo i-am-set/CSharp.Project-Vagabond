@@ -48,26 +48,27 @@ namespace ProjectVagabond
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
 
-            // Handle Escape key press to cancel an ongoing action (like movement).
-            // This must be checked even when the UIState is Busy.
+            // Handle Escape key press to cancel an ongoing action or go back.
             if (currentKeyboardState.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape))
             {
-                // Only cancel if a move is actually in progress (indicated by InterpolationComponent).
+                // If a move is in progress, cancel it.
                 if (_gameState.UIState == CombatUIState.Busy && _componentStore.HasComponent<InterpolationComponent>(_gameState.PlayerEntityId))
                 {
                     var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(_gameState.PlayerEntityId);
                     if (actionQueueComp != null)
                     {
-                        // Clear any future moves, but let the current one finish.
                         actionQueueComp.ActionQueue.Clear();
-
-                        // Immediately return UI control to the player so they can see the menu.
                         _gameState.UIState = CombatUIState.Default;
-
                         EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[cancel]Movement will stop after the current step." });
                     }
-
-                    // Update state and exit to prevent further processing this frame.
+                    _previousMouseState = currentMouseState;
+                    _previousKeyboardState = currentKeyboardState;
+                    return;
+                }
+                // If in a selection state, treat Escape as clicking the "Back" button.
+                else if (_gameState.UIState == CombatUIState.SelectMove || _gameState.UIState == CombatUIState.SelectTarget)
+                {
+                    ProcessMenuCommand("Back");
                     _previousMouseState = currentMouseState;
                     _previousKeyboardState = currentKeyboardState;
                     return;

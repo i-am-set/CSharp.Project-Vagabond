@@ -27,7 +27,6 @@ namespace ProjectVagabond.Scenes
         private readonly TerminalRenderer _terminalRenderer;
         private readonly ParticleSystemManager _particleSystemManager;
         private readonly DiceRollingSystem _diceRollingSystem;
-
         private WaitDialog _waitDialog;
         private ImageButton _settingsButton;
         private TurnOrderPanel _turnOrderPanel;
@@ -142,7 +141,7 @@ namespace ProjectVagabond.Scenes
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{groupResult.Key} dice : Sum = {groupResult.Value.Sum()}" });
             }
 
-            
+
         }
 
         private void OpenSettings()
@@ -180,29 +179,29 @@ namespace ProjectVagabond.Scenes
                 Global _global = ServiceLocator.Get<Global>();
 
                 var rollRequest = new List<DiceGroup>
+            {
+                new DiceGroup
                 {
-                    new DiceGroup
-                    {
-                        GroupId = "test_sum",
-                        NumberOfDice = 4,
-                        Tint = _global.Palette_BrightWhite,
-                        ResultProcessing = DiceResultProcessing.Sum
-                    },
-                    new DiceGroup
-                    {
-                        GroupId = "test_individual",
-                        NumberOfDice = 2,
-                        Tint = _global.Palette_DarkGreen,
-                        ResultProcessing = DiceResultProcessing.IndividualValues
-                    },
-                    new DiceGroup
-                    {
-                        GroupId = "test_third",
-                        NumberOfDice = 2,
-                        Tint = _global.Palette_Yellow,
-                        ResultProcessing = DiceResultProcessing.IndividualValues
-                    }
-                };
+                    GroupId = "test_sum",
+                    NumberOfDice = 4,
+                    Tint = _global.Palette_BrightWhite,
+                    ResultProcessing = DiceResultProcessing.Sum
+                },
+                new DiceGroup
+                {
+                    GroupId = "test_individual",
+                    NumberOfDice = 2,
+                    Tint = _global.Palette_DarkGreen,
+                    ResultProcessing = DiceResultProcessing.IndividualValues
+                },
+                new DiceGroup
+                {
+                    GroupId = "test_third",
+                    NumberOfDice = 2,
+                    Tint = _global.Palette_Yellow,
+                    ResultProcessing = DiceResultProcessing.IndividualValues
+                }
+            };
                 _diceRollingSystem.Roll(rollRequest);
             }
 
@@ -231,7 +230,7 @@ namespace ProjectVagabond.Scenes
                 // These panels must always update during combat.
                 _playerCombatInputSystem.ProcessInput();
                 _actionMenuPanel.Update(gameTime, currentMouseState, font);
-                _enemyDisplayPanel.Update(currentMouseState);
+                _enemyDisplayPanel.Update(gameTime, currentMouseState);
 
                 // Block TurnOrderPanel during any focus state.
                 if (_coreState.UIState != CombatUIState.SelectTarget && _coreState.UIState != CombatUIState.SelectMove)

@@ -193,7 +193,7 @@ namespace ProjectVagabond
         /// How to use: A value of 1.0 is normal speed. A value of 2.0 will make the dice settle twice as fast.
         /// This does not affect the quality of the simulation (the fixed timestep), only how many steps are run per frame.
         /// </summary>
-        public float DiceSimulationSpeedMultiplier { get; set; } = 1.5f;
+        public float DiceSimulationSpeedMultiplier { get; set; } = 1f;
 
         /// <summary>
         /// The gravity vector for the physics simulation. Determines the "down" direction and its strength.
@@ -351,7 +351,7 @@ namespace ProjectVagabond
         /// <summary>
         /// The duration in seconds for each die's "pop" animation during the counting sequence.
         /// </summary>
-        public float DiceEnumerationStepDuration { get; set; } = 0.2f;
+        public float DiceEnumerationStepDuration { get; set; } = 0.3f;
 
         /// <summary>
         /// The duration in seconds of the white flash at the start of a die's enumeration animation.
@@ -366,7 +366,7 @@ namespace ProjectVagabond
         /// <summary>
         /// The vertical distance (in screen pixels) that the result number appears above or below the die during enumeration.
         /// </summary>
-        public float DiceResultTextYOffset { get; set; } = 45f;
+        public float DiceResultTextYOffset { get; set; } = 0f;
 
         /// <summary>
         /// The delay in seconds after all dice have been counted before the result numbers start moving to the center.
