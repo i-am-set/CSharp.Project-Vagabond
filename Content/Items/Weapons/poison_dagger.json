@@ -1,13 +1,13 @@
 {
   "Id": "poison_dagger",
   "Name": "Poison Dagger",
-  "Damage": "1d6",
+  "Damage": "1d4+2",
   "Range": 1.5,
   "Type": "Melee",
   "StatusEffectsToApply": [
     {
       "EffectName": "Poison",
-      "Amount": "1d6"
+      "Amount": "1d4"
     }
   ]
 }

@@ -338,7 +338,7 @@ namespace ProjectVagabond
                         NumberOfDice = 1,
                         Tint = Color.Green,
                         ResultProcessing = DiceResultProcessing.Sum,
-                        DieType = DieType.D4, // This is our new D4
+                        DieType = DieType.D4,
                         Scale = 1.0f
                     }
                 };

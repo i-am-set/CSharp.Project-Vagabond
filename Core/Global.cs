@@ -202,7 +202,7 @@ namespace ProjectVagabond
         /// How to use: More substeps improve stability for very fast-moving objects, preventing them from "tunneling" (passing through) other objects like walls.
         /// Example: 4 is standard, 8 is very robust for fast objects.
         /// </summary>
-        public int DiceSolverSubsteps { get; set; } = 8;
+        public int DiceSolverSubsteps { get; set; } = 12;
 
         /// <summary>
         /// Controls the "slipperiness" of surfaces (both dice and the floor).

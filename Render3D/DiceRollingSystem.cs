@@ -510,24 +510,25 @@ namespace ProjectVagabond.Dice
                 collidable,
                 new BodyActivityDescription(0.01f));
 
-            // --- MODIFIED: Increased the precision of Continuous Collision Detection (CCD). ---
-            // This is the primary fix for the D4 "exploding" on its first collision.
-            // By making the timestep and convergence threshold smaller, we force the physics engine
-            // to be much more careful when calculating the exact time of impact for fast-moving objects.
-            // This prevents tunneling and the resulting unstable, explosive reactions.
             bodyDescription.Collidable.Continuity = new ContinuousDetection
             {
                 Mode = ContinuousDetectionMode.Continuous,
                 MinimumSweepTimestep = 1e-5f,
                 SweepConvergenceThreshold = 1e-5f
             };
-            // --- END MODIFIED ---
+            double u1 = _random.NextDouble();
+            double u2 = _random.NextDouble();
+            double u3 = _random.NextDouble();
 
-            bodyDescription.Pose.Orientation = System.Numerics.Quaternion.Normalize(new System.Numerics.Quaternion(
-                (float)_random.NextDouble() * 2 - 1,
-                (float)_random.NextDouble() * 2 - 1,
-                (float)_random.NextDouble() * 2 - 1,
-                (float)_random.NextDouble() * 2 - 1));
+            double sqrt1MinusU1 = Math.Sqrt(1 - u1);
+            double sqrtU1 = Math.Sqrt(u1);
+
+            float qx = (float)(sqrt1MinusU1 * Math.Sin(2 * Math.PI * u2));
+            float qy = (float)(sqrt1MinusU1 * Math.Cos(2 * Math.PI * u2));
+            float qz = (float)(sqrtU1 * Math.Sin(2 * Math.PI * u3));
+            float qw = (float)(sqrtU1 * Math.Cos(2 * Math.PI * u3));
+
+            bodyDescription.Pose.Orientation = new System.Numerics.Quaternion(qx, qy, qz, qw);
 
             bodyDescription.Velocity.Linear = direction * throwForce;
             float maxAngVel = _global.DiceInitialAngularVelocityMax;
