@@ -126,6 +126,28 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Converts an integer number of sides into a DieType enum.
+        /// </summary>
+        /// <param name="numSides">The number of sides on the die.</param>
+        /// <returns>The corresponding DieType, defaulting to D6.</returns>
+        private static DieType DieTypeFromSides(int numSides)
+        {
+            switch (numSides)
+            {
+                case 4:
+                    return DieType.D4;
+                // Future-proofing for other dice
+                // case 8: return DieType.D8;
+                // case 10: return DieType.D10;
+                // case 12: return DieType.D12;
+                // case 20: return DieType.D20;
+                case 6:
+                default:
+                    return DieType.D6;
+            }
+        }
+
+        /// <summary>
         /// Initiates an attack by parsing all dice notations, requesting a dice roll for non-flat values,
         /// and preparing for the result.
         /// </summary>
@@ -137,38 +159,47 @@ namespace ProjectVagabond
 
             var effectiveStats = GetEffectiveAttackStats(action.ActorId);
 
-            // 1. Process Damage by combining all sources into a single group.
-            int totalDamageDice = 0;
+            // 1. Process Damage by creating a group for each dice term.
             int totalDamageModifier = 0;
+            var damageDiceGroups = new List<DiceGroup>();
             string[] damageTerms = effectiveStats.DamageNotation.Split('+', StringSplitOptions.RemoveEmptyEntries);
 
-            foreach (var term in damageTerms)
+            for (int i = 0; i < damageTerms.Length; i++)
             {
+                var term = damageTerms[i].Trim();
                 var (numDice, numSides, modifier) = DiceParser.Parse(term);
-                // We assume all damage dice can be grouped (e.g., they are all d6s).
-                // The parser handles flat numbers as modifiers with 0 dice.
-                if (numDice > 0)
+
+                if (numDice > 0 && numSides > 0)
                 {
-                    totalDamageDice += numDice;
+                    damageDiceGroups.Add(new DiceGroup
+                    {
+                        GroupId = $"damage_{i}", // Unique group for each dice term
+                        DisplayGroupId = "damage", // Common ID for animation grouping
+                        NumberOfDice = numDice,
+                        DieType = DieTypeFromSides(numSides),
+                        Tint = _global.Palette_BrightWhite,
+                        Scale = 1.0f,
+                        ResultProcessing = DiceResultProcessing.Sum,
+                        Modifier = modifier // Modifier is part of this specific term
+                    });
                 }
-                totalDamageModifier += modifier;
+                else
+                {
+                    // This term is a flat number, add it to the total flat modifier.
+                    totalDamageModifier += modifier;
+                }
             }
 
-            if (totalDamageDice > 0)
+            // Add the aggregated flat modifier to the first damage dice group, if any exist.
+            if (damageDiceGroups.Any())
             {
-                rollRequest.Add(new DiceGroup
-                {
-                    GroupId = "damage",
-                    NumberOfDice = totalDamageDice,
-                    Tint = _global.Palette_BrightWhite,
-                    Scale = 1.0f,
-                    ResultProcessing = DiceResultProcessing.Sum,
-                    Modifier = totalDamageModifier
-                });
+                damageDiceGroups[0].Modifier += totalDamageModifier;
+                rollRequest.AddRange(damageDiceGroups);
             }
             else if (totalDamageModifier > 0)
             {
-                _flatModifiers["damage"] = totalDamageModifier;
+                // If there are no dice to roll, store the flat damage to be resolved directly.
+                _flatModifiers["damage_flat"] = totalDamageModifier;
             }
 
 
@@ -209,7 +240,9 @@ namespace ProjectVagabond
                 rollRequest.Add(new DiceGroup
                 {
                     GroupId = groupId,
+                    DisplayGroupId = groupId, // For status effects, they are their own display group
                     NumberOfDice = numDice,
+                    DieType = DieTypeFromSides(numSides),
                     Tint = tint,
                     Scale = scale,
                     ResultProcessing = DiceResultProcessing.Sum,
@@ -256,8 +289,21 @@ namespace ProjectVagabond
             }
 
             // --- DAMAGE RESOLUTION ---
-            // Get the final value from the single, consolidated "damage" group.
-            int finalDamage = GetResolvedValue("damage", result);
+            // Sum results from all groups that were part of the roll.
+            int finalDamage = 0;
+            foreach (var groupResult in result.ResultsByGroup)
+            {
+                // The group's result already includes its modifier, so we just sum them up.
+                if (groupResult.Key.StartsWith("damage_"))
+                {
+                    finalDamage += groupResult.Value.Sum();
+                }
+            }
+            // Add any flat damage that had no dice associated with it.
+            if (_flatModifiers.TryGetValue("damage_flat", out int flatDamage))
+            {
+                finalDamage += flatDamage;
+            }
 
             var attackerStatusEffects = _componentStore.GetComponent<ActiveStatusEffectComponent>(attackerId);
             bool isWeakened = attackerStatusEffects?.ActiveEffects.Any(e => e.BaseEffect.Name == "Weakness") ?? false;

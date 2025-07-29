@@ -36,7 +36,6 @@ namespace ProjectVagabond.Dice
             SpawningNewSum,
             PostSumDelay,
             ApplyingMultipliers,
-            ApplyingModifiers,
             FinalSumHold,
             SequentialFadeOut,
             Complete
@@ -127,8 +126,9 @@ namespace ProjectVagabond.Dice
         private int _completeRerollAttempts;
 
         // State for handling group-by-group enumeration and animation
-        private readonly Queue<DiceGroup> _groupQueue = new Queue<DiceGroup>();
-        private DiceGroup _currentGroup;
+        private readonly Queue<string> _displayGroupQueue = new Queue<string>();
+        private string _currentDisplayGroupId;
+        private List<DiceGroup> _currentGroupsForDisplay;
         private readonly Queue<RenderableDie> _enumerationQueue = new Queue<RenderableDie>();
         private RenderableDie _currentlyEnumeratingDie;
         private float _animationTimer;
@@ -394,14 +394,26 @@ namespace ProjectVagabond.Dice
             _groupSumResults.Clear();
             _activeModifiers.Clear();
             _enumerationQueue.Clear();
-            _groupQueue.Clear();
+            _displayGroupQueue.Clear();
             _currentlyEnumeratingDie = null;
-            _currentGroup = null;
+            _currentDisplayGroupId = null;
+            _currentGroupsForDisplay = null;
 
+            // Get unique display group IDs, preserving order, and queue them for processing.
+            var uniqueDisplayGroupIds = rollGroups
+                .Select(g => g.DisplayGroupId ?? g.GroupId) // Fallback to GroupId if DisplayGroupId is null
+                .Distinct()
+                .ToList();
+
+            foreach (var displayId in uniqueDisplayGroupIds)
+            {
+                _displayGroupQueue.Enqueue(displayId);
+            }
+
+            // Ensure a physics shape is cached for every type/scale combination in the roll.
             foreach (var group in rollGroups)
             {
-                _groupQueue.Enqueue(group);
-                CacheShapeForScale(group.DieType, group.Scale); // Ensure a shape for this type and scale exists.
+                CacheShapeForScale(group.DieType, group.Scale);
             }
 
             // Dynamically adjust camera zoom based on the number of dice.
@@ -615,10 +627,6 @@ namespace ProjectVagabond.Dice
                     UpdateApplyingMultipliersState(deltaTime);
                     break;
 
-                case RollState.ApplyingModifiers:
-                    UpdateApplyingModifiersState(deltaTime);
-                    break;
-
                 case RollState.FinalSumHold:
                     UpdateFinalSumHoldState(deltaTime);
                     break;
@@ -782,28 +790,33 @@ namespace ProjectVagabond.Dice
                     else
                     {
                         // All checks passed; the roll is valid. Begin counting the results.
-                        StartNextGroupEnumeration();
+                        StartNextDisplayGroupEnumeration();
                     }
                 }
                 _settleTimer = 0f;
             }
         }
 
-        private void StartNextGroupEnumeration()
+        private void StartNextDisplayGroupEnumeration()
         {
-            if (_groupQueue.TryDequeue(out _currentGroup))
+            if (_displayGroupQueue.TryDequeue(out _currentDisplayGroupId))
             {
                 _currentState = RollState.Enumerating;
                 _currentGroupSum = 0;
                 _animationTimer = 0f;
                 _enumerationQueue.Clear();
 
-                var diceInGroup = _activeDice
-                    .Where(d => d.GroupId == _currentGroup.GroupId)
+                _currentGroupsForDisplay = _currentRollGroups
+                    .Where(g => (g.DisplayGroupId ?? g.GroupId) == _currentDisplayGroupId)
+                    .ToList();
+
+                var groupIds = _currentGroupsForDisplay.Select(g => g.GroupId).ToHashSet();
+                var diceInDisplayGroup = _activeDice
+                    .Where(d => groupIds.Contains(d.GroupId))
                     .OrderBy(d => d.World.Translation.X)
                     .ToList();
 
-                foreach (var die in diceInGroup)
+                foreach (var die in diceInDisplayGroup)
                 {
                     _enumerationQueue.Enqueue(die);
                 }
@@ -811,7 +824,7 @@ namespace ProjectVagabond.Dice
             }
             else
             {
-                // All groups have been processed. Start applying multipliers.
+                // All display groups have been processed. Start applying multipliers.
                 _currentState = RollState.ApplyingMultipliers;
                 _animationTimer = 0f;
                 PrepareMultipliers();
@@ -950,15 +963,19 @@ namespace ProjectVagabond.Dice
             {
                 // After the delay, create the sum object (invisibly) and calculate final positions.
                 var font = ServiceLocator.Get<BitmapFont>();
-                string newSumText = _currentGroupSum.ToString();
+
+                // Calculate the final sum, including all modifiers from the constituent groups.
+                int totalModifier = _currentGroupsForDisplay.Sum(g => g.Modifier);
+                int finalSum = _currentGroupSum + totalModifier;
+                string newSumText = finalSum.ToString();
 
                 // Create the new sum object now to ensure its data is not lost.
                 var newSum = new FloatingResultText
                 {
                     Text = newSumText,
                     Type = FloatingResultText.TextType.GroupSum,
-                    GroupId = _currentGroup.GroupId,
-                    TintColor = _currentGroup.Tint,
+                    GroupId = _currentDisplayGroupId,
+                    TintColor = _currentGroupsForDisplay.First().Tint,
                     Scale = 3.5f,
                     IsVisible = false // It starts invisible.
                 };
@@ -1090,7 +1107,7 @@ namespace ProjectVagabond.Dice
             if (_animationTimer >= _global.DicePostSumDelayDuration)
             {
                 // Delay is over; start processing the next group of dice.
-                StartNextGroupEnumeration();
+                StartNextDisplayGroupEnumeration();
             }
         }
 
@@ -1099,12 +1116,14 @@ namespace ProjectVagabond.Dice
             _activeModifiers.Clear();
             foreach (var sum in _groupSumResults)
             {
-                var group = _currentRollGroups.FirstOrDefault(g => g.GroupId == sum.GroupId);
-                if (group != null && group.Multiplier != 1.0f)
+                var groupsForSum = _currentRollGroups.Where(g => (g.DisplayGroupId ?? g.GroupId) == sum.GroupId).ToList();
+                var groupWithMultiplier = groupsForSum.FirstOrDefault(g => g.Multiplier != 1.0f);
+
+                if (groupWithMultiplier != null)
                 {
                     var multiplierText = new FloatingResultText
                     {
-                        Text = $"x{group.Multiplier:0.0#}",
+                        Text = $"x{groupWithMultiplier.Multiplier:0.0#}",
                         Type = FloatingResultText.TextType.Multiplier,
                         GroupId = sum.GroupId,
                         Scale = 0f, // Start at scale 0 for pop-in
@@ -1123,10 +1142,9 @@ namespace ProjectVagabond.Dice
 
             if (!_activeModifiers.Any())
             {
-                // No multipliers to apply, skip to modifiers.
-                _currentState = RollState.ApplyingModifiers;
+                // No multipliers to apply, skip to the final hold.
+                _currentState = RollState.FinalSumHold;
                 _animationTimer = 0f;
-                PrepareModifiers();
             }
         }
 
@@ -1159,75 +1177,6 @@ namespace ProjectVagabond.Dice
             }
 
             // The state transitions once all sums have finished their collision animations.
-            if (allDone && _groupSumResults.All(s => !s.IsColliding))
-            {
-                _currentState = RollState.ApplyingModifiers;
-                _animationTimer = 0f;
-                PrepareModifiers();
-            }
-        }
-
-        private void PrepareModifiers()
-        {
-            _activeModifiers.Clear();
-            foreach (var sum in _groupSumResults)
-            {
-                var group = _currentRollGroups.FirstOrDefault(g => g.GroupId == sum.GroupId);
-                if (group != null && group.Modifier != 0)
-                {
-                    var modifierText = new FloatingResultText
-                    {
-                        Text = group.Modifier > 0 ? $"+{group.Modifier}" : group.Modifier.ToString(),
-                        Type = FloatingResultText.TextType.Modifier,
-                        GroupId = sum.GroupId,
-                        Scale = 0f,
-                        TintColor = group.Modifier > 0 ? _global.Palette_LightGreen : _global.Palette_LightBlue,
-                        IsVisible = true,
-                        StartPosition = sum.CurrentPosition + new Vector2(0, -60),
-                        TargetPosition = sum.CurrentPosition,
-                        CurrentPosition = sum.CurrentPosition + new Vector2(0, -60),
-                        IsAnimating = true,
-                        AnimationProgress = 0f
-                    };
-                    _activeModifiers.Add(modifierText);
-                    sum.IsAwaitingCollision = true;
-                }
-            }
-
-            if (!_activeModifiers.Any())
-            {
-                _currentState = RollState.FinalSumHold;
-                _animationTimer = 0f;
-            }
-        }
-
-        private void UpdateApplyingModifiersState(float deltaTime)
-        {
-            _animationTimer += deltaTime;
-            float progress = Math.Clamp(_animationTimer / _global.DiceModifierAnimationDuration, 0f, 1f);
-
-            bool allDone = true;
-            foreach (var modifier in _activeModifiers.Where(m => m.Type == FloatingResultText.TextType.Modifier))
-            {
-                if (!modifier.IsVisible) continue;
-                allDone = false;
-                modifier.AnimationProgress = progress;
-            }
-
-            if (progress >= 1.0f && !allDone)
-            {
-                foreach (var modifier in _activeModifiers.Where(m => m.Type == FloatingResultText.TextType.Modifier && m.IsVisible))
-                {
-                    modifier.IsVisible = false;
-                    var targetSum = _groupSumResults.FirstOrDefault(s => s.GroupId == modifier.GroupId);
-                    if (targetSum != null)
-                    {
-                        targetSum.IsColliding = true;
-                        targetSum.CollisionProgress = 0f;
-                    }
-                }
-            }
-
             if (allDone && _groupSumResults.All(s => !s.IsColliding))
             {
                 _currentState = RollState.FinalSumHold;
@@ -1286,7 +1235,7 @@ namespace ProjectVagabond.Dice
                 result.ShakeOffset = Vector2.Zero;
                 result.Rotation = 0f;
 
-                if (result.Type == FloatingResultText.TextType.Multiplier || result.Type == FloatingResultText.TextType.Modifier)
+                if (result.Type == FloatingResultText.TextType.Multiplier)
                 {
                     if (result.IsAnimating)
                     {
@@ -1350,25 +1299,19 @@ namespace ProjectVagabond.Dice
                             if (result.IsAwaitingCollision)
                             {
                                 result.IsAwaitingCollision = false;
-                                var group = _currentRollGroups.FirstOrDefault(g => g.GroupId == result.GroupId);
-                                if (group != null)
+                                var groupsForSum = _currentRollGroups.Where(g => (g.DisplayGroupId ?? g.GroupId) == result.GroupId).ToList();
+                                var groupWithMultiplier = groupsForSum.FirstOrDefault(g => g.Multiplier != 1.0f);
+                                if (groupWithMultiplier != null)
                                 {
                                     int currentVal = int.Parse(result.Text);
-                                    if (_activeModifiers.Any(m => m.GroupId == result.GroupId && m.Type == FloatingResultText.TextType.Multiplier))
+                                    float multipliedValue = currentVal * groupWithMultiplier.Multiplier;
+                                    if (groupWithMultiplier.Multiplier < 1.0f)
                                     {
-                                        float multipliedValue = currentVal * group.Multiplier;
-                                        if (group.Multiplier < 1.0f)
-                                        {
-                                            currentVal = (int)Math.Floor(multipliedValue);
-                                        }
-                                        else
-                                        {
-                                            currentVal = (int)Math.Ceiling(multipliedValue);
-                                        }
+                                        currentVal = (int)Math.Floor(multipliedValue);
                                     }
-                                    else if (_activeModifiers.Any(m => m.GroupId == result.GroupId && m.Type == FloatingResultText.TextType.Modifier))
+                                    else
                                     {
-                                        currentVal += group.Modifier;
+                                        currentVal = (int)Math.Ceiling(multipliedValue);
                                     }
                                     result.Text = currentVal.ToString();
                                 }

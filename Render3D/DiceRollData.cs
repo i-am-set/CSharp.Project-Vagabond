@@ -40,6 +40,12 @@ namespace ProjectVagabond.Dice
         public string GroupId { get; set; }
 
         /// <summary>
+        /// An optional identifier used to visually group the results of multiple DiceGroups
+        /// into a single animated sum. If null, GroupId is used.
+        /// </summary>
+        public string DisplayGroupId { get; set; }
+
+        /// <summary>
         /// The number of dice to roll in this group.
         /// </summary>
         public int NumberOfDice { get; set; }
@@ -55,7 +61,7 @@ namespace ProjectVagabond.Dice
         public float Scale { get; set; } = 1.0f;
 
         /// <summary>
-        /// The type of die to roll (e.g., D6, D4). This determines the physics shape and result calculation.
+        /// The type of die to roll (e.g., D6, D4). This determines the physics shape and result calculation logic.
         /// </summary>
         public DieType DieType { get; set; } = DieType.D6;
 
