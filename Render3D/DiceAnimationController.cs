@@ -70,6 +70,7 @@ namespace ProjectVagabond.Dice
         // Dependencies
         private Global _global;
         private readonly Random _random = new Random();
+        private HapticsManager _hapticsManager;
 
         // Particle Effects
         private ParticleSystemManager _particleManager;
@@ -105,6 +106,7 @@ namespace ProjectVagabond.Dice
         public void Initialize()
         {
             _global = ServiceLocator.Get<Global>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _particleManager = new ParticleSystemManager();
 
             // Emitter creation is deferred to here, when we know the Texture2D service is available.
@@ -492,7 +494,8 @@ namespace ProjectVagabond.Dice
         private void UpdateSpawningNewSumState(float deltaTime)
         {
             _animationTimer += deltaTime;
-            float progress = Math.Clamp(_animationTimer / _global.DiceNewSumAnimationDuration, 0f, 1f);
+            float totalDuration = _global.DiceNewSumInflateDuration + _global.DiceNewSumHoldDuration + _global.DiceNewSumDeflateDuration;
+            float progress = Math.Clamp(_animationTimer / totalDuration, 0f, 1f);
             var newSum = _groupSumResults.Last();
             if (!newSum.IsVisible)
             {
@@ -640,7 +643,10 @@ namespace ProjectVagabond.Dice
                         if (result.ShouldPopOnAnimate)
                         {
                             float popProgress = result.AnimationProgress;
-                            const float inflateEndTime = 0.2f, holdEndTime = 0.7f;
+                            float totalDuration = _global.DiceNewSumInflateDuration + _global.DiceNewSumHoldDuration + _global.DiceNewSumDeflateDuration;
+                            float inflateEndTime = _global.DiceNewSumInflateDuration / totalDuration;
+                            float holdEndTime = (_global.DiceNewSumInflateDuration + _global.DiceNewSumHoldDuration) / totalDuration;
+
                             if (popProgress <= inflateEndTime) result.Scale = 3.5f + (5.25f - 3.5f) * Easing.EaseOutCubic(popProgress / inflateEndTime);
                             else if (popProgress <= holdEndTime) { result.Scale = 5.25f; result.Rotation = (float)(_random.NextDouble() * 2 - 1) * 0.05f; }
                             else result.Scale = 5.25f - (5.25f - 3.5f) * Easing.EaseInCubic((popProgress - holdEndTime) / (1.0f - holdEndTime));
@@ -653,6 +659,7 @@ namespace ProjectVagabond.Dice
                         _sumImpactEmitter.Position = result.CurrentPosition;
                         _sumImpactEmitter.EmitBurst(50);
                         result.ImpactEffectTriggered = true;
+                        _hapticsManager.TriggerZoomPulse(0.98f, 0.1f);
                     }
                 }
             }

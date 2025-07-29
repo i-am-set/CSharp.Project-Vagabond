@@ -394,6 +394,21 @@ namespace ProjectVagabond
         public float DiceNewSumAnimationDuration { get; set; } = 0.5f;
 
         /// <summary>
+        /// The duration in seconds for the "inflate" part of the new sum's pop animation.
+        /// </summary>
+        public float DiceNewSumInflateDuration { get; set; } = 0.2f;
+
+        /// <summary>
+        /// The duration in seconds for the "hold" part of the new sum's pop animation, where it shakes.
+        /// </summary>
+        public float DiceNewSumHoldDuration { get; set; } = 0.25f;
+
+        /// <summary>
+        /// The duration in seconds for the "deflate" part of the new sum's pop animation.
+        /// </summary>
+        public float DiceNewSumDeflateDuration { get; set; } = 0.3f;
+
+        /// <summary>
         /// The duration in seconds for the multiplier animation phase.
         /// </summary>
         public float DiceMultiplierAnimationDuration { get; set; } = 1.5f;

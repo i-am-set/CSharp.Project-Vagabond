@@ -10,7 +10,8 @@ namespace ProjectVagabond
         Pulse,
         Wobble,
         Drift,
-        Bounce
+        Bounce,
+        ZoomPulse
     }
 
     public class HapticsManager
@@ -22,6 +23,7 @@ namespace ProjectVagabond
         private readonly HapticEffect _wobble = new(HapticType.Wobble);
         private readonly HapticEffect _drift = new(HapticType.Drift);
         private readonly HapticEffect _bounce = new(HapticType.Bounce);
+        private readonly HapticEffect _zoomPulse = new(HapticType.ZoomPulse);
         private Global _global;
 
         public HapticsManager()
@@ -59,6 +61,11 @@ namespace ProjectVagabond
             _bounce.Trigger(intensity, duration, direction: direction);
         }
 
+        public void TriggerZoomPulse(float intensity, float duration)
+        {
+            _zoomPulse.Trigger(intensity, duration);
+        }
+
         public void TriggerRandomHop(float intensity, float duration)
         {
             float randomIntensity = intensity * ((float)_random.NextDouble() * 0.6f + 0.4f);
@@ -73,6 +80,7 @@ namespace ProjectVagabond
             _wobble.Reset();
             _drift.Reset();
             _bounce.Reset();
+            _zoomPulse.Reset();
         }
 
         public void Update(GameTime gameTime)
@@ -83,39 +91,50 @@ namespace ProjectVagabond
             _wobble.Update(gameTime, _random);
             _drift.Update(gameTime, _random);
             _bounce.Update(gameTime, _random);
+            _zoomPulse.Update(gameTime, _random);
         }
 
         public Matrix GetHapticsMatrix()
         {
-            Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset;
-            float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation;
+            _global ??= ServiceLocator.Get<Global>();
+
+            Vector2 totalOffset = _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset;
+            float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation;
+            float totalScale = GetCurrentScale();
+
+            var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
 
             Matrix offsetMatrix = Matrix.CreateTranslation(totalOffset.X, totalOffset.Y, 0);
-            Matrix rotationMatrix = Matrix.Identity;
 
-            if (Math.Abs(totalRotation) > float.Epsilon)
-            {
-                var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-                rotationMatrix = Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
-                                 Matrix.CreateRotationZ(totalRotation) *
-                                 Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0);
-            }
+            Matrix rotationMatrix = Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
+                                     Matrix.CreateRotationZ(totalRotation) *
+                                     Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0);
 
-            // Apply rotation first, then the translation offset.
-            return rotationMatrix * offsetMatrix;
+            Matrix scaleMatrix = Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
+                                  Matrix.CreateScale(totalScale, totalScale, 1.0f) *
+                                  Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0);
+
+            // Apply effects in order: Scale, then Rotate, then Translate.
+            return scaleMatrix * rotationMatrix * offsetMatrix;
         }
 
         public bool IsAnyHapticActive()
         {
-            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active;
+            return _shake.Active || _hop.Active || _pulse.Active || _wobble.Active || _drift.Active || _bounce.Active || _zoomPulse.Active;
         }
 
         public Vector2 GetCurrentOffset()
         {
-            return _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset;
+            return _shake.Offset + _hop.Offset + _pulse.Offset + _wobble.Offset + _drift.Offset + _bounce.Offset + _zoomPulse.Offset;
         }
 
-        private enum HapticType { Shake, Hop, Pulse, Wobble, Drift, Bounce }
+        public float GetCurrentScale()
+        {
+            // If multiple effects modify scale in the future, they should be multiplied together.
+            return _zoomPulse.Scale;
+        }
+
+        private enum HapticType { Shake, Hop, Pulse, Wobble, Drift, Bounce, ZoomPulse }
 
         private class HapticEffect
         {
@@ -125,6 +144,7 @@ namespace ProjectVagabond
             private bool _decayed, _active;
             private Vector2 _offset;
             private float _rotation;
+            private float _scale;
 
             public HapticEffect(HapticType type)
             {
@@ -135,6 +155,7 @@ namespace ProjectVagabond
             public bool Active => _active;
             public Vector2 Offset => _offset;
             public float Rotation => _rotation;
+            public float Scale => _scale;
 
             public void Trigger(float intensity, float duration, bool decayed = true, float frequency = 0f, Vector2 direction = default)
             {
@@ -156,6 +177,7 @@ namespace ProjectVagabond
                 _direction = Vector2.Zero;
                 _offset = Vector2.Zero;
                 _rotation = 0f;
+                _scale = 1.0f;
                 _active = false;
                 _decayed = true;
             }
@@ -229,6 +251,14 @@ namespace ProjectVagabond
                         {
                             float bounceValue = (float)(Math.Sin(progress * Math.PI * 6) * Math.Exp(-progress * 4)) * _intensity;
                             _offset = _direction * bounceValue;
+                        }
+                        break;
+                    case HapticType.ZoomPulse:
+                        if (_timer > 0)
+                        {
+                            // A pulse that goes from 1.0 -> intensity -> 1.0 using a sine wave.
+                            float pulseValue = (float)Math.Sin(progress * Math.PI);
+                            _scale = 1.0f + (_intensity - 1.0f) * pulseValue;
                         }
                         break;
                 }

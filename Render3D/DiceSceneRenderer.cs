@@ -115,9 +115,12 @@ namespace ProjectVagabond.Dice
 
         public (float viewWidth, float viewHeight) UpdateCamera(int totalDice)
         {
+            var hapticsManager = ServiceLocator.Get<HapticsManager>();
+            float hapticScale = hapticsManager.GetCurrentScale();
+
             float requiredZoom = totalDice <= 8 ? 20f : (totalDice <= 20 ? 30f : 40f);
             float aspectRatio = (float)_renderTarget.Width / _renderTarget.Height;
-            float viewHeight = requiredZoom;
+            float viewHeight = requiredZoom / hapticScale; // Inverted to make scale < 1.0 a zoom out
             float viewWidth = viewHeight * aspectRatio;
 
             float physicsWorldWidth = 40f * aspectRatio;
