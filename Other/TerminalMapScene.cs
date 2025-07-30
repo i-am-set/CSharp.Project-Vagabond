@@ -36,6 +36,7 @@ namespace ProjectVagabond.Scenes
         private ActionMenuPanel _actionMenuPanel;
         private PlayerCombatInputSystem _playerCombatInputSystem;
         private KeyboardState _previousKeyboardState;
+        private readonly CombatUIAnimationManager _combatUIAnimationManager;
 
         public TerminalMapScene()
         {
@@ -52,6 +53,7 @@ namespace ProjectVagabond.Scenes
             _terminalRenderer = ServiceLocator.Get<TerminalRenderer>();
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
+            _combatUIAnimationManager = ServiceLocator.Get<CombatUIAnimationManager>();
 
             EventBus.Subscribe<GameEvents.EntityTookDamage>(OnEntityTookDamage);
         }
@@ -316,6 +318,14 @@ namespace ProjectVagabond.Scenes
                                     int cellSize = Global.LOCAL_GRID_CELL_SIZE;
                                     var destRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
                                     spriteBatch.Draw(renderComp.Texture ?? pixel, destRect, renderComp.Color);
+
+                                    // Draw the pulsing red selector
+                                    bool isInflated = _combatUIAnimationManager.IsPulsing("TargetSelector");
+                                    var global = ServiceLocator.Get<Global>();
+                                    Rectangle highlightRect = isInflated
+                                        ? new Rectangle(destRect.X - 1, destRect.Y - 1, destRect.Width + 2, destRect.Height + 2)
+                                        : destRect;
+                                    DrawHollowRectangle(spriteBatch, highlightRect, global.Palette_Red, 1);
                                 }
                             }
                         }
@@ -340,6 +350,19 @@ namespace ProjectVagabond.Scenes
             spriteBatch.End();
 
             _waitDialog.Draw(spriteBatch, font, gameTime);
+        }
+
+        private void DrawHollowRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            // Top
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
+            // Bottom
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
+            // Left
+            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
+            // Right
+            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
         }
     }
 }
