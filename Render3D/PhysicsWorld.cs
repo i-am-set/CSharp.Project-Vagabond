@@ -56,70 +56,39 @@ namespace ProjectVagabond.Physics
                 SpringSettings = new SpringSettings(_global.DiceSpringStiffness, _global.DiceSpringDamping)
             };
 
-            // --- Publish a collision event for particle effects ---
-            // We need to get the BodyReference to check the Awake status.
-            bool isAwake = false;
-            if (pair.A.Mobility != CollidableMobility.Static)
+            // --- Publish a collision event for particle effects & nudges ---
+            if (manifold.Count > 0)
             {
-                isAwake = _simulation.Bodies.GetBodyReference(pair.A.BodyHandle).Awake;
-            }
-            if (!isAwake && pair.B.Mobility != CollidableMobility.Static)
-            {
-                isAwake = _simulation.Bodies.GetBodyReference(pair.B.BodyHandle).Awake;
-            }
-
-            // Only create sparks for new, active collisions.
-            if (isAwake && manifold.Count > 0)
-            {
-                // Get the contact point's offset and normal.
+                // Get contact data once.
                 manifold.GetContact(0, out var offset, out var normal, out _, out _);
 
-                // Calculate the absolute world position of the contact point.
+                // Calculate world position of the contact.
                 Vector3 worldPosition;
                 if (pair.A.Mobility != CollidableMobility.Static)
                 {
-                    var bodyA = _simulation.Bodies.GetBodyReference(pair.A.BodyHandle);
-                    worldPosition = bodyA.Pose.Position + offset;
+                    worldPosition = _simulation.Bodies.GetBodyReference(pair.A.BodyHandle).Pose.Position + offset;
                 }
                 else
                 {
-                    var staticA = _simulation.Statics.GetStaticReference(pair.A.StaticHandle);
-                    worldPosition = staticA.Pose.Position + offset;
+                    worldPosition = _simulation.Statics.GetStaticReference(pair.A.StaticHandle).Pose.Position + offset;
                 }
 
-                // --- Check if this is a floor collision ---
-                var mobilityA = pair.A.Mobility;
-                var mobilityB = pair.B.Mobility;
-                bool isDieOnStatic = (mobilityA == CollidableMobility.Dynamic && mobilityB == CollidableMobility.Static) ||
-                                     (mobilityA == CollidableMobility.Static && mobilityB == CollidableMobility.Dynamic);
+                // Determine if a spark should be created.
+                bool isFloorCollision = (pair.A.Mobility == CollidableMobility.Static || pair.B.Mobility == CollidableMobility.Static) && worldPosition.Y < 0.5f;
+                var velocityA = pair.A.Mobility == CollidableMobility.Dynamic ? _simulation.Bodies.GetBodyReference(pair.A.BodyHandle).Velocity.Linear : Vector3.Zero;
+                var velocityB = pair.B.Mobility == CollidableMobility.Dynamic ? _simulation.Bodies.GetBodyReference(pair.B.BodyHandle).Velocity.Linear : Vector3.Zero;
+                var relativeVelocity = velocityA - velocityB;
+                float closingSpeed = Vector3.Dot(relativeVelocity, normal);
+                bool shouldSpark = !isFloorCollision && Math.Abs(closingSpeed) > _global.DiceSparkVelocityThreshold;
 
-                // The floor is a static body located at Y = -0.5.
-                // If a die hits a static body at a very low Y-coordinate, we assume it's the floor and don't create a spark.
-                // A small threshold (0.5f) is used to account for the size of the die collider.
-                if (isDieOnStatic && worldPosition.Y < 0.5f)
+                // Publish an event for each dynamic, awake body involved in the collision.
+                if (pair.A.Mobility == CollidableMobility.Dynamic && _simulation.Bodies.GetBodyReference(pair.A.BodyHandle).Awake)
                 {
-                    // This is a floor collision. Do nothing and let the physics resolve.
+                    EventBus.Publish(new GameEvents.DiceCollisionOccurred { WorldPosition = worldPosition, BodyHandle = pair.A.BodyHandle, IsSparking = shouldSpark });
                 }
-                else
+                if (pair.B.Mobility == CollidableMobility.Dynamic && _simulation.Bodies.GetBodyReference(pair.B.BodyHandle).Awake)
                 {
-                    // --- NEW: Check for impact velocity ---
-                    // Get velocities of both bodies. Static/kinematic bodies have zero velocity.
-                    var velocityA = pair.A.Mobility == CollidableMobility.Dynamic ? _simulation.Bodies.GetBodyReference(pair.A.BodyHandle).Velocity.Linear : Vector3.Zero;
-                    var velocityB = pair.B.Mobility == CollidableMobility.Dynamic ? _simulation.Bodies.GetBodyReference(pair.B.BodyHandle).Velocity.Linear : Vector3.Zero;
-
-                    // Calculate the relative velocity at the point of contact.
-                    var relativeVelocity = velocityA - velocityB;
-
-                    // Calculate the closing speed along the contact normal.
-                    // The normal points from B to A, so a negative dot product means they are closing.
-                    float closingSpeed = Vector3.Dot(relativeVelocity, normal);
-
-                    // Only create a spark if the impact is fast enough.
-                    if (Math.Abs(closingSpeed) > _global.DiceSparkVelocityThreshold)
-                    {
-                        // This is a die-vs-die, die-vs-wall, or die-vs-ceiling collision. Create a spark.
-                        EventBus.Publish(new GameEvents.DiceCollisionOccurred { WorldPosition = worldPosition });
-                    }
+                    EventBus.Publish(new GameEvents.DiceCollisionOccurred { WorldPosition = worldPosition, BodyHandle = pair.B.BodyHandle, IsSparking = shouldSpark });
                 }
             }
 

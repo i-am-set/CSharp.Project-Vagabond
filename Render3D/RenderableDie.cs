@@ -75,6 +75,12 @@ namespace ProjectVagabond.Dice
         /// </summary>
         public bool IsDespawned { get; set; } = false;
 
+        /// <summary>
+        /// Tracks the number of significant collisions this die has experienced.
+        /// Used for effects like the D4's initial tumble.
+        /// </summary>
+        public int CollisionCount { get; set; }
+
 
         /// <summary>
         /// Initializes a new instance of the RenderableDie class.
@@ -105,6 +111,7 @@ namespace ProjectVagabond.Dice
             BaseScale = 1.0f;
             IsDespawned = false;
             DieType = DieType.D6; // Reset to default
+            CollisionCount = 0;
         }
 
         /// <summary>

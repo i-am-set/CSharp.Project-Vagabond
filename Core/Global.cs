@@ -500,6 +500,27 @@ namespace ProjectVagabond
         /// </summary>
         public float DiceNudgeTorqueMax { get; set; } = 25f;
 
+        /// <summary>
+        /// The number of initial collisions a D4 can have that will trigger a "tumble" impulse.
+        /// </summary>
+        public int DiceD4MaxTumbleCollisions { get; set; } = 3;
+
+        /// <summary>
+        /// The maximum torque (spin) applied to a D4 to make it tumble on an initial collision.
+        /// </summary>
+        public float DiceD4TumbleTorqueMax { get; set; } = 15f;
+
+        /// <summary>
+        /// The minimum upward force applied to a D4 to make it "pop" on an initial collision.
+        /// </summary>
+        public float DiceD4TumbleUpwardForceMin { get; set; } = 5f;
+
+        /// <summary>
+        /// The maximum upward force applied to a D4 to make it "pop" on an initial collision.
+        /// </summary>
+        public float DiceD4TumbleUpwardForceMax { get; set; } = 10f;
+
+
         // --- Debugging ---
 
         /// <summary>

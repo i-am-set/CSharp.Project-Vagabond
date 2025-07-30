@@ -356,7 +356,22 @@ namespace ProjectVagabond.Dice
         private void HandleDiceCollision(GameEvents.DiceCollisionOccurred e)
         {
             if (_renderer.RenderTarget == null) return;
-            _animationController.HandleDiceCollision(e, _renderer.View, _renderer.Projection, _renderer.RenderTarget);
+
+            // Handle the D4 tumble effect
+            if (_bodyToDieMap.TryGetValue(e.BodyHandle, out var die))
+            {
+                if (die.DieType == DieType.D4 && die.CollisionCount < _global.DiceD4MaxTumbleCollisions)
+                {
+                    die.CollisionCount++;
+                    _physicsController.ApplyTumbleImpulse(e.BodyHandle);
+                }
+            }
+
+            // Handle the spark particle effect
+            if (e.IsSparking)
+            {
+                _animationController.HandleDiceCollision(e, _renderer.View, _renderer.Projection, _renderer.RenderTarget);
+            }
         }
 
         private void HandleStuckDice()

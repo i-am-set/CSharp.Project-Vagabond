@@ -200,5 +200,27 @@ namespace ProjectVagabond.Dice
                 (float)(Random.Shared.NextDouble() * nudgeTorqueMax * 2 - nudgeTorqueMax),
                 (float)(Random.Shared.NextDouble() * nudgeTorqueMax * 2 - nudgeTorqueMax));
         }
+
+        public void ApplyTumbleImpulse(BodyHandle handle)
+        {
+            var body = GetBodyReference(handle);
+            if (!body.Awake) body.Awake = true;
+
+            float upwardForceMin = _global.DiceD4TumbleUpwardForceMin;
+            float upwardForceMax = _global.DiceD4TumbleUpwardForceMax;
+            float torqueMax = _global.DiceD4TumbleTorqueMax;
+
+            // Apply a small upward pop to get it off the surface
+            body.Velocity.Linear += new BepuVector3(
+                0,
+                (float)(Random.Shared.NextDouble() * (upwardForceMax - upwardForceMin) + upwardForceMin),
+                0);
+
+            // Apply a random torque to make it tumble
+            body.Velocity.Angular += new BepuVector3(
+                (float)(Random.Shared.NextDouble() * torqueMax * 2 - torqueMax),
+                (float)(Random.Shared.NextDouble() * torqueMax * 2 - torqueMax),
+                (float)(Random.Shared.NextDouble() * torqueMax * 2 - torqueMax));
+        }
     }
 }

@@ -59,6 +59,7 @@
 
         /// <summary>
         /// Published by the physics system when two dice colliders make contact.
+        /// An event is published for each dynamic body involved in the collision.
         /// </summary>
         public struct DiceCollisionOccurred
         {
@@ -66,6 +67,16 @@
             /// The position of the collision in 3D world space.
             /// </summary>
             public System.Numerics.Vector3 WorldPosition;
+
+            /// <summary>
+            /// The handle of the dynamic body (the die) this event pertains to.
+            /// </summary>
+            public BepuPhysics.BodyHandle BodyHandle;
+
+            /// <summary>
+            /// True if the collision was fast enough to generate a spark effect.
+            /// </summary>
+            public bool IsSparking;
         }
     }
 }
