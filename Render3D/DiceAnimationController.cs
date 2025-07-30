@@ -136,6 +136,10 @@ namespace ProjectVagabond.Dice
             }
             _activeBoxEmitters.Clear();
 
+            // Clear any particles from the persistent emitters from the previous roll.
+            _sparkEmitter?.Clear();
+            _sumImpactEmitter?.Clear();
+
             _currentRollGroups = rollGroups;
             _floatingResults.Clear();
             _groupSumResults.Clear();
@@ -179,7 +183,13 @@ namespace ProjectVagabond.Dice
                 case AnimationState.ShiftingSums: UpdateShiftingSumsState(deltaTime); break;
                 case AnimationState.GatheringResults: UpdateGatheringState(deltaTime); break;
                 case AnimationState.SpawningNewSum: UpdateSpawningNewSumState(deltaTime); break;
-                case AnimationState.PostSumDelay: StartNextDisplayGroupEnumeration(renderTarget); break;
+                case AnimationState.PostSumDelay:
+                    _animationTimer += deltaTime;
+                    if (_animationTimer >= _global.DicePostSumDelayDuration)
+                    {
+                        StartNextDisplayGroupEnumeration(renderTarget);
+                    }
+                    break;
                 case AnimationState.ApplyingMultipliers: UpdateApplyingMultipliersState(deltaTime); break;
                 case AnimationState.FinalSumHold: UpdateFinalSumHoldState(deltaTime); break;
                 case AnimationState.SequentialFadeOut: UpdateSequentialFadeOutState(deltaTime); break;

@@ -26,11 +26,10 @@ using System.Text;              // Added for StringBuilder
 // TODO: Make "activeStatusEffectcomponent" a component that can be added to any entity, not just the player
 // TODO: Make secondary dice in combat smaller
 // TODO: Add a 1d8, 1d10, 1d12, and 1d20 to the dice rolling system; one at a time since its complex to impliment
-// TODO: Add a delay after the final sum impact before the next die group is counted
 // TODO: When hovering an enemy in the enemydisplaypanel, make their entity on the map display over the gray filter so its highlighted
 // TODO: fix the selector logic in combat so it doesnt default "select" the closest entity, because now theres a menu for selecting. Isntead, make the red pulsing selector render over the darkened curtain filter thing and have it move ontop of the entity that is being hovered in the enemy display panel
 // TODO: Make a brief loading screen on game start to roll a fake dice roll of like 10 die to get rid of the hitching first roll
-// BUG: Fix impact particle effect rendering when dice start getting counted
+// BUG: 
 // TODO: Add a nudge effect to d4s when for their first 3 collisions to make them bounce around a bit more like they do in real life
 // TODO: Make it so the game checks if a die is still moving before rerolling it, but if its moving outside of the bounds of the screen, then reroll, and on top of that have a 20 second timeout for rerolling dice that are still moving just in case the physics engine gets stuck
 
