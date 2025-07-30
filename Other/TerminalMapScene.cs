@@ -37,6 +37,8 @@ namespace ProjectVagabond.Scenes
         private PlayerCombatInputSystem _playerCombatInputSystem;
         private KeyboardState _previousKeyboardState;
         private readonly CombatUIAnimationManager _combatUIAnimationManager;
+        private readonly LoadingScreen _loadingScreen;
+        private bool _isInitialLoad = true;
 
         public TerminalMapScene()
         {
@@ -54,6 +56,7 @@ namespace ProjectVagabond.Scenes
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _combatUIAnimationManager = ServiceLocator.Get<CombatUIAnimationManager>();
+            _loadingScreen = new LoadingScreen();
 
             EventBus.Subscribe<GameEvents.EntityTookDamage>(OnEntityTookDamage);
         }
@@ -79,6 +82,13 @@ namespace ProjectVagabond.Scenes
             _waitDialog = new WaitDialog(this);
             _clockRenderer.OnClockClicked += ShowWaitDialog;
             _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
+
+            if (_isInitialLoad)
+            {
+                _isInitialLoad = false;
+                _loadingScreen.AddTask(new DiceWarmupTask());
+                _loadingScreen.Start();
+            }
 
             if (_settingsButton == null)
             {
@@ -172,6 +182,14 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
+            if (_loadingScreen.IsActive)
+            {
+                _loadingScreen.Update(gameTime);
+                // The dice system needs to update for the warmup roll to simulate
+                _diceRollingSystem.Update(gameTime);
+                return; // Block all other updates
+            }
+
             var currentKeyboardState = Keyboard.GetState();
             _diceRollingSystem.Update(gameTime);
 
@@ -261,6 +279,14 @@ namespace ProjectVagabond.Scenes
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
+            if (_loadingScreen.IsActive)
+            {
+                spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+                _loadingScreen.Draw(spriteBatch, font);
+                spriteBatch.End();
+                return; // Block all other drawing
+            }
+
             var currentMouseState = Mouse.GetState();
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);

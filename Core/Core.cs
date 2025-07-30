@@ -25,7 +25,7 @@ using System.Text;              // Added for StringBuilder
 // TODO: Finish entity implimentation
 // TODO: Make "activeStatusEffectcomponent" a component that can be added to any entity, not just the player
 // TODO: Add a 1d8, 1d10, 1d12, and 1d20 to the dice rolling system; one at a time since its complex to impliment
-// TODO: Make a brief loading screen on game start to roll a fake dice roll of like 10 die to get rid of the hitching first roll
+// TODO: Make the loading screen use the same display as the health bar
 // TODO: Make it so the game checks if a die is still moving before rerolling it, but if its moving outside of the bounds of the screen, then reroll, and on top of that have a 20 second timeout for rerolling dice that are still moving just in case the physics engine gets stuck
 
 namespace ProjectVagabond

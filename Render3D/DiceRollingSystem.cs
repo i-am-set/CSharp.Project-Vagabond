@@ -108,6 +108,15 @@ namespace ProjectVagabond.Dice
             _currentState = RollState.Rolling;
         }
 
+        /// <summary>
+        /// Forcibly stops the current roll, clears all dice, and resets the system to an idle state.
+        /// </summary>
+        public void ClearRoll()
+        {
+            ClearRollState();
+            _currentState = RollState.Idle;
+        }
+
         private void ClearRollState()
         {
             foreach (var pair in _bodyToDieMap)
