@@ -20,6 +20,7 @@ namespace ProjectVagabond.Dice
         private RenderTarget2D _renderTarget;
         private Model _d6Model;
         private Model _d4Model;
+        private Model _d4ColliderSourceModel;
 
         // Shared Debug Resources
         private BasicEffect _debugEffect;
@@ -55,6 +56,10 @@ namespace ProjectVagabond.Dice
             _d4Model = content.Load<Model>("Models/die_d4");
             var d4Texture = content.Load<Texture2D>("Textures/die_d4_texture");
             ApplyTextureToModel(_d4Model, d4Texture);
+
+            // Load the simple collider model for the D4.
+            // This should be a model of a perfect, 4-vertex tetrahedron.
+            _d4ColliderSourceModel = content.Load<Model>("Models/die_d4_collider");
 
             // Create shared debug resources
             _debugEffect = new BasicEffect(_graphicsDevice)
@@ -96,7 +101,9 @@ namespace ProjectVagabond.Dice
 
         public List<BepuVector3> GetVerticesForModel(DieType dieType)
         {
-            var model = dieType == DieType.D4 ? _d4Model : _d6Model;
+            // If the die is a D4, use the simple collider source model to generate the physics shape.
+            // Otherwise, use the visual model. The D6 collider is procedural, so what this returns for D6 doesn't matter for physics.
+            var model = dieType == DieType.D4 ? _d4ColliderSourceModel : _d6Model;
             var uniqueVertices = new HashSet<XnaVector3>();
             foreach (var mesh in model.Meshes)
             {
