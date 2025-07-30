@@ -221,7 +221,7 @@ namespace ProjectVagabond
         /// How to use: Higher values create more friction, making dice stop rolling sooner. Lower values make them feel more like ice.
         /// Example: 0.1f is very slippery, 2.0f is very rough.
         /// </summary>
-        public float DiceFrictionCoefficient { get; set; } = 1.5f;
+        public float DiceFrictionCoefficient { get; set; } = 1.25f;
 
         /// <summary>
         /// Controls the bounciness of a collision.
@@ -324,7 +324,7 @@ namespace ProjectVagabond
         /// How to use: Higher values create a much faster, more chaotic tumble.
         /// Example: 20 is a gentle tumble, 100 is a very fast spin.
         /// </summary>
-        public float DiceInitialAngularVelocityMax { get; set; } = 100f;
+        public float DiceInitialAngularVelocityMax { get; set; } = 75f;
 
         // --- Visuals & Animation ---
 

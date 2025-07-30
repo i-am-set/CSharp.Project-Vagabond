@@ -304,7 +304,7 @@ namespace ProjectVagabond
                 IsFixedTimeStep = true;
                 TargetElapsedTime = TimeSpan.FromSeconds(1.0 / _settings.TargetFramerate);
             }
-            else
+            else 
             {
                 IsFixedTimeStep = false;
             }
