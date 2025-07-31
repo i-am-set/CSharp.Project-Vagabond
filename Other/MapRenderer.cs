@@ -69,19 +69,26 @@ namespace ProjectVagabond
             _contextMenu.Update(mouseState, mouseState, virtualMousePos, font); // Note: prevMouseState is same as current here, might need adjustment if complex logic is added
         }
 
-        private void CalculateMapLayout()
+        private void CalculateMapLayout(Rectangle? overrideBounds = null)
         {
-            // Calculate max dimensions based on screen size and reserved areas
-            int maxWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
-            int maxHeight = Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10; // 10px gap
+            if (overrideBounds.HasValue)
+            {
+                MapScreenBounds = overrideBounds.Value;
+            }
+            else
+            {
+                // Calculate max dimensions based on screen size and reserved areas
+                int maxWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
+                int maxHeight = Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10; // 10px gap
 
-            // The map must be a square, so its size is the smaller of the two dimensions
-            int mapSize = Math.Min(maxWidth, maxHeight);
+                // The map must be a square, so its size is the smaller of the two dimensions
+                int mapSize = Math.Min(maxWidth, maxHeight);
 
-            int mapX = (Global.VIRTUAL_WIDTH - mapSize) / 2;
-            int mapY = Global.MAP_TOP_PADDING;
+                int mapX = (Global.VIRTUAL_WIDTH - mapSize) / 2;
+                int mapY = Global.MAP_TOP_PADDING;
+                MapScreenBounds = new Rectangle(mapX, mapY, mapSize, mapSize);
+            }
 
-            MapScreenBounds = new Rectangle(mapX, mapY, mapSize, mapSize);
             _mapGridBounds = MapScreenBounds;
 
             if (_gameState.CurrentMapView == MapView.World)
@@ -171,22 +178,22 @@ namespace ProjectVagabond
             }
         }
 
-        public void DrawMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public void DrawMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Rectangle? overrideBounds = null)
         {
             if (_gameState.CurrentMapView == MapView.World)
             {
-                DrawWorldMap(spriteBatch, font, gameTime);
+                DrawWorldMap(spriteBatch, font, gameTime, overrideBounds);
             }
             else
             {
-                DrawLocalMap(spriteBatch, font, gameTime);
+                DrawLocalMap(spriteBatch, font, gameTime, overrideBounds);
             }
             _contextMenu.Draw(spriteBatch, font);
         }
 
-        private void DrawWorldMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        private void DrawWorldMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Rectangle? overrideBounds)
         {
-            CalculateMapLayout();
+            CalculateMapLayout(overrideBounds);
             DrawMapFrame(spriteBatch, font, gameTime);
 
             var gridElements = GenerateWorldMapGridElements();
@@ -218,15 +225,15 @@ namespace ProjectVagabond
             if (_gameState.IsPaused) DrawPauseIcon(spriteBatch, font);
         }
 
-        private void DrawLocalMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        private void DrawLocalMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Rectangle? overrideBounds)
         {
-            DrawLocalMapBackground(spriteBatch, font, gameTime);
+            DrawLocalMapBackground(spriteBatch, font, gameTime, overrideBounds);
             DrawLocalMapEntities(spriteBatch, font, gameTime);
         }
 
-        public void DrawLocalMapBackground(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public void DrawLocalMapBackground(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Rectangle? overrideBounds = null)
         {
-            CalculateMapLayout();
+            CalculateMapLayout(overrideBounds);
             DrawMapFrame(spriteBatch, font, gameTime);
 
             var backgroundElements = GenerateLocalMapBackgroundElements();

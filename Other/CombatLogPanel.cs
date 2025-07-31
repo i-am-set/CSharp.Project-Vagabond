@@ -15,7 +15,7 @@ namespace ProjectVagabond
     public class CombatLogPanel
     {
         private readonly Global _global;
-        private readonly Rectangle _bounds;
+        public Rectangle Bounds { get; set; }
 
         private readonly List<ColoredLine> _unwrappedMessages = new List<ColoredLine>();
         private List<ColoredLine> _wrappedMessages = new List<ColoredLine>();
@@ -27,7 +27,7 @@ namespace ProjectVagabond
 
         public CombatLogPanel(Rectangle bounds)
         {
-            _bounds = bounds;
+            Bounds = bounds;
             _global = ServiceLocator.Get<Global>();
             EventBus.Subscribe<GameEvents.CombatLogMessagePublished>(HandleMessageLogged);
         }
@@ -59,21 +59,21 @@ namespace ProjectVagabond
 
             // Draw the border first (a slightly larger rectangle behind the background)
             var borderRect = new Rectangle(
-                _bounds.X - BORDER_THICKNESS,
-                _bounds.Y - BORDER_THICKNESS,
-                _bounds.Width + (BORDER_THICKNESS * 2),
-                _bounds.Height + (BORDER_THICKNESS * 2)
+                Bounds.X - BORDER_THICKNESS,
+                Bounds.Y - BORDER_THICKNESS,
+                Bounds.Width + (BORDER_THICKNESS * 2),
+                Bounds.Height + (BORDER_THICKNESS * 2)
             );
             spriteBatch.Draw(pixel, borderRect, _global.Palette_White);
 
             // Draw the background for the log panel
-            spriteBatch.Draw(pixel, _bounds, _global.TerminalBg);
+            spriteBatch.Draw(pixel, Bounds, _global.TerminalBg);
 
             // --- Draw Text ---
             int lineHeight = Global.TERMINAL_LINE_SPACING;
-            int maxVisibleLines = (_bounds.Height - (PADDING * 2)) / lineHeight;
+            int maxVisibleLines = (Bounds.Height - (PADDING * 2)) / lineHeight;
 
-            float startY = _bounds.Bottom - PADDING - lineHeight;
+            float startY = Bounds.Bottom - PADDING - lineHeight;
             int linesToDraw = System.Math.Min(maxVisibleLines, _wrappedMessages.Count);
 
             for (int i = 0; i < linesToDraw; i++)
@@ -82,11 +82,11 @@ namespace ProjectVagabond
                 if (messageIndex < 0) break;
 
                 var line = _wrappedMessages[messageIndex];
-                float currentX = _bounds.Left + PADDING;
+                float currentX = Bounds.Left + PADDING;
                 float currentY = startY - (i * lineHeight);
 
                 // Ensure text isn't drawn outside the panel's vertical bounds
-                if (currentY < _bounds.Top) break;
+                if (currentY < Bounds.Top) break;
 
                 foreach (var segment in line.Segments)
                 {
@@ -99,7 +99,7 @@ namespace ProjectVagabond
         private void ReWrapMessages(BitmapFont font)
         {
             _wrappedMessages.Clear();
-            float wrapWidth = _bounds.Width - (PADDING * 2);
+            float wrapWidth = Bounds.Width - (PADDING * 2);
             foreach (var line in _unwrappedMessages)
             {
                 _wrappedMessages.AddRange(WrapColoredText(line, wrapWidth, font));

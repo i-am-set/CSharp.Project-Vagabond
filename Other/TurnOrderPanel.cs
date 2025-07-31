@@ -17,9 +17,8 @@ namespace ProjectVagabond
         private readonly GameState _gameState;
         private readonly Global _global;
 
-        private readonly Vector2 _position;
-        private readonly int _width;
-        private readonly int _maxVisibleItems;
+        private readonly Rectangle _bounds;
+        private int _maxVisibleItems;
         private int _scrollStartIndex = 0;
 
         private readonly List<Button> _buttons = new List<Button>();
@@ -32,12 +31,9 @@ namespace ProjectVagabond
 
         public event Action<int> OnTargetSelected;
 
-        public TurnOrderPanel(Vector2 position, int width, int maxVisibleItems)
+        public TurnOrderPanel(Rectangle bounds)
         {
-            _position = position;
-            _width = width;
-            _maxVisibleItems = maxVisibleItems;
-
+            _bounds = bounds;
             _gameState = ServiceLocator.Get<GameState>();
             _global = ServiceLocator.Get<Global>();
         }
@@ -73,6 +69,10 @@ namespace ProjectVagabond
             var initiativeOrder = _gameState.InitiativeOrder;
             if (initiativeOrder == null || initiativeOrder.Count == 0 || font == null) return;
 
+            int lineHeight = font.LineHeight + 4;
+            _maxVisibleItems = (_bounds.Height - TITLE_AREA_HEIGHT - PADDING) / lineHeight;
+
+
             // Update scroll position to keep the current turn visible
             int currentIndex = initiativeOrder.IndexOf(_gameState.CurrentTurnEntityId);
             if (currentIndex != -1)
@@ -82,8 +82,7 @@ namespace ProjectVagabond
             }
 
             var displayNames = EntityNamer.GetUniqueNames(initiativeOrder);
-            int lineHeight = font.LineHeight + 4;
-            float currentY = _position.Y + TITLE_AREA_HEIGHT + 2;
+            float currentY = _bounds.Y + TITLE_AREA_HEIGHT + 2;
 
             int itemsToDraw = System.Math.Min(_maxVisibleItems, initiativeOrder.Count - _scrollStartIndex);
 
@@ -93,7 +92,7 @@ namespace ProjectVagabond
                 int entityId = initiativeOrder[listIndex];
                 string name = displayNames[entityId];
 
-                var buttonBounds = new Rectangle((int)_position.X + PADDING, (int)currentY + (i * lineHeight), _width - (PADDING * 2), lineHeight);
+                var buttonBounds = new Rectangle((int)_bounds.X + PADDING, (int)currentY + (i * lineHeight), _bounds.Width - (PADDING * 2), lineHeight);
 
                 var button = new Button(buttonBounds, name, $"SelectTarget_{entityId}")
                 {
@@ -125,24 +124,18 @@ namespace ProjectVagabond
 
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
-            // --- Calculate Panel Dimensions with Fixed Height ---
-            int lineHeight = font.LineHeight + 4;
-            int listHeight = _maxVisibleItems * lineHeight;
-            int totalHeight = TITLE_AREA_HEIGHT + listHeight + PADDING;
-            var bounds = new Rectangle((int)_position.X, (int)_position.Y, _width, totalHeight);
-
             // --- Draw Panel Border and Background ---
-            var borderRect = new Rectangle(bounds.X - BORDER_THICKNESS, bounds.Y - BORDER_THICKNESS, bounds.Width + (BORDER_THICKNESS * 2), bounds.Height + (BORDER_THICKNESS * 2));
+            var borderRect = new Rectangle(_bounds.X - BORDER_THICKNESS, _bounds.Y - BORDER_THICKNESS, _bounds.Width + (BORDER_THICKNESS * 2), _bounds.Height + (BORDER_THICKNESS * 2));
             spriteBatch.Draw(pixel, borderRect, _global.Palette_White);
-            spriteBatch.Draw(pixel, bounds, _global.TerminalBg * 0.9f);
+            spriteBatch.Draw(pixel, _bounds, _global.TerminalBg * 0.9f);
 
             // --- Draw Title and Divider ---
             string title = "TURN ORDER";
             Vector2 titleSize = font.MeasureString(title);
-            Vector2 titlePos = new Vector2(bounds.Center.X - titleSize.X / 2, bounds.Y + PADDING);
+            Vector2 titlePos = new Vector2(_bounds.Center.X - titleSize.X / 2, _bounds.Y + PADDING);
             spriteBatch.DrawString(font, title, titlePos, _global.Palette_Gray);
             int dividerY = (int)titlePos.Y + font.LineHeight + 2;
-            spriteBatch.Draw(pixel, new Rectangle(bounds.X + PADDING, dividerY, bounds.Width - (PADDING * 2), 1), _global.Palette_Gray);
+            spriteBatch.Draw(pixel, new Rectangle(_bounds.X + PADDING, dividerY, _bounds.Width - (PADDING * 2), 1), _global.Palette_Gray);
 
             // --- Draw Buttons and Turn Numbers ---
             for (int i = 0; i < _buttons.Count; i++)

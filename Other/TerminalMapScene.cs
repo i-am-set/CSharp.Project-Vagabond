@@ -106,38 +106,41 @@ namespace ProjectVagabond.Scenes
             // --- Combat UI Panel Initialization and Layout ---
             if (_playerStatusPanel == null)
             {
-                // Calculate reference bounds based on the new map layout
+                // Calculate reference bounds based on the out-of-combat map layout
                 int mapTotalWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
-                int mapX = (Global.VIRTUAL_WIDTH - mapTotalWidth) / 2;
                 int mapSize = Math.Min(mapTotalWidth, Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10);
+                int mapX = (Global.VIRTUAL_WIDTH - mapSize) / 2;
                 var mapBounds = new Rectangle(mapX, Global.MAP_TOP_PADDING, mapSize, mapSize);
 
-                // Left Column
-                int leftColumnWidth = mapBounds.X - 20; // 10px padding on each side
-                var playerStatusBounds = new Rectangle(10, Global.MAP_TOP_PADDING, leftColumnWidth, 140);
-                _playerStatusPanel = new PlayerStatusPanel(playerStatusBounds);
-
-                // Right Column
+                // --- Side Columns ---
+                int leftColumnWidth = mapBounds.X - 20;
                 int rightColumnX = mapBounds.Right + 10;
                 int rightColumnWidth = Global.VIRTUAL_WIDTH - rightColumnX - 10;
-                var enemyDisplayBounds = new Rectangle(rightColumnX, Global.MAP_TOP_PADDING, rightColumnWidth, 120);
-                _enemyDisplayPanel = new EnemyDisplayPanel(enemyDisplayBounds);
 
-                var turnOrderPosition = new Vector2(rightColumnX, enemyDisplayBounds.Bottom + 10);
-                _turnOrderPanel = new TurnOrderPanel(turnOrderPosition, rightColumnWidth, 10);
+                // Turn Order (Left Column)
+                var turnOrderBounds = new Rectangle(10, mapBounds.Y, leftColumnWidth, mapBounds.Height);
+                _turnOrderPanel = new TurnOrderPanel(turnOrderBounds);
 
-                // Bottom Area (Terminal Area)
+                // Combat Log (Right Column)
+                var combatLogBounds = new Rectangle(rightColumnX, mapBounds.Y, rightColumnWidth, mapBounds.Height);
+                _combatLogPanel = new CombatLogPanel(combatLogBounds);
+
+                // --- Bottom Area ---
                 int bottomAreaY = mapBounds.Bottom + 10;
                 int bottomAreaHeight = Global.VIRTUAL_HEIGHT - bottomAreaY - 10;
-                int bottomAreaWidth = mapBounds.Width;
-                int actionMenuWidth = (int)(bottomAreaWidth * 0.4f) - 5;
-                int combatLogWidth = bottomAreaWidth - actionMenuWidth - 10;
+                int playerStatusWidth = 200;
+                int actionMenuWidth = 150;
+                int enemyDisplayX = 10 + playerStatusWidth + 10 + actionMenuWidth + 10;
+                int enemyDisplayWidth = Global.VIRTUAL_WIDTH - enemyDisplayX - 10;
 
-                var actionMenuBounds = new Rectangle(mapBounds.X, bottomAreaY, actionMenuWidth, bottomAreaHeight);
+                var playerStatusBounds = new Rectangle(10, bottomAreaY, playerStatusWidth, bottomAreaHeight);
+                _playerStatusPanel = new PlayerStatusPanel(playerStatusBounds);
+
+                var actionMenuBounds = new Rectangle(playerStatusBounds.Right + 10, bottomAreaY, actionMenuWidth, bottomAreaHeight);
                 _actionMenuPanel = new ActionMenuPanel(actionMenuBounds);
 
-                var combatLogBounds = new Rectangle(actionMenuBounds.Right + 10, bottomAreaY, combatLogWidth, bottomAreaHeight);
-                _combatLogPanel = new CombatLogPanel(combatLogBounds);
+                var enemyDisplayBounds = new Rectangle(actionMenuBounds.Right + 10, bottomAreaY, enemyDisplayWidth, bottomAreaHeight);
+                _enemyDisplayPanel = new EnemyDisplayPanel(enemyDisplayBounds);
 
                 // Initialize the combat input system with the correct panels
                 _playerCombatInputSystem = new PlayerCombatInputSystem(_actionMenuPanel, _turnOrderPanel, _enemyDisplayPanel, _mapRenderer);
@@ -276,25 +279,18 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
-            // --- Draw World/Map Content ---
-            if (_coreState.CurrentMapView == MapView.Local)
-            {
-                _mapRenderer.DrawLocalMapBackground(spriteBatch, font, gameTime);
-
-                spriteBatch.End();
-                _particleSystemManager.Draw(spriteBatch);
-                spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-
-                _mapRenderer.DrawLocalMapEntities(spriteBatch, font, gameTime);
-            }
-            else // World Map
-            {
-                _mapRenderer.DrawMap(spriteBatch, font, gameTime);
-            }
-
             // --- Draw UI Panels ---
             if (_coreState.IsInCombat)
             {
+                // Use the same map bounds calculation as the non-combat view for consistency
+                int mapTotalWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
+                int mapSize = Math.Min(mapTotalWidth, Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10);
+                int mapX = (Global.VIRTUAL_WIDTH - mapSize) / 2;
+                var combatMapBounds = new Rectangle(mapX, Global.MAP_TOP_PADDING, mapSize, mapSize);
+
+                // Draw map first, with specific combat bounds
+                _mapRenderer.DrawMap(spriteBatch, font, gameTime, combatMapBounds);
+
                 _enemyDisplayPanel.Draw(spriteBatch, gameTime, currentMouseState);
                 _turnOrderPanel.Draw(spriteBatch, font, gameTime);
                 _playerStatusPanel.Draw(spriteBatch, font);
@@ -344,14 +340,16 @@ namespace ProjectVagabond.Scenes
                     else // Must be SelectMove
                     {
                         // Redraw the map with entities to see where you're moving
-                        _mapRenderer.DrawLocalMapBackground(spriteBatch, font, gameTime);
-                        _mapRenderer.DrawLocalMapEntities(spriteBatch, font, gameTime);
+                        _mapRenderer.DrawMap(spriteBatch, font, gameTime, combatMapBounds);
                     }
                     _actionMenuPanel.Draw(spriteBatch, font, gameTime);
                 }
             }
             else
             {
+                // Draw map with default out-of-combat bounds
+                _mapRenderer.DrawMap(spriteBatch, font, gameTime);
+
                 // Calculate terminal bounds based on the map's position and size
                 var mapBounds = _mapRenderer.MapScreenBounds;
                 int terminalY = mapBounds.Bottom + 10; // 10px gap

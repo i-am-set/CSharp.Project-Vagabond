@@ -41,13 +41,6 @@ namespace ProjectVagabond
         private float _caratBlinkTimer = 0f;
         private readonly StringBuilder _stringBuilder = new StringBuilder(256);
 
-        // Caching for prompt/status text
-        public string CachedStatusText { get; private set; }
-        public List<ColoredLine> WrappedPromptLines { get; private set; }
-        private int _cachedPendingActionCount = -1;
-        private bool _cachedIsExecutingPath = false;
-        private bool _cachedIsFreeMoveMode = false;
-
         public List<ColoredLine> WrappedHistory => _wrappedHistory;
         private Rectangle _currentBounds;
         private int _inputLineY;
@@ -229,14 +222,6 @@ namespace ProjectVagabond
 
                 if (_inputHandler.IsTerminalInputActive)
                 {
-                    if (_gameState.PendingActions.Count != _cachedPendingActionCount ||
-                        _gameState.IsExecutingActions != _cachedIsExecutingPath ||
-                        _gameState.IsFreeMoveMode != _cachedIsFreeMoveMode ||
-                        _gameState.IsActionQueueDirty)
-                    {
-                        UpdateCachedPromptAndStatus(font);
-                        _gameState.IsActionQueueDirty = false;
-                    }
                     outputAreaBottom = separatorY;
                 }
                 else
@@ -322,71 +307,6 @@ namespace ProjectVagabond
                 spriteBatch.DrawString(font, prefix + _autoCompleteManager.AutoCompleteSuggestions[i],
                     new Vector2(_currentBounds.X + 2, suggestionY - i * Global.FONT_SIZE), suggestionColor);
             }
-        }
-
-        public void UpdateCachedPromptAndStatus(BitmapFont font)
-        {
-            _cachedPendingActionCount = _gameState.PendingActions.Count;
-            _cachedIsExecutingPath = _gameState.IsExecutingActions;
-            _cachedIsFreeMoveMode = _gameState.IsFreeMoveMode;
-
-            _stringBuilder.Clear();
-            _stringBuilder.Append("Actions Queued: ").Append(_gameState.PendingActions.Count);
-            if (_gameState.IsExecutingActions)
-            {
-                _stringBuilder.Append(" | Executing...");
-            }
-            CachedStatusText = _stringBuilder.ToString();
-            string promptText = GetPromptText();
-            var coloredPrompt = ParseColoredText(promptText, Color.Khaki);
-            WrappedPromptLines = WrapColoredText(coloredPrompt, GetTerminalContentWidthInPixels(), font);
-        }
-
-        private string GetPromptText()
-        {
-            int moveCount = _gameState.PendingActions.Count(a => a is MoveAction);
-            int restCount = _gameState.PendingActions.Count(a => a is RestAction);
-
-            var promptBuilder = new StringBuilder();
-
-            if (_gameState.IsFreeMoveMode && _gameState.PendingActions.Count <= 0)
-            {
-                promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
-                promptBuilder.Append("[gold]Press[orange] ENTER[gold] to confirm,[orange] ESC[gold] to cancel\n");
-                return promptBuilder.ToString();
-            }
-            else if (_gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions)
-            {
-                if (_gameState.IsFreeMoveMode)
-                {
-                    promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([deepskyblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
-                }
-                else
-                {
-                    promptBuilder.Append("[khaki]Previewing action queue...\n");
-                }
-                promptBuilder.Append("[gold]Press[orange] ENTER[gold] to confirm,[orange] ESC[gold] to cancel\n");
-
-                var details = new List<string>();
-                if (moveCount > 0) details.Add($"[orange]{moveCount}[gold] move(s)");
-                if (restCount > 0) details.Add($"[green]{restCount}[gold] rest(s)");
-
-                promptBuilder.Append($"[gold]Pending[orange] {string.Join(", ", details)}\n");
-
-                var simResult = _gameState.PendingQueueSimulationResult;
-                float secondsPassed = simResult.secondsPassed;
-
-                if (secondsPassed > 0.01f)
-                {
-                    string finalETA = _worldClockManager.GetCalculatedNewTime(_worldClockManager.CurrentTime, (int)secondsPassed);
-                    finalETA = _global.Use24HourClock ? finalETA : _worldClockManager.GetConverted24hToAmPm(finalETA);
-                    string formattedDuration = _worldClockManager.GetFormattedTimeFromSecondsShortHand(secondsPassed);
-                    promptBuilder.Append($"[gold]Arrival Time:[orange] ~{finalETA} [Palette_Gray](about {formattedDuration})\n");
-                }
-
-                return promptBuilder.ToString();
-            }
-            return "";
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

@@ -26,21 +26,19 @@ namespace ProjectVagabond.UI
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, Vector2 position)
         {
             string statusText = GetStatusText();
-            string promptText = GetPromptText();
+            List<string> promptLines = GetPromptLines();
 
             float y = position.Y - font.LineHeight;
 
             // Draw prompt lines from bottom up
-            if (!string.IsNullOrEmpty(promptText))
+            if (promptLines.Any())
             {
-                var coloredPrompt = ParseColoredText(promptText, Color.Khaki);
-                var promptLines = WrapColoredText(coloredPrompt, 300, font); // Use a fixed reasonable width
-
                 for (int i = promptLines.Count - 1; i >= 0; i--)
                 {
-                    var line = promptLines[i];
+                    var lineText = promptLines[i];
+                    var coloredLine = ParseColoredText(lineText, Color.Khaki);
                     float x = position.X;
-                    foreach (var segment in line.Segments)
+                    foreach (var segment in coloredLine.Segments)
                     {
                         spriteBatch.DrawString(font, segment.Text, new Vector2(x, y), segment.Color);
                         x += font.MeasureString(segment.Text).Width;
@@ -68,36 +66,37 @@ namespace ProjectVagabond.UI
             return _stringBuilder.ToString();
         }
 
-        private string GetPromptText()
+        private List<string> GetPromptLines()
         {
+            var lines = new List<string>();
             int moveCount = _gameState.PendingActions.Count(a => a is MoveAction);
             int restCount = _gameState.PendingActions.Count(a => a is RestAction);
 
-            var promptBuilder = new StringBuilder();
-
             if (_gameState.IsFreeMoveMode && _gameState.PendingActions.Count <= 0)
             {
-                promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
-                promptBuilder.Append("[gold]Press[orange] ENTER[gold] to confirm,[orange] ESC[gold] to cancel\n");
-                return promptBuilder.ToString();
+                lines.Add("[skyblue]Free moving...");
+                lines.Add("<[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>");
+                lines.Add("[gold]Press[orange] ENTER[gold] to confirm");
+                lines.Add("[gold]Press[orange] ESC[gold] to cancel");
             }
             else if (_gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions)
             {
                 if (_gameState.IsFreeMoveMode)
                 {
-                    promptBuilder.Append("[skyblue]Free moving... <[deepskyblue]Use ([deepskyblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>\n");
+                    lines.Add("[skyblue]Free moving...");
                 }
                 else
                 {
-                    promptBuilder.Append("[khaki]Previewing action queue...\n");
+                    lines.Add("[khaki]Previewing action queue...");
                 }
-                promptBuilder.Append("[gold]Press[orange] ENTER[gold] to confirm,[orange] ESC[gold] to cancel\n");
+                lines.Add("[gold]Press[orange] ENTER[gold] to confirm");
+                lines.Add("[gold]Press[orange] ESC[gold] to cancel");
 
                 var details = new List<string>();
                 if (moveCount > 0) details.Add($"[orange]{moveCount}[gold] move(s)");
                 if (restCount > 0) details.Add($"[green]{restCount}[gold] rest(s)");
 
-                promptBuilder.Append($"[gold]Pending[orange] {string.Join(", ", details)}\n");
+                lines.Add($"[gold]Pending[orange] {string.Join(", ", details)}");
 
                 var simResult = _gameState.PendingQueueSimulationResult;
                 float secondsPassed = simResult.secondsPassed;
@@ -107,12 +106,11 @@ namespace ProjectVagabond.UI
                     string finalETA = _worldClockManager.GetCalculatedNewTime(_worldClockManager.CurrentTime, (int)secondsPassed);
                     finalETA = _global.Use24HourClock ? finalETA : _worldClockManager.GetConverted24hToAmPm(finalETA);
                     string formattedDuration = _worldClockManager.GetFormattedTimeFromSecondsShortHand(secondsPassed);
-                    promptBuilder.Append($"[gold]Arrival Time:[orange] ~{finalETA} [Palette_Gray](about {formattedDuration})\n");
+                    lines.Add($"[gold]Arrival Time:[orange] ~{finalETA}");
+                    lines.Add($"[Palette_Gray](about {formattedDuration})");
                 }
-
-                return promptBuilder.ToString();
             }
-            return "";
+            return lines;
         }
 
         private ColoredLine ParseColoredText(string text, Color? baseColor = null)
@@ -226,76 +224,6 @@ namespace ProjectVagabond.UI
             catch { /* Fallback on failure */ }
 
             return _global.GameTextColor;
-        }
-
-        private List<ColoredLine> WrapColoredText(ColoredLine line, float maxWidthInPixels, BitmapFont font)
-        {
-            var wrappedLines = new List<ColoredLine>();
-            if (!line.Segments.Any())
-            {
-                wrappedLines.Add(line);
-                return wrappedLines;
-            }
-
-            var currentLine = new ColoredLine { LineNumber = line.LineNumber };
-            var currentLineText = new StringBuilder();
-
-            Action finishCurrentLine = () =>
-            {
-                if (currentLine.Segments.Any())
-                {
-                    wrappedLines.Add(currentLine);
-                }
-                currentLine = new ColoredLine { LineNumber = 0 };
-                currentLineText.Clear();
-            };
-
-            foreach (var segment in line.Segments)
-            {
-                string processedText = segment.Text.Replace("\r", "");
-                var tokens = Regex.Split(processedText, @"(\s+|\n)");
-
-                foreach (string token in tokens)
-                {
-                    if (string.IsNullOrEmpty(token)) continue;
-
-                    if (token == "\n")
-                    {
-                        finishCurrentLine();
-                        continue;
-                    }
-
-                    float potentialWidth = font.MeasureString(currentLineText.ToString() + token).Width;
-                    bool isWhitespace = string.IsNullOrWhiteSpace(token);
-
-                    if (currentLineText.Length > 0 && !isWhitespace && potentialWidth > maxWidthInPixels)
-                    {
-                        finishCurrentLine();
-                    }
-
-                    if (currentLine.Segments.Any() && currentLine.Segments.Last().Color == segment.Color)
-                    {
-                        currentLine.Segments.Last().Text += token;
-                    }
-                    else
-                    {
-                        currentLine.Segments.Add(new ColoredText(token, segment.Color));
-                    }
-                    currentLineText.Append(token);
-                }
-            }
-
-            if (currentLine.Segments.Any())
-            {
-                wrappedLines.Add(currentLine);
-            }
-
-            if (!wrappedLines.Any())
-            {
-                wrappedLines.Add(new ColoredLine { LineNumber = line.LineNumber });
-            }
-
-            return wrappedLines;
         }
     }
 }
