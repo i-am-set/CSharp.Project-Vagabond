@@ -35,6 +35,7 @@ namespace ProjectVagabond
         private string _currentEditingCommand = "";
 
         public string CurrentInput => _currentInput;
+        public bool IsTerminalInputActive { get; private set; } = false;
 
         public InputHandler()
         {
@@ -50,7 +51,7 @@ namespace ProjectVagabond
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public void HandleInput(GameTime gameTime)
+        public void HandleInput(GameTime gameTime, Rectangle terminalBounds)
         {
             // Lazyload dependencies to break initialization cycles
             _terminalRenderer ??= ServiceLocator.Get<TerminalRenderer>();
@@ -59,6 +60,7 @@ namespace ProjectVagabond
 
             KeyboardState currentKeyboardState = Keyboard.GetState();
             MouseState currentMouseState = Mouse.GetState();
+            var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             // If the game is paused, only process the unpause command and nothing else.
             if (_gameState.IsPaused)
@@ -72,11 +74,83 @@ namespace ProjectVagabond
                 return;
             }
 
+            // --- Handle Terminal Activation/Deactivation ---
+            if (!_gameState.IsInCombat)
+            {
+                // Toggle with '~' key
+                if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && !_previousKeyboardState.IsKeyDown(Keys.OemTilde))
+                {
+                    IsTerminalInputActive = !IsTerminalInputActive;
+                    if (!IsTerminalInputActive)
+                    {
+                        _currentInput = "";
+                        _autoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
+                    }
+                    else
+                    {
+                        _terminalRenderer.ResetCaratBlink();
+                    }
+                }
+
+                if (IsTerminalInputActive)
+                {
+                    // Deactivate with Escape key
+                    if (currentKeyboardState.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape))
+                    {
+                        IsTerminalInputActive = false;
+                        _currentInput = "";
+                        _autoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
+                    }
+                    // Deactivate by clicking outside the terminal
+                    else if (currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+                    {
+                        if (!terminalBounds.Contains(virtualMousePos))
+                        {
+                            IsTerminalInputActive = false;
+                            _currentInput = "";
+                            _autoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // Force terminal to be inactive during combat
+                IsTerminalInputActive = false;
+            }
+
+
+            // --- Process Other Inputs ---
             Keys[] pressedKeys = currentKeyboardState.GetPressedKeys();
 
             _controlPressed = currentKeyboardState.IsKeyDown(Keys.LeftControl) || currentKeyboardState.IsKeyDown(Keys.RightControl);
             _shiftPressed = currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift);
 
+            HandleScrolling(currentMouseState);
+
+            if (!IsTerminalInputActive)
+            {
+                HandleGlobalHotkeys(currentKeyboardState);
+                if (_gameState.IsFreeMoveMode)
+                {
+                    HandleFreeMoveInput(currentKeyboardState);
+                }
+                else if (_gameState.IsExecutingActions)
+                {
+                    HandleExecutingActionsInput(currentKeyboardState);
+                }
+            }
+            else // Terminal input is active
+            {
+                HandleTerminalInput(gameTime, currentKeyboardState, pressedKeys);
+            }
+
+            _previousKeyboardState = currentKeyboardState;
+            _previousMouseState = currentMouseState;
+        }
+
+        private void HandleScrolling(MouseState currentMouseState)
+        {
             if (currentMouseState.ScrollWheelValue != _previousMouseState.ScrollWheelValue)
             {
                 int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
@@ -109,7 +183,10 @@ namespace ProjectVagabond
                     }
                 }
             }
+        }
 
+        private void HandleGlobalHotkeys(KeyboardState currentKeyboardState)
+        {
             if (!_previousKeyboardState.IsKeyDown(Keys.Escape) && currentKeyboardState.IsKeyDown(Keys.Escape))
             {
                 if (_gameState.IsExecutingActions)
@@ -130,22 +207,6 @@ namespace ProjectVagabond
             {
                 _gameState.TogglePause();
             }
-
-            if (_gameState.IsFreeMoveMode)
-            {
-                HandleFreeMoveInput(currentKeyboardState);
-            }
-            else if (!_gameState.IsExecutingActions)
-            {
-                HandleTerminalInput(gameTime, currentKeyboardState, pressedKeys);
-            }
-            else
-            {
-                HandleExecutingActionsInput(currentKeyboardState);
-            }
-
-            _previousKeyboardState = currentKeyboardState;
-            _previousMouseState = currentMouseState;
         }
 
         private void HandleFreeMoveInput(KeyboardState currentKeyboardState)

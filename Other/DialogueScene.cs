@@ -37,7 +37,14 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
             _mapRenderer.DrawMap(spriteBatch, font, gameTime);
-            _statsRenderer.DrawStats(spriteBatch, font);
+
+            // Use the map's calculated bounds to position the stats correctly
+            var mapBounds = _mapRenderer.MapScreenBounds;
+            int leftColumnWidth = mapBounds.X;
+            if (leftColumnWidth > 20)
+            {
+                _statsRenderer.DrawStats(spriteBatch, font, new Vector2(10, Global.MAP_TOP_PADDING), leftColumnWidth - 20);
+            }
 
             Rectangle dialogueBox = new Rectangle(100, screenHeight - 250, screenWidth - 200, 200);
             spriteBatch.Draw(pixel, dialogueBox, _global.Palette_Black * 0.8f);

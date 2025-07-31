@@ -25,6 +25,7 @@ namespace ProjectVagabond.Scenes
         private readonly StatsRenderer _statsRenderer;
         private readonly HapticsManager _hapticsManager;
         private readonly TerminalRenderer _terminalRenderer;
+        private readonly AutoCompleteManager _autoCompleteManager;
         private readonly ParticleSystemManager _particleSystemManager;
         private readonly DiceRollingSystem _diceRollingSystem;
         private WaitDialog _waitDialog;
@@ -53,6 +54,7 @@ namespace ProjectVagabond.Scenes
             _statsRenderer = ServiceLocator.Get<StatsRenderer>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _terminalRenderer = ServiceLocator.Get<TerminalRenderer>();
+            _autoCompleteManager = ServiceLocator.Get<AutoCompleteManager>();
             _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _combatUIAnimationManager = ServiceLocator.Get<CombatUIAnimationManager>();
@@ -102,33 +104,37 @@ namespace ProjectVagabond.Scenes
             // --- Combat UI Panel Initialization and Layout ---
             if (_playerStatusPanel == null)
             {
-                // This layout is designed around the MapRenderer's fixed position.
-                const int mapRightEdge = 35 + (Global.LOCAL_GRID_SIZE * Global.LOCAL_GRID_CELL_SIZE) + 10; // Map starts at 35, grid is 320, frame is 10
-                const int bottomPanelY = 380;
-                const int bottomPanelHeight = 140;
+                // Calculate reference bounds based on the new map layout
+                int mapTotalWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
+                int mapX = (Global.VIRTUAL_WIDTH - mapTotalWidth) / 2;
+                int mapSize = Math.Min(mapTotalWidth, Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10);
+                var mapBounds = new Rectangle(mapX, Global.MAP_TOP_PADDING, mapSize, mapSize);
 
-                // Enemy Display (Top Right)
-                var enemyDisplayBounds = new Rectangle(mapRightEdge + 20, 50, Global.VIRTUAL_WIDTH - (mapRightEdge + 40), 120);
-                _enemyDisplayPanel = new EnemyDisplayPanel(enemyDisplayBounds);
-
-                // Turn Order (Right Side, below enemies)
-                int turnOrderPanelWidth = 150;
-                int maxTurnOrderItems = 10;
-                var turnOrderPosition = new Vector2(enemyDisplayBounds.X, enemyDisplayBounds.Bottom + 10);
-                _turnOrderPanel = new TurnOrderPanel(turnOrderPosition, turnOrderPanelWidth, maxTurnOrderItems);
-
-                // Player Status (Bottom Left)
-                var playerStatusBounds = new Rectangle(35, bottomPanelY, 250, bottomPanelHeight);
+                // Left Column
+                int leftColumnWidth = mapBounds.X - 20; // 10px padding on each side
+                var playerStatusBounds = new Rectangle(10, Global.MAP_TOP_PADDING, leftColumnWidth, 140);
                 _playerStatusPanel = new PlayerStatusPanel(playerStatusBounds);
 
-                // Action Menu (Bottom Middle)
-                var actionMenuBounds = new Rectangle(playerStatusBounds.Right + 10, bottomPanelY, 200, bottomPanelHeight);
+                // Right Column
+                int rightColumnX = mapBounds.Right + 10;
+                int rightColumnWidth = Global.VIRTUAL_WIDTH - rightColumnX - 10;
+                var enemyDisplayBounds = new Rectangle(rightColumnX, Global.MAP_TOP_PADDING, rightColumnWidth, 120);
+                _enemyDisplayPanel = new EnemyDisplayPanel(enemyDisplayBounds);
+
+                var turnOrderPosition = new Vector2(rightColumnX, enemyDisplayBounds.Bottom + 10);
+                _turnOrderPanel = new TurnOrderPanel(turnOrderPosition, rightColumnWidth, 10);
+
+                // Bottom Area (Terminal Area)
+                int bottomAreaY = mapBounds.Bottom + 10;
+                int bottomAreaHeight = Global.VIRTUAL_HEIGHT - bottomAreaY - 10;
+                int bottomAreaWidth = mapBounds.Width;
+                int actionMenuWidth = (int)(bottomAreaWidth * 0.4f) - 5;
+                int combatLogWidth = bottomAreaWidth - actionMenuWidth - 10;
+
+                var actionMenuBounds = new Rectangle(mapBounds.X, bottomAreaY, actionMenuWidth, bottomAreaHeight);
                 _actionMenuPanel = new ActionMenuPanel(actionMenuBounds);
 
-                // Combat Log (Bottom Right)
-                int combatLogX = actionMenuBounds.Right + 10;
-                int combatLogWidth = Global.VIRTUAL_WIDTH - combatLogX - 35;
-                var combatLogBounds = new Rectangle(combatLogX, bottomPanelY, combatLogWidth, bottomPanelHeight);
+                var combatLogBounds = new Rectangle(actionMenuBounds.Right + 10, bottomAreaY, combatLogWidth, bottomAreaHeight);
                 _combatLogPanel = new CombatLogPanel(combatLogBounds);
 
                 // Initialize the combat input system with the correct panels
@@ -193,45 +199,22 @@ namespace ProjectVagabond.Scenes
             var currentKeyboardState = Keyboard.GetState();
             _diceRollingSystem.Update(gameTime);
 
-            // Temporary input for testing dice rolls, changed to Tilde key
-            if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && !_previousKeyboardState.IsKeyDown(Keys.OemTilde))
-            {
-                Global _global = ServiceLocator.Get<Global>();
-
-                var rollRequest = new List<DiceGroup>
-            {
-                new DiceGroup
-                {
-                    GroupId = "test_sum",
-                    NumberOfDice = 4,
-                    Tint = _global.Palette_BrightWhite,
-                    ResultProcessing = DiceResultProcessing.Sum
-                },
-                new DiceGroup
-                {
-                    GroupId = "test_individual",
-                    NumberOfDice = 2,
-                    Tint = _global.Palette_DarkGreen,
-                    ResultProcessing = DiceResultProcessing.IndividualValues
-                },
-                new DiceGroup
-                {
-                    GroupId = "test_third",
-                    NumberOfDice = 2,
-                    Tint = _global.Palette_Yellow,
-                    ResultProcessing = DiceResultProcessing.IndividualValues
-                }
-            };
-                _diceRollingSystem.Roll(rollRequest);
-            }
-
             var font = ServiceLocator.Get<BitmapFont>();
             _waitDialog.Update(gameTime);
             if (_waitDialog.IsActive) return;
 
+            // Calculate terminal bounds once for the update frame
+            int mapTotalWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
+            int mapX = (Global.VIRTUAL_WIDTH - mapTotalWidth) / 2;
+            int mapSize = Math.Min(mapTotalWidth, Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10);
+            var mapBounds = new Rectangle(mapX, Global.MAP_TOP_PADDING, mapSize, mapSize);
+            int terminalY = mapBounds.Bottom + 10;
+            int terminalHeight = Global.VIRTUAL_HEIGHT - terminalY - 10;
+            var terminalBounds = new Rectangle(mapBounds.X, terminalY, mapBounds.Width, terminalHeight);
+
             // The input handler must run every frame to catch the unpause command.
             // It has its own internal logic to halt other inputs when paused.
-            _inputHandler.HandleInput(gameTime);
+            _inputHandler.HandleInput(gameTime, terminalBounds);
 
             // UI elements that should remain interactive while paused are updated here.
             var currentMouseState = Mouse.GetState();
@@ -341,7 +324,7 @@ namespace ProjectVagabond.Scenes
                                 Vector2? screenPos = _mapRenderer.MapCoordsToScreen(localPosComp.LocalPosition);
                                 if (screenPos.HasValue)
                                 {
-                                    int cellSize = Global.LOCAL_GRID_CELL_SIZE;
+                                    int cellSize = _mapRenderer.CellSize;
                                     var destRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
                                     spriteBatch.Draw(renderComp.Texture ?? pixel, destRect, renderComp.Color);
 
@@ -367,15 +350,88 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                _terminalRenderer.DrawTerminal(spriteBatch, font, gameTime);
-                _statsRenderer.DrawStats(spriteBatch, font);
-                _clockRenderer.DrawClock(spriteBatch, font, gameTime);
-                _settingsButton?.Draw(spriteBatch, font, gameTime);
+                // Calculate terminal bounds based on the map's position and size
+                var mapBounds = _mapRenderer.MapScreenBounds;
+                int terminalY = mapBounds.Bottom + 10; // 10px gap
+                int terminalHeight = Global.VIRTUAL_HEIGHT - terminalY - 10; // 10px bottom padding
+                var terminalBounds = new Rectangle(mapBounds.X, terminalY, mapBounds.Width, terminalHeight);
+
+                _terminalRenderer.DrawTerminal(spriteBatch, font, gameTime, terminalBounds);
+
+                // --- Side Column Layout ---
+                int leftColumnWidth = mapBounds.X;
+                int rightColumnX = mapBounds.Right;
+                int rightColumnWidth = Global.VIRTUAL_WIDTH - rightColumnX;
+
+                // Draw Stats in Left Column
+                if (leftColumnWidth > 20) // Ensure there's space for padding
+                {
+                    _statsRenderer.DrawStats(spriteBatch, font, new Vector2(10, Global.MAP_TOP_PADDING), leftColumnWidth - 20);
+                }
+
+                // Draw Clock and Settings in Right Column
+                if (rightColumnWidth > 20)
+                {
+                    // Settings Button
+                    if (_settingsButton != null)
+                    {
+                        int settingsButtonX = rightColumnX + (rightColumnWidth - _settingsButton.Bounds.Width) / 2;
+                        _settingsButton.Bounds = new Rectangle(settingsButtonX, Global.MAP_TOP_PADDING, _settingsButton.Bounds.Width, _settingsButton.Bounds.Height);
+                        _settingsButton.Draw(spriteBatch, font, gameTime);
+                    }
+
+                    // Clock
+                    int clockX = rightColumnX + (rightColumnWidth - 64) / 2;
+                    _clockRenderer.DrawClock(spriteBatch, font, gameTime, new Vector2(clockX, Global.MAP_TOP_PADDING + 30));
+                }
+
+                // Draw Prompt/Status in Bottom-Left
+                DrawPromptAndStatus(spriteBatch, font);
             }
 
             spriteBatch.End();
 
+            // Draw autocomplete on top of everything else
+            if (!_coreState.IsInCombat && _autoCompleteManager.ShowingAutoCompleteSuggestions)
+            {
+                spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+                _terminalRenderer.DrawAutoComplete(spriteBatch, font);
+                spriteBatch.End();
+            }
+
             _waitDialog.Draw(spriteBatch, font, gameTime);
+        }
+
+        private void DrawPromptAndStatus(SpriteBatch spriteBatch, BitmapFont font)
+        {
+            var global = ServiceLocator.Get<Global>();
+            var statusText = _terminalRenderer.CachedStatusText;
+            var promptLines = _terminalRenderer.WrappedPromptLines;
+
+            float y = Global.VIRTUAL_HEIGHT - 10 - font.LineHeight;
+
+            // Draw prompt lines from bottom up
+            if (promptLines != null)
+            {
+                for (int i = promptLines.Count - 1; i >= 0; i--)
+                {
+                    var line = promptLines[i];
+                    float x = 10;
+                    foreach (var segment in line.Segments)
+                    {
+                        spriteBatch.DrawString(font, segment.Text, new Vector2(x, y), segment.Color);
+                        x += font.MeasureString(segment.Text).Width;
+                    }
+                    y -= Global.PROMPT_LINE_SPACING;
+                }
+            }
+
+            // Draw status text above the prompt
+            if (!string.IsNullOrEmpty(statusText))
+            {
+                y -= (Global.TERMINAL_LINE_SPACING - Global.PROMPT_LINE_SPACING); // Adjust spacing
+                spriteBatch.DrawString(font, statusText, new Vector2(10, y), global.Palette_LightGray);
+            }
         }
 
         private void DrawHollowRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)

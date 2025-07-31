@@ -75,11 +75,12 @@ namespace ProjectVagabond
         public const int VIRTUAL_HEIGHT = 540;
 
         // Map settings Global
-        public const int LOCAL_GRID_SIZE = 64;
+        public const float MAP_AREA_WIDTH_PERCENT = 0.8f;
+        public const int MAP_TOP_PADDING = 20;
+        public const int TERMINAL_AREA_HEIGHT = 150;
+        public const int LOCAL_GRID_SIZE = 64; // Logical size of a local area grid. Rendered size is now dynamic.
         public const int LOCAL_GRID_CELL_SIZE = 5;
-        public const int GRID_SIZE = 32;
         public const int GRID_CELL_SIZE = 10;
-        public const int MAP_WIDTH = GRID_SIZE * GRID_CELL_SIZE + 10;
         public const int FONT_SIZE = 12;
         public const int TERMINAL_LINE_SPACING = 12;
         public const int PROMPT_LINE_SPACING = 16;

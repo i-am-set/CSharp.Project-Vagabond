@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
+using System;
 
 namespace ProjectVagabond
 {
@@ -33,29 +34,27 @@ namespace ProjectVagabond
             CheckTooltipHover();
         }
 
-        public void DrawStats(SpriteBatch spriteBatch, BitmapFont font)
+        public void DrawStats(SpriteBatch spriteBatch, BitmapFont font, Vector2 position, int availableWidth)
         {
             if (_gameState.PlayerStats == null) return;
 
             var stats = _gameState.PlayerStats;
 
-            int baseX = 50;
-            int baseY = 50 + Global.GRID_SIZE * Global.GRID_CELL_SIZE + 10;
-            int currentY = baseY;
+            float currentY = position.Y;
 
             // Health bar
             _hpBarBounds = DrawSimpleStatBar(spriteBatch, font, "HP", stats.CurrentHealthPoints, stats.MaxHealthPoints,
-                new Vector2(baseX, currentY), _global.Palette_Red, _global.Palette_DarkGray, Global.MAP_WIDTH - baseX);
+                new Vector2(position.X, currentY), _global.Palette_Red, _global.Palette_DarkGray, availableWidth);
 
             currentY += 14;
-            _epBarBounds = DrawEnergyBarWithPreview(spriteBatch, font, stats, new Vector2(baseX, currentY), Global.MAP_WIDTH - baseX);
+            _epBarBounds = DrawEnergyBarWithPreview(spriteBatch, font, stats, new Vector2(position.X, currentY), availableWidth);
 
             currentY += 16;
             string secondaryStats = $"Spd:{stats.WalkSpeed:F1} Car:{stats.CarryCapacity} Men:{stats.MentalResistance} Soc:{stats.SocialInfluence}";
-            spriteBatch.DrawString(font, secondaryStats, new Vector2(baseX, currentY), _global.Palette_LightGray);
+            spriteBatch.DrawString(font, secondaryStats, new Vector2(position.X, currentY), _global.Palette_LightGray);
         }
 
-        private Rectangle DrawEnergyBarWithPreview(SpriteBatch spriteBatch, BitmapFont font, StatsComponent stats, Vector2 position, int width)
+        private Rectangle DrawEnergyBarWithPreview(SpriteBatch spriteBatch, BitmapFont font, StatsComponent stats, Vector2 position, int availableWidth)
         {
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
@@ -79,6 +78,7 @@ namespace ProjectVagabond
             int maxEnergy = stats.MaxEnergyPoints;
             int segmentsAreaWidth = (maxEnergy * (segmentWidth + segmentGap)) - segmentGap;
             int barWidth = segmentsAreaWidth + (horizontalPadding * 2);
+            barWidth = Math.Min(barWidth, availableWidth - (int)textSize.X - 5);
             var barBounds = new Rectangle(barX, barY, barWidth, barHeight);
 
             // Draw the base bar using the new primitive
@@ -102,15 +102,19 @@ namespace ProjectVagabond
             {
                 int currentEnergy = stats.CurrentEnergyPoints;
                 int finalEnergy = _gameState.PendingQueueSimulationResult.finalEnergy;
-                int totalSegmentWidth = segmentWidth + segmentGap;
+                int totalSegmentUnitWidth = segmentWidth + segmentGap;
                 int segmentY = barBounds.Y + (barBounds.Height - segmentHeight) / 2;
                 int segmentsStartX = barBounds.X + horizontalPadding;
+
+                int availableWidthForSegments = barBounds.Width - (horizontalPadding * 2);
+                int maxSegmentsThatFit = (availableWidthForSegments + segmentGap) / totalSegmentUnitWidth;
 
                 if (finalEnergy < currentEnergy) // Energy loss preview
                 {
                     for (int i = finalEnergy; i < currentEnergy; i++)
                     {
-                        int segmentX = segmentsStartX + i * totalSegmentWidth;
+                        if (i >= maxSegmentsThatFit) break;
+                        int segmentX = segmentsStartX + i * totalSegmentUnitWidth;
                         Rectangle segmentRect = new Rectangle(segmentX, segmentY, segmentWidth, segmentHeight);
                         spriteBatch.Draw(pixel, segmentRect, _global.Palette_Yellow);
                     }
@@ -119,7 +123,8 @@ namespace ProjectVagabond
                 {
                     for (int i = currentEnergy; i < finalEnergy; i++)
                     {
-                        int segmentX = segmentsStartX + i * totalSegmentWidth;
+                        if (i >= maxSegmentsThatFit) break;
+                        int segmentX = segmentsStartX + i * totalSegmentUnitWidth;
                         Rectangle segmentRect = new Rectangle(segmentX, segmentY, segmentWidth, segmentHeight);
                         spriteBatch.Draw(pixel, segmentRect, _global.Palette_LightBlue);
                     }
@@ -129,7 +134,7 @@ namespace ProjectVagabond
             return new Rectangle((int)position.X, (int)position.Y, (int)textSize.X + 5 + barWidth, barHeight);
         }
 
-        private Rectangle DrawSimpleStatBar(SpriteBatch spriteBatch, BitmapFont font, string label, int current, int max, Vector2 position, Color fillColor, Color bgColor, int width)
+        private Rectangle DrawSimpleStatBar(SpriteBatch spriteBatch, BitmapFont font, string label, int current, int max, Vector2 position, Color fillColor, Color bgColor, int availableWidth)
         {
             const int segmentWidth = 3;
             const int segmentGap = 3;
@@ -150,6 +155,7 @@ namespace ProjectVagabond
 
             int segmentsAreaWidth = (max * (segmentWidth + segmentGap)) - segmentGap;
             int barWidth = segmentsAreaWidth + (horizontalPadding * 2);
+            barWidth = Math.Min(barWidth, availableWidth - (int)textSize.X - 5);
             var barBounds = new Rectangle(barX, barY, barWidth, barHeight);
 
             if (max > 0)

@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -13,6 +13,7 @@ namespace ProjectVagabond
         private readonly WorldClockManager _worldClockManager;
         private readonly TooltipManager _tooltipManager;
         private readonly Global _global;
+        private MapRenderer _mapRenderer;
 
         private Vector2 _clockPosition;
         private const int CLOCK_SIZE = 64;
@@ -103,14 +104,12 @@ namespace ProjectVagabond
             _pausePlayButton.Update(currentMouseState);
         }
 
-        public void DrawClock(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public void DrawClock(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Vector2 position)
         {
+            _mapRenderer ??= ServiceLocator.Get<MapRenderer>();
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            int statsBaseX = 50;
-            int statsBaseY = 50 + Global.GRID_SIZE * Global.GRID_CELL_SIZE + 10;
-            int statsHeight = 14 + 16 + Global.FONT_SIZE;
-            _clockPosition = new Vector2(statsBaseX, statsBaseY + statsHeight + 10);
+            _clockPosition = position;
 
             _clockButton.Bounds = new Rectangle((int)_clockPosition.X, (int)_clockPosition.Y, CLOCK_SIZE, CLOCK_SIZE);
 
