@@ -28,6 +28,7 @@ namespace ProjectVagabond.Scenes
         private readonly AutoCompleteManager _autoCompleteManager;
         private readonly ParticleSystemManager _particleSystemManager;
         private readonly DiceRollingSystem _diceRollingSystem;
+        private readonly PromptRenderer _promptRenderer;
         private WaitDialog _waitDialog;
         private ImageButton _settingsButton;
         private TurnOrderPanel _turnOrderPanel;
@@ -59,6 +60,7 @@ namespace ProjectVagabond.Scenes
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _combatUIAnimationManager = ServiceLocator.Get<CombatUIAnimationManager>();
             _loadingScreen = new LoadingScreen();
+            _promptRenderer = ServiceLocator.Get<PromptRenderer>();
 
             EventBus.Subscribe<GameEvents.EntityTookDamage>(OnEntityTookDamage);
         }
@@ -386,7 +388,7 @@ namespace ProjectVagabond.Scenes
                 }
 
                 // Draw Prompt/Status in Bottom-Left
-                DrawPromptAndStatus(spriteBatch, font);
+                _promptRenderer.Draw(spriteBatch, font, new Vector2(10, Global.VIRTUAL_HEIGHT - 18));
             }
 
             spriteBatch.End();
@@ -400,38 +402,6 @@ namespace ProjectVagabond.Scenes
             }
 
             _waitDialog.Draw(spriteBatch, font, gameTime);
-        }
-
-        private void DrawPromptAndStatus(SpriteBatch spriteBatch, BitmapFont font)
-        {
-            var global = ServiceLocator.Get<Global>();
-            var statusText = _terminalRenderer.CachedStatusText;
-            var promptLines = _terminalRenderer.WrappedPromptLines;
-
-            float y = Global.VIRTUAL_HEIGHT - 10 - font.LineHeight;
-
-            // Draw prompt lines from bottom up
-            if (promptLines != null)
-            {
-                for (int i = promptLines.Count - 1; i >= 0; i--)
-                {
-                    var line = promptLines[i];
-                    float x = 10;
-                    foreach (var segment in line.Segments)
-                    {
-                        spriteBatch.DrawString(font, segment.Text, new Vector2(x, y), segment.Color);
-                        x += font.MeasureString(segment.Text).Width;
-                    }
-                    y -= Global.PROMPT_LINE_SPACING;
-                }
-            }
-
-            // Draw status text above the prompt
-            if (!string.IsNullOrEmpty(statusText))
-            {
-                y -= (Global.TERMINAL_LINE_SPACING - Global.PROMPT_LINE_SPACING); // Adjust spacing
-                spriteBatch.DrawString(font, statusText, new Vector2(10, y), global.Palette_LightGray);
-            }
         }
 
         private void DrawHollowRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)

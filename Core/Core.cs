@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Dice; // Added using directive
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic; // Added for List
 using System.Diagnostics;       // Added for Debug.WriteLine
@@ -203,6 +204,9 @@ namespace ProjectVagabond
             var mapInputHandler = new MapInputHandler(mapRenderer.MapContextMenu, mapRenderer);
             ServiceLocator.Register<MapInputHandler>(mapInputHandler);
 
+            var promptRenderer = new PromptRenderer();
+            ServiceLocator.Register<PromptRenderer>(promptRenderer);
+
             var autoCompleteManager = new AutoCompleteManager();
             ServiceLocator.Register<AutoCompleteManager>(autoCompleteManager);
 
@@ -303,7 +307,7 @@ namespace ProjectVagabond
                 IsFixedTimeStep = true;
                 TargetElapsedTime = TimeSpan.FromSeconds(1.0 / _settings.TargetFramerate);
             }
-            else 
+            else
             {
                 IsFixedTimeStep = false;
             }
