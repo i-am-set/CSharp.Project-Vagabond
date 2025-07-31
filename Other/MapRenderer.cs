@@ -77,30 +77,32 @@ namespace ProjectVagabond
             }
             else
             {
-                // Calculate max dimensions based on screen size and reserved areas
+                // --- UNIFIED SIZE CALCULATION ---
+                // Always calculate the map's pixel dimensions based on the world map's cell size for consistency.
+                const int worldCellSize = Global.GRID_CELL_SIZE;
+
                 int maxWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
-                int maxHeight = Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10; // 10px gap
+                int maxHeight = Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10;
+                int baseMapSize = Math.Min(maxWidth, maxHeight);
 
-                // The map must be a square, so its size is the smaller of the two dimensions
-                int mapSize = Math.Min(maxWidth, maxHeight);
+                // Calculate grid size based on the base size and world cell size, then add the expansion
+                int baseGridSize = baseMapSize / worldCellSize;
+                int worldGridSize = baseGridSize + 4;
 
-                int mapX = (Global.VIRTUAL_WIDTH - mapSize) / 2;
+                // This is the final, uniform pixel size for all maps.
+                int finalMapSize = worldGridSize * worldCellSize;
+
+                int mapX = (Global.VIRTUAL_WIDTH - finalMapSize) / 2;
                 int mapY = Global.MAP_TOP_PADDING;
-                MapScreenBounds = new Rectangle(mapX, mapY, mapSize, mapSize);
+                MapScreenBounds = new Rectangle(mapX, mapY, finalMapSize, finalMapSize);
             }
 
+            // --- VIEW-SPECIFIC GRID SETUP ---
+            // Now, determine the cell size and grid dimensions for the CURRENT view.
+            CellSize = _gameState.CurrentMapView == MapView.World ? Global.GRID_CELL_SIZE : Global.LOCAL_GRID_CELL_SIZE;
             _mapGridBounds = MapScreenBounds;
 
-            if (_gameState.CurrentMapView == MapView.World)
-            {
-                CellSize = Global.GRID_CELL_SIZE;
-            }
-            else // Local Map
-            {
-                CellSize = Global.LOCAL_GRID_CELL_SIZE;
-            }
-
-            // The number of visible grid cells is determined by how many fit in the bounds
+            // Recalculate grid dimensions based on the final, uniform pixel size and the current view's cell size.
             GridSizeX = MapScreenBounds.Width / CellSize;
             GridSizeY = MapScreenBounds.Height / CellSize;
         }
@@ -399,12 +401,8 @@ namespace ProjectVagabond
             spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 5, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Separator
 
             string timeText = _worldClockManager.CurrentTime;
-            if (timeText != _cachedTimeText)
-            {
-                _timeTextPos = new Vector2(MapScreenBounds.X, MapScreenBounds.Y - 20);
-                _cachedTimeText = timeText;
-            }
-            spriteBatch.DrawString(font, _cachedTimeText, _timeTextPos, _global.GameTextColor);
+            _timeTextPos = new Vector2(MapScreenBounds.X, MapScreenBounds.Y - 12 - font.LineHeight / 2);
+            spriteBatch.DrawString(font, timeText, _timeTextPos, _global.GameTextColor);
 
             LayoutHeaderButtons();
             foreach (var b in _headerButtons)
@@ -421,7 +419,7 @@ namespace ProjectVagabond
             const int toggleButtonWidth = 85;
 
             int headerContentRightEdge = MapScreenBounds.Right - 2;
-            int buttonY = MapScreenBounds.Y - buttonHeight - 9;
+            int buttonY = MapScreenBounds.Y - 12 - buttonHeight / 2;
 
             if (_buttonMap.TryGetValue("map", out Button toggleMapButton))
             {

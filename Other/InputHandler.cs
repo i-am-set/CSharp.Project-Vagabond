@@ -15,9 +15,9 @@ namespace ProjectVagabond
         private readonly PlayerInputSystem _playerInputSystem;
         private readonly ClockRenderer _clockRenderer;
         private readonly Global _global;
-        private AutoCompleteManager _autoCompleteManager; // Lazyloaded
-        private CommandProcessor _commandProcessor; // Lazyloaded
-        private TerminalRenderer _terminalRenderer; // Lazyloaded
+        private AutoCompleteManager _autoCompleteManager; // Lazy loaded
+        private CommandProcessor _commandProcessor; // Lazy loaded
+        private TerminalRenderer _terminalRenderer; // Lazy loaded
 
         // Input State
         private string _currentInput = "";
@@ -206,6 +206,15 @@ namespace ProjectVagabond
             if (_gameState.IsExecutingActions && !_previousKeyboardState.IsKeyDown(Keys.Space) && currentKeyboardState.IsKeyDown(Keys.Space))
             {
                 _gameState.TogglePause();
+            }
+
+            // Execute queued actions with Enter key when terminal is not active
+            if (!_previousKeyboardState.IsKeyDown(Keys.Enter) && currentKeyboardState.IsKeyDown(Keys.Enter))
+            {
+                if (_gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions)
+                {
+                    _gameState.ToggleExecutingActions(true);
+                }
             }
         }
 

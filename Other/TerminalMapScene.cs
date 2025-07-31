@@ -106,11 +106,17 @@ namespace ProjectVagabond.Scenes
             // --- Combat UI Panel Initialization and Layout ---
             if (_playerStatusPanel == null)
             {
-                // Calculate reference bounds based on the out-of-combat map layout
-                int mapTotalWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
-                int mapSize = Math.Min(mapTotalWidth, Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10);
-                int mapX = (Global.VIRTUAL_WIDTH - mapSize) / 2;
-                var mapBounds = new Rectangle(mapX, Global.MAP_TOP_PADDING, mapSize, mapSize);
+                // Calculate the large, uniform map bounds to lay out the combat UI.
+                // This logic is duplicated from MapRenderer to ensure consistency.
+                const int worldCellSize = Global.GRID_CELL_SIZE;
+                int maxWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
+                int maxHeight = Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10;
+                int baseMapSize = Math.Min(maxWidth, maxHeight);
+                int baseGridSize = baseMapSize / worldCellSize;
+                int worldGridSize = baseGridSize + 4;
+                int finalMapSize = worldGridSize * worldCellSize;
+                int mapX = (Global.VIRTUAL_WIDTH - finalMapSize) / 2;
+                var mapBounds = new Rectangle(mapX, Global.MAP_TOP_PADDING, finalMapSize, finalMapSize);
 
                 // --- Side Columns ---
                 int leftColumnWidth = mapBounds.X - 20;
@@ -282,14 +288,8 @@ namespace ProjectVagabond.Scenes
             // --- Draw UI Panels ---
             if (_coreState.IsInCombat)
             {
-                // Use the same map bounds calculation as the non-combat view for consistency
-                int mapTotalWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
-                int mapSize = Math.Min(mapTotalWidth, Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10);
-                int mapX = (Global.VIRTUAL_WIDTH - mapSize) / 2;
-                var combatMapBounds = new Rectangle(mapX, Global.MAP_TOP_PADDING, mapSize, mapSize);
-
-                // Draw map first, with specific combat bounds
-                _mapRenderer.DrawMap(spriteBatch, font, gameTime, combatMapBounds);
+                // Draw map first, letting it calculate its own uniform bounds
+                _mapRenderer.DrawMap(spriteBatch, font, gameTime);
 
                 _enemyDisplayPanel.Draw(spriteBatch, gameTime, currentMouseState);
                 _turnOrderPanel.Draw(spriteBatch, font, gameTime);
@@ -340,7 +340,7 @@ namespace ProjectVagabond.Scenes
                     else // Must be SelectMove
                     {
                         // Redraw the map with entities to see where you're moving
-                        _mapRenderer.DrawMap(spriteBatch, font, gameTime, combatMapBounds);
+                        _mapRenderer.DrawMap(spriteBatch, font, gameTime);
                     }
                     _actionMenuPanel.Draw(spriteBatch, font, gameTime);
                 }
