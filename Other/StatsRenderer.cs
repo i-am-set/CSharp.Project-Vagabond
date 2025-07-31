@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
 
 namespace ProjectVagabond
 {
@@ -58,91 +59,118 @@ namespace ProjectVagabond
         {
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
+            const int segmentWidth = 3;
+            const int segmentGap = 3;
+            const int segmentHeight = 6;
+            const int barHeight = 12;
+            const int horizontalPadding = 2;
+
+            // Calculate the vertical offset to center the text with the bar
+            float textOffsetY = (barHeight - font.LineHeight) / 2f;
+            Vector2 textPosition = new Vector2(position.X, position.Y + textOffsetY);
+
             string labelText = "EP";
-            spriteBatch.DrawString(font, labelText, position, _global.GameTextColor);
+            spriteBatch.DrawString(font, labelText, textPosition, _global.GameTextColor);
 
             Vector2 textSize = font.MeasureString(labelText);
             int barX = (int)(position.X + textSize.X + 5);
-            int barY = (int)(position.Y + 3);
-            int barWidth = (stats.MaxEnergyPoints * 6) - 3;
+            int barY = (int)position.Y;
 
-            Rectangle barBg = new Rectangle(barX - 2, barY - 2, barWidth + 4, 10);
-            spriteBatch.Draw(pixel, barBg, _global.Palette_DarkGray);
-
-            int currentEnergy = stats.CurrentEnergyPoints;
             int maxEnergy = stats.MaxEnergyPoints;
-            bool hasPendingActions = _gameState.PendingActions.Count > 0;
+            int segmentsAreaWidth = (maxEnergy * (segmentWidth + segmentGap)) - segmentGap;
+            int barWidth = segmentsAreaWidth + (horizontalPadding * 2);
+            var barBounds = new Rectangle(barX, barY, barWidth, barHeight);
 
-            for (int i = 0; i < maxEnergy; i++)
-            {
-                int segmentX = barX + i * 6;
-                Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
-                if (i < currentEnergy)
-                    spriteBatch.Draw(pixel, segmentRect, _global.Palette_LightGreen);
-                else
-                    spriteBatch.Draw(pixel, segmentRect, Color.Lerp(_global.Palette_DarkGray, _global.Palette_LightGreen, 0.3f));
-            }
+            // Draw the base bar using the new primitive
+            UIPrimitives.DrawSegmentedBar(
+                spriteBatch,
+                pixel,
+                barBounds,
+                (float)stats.CurrentEnergyPoints / maxEnergy,
+                maxEnergy,
+                _global.Palette_LightGreen,
+                Color.Lerp(_global.Palette_DarkGray, _global.Palette_LightGreen, 0.3f),
+                _global.Palette_DarkGray,
+                segmentWidth,
+                segmentGap,
+                segmentHeight,
+                horizontalPadding
+            );
 
-            if (hasPendingActions)
+            // Draw preview segments on top
+            if (_gameState.PendingActions.Count > 0)
             {
+                int currentEnergy = stats.CurrentEnergyPoints;
                 int finalEnergy = _gameState.PendingQueueSimulationResult.finalEnergy;
-                if (finalEnergy < currentEnergy)
+                int totalSegmentWidth = segmentWidth + segmentGap;
+                int segmentY = barBounds.Y + (barBounds.Height - segmentHeight) / 2;
+                int segmentsStartX = barBounds.X + horizontalPadding;
+
+                if (finalEnergy < currentEnergy) // Energy loss preview
                 {
                     for (int i = finalEnergy; i < currentEnergy; i++)
                     {
-                        int segmentX = barX + i * 6;
-                        Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
+                        int segmentX = segmentsStartX + i * totalSegmentWidth;
+                        Rectangle segmentRect = new Rectangle(segmentX, segmentY, segmentWidth, segmentHeight);
                         spriteBatch.Draw(pixel, segmentRect, _global.Palette_Yellow);
                     }
                 }
-                else if (finalEnergy > currentEnergy)
+                else if (finalEnergy > currentEnergy) // Energy gain preview
                 {
                     for (int i = currentEnergy; i < finalEnergy; i++)
                     {
-                        int segmentX = barX + i * 6;
-                        Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
+                        int segmentX = segmentsStartX + i * totalSegmentWidth;
+                        Rectangle segmentRect = new Rectangle(segmentX, segmentY, segmentWidth, segmentHeight);
                         spriteBatch.Draw(pixel, segmentRect, _global.Palette_LightBlue);
                     }
                 }
             }
 
-            return new Rectangle((int)position.X, (int)position.Y, (int)textSize.X + 5 + barWidth, 12);
+            return new Rectangle((int)position.X, (int)position.Y, (int)textSize.X + 5 + barWidth, barHeight);
         }
 
         private Rectangle DrawSimpleStatBar(SpriteBatch spriteBatch, BitmapFont font, string label, int current, int max, Vector2 position, Color fillColor, Color bgColor, int width)
         {
-            Texture2D pixel = ServiceLocator.Get<Texture2D>();
+            const int segmentWidth = 3;
+            const int segmentGap = 3;
+            const int segmentHeight = 6;
+            const int barHeight = 12;
+            const int horizontalPadding = 2;
+
+            // Calculate the vertical offset to center the text with the bar
+            float textOffsetY = (barHeight - font.LineHeight) / 2f;
+            Vector2 textPosition = new Vector2(position.X, position.Y + textOffsetY);
 
             string labelText = $"{label}";
-            spriteBatch.DrawString(font, labelText, position, _global.GameTextColor);
+            spriteBatch.DrawString(font, labelText, textPosition, _global.GameTextColor);
 
             Vector2 textSize = font.MeasureString(labelText);
             int barX = (int)(position.X + textSize.X + 5);
-            int barY = (int)(position.Y + 3);
-            int barWidth = (max * 6) - 3;
+            int barY = (int)position.Y;
 
-            Rectangle barBg = new Rectangle(barX - 2, barY - 2, barWidth + 4, 10);
-            spriteBatch.Draw(pixel, barBg, bgColor);
+            int segmentsAreaWidth = (max * (segmentWidth + segmentGap)) - segmentGap;
+            int barWidth = segmentsAreaWidth + (horizontalPadding * 2);
+            var barBounds = new Rectangle(barX, barY, barWidth, barHeight);
 
             if (max > 0)
             {
-                for (int i = 0; i < max; i++)
-                {
-                    int segmentX = barX + i * 6;
-                    Rectangle segmentRect = new Rectangle(segmentX, barY, 3, 6);
-
-                    if (i < current)
-                    {
-                        spriteBatch.Draw(pixel, segmentRect, fillColor);
-                    }
-                    else
-                    {
-                        spriteBatch.Draw(pixel, segmentRect, Color.Lerp(bgColor, fillColor, 0.3f));
-                    }
-                }
+                UIPrimitives.DrawSegmentedBar(
+                    spriteBatch,
+                    ServiceLocator.Get<Texture2D>(),
+                    barBounds,
+                    (float)current / max,
+                    max,
+                    fillColor,
+                    Color.Lerp(bgColor, fillColor, 0.3f),
+                    bgColor,
+                    segmentWidth,
+                    segmentGap,
+                    segmentHeight,
+                    horizontalPadding
+                );
             }
 
-            return new Rectangle((int)position.X, (int)position.Y, (int)textSize.X + 5 + barWidth, 12);
+            return new Rectangle((int)position.X, (int)position.Y, (int)textSize.X + 5 + barWidth, barHeight);
         }
 
         private void CheckTooltipHover()

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -133,6 +134,14 @@ namespace ProjectVagabond.Scenes
         {
             if (!IsActive) return;
 
+            // --- Loading Bar Style Parameters ---
+            const int LOADING_BAR_SEGMENTS = 50;
+            const int SEGMENT_WIDTH = 6;
+            const int SEGMENT_GAP = 2;
+            const int SEGMENT_HEIGHT = 6;
+            const int BAR_HEIGHT = 10;
+            const int horizontalPadding = 2;
+
             var pixel = ServiceLocator.Get<Texture2D>();
             var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
 
@@ -148,23 +157,32 @@ namespace ProjectVagabond.Scenes
             );
             spriteBatch.DrawString(font, loadingText, textPosition, _global.Palette_BrightWhite);
 
-            // Loading bar
-            int barWidth = 400;
-            int barHeight = 2;
+            // Loading bar layout
+            int segmentsAreaWidth = LOADING_BAR_SEGMENTS * (SEGMENT_WIDTH + SEGMENT_GAP) - SEGMENT_GAP;
+            int barWidth = segmentsAreaWidth + (horizontalPadding * 2);
             int barX = (Global.VIRTUAL_WIDTH - barWidth) / 2;
-            int barY = (Global.VIRTUAL_HEIGHT - 20);
+            int barY = (Global.VIRTUAL_HEIGHT - 20 - (BAR_HEIGHT / 2));
+            var barBounds = new Rectangle(barX, barY, barWidth, BAR_HEIGHT);
 
-            // Background
-            spriteBatch.Draw(pixel, new Rectangle(barX, barY, barWidth, barHeight), _global.Palette_DarkGray);
             // Border
-            DrawRectangleBorder(spriteBatch, pixel, new Rectangle(barX, barY, barWidth, barHeight), 1, _global.Palette_LightGray);
+            var borderRect = new Rectangle(barBounds.X - 2, barBounds.Y - 2, barBounds.Width + 4, barBounds.Height + 4);
+            spriteBatch.Draw(pixel, borderRect, _global.Palette_DarkGray);
 
-            // Progress fill
-            int fillWidth = (int)(barWidth * _visualProgress);
-            if (fillWidth > 0)
-            {
-                spriteBatch.Draw(pixel, new Rectangle(barX, barY, fillWidth, barHeight), _global.Palette_DarkGreen);
-            }
+            // Draw the stylized, segmented bar
+            UIPrimitives.DrawSegmentedBar(
+                spriteBatch,
+                pixel,
+                barBounds,
+                _visualProgress,
+                LOADING_BAR_SEGMENTS,
+                _global.Palette_LightGreen,
+                Color.Lerp(_global.Palette_DarkGray, _global.Palette_LightGreen, 0.3f),
+                _global.Palette_DarkGray,
+                SEGMENT_WIDTH,
+                SEGMENT_GAP,
+                SEGMENT_HEIGHT,
+                horizontalPadding
+            );
         }
 
         private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
