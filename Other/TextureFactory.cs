@@ -229,7 +229,7 @@ namespace ProjectVagabond
         public Texture2D CreateCircleTexture()
         {
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            const int size = 16;
+            const int size = 64; // Match the CLOCK_SIZE for a 1:1 texture
             var texture = new Texture2D(graphicsDevice, size, size);
             var colorData = new Color[size * size];
 
@@ -242,8 +242,16 @@ namespace ProjectVagabond
                 {
                     var position = new Vector2(x, y);
                     float distance = Vector2.Distance(center, position);
-                    float alpha = Math.Clamp(1.0f - (distance - (radius - 1)), 0, 1);
-                    colorData[y * size + x] = Color.White * alpha;
+
+                    // Use a hard edge for a crisp, pixelated circle
+                    if (distance <= radius)
+                    {
+                        colorData[y * size + x] = Color.White;
+                    }
+                    else
+                    {
+                        colorData[y * size + x] = Color.Transparent;
+                    }
                 }
             }
 

@@ -64,6 +64,7 @@ namespace ProjectVagabond
         private CombatInitiationSystem _combatInitiationSystem;
         private ParticleSystemManager _particleSystemManager;
         private DiceRollingSystem _diceRollingSystem;
+        private BackgroundManager _backgroundManager;
 
         // Input State
         private KeyboardState _previousKeyboardState;
@@ -157,6 +158,9 @@ namespace ProjectVagabond
             // Now the DiceRollingSystem can be created and it will fetch its dependencies.
             _diceRollingSystem = new DiceRollingSystem();
             ServiceLocator.Register<DiceRollingSystem>(_diceRollingSystem);
+
+            _backgroundManager = new BackgroundManager();
+            ServiceLocator.Register<BackgroundManager>(_backgroundManager);
 
             _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
@@ -273,6 +277,7 @@ namespace ProjectVagabond
             }
 
             _spriteManager.LoadSpriteContent();
+            _backgroundManager.LoadContent();
             ServiceLocator.Get<ItemManager>().LoadWeapons("Content/Items/Weapons");
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
             _diceRollingSystem.OnRollCompleted += HandleRollCompleted; // Subscribe to the new event
@@ -379,6 +384,7 @@ namespace ProjectVagabond
             _tooltipManager.Update(gameTime); // Tooltips should always update.
             _particleSystemManager.Update(gameTime);
             _diceRollingSystem.Update(gameTime); // Update dice visuals and game logic every frame.
+            _backgroundManager.Update(gameTime);
 
             // These systems handle visual updates and should be paused.
             if (!_gameState.IsPaused)
@@ -413,6 +419,11 @@ namespace ProjectVagabond
             GraphicsDevice.SetRenderTarget(_renderTarget);
             GraphicsDevice.Clear(Color.Transparent);
 
+            // Draw the tiling background first, inside the render target.
+            _spriteBatch.Begin(samplerState: SamplerState.LinearWrap);
+            _backgroundManager.Draw(_spriteBatch);
+            _spriteBatch.End();
+
             _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
@@ -424,7 +435,7 @@ namespace ProjectVagabond
 
             // --- 3. Draw everything to the screen ---
             GraphicsDevice.SetRenderTarget(null);
-            GraphicsDevice.Clear(_global.GameBg);
+            GraphicsDevice.Clear(Color.Black); // Use a solid color for letterboxing
 
             _sceneManager.DrawUnderlay(_spriteBatch, _defaultFont, gameTime);
 

@@ -31,6 +31,7 @@
 	<ItemGroup>
 		<Folder Include="Content\Models\" />
 		<Folder Include="Content\Sprites\UI\KeyPrompts\" />
+		<Folder Include="Content\Sprites\UI\Backgrounds\" />
 	</ItemGroup>
 	<ItemGroup>
 		<Content Include="Content\**\*.json">

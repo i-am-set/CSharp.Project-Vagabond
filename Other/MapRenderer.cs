@@ -394,6 +394,9 @@ namespace ProjectVagabond
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
             int frameHeight = MapScreenBounds.Height + 30;
 
+            // Draw the opaque background for the map area first.
+            spriteBatch.Draw(pixel, MapScreenBounds, _global.TerminalBg);
+
             spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 25, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Top
             spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y + MapScreenBounds.Height + 3, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Bottom
             spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 25, 2, frameHeight), _global.Palette_White); // Left

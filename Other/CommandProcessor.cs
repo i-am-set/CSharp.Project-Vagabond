@@ -18,6 +18,7 @@ namespace ProjectVagabond
         private Global _global;
         private Core _core;
         private GraphicsDeviceManager _graphics;
+        private BackgroundManager _backgroundManager;
 
         private Dictionary<string, Command> _commands;
         public Dictionary<string, Command> Commands => _commands;
@@ -228,6 +229,56 @@ namespace ProjectVagabond
             (args) =>
             {
                 if (args.Length == 0) return new List<string> { "short", "long", "full" };
+                return new List<string>();
+            });
+
+            _commands["setbgscroll"] = new Command("setbgscroll", (args) =>
+            {
+                _backgroundManager ??= ServiceLocator.Get<BackgroundManager>();
+                if (args.Length < 2)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: setbgscroll <direction|stop> <speed?>" });
+                    return;
+                }
+
+                string direction = args[1].ToLower();
+                if (direction == "stop")
+                {
+                    _backgroundManager.ScrollSpeed = 0f;
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Background scrolling stopped." });
+                    return;
+                }
+
+                float speed = 10f; // default speed
+                if (args.Length > 2 && float.TryParse(args[2], out float parsedSpeed))
+                {
+                    speed = parsedSpeed;
+                }
+
+                Vector2 dirVector = Vector2.Zero;
+                switch (direction)
+                {
+                    case "up": dirVector = new Vector2(0, -1); break;
+                    case "down": dirVector = new Vector2(0, 1); break;
+                    case "left": dirVector = new Vector2(-1, 0); break;
+                    case "right": dirVector = new Vector2(1, 0); break;
+                    case "up-left": dirVector = new Vector2(-1, -1); break;
+                    case "up-right": dirVector = new Vector2(1, -1); break;
+                    case "down-left": dirVector = new Vector2(-1, 1); break;
+                    case "down-right": dirVector = new Vector2(1, 1); break;
+                    default:
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Unknown direction for setbgscroll: '{direction}'." });
+                        return;
+                }
+
+                _backgroundManager.ScrollDirection = dirVector;
+                _backgroundManager.ScrollSpeed = speed;
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Background scrolling set to {direction} at speed {speed}." });
+            },
+            "setbgscroll <dir> <speed?> [gray]- Sets the background scroll.",
+            (args) =>
+            {
+                if (args.Length == 0) return new List<string> { "stop", "up", "down", "left", "right", "up-left", "up-right", "down-left", "down-right" };
                 return new List<string>();
             });
 

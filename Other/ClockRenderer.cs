@@ -13,6 +13,7 @@ namespace ProjectVagabond
         private readonly WorldClockManager _worldClockManager;
         private readonly TooltipManager _tooltipManager;
         private readonly Global _global;
+        private readonly SpriteManager _spriteManager;
         private MapRenderer _mapRenderer;
 
         private Vector2 _clockPosition;
@@ -30,6 +31,7 @@ namespace ProjectVagabond
             _worldClockManager = ServiceLocator.Get<WorldClockManager>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
             _global = ServiceLocator.Get<Global>();
+            _spriteManager = ServiceLocator.Get<SpriteManager>();
 
             _timeScaleGroup = new RadioGroup(defaultIndex: 0);
 
@@ -113,6 +115,10 @@ namespace ProjectVagabond
 
             _clockButton.Bounds = new Rectangle((int)_clockPosition.X, (int)_clockPosition.Y, CLOCK_SIZE, CLOCK_SIZE);
 
+            // Draw the white background circle
+            var backgroundCircleRect = new Rectangle((int)_clockPosition.X, (int)_clockPosition.Y, CLOCK_SIZE, CLOCK_SIZE);
+            spriteBatch.Draw(_spriteManager.CircleTextureSprite, backgroundCircleRect, _global.Palette_BrightWhite);
+
             Vector2 clockCenter = _clockPosition + new Vector2(CLOCK_SIZE / 2f, CLOCK_SIZE / 2f);
 
             // Draw hour marker dots
@@ -122,7 +128,7 @@ namespace ProjectVagabond
             {
                 float angle = (i / 12f) * MathHelper.TwoPi - MathHelper.PiOver2;
                 Vector2 dotPosition = new Vector2(clockCenter.X + DOT_RADIUS * (float)Math.Cos(angle), clockCenter.Y + DOT_RADIUS * (float)Math.Sin(angle));
-                spriteBatch.Draw(pixel, new Rectangle((int)(dotPosition.X - DOT_SIZE / 2f), (int)(dotPosition.Y - DOT_SIZE / 2f), DOT_SIZE, DOT_SIZE), _global.Palette_BrightWhite);
+                spriteBatch.Draw(pixel, new Rectangle((int)(dotPosition.X - DOT_SIZE / 2f), (int)(dotPosition.Y - DOT_SIZE / 2f), DOT_SIZE, DOT_SIZE), _global.Palette_Black);
             }
 
             // Get current time with high precision
@@ -140,7 +146,7 @@ namespace ProjectVagabond
             string period = _worldClockManager.CurrentHour >= 12 ? "PM" : "AM";
             Vector2 periodSize = font.MeasureString(period);
             Vector2 periodPosition = new Vector2(clockCenter.X - periodSize.X / 2, _clockPosition.Y + CLOCK_SIZE * 0.7f - periodSize.Y / 2);
-            spriteBatch.DrawString(font, period, periodPosition, _global.Palette_BrightWhite);
+            spriteBatch.DrawString(font, period, periodPosition, _global.Palette_Black);
 
             // Define hand properties
             Vector2 handOrigin = new Vector2(0, 0.5f);
@@ -150,11 +156,11 @@ namespace ProjectVagabond
 
             // Draw hands
             // Hour hand
-            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_BrightWhite, hourRotation, handOrigin, new Vector2(hourHandLength, 2), SpriteEffects.None, 0);
+            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_Black, hourRotation, handOrigin, new Vector2(hourHandLength, 2), SpriteEffects.None, 0);
             // Minute hand
-            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_BrightWhite, minuteRotation, handOrigin, new Vector2(minuteHandLength, 2), SpriteEffects.None, 0);
+            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_Black, minuteRotation, handOrigin, new Vector2(minuteHandLength, 2), SpriteEffects.None, 0);
             // Second hand
-            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_Red, secondRotation, handOrigin, new Vector2(secondHandLength, 1), SpriteEffects.None, 0);
+            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_Black, secondRotation, handOrigin, new Vector2(secondHandLength, 1), SpriteEffects.None, 0);
 
             _clockButton.Draw(spriteBatch, font, gameTime);
 

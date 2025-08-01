@@ -223,6 +223,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/speedMark.png
 
+#begin Sprites/UI/Backgrounds/tiled_background_1.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Backgrounds/tiled_background_1.png
+
 #begin Sprites/UI/ButtonIcons/ui_settings_icon.png
 /importer:TextureImporter
 /processor:TextureProcessor
