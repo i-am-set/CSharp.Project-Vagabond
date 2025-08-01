@@ -66,9 +66,6 @@
       }
     },
     {
-      "Type": "ProjectVagabond.TurnStatsComponent, ProjectVagabond"
-    },
-    {
       "Type": "ProjectVagabond.ActiveStatusEffectComponent, ProjectVagabond"
     },
     {

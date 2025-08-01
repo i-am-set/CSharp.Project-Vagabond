@@ -24,7 +24,6 @@ namespace ProjectVagabond
         private Vector2? _hoveredGridPos;
         private Rectangle _mapGridBounds;
         private readonly ContextMenu _contextMenu;
-        private string _cachedTimeText;
         private Vector2 _timeTextPos;
         private readonly Dictionary<string, Button> _buttonMap;
 
@@ -543,6 +542,8 @@ namespace ProjectVagabond
 
             foreach (var entityId in _gameState.ActiveEntities)
             {
+                if (entityId == _gameState.PlayerEntityId) continue; // Skip the player here, they are drawn separately
+
                 var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
                 var renderComp = _componentStore.GetComponent<RenderableComponent>(entityId);
                 var interpComp = _componentStore.GetComponent<InterpolationComponent>(entityId);
@@ -556,14 +557,24 @@ namespace ProjectVagabond
                     if (screenPos.HasValue)
                     {
                         Texture2D textureToDraw = (corpseComp != null) ? pixel : (renderComp.Texture ?? pixel);
-                        if (entityId == _gameState.PlayerEntityId)
-                        {
-                            textureToDraw = pixel;
-                        }
                         elements.Add(new GridElement(textureToDraw, renderComp.Color, screenPos.Value));
                     }
                 }
             }
+
+            // Explicitly draw the player last to ensure they are on top
+            var playerRenderComp = _componentStore.GetComponent<RenderableComponent>(_gameState.PlayerEntityId);
+            var playerInterpComp = _componentStore.GetComponent<InterpolationComponent>(_gameState.PlayerEntityId);
+            if (playerRenderComp != null)
+            {
+                Vector2 playerPosToDraw = playerInterpComp != null ? playerInterpComp.CurrentVisualPosition : _gameState.PlayerLocalPos;
+                Vector2? screenPos = MapCoordsToScreen(playerPosToDraw);
+                if (screenPos.HasValue)
+                {
+                    elements.Add(new GridElement(playerRenderComp.Texture, playerRenderComp.Color, screenPos.Value));
+                }
+            }
+
             return elements;
         }
 

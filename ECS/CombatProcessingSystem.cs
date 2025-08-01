@@ -15,11 +15,6 @@ namespace ProjectVagabond
         private CombatTurnSystem _combatTurnSystem;
         private WorldClockManager _worldClockManager;
 
-        private float _actionDelayTimer = 0f;
-        private const float ACTION_DELAY_SECONDS = 0.5f; // A standard delay between distinct actions.
-        private const float VISUAL_SPEED_MULTIPLIER = 0.8f; // Makes animations slightly faster than the raw time cost.
-        private bool _isWaitingForDiceResult = false;
-
         public CombatProcessingSystem() { }
 
         public void Update(GameTime gameTime)
@@ -38,120 +33,13 @@ namespace ProjectVagabond
 
             if (!_gameState.IsInCombat) return;
 
-            // If we are waiting for a dice roll to resolve, do nothing else.
-            if (_isWaitingForDiceResult)
-            {
-                return;
-            }
-
-            int currentEntityId = _gameState.CurrentTurnEntityId;
-
-            // If the entity is currently moving, wait for the animation to finish.
-            // This takes priority over the action delay timer.
-            if (_componentStore.HasComponent<InterpolationComponent>(currentEntityId))
-            {
-                return;
-            }
-
-            // If we are in a post-action delay, count it down.
-            if (_actionDelayTimer > 0)
-            {
-                _actionDelayTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-                return;
-            }
-
-            var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(currentEntityId);
-
-            if (actionQueue != null && actionQueue.ActionQueue.TryDequeue(out IAction nextAction))
-            {
-                bool isAI = _componentStore.HasComponent<AIComponent>(currentEntityId);
-
-                // Process the dequeued action
-                switch (nextAction)
-                {
-                    case MoveAction moveAction:
-                        ApplyMoveActionEffects(moveAction);
-                        break;
-
-                    case AttackAction attackAction:
-                        _isWaitingForDiceResult = true; // Enter wait state
-                        _combatResolutionSystem.InitiateAttackResolution(attackAction);
-                        break;
-
-                    case EndTurnAction:
-                        _combatTurnSystem.EndCurrentTurn();
-                        break;
-                }
-
-                // A delay is needed unless the action just processed was a move
-                // AND the next action in the queue is also a move.
-                bool isConsecutiveMove = false;
-                if (nextAction is MoveAction)
-                {
-                    if (actionQueue.ActionQueue.TryPeek(out IAction peekedAction) && peekedAction is MoveAction)
-                    {
-                        isConsecutiveMove = true;
-                    }
-                }
-
-                if (!isConsecutiveMove)
-                {
-                    _actionDelayTimer = ACTION_DELAY_SECONDS;
-                }
-
-
-                // After processing an action, check if the queue is now empty.
-                if (!actionQueue.ActionQueue.Any())
-                {
-                    // If it's the player's turn and their queue is empty,
-                    // it means their move/attack sequence is done. Return control to them.
-                    if (!isAI)
-                    {
-                        _gameState.UIState = CombatUIState.Default;
-                    }
-                }
-            }
-            else if (_componentStore.HasComponent<AIComponent>(currentEntityId))
-            {
-                // Safety net: If an AI's queue is somehow empty at the start of its processing, end its turn.
-                _combatTurnSystem.EndCurrentTurn();
-            }
+            // The body of this method has been emptied as per the refactoring brief.
+            // It no longer processes any actions.
         }
 
         private void OnAttackResolved()
         {
-            _isWaitingForDiceResult = false;
-            // Reset the action delay timer to make the game feel more responsive after a roll.
-            _actionDelayTimer = 0f;
-        }
-
-        private void ApplyMoveActionEffects(MoveAction action)
-        {
-            var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(action.ActorId);
-            var statsComp = _componentStore.GetComponent<StatsComponent>(action.ActorId);
-            var turnStatsComp = _componentStore.GetComponent<TurnStatsComponent>(action.ActorId);
-
-            if (localPosComp != null && statsComp != null && turnStatsComp != null)
-            {
-                if (action.Mode == MovementMode.Run)
-                {
-                    int energyCost = _gameState.GetMovementEnergyCost(action, true);
-                    statsComp.ExertEnergy(energyCost);
-                }
-
-                // Calculate the actual in-game time this single step will take.
-                Vector2 moveDir = action.Destination - localPosComp.LocalPosition;
-                float timeCostOfStep = _gameState.GetSecondsPassedDuringMovement(statsComp, action.Mode, default, moveDir, true);
-
-                // ADDED: Increment the turn's movement time by the cost of this single step.
-                turnStatsComp.MovementTimeUsedThisTurn += timeCostOfStep;
-
-                // The visual duration is proportional to the in-game time cost, scaled by the world clock.
-                float visualDuration = (timeCostOfStep / _worldClockManager.TimeScale) * VISUAL_SPEED_MULTIPLIER;
-
-                var interp = new InterpolationComponent(localPosComp.LocalPosition, action.Destination, visualDuration, action.Mode);
-                _componentStore.AddComponent(action.ActorId, interp);
-            }
+            // This callback is still required to be subscribed to, but its functionality is now empty.
         }
     }
 }

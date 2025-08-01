@@ -12,13 +12,11 @@ namespace ProjectVagabond
     public class CombatResolutionSystem : ISystem
     {
         private readonly ComponentStore _componentStore;
-        private GameState _gameState; // Lazy loaded
-        private EntityManager _entityManager; // Lazy loaded
         private readonly DiceRollingSystem _diceRollingSystem;
         private readonly Global _global;
         private ItemManager _itemManager;
 
-        private AttackAction _pendingAttackAction;
+        private IAction _pendingAttackAction;
         private Dictionary<string, int> _flatModifiers = new Dictionary<string, int>();
         public event Action OnAttackResolved;
 
@@ -151,80 +149,11 @@ namespace ProjectVagabond
         /// Initiates an attack by parsing all dice notations, requesting a dice roll for non-flat values,
         /// and preparing for the result.
         /// </summary>
-        public void InitiateAttackResolution(AttackAction action)
+        public void InitiateAttackResolution(IAction action)
         {
             _pendingAttackAction = action;
-            _flatModifiers.Clear();
-            var rollRequest = new List<DiceGroup>();
-
-            var effectiveStats = GetEffectiveAttackStats(action.ActorId);
-
-            // 1. Process Damage by creating a group for each dice term.
-            int totalDamageModifier = 0;
-            var damageDiceGroups = new List<DiceGroup>();
-            string[] damageTerms = effectiveStats.DamageNotation.Split('+', StringSplitOptions.RemoveEmptyEntries);
-
-            for (int i = 0; i < damageTerms.Length; i++)
-            {
-                var term = damageTerms[i].Trim();
-                var (numDice, numSides, modifier) = DiceParser.Parse(term);
-
-                if (numDice > 0 && numSides > 0)
-                {
-                    damageDiceGroups.Add(new DiceGroup
-                    {
-                        GroupId = $"damage_{i}", // Unique group for each dice term
-                        DisplayGroupId = "damage", // Common ID for animation grouping
-                        NumberOfDice = numDice,
-                        DieType = DieTypeFromSides(numSides),
-                        Tint = _global.Palette_BrightWhite,
-                        Scale = 1.0f,
-                        ResultProcessing = DiceResultProcessing.Sum,
-                        Modifier = modifier // Modifier is part of this specific term
-                    });
-                }
-                else
-                {
-                    // This term is a flat number, add it to the total flat modifier.
-                    totalDamageModifier += modifier;
-                }
-            }
-
-            // Add the aggregated flat modifier to the first damage dice group, if any exist.
-            if (damageDiceGroups.Any())
-            {
-                damageDiceGroups[0].Modifier += totalDamageModifier;
-                rollRequest.AddRange(damageDiceGroups);
-            }
-            else if (totalDamageModifier > 0)
-            {
-                // If there are no dice to roll, store the flat damage to be resolved directly.
-                _flatModifiers["damage_flat"] = totalDamageModifier;
-            }
-
-
-            // 2. Process Status Effect Amounts as separate, smaller dice groups.
-            if (effectiveStats.StatusEffects != null)
-            {
-                for (int i = 0; i < effectiveStats.StatusEffects.Count; i++)
-                {
-                    var effectApp = effectiveStats.StatusEffects[i];
-                    string groupId = $"{effectApp.EffectName.ToLower()}_amount_{i}";
-                    Color tint = effectApp.EffectName.ToLower() == "poison" ? _global.Palette_DarkGreen : _global.Palette_LightPurple;
-                    ProcessNotation(effectApp.Amount, groupId, tint, 0.6f, rollRequest);
-                }
-            }
-
-            // 3. Submit the roll request or resolve immediately if no dice were needed
-            if (rollRequest.Any())
-            {
-                _diceRollingSystem.Roll(rollRequest);
-            }
-            else
-            {
-                // No dice to roll, all values are flat modifiers. Resolve immediately.
-                HandleDiceRollCompleted(new DiceRollResult());
-            }
+            // Immediately resolve the attack without rolling dice.
+            HandleDiceRollCompleted(new DiceRollResult());
         }
 
         /// <summary>
@@ -256,152 +185,16 @@ namespace ProjectVagabond
             }
         }
 
-        private void ResolveZeroDamageAttack()
-        {
-            var attackerName = EntityNamer.GetName(_pendingAttackAction.ActorId);
-            var targetName = EntityNamer.GetName(_pendingAttackAction.TargetId);
-            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{attackerName} attacks {targetName} but deals no damage." });
-
-            _pendingAttackAction = null;
-            OnAttackResolved?.Invoke();
-        }
-
         private void HandleDiceRollCompleted(DiceRollResult result)
         {
             if (_pendingAttackAction == null) return;
 
-            _gameState ??= ServiceLocator.Get<GameState>();
-            _entityManager ??= ServiceLocator.Get<EntityManager>();
+            var attackerName = EntityNamer.GetName(_pendingAttackAction.ActorId);
+            var targetName = EntityNamer.GetName(0); // Placeholder, as AttackAction is gone
 
-            var attackerId = _pendingAttackAction.ActorId;
-            var targetId = _pendingAttackAction.TargetId;
-
-            var effectiveStats = GetEffectiveAttackStats(attackerId);
-            var targetHealthComp = _componentStore.GetComponent<HealthComponent>(targetId);
-            var attackerName = EntityNamer.GetName(attackerId);
-            var targetName = EntityNamer.GetName(targetId);
-
-            if (targetHealthComp == null)
-            {
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]Could not resolve attack for {attackerName}. Target missing components." });
-                CleanupAndSignalCompletion();
-                return;
-            }
-
-            // --- DAMAGE RESOLUTION ---
-            // Sum results from all groups that were part of the roll.
-            int finalDamage = 0;
-            foreach (var groupResult in result.ResultsByGroup)
-            {
-                // The group's result already includes its modifier, so we just sum them up.
-                if (groupResult.Key.StartsWith("damage_"))
-                {
-                    finalDamage += groupResult.Value.Sum();
-                }
-            }
-            // Add any flat damage that had no dice associated with it.
-            if (_flatModifiers.TryGetValue("damage_flat", out int flatDamage))
-            {
-                finalDamage += flatDamage;
-            }
-
-            var attackerStatusEffects = _componentStore.GetComponent<ActiveStatusEffectComponent>(attackerId);
-            bool isWeakened = attackerStatusEffects?.ActiveEffects.Any(e => e.BaseEffect.Name == "Weakness") ?? false;
-            if (isWeakened) finalDamage /= 2;
-
-            targetHealthComp.TakeDamage(finalDamage);
-            EventBus.Publish(new GameEvents.EntityTookDamage { EntityId = targetId, DamageAmount = finalDamage });
-            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{attackerName} attacks {targetName} with {effectiveStats.WeaponName} for [red]{finalDamage}[/] damage! {targetName} has {targetHealthComp.CurrentHealth}/{targetHealthComp.MaxHealth} HP remaining." });
-
-            // --- STATUS EFFECT RESOLUTION ---
-            if (effectiveStats.StatusEffects != null && effectiveStats.StatusEffects.Any())
-            {
-                var statusEffectSystem = ServiceLocator.Get<StatusEffectSystem>();
-                for (int i = 0; i < effectiveStats.StatusEffects.Count; i++)
-                {
-                    var effectApp = effectiveStats.StatusEffects[i];
-                    string groupId = $"{effectApp.EffectName.ToLower()}_amount_{i}";
-                    int effectValue = GetResolvedValue(groupId, result);
-
-                    var effect = statusEffectSystem.CreateEffectFromName(effectApp.EffectName, effectiveStats.WeaponName);
-                    if (effect != null && effectValue > 0)
-                    {
-                        // For poison, the rolled amount is the duration.
-                        if (effect.Name == "Poison")
-                        {
-                            statusEffectSystem.ApplyEffect(targetId, effect, effectValue, attackerId, effectValue);
-                        }
-                        else
-                        {
-                            // For other effects, it might be a fixed duration with a variable amount.
-                            statusEffectSystem.ApplyEffect(targetId, effect, 3f, attackerId, effectValue);
-                        }
-                    }
-                }
-            }
-
-            // --- PROVOKE & DEATH CHECKS ---
-            var playerTag = _componentStore.GetComponent<PlayerTagComponent>(attackerId);
-            if (playerTag != null)
-            {
-                var targetPersonality = _componentStore.GetComponent<AIPersonalityComponent>(targetId);
-                if (targetPersonality != null && !targetPersonality.IsProvoked)
-                {
-                    if (targetPersonality.Personality == AIPersonalityType.Neutral || targetPersonality.Personality == AIPersonalityType.Passive)
-                    {
-                        targetPersonality.IsProvoked = true;
-                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName} becomes hostile!" });
-                    }
-                }
-            }
-
-            if (targetHealthComp.CurrentHealth <= 0)
-            {
-                HandleTargetDeath(targetId, targetName);
-            }
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{attackerName} attacks {targetName}!" });
 
             CleanupAndSignalCompletion();
-        }
-
-        private int GetResolvedValue(string groupId, DiceRollResult result)
-        {
-            // The final value is the sum of the dice roll for that group (or 0 if none)
-            // plus any flat modifier stored for that group.
-            int rolledValue = result.ResultsByGroup.ContainsKey(groupId) ? result.ResultsByGroup[groupId].Sum() : 0;
-            int modifierValue = _flatModifiers.ContainsKey(groupId) ? _flatModifiers[groupId] : 0;
-            return rolledValue + modifierValue;
-        }
-
-        private void HandleTargetDeath(int targetId, string targetName)
-        {
-            if (targetId == _gameState.PlayerEntityId)
-            {
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[red]You have been defeated!" });
-                _gameState.EndCombat();
-                return;
-            }
-
-            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[red]{targetName} has been defeated![/]" });
-
-            var worldPos = _componentStore.GetComponent<PositionComponent>(targetId)?.WorldPosition ?? Vector2.Zero;
-            var localPos = _componentStore.GetComponent<LocalPositionComponent>(targetId)?.LocalPosition ?? Vector2.Zero;
-            int corpseId = Spawner.Spawn("corpse", worldPos, localPos);
-            var corpseComp = _componentStore.GetComponent<CorpseComponent>(corpseId);
-            if (corpseComp != null)
-            {
-                corpseComp.OriginalEntityId = targetId;
-            }
-
-            _gameState.RemoveEntityFromCombat(targetId);
-            _componentStore.EntityDestroyed(targetId);
-            _entityManager.DestroyEntity(targetId);
-
-            bool enemiesRemain = _gameState.Combatants.Any(id => id != _gameState.PlayerEntityId);
-            if (!enemiesRemain)
-            {
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[palette_yellow]Victory! All enemies have been defeated." });
-                _gameState.EndCombat();
-            }
         }
 
         private void CleanupAndSignalCompletion()

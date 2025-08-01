@@ -213,22 +213,8 @@ namespace ProjectVagabond
         private void HandleRightClickOnEntity(int targetId, Vector2 targetPos, Vector2 mousePos)
         {
             var menuItems = new List<ContextMenuItem>();
-            var playerCombatant = _componentStore.GetComponent<CombatantComponent>(_gameState.PlayerEntityId);
-            if (playerCombatant == null) return;
-
-            // Use the same cross-chunk distance logic as the AI
-            var aiSystem = ServiceLocator.Get<AISystem>();
-            float distance = aiSystem.GetTrueLocalDistance(_gameState.PlayerEntityId, targetId);
-            bool inRange = distance <= playerCombatant.AttackRange;
-
-            menuItems.Add(new ContextMenuItem
-            {
-                Text = "Attack",
-                Color = _global.Palette_Red,
-                IsEnabled = () => inRange,
-                OnClick = () => _gameState.InitiateCombat(new List<int> { _gameState.PlayerEntityId, targetId })
-            });
-
+            // The "Attack" option has been removed.
+            // The context menu will now be empty for entities, but the method is kept for future expansion.
             ShowContextMenu(targetPos, mousePos, menuItems);
         }
 

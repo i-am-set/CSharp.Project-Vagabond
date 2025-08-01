@@ -32,8 +32,14 @@ namespace ProjectVagabond
         {
             if (path == null) return;
 
-            var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
-            var playerWorldPos = _componentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId).WorldPosition;
+            var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId);
+            if (actionQueueComp == null) return;
+            var actionQueue = actionQueueComp.ActionQueue;
+
+            var playerWorldPosComp = _componentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId);
+            if (playerWorldPosComp == null) return;
+            var playerWorldPos = playerWorldPosComp.WorldPosition;
+
             var playerEntityId = gameState.PlayerEntityId;
 
             bool isLocalPath = gameState.CurrentMapView == MapView.Local;
@@ -85,8 +91,10 @@ namespace ProjectVagabond
 
         public void CancelPendingActions(GameState gameState)
         {
-            var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
-            actionQueue.Clear();
+            var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId);
+            if (actionQueueComp == null) return;
+            actionQueueComp.ActionQueue.Clear();
+
             gameState.ClearAIPreviewPaths();
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Pending actions cleared." });
             EventBus.Publish(new GameEvents.ActionQueueChanged());
@@ -94,8 +102,10 @@ namespace ProjectVagabond
 
         public void ClearPendingActions(GameState gameState)
         {
-            var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
-            actionQueue.Clear();
+            var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId);
+            if (actionQueueComp == null) return;
+            actionQueueComp.ActionQueue.Clear();
+
             gameState.ClearAIPreviewPaths();
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
@@ -103,7 +113,9 @@ namespace ProjectVagabond
         public void RemovePendingActionsFrom(GameState gameState, int index)
         {
             var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId);
+            if (actionQueueComp == null) return;
             var actionQueue = actionQueueComp.ActionQueue;
+
             if (index < 0 || index >= actionQueue.Count) return;
 
             var tempList = actionQueue.ToList();
@@ -120,8 +132,10 @@ namespace ProjectVagabond
 
         public void QueueAction(GameState gameState, IAction action)
         {
-            var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
-            actionQueue.Enqueue(action);
+            var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId);
+            if (actionQueueComp == null) return;
+            actionQueueComp.ActionQueue.Enqueue(action);
+
             UpdateAIPathPreviews(gameState);
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
@@ -134,9 +148,16 @@ namespace ProjectVagabond
                 return;
             }
 
-            var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
-            var playerLocalPos = _componentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId).LocalPosition;
-            var playerWorldPos = _componentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId).WorldPosition;
+            var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId);
+            if (actionQueueComp == null) return;
+            var actionQueue = actionQueueComp.ActionQueue;
+
+            var playerLocalPosComp = _componentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId);
+            var playerWorldPosComp = _componentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId);
+            if (playerLocalPosComp == null || playerWorldPosComp == null) return;
+
+            var playerLocalPos = playerLocalPosComp.LocalPosition;
+            var playerWorldPos = playerWorldPosComp.WorldPosition;
             var playerEntityId = gameState.PlayerEntityId;
 
             RestType restType = RestType.ShortRest;
@@ -172,10 +193,17 @@ namespace ProjectVagabond
                 return;
             }
 
-            var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId).ActionQueue;
+            var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId);
+            if (actionQueueComp == null) return;
+            var actionQueue = actionQueueComp.ActionQueue;
+
             var playerStats = _componentStore.GetComponent<StatsComponent>(gameState.PlayerEntityId);
-            var playerLocalPos = _componentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId).LocalPosition;
-            var playerWorldPos = _componentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId).WorldPosition;
+            var playerLocalPosComp = _componentStore.GetComponent<LocalPositionComponent>(gameState.PlayerEntityId);
+            var playerWorldPosComp = _componentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId);
+            if (playerStats == null || playerLocalPosComp == null || playerWorldPosComp == null) return;
+
+            var playerLocalPos = playerLocalPosComp.LocalPosition;
+            var playerWorldPos = playerWorldPosComp.WorldPosition;
             var playerEntityId = gameState.PlayerEntityId;
 
             bool isLocalMove = gameState.CurrentMapView == MapView.Local;

@@ -70,24 +70,6 @@ namespace ProjectVagabond
             var newTurnEntityId = _gameState.InitiativeOrder[_currentTurnIndex];
             _gameState.SetCurrentTurnEntity(newTurnEntityId);
 
-            // Process status effects at the start of the turn (e.g., poison damage).
-            _statusEffectSystem.ProcessCombatTurnStart(newTurnEntityId);
-
-            // Reset the turn-specific stats for the new entity.
-            var turnStats = _componentStore.GetComponent<TurnStatsComponent>(newTurnEntityId);
-            if (turnStats != null)
-            {
-                turnStats.HasPrimaryAction = true;
-                turnStats.HasSecondaryAction = true;
-                turnStats.MovementTimeUsedThisTurn = 0f;
-            }
-            else
-            {
-                // Safety: if an entity enters combat without this component, add it.
-                var newTurnStats = new TurnStatsComponent();
-                _componentStore.AddComponent(newTurnEntityId, newTurnStats);
-            }
-
             // Log whose turn it is now.
             var newTurnEntityName = EntityNamer.GetName(_gameState.CurrentTurnEntityId);
             EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"Turn: {newTurnEntityName}" });
@@ -99,8 +81,7 @@ namespace ProjectVagabond
             }
             else if (newTurnEntityId == _gameState.PlayerEntityId)
             {
-                // It's the player's turn, reset their UI state to default
-                _gameState.UIState = CombatUIState.Default;
+                // It's the player's turn.
             }
         }
 

@@ -60,26 +60,7 @@ namespace ProjectVagabond
             _gameState ??= ServiceLocator.Get<GameState>();
             if (!_gameState.IsInCombat) return;
 
-            var statusEffectComp = _componentStore.GetComponent<ActiveStatusEffectComponent>(entityId);
-            if (statusEffectComp == null || !statusEffectComp.ActiveEffects.Any()) return;
-
-            var effectsToRemove = new List<(int entityId, ActiveStatusEffect effect)>();
-
-            foreach (var effect in statusEffectComp.ActiveEffects)
-            {
-                // Tick the effect at the start of the turn, passing the remaining duration as the 'amount'.
-                effect.BaseEffect.OnTick(entityId, _componentStore, (int)effect.Duration);
-
-                // Reduce duration by one round
-                effect.Duration -= 1;
-
-                if (effect.Duration <= 0)
-                {
-                    effectsToRemove.Add((entityId, effect));
-                }
-            }
-
-            RemoveExpiredEffects(effectsToRemove);
+            // Body of this method is now empty.
         }
 
         private void RemoveExpiredEffects(List<(int entityId, ActiveStatusEffect effect)> effectsToRemove)
@@ -127,8 +108,6 @@ namespace ProjectVagabond
         {
             switch (name.ToLower())
             {
-                case "poison":
-                    return new PoisonStatusEffect(source);
                 case "weakness":
                     return new WeaknessStatusEffect(source);
                 default:

@@ -31,12 +31,6 @@ namespace ProjectVagabond.Scenes
         private readonly PromptRenderer _promptRenderer;
         private WaitDialog _waitDialog;
         private ImageButton _settingsButton;
-        private TurnOrderPanel _turnOrderPanel;
-        private PlayerStatusPanel _playerStatusPanel;
-        private EnemyDisplayPanel _enemyDisplayPanel;
-        private CombatLogPanel _combatLogPanel;
-        private ActionMenuPanel _actionMenuPanel;
-        private PlayerCombatInputSystem _playerCombatInputSystem;
         private KeyboardState _previousKeyboardState;
         private readonly CombatUIAnimationManager _combatUIAnimationManager;
         private readonly LoadingScreen _loadingScreen;
@@ -103,54 +97,6 @@ namespace ProjectVagabond.Scenes
             }
             _settingsButton.OnClick += OpenSettings;
 
-            // --- Combat UI Panel Initialization and Layout ---
-            if (_playerStatusPanel == null)
-            {
-                // Calculate the large, uniform map bounds to lay out the combat UI.
-                // This logic is duplicated from MapRenderer to ensure consistency.
-                const int worldCellSize = Global.GRID_CELL_SIZE;
-                int maxWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
-                int maxHeight = Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10;
-                int baseMapSize = Math.Min(maxWidth, maxHeight);
-                int baseGridSize = baseMapSize / worldCellSize;
-                int worldGridSize = baseGridSize + 4;
-                int finalMapSize = worldGridSize * worldCellSize;
-                int mapX = (Global.VIRTUAL_WIDTH - finalMapSize) / 2;
-                var mapBounds = new Rectangle(mapX, Global.MAP_TOP_PADDING + 7, finalMapSize, finalMapSize);
-
-                // --- Side Columns ---
-                int leftColumnWidth = mapBounds.X - 20;
-                int rightColumnX = mapBounds.Right + 10;
-                int rightColumnWidth = Global.VIRTUAL_WIDTH - rightColumnX - 10;
-
-                // Turn Order (Left Column)
-                var turnOrderBounds = new Rectangle(10, mapBounds.Y, leftColumnWidth, mapBounds.Height);
-                _turnOrderPanel = new TurnOrderPanel(turnOrderBounds);
-
-                // Combat Log (Right Column)
-                var combatLogBounds = new Rectangle(rightColumnX, mapBounds.Y, rightColumnWidth, mapBounds.Height);
-                _combatLogPanel = new CombatLogPanel(combatLogBounds);
-
-                // --- Bottom Area ---
-                int bottomAreaY = mapBounds.Bottom + 10;
-                int bottomAreaHeight = Global.VIRTUAL_HEIGHT - bottomAreaY - 10;
-                int playerStatusWidth = 200;
-                int actionMenuWidth = 150;
-                int enemyDisplayX = 10 + playerStatusWidth + 10 + actionMenuWidth + 10;
-                int enemyDisplayWidth = Global.VIRTUAL_WIDTH - enemyDisplayX - 10;
-
-                var playerStatusBounds = new Rectangle(10, bottomAreaY, playerStatusWidth, bottomAreaHeight);
-                _playerStatusPanel = new PlayerStatusPanel(playerStatusBounds);
-
-                var actionMenuBounds = new Rectangle(playerStatusBounds.Right + 10, bottomAreaY, actionMenuWidth, bottomAreaHeight);
-                _actionMenuPanel = new ActionMenuPanel(actionMenuBounds);
-
-                var enemyDisplayBounds = new Rectangle(actionMenuBounds.Right + 10, bottomAreaY, enemyDisplayWidth, bottomAreaHeight);
-                _enemyDisplayPanel = new EnemyDisplayPanel(enemyDisplayBounds);
-
-                // Initialize the combat input system with the correct panels
-                _playerCombatInputSystem = new PlayerCombatInputSystem(_actionMenuPanel, _turnOrderPanel, _enemyDisplayPanel, _mapRenderer);
-            }
             _previousKeyboardState = Keyboard.GetState();
         }
 
@@ -241,21 +187,10 @@ namespace ProjectVagabond.Scenes
 
             if (_coreState.IsInCombat)
             {
-                // These panels must always update during combat.
-                _playerCombatInputSystem.ProcessInput();
-                _actionMenuPanel.Update(gameTime, currentMouseState, font);
-                _enemyDisplayPanel.Update(gameTime, currentMouseState);
-
-                // Block TurnOrderPanel during any focus state.
-                if (_coreState.UIState != CombatUIState.SelectTarget && _coreState.UIState != CombatUIState.SelectMove)
+                // Exit combat with the F5 debug key.
+                if (currentKeyboardState.IsKeyDown(Keys.F5) && !_previousKeyboardState.IsKeyDown(Keys.F5))
                 {
-                    _turnOrderPanel.Update(gameTime, currentMouseState, font);
-                }
-
-                // Handle MapRenderer update separately. It should NOT update during target selection.
-                if (_coreState.UIState != CombatUIState.SelectTarget)
-                {
-                    _mapRenderer.Update(gameTime, font);
+                    _coreState.EndCombat();
                 }
             }
             else
@@ -288,62 +223,18 @@ namespace ProjectVagabond.Scenes
             // --- Draw UI Panels ---
             if (_coreState.IsInCombat)
             {
-                // Draw map first, letting it calculate its own uniform bounds
-                _mapRenderer.DrawMap(spriteBatch, font, gameTime);
+                // Draw a black screen with "COMBAT" text
+                var pixel = ServiceLocator.Get<Texture2D>();
+                var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+                spriteBatch.Draw(pixel, screenBounds, Color.Black);
 
-                _enemyDisplayPanel.Draw(spriteBatch, gameTime, currentMouseState);
-                _turnOrderPanel.Draw(spriteBatch, font, gameTime);
-                _playerStatusPanel.Draw(spriteBatch, font);
-                _actionMenuPanel.Draw(spriteBatch, font, gameTime);
-                _combatLogPanel.Draw(spriteBatch, font, gameTime);
-
-                // Draw focus effect for target or move selection
-                if (_coreState.UIState == CombatUIState.SelectTarget || _coreState.UIState == CombatUIState.SelectMove)
-                {
-                    var pixel = ServiceLocator.Get<Texture2D>();
-                    var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-                    spriteBatch.Draw(pixel, screenBounds, Color.Black * 0.6f);
-
-                    // Redraw the important panels on top of the overlay
-                    if (_coreState.UIState == CombatUIState.SelectTarget)
-                    {
-                        _enemyDisplayPanel.Draw(spriteBatch, gameTime, currentMouseState);
-
-                        // If an enemy is hovered in the panel, highlight them on the map.
-                        if (_enemyDisplayPanel.HoveredEnemyId.HasValue)
-                        {
-                            int hoveredId = _enemyDisplayPanel.HoveredEnemyId.Value;
-                            var componentStore = ServiceLocator.Get<ComponentStore>();
-                            var localPosComp = componentStore.GetComponent<LocalPositionComponent>(hoveredId);
-                            var renderComp = componentStore.GetComponent<RenderableComponent>(hoveredId);
-
-                            if (localPosComp != null && renderComp != null)
-                            {
-                                Vector2? screenPos = _mapRenderer.MapCoordsToScreen(localPosComp.LocalPosition);
-                                if (screenPos.HasValue)
-                                {
-                                    int cellSize = _mapRenderer.CellSize;
-                                    var destRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, cellSize, cellSize);
-                                    spriteBatch.Draw(renderComp.Texture ?? pixel, destRect, renderComp.Color);
-
-                                    // Draw the pulsing red selector
-                                    bool isInflated = _combatUIAnimationManager.IsPulsing("TargetSelector");
-                                    var global = ServiceLocator.Get<Global>();
-                                    Rectangle highlightRect = isInflated
-                                        ? new Rectangle(destRect.X - 1, destRect.Y - 1, destRect.Width + 2, destRect.Height + 2)
-                                        : destRect;
-                                    DrawHollowRectangle(spriteBatch, highlightRect, global.Palette_Red, 1);
-                                }
-                            }
-                        }
-                    }
-                    else // Must be SelectMove
-                    {
-                        // Redraw the map with entities to see where you're moving
-                        _mapRenderer.DrawMap(spriteBatch, font, gameTime);
-                    }
-                    _actionMenuPanel.Draw(spriteBatch, font, gameTime);
-                }
+                string combatText = "COMBAT";
+                Vector2 textSize = font.MeasureString(combatText);
+                Vector2 textPosition = new Vector2(
+                    (Global.VIRTUAL_WIDTH - textSize.X) / 2,
+                    (Global.VIRTUAL_HEIGHT - textSize.Y) / 2
+                );
+                spriteBatch.DrawString(font, combatText, textPosition, Color.White);
             }
             else
             {

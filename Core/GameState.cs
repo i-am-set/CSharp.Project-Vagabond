@@ -32,6 +32,7 @@ namespace ProjectVagabond
         private bool _isFreeMoveMode = false;
         private bool _isPaused = false;
         private readonly Random _random = new Random();
+        private static readonly Queue<IAction> _emptyActionQueue = new Queue<IAction>();
 
         // Combat Initiation State
         public bool IsCombatInitiationPending { get; private set; } = false;
@@ -41,9 +42,30 @@ namespace ProjectVagabond
         public MapView PathExecutionMapView { get; private set; }
 
         public int PlayerEntityId { get; private set; }
-        public Vector2 PlayerWorldPos => _componentStore.GetComponent<PositionComponent>(PlayerEntityId).WorldPosition;
-        public Vector2 PlayerLocalPos => _componentStore.GetComponent<LocalPositionComponent>(PlayerEntityId).LocalPosition;
-        public Queue<IAction> PendingActions => _componentStore.GetComponent<ActionQueueComponent>(PlayerEntityId).ActionQueue;
+        public Vector2 PlayerWorldPos
+        {
+            get
+            {
+                var posComp = _componentStore.GetComponent<PositionComponent>(PlayerEntityId);
+                return posComp != null ? posComp.WorldPosition : Vector2.Zero;
+            }
+        }
+        public Vector2 PlayerLocalPos
+        {
+            get
+            {
+                var localPosComp = _componentStore.GetComponent<LocalPositionComponent>(PlayerEntityId);
+                return localPosComp != null ? localPosComp.LocalPosition : Vector2.Zero;
+            }
+        }
+        public Queue<IAction> PendingActions
+        {
+            get
+            {
+                var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(PlayerEntityId);
+                return actionQueueComp?.ActionQueue ?? _emptyActionQueue;
+            }
+        }
         public bool IsExecutingActions => _isExecutingActions;
         public bool IsPaused => _isPaused;
         public bool IsFreeMoveMode => _isFreeMoveMode;
@@ -61,7 +83,6 @@ namespace ProjectVagabond
         public List<int> Combatants { get; private set; } = new List<int>();
         public List<int> InitiativeOrder { get; private set; } = new List<int>();
         public int CurrentTurnEntityId { get; private set; }
-        public CombatUIState UIState { get; set; } = CombatUIState.Default;
         public int? SelectedTargetId { get; set; } = null;
         public List<(Vector2 Position, MovementMode Mode)> CombatMovePreviewPath { get; set; } = new List<(Vector2, MovementMode)>();
         public MovementMode CombatMovePreviewMode { get; set; } = MovementMode.Walk;
@@ -261,7 +282,6 @@ namespace ProjectVagabond
             if (!IsInCombat) return;
 
             IsInCombat = false;
-            UIState = CombatUIState.Default; // Return control to the player
             Combatants.Clear();
             InitiativeOrder.Clear();
             SelectedTargetId = null;
@@ -292,17 +312,15 @@ namespace ProjectVagabond
         {
             if (!IsInCombat) return false;
 
-            var turnStats = _componentStore.GetComponent<TurnStatsComponent>(PlayerEntityId);
+            var turnStats = _componentStore.GetComponent<IComponent>(PlayerEntityId); // Placeholder, as TurnStatsComponent is deleted
             var playerStats = _componentStore.GetComponent<StatsComponent>(PlayerEntityId);
 
             if (turnStats == null || playerStats == null) return false;
 
-            float remainingTime = Global.COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
-
-            // Calculate the cost of the cheapest possible move (a non-diagonal walk)
-            float cheapestMoveCost = GetSecondsPassedDuringMovement(playerStats, MovementMode.Walk, default, new Vector2(1, 0), true);
-
-            return remainingTime >= cheapestMoveCost;
+            // Since TurnStatsComponent is gone, we can't check remaining time.
+            // For now, let's assume movement is always possible if the component exists.
+            // This logic will be replaced with the new combat system.
+            return true;
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -506,12 +524,15 @@ namespace ProjectVagabond
 
         public (int finalEnergy, bool possible, float secondsPassed) SimulateActionQueueEnergy(IEnumerable<IAction> customQueue = null)
         {
+            var playerStats = PlayerStats;
+            if (playerStats == null) return (0, true, 0f); // Prevent crash if stats aren't loaded yet
+
             var queueToSimulate = customQueue ?? PendingActions;
-            if (!queueToSimulate.Any()) return (PlayerStats.CurrentEnergyPoints, true, 0f);
+            if (!queueToSimulate.Any()) return (playerStats.CurrentEnergyPoints, true, 0f);
 
             bool isLocalMove = CurrentMapView == MapView.Local;
-            int finalEnergy = PlayerStats.CurrentEnergyPoints;
-            int maxEnergy = PlayerStats.MaxEnergyPoints;
+            int finalEnergy = playerStats.CurrentEnergyPoints;
+            int maxEnergy = playerStats.MaxEnergyPoints;
             float secondsPassed = 0f;
             Vector2 lastPosition = isLocalMove ? PlayerLocalPos : PlayerWorldPos;
             bool isFirstMoveInQueue = true;
@@ -537,7 +558,7 @@ namespace ProjectVagabond
                     // Calculate time passed based on the actual movement mode
                     Vector2 moveDirection = moveAction.Destination - lastPosition;
                     MapData mapData = isLocalMove ? default : GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
-                    float moveDuration = GetSecondsPassedDuringMovement(PlayerStats, actualMode, mapData, moveDirection, isLocalMove);
+                    float moveDuration = GetSecondsPassedDuringMovement(playerStats, actualMode, mapData, moveDirection, isLocalMove);
 
                     if (!isLocalMove && isFirstMoveInQueue)
                     {
@@ -557,16 +578,16 @@ namespace ProjectVagabond
                     switch (restAction.RestType)
                     {
                         case RestType.ShortRest:
-                            finalEnergy += PlayerStats.ShortRestEnergyRestored;
-                            secondsPassed += PlayerStats.ShortRestDuration * 60;
+                            finalEnergy += playerStats.ShortRestEnergyRestored;
+                            secondsPassed += playerStats.ShortRestDuration * 60;
                             break;
                         case RestType.LongRest:
-                            finalEnergy += PlayerStats.LongRestEnergyRestored;
-                            secondsPassed += PlayerStats.LongRestDuration * 60;
+                            finalEnergy += playerStats.LongRestEnergyRestored;
+                            secondsPassed += playerStats.LongRestDuration * 60;
                             break;
                         case RestType.FullRest:
-                            finalEnergy += PlayerStats.FullRestEnergyRestored;
-                            secondsPassed += PlayerStats.FullRestDuration * 60;
+                            finalEnergy += playerStats.FullRestEnergyRestored;
+                            secondsPassed += playerStats.FullRestDuration * 60;
                             break;
                     }
                     finalEnergy = Math.Min(finalEnergy, maxEnergy);
@@ -575,63 +596,6 @@ namespace ProjectVagabond
                 isFirstMoveInQueue = false;
             }
             return (finalEnergy, true, secondsPassed);
-        }
-
-        public List<(Vector2 Position, MovementMode Mode)> GetAffordablePath(int entityId, Vector2 start, Vector2 end, MovementMode mode, out float totalTimeCost)
-        {
-            totalTimeCost = 0f;
-            var stats = _componentStore.GetComponent<StatsComponent>(entityId);
-            var turnStats = _componentStore.GetComponent<TurnStatsComponent>(entityId);
-            if (stats == null || turnStats == null)
-            {
-                return null;
-            }
-
-            float timeBudget = Global.COMBAT_TURN_DURATION_SECONDS - turnStats.MovementTimeUsedThisTurn;
-            if (timeBudget <= 0)
-            {
-                return new List<(Vector2, MovementMode)>();
-            }
-
-            var fullPath = Pathfinder.FindPath(entityId, start, end, this, mode, PathfindingMode.Time, MapView.Local);
-            if (fullPath == null || !fullPath.Any())
-            {
-                return null;
-            }
-
-            var affordablePath = new List<(Vector2 Position, MovementMode Mode)>();
-            var lastPos = start;
-            int simulatedEnergy = stats.CurrentEnergyPoints;
-
-            foreach (var step in fullPath)
-            {
-                var moveDirection = step - lastPos;
-                var currentMode = mode;
-
-                int energyCostForRun = GetMovementEnergyCost(new MoveAction(entityId, step, MovementMode.Run), true);
-                if (currentMode == MovementMode.Run && simulatedEnergy < energyCostForRun)
-                {
-                    currentMode = MovementMode.Jog;
-                }
-
-                float stepCost = GetSecondsPassedDuringMovement(stats, currentMode, default, moveDirection, true);
-
-                if (totalTimeCost + stepCost <= timeBudget)
-                {
-                    totalTimeCost += stepCost;
-                    affordablePath.Add((step, currentMode));
-                    if (currentMode == MovementMode.Run)
-                    {
-                        simulatedEnergy -= energyCostForRun;
-                    }
-                    lastPos = step;
-                }
-                else
-                {
-                    break;
-                }
-            }
-            return affordablePath;
         }
 
         public void ExecuteActions()

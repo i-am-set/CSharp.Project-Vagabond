@@ -157,66 +157,10 @@ namespace ProjectVagabond
 
         public void ProcessCombatTurn(int entityId)
         {
-            _gameState ??= ServiceLocator.Get<GameState>();
-
-            var aiPosComp = _componentStore.GetComponent<LocalPositionComponent>(entityId);
-            var playerPosComp = _componentStore.GetComponent<LocalPositionComponent>(_gameState.PlayerEntityId);
-            var actionQueue = _componentStore.GetComponent<ActionQueueComponent>(entityId);
-            var stats = _componentStore.GetComponent<StatsComponent>(entityId);
-            var turnStats = _componentStore.GetComponent<TurnStatsComponent>(entityId);
-            var combatant = _componentStore.GetComponent<CombatantComponent>(entityId);
-            var equipment = _componentStore.GetComponent<EquipmentComponent>(entityId);
             var aiName = EntityNamer.GetName(entityId);
-
-            if (aiPosComp == null || playerPosComp == null || actionQueue == null || stats == null || turnStats == null || combatant == null || equipment == null)
-            {
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"[error]{aiName} cannot act (missing components)." });
-                actionQueue?.ActionQueue.Enqueue(new EndTurnAction(entityId));
-                return;
-            }
-
-            Vector2 finalPositionAfterMove = aiPosComp.LocalPosition;
-
-            // --- MOVEMENT PHASE ---
-            float distanceToPlayer = Vector2.Distance(aiPosComp.LocalPosition, playerPosComp.LocalPosition);
-            if (distanceToPlayer > combatant.AttackRange)
-            {
-                Vector2? destination = FindBestAdjacentTile(playerPosComp.LocalPosition, aiPosComp.LocalPosition, entityId);
-
-                if (destination.HasValue)
-                {
-                    var path = Pathfinder.FindPath(entityId, aiPosComp.LocalPosition, destination.Value, _gameState, MovementMode.Run, PathfindingMode.Moves, MapView.Local);
-
-                    if (path != null && path.Any())
-                    {
-                        QueueMovementAlongPath(entityId, path, actionQueue, stats, turnStats);
-                        var lastMove = actionQueue.ActionQueue.OfType<MoveAction>().LastOrDefault();
-                        if (lastMove != null)
-                        {
-                            finalPositionAfterMove = lastMove.Destination;
-                        }
-                    }
-                    else
-                    {
-                        EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} cannot find a path and waits." });
-                    }
-                }
-                else
-                {
-                    EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} is blocked and waits." });
-                }
-            }
-
-            // --- ACTION PHASE ---
-            float finalDistanceToPlayer = Vector2.Distance(finalPositionAfterMove, playerPosComp.LocalPosition);
-            if (finalDistanceToPlayer <= combatant.AttackRange && turnStats.HasPrimaryAction)
-            {
-                actionQueue.ActionQueue.Enqueue(new AttackAction(entityId, _gameState.PlayerEntityId, "Attack"));
-                turnStats.HasPrimaryAction = false;
-            }
-
-            // --- END TURN ---
-            actionQueue.ActionQueue.Enqueue(new EndTurnAction(entityId));
+            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} considers its options and waits." });
+            // Immediately end the turn to prevent a soft-lock, as CombatProcessingSystem is now empty.
+            ServiceLocator.Get<CombatTurnSystem>().EndCurrentTurn();
         }
 
         private Vector2? FindBestAdjacentTile(Vector2 targetPosition, Vector2 seekerPosition, int seekerId)
@@ -241,44 +185,10 @@ namespace ProjectVagabond
             return validNeighbors.OrderBy(n => Vector2.DistanceSquared(seekerPosition, n)).First();
         }
 
-        private void QueueMovementAlongPath(int entityId, List<Vector2> path, ActionQueueComponent actionQueue, StatsComponent stats, TurnStatsComponent turnStats)
+        private void QueueMovementAlongPath(int entityId, List<Vector2> path, ActionQueueComponent actionQueue, StatsComponent stats, IComponent turnStats)
         {
-            float timeUsedThisTurn = turnStats.MovementTimeUsedThisTurn;
-            int simulatedEnergy = stats.CurrentEnergyPoints;
-            Vector2 lastStepPosition = _componentStore.GetComponent<LocalPositionComponent>(entityId).LocalPosition;
-            int movesQueued = 0;
-
-            foreach (var step in path)
-            {
-                int runCost = _gameState.GetMovementEnergyCost(new MoveAction(entityId, step, MovementMode.Run), true);
-                var moveMode = (simulatedEnergy >= runCost) ? MovementMode.Run : MovementMode.Jog;
-
-                Vector2 moveDir = step - lastStepPosition;
-                float stepTimeCost = _gameState.GetSecondsPassedDuringMovement(stats, moveMode, default, moveDir, true);
-
-                if (timeUsedThisTurn + stepTimeCost > Global.COMBAT_TURN_DURATION_SECONDS)
-                {
-                    break; // Can't afford this move, stop planning.
-                }
-
-                timeUsedThisTurn += stepTimeCost;
-                actionQueue.ActionQueue.Enqueue(new MoveAction(entityId, step, moveMode));
-                movesQueued++;
-
-                if (moveMode == MovementMode.Run)
-                {
-                    simulatedEnergy -= runCost;
-                }
-                lastStepPosition = step;
-            }
-
-            turnStats.MovementTimeUsedThisTurn = timeUsedThisTurn;
-
-            if (movesQueued > 0)
-            {
-                var aiName = EntityNamer.GetName(entityId);
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{aiName} moves towards the player." });
-            }
+            // This method is no longer called due to ProcessCombatTurn being gutted.
+            // It is kept for reference but is now dead code.
         }
 
         public void UpdateDecisions()
