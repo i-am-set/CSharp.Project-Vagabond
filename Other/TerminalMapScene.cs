@@ -116,7 +116,7 @@ namespace ProjectVagabond.Scenes
                 int worldGridSize = baseGridSize + 4;
                 int finalMapSize = worldGridSize * worldCellSize;
                 int mapX = (Global.VIRTUAL_WIDTH - finalMapSize) / 2;
-                var mapBounds = new Rectangle(mapX, Global.MAP_TOP_PADDING, finalMapSize, finalMapSize);
+                var mapBounds = new Rectangle(mapX, Global.MAP_TOP_PADDING + 7, finalMapSize, finalMapSize);
 
                 // --- Side Columns ---
                 int leftColumnWidth = mapBounds.X - 20;
@@ -366,7 +366,7 @@ namespace ProjectVagabond.Scenes
                 // Draw Stats in Left Column
                 if (leftColumnWidth > 20) // Ensure there's space for padding
                 {
-                    _statsRenderer.DrawStats(spriteBatch, font, new Vector2(10, Global.MAP_TOP_PADDING), leftColumnWidth - 20);
+                    _statsRenderer.DrawStats(spriteBatch, font, new Vector2(10, mapBounds.Y), leftColumnWidth - 20);
                 }
 
                 // Draw Clock and Settings in Right Column
@@ -376,13 +376,13 @@ namespace ProjectVagabond.Scenes
                     if (_settingsButton != null)
                     {
                         int settingsButtonX = rightColumnX + (rightColumnWidth - _settingsButton.Bounds.Width) / 2;
-                        _settingsButton.Bounds = new Rectangle(settingsButtonX, Global.MAP_TOP_PADDING, _settingsButton.Bounds.Width, _settingsButton.Bounds.Height);
+                        _settingsButton.Bounds = new Rectangle(settingsButtonX, mapBounds.Y, _settingsButton.Bounds.Width, _settingsButton.Bounds.Height);
                         _settingsButton.Draw(spriteBatch, font, gameTime);
                     }
 
                     // Clock
                     int clockX = rightColumnX + (rightColumnWidth - 64) / 2;
-                    _clockRenderer.DrawClock(spriteBatch, font, gameTime, new Vector2(clockX, Global.MAP_TOP_PADDING + 30));
+                    _clockRenderer.DrawClock(spriteBatch, font, gameTime, new Vector2(clockX, mapBounds.Y + 30));
                 }
 
                 // Draw Prompt/Status in Bottom-Left

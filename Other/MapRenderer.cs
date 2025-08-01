@@ -93,7 +93,7 @@ namespace ProjectVagabond
                 int finalMapSize = worldGridSize * worldCellSize;
 
                 int mapX = (Global.VIRTUAL_WIDTH - finalMapSize) / 2;
-                int mapY = Global.MAP_TOP_PADDING;
+                int mapY = Global.MAP_TOP_PADDING + 7; // Move map and header down by 7 pixels
                 MapScreenBounds = new Rectangle(mapX, mapY, finalMapSize, finalMapSize);
             }
 

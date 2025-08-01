@@ -49,19 +49,23 @@ namespace ProjectVagabond
         {
             if (_texture == null) return;
 
-            // The destination rectangle is the entire virtual screen.
-            var destRect = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+            // Calculate the starting position for the top-left tile based on the offset.
+            // The modulo operator ensures the position wraps around, creating the infinite tiling effect.
+            float startX = -(_offset.X % _texture.Width);
+            float startY = -(_offset.Y % _texture.Height);
 
-            // The source rectangle's position is our scrolling offset.
-            // Its size is the same as the destination, and SamplerState.LinearWrap handles the tiling.
-            var sourceRect = new Rectangle(
-                (int)_offset.X,
-                (int)_offset.Y,
-                destRect.Width,
-                destRect.Height
-            );
+            // We need to draw enough tiles to cover the entire virtual screen.
+            int screenWidth = Global.VIRTUAL_WIDTH;
+            int screenHeight = Global.VIRTUAL_HEIGHT;
 
-            spriteBatch.Draw(_texture, destRect, sourceRect, Color.White);
+            // Loop through and draw tiles to fill the screen.
+            for (float y = startY; y < screenHeight; y += _texture.Height)
+            {
+                for (float x = startX; x < screenWidth; x += _texture.Width)
+                {
+                    spriteBatch.Draw(_texture, new Vector2(x, y), Color.White);
+                }
+            }
         }
     }
 }
