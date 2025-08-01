@@ -165,8 +165,8 @@ namespace ProjectVagabond.Scenes
             int mapX = (Global.VIRTUAL_WIDTH - mapTotalWidth) / 2;
             int mapSize = Math.Min(mapTotalWidth, Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10);
             var mapBounds = new Rectangle(mapX, Global.MAP_TOP_PADDING, mapSize, mapSize);
-            int terminalY = mapBounds.Bottom + 10;
-            int terminalHeight = Global.VIRTUAL_HEIGHT - terminalY - 10;
+            int terminalY = mapBounds.Bottom + 5; // Position terminal top flush with map bottom frame
+            int terminalHeight = Global.VIRTUAL_HEIGHT - terminalY - 10; // Extend height to bottom padding
             var terminalBounds = new Rectangle(mapBounds.X, terminalY, mapBounds.Width, terminalHeight);
 
             // The input handler must run every frame to catch the unpause command.
@@ -243,8 +243,8 @@ namespace ProjectVagabond.Scenes
 
                 // Calculate terminal bounds based on the map's position and size
                 var mapBounds = _mapRenderer.MapScreenBounds;
-                int terminalY = mapBounds.Bottom + 10; // 10px gap
-                int terminalHeight = Global.VIRTUAL_HEIGHT - terminalY - 10; // 10px bottom padding
+                int terminalY = mapBounds.Bottom + 5; // Position terminal top flush with map bottom frame
+                int terminalHeight = Global.VIRTUAL_HEIGHT - terminalY - 10; // Extend height to bottom padding
                 var terminalBounds = new Rectangle(mapBounds.X, terminalY, mapBounds.Width, terminalHeight);
 
                 _terminalRenderer.DrawTerminal(spriteBatch, font, gameTime, terminalBounds);

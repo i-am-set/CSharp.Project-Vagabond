@@ -13,7 +13,7 @@ namespace ProjectVagabond
         private readonly GraphicsDevice _graphicsDevice;
 
         public Vector2 ScrollDirection { get; set; } = new Vector2(0.1f, 0.1f);
-        public float ScrollSpeed { get; set; } = 15f;
+        public float ScrollSpeed { get; set; } = 5f;
 
         public BackgroundManager()
         {

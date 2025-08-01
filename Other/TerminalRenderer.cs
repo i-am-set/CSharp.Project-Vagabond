@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -211,23 +210,13 @@ namespace ProjectVagabond
                 spriteBatch.DrawString(font, scrollIndicator, new Vector2(bounds.X, scrollY), Color.Gold);
             }
 
-            // Calculate layout from bottom up
-            float contentWidth = GetTerminalContentWidthInPixels();
-            int separatorY = 0, outputAreaBottom = 0;
-
-            if (!isInCombat)
+            // --- REVISED LAYOUT LOGIC ---
+            int outputAreaBottom;
+            if (!isInCombat && _inputHandler.IsTerminalInputActive)
             {
                 _inputLineY = bounds.Bottom - Global.TERMINAL_LINE_SPACING - 5;
-                separatorY = _inputLineY - 5;
-
-                if (_inputHandler.IsTerminalInputActive)
-                {
-                    outputAreaBottom = separatorY;
-                }
-                else
-                {
-                    outputAreaBottom = bounds.Bottom;
-                }
+                int separatorY = _inputLineY - 5;
+                outputAreaBottom = separatorY;
             }
             else
             {
@@ -236,10 +225,10 @@ namespace ProjectVagabond
 
             // Draw History
             int outputAreaHeight = outputAreaBottom - bounds.Y;
-            int maxVisibleLines = (outputAreaHeight - 5) / Global.TERMINAL_LINE_SPACING;
+            int maxVisibleLines = outputAreaHeight / Global.TERMINAL_LINE_SPACING;
             int totalLines = activeHistory.Count;
             int lastHistoryIndexToDraw = totalLines - 1 - activeScrollOffset;
-            float lastScreenLineY = outputAreaBottom - Global.TERMINAL_LINE_SPACING;
+            float lastScreenLineY = (bounds.Y + outputAreaHeight) - Global.TERMINAL_LINE_SPACING + 1;
 
             for (int i = 0; i < maxVisibleLines; i++)
             {
@@ -262,6 +251,7 @@ namespace ProjectVagabond
             // Conditionally draw the input section
             if (!isInCombat && _inputHandler.IsTerminalInputActive)
             {
+                int separatorY = _inputLineY - 5;
                 spriteBatch.Draw(pixel, new Rectangle(bounds.X - 5, separatorY, bounds.Width + 10, 2), _global.Palette_White);
 
                 _caratBlinkTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -270,7 +260,7 @@ namespace ProjectVagabond
                 _stringBuilder.Clear();
                 _stringBuilder.Append("> ").Append(_inputHandler.CurrentInput).Append(caratUnderscore);
                 string inputCarat = _stringBuilder.ToString();
-                string wrappedInput = WrapText(inputCarat, contentWidth, font);
+                string wrappedInput = WrapText(inputCarat, GetTerminalContentWidthInPixels(), font);
                 spriteBatch.DrawString(font, wrappedInput, new Vector2(bounds.X, _inputLineY + 1), _global.InputCaratColor, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
             }
         }
