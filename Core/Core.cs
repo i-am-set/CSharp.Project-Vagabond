@@ -29,6 +29,7 @@ using System.Text;              // Added for StringBuilder
 // TODO: Make the loading screen use the same display as the health bar
 // TODO: Make it so the game checks if a die is still moving before rerolling it, but if its moving outside of the bounds of the screen, then reroll, and on top of that have a 20 second timeout for rerolling dice that are still moving just in case the physics engine gets stuck
 // TODO: Make hit makrer number that appears on map entity
+// TODO: Speed up scrolling background and dice to match speed up
 
 namespace ProjectVagabond
 {
