@@ -57,7 +57,6 @@ namespace ProjectVagabond
         private GameState _gameState;
         private ActionExecutionSystem _actionExecutionSystem;
         private AISystem _aiSystem;
-        private CombatProcessingSystem _combatProcessingSystem;
         private SpriteManager _spriteManager;
         private CombatUIAnimationManager _combatUIAnimationManager;
         private LocalMapTurnSystem _localMapTurnSystem;
@@ -180,12 +179,6 @@ namespace ProjectVagabond
 
             _aiSystem = new AISystem();
             ServiceLocator.Register<AISystem>(_aiSystem);
-
-            var combatResolutionSystem = new CombatResolutionSystem();
-            ServiceLocator.Register<CombatResolutionSystem>(combatResolutionSystem);
-
-            _combatProcessingSystem = new CombatProcessingSystem();
-            ServiceLocator.Register<CombatProcessingSystem>(_combatProcessingSystem);
 
             _combatInitiationSystem = new CombatInitiationSystem();
             ServiceLocator.Register<CombatInitiationSystem>(_combatInitiationSystem);
@@ -402,7 +395,6 @@ namespace ProjectVagabond
             {
                 if (_gameState.IsInCombat)
                 {
-                    _combatProcessingSystem.Update(gameTime);
                 }
                 else if (_sceneManager.CurrentActiveScene is TerminalMapScene)
                 {

@@ -104,7 +104,6 @@ namespace ProjectVagabond
         public void InitializeWorld()
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0), localPosition: new Vector2(32, 32));
-            _componentStore.AddComponent(PlayerEntityId, new MovementProgressComponent());
             Spawner.Spawn("bandit", worldPosition: new Vector2(0, 0), localPosition: new Vector2(34, 36));
         }
 
