@@ -28,6 +28,7 @@ namespace ProjectVagabond.Scenes
         private readonly AutoCompleteManager _autoCompleteManager;
         private readonly DiceRollingSystem _diceRollingSystem;
         private readonly PromptRenderer _promptRenderer;
+        private readonly PreEncounterAnimationSystem _preEncounterAnimationSystem;
         private WaitDialog _waitDialog;
         private EncounterDialog _encounterDialog;
         private ImageButton _settingsButton;
@@ -54,6 +55,7 @@ namespace ProjectVagabond.Scenes
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _loadingScreen = new LoadingScreen();
             _promptRenderer = ServiceLocator.Get<PromptRenderer>();
+            _preEncounterAnimationSystem = ServiceLocator.Get<PreEncounterAnimationSystem>();
 
             EventBus.Subscribe<GameEvents.EntityTookDamage>(OnEntityTookDamage);
         }
@@ -256,6 +258,9 @@ namespace ProjectVagabond.Scenes
             {
                 // Draw map with default out-of-combat bounds
                 _mapRenderer.DrawMap(spriteBatch, font, gameTime);
+
+                // Draw the pre-encounter animation on top of the map
+                _preEncounterAnimationSystem.Draw(spriteBatch, font);
 
                 // Calculate terminal bounds based on the map's position and size
                 var mapBounds = _mapRenderer.MapScreenBounds;

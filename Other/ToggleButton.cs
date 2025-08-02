@@ -10,8 +10,8 @@ namespace ProjectVagabond.UI
         public Color? CustomToggledTextColor { get; set; }
 
 #nullable enable
-        public ToggleButton(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, Color? customToggledTextColor = null)
-            : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor)
+        public ToggleButton(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, Color? customToggledTextColor = null, bool zoomHapticOnClick = true)
+            : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor, zoomHapticOnClick: zoomHapticOnClick)
         {
             CustomToggledTextColor = customToggledTextColor;
         }

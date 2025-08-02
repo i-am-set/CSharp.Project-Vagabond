@@ -17,6 +17,7 @@ namespace ProjectVagabond
         private readonly ContextMenu _contextMenu;
         private readonly Global _global;
         private readonly ComponentStore _componentStore;
+        private readonly PreEncounterAnimationSystem _preEncounterAnimationSystem;
         private BitmapFont _font;
 
         private MouseState _currentMouseState;
@@ -39,6 +40,7 @@ namespace ProjectVagabond
             _playerInputSystem = ServiceLocator.Get<PlayerInputSystem>();
             _global = ServiceLocator.Get<Global>();
             _componentStore = ServiceLocator.Get<ComponentStore>();
+            _preEncounterAnimationSystem = ServiceLocator.Get<PreEncounterAnimationSystem>();
 
             _previousKeyboardState = Keyboard.GetState();
 
@@ -75,6 +77,13 @@ namespace ProjectVagabond
 
             _previousMouseState = _currentMouseState;
             _currentMouseState = Mouse.GetState();
+
+            // If a pre-encounter animation is playing, block all map input.
+            if (_preEncounterAnimationSystem.IsAnimating)
+            {
+                return;
+            }
+
             var keyboardState = Keyboard.GetState();
             Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
 

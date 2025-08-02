@@ -1,4 +1,6 @@
-﻿namespace ProjectVagabond
+﻿using ProjectVagabond.Encounters;
+
+namespace ProjectVagabond
 {
     /// <summary>
     /// A central place to define event argument classes for the EventBus.
@@ -76,6 +78,15 @@
             /// True if the collision was fast enough to generate a spark effect.
             /// </summary>
             public bool IsSparking;
+        }
+
+        /// <summary>
+        /// Published when the conditions for a random encounter are met.
+        /// This signals the PreEncounterAnimationSystem to begin its animation.
+        /// </summary>
+        public struct EncounterTriggered
+        {
+            public EncounterData Encounter { get; set; }
         }
     }
 }

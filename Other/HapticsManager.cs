@@ -66,6 +66,11 @@ namespace ProjectVagabond
             _zoomPulse.Trigger(intensity, duration);
         }
 
+        public void QuickZoomInPulseSmall()
+        {
+            TriggerZoomPulse(1.01f, 0.05f);
+        }
+
         public void TriggerRandomHop(float intensity, float duration)
         {
             float randomIntensity = intensity * ((float)_random.NextDouble() * 0.6f + 0.4f);

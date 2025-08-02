@@ -2,10 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Encounters;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
@@ -38,11 +36,17 @@ namespace ProjectVagabond.Scenes
         private AnimationState _animationState;
         private float _animationTimer;
         private const float AnimationInDuration = 0.75f;
-        private const float AnimationOutDuration = 0.3f;
+        private const float ImageFadeInDuration = AnimationInDuration * 0.4f; // Image appears quickly
         private float _dialogScaleY;
         private float _contentAlpha;
+        private float _imageAlpha;
         private Vector2 _titleOffset;
         private readonly List<float> _buttonOffsets = new List<float>();
+        private float _swayTimer = 0f;
+        private const float IMAGE_SWAY_SPEED = 1.5f;
+        private const float IMAGE_SWAY_AMOUNT_X = 2f;
+        private const float IMAGE_SWAY_AMOUNT_Y = 1f;
+
 
         // Skill Check State
         private EncounterChoiceData _skillCheckChoice;
@@ -68,8 +72,10 @@ namespace ProjectVagabond.Scenes
             _contentState = ContentState.Displaying;
             _animationState = AnimationState.In;
             _animationTimer = 0f;
+            _swayTimer = 0f;
             _dialogScaleY = 0f;
             _contentAlpha = 0f;
+            _imageAlpha = 0f;
             _titleOffset = new Vector2(0, -10f);
             _buttonOffsets.Clear();
 
@@ -84,13 +90,13 @@ namespace ProjectVagabond.Scenes
 
             var font = ServiceLocator.Get<BitmapFont>();
 
-            int panelWidth = 600;
-            int panelHeight = 400;
+            int panelWidth = 560;
+            int panelHeight = 480;
             _panelBounds = new Rectangle((Global.VIRTUAL_WIDTH - panelWidth) / 2, (Global.VIRTUAL_HEIGHT - panelHeight) / 2, panelWidth, panelHeight);
+
+            // Image is positioned first, near the top
             float currentY = _panelBounds.Y + 20;
-            currentY += 20;
-            _imagePlaceholderBounds = new Rectangle(_panelBounds.Center.X - 100, (int)currentY, 200, 120);
-            currentY = _imagePlaceholderBounds.Bottom + 15;
+            _imagePlaceholderBounds = new Rectangle(_panelBounds.Center.X - 256, (int)currentY, 512, 256);
 
             if (_currentEncounter != null && !string.IsNullOrEmpty(_currentEncounter.DescriptionText))
             {
@@ -125,9 +131,8 @@ namespace ProjectVagabond.Scenes
 
         public override void Hide()
         {
-            if (_animationState == AnimationState.Out || _animationState == AnimationState.In) return;
-            _animationState = AnimationState.Out;
-            _animationTimer = 0f;
+            base.Hide();
+            _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
         }
 
         private (bool met, string requirementText) CheckRequirements(EncounterChoiceData choice)
@@ -248,21 +253,20 @@ namespace ProjectVagabond.Scenes
 
             _animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if (_animationState == AnimationState.In)
-            {
-                UpdateAnimationIn();
-                _previousMouseState = Mouse.GetState();
-                _previousKeyboardState = Keyboard.GetState();
-                return;
-            }
-            else if (_animationState == AnimationState.Out)
-            {
-                UpdateAnimationOut();
-                return;
-            }
-
             if (_contentState == ContentState.Displaying)
             {
+                if (_animationState == AnimationState.In)
+                {
+                    UpdateAnimationIn();
+                    _previousMouseState = Mouse.GetState();
+                    _previousKeyboardState = Keyboard.GetState();
+                    return;
+                }
+                else if (_animationState == AnimationState.Idle)
+                {
+                    _swayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                }
+
                 var currentMouseState = Mouse.GetState();
                 foreach (var button in _choiceButtons)
                 {
@@ -281,7 +285,11 @@ namespace ProjectVagabond.Scenes
             float popInProgress = Math.Clamp(_animationTimer / popInDuration, 0f, 1f);
             _dialogScaleY = Easing.EaseOutBack(popInProgress);
 
-            // Phase 2: Content Fade-in (20% to 100%)
+            // Phase 2: Image Flash-in (0% to 40%)
+            float imageFadeProgress = Math.Clamp(_animationTimer / ImageFadeInDuration, 0f, 1f);
+            _imageAlpha = Easing.EaseOutQuad(imageFadeProgress);
+
+            // Phase 3: Content Fade-in (20% to 100%)
             float contentFadeStart = AnimationInDuration * 0.2f;
             if (_animationTimer > contentFadeStart)
             {
@@ -291,7 +299,7 @@ namespace ProjectVagabond.Scenes
                 _titleOffset.Y = MathHelper.Lerp(-10f, 0f, contentProgress);
             }
 
-            // Phase 3: Button slide-in (50% to 100%)
+            // Phase 4: Button slide-in (50% to 100%)
             float buttonSlideStart = AnimationInDuration * 0.5f;
             if (_animationTimer > buttonSlideStart)
             {
@@ -316,38 +324,6 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void UpdateAnimationOut()
-        {
-            float progress = Math.Clamp(_animationTimer / AnimationOutDuration, 0f, 1f);
-
-            // Content fades and moves out first and quickly
-            _contentAlpha = MathHelper.Lerp(1f, 0f, Easing.EaseInQuad(progress * 2f));
-            _titleOffset.Y = MathHelper.Lerp(0f, -10f, Easing.EaseInCubic(progress));
-            for (int i = 0; i < _buttonOffsets.Count; i++)
-            {
-                _buttonOffsets[i] = MathHelper.Lerp(0f, 30f, Easing.EaseInCubic(progress));
-            }
-
-            // Panel shrinks after a short delay
-            float panelShrinkStart = AnimationOutDuration * 0.2f;
-            if (_animationTimer > panelShrinkStart)
-            {
-                float panelDuration = AnimationOutDuration - panelShrinkStart;
-                float panelProgress = Math.Clamp((_animationTimer - panelShrinkStart) / panelDuration, 0f, 1f);
-                _dialogScaleY = MathHelper.Lerp(1f, 0f, Easing.EaseInCubic(panelProgress));
-            }
-            else
-            {
-                _dialogScaleY = 1f;
-            }
-
-            if (progress >= 1.0f)
-            {
-                base.Hide(); // This sets IsActive = false
-                _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
-            }
-        }
-
         protected override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (_currentEncounter == null) return;
@@ -356,7 +332,7 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
             Rectangle finalPanelBounds = _panelBounds;
-            if (_animationState != AnimationState.Idle)
+            if (_animationState == AnimationState.In)
             {
                 finalPanelBounds.Height = (int)(_panelBounds.Height * _dialogScaleY);
                 finalPanelBounds.Y = _panelBounds.Center.Y - finalPanelBounds.Height / 2;
@@ -365,18 +341,37 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Draw(pixel, finalPanelBounds, _global.Palette_DarkGray);
             DrawRectangleBorder(spriteBatch, pixel, finalPanelBounds, 1, _global.Palette_LightGray);
 
-            if (_contentAlpha > 0)
+            // Draw Image
+            if (_imageAlpha > 0)
             {
-                Vector2 titleSize = font.MeasureString(_currentEncounter.Title);
-                Vector2 titlePosition = new Vector2(_panelBounds.Center.X - titleSize.X / 2, _panelBounds.Y + 15) + _titleOffset;
-                spriteBatch.DrawString(font, _currentEncounter.Title, titlePosition, _global.Palette_BrightWhite * _contentAlpha);
+                float swayOffsetX = 0f;
+                float swayOffsetY = 0f;
+                if (_animationState == AnimationState.Idle)
+                {
+                    swayOffsetX = (float)Math.Sin(_swayTimer * IMAGE_SWAY_SPEED) * IMAGE_SWAY_AMOUNT_X;
+                    swayOffsetY = (float)Math.Sin(_swayTimer * IMAGE_SWAY_SPEED * 2) * IMAGE_SWAY_AMOUNT_Y;
+                }
+                var swayedImageBounds = new Rectangle(
+                    _imagePlaceholderBounds.X + (int)swayOffsetX,
+                    _imagePlaceholderBounds.Y + (int)swayOffsetY,
+                    _imagePlaceholderBounds.Width,
+                    _imagePlaceholderBounds.Height);
 
-                spriteBatch.Draw(pixel, _imagePlaceholderBounds, _global.Palette_Black * _contentAlpha);
+                spriteBatch.Draw(pixel, swayedImageBounds, _global.Palette_Black * _imageAlpha);
                 string placeholderText = $"Image: {_currentEncounter.Image}";
                 Vector2 placeholderTextSize = font.MeasureString(placeholderText);
-                spriteBatch.DrawString(font, placeholderText, new Vector2(_imagePlaceholderBounds.Center.X - placeholderTextSize.X / 2, _imagePlaceholderBounds.Center.Y - placeholderTextSize.Y / 2), _global.Palette_Gray * _contentAlpha);
+                spriteBatch.DrawString(font, placeholderText, new Vector2(swayedImageBounds.Center.X - placeholderTextSize.X / 2, swayedImageBounds.Center.Y - placeholderTextSize.Y / 2), _global.Palette_Gray * _imageAlpha);
+            }
 
-                float currentY = _imagePlaceholderBounds.Bottom + 15;
+            // Draw Text Content (Title, Description, Buttons)
+            if (_contentAlpha > 0)
+            {
+                float currentY = _imagePlaceholderBounds.Bottom + 10;
+                Vector2 titleSize = font.MeasureString(_currentEncounter.Title);
+                Vector2 titlePosition = new Vector2(_panelBounds.Center.X - titleSize.X / 2, currentY) + _titleOffset;
+                spriteBatch.DrawString(font, _currentEncounter.Title, titlePosition, _global.Palette_BrightWhite * _contentAlpha);
+
+                currentY += titleSize.Y + 15;
                 foreach (var line in _wrappedDescription)
                 {
                     spriteBatch.DrawString(font, line, new Vector2(_panelBounds.X + 20, currentY), _global.Palette_White * _contentAlpha);
@@ -389,7 +384,6 @@ namespace ProjectVagabond.Scenes
                     var originalBounds = button.Bounds;
                     button.Bounds = new Rectangle(originalBounds.X, originalBounds.Y + (int)_buttonOffsets[i], originalBounds.Width, originalBounds.Height);
 
-                    // Temporarily adjust button text color for fade-in
                     var originalDefaultColor = button.CustomDefaultTextColor;
                     var originalDisabledColor = button.CustomDisabledTextColor;
                     button.CustomDefaultTextColor = (originalDefaultColor ?? _global.Palette_BrightWhite) * _contentAlpha;
@@ -397,7 +391,6 @@ namespace ProjectVagabond.Scenes
 
                     button.Draw(spriteBatch, font, gameTime);
 
-                    // Restore original properties
                     button.Bounds = originalBounds;
                     button.CustomDefaultTextColor = originalDefaultColor;
                     button.CustomDisabledTextColor = originalDisabledColor;
@@ -438,69 +431,6 @@ namespace ProjectVagabond.Scenes
             }
             lines.Add(currentLine.ToString());
             return lines;
-        }
-    }
-}
-using Microsoft.Xna.Framework;
-using System;
-using System.Linq;
-
-namespace ProjectVagabond
-{
-    /// <summary>
-    /// Manages the triggering of random overland travel encounters based on player movement.
-    /// </summary>
-    public class EncounterTriggerSystem : ISystem
-    {
-        // --- TUNING PARAMETERS ---
-        private const float BASE_ENCOUNTER_CHANCE = 0.01f; // 1% base chance
-        private const float ENCOUNTER_CHANCE_INCREMENT = 0.005f; // Adds 0.5% chance per step
-
-        private readonly EncounterManager _encounterManager;
-        private readonly PossibleEncounterListBuilder _encounterListBuilder;
-        private readonly Random _random = new();
-
-        private float _encounterChance = BASE_ENCOUNTER_CHANCE;
-        private bool _nextMoveIsSafe = true;
-
-        public EncounterTriggerSystem()
-        {
-            _encounterManager = ServiceLocator.Get<EncounterManager>();
-            _encounterListBuilder = ServiceLocator.Get<PossibleEncounterListBuilder>();
-            EventBus.Subscribe<GameEvents.PlayerMoved>(HandlePlayerMoved);
-        }
-
-        private void HandlePlayerMoved(GameEvents.PlayerMoved e)
-        {
-            // The first move after an encounter (or after loading) is a "grace period" step.
-            // It doesn't trigger a roll but sets up the chance for the next move.
-            if (_nextMoveIsSafe)
-            {
-                _nextMoveIsSafe = false;
-                _encounterChance = BASE_ENCOUNTER_CHANCE;
-                return;
-            }
-
-            if (_random.NextDouble() < _encounterChance)
-            {
-                var possibleEncounters = _encounterListBuilder.BuildList(e.NewPosition);
-                if (possibleEncounters.Any())
-                {
-                    // Select a random encounter from the valid list
-                    var chosenEncounter = possibleEncounters[_random.Next(possibleEncounters.Count)];
-                    _encounterManager.TriggerEncounter(chosenEncounter.Id);
-                    _nextMoveIsSafe = true; // Grant another grace period step after this encounter.
-                }
-            }
-            else
-            {
-                _encounterChance += ENCOUNTER_CHANCE_INCREMENT;
-            }
-        }
-
-        public void Update(GameTime gameTime)
-        {
-            // This system is entirely event-driven by HandlePlayerMoved.
         }
     }
 }

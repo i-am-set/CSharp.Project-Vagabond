@@ -123,6 +123,10 @@ namespace ProjectVagabond
             if (!currentHoveredGridPos.HasValue) return;
 
             _hoveredGridPos = currentHoveredGridPos;
+
+            // Do not show tooltips while the player is auto-moving.
+            if (_gameState.IsExecutingActions) return;
+
             var stringBuilder = new StringBuilder();
 
             // --- Tooltip Logic ---
@@ -393,10 +397,20 @@ namespace ProjectVagabond
             return elements;
         }
 
+        private bool IsPathPipTexture(Texture2D texture)
+        {
+            return texture == _spriteManager.PathSprite ||
+                   texture == _spriteManager.RunPathSprite ||
+                   texture == _spriteManager.ShortRestSprite ||
+                   texture == _spriteManager.LongRestSprite;
+        }
+
         private void DrawGridElement(SpriteBatch spriteBatch, GridElement element, int cellSize, GameTime gameTime)
         {
             Vector2 finalPosition = element.ScreenPosition;
-            if (_pathNodeAnimationOffsets.ContainsKey(element.WorldPosition))
+
+            // Only apply the sway animation to path-related textures that are in the animation dictionary.
+            if (_pathNodeAnimationOffsets.ContainsKey(element.WorldPosition) && IsPathPipTexture(element.Texture))
             {
                 float offset = _pathNodeAnimationOffsets[element.WorldPosition];
                 const float SWAY_SPEED = 1f;

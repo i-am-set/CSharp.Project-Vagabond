@@ -61,6 +61,7 @@ namespace ProjectVagabond
         private CombatInitiationSystem _combatInitiationSystem;
         private DiceRollingSystem _diceRollingSystem;
         private BackgroundManager _backgroundManager;
+        private PreEncounterAnimationSystem _preEncounterAnimationSystem;
 
         // Input State
         private KeyboardState _previousKeyboardState;
@@ -197,6 +198,10 @@ namespace ProjectVagabond
             var mapRenderer = new MapRenderer();
             ServiceLocator.Register<MapRenderer>(mapRenderer);
 
+            // PreEncounterAnimationSystem depends on MapRenderer, so it must be registered after.
+            _preEncounterAnimationSystem = new PreEncounterAnimationSystem();
+            ServiceLocator.Register<PreEncounterAnimationSystem>(_preEncounterAnimationSystem);
+
             var mapInputHandler = new MapInputHandler(mapRenderer.MapContextMenu, mapRenderer);
             ServiceLocator.Register<MapInputHandler>(mapInputHandler);
 
@@ -236,6 +241,7 @@ namespace ProjectVagabond
             _systemManager.RegisterSystem(energySystem, 0f);
             _systemManager.RegisterSystem(poiManagerSystem, 0f);
             _systemManager.RegisterSystem(encounterTriggerSystem, 0f);
+            _systemManager.RegisterSystem(_preEncounterAnimationSystem, 0f);
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());

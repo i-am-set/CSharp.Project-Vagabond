@@ -27,8 +27,8 @@ namespace ProjectVagabond.UI
         private const float SWAY_AMOUNT_X = 2f;
         private const float SWAY_AMOUNT_Y = 1f;
 
-        public ImageButton(Rectangle bounds, Texture2D defaultTexture = null, Texture2D hoverTexture = null, Texture2D clickedTexture = null, Texture2D disabledTexture = null, bool enableHoverSway = true)
-            : base(bounds, "", enableHoverSway: enableHoverSway)
+        public ImageButton(Rectangle bounds, Texture2D defaultTexture = null, Texture2D hoverTexture = null, Texture2D clickedTexture = null, Texture2D disabledTexture = null, bool enableHoverSway = true, bool zoomHapticOnClick = true)
+            : base(bounds, "", enableHoverSway: enableHoverSway, zoomHapticOnClick: zoomHapticOnClick)
         {
             _defaultTexture = defaultTexture;
             _hoverTexture = hoverTexture;
