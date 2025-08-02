@@ -59,9 +59,9 @@ namespace ProjectVagabond
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             const int segmentWidth = 3;
-            const int segmentGap = 3;
+            const int segmentGap = 2;
             const int segmentHeight = 6;
-            const int barHeight = 12;
+            const int barHeight = 10;
             const int horizontalPadding = 2;
 
             // Calculate the vertical offset to center the text with the bar
