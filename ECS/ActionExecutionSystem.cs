@@ -18,8 +18,6 @@ namespace ProjectVagabond
 
         // Timer for the new tick-based movement system
         private float _moveTickTimer = 0f;
-        // The duration of one tick in real-world seconds at 1x speed.
-        private const float BASE_TICK_DURATION = 1.0f;
         private bool _isFirstActionInQueue = true;
 
         public ActionExecutionSystem()
@@ -65,18 +63,19 @@ namespace ProjectVagabond
                 return;
             }
 
+            // Calculate the duration of the current tick based on the time scale.
+            float currentTickDuration = Global.ACTION_TICK_DURATION_SECONDS / _worldClockManager.TimeScale;
+
             // If this is the first action in the queue, execute it immediately without a timer.
             if (_isFirstActionInQueue && _gameState.PendingActions.Any())
             {
-                float tickDuration = BASE_TICK_DURATION / _worldClockManager.TimeScale;
-                ProcessNextActionInQueue(tickDuration);
+                ProcessNextActionInQueue(currentTickDuration);
                 _isFirstActionInQueue = false;
                 _moveTickTimer = 0f; // Reset the timer so the *next* action has the full delay.
                 return;
             }
 
             // For all subsequent actions, wait for the tick timer.
-            float currentTickDuration = BASE_TICK_DURATION / _worldClockManager.TimeScale;
             _moveTickTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             if (_moveTickTimer >= currentTickDuration)

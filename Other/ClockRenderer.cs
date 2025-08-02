@@ -17,7 +17,11 @@ namespace ProjectVagabond
         private MapRenderer _mapRenderer;
 
         private Vector2 _clockPosition;
-        private const int CLOCK_SIZE = 64;
+        private const float CLOCK_SCALE = 0.75f;
+        private const int BASE_CLOCK_SIZE = 64;
+        private readonly int _clockSize;
+        public int ClockSize => _clockSize;
+
         private readonly RadioGroup _timeScaleGroup;
         public RadioGroup TimeScaleGroup => _timeScaleGroup;
         private readonly ToggleButton _pausePlayButton;
@@ -32,6 +36,8 @@ namespace ProjectVagabond
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
             _global = ServiceLocator.Get<Global>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
+
+            _clockSize = (int)(BASE_CLOCK_SIZE * CLOCK_SCALE);
 
             _timeScaleGroup = new RadioGroup(defaultIndex: 0);
 
@@ -113,22 +119,22 @@ namespace ProjectVagabond
 
             _clockPosition = position;
 
-            _clockButton.Bounds = new Rectangle((int)_clockPosition.X, (int)_clockPosition.Y, CLOCK_SIZE, CLOCK_SIZE);
+            _clockButton.Bounds = new Rectangle((int)_clockPosition.X, (int)_clockPosition.Y, _clockSize, _clockSize);
 
             // Draw the white background circle
-            var backgroundCircleRect = new Rectangle((int)_clockPosition.X, (int)_clockPosition.Y, CLOCK_SIZE, CLOCK_SIZE);
+            var backgroundCircleRect = new Rectangle((int)_clockPosition.X, (int)_clockPosition.Y, _clockSize, _clockSize);
             spriteBatch.Draw(_spriteManager.CircleTextureSprite, backgroundCircleRect, _global.Palette_BrightWhite);
 
-            Vector2 clockCenter = _clockPosition + new Vector2(CLOCK_SIZE / 2f, CLOCK_SIZE / 2f);
+            Vector2 clockCenter = _clockPosition + new Vector2(_clockSize / 2f, _clockSize / 2f);
 
             // Draw hour marker dots
-            const int DOT_RADIUS = CLOCK_SIZE / 2 - 3;
-            const int DOT_SIZE = 2;
+            int dotRadius = _clockSize / 2 - (int)Math.Max(1, 3 * CLOCK_SCALE);
+            int dotSize = (int)Math.Max(1, 2 * CLOCK_SCALE);
             for (int i = 1; i <= 12; i++)
             {
                 float angle = (i / 12f) * MathHelper.TwoPi - MathHelper.PiOver2;
-                Vector2 dotPosition = new Vector2(clockCenter.X + DOT_RADIUS * (float)Math.Cos(angle), clockCenter.Y + DOT_RADIUS * (float)Math.Sin(angle));
-                spriteBatch.Draw(pixel, new Rectangle((int)(dotPosition.X - DOT_SIZE / 2f), (int)(dotPosition.Y - DOT_SIZE / 2f), DOT_SIZE, DOT_SIZE), _global.Palette_Black);
+                Vector2 dotPosition = new Vector2(clockCenter.X + dotRadius * (float)Math.Cos(angle), clockCenter.Y + dotRadius * (float)Math.Sin(angle));
+                spriteBatch.Draw(pixel, new Rectangle((int)(dotPosition.X - dotSize / 2f), (int)(dotPosition.Y - dotSize / 2f), dotSize, dotSize), _global.Palette_Black);
             }
 
             // Get current time with high precision from the VISUAL time span
@@ -145,29 +151,29 @@ namespace ProjectVagabond
             // Draw AM/PM text (uses logical hour for accuracy)
             string period = _worldClockManager.CurrentHour >= 12 ? "PM" : "AM";
             Vector2 periodSize = font.MeasureString(period);
-            Vector2 periodPosition = new Vector2(clockCenter.X - periodSize.X / 2, _clockPosition.Y + CLOCK_SIZE * 0.7f - periodSize.Y / 2);
+            Vector2 periodPosition = new Vector2(clockCenter.X - periodSize.X / 2, _clockPosition.Y + _clockSize * 0.7f - periodSize.Y / 2);
             spriteBatch.DrawString(font, period, periodPosition, _global.Palette_Black);
 
             // Define hand properties
             Vector2 handOrigin = new Vector2(0, 0.5f);
-            int hourHandLength = 16;
-            int minuteHandLength = 24;
-            int secondHandLength = 24;
+            int hourHandLength = (int)(16 * CLOCK_SCALE);
+            int minuteHandLength = (int)(24 * CLOCK_SCALE);
+            int secondHandLength = (int)(24 * CLOCK_SCALE);
 
             // Draw hands
             // Hour hand
-            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_Black, hourRotation, handOrigin, new Vector2(hourHandLength, 2), SpriteEffects.None, 0);
+            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_Black, hourRotation, handOrigin, new Vector2(hourHandLength, 1), SpriteEffects.None, 0);
             // Minute hand
-            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_Black, minuteRotation, handOrigin, new Vector2(minuteHandLength, 2), SpriteEffects.None, 0);
+            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_Black, minuteRotation, handOrigin, new Vector2(minuteHandLength, 1), SpriteEffects.None, 0);
             // Second hand
-            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_Black, secondRotation, handOrigin, new Vector2(secondHandLength, 1), SpriteEffects.None, 0);
+            spriteBatch.Draw(pixel, clockCenter, null, _global.Palette_Red, secondRotation, handOrigin, new Vector2(secondHandLength, 1), SpriteEffects.None, 0);
 
             _clockButton.Draw(spriteBatch, font, gameTime);
 
             // Set button positions and draw them
-            int buttonWidth = 30;
-            int buttonHeight = 18;
-            int buttonSpacing = 2;
+            int buttonWidth = (int)(30 * CLOCK_SCALE);
+            int buttonHeight = (int)(18 * CLOCK_SCALE);
+            int buttonSpacing = (int)Math.Max(1, 2 * CLOCK_SCALE);
 
             // Pause/Play Button
             _pausePlayButton.IsEnabled = _gameState.IsExecutingActions;
@@ -183,7 +189,7 @@ namespace ProjectVagabond
                 totalGroupWidth += buttonWidth + buttonSpacing;
             }
 
-            Vector2 groupStartPosition = new Vector2(clockCenter.X - (totalGroupWidth / 2), _clockPosition.Y + CLOCK_SIZE + 5);
+            Vector2 groupStartPosition = new Vector2(clockCenter.X - (totalGroupWidth / 2), _clockPosition.Y + _clockSize + (int)Math.Max(2, 5 * CLOCK_SCALE));
             float currentX = groupStartPosition.X;
 
             // Draw Pause/Play button if active

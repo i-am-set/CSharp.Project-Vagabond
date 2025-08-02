@@ -26,6 +26,12 @@ namespace ProjectVagabond
         {
             _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
+            // If there's a queued path, clear it first. Manual movement takes priority.
+            if (gameState.PendingActions.Any())
+            {
+                CancelPendingActions(gameState);
+            }
+
             var playerStats = _componentStore.GetComponent<StatsComponent>(gameState.PlayerEntityId);
             var playerPosComp = _componentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId);
             if (playerStats == null || playerPosComp == null) return;
@@ -45,7 +51,15 @@ namespace ProjectVagabond
 
                 if (playerStats.CanExertEnergy(energyCost))
                 {
-                    _worldClockManager.PassTime(timeCost, 0, ActivityType.Jogging);
+                    float tickDuration = Global.ACTION_TICK_DURATION_SECONDS / _worldClockManager.TimeScale;
+                    ActivityType activity = mode switch
+                    {
+                        MovementMode.Run => ActivityType.Running,
+                        MovementMode.Jog => ActivityType.Jogging,
+                        _ => ActivityType.Walking
+                    };
+
+                    _worldClockManager.PassTime(timeCost, tickDuration, activity);
                     playerPosComp.WorldPosition = nextPos;
                     playerStats.ExertEnergy(energyCost);
                 }

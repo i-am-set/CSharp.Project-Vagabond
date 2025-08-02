@@ -6,8 +6,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Dice;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Physics;
 using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
@@ -64,6 +62,7 @@ namespace ProjectVagabond
         public const float GAME_SECONDS_PER_REAL_SECOND = 8f;
         public const float FEET_PER_WORLD_TILE = 200f; // The physical distance of a single world tile
         public const float FEET_PER_SECOND_PER_SPEED_UNIT = 4.0f; // A character with speed 1.0 moves at X ft/s.
+        public const float ACTION_TICK_DURATION_SECONDS = 1.0f; // Real-world duration of a single move/action tick at 1x speed.
 
         // Physics constants
         public const float PHYSICS_UPDATES_PER_SECOND = 60f;

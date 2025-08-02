@@ -136,10 +136,10 @@ namespace ProjectVagabond.Scenes
 
             // --- Loading Bar Style Parameters ---
             const int LOADING_BAR_SEGMENTS = 50;
-            const int SEGMENT_WIDTH = 6;
+            const int SEGMENT_WIDTH = 3;
             const int SEGMENT_GAP = 2;
             const int SEGMENT_HEIGHT = 6;
-            const int BAR_HEIGHT = 10;
+            const int BAR_HEIGHT = 8;
             const int horizontalPadding = 2;
 
             var pixel = ServiceLocator.Get<Texture2D>();

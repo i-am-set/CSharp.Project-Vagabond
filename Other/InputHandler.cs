@@ -15,6 +15,7 @@ namespace ProjectVagabond
         private readonly PlayerInputSystem _playerInputSystem;
         private readonly ClockRenderer _clockRenderer;
         private readonly Global _global;
+        private WorldClockManager _worldClockManager; // Lazy loaded
         private AutoCompleteManager _autoCompleteManager; // Lazy loaded
         private CommandProcessor _commandProcessor; // Lazy loaded
         private TerminalRenderer _terminalRenderer; // Lazy loaded
@@ -57,9 +58,19 @@ namespace ProjectVagabond
             _terminalRenderer ??= ServiceLocator.Get<TerminalRenderer>();
             _autoCompleteManager ??= ServiceLocator.Get<AutoCompleteManager>();
             _commandProcessor ??= ServiceLocator.Get<CommandProcessor>();
+            _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
             KeyboardState currentKeyboardState = Keyboard.GetState();
             MouseState currentMouseState = Mouse.GetState();
+
+            // If the game is awaiting a time pass animation to finish, block all input.
+            if (_gameState.IsAwaitingTimePass)
+            {
+                _previousKeyboardState = currentKeyboardState;
+                _previousMouseState = currentMouseState;
+                return;
+            }
+
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             // If the game is paused, only process the unpause command and nothing else.
@@ -221,9 +232,15 @@ namespace ProjectVagabond
 
         private void HandleRealTimeMovement(KeyboardState currentKeyboardState)
         {
-            if (_gameState.IsExecutingActions) return;
+            // Block new movement if an action queue is running or if the clock is currently animating.
+            if (_gameState.IsExecutingActions || _worldClockManager.IsInterpolatingTime)
+            {
+                return;
+            }
 
             Vector2 moveDir = Vector2.Zero;
+
+            // Check for held keys, not just new presses.
             if (currentKeyboardState.IsKeyDown(Keys.W) || currentKeyboardState.IsKeyDown(Keys.Up)) moveDir.Y--;
             if (currentKeyboardState.IsKeyDown(Keys.S) || currentKeyboardState.IsKeyDown(Keys.Down)) moveDir.Y++;
             if (currentKeyboardState.IsKeyDown(Keys.A) || currentKeyboardState.IsKeyDown(Keys.Left)) moveDir.X--;

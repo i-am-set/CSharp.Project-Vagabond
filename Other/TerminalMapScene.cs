@@ -33,6 +33,8 @@ namespace ProjectVagabond.Scenes
         private readonly LoadingScreen _loadingScreen;
         private bool _isInitialLoad = true;
 
+        private const float TIME_PASS_FAILSAFE_SECONDS = 10.0f;
+
         public TerminalMapScene()
         {
             _coreState = ServiceLocator.Get<GameState>();
@@ -148,6 +150,16 @@ namespace ProjectVagabond.Scenes
                 return; // Block all other updates
             }
 
+            // Handle the input lock state for post-cancellation time passing
+            if (_coreState.IsAwaitingTimePass)
+            {
+                _coreState.TimePassFailsafeTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (!_worldClockManager.IsInterpolatingTime || _coreState.TimePassFailsafeTimer <= 0)
+                {
+                    _coreState.IsAwaitingTimePass = false;
+                }
+            }
+
             var currentKeyboardState = Keyboard.GetState();
             _diceRollingSystem.Update(gameTime);
 
@@ -258,17 +270,20 @@ namespace ProjectVagabond.Scenes
                 // Draw Clock and Settings in Right Column
                 if (rightColumnWidth > 20)
                 {
-                    // Settings Button
+                    const int padding = 5;
+                    // Settings Button in top-right corner
                     if (_settingsButton != null)
                     {
-                        int settingsButtonX = rightColumnX + (rightColumnWidth - _settingsButton.Bounds.Width) / 2;
-                        _settingsButton.Bounds = new Rectangle(settingsButtonX, mapBounds.Y, _settingsButton.Bounds.Width, _settingsButton.Bounds.Height);
+                        int settingsButtonX = Global.VIRTUAL_WIDTH - _settingsButton.Bounds.Width - padding;
+                        int settingsButtonY = padding;
+                        _settingsButton.Bounds = new Rectangle(settingsButtonX, settingsButtonY, _settingsButton.Bounds.Width, _settingsButton.Bounds.Height);
                         _settingsButton.Draw(spriteBatch, font, gameTime);
                     }
 
-                    // Clock
-                    int clockX = rightColumnX + (rightColumnWidth - 64) / 2;
-                    _clockRenderer.DrawClock(spriteBatch, font, gameTime, new Vector2(clockX, mapBounds.Y + 30));
+                    // Clock centered in the right column area
+                    int clockX = rightColumnX + (rightColumnWidth - _clockRenderer.ClockSize) / 2;
+                    int clockY = mapBounds.Y + (mapBounds.Height - _clockRenderer.ClockSize) / 2;
+                    _clockRenderer.DrawClock(spriteBatch, font, gameTime, new Vector2(clockX, clockY));
                 }
 
                 // Draw Prompt/Status in Bottom-Left

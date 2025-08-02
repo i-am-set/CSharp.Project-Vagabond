@@ -32,6 +32,10 @@ namespace ProjectVagabond
         private readonly Random _random = new Random();
         private static readonly Queue<IAction> _emptyActionQueue = new Queue<IAction>();
 
+        // State Flags
+        public bool IsAwaitingTimePass { get; set; } = false;
+        public float TimePassFailsafeTimer { get; set; } = 0f;
+
         // Combat Initiation State
         public bool IsCombatInitiationPending { get; private set; } = false;
         public List<int> PendingCombatants { get; private set; } = new List<int>();
@@ -191,7 +195,6 @@ namespace ProjectVagabond
             InitiativeOrder.Clear();
             SelectedTargetId = null;
 
-            // FIX: Clear any leftover actions from combat and cancel any time interpolation.
             _componentStore.GetComponent<ActionQueueComponent>(PlayerEntityId)?.ActionQueue.Clear();
             _worldClockManager.CancelInterpolation();
 
@@ -435,7 +438,14 @@ namespace ProjectVagabond
                 ToggleExecutingActions(false);
                 _isPaused = false;
                 PendingActions.Clear();
-                _worldClockManager.CancelInterpolation();
+
+                // If the clock is currently animating, let it finish but block input.
+                if (_worldClockManager.IsInterpolatingTime)
+                {
+                    IsAwaitingTimePass = true;
+                    TimePassFailsafeTimer = 10f; // Set a 10-second failsafe
+                }
+
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = interrupted ? "[cancel]Action queue interrupted." : "[cancel]Action queue cancelled." });
                 return true;
             }
