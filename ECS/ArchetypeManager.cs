@@ -37,7 +37,7 @@ namespace ProjectVagabond
                 PropertyNameCaseInsensitive = true,
             };
 
-            string[] archetypeFiles = Directory.GetFiles(directoryPath, "*.json");
+            string[] archetypeFiles = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories);
 
             foreach (var file in archetypeFiles)
             {

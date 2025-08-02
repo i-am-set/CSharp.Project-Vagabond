@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using ProjectVagabond.Encounters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,7 +27,6 @@ namespace ProjectVagabond
         {
             _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
-            // If there's a queued path, clear it first. Manual movement takes priority.
             if (gameState.PendingActions.Any())
             {
                 CancelPendingActions(gameState);
@@ -62,6 +62,9 @@ namespace ProjectVagabond
                     _worldClockManager.PassTime(timeCost, tickDuration, activity);
                     playerPosComp.WorldPosition = nextPos;
                     playerStats.ExertEnergy(energyCost);
+                    EventBus.Publish(new GameEvents.PlayerMoved { NewPosition = nextPos });
+
+                    CheckForPOITrigger(gameState, gameState.PlayerEntityId, nextPos);
                 }
             }
         }
@@ -354,6 +357,39 @@ namespace ProjectVagabond
         public void QueueWalkMovement(GameState gameState, Vector2 direction, string[] args)
         {
             QueueMovementInternal(gameState, direction, args, MovementMode.Walk);
+        }
+
+        private void CheckForPOITrigger(GameState gameState, int movingEntityId, Vector2 newPosition)
+        {
+            if (movingEntityId != gameState.PlayerEntityId) return;
+
+            var encounterManager = ServiceLocator.Get<EncounterManager>();
+            var entityManager = ServiceLocator.Get<EntityManager>();
+            var componentStore = ServiceLocator.Get<ComponentStore>();
+            var chunkManager = ServiceLocator.Get<ChunkManager>();
+            var poiManager = ServiceLocator.Get<POIManagerSystem>();
+
+            var entitiesOnTile = gameState.GetEntitiesAtGridPos(newPosition).ToList();
+
+            foreach (var otherEntityId in entitiesOnTile)
+            {
+                if (otherEntityId == movingEntityId) continue;
+
+                var poiComp = componentStore.GetComponent<POIComponent>(otherEntityId);
+                if (poiComp != null)
+                {
+                    encounterManager.TriggerEncounter(poiComp.EncounterId);
+
+                    if (!poiComp.IsPersistent)
+                    {
+                        poiManager.TrackDestroyedPOI(otherEntityId, newPosition);
+                        chunkManager.UnregisterEntity(otherEntityId, newPosition);
+                        componentStore.EntityDestroyed(otherEntityId);
+                        entityManager.DestroyEntity(otherEntityId);
+                    }
+                    break;
+                }
+            }
         }
     }
 }

@@ -1,0 +1,35 @@
+{
+  "id": "resource_check_event",
+  "title": "The Grumpy Guard",
+  "image": "guard_icon",
+  "descriptionText": "A grumpy-looking guard blocks a bridge. 'None shall pass,' he grunts, 'unless you can make it worth my while.'",
+  "isRandom": true,
+  "triggerConditions": [],
+  "choices": [
+    {
+      "text": "Bribe the guard.",
+      "requirements": [
+        {
+          "type": "Resource",
+          "value": "Charm:6"
+        }
+      ],
+      "outcomes": [
+        {
+          "type": "LogMessage",
+          "value": "The guard pockets your 'toll' and lets you pass."
+        }
+      ]
+    },
+    {
+      "text": "Try to reason with him.",
+      "requirements": [],
+      "outcomes": [
+        {
+          "type": "LogMessage",
+          "value": "'Reason doesn't fill my belly. Now scram!' he shouts."
+        }
+      ]
+    }
+  ]
+}

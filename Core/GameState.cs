@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond.Encounters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,6 +27,7 @@ namespace ProjectVagabond
         // Lazyloaded System Dependencies
         private ActionExecutionSystem _actionExecutionSystem;
         private CombatTurnSystem _combatTurnSystem;
+        private POIManagerSystem _poiManagerSystem;
 
         private bool _isExecutingActions = false;
         private bool _isPaused = false;
@@ -94,29 +96,34 @@ namespace ProjectVagabond
         public void InitializeWorld()
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0));
+
+            _poiManagerSystem ??= ServiceLocator.Get<POIManagerSystem>();
+            _poiManagerSystem.GeneratePOIs();
         }
 
         public void InitializeRenderableEntities()
         {
-            // Player
-            var playerRenderable = _componentStore.GetComponent<RenderableComponent>(PlayerEntityId);
-            if (playerRenderable != null)
+            // Initialize textures for all entities that have a RenderableComponent but no texture assigned yet.
+            // This is a robust way to handle the player, NPCs, POIs, and any other future renderable entity type.
+            var allEntitiesWithRenderable = _componentStore.GetAllEntitiesWithComponent<RenderableComponent>().ToList();
+            foreach (var entityId in allEntitiesWithRenderable)
             {
-                playerRenderable.Texture = _spriteManager.PlayerSprite;
-            }
+                var renderable = _componentStore.GetComponent<RenderableComponent>(entityId);
 
-            // NPCs
-            var npcEntities = _componentStore.GetAllEntitiesWithComponent<NPCTagComponent>().ToList();
-            foreach (var npcId in npcEntities)
-            {
-                // Get the component that the Spawner already created from the JSON file.
-                var renderable = _componentStore.GetComponent<RenderableComponent>(npcId);
-                // If the component exists but doesn't have a texture yet, assign one.
-                // This preserves the color and other properties loaded from the JSON.
-                if (renderable != null && renderable.Texture == null)
+                // If a texture is already assigned (e.g., by a more specific system), leave it alone.
+                if (renderable.Texture != null)
                 {
-                    // For now, all NPCs get a generic pixel sprite.
-                    // In the future, you could have a lookup here based on archetype ID.
+                    continue;
+                }
+
+                if (entityId == PlayerEntityId)
+                {
+                    renderable.Texture = _spriteManager.PlayerSprite;
+                }
+                else
+                {
+                    // For any other entity (NPCs, POIs, etc.), assign a default 1x1 pixel.
+                    // The color property, loaded from the archetype JSON, will give it its appearance.
                     renderable.Texture = ServiceLocator.Get<Texture2D>();
                 }
             }
@@ -304,10 +311,15 @@ namespace ProjectVagabond
                 var worldPosComp = _componentStore.GetComponent<PositionComponent>(entityId);
                 if (worldPosComp != null && worldPosComp.WorldPosition == position)
                 {
-                    return true; // Blocked by another entity.
+                    // An entity is on this tile. Check if it's a blocking entity.
+                    // Blocking entities are mobile characters (Player or NPCs). POIs without these tags are passable.
+                    if (_componentStore.HasComponent<PlayerTagComponent>(entityId) || _componentStore.HasComponent<NPCTagComponent>(entityId))
+                    {
+                        return true; // It's a character, so the tile is occupied.
+                    }
                 }
             }
-            return false;
+            return false; // No blocking entities found.
         }
 
         public int GetMovementEnergyCost(MoveAction action)
@@ -487,17 +499,19 @@ namespace ProjectVagabond
             return 5;
         }
 
-        public int? GetEntityIdAtGridPos(Vector2 gridPos)
+        public List<int> GetEntitiesAtGridPos(Vector2 gridPos)
         {
-            foreach (var entityId in ActiveEntities)
+            var entitiesOnTile = new List<int>();
+            var entitiesToCheck = IsInCombat ? Combatants : ActiveEntities;
+            foreach (var entityId in entitiesToCheck)
             {
                 var worldPosComp = _componentStore.GetComponent<PositionComponent>(entityId);
-                if (worldPosComp != null && (int)worldPosComp.WorldPosition.X == (int)gridPos.X && (int)worldPosComp.WorldPosition.Y == (int)gridPos.Y)
+                if (worldPosComp != null && worldPosComp.WorldPosition == gridPos)
                 {
-                    return entityId;
+                    entitiesOnTile.Add(entityId);
                 }
             }
-            return null;
+            return entitiesOnTile;
         }
     }
 }

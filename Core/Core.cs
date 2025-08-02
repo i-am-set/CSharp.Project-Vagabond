@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input; // Added for Keyboard state
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Dice; // Added using directive
+using ProjectVagabond.Encounters;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using System;
@@ -149,8 +150,24 @@ namespace ProjectVagabond
             _backgroundManager = new BackgroundManager();
             ServiceLocator.Register<BackgroundManager>(_backgroundManager);
 
+            // Encounter System Initialization
+            EncounterActionRegistry.RegisterActions();
+            var encounterManager = new EncounterManager();
+            ServiceLocator.Register<EncounterManager>(encounterManager);
+
+            var poiManagerSystem = new POIManagerSystem();
+            ServiceLocator.Register<POIManagerSystem>(poiManagerSystem);
+
+            // GameState must be registered before systems that depend on it in their constructor.
             _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
+
+            // These systems depend on GameState being available in the ServiceLocator.
+            var possibleEncounterListBuilder = new PossibleEncounterListBuilder();
+            ServiceLocator.Register<PossibleEncounterListBuilder>(possibleEncounterListBuilder);
+
+            var encounterTriggerSystem = new EncounterTriggerSystem();
+            ServiceLocator.Register<EncounterTriggerSystem>(encounterTriggerSystem);
 
             var playerInputSystem = new PlayerInputSystem();
             ServiceLocator.Register<PlayerInputSystem>(playerInputSystem);
@@ -217,6 +234,8 @@ namespace ProjectVagabond
             _systemManager.RegisterSystem(_combatInitiationSystem, 0f);
             _systemManager.RegisterSystem(_aiSystem, 0f);
             _systemManager.RegisterSystem(energySystem, 0f);
+            _systemManager.RegisterSystem(poiManagerSystem, 0f);
+            _systemManager.RegisterSystem(encounterTriggerSystem, 0f);
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());
@@ -256,6 +275,7 @@ namespace ProjectVagabond
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
             _diceRollingSystem.OnRollCompleted += HandleRollCompleted; // Subscribe to the new event
             ServiceLocator.Get<ArchetypeManager>().LoadArchetypes("Content/Archetypes");
+            ServiceLocator.Get<EncounterManager>().LoadEncounters("Content/Encounters");
             _gameState.InitializeWorld();
             _gameState.InitializeRenderableEntities();
 

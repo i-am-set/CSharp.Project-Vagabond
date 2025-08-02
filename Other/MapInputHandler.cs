@@ -155,10 +155,13 @@ namespace ProjectVagabond
                 }
                 if (rightClickPressed)
                 {
-                    int? entityIdOnTile = _gameState.GetEntityIdAtGridPos(targetPos);
-                    if (entityIdOnTile.HasValue && entityIdOnTile.Value != _gameState.PlayerEntityId)
+                    var entitiesOnTile = _gameState.GetEntitiesAtGridPos(targetPos)
+                                                   .Where(id => id != _gameState.PlayerEntityId)
+                                                   .ToList();
+
+                    if (entitiesOnTile.Any())
                     {
-                        HandleRightClickOnEntity(entityIdOnTile.Value, targetPos, virtualMousePos);
+                        HandleRightClickOnEntity(entitiesOnTile.First(), targetPos, virtualMousePos);
                     }
                     else
                     {

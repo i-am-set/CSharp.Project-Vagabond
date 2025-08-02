@@ -25,7 +25,13 @@ namespace ProjectVagabond.Scenes
         private float _progressAnimStart = 0f;
         private float _progressAnimEnd = 0f;
         private float _progressAnimTimer = 0f;
-        private const float PROGRESS_ANIM_DURATION = 0.4f;
+        private const float PROGRESS_ANIM_DURATION = 0.2f; // Shorter duration for quick segment fills
+
+        // Segment-based animation state
+        private int _currentSegmentToFill = 0;
+        private float _segmentFillTimer = 0f;
+        private const float MIN_SEGMENT_FILL_DELAY = 0.01f; // Minimum time between each segment fill
+        private const int LOADING_BAR_SEGMENTS = 50;
 
         // Hold after complete
         private bool _allTasksComplete = false;
@@ -58,7 +64,10 @@ namespace ProjectVagabond.Scenes
             _visualProgress = 0f;
             _progressAnimStart = 0f;
             _progressAnimEnd = 0f;
-            _progressAnimTimer = PROGRESS_ANIM_DURATION; // Start as complete
+            _progressAnimTimer = PROGRESS_ANIM_DURATION;
+
+            _currentSegmentToFill = 0;
+            _segmentFillTimer = 0f;
 
             _allTasksComplete = false;
             _holdTimer = 0f;
@@ -97,12 +106,6 @@ namespace ProjectVagabond.Scenes
                 if (currentTask.IsComplete)
                 {
                     _totalProgress = (_currentTaskIndex + 1) * _progressPerTask;
-
-                    // Start animation for the progress bar
-                    _progressAnimStart = _visualProgress;
-                    _progressAnimEnd = _totalProgress;
-                    _progressAnimTimer = 0f;
-
                     _currentTaskIndex++;
 
                     if (_currentTaskIndex < _tasks.Count)
@@ -112,17 +115,42 @@ namespace ProjectVagabond.Scenes
                     else
                     {
                         _allTasksComplete = true;
-                        _progressAnimEnd = 1.0f; // Ensure it animates to exactly 100%
+                        _totalProgress = 1.0f; // Ensure it reaches exactly 100%
                     }
                 }
             }
 
-            // Update progress bar animation
+            // --- New Segment-Based Animation Logic ---
+            if (_currentSegmentToFill < LOADING_BAR_SEGMENTS)
+            {
+                _segmentFillTimer += deltaTime;
+
+                if (_segmentFillTimer >= MIN_SEGMENT_FILL_DELAY)
+                {
+                    _segmentFillTimer -= MIN_SEGMENT_FILL_DELAY;
+
+                    // Calculate the progress required to fill the *next* segment.
+                    float requiredProgress = (_currentSegmentToFill + 1) / (float)LOADING_BAR_SEGMENTS;
+
+                    // Check if the actual loading has progressed far enough to allow the next segment to fill.
+                    if (_totalProgress >= requiredProgress)
+                    {
+                        _currentSegmentToFill++;
+
+                        // Start the visual animation to the new target progress.
+                        _progressAnimStart = _visualProgress;
+                        _progressAnimEnd = (float)_currentSegmentToFill / LOADING_BAR_SEGMENTS;
+                        _progressAnimTimer = 0f;
+                    }
+                }
+            }
+
+            // Update progress bar visual interpolation
             if (_progressAnimTimer < PROGRESS_ANIM_DURATION)
             {
                 _progressAnimTimer += deltaTime;
                 float progress = MathHelper.Clamp(_progressAnimTimer / PROGRESS_ANIM_DURATION, 0f, 1f);
-                _visualProgress = MathHelper.Lerp(_progressAnimStart, _progressAnimEnd, Easing.EaseOutCirc(progress));
+                _visualProgress = MathHelper.Lerp(_progressAnimStart, _progressAnimEnd, Easing.EaseOutQuad(progress));
             }
             else
             {
@@ -135,7 +163,6 @@ namespace ProjectVagabond.Scenes
             if (!IsActive) return;
 
             // --- Loading Bar Style Parameters ---
-            const int LOADING_BAR_SEGMENTS = 50;
             const int SEGMENT_WIDTH = 3;
             const int SEGMENT_GAP = 2;
             const int SEGMENT_HEIGHT = 6;

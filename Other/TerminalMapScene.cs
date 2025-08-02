@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Encounters;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
@@ -28,6 +29,7 @@ namespace ProjectVagabond.Scenes
         private readonly DiceRollingSystem _diceRollingSystem;
         private readonly PromptRenderer _promptRenderer;
         private WaitDialog _waitDialog;
+        private EncounterDialog _encounterDialog;
         private ImageButton _settingsButton;
         private KeyboardState _previousKeyboardState;
         private readonly LoadingScreen _loadingScreen;
@@ -75,6 +77,7 @@ namespace ProjectVagabond.Scenes
             base.Enter();
             _core.IsMouseVisible = true;
             _waitDialog = new WaitDialog(this);
+            _encounterDialog = new EncounterDialog(this);
             _clockRenderer.OnClockClicked += ShowWaitDialog;
             _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
 
@@ -104,6 +107,11 @@ namespace ProjectVagabond.Scenes
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
             EventBus.Unsubscribe<GameEvents.EntityTookDamage>(OnEntityTookDamage);
             _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
+        }
+
+        public void ShowEncounter(EncounterData encounterData)
+        {
+            _encounterDialog.Show(encounterData);
         }
 
         private void OnDiceRollCompleted(DiceRollResult result)
@@ -165,7 +173,8 @@ namespace ProjectVagabond.Scenes
 
             var font = ServiceLocator.Get<BitmapFont>();
             _waitDialog.Update(gameTime);
-            if (_waitDialog.IsActive) return;
+            _encounterDialog.Update(gameTime);
+            if (_waitDialog.IsActive || _encounterDialog.IsActive) return;
 
             // Calculate terminal bounds once for the update frame
             int mapTotalWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
@@ -300,7 +309,9 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.End();
             }
 
+            // Draw dialogs last so they appear on top of all other UI
             _waitDialog.Draw(spriteBatch, font, gameTime);
+            _encounterDialog.Draw(spriteBatch, font, gameTime);
         }
 
         private void DrawHollowRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)

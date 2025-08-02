@@ -301,8 +301,7 @@ namespace ProjectVagabond
             {
                 if (entityId != _gameState.PlayerEntityId &&
                     _componentStore.HasComponent<PositionComponent>(entityId) &&
-                    _componentStore.HasComponent<RenderableComponent>(entityId) &&
-                    _componentStore.HasComponent<HighImportanceComponent>(entityId))
+                    _componentStore.HasComponent<RenderableComponent>(entityId))
                 {
                     entitiesToDraw.Add(entityId);
                 }
@@ -442,19 +441,6 @@ namespace ProjectVagabond
             int startX = (int)_gameState.PlayerWorldPos.X - GridSizeX / 2;
             int startY = (int)_gameState.PlayerWorldPos.Y - GridSizeY / 2;
             return new Vector2(startX + gridX, startY + gridY);
-        }
-
-        private int? GetEntityIdAtGridPos(Vector2 gridPos)
-        {
-            foreach (var entityId in _gameState.ActiveEntities)
-            {
-                var worldPosComp = _componentStore.GetComponent<PositionComponent>(entityId);
-                if (worldPosComp != null && (int)worldPosComp.WorldPosition.X == (int)gridPos.X && (int)worldPosComp.WorldPosition.Y == (int)gridPos.Y)
-                {
-                    return entityId;
-                }
-            }
-            return null;
         }
 
         private string GetTerrainName(float noise)

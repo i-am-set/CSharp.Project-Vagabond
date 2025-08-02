@@ -1,0 +1,36 @@
+{
+  "id": "flatland_merchant",
+  "title": "A Weary Traveler",
+  "image": "merchant_icon",
+  "descriptionText": "On the open plains, you spot a lone merchant with a heavy pack. He looks tired but gives you a friendly nod.",
+  "isRandom": true,
+  "triggerConditions": [
+    {
+      "type": "TerrainHeight",
+      "comparison": "LessThan",
+      "value": 0.6
+    }
+  ],
+  "choices": [
+    {
+      "text": "Greet him.",
+      "requirements": [],
+      "outcomes": [
+        {
+          "type": "LogMessage",
+          "value": "You greet the merchant, who offers to trade some goods."
+        }
+      ]
+    },
+    {
+      "text": "Ignore him and continue on your way.",
+      "requirements": [],
+      "outcomes": [
+        {
+          "type": "LogMessage",
+          "value": "You walk past the merchant without a word."
+        }
+      ]
+    }
+  ]
+}

@@ -10,6 +10,7 @@ namespace ProjectVagabond.UI
     {
         protected readonly GameScene _currentGameScene;
         protected readonly Global _global;
+        protected readonly Core _core;
 
         public bool IsActive { get; protected set; }
         protected Rectangle _dialogBounds;
@@ -21,6 +22,7 @@ namespace ProjectVagabond.UI
         {
             _currentGameScene = currentGameScene;
             _global = ServiceLocator.Get<Global>();
+            _core = ServiceLocator.Get<Core>();
         }
 
         public virtual void Hide()

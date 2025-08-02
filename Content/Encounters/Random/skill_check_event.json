@@ -1,0 +1,41 @@
+{
+  "id": "skill_check_event",
+  "title": "A Rusted Lock",
+  "image": "chest_icon",
+  "descriptionText": "You find an old, rusted chest. The lock looks tricky, but it might be worth a try.",
+  "isRandom": true,
+  "triggerConditions": [],
+  "choices": [
+    {
+      "text": "Attempt to pick the lock.",
+      "requirements": [
+        {
+          "type": "SkillCheck",
+          "value": "Agility:12"
+        }
+      ],
+      "successOutcomes": [
+        {
+          "type": "LogMessage",
+          "value": "With a satisfying *click*, the lock springs open! You find some old coins."
+        }
+      ],
+      "failureOutcomes": [
+        {
+          "type": "LogMessage",
+          "value": "You fumble with the lock, and your lockpick snaps. The chest remains sealed."
+        }
+      ]
+    },
+    {
+      "text": "Leave it be.",
+      "requirements": [],
+      "outcomes": [
+        {
+          "type": "LogMessage",
+          "value": "You decide it's not worth the trouble and leave the chest."
+        }
+      ]
+    }
+  ]
+}

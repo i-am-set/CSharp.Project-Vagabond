@@ -355,6 +355,14 @@ namespace ProjectVagabond
                 _ => 0
             };
         }
+
+        public int GetStatModifier(StatType statType)
+        {
+            int baseValue = GetMainStat(statType);
+            // A simple modifier calculation: (Value - 5).
+            // This gives a range from -4 (for stat of 1) to +5 (for stat of 10).
+            return baseValue - 5;
+        }
     }
 
     // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

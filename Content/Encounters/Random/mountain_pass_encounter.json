@@ -1,0 +1,36 @@
+{
+  "id": "mountain_pass_encounter",
+  "title": "A Perilous Ledge",
+  "image": "mountain_icon",
+  "descriptionText": "You navigate a narrow ledge in the mountains. The wind howls, and a misstep could be fatal.",
+  "isRandom": true,
+  "triggerConditions": [
+    {
+      "type": "TerrainHeight",
+      "comparison": "GreaterThan",
+      "value": 0.6
+    }
+  ],
+  "choices": [
+    {
+      "text": "Proceed carefully.",
+      "requirements": [],
+      "outcomes": [
+        {
+          "type": "LogMessage",
+          "value": "You carefully make your way across the ledge."
+        }
+      ]
+    },
+    {
+      "text": "Look for another path.",
+      "requirements": [],
+      "outcomes": [
+        {
+          "type": "LogMessage",
+          "value": "You decide it's too risky and turn back."
+        }
+      ]
+    }
+  ]
+}
