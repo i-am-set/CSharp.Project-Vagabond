@@ -68,7 +68,6 @@ namespace ProjectVagabond
                 string terrain = _gameState.GetTerrainDescription(noise);
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"You are standing on {terrain}." });
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"World Position: ({x}, {y})" });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Local Position: ({(int)_gameState.PlayerLocalPos.X}, {(int)_gameState.PlayerLocalPos.Y})" });
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Terrain value: {noise:F2}" });
             }, "look [gray]- Look around current area.");
 
@@ -188,7 +187,6 @@ namespace ProjectVagabond
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"World position: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})" });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Local position: ({(int)_gameState.PlayerLocalPos.X}, {(int)_gameState.PlayerLocalPos.Y})" });
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Pending actions in queue: {_gameState.PendingActions.Count}" });
                 if (_gameState.IsExecutingActions)
                 {
@@ -198,18 +196,6 @@ namespace ProjectVagabond
                 }
             }, "pos [gray]- Show current position and queue status.");
 
-            _commands["move"] = new Command("move", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                _gameState.ToggleIsFreeMoveMode(true);
-            }, "move [gray]- Enable free-move mode (W/A/S/D to queue movement).");
-
-            _commands["map"] = new Command("map", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                _gameState.ToggleMapView();
-            }, "map [gray]- Toggles between World and Local map views.");
-
             _commands["debugallcolors"] = new Command("debugallcolors", (args) =>
             {
                 DebugAllColors();
@@ -218,11 +204,6 @@ namespace ProjectVagabond
             _commands["rest"] = new Command("rest", (args) =>
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
-                if (_gameState.CurrentMapView == MapView.Local)
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Cannot queue rests from the local map." });
-                    return;
-                }
                 _playerInputSystem.QueueRest(_gameState, args);
             },
             "rest <short|long|full> [gray]- Queue a rest action.",

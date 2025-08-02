@@ -258,52 +258,5 @@ namespace ProjectVagabond
             texture.SetData(colorData);
             return texture;
         }
-
-        // NEW METHOD for single exclamation mark
-        public Texture2D CreateWarningMarkSprite()
-        {
-            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            const int width = 3;
-            const int height = 7;
-            var texture = new Texture2D(graphicsDevice, width, height);
-            var colorData = new Color[width * height];
-            for (int i = 0; i < colorData.Length; i++) colorData[i] = Color.Transparent;
-
-            // Draw the line
-            colorData[1] = Color.Red;
-            colorData[4] = Color.Red;
-            colorData[7] = Color.Red;
-            // Draw the dot
-            colorData[16] = Color.Red;
-
-            texture.SetData(colorData);
-            return texture;
-        }
-
-        // NEW METHOD for double exclamation mark
-        public Texture2D CreateDoubleWarningMarkSprite()
-        {
-            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            const int width = 7;
-            const int height = 7;
-            var texture = new Texture2D(graphicsDevice, width, height);
-            var colorData = new Color[width * height];
-            for (int i = 0; i < colorData.Length; i++) colorData[i] = Color.Transparent;
-
-            // First !
-            colorData[1] = Color.Red;
-            colorData[8] = Color.Red;
-            colorData[15] = Color.Red;
-            colorData[29] = Color.Red;
-
-            // Second !
-            colorData[5] = Color.Red;
-            colorData[12] = Color.Red;
-            colorData[19] = Color.Red;
-            colorData[33] = Color.Red;
-
-            texture.SetData(colorData);
-            return texture;
-        }
     }
 }

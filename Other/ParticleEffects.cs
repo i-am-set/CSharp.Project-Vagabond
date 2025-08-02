@@ -16,7 +16,7 @@ namespace ProjectVagabond.Particles
             // Emitter
             settings.Shape = EmitterShape.Circle;
             settings.EmitFrom = EmissionSource.Volume;
-            settings.EmitterSize = new Vector2(Global.LOCAL_GRID_CELL_SIZE / 2f, Global.LOCAL_GRID_CELL_SIZE / 2f);
+            settings.EmitterSize = new Vector2(Global.GRID_CELL_SIZE / 2f, Global.GRID_CELL_SIZE / 2f);
             settings.EmissionRate = 0; // We will use bursts, not a continuous rate
             settings.MaxParticles = 100; // Increased for bursts
 

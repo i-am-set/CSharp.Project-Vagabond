@@ -6,9 +6,6 @@
       "Type": "ProjectVagabond.PositionComponent, ProjectVagabond"
     },
     {
-      "Type": "ProjectVagabond.LocalPositionComponent, ProjectVagabond"
-    },
-    {
       "Type": "ProjectVagabond.ActionQueueComponent, ProjectVagabond"
     },
     {

@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input; // Added for Keyboard state
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Dice; // Added using directive
-using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using System;
@@ -58,11 +57,7 @@ namespace ProjectVagabond
         private ActionExecutionSystem _actionExecutionSystem;
         private AISystem _aiSystem;
         private SpriteManager _spriteManager;
-        private CombatUIAnimationManager _combatUIAnimationManager;
-        private LocalMapTurnSystem _localMapTurnSystem;
-        private InterpolationSystem _interpolationSystem;
         private CombatInitiationSystem _combatInitiationSystem;
-        private ParticleSystemManager _particleSystemManager;
         private DiceRollingSystem _diceRollingSystem;
         private BackgroundManager _backgroundManager;
 
@@ -142,14 +137,6 @@ namespace ProjectVagabond
             _tooltipManager = new TooltipManager();
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
 
-            _combatUIAnimationManager = new CombatUIAnimationManager();
-            _combatUIAnimationManager.RegisterAnimation("TargetSelector", new PulsingAnimation(duration: 0.4f));
-            _combatUIAnimationManager.RegisterAnimation("TurnIndicator", new BobbingAnimation(speed: 5f, amount: 1f));
-            ServiceLocator.Register<CombatUIAnimationManager>(_combatUIAnimationManager);
-
-            _particleSystemManager = new ParticleSystemManager();
-            ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
-
             // Instantiate and register the individual dice controllers first.
             ServiceLocator.Register<DicePhysicsController>(new DicePhysicsController());
             ServiceLocator.Register<DiceSceneRenderer>(new DiceSceneRenderer());
@@ -167,9 +154,6 @@ namespace ProjectVagabond
 
             var playerInputSystem = new PlayerInputSystem();
             ServiceLocator.Register<PlayerInputSystem>(playerInputSystem);
-
-            _localMapTurnSystem = new LocalMapTurnSystem();
-            ServiceLocator.Register<LocalMapTurnSystem>(_localMapTurnSystem);
 
             _actionExecutionSystem = new ActionExecutionSystem();
             ServiceLocator.Register<ActionExecutionSystem>(_actionExecutionSystem);
@@ -189,9 +173,6 @@ namespace ProjectVagabond
 
             var energySystem = new EnergySystem();
             ServiceLocator.Register<EnergySystem>(energySystem);
-
-            _interpolationSystem = new InterpolationSystem();
-            ServiceLocator.Register<InterpolationSystem>(_interpolationSystem);
 
             var terminalRenderer = new TerminalRenderer();
             ServiceLocator.Register<TerminalRenderer>(terminalRenderer);
@@ -233,7 +214,6 @@ namespace ProjectVagabond
             ServiceLocator.Register<Texture2D>(_pixel);
 
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
-            _systemManager.RegisterSystem(_localMapTurnSystem, 0f);
             _systemManager.RegisterSystem(_combatInitiationSystem, 0f);
             _systemManager.RegisterSystem(_aiSystem, 0f);
             _systemManager.RegisterSystem(energySystem, 0f);
@@ -376,16 +356,8 @@ namespace ProjectVagabond
             // --- Frame-Rate Dependent Updates ---
             _sceneManager.Update(gameTime);
             _tooltipManager.Update(gameTime); // Tooltips should always update.
-            _particleSystemManager.Update(gameTime);
             _diceRollingSystem.Update(gameTime); // Update dice visuals and game logic every frame.
             _backgroundManager.Update(gameTime);
-
-            // These systems handle visual updates and should be paused.
-            if (!_gameState.IsPaused)
-            {
-                _combatUIAnimationManager.Update(gameTime);
-                _interpolationSystem.Update(gameTime);
-            }
 
             // This system handles core logic that must run even when paused (to handle interruptions).
             _combatInitiationSystem.Update(gameTime);

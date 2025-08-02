@@ -35,24 +35,13 @@ namespace ProjectVagabond
             // Forcefully stop any visual movement for all pending combatants.
             foreach (var entityId in _gameState.PendingCombatants)
             {
-                // Stop visual movement
-                if (_componentStore.HasComponent<InterpolationComponent>(entityId))
-                {
-                    _componentStore.RemoveComponent<InterpolationComponent>(entityId);
-                }
-
                 // If it's an AI, clear its brain to prevent lingering actions.
                 if (entityId != _gameState.PlayerEntityId)
                 {
-                    // Clear any planned paths or single-step actions
-                    var pathComp = _componentStore.GetComponent<AIPathComponent>(entityId);
-                    pathComp?.Clear();
-
                     var aiComp = _componentStore.GetComponent<AIComponent>(entityId);
                     if (aiComp != null)
                     {
                         aiComp.ActionTimeBudget = 0;
-                        aiComp.NextStep = null;
                     }
 
                     // Clear the action queue as a failsafe

@@ -63,7 +63,6 @@ namespace ProjectVagabond
         // World constants
         public const float GAME_SECONDS_PER_REAL_SECOND = 8f;
         public const float FEET_PER_WORLD_TILE = 200f; // The physical distance of a single world tile
-        public const float FEET_PER_LOCAL_TILE = FEET_PER_WORLD_TILE / LOCAL_GRID_SIZE;
         public const float FEET_PER_SECOND_PER_SPEED_UNIT = 4.0f; // A character with speed 1.0 moves at X ft/s.
 
         // Physics constants
@@ -78,8 +77,6 @@ namespace ProjectVagabond
         public const float MAP_AREA_WIDTH_PERCENT = 0.8f;
         public const int MAP_TOP_PADDING = 20;
         public const int TERMINAL_AREA_HEIGHT = 150;
-        public const int LOCAL_GRID_SIZE = 64; // Logical size of a local area grid. Rendered size is now dynamic.
-        public const int LOCAL_GRID_CELL_SIZE = 5;
         public const int GRID_CELL_SIZE = 10;
         public const int FONT_SIZE = 12;
         public const int TERMINAL_LINE_SPACING = 12;

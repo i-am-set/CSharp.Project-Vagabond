@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Dice;
-using ProjectVagabond.Particles;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
@@ -26,13 +25,11 @@ namespace ProjectVagabond.Scenes
         private readonly HapticsManager _hapticsManager;
         private readonly TerminalRenderer _terminalRenderer;
         private readonly AutoCompleteManager _autoCompleteManager;
-        private readonly ParticleSystemManager _particleSystemManager;
         private readonly DiceRollingSystem _diceRollingSystem;
         private readonly PromptRenderer _promptRenderer;
         private WaitDialog _waitDialog;
         private ImageButton _settingsButton;
         private KeyboardState _previousKeyboardState;
-        private readonly CombatUIAnimationManager _combatUIAnimationManager;
         private readonly LoadingScreen _loadingScreen;
         private bool _isInitialLoad = true;
 
@@ -50,9 +47,7 @@ namespace ProjectVagabond.Scenes
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _terminalRenderer = ServiceLocator.Get<TerminalRenderer>();
             _autoCompleteManager = ServiceLocator.Get<AutoCompleteManager>();
-            _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
-            _combatUIAnimationManager = ServiceLocator.Get<CombatUIAnimationManager>();
             _loadingScreen = new LoadingScreen();
             _promptRenderer = ServiceLocator.Get<PromptRenderer>();
 

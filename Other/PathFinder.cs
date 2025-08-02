@@ -24,7 +24,7 @@ namespace ProjectVagabond
             new Vector2(1, 1)   // Down-Right
         };
 
-        public static List<Vector2> FindPath(int pathfindingEntityId, Vector2 start, Vector2 end, GameState gameState, MovementMode mode, PathfindingMode pathfindingMode, MapView mapView)
+        public static List<Vector2> FindPath(int pathfindingEntityId, Vector2 start, Vector2 end, GameState gameState, MovementMode mode, PathfindingMode pathfindingMode)
         {
             var openQueue = new PriorityQueue<Vector2, float>();
             openQueue.Enqueue(start, 0);
@@ -45,7 +45,7 @@ namespace ProjectVagabond
                 {
                     var neighborPos = currentPos + _neighborOffsets[i];
 
-                    if (!gameState.IsPositionPassable(neighborPos, mapView, pathfindingEntityId, end, out var mapData))
+                    if (!gameState.IsPositionPassable(neighborPos, MapView.World, pathfindingEntityId, end, out var mapData))
                         continue;
 
                     bool isDiagonal = i >= 4;
@@ -53,7 +53,7 @@ namespace ProjectVagabond
                     {
                         var neighbor1 = currentPos + new Vector2(_neighborOffsets[i].X, 0);
                         var neighbor2 = currentPos + new Vector2(0, _neighborOffsets[i].Y);
-                        if (!gameState.IsPositionPassable(neighbor1, mapView, pathfindingEntityId, end, out _) || !gameState.IsPositionPassable(neighbor2, mapView, pathfindingEntityId, end, out _))
+                        if (!gameState.IsPositionPassable(neighbor1, MapView.World, pathfindingEntityId, end, out _) || !gameState.IsPositionPassable(neighbor2, MapView.World, pathfindingEntityId, end, out _))
                         {
                             continue;
                         }
@@ -70,7 +70,7 @@ namespace ProjectVagabond
                         // We use player stats here because pathfinder doesn't know which entity is pathing.
                         // The cost is relative, so this is acceptable for finding the "fastest" path.
                         // The actual time cost is calculated later when truncating the path.
-                        moveCost = gameState.GetSecondsPassedDuringMovement(gameState.PlayerStats, mode, mapData, moveDir, mapView == MapView.Local);
+                        moveCost = gameState.GetSecondsPassedDuringMovement(gameState.PlayerStats, mode, mapData, moveDir);
                     }
 
                     float tentative_gScore = current_gScore + moveCost;

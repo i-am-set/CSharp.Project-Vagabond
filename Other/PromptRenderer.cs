@@ -72,23 +72,9 @@ namespace ProjectVagabond.UI
             int moveCount = _gameState.PendingActions.Count(a => a is MoveAction);
             int restCount = _gameState.PendingActions.Count(a => a is RestAction);
 
-            if (_gameState.IsFreeMoveMode && _gameState.PendingActions.Count <= 0)
+            if (_gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions)
             {
-                lines.Add("[skyblue]Free moving...");
-                lines.Add("<[deepskyblue]Use ([royalblue]W[deepskyblue]/[royalblue]A[deepskyblue]/[royalblue]S[deepskyblue]/[royalblue]D[deepskyblue]) to queue moves>");
-                lines.Add("[gold]Press[orange] ENTER[gold] to confirm");
-                lines.Add("[gold]Press[orange] ESC[gold] to cancel");
-            }
-            else if (_gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions)
-            {
-                if (_gameState.IsFreeMoveMode)
-                {
-                    lines.Add("[skyblue]Free moving...");
-                }
-                else
-                {
-                    lines.Add("[khaki]Previewing action queue...");
-                }
+                lines.Add("[khaki]Previewing action queue...");
                 lines.Add("[gold]Press[orange] ENTER[gold] to confirm");
                 lines.Add("[gold]Press[orange] ESC[gold] to cancel");
 

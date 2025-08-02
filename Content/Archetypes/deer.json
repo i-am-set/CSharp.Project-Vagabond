@@ -3,7 +3,6 @@
   "Name": "Deer",
   "Components": [
     { "Type": "ProjectVagabond.PositionComponent, ProjectVagabond" },
-    { "Type": "ProjectVagabond.LocalPositionComponent, ProjectVagabond" },
     { "Type": "ProjectVagabond.ActionQueueComponent, ProjectVagabond" },
     { "Type": "ProjectVagabond.AIComponent, ProjectVagabond" },
     {

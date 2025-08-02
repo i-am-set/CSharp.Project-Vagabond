@@ -1,7 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Particles;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,14 +71,6 @@ namespace ProjectVagabond.Dice
         private readonly Random _random = new Random();
         private HapticsManager _hapticsManager;
 
-        // Particle Effects
-        private ParticleSystemManager _particleManager;
-        private ParticleEmitter _sparkEmitter;
-        private ParticleEmitter _sumImpactEmitter;
-        private readonly List<ParticleEmitter> _activeBoxEmitters = new List<ParticleEmitter>();
-        private readonly Queue<ParticleEmitter> _pooledBoxEmitters = new Queue<ParticleEmitter>();
-        private const float BOX_FIRE_EMISSION_RATE = 150f;
-
         // State
         private AnimationState _currentState = AnimationState.Idle;
         private List<DiceGroup> _currentRollGroups;
@@ -110,36 +101,10 @@ namespace ProjectVagabond.Dice
         {
             _global = ServiceLocator.Get<Global>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
-            _particleManager = new ParticleSystemManager();
-
-            // Emitter creation is deferred to here, when we know the Texture2D service is available.
-            _sparkEmitter = _particleManager.CreateEmitter(ParticleEffects.CreateSparks());
-            _sumImpactEmitter = _particleManager.CreateEmitter(ParticleEffects.CreateSumImpact());
-
-            // Create a pool of emitters for the box fire effect.
-            for (int i = 0; i < 15; i++)
-            {
-                var settings = ParticleEffects.CreateUIFire();
-                settings.EmissionRate = 0; // Start inactive
-                _pooledBoxEmitters.Enqueue(_particleManager.CreateEmitter(settings));
-            }
         }
 
         public void Start(List<(RenderableDie die, int value)> settledDice, List<DiceGroup> rollGroups, RenderTarget2D renderTarget)
         {
-            // Return any lingering emitters to the pool from a previous, unfinished animation.
-            foreach (var emitter in _activeBoxEmitters)
-            {
-                emitter.Settings.EmissionRate = 0;
-                emitter.Clear(); // Kill any remaining particles
-                _pooledBoxEmitters.Enqueue(emitter);
-            }
-            _activeBoxEmitters.Clear();
-
-            // Clear any particles from the persistent emitters from the previous roll.
-            _sparkEmitter?.Clear();
-            _sumImpactEmitter?.Clear();
-
             _currentRollGroups = rollGroups;
             _floatingResults.Clear();
             _groupSumResults.Clear();
@@ -171,7 +136,6 @@ namespace ProjectVagabond.Dice
             if (_currentState == AnimationState.Idle || _currentState == AnimationState.Complete) return;
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _particleManager.Update(gameTime);
             UpdateFloatingResults(gameTime);
 
             var renderTarget = ServiceLocator.Get<DiceSceneRenderer>().RenderTarget;
@@ -198,8 +162,6 @@ namespace ProjectVagabond.Dice
 
         public void DrawOverlays(SpriteBatch spriteBatch, BitmapFont font)
         {
-            _particleManager.Draw(spriteBatch);
-
             var allFloatingText = _floatingResults.Concat(_groupSumResults).Concat(_activeModifiers).ToList();
             if (allFloatingText.Any() && font != null)
             {
@@ -288,27 +250,6 @@ namespace ProjectVagabond.Dice
                     }
                 }
                 spriteBatch.End();
-            }
-        }
-
-        public void HandleDiceCollision(GameEvents.DiceCollisionOccurred e, Matrix view, Matrix projection, RenderTarget2D renderTarget)
-        {
-            var worldPos = new XnaVector3(e.WorldPosition.X, e.WorldPosition.Y, e.WorldPosition.Z);
-            var viewport = new Viewport(renderTarget.Bounds);
-            var screenPos3D = viewport.Project(worldPos, projection, view, Matrix.Identity);
-
-            if (screenPos3D.Z < 0 || screenPos3D.Z > 1) return;
-
-            _sparkEmitter.Position = new Vector2(screenPos3D.X, screenPos3D.Y);
-            int burstCount = _random.Next(40, 71);
-            for (int i = 0; i < burstCount; i++)
-            {
-                int pIndex = _sparkEmitter.EmitParticleAndGetIndex();
-                if (pIndex == -1) break;
-                ref var p = ref _sparkEmitter.GetParticle(pIndex);
-                float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
-                float speed = _sparkEmitter.Settings.InitialVelocityX.GetValue(_random);
-                p.Velocity = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle)) * speed;
             }
         }
 
@@ -451,24 +392,6 @@ namespace ProjectVagabond.Dice
 
             if (allShrunk)
             {
-                // Activate an emitter for each new box
-                foreach (var result in _floatingResults)
-                {
-                    if (_pooledBoxEmitters.TryDequeue(out var emitter))
-                    {
-                        // Configure the emitter instance for this specific box
-                        emitter.Settings.StartColor = result.TintColor;
-                        emitter.Settings.EndColor = result.TintColor; // Fade to same color (alpha handles transparency)
-                        emitter.Settings.EmitterSize = new Vector2(8f, 8f); // Size of the box
-                        emitter.Settings.EmissionRate = BOX_FIRE_EMISSION_RATE;
-
-                        // Set initial position
-                        emitter.Position = result.CurrentPosition;
-
-                        _activeBoxEmitters.Add(emitter);
-                    }
-                }
-
                 var font = ServiceLocator.Get<BitmapFont>();
                 int totalModifier = _currentGroupsForDisplay.Sum(g => g.Modifier);
                 string newSumText = (_currentGroupSum + totalModifier).ToString();
@@ -517,12 +440,6 @@ namespace ProjectVagabond.Dice
 
         private void UpdateGatheringState(float deltaTime)
         {
-            // Update emitter positions to match their boxes
-            for (int i = 0; i < _floatingResults.Count && i < _activeBoxEmitters.Count; i++)
-            {
-                _activeBoxEmitters[i].Position = _floatingResults[i].CurrentPosition;
-            }
-
             _animationTimer += deltaTime;
             float progress = Math.Clamp(_animationTimer / _global.DiceGatheringDuration, 0f, 1f);
             float easedProgress = Easing.EaseInQuint(progress);
@@ -543,15 +460,6 @@ namespace ProjectVagabond.Dice
 
             if (progress >= 1.0f)
             {
-                // Deactivate and pool the emitters
-                foreach (var emitter in _activeBoxEmitters)
-                {
-                    emitter.Settings.EmissionRate = 0;
-                    emitter.Clear(); // Kill any remaining particles
-                    _pooledBoxEmitters.Enqueue(emitter);
-                }
-                _activeBoxEmitters.Clear();
-
                 // Clear trails and results
                 foreach (var result in _floatingResults)
                 {
@@ -728,8 +636,6 @@ namespace ProjectVagabond.Dice
 
                     if (result.ShouldPopOnAnimate && result.AnimationProgress >= 1.0f && !result.ImpactEffectTriggered)
                     {
-                        _sumImpactEmitter.Position = result.CurrentPosition;
-                        _sumImpactEmitter.EmitBurst(50);
                         result.ImpactEffectTriggered = true;
                         _hapticsManager.TriggerZoomPulse(0.98f, 0.1f);
                     }

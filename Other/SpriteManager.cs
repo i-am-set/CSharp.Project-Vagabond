@@ -23,12 +23,9 @@ namespace ProjectVagabond
         private Texture2D _pathEndSprite;
         private Texture2D _shortRestSprite;
         private Texture2D _longRestSprite;
-        private Texture2D _warningMarkSprite;
-        private Texture2D _doubleWarningMarkSprite; // NEW
         private Texture2D _emptySprite;
         private Texture2D _speedMarkSprite;
         private Texture2D _worldMapHoverSelectorSprite;
-        private Texture2D _localMapHoverSelectorSprite;
         private Texture2D _circleTextureSprite;
         private Texture2D _settingsIconSprite;
         private Texture2D _turnIndicatorSprite;
@@ -45,12 +42,9 @@ namespace ProjectVagabond
         public Texture2D PathEndSprite => _pathEndSprite;
         public Texture2D ShortRestSprite => _shortRestSprite;
         public Texture2D LongRestSprite => _longRestSprite;
-        public Texture2D WarningMarkSprite => _warningMarkSprite;
-        public Texture2D DoubleWarningMarkSprite => _doubleWarningMarkSprite; // NEW
         public Texture2D EmptySprite => _emptySprite;
         public Texture2D SpeedMarkSprite => _speedMarkSprite;
         public Texture2D WorldMapHoverSelectorSprite => _worldMapHoverSelectorSprite;
-        public Texture2D LocalMapHoverSelectorSprite => _localMapHoverSelectorSprite;
         public Texture2D CircleTextureSprite => _circleTextureSprite;
         public Texture2D SettingsIconSprite => _settingsIconSprite;
         public Texture2D TurnIndicatorSprite => _turnIndicatorSprite;
@@ -99,12 +93,6 @@ namespace ProjectVagabond
             try { _longRestSprite = _core.Content.Load<Texture2D>("Sprites/longRest"); }
             catch { _longRestSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-            try { _warningMarkSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_warning_mark"); }
-            catch { _warningMarkSprite = _textureFactory.CreateWarningMarkSprite(); }
-
-            try { _doubleWarningMarkSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_double_warning_mark"); }
-            catch { _doubleWarningMarkSprite = _textureFactory.CreateDoubleWarningMarkSprite(); }
-
             try { _emptySprite = _textureFactory.CreateEmptyTexture(); }
             catch { _emptySprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
@@ -113,9 +101,6 @@ namespace ProjectVagabond
 
             try { _worldMapHoverSelectorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_world_map_selector"); }
             catch { _worldMapHoverSelectorSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
-
-            try { _localMapHoverSelectorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_local_map_selector"); }
-            catch { _localMapHoverSelectorSprite = _textureFactory.CreateColoredTexture(5, 5, Color.Red); }
 
             try { _circleTextureSprite = _textureFactory.CreateCircleTexture(); }
             catch { _circleTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }

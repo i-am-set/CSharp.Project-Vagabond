@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xna.Framework;
-using ProjectVagabond.Particles; // Added using directive
 using System;
 using System.Reflection;
 using System.Text.Json;
@@ -17,15 +16,13 @@ namespace ProjectVagabond
         /// </summary>
         /// <param name="archetypeId">The ID of the archetype to spawn (e.g., "player", "wanderer_npc").</param>
         /// <param name="worldPosition">The world position where the entity should be spawned.</param>
-        /// <param name="localPosition">The local position where the entity should be spawned within its world chunk.</param>
         /// <returns>The entity ID of the newly spawned entity, or -1 if spawning fails.</returns>
-        public static int Spawn(string archetypeId, Vector2 worldPosition, Vector2 localPosition)
+        public static int Spawn(string archetypeId, Vector2 worldPosition)
         {
             var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
             var entityManager = ServiceLocator.Get<EntityManager>();
             var componentStore = ServiceLocator.Get<ComponentStore>();
             var chunkManager = ServiceLocator.Get<ChunkManager>();
-            var particleManager = ServiceLocator.Get<ParticleSystemManager>(); // Get the particle manager
 
             var template = archetypeManager.GetArchetypeTemplate(archetypeId);
             if (template == null)
@@ -61,25 +58,6 @@ namespace ProjectVagabond
             {
                 posComp.WorldPosition = worldPosition;
             }
-
-            var localPosComp = componentStore.GetComponent<LocalPositionComponent>(entityId);
-            if (localPosComp != null)
-            {
-                localPosComp.LocalPosition = localPosition;
-            }
-
-            // --- NEW: Add Particle Emitter Component ---
-            // For now, we add it to any entity that can move (has a position).
-            // This could be made more specific later (e.g., based on a tag in the archetype).
-            if (posComp != null && localPosComp != null)
-            {
-                var emitterComp = new ParticleEmitterComponent();
-                var dirtSpraySettings = ParticleEffects.CreateDirtSpray();
-                var dirtSprayEmitter = particleManager.CreateEmitter(dirtSpraySettings);
-                emitterComp.Emitters["DirtSpray"] = dirtSprayEmitter;
-                componentStore.AddComponent(entityId, emitterComp);
-            }
-            // --- END NEW ---
 
             // Register the new entity with the spatial partitioning system
             chunkManager.RegisterEntity(entityId, worldPosition);

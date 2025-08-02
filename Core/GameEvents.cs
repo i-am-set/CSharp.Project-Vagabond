@@ -54,7 +54,6 @@
         public struct PlayerMoved
         {
             public Microsoft.Xna.Framework.Vector2 NewPosition { get; set; }
-            public MapView Map { get; set; }
         }
 
         /// <summary>

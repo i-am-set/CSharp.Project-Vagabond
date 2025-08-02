@@ -131,11 +131,8 @@ namespace ProjectVagabond
             if (!IsTerminalInputActive)
             {
                 HandleGlobalHotkeys(currentKeyboardState);
-                if (_gameState.IsFreeMoveMode)
-                {
-                    HandleFreeMoveInput(currentKeyboardState);
-                }
-                else if (_gameState.IsExecutingActions)
+                HandleRealTimeMovement(currentKeyboardState);
+                if (_gameState.IsExecutingActions)
                 {
                     HandleExecutingActionsInput(currentKeyboardState);
                 }
@@ -193,10 +190,6 @@ namespace ProjectVagabond
                 {
                     _gameState.CancelExecutingActions();
                 }
-                else if (_gameState.IsFreeMoveMode)
-                {
-                    _gameState.ToggleIsFreeMoveMode(false);
-                }
                 else if (_gameState.PendingActions.Count > 0)
                 {
                     _playerInputSystem.CancelPendingActions(_gameState);
@@ -218,51 +211,19 @@ namespace ProjectVagabond
             }
         }
 
-        private void HandleFreeMoveInput(KeyboardState currentKeyboardState)
+        private void HandleRealTimeMovement(KeyboardState currentKeyboardState)
         {
+            if (_gameState.IsExecutingActions) return;
+
             Vector2 moveDir = Vector2.Zero;
             if (currentKeyboardState.IsKeyDown(Keys.W) || currentKeyboardState.IsKeyDown(Keys.Up)) moveDir.Y--;
             if (currentKeyboardState.IsKeyDown(Keys.S) || currentKeyboardState.IsKeyDown(Keys.Down)) moveDir.Y++;
             if (currentKeyboardState.IsKeyDown(Keys.A) || currentKeyboardState.IsKeyDown(Keys.Left)) moveDir.X--;
             if (currentKeyboardState.IsKeyDown(Keys.D) || currentKeyboardState.IsKeyDown(Keys.Right)) moveDir.X++;
 
-            bool newMoveKeyPressed = false;
-            Keys[] moveKeys = { Keys.W, Keys.A, Keys.S, Keys.D, Keys.Up, Keys.Down, Keys.Left, Keys.Right };
-            foreach (var key in moveKeys)
+            if (moveDir != Vector2.Zero)
             {
-                if (currentKeyboardState.IsKeyDown(key) && !_previousKeyboardState.IsKeyDown(key))
-                {
-                    newMoveKeyPressed = true;
-                    break;
-                }
-            }
-
-            if (newMoveKeyPressed && moveDir != Vector2.Zero)
-            {
-                string[] args = { "move", "1" };
-                if (_shiftPressed)
-                {
-                    _playerInputSystem.QueueRunMovement(_gameState, moveDir, args);
-                }
-                else
-                {
-                    _playerInputSystem.QueueJogMovement(_gameState, moveDir, args);
-                }
-            }
-            else if (!_previousKeyboardState.IsKeyDown(Keys.Enter) && currentKeyboardState.IsKeyDown(Keys.Enter))
-            {
-                if (_gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions)
-                {
-                    _gameState.ToggleExecutingActions(true);
-                }
-                else if (_gameState.IsExecutingActions)
-                {
-                    _gameState.ToggleExecutingActions(false);
-                }
-                else
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "No actions queued." });
-                }
+                _playerInputSystem.ExecuteSingleStepMove(_gameState, moveDir);
             }
         }
 

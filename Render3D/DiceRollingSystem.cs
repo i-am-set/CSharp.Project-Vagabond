@@ -375,12 +375,6 @@ namespace ProjectVagabond.Dice
                     _physicsController.ApplyTumbleImpulse(e.BodyHandle);
                 }
             }
-
-            // Handle the spark particle effect
-            if (e.IsSparking)
-            {
-                _animationController.HandleDiceCollision(e, _renderer.View, _renderer.Projection, _renderer.RenderTarget);
-            }
         }
 
         private void HandleStuckDice()
