@@ -11,6 +11,7 @@ namespace ProjectVagabond
         private Vector2 _offset;
         private readonly Core _core;
         private readonly GraphicsDevice _graphicsDevice;
+        private readonly WorldClockManager _worldClockManager;
 
         public Vector2 ScrollDirection { get; set; } = new Vector2(0.1f, 0.1f);
         public float ScrollSpeed { get; set; } = 5f;
@@ -19,6 +20,7 @@ namespace ProjectVagabond
         {
             _core = ServiceLocator.Get<Core>();
             _graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            _worldClockManager = ServiceLocator.Get<WorldClockManager>();
             _offset = Vector2.Zero;
         }
 
@@ -41,7 +43,9 @@ namespace ProjectVagabond
         {
             if (ScrollDirection != Vector2.Zero)
             {
-                _offset += Vector2.Normalize(ScrollDirection) * ScrollSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
+                // The effective speed is the base ScrollSpeed multiplied by the current time scale.
+                float effectiveSpeed = ScrollSpeed * (_worldClockManager.TimeScale*3);
+                _offset += Vector2.Normalize(ScrollDirection) * effectiveSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
         }
 

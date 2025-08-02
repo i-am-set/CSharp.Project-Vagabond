@@ -39,6 +39,10 @@ namespace ProjectVagabond
         public int GridSizeY { get; private set; }
         public int CellSize { get; private set; }
 
+        // Animation state for path nodes
+        private readonly Dictionary<Vector2, float> _pathNodeAnimationOffsets = new Dictionary<Vector2, float>();
+        private readonly Random _pathAnimRandom = new Random();
+
         public MapRenderer()
         {
             _gameState = ServiceLocator.Get<GameState>();
@@ -135,13 +139,42 @@ namespace ProjectVagabond
 
         public void DrawMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Rectangle? overrideBounds = null)
         {
+            if (_gameState.IsActionQueueDirty)
+            {
+                _pathNodeAnimationOffsets.Clear();
+                foreach (var action in _gameState.PendingActions)
+                {
+                    Vector2 actionPos = Vector2.Zero;
+                    if (action is MoveAction moveAction)
+                    {
+                        actionPos = moveAction.Destination;
+                    }
+                    else if (action is RestAction restAction)
+                    {
+                        actionPos = restAction.Position;
+                    }
+
+                    if (actionPos != Vector2.Zero)
+                    {
+                        _pathNodeAnimationOffsets[actionPos] = (float)_pathAnimRandom.NextDouble() * 10f;
+                    }
+                }
+                _gameState.IsActionQueueDirty = false;
+            }
+
+            DrawWorldMap(spriteBatch, font, gameTime, overrideBounds);
+            _contextMenu.Draw(spriteBatch, font);
+        }
+
+        private void DrawWorldMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Rectangle? overrideBounds)
+        {
             CalculateMapLayout(overrideBounds);
             DrawMapFrame(spriteBatch, font, gameTime);
 
             var gridElements = GenerateWorldMapGridElements();
             foreach (var element in gridElements)
             {
-                DrawGridElement(spriteBatch, element, CellSize);
+                DrawGridElement(spriteBatch, element, CellSize, gameTime);
             }
 
             if (_hoveredGridPos.HasValue)
@@ -165,7 +198,6 @@ namespace ProjectVagabond
             }
 
             if (_gameState.IsPaused) DrawPauseIcon(spriteBatch, font);
-            _contextMenu.Draw(spriteBatch, font);
         }
 
         private void DrawMapFrame(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -249,7 +281,7 @@ namespace ProjectVagabond
                     Vector2? screenPos = MapCoordsToScreen(new Vector2(worldX, worldY));
                     if (screenPos.HasValue)
                     {
-                        elements.Add(new GridElement(GetTerrainTexture(noise), GetTerrainColor(noise), screenPos.Value));
+                        elements.Add(new GridElement(GetTerrainTexture(noise), GetTerrainColor(noise), screenPos.Value, new Vector2(worldX, worldY)));
                     }
                 }
             }
@@ -284,7 +316,7 @@ namespace ProjectVagabond
                 Vector2? screenPos = MapCoordsToScreen(posComp.WorldPosition);
                 if (screenPos.HasValue)
                 {
-                    elements.Add(new GridElement(renderComp.Texture, renderComp.Color, screenPos.Value));
+                    elements.Add(new GridElement(renderComp.Texture, renderComp.Color, screenPos.Value, posComp.WorldPosition));
                 }
             }
 
@@ -295,7 +327,7 @@ namespace ProjectVagabond
                 Vector2? screenPos = MapCoordsToScreen(_gameState.PlayerWorldPos);
                 if (screenPos.HasValue)
                 {
-                    elements.Add(new GridElement(playerRenderComp.Texture, playerRenderComp.Color, screenPos.Value));
+                    elements.Add(new GridElement(playerRenderComp.Texture, playerRenderComp.Color, screenPos.Value, _gameState.PlayerWorldPos));
                 }
             }
 
@@ -356,15 +388,28 @@ namespace ProjectVagabond
                 Vector2? screenPos = MapCoordsToScreen(actionPos);
                 if (screenPos.HasValue)
                 {
-                    elements.Add(new GridElement(actionTexture, actionColor, screenPos.Value));
+                    elements.Add(new GridElement(actionTexture, actionColor, screenPos.Value, actionPos));
                 }
             }
             return elements;
         }
 
-        private void DrawGridElement(SpriteBatch spriteBatch, GridElement element, int cellSize)
+        private void DrawGridElement(SpriteBatch spriteBatch, GridElement element, int cellSize, GameTime gameTime)
         {
-            Rectangle destRect = new Rectangle((int)element.Position.X, (int)element.Position.Y, cellSize, cellSize);
+            Vector2 finalPosition = element.ScreenPosition;
+            if (_pathNodeAnimationOffsets.ContainsKey(element.WorldPosition))
+            {
+                float offset = _pathNodeAnimationOffsets[element.WorldPosition];
+                const float SWAY_SPEED = 1f;
+                const float SWAY_AMOUNT_X = 1f;
+                const float SWAY_AMOUNT_Y = 1f;
+                float swayTimer = (float)gameTime.TotalGameTime.TotalSeconds + offset;
+                float swayOffsetX = (float)Math.Sin(swayTimer * SWAY_SPEED) * SWAY_AMOUNT_X;
+                float swayOffsetY = (float)Math.Sin(swayTimer * SWAY_SPEED * 2) * SWAY_AMOUNT_Y * 0.5f;
+                finalPosition += new Vector2(swayOffsetX, swayOffsetY);
+            }
+
+            Rectangle destRect = new Rectangle((int)finalPosition.X, (int)finalPosition.Y, cellSize, cellSize);
             spriteBatch.Draw(element.Texture, destRect, element.Color);
         }
 

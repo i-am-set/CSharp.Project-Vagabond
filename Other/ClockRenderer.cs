@@ -131,8 +131,8 @@ namespace ProjectVagabond
                 spriteBatch.Draw(pixel, new Rectangle((int)(dotPosition.X - DOT_SIZE / 2f), (int)(dotPosition.Y - DOT_SIZE / 2f), DOT_SIZE, DOT_SIZE), _global.Palette_Black);
             }
 
-            // Get current time with high precision
-            var currentTime = _worldClockManager.CurrentTimeSpan;
+            // Get current time with high precision from the VISUAL time span
+            var currentTime = _worldClockManager.VisualTimeSpan;
             double totalHours = currentTime.TotalHours;
             double totalMinutes = currentTime.TotalMinutes;
             double totalSeconds = currentTime.TotalSeconds;
@@ -142,7 +142,7 @@ namespace ProjectVagabond
             float minuteRotation = (float)(totalMinutes / 60.0 * MathHelper.TwoPi - MathHelper.PiOver2);
             float hourRotation = (float)(totalHours / 12.0 * MathHelper.TwoPi - MathHelper.PiOver2);
 
-            // Draw AM/PM text (still uses integer hour for simplicity)
+            // Draw AM/PM text (uses logical hour for accuracy)
             string period = _worldClockManager.CurrentHour >= 12 ? "PM" : "AM";
             Vector2 periodSize = font.MeasureString(period);
             Vector2 periodPosition = new Vector2(clockCenter.X - periodSize.X / 2, _clockPosition.Y + CLOCK_SIZE * 0.7f - periodSize.Y / 2);

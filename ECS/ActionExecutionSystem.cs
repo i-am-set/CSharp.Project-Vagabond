@@ -16,6 +16,12 @@ namespace ProjectVagabond
         private WorldClockManager _worldClockManager;
         private readonly ChunkManager _chunkManager;
 
+        // Timer for the new tick-based movement system
+        private float _moveTickTimer = 0f;
+        // The duration of one tick in real-world seconds at 1x speed.
+        private const float BASE_TICK_DURATION = 1.0f;
+        private bool _isFirstActionInQueue = true;
+
         public ActionExecutionSystem()
         {
             _componentStore = ServiceLocator.Get<ComponentStore>();
@@ -24,16 +30,17 @@ namespace ProjectVagabond
 
         public void StartExecution()
         {
+            _isFirstActionInQueue = true;
         }
 
 
         public void StopExecution()
         {
+            _isFirstActionInQueue = true;
         }
 
         /// <summary>
         /// Called when an action queue is forcefully stopped mid-execution.
-        /// It applies partial effects for the action that was in progress.
         /// </summary>
         public void HandleInterruption()
         {
@@ -41,8 +48,6 @@ namespace ProjectVagabond
             _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
             int playerEntityId = _gameState.PlayerEntityId;
-
-            // Interruption logic is simplified as there's no visual interpolation to cut short.
             _componentStore.RemoveComponent<MoveAction>(playerEntityId);
             _componentStore.RemoveComponent<RestAction>(playerEntityId);
         }
@@ -55,15 +60,33 @@ namespace ProjectVagabond
             _gameState ??= ServiceLocator.Get<GameState>();
             _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
-            if (_gameState.IsPaused || _gameState.IsInCombat || !_gameState.IsExecutingActions || _worldClockManager.IsInterpolatingTime)
+            if (_gameState.IsPaused || _gameState.IsInCombat || !_gameState.IsExecutingActions)
             {
                 return;
             }
 
-            ProcessNextActionInQueue();
+            // If this is the first action in the queue, execute it immediately without a timer.
+            if (_isFirstActionInQueue && _gameState.PendingActions.Any())
+            {
+                float tickDuration = BASE_TICK_DURATION / _worldClockManager.TimeScale;
+                ProcessNextActionInQueue(tickDuration);
+                _isFirstActionInQueue = false;
+                _moveTickTimer = 0f; // Reset the timer so the *next* action has the full delay.
+                return;
+            }
+
+            // For all subsequent actions, wait for the tick timer.
+            float currentTickDuration = BASE_TICK_DURATION / _worldClockManager.TimeScale;
+            _moveTickTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (_moveTickTimer >= currentTickDuration)
+            {
+                _moveTickTimer -= currentTickDuration; // Decrement, keeping any leftover time for the next frame.
+                ProcessNextActionInQueue(currentTickDuration);
+            }
         }
 
-        private void ProcessNextActionInQueue()
+        private void ProcessNextActionInQueue(float tickDuration)
         {
             int playerEntityId = _gameState.PlayerEntityId;
             var playerActionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(playerEntityId);
@@ -91,8 +114,8 @@ namespace ProjectVagabond
                     ApplyRestActionEffects(_gameState, playerEntityId, ra);
                 }
 
-                // PassTime now calculates the real-world duration internally based on the current TimeScale.
-                _worldClockManager.PassTime(actionCostInGameSeconds, 0, activity);
+                // The clock's visual animation will last for the duration of this tick.
+                _worldClockManager.PassTime(actionCostInGameSeconds, tickDuration, activity);
             }
             else if (_gameState.IsExecutingActions)
             {

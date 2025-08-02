@@ -136,6 +136,14 @@ namespace ProjectVagabond
                 {
                     HandleExecutingActionsInput(currentKeyboardState);
                 }
+                else
+                {
+                    // Handle input for when the player is idle (not executing actions and terminal is closed)
+                    if (currentKeyboardState.IsKeyDown(Keys.Tab) && !_previousKeyboardState.IsKeyDown(Keys.Tab))
+                    {
+                        _clockRenderer.TimeScaleGroup.CycleNext();
+                    }
+                }
             }
             else // Terminal input is active
             {

@@ -57,6 +57,11 @@ namespace ProjectVagabond.UI
 
         private string GetStatusText()
         {
+            if (_gameState.PendingActions.Count == 0)
+            {
+                return string.Empty;
+            }
+
             _stringBuilder.Clear();
             _stringBuilder.Append("Actions Queued: ").Append(_gameState.PendingActions.Count);
             if (_gameState.IsExecutingActions)

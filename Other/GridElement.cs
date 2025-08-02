@@ -7,15 +7,15 @@ namespace ProjectVagabond
     {
         public Texture2D Texture;
         public Color Color;
-        public Vector2 Position;
+        public Vector2 ScreenPosition;
+        public Vector2 WorldPosition;
 
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
-        public GridElement(Texture2D texture, Color color, Vector2 position)
+        public GridElement(Texture2D texture, Color color, Vector2 screenPosition, Vector2 worldPosition)
         {
             Texture = texture;
             Color = color;
-            Position = position;
+            ScreenPosition = screenPosition;
+            WorldPosition = worldPosition;
         }
     }
 }

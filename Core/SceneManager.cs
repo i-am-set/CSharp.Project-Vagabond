@@ -171,7 +171,7 @@ namespace ProjectVagabond
                 float padding = 5f;
                 var screenHeight = _graphics.PreferredBackBufferHeight;
                 var versionPosition = new Vector2(padding, screenHeight - font.LineHeight - padding);
-                spriteBatch.DrawString(font, versionText, versionPosition, _global.Palette_Gray);
+                spriteBatch.DrawString(font, versionText, versionPosition, _global.Palette_DarkGray);
             }
 
             spriteBatch.End();
