@@ -169,5 +169,43 @@ namespace ProjectVagabond.Particles
 
             return settings;
         }
+
+        /// <summary>
+        /// Creates the settings for a digital, square particle burst.
+        /// </summary>
+        public static ParticleEmitterSettings CreateDigitalBurst()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            // Emitter
+            settings.Shape = EmitterShape.Point;
+            settings.EmissionRate = 0; // Burst only
+            settings.MaxParticles = 50;
+
+            // Initial Particle
+            settings.Lifetime = new FloatRange(0.2f, 0.4f);
+            // Velocity is set manually for a radial burst. This is the speed.
+            settings.InitialVelocityX = new FloatRange(150f, 300f);
+            settings.InitialVelocityY = new FloatRange(0f);
+            settings.InitialSize = new FloatRange(1f, 2f);
+            settings.InitialRotation = new FloatRange(0f);
+            settings.InitialRotationSpeed = new FloatRange(0f);
+
+            // Over Lifetime
+            settings.Gravity = Vector2.Zero;
+            settings.Drag = 4f; // High drag for a quick stop
+            settings.StartColor = global.Palette_BrightWhite;
+            settings.EndColor = global.Palette_Teal;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
+
+            // Rendering
+            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 white pixel
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.9f;
+
+            return settings;
+        }
     }
 }

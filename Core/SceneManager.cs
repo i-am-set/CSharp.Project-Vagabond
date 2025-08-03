@@ -68,6 +68,20 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Initiates a hard-cut transition to a new scene via a temporary transition scene.
+        /// </summary>
+        /// <param name="nextState">The final destination scene.</param>
+        /// <param name="transitionDelay">The time to spend in the transition scene.</param>
+        public void TransitionToScene(GameSceneState nextState, float transitionDelay = 0.5f)
+        {
+            if (_scenes.TryGetValue(GameSceneState.Transition, out var scene) && scene is TransitionScene transitionScene)
+            {
+                transitionScene.SetTransition(nextState, transitionDelay);
+                ChangeScene(GameSceneState.Transition); // Instant switch to the transition scene
+            }
+        }
+
+        /// <summary>
         /// Changes the currently active scene, with an optional fade transition.
         /// </summary>
         /// <param name="state">The state of the scene to switch to.</param>

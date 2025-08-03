@@ -16,7 +16,6 @@ namespace ProjectVagabond.Scenes
 
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = -1;
-        private KeyboardState _previousKeyboardState;
 
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
@@ -28,6 +27,11 @@ namespace ProjectVagabond.Scenes
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
+        }
+
+        protected override Rectangle GetAnimatedBounds()
+        {
+            return new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
         }
 
         public override void Initialize()
@@ -109,10 +113,8 @@ namespace ProjectVagabond.Scenes
         {
             base.Update(gameTime);
 
-            if (IsInputBlocked)
+            if (IsInputBlocked || (_introAnimator != null && !_introAnimator.IsComplete))
             {
-                _previousKeyboardState = Keyboard.GetState();
-                previousMouseState = Mouse.GetState();
                 return;
             }
 
@@ -201,17 +203,12 @@ namespace ProjectVagabond.Scenes
                     ConfirmExit();
                 }
             }
-
-            _previousKeyboardState = currentKeyboardState;
-            previousMouseState = currentMouseState;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             int screenWidth = Global.VIRTUAL_WIDTH;
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
-
-            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
 
             spriteBatch.Draw(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 150), Color.White);
 
@@ -237,13 +234,6 @@ namespace ProjectVagabond.Scenes
                     );
                     DrawRectangleBorder(spriteBatch, pixel, highlightRect, 1, _global.ButtonHoverColor);
                 }
-            }
-
-            spriteBatch.End();
-
-            if (_confirmationDialog.IsActive)
-            {
-                _confirmationDialog.Draw(spriteBatch, font, gameTime);
             }
         }
 

@@ -10,7 +10,6 @@ namespace ProjectVagabond.UI
 {
     public class WaitDialog : Dialog
     {
-        private readonly Core _core;
         private readonly WorldClockManager _worldClockManager;
 
         private const int DialogWidth = 400;
@@ -48,7 +47,6 @@ namespace ProjectVagabond.UI
 
         public WaitDialog(GameScene currentGameScene) : base(currentGameScene)
         {
-            _core = ServiceLocator.Get<Core>();
             _worldClockManager = ServiceLocator.Get<WorldClockManager>();
         }
 

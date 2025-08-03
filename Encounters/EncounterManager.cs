@@ -90,13 +90,15 @@ namespace ProjectVagabond
 
             if (_encounters.TryGetValue(encounterId, out var encounterData))
             {
-                if (_sceneManager.CurrentActiveScene is GameMapScene terminalMapScene)
+                var encounterScene = _sceneManager.GetScene(GameSceneState.Encounter) as EncounterScene;
+                if (encounterScene != null)
                 {
-                    terminalMapScene.ShowEncounter(encounterData);
+                    encounterScene.SetEncounter(encounterData);
+                    _sceneManager.TransitionToScene(GameSceneState.Encounter);
                 }
                 else
                 {
-                    Console.WriteLine($"[WARNING] EncounterManager: Tried to trigger encounter '{encounterId}' but the active scene is not TerminalMapScene.");
+                    Console.WriteLine($"[ERROR] EncounterManager: Could not find or cast the EncounterScene.");
                 }
             }
             else

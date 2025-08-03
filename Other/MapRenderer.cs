@@ -41,6 +41,12 @@ namespace ProjectVagabond
         private readonly Dictionary<Vector2, float> _pathNodeAnimationOffsets = new Dictionary<Vector2, float>();
         private readonly Random _pathAnimRandom = new Random();
 
+        // Animation state for the header tab
+        private float _headerYOffset;
+        private float _headerTargetYOffset;
+        private const float HEADER_ANIMATION_SPEED = 8f;
+        private const float HEADER_HIDDEN_Y_OFFSET = 30f;
+
         public MapRenderer()
         {
             _gameState = ServiceLocator.Get<GameState>();
@@ -57,6 +63,10 @@ namespace ProjectVagabond
             _headerButtons.Add(new Button(Rectangle.Empty, "Stop") { IsEnabled = false });
 
             _buttonMap = _headerButtons.ToDictionary(b => b.Function.ToLowerInvariant(), b => b);
+
+            // Initialize header state to be hidden
+            _headerYOffset = HEADER_HIDDEN_Y_OFFSET;
+            _headerTargetYOffset = HEADER_HIDDEN_Y_OFFSET;
         }
 
         public void Update(GameTime gameTime, BitmapFont font)
@@ -65,6 +75,10 @@ namespace ProjectVagabond
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
             UpdateHover(virtualMousePos);
             _contextMenu.Update(mouseState, mouseState, virtualMousePos, font); // Note: prevMouseState is same as current here, might need adjustment if complex logic is added
+
+            // --- Header Animation Logic ---
+            _headerTargetYOffset = _gameState.PendingActions.Any() ? 0f : HEADER_HIDDEN_Y_OFFSET;
+            _headerYOffset = MathHelper.Lerp(_headerYOffset, _headerTargetYOffset, (float)gameTime.ElapsedGameTime.TotalSeconds * HEADER_ANIMATION_SPEED);
         }
 
         private void CalculateMapLayout(Rectangle? overrideBounds = null)
@@ -76,7 +90,6 @@ namespace ProjectVagabond
             else
             {
                 const int worldCellSize = Global.GRID_CELL_SIZE;
-                const int headerHeight = 25;
 
                 // --- SIZE CALCULATION (to keep the original, smaller map size) ---
                 int maxWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
@@ -91,11 +104,8 @@ namespace ProjectVagabond
                 int availableHeight = Global.VIRTUAL_HEIGHT; // Use the whole screen for centering
                 int availableWidth = Global.VIRTUAL_WIDTH;
 
-                // Center the entire block (header + map) vertically and horizontally.
-                int totalBlockHeight = finalMapSize + headerHeight;
-                int blockStartY = (availableHeight - totalBlockHeight) / 2;
-
-                int mapY = blockStartY + headerHeight;
+                // Center the map itself vertically, ignoring the header space for this calculation.
+                int mapY = (availableHeight - finalMapSize) / 2;
                 int mapX = (availableWidth - finalMapSize) / 2;
                 MapScreenBounds = new Rectangle(mapX, mapY, finalMapSize, finalMapSize);
             }
@@ -203,27 +213,49 @@ namespace ProjectVagabond
         private void DrawMapFrame(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
-            int frameHeight = MapScreenBounds.Height + 30;
 
-            // Define header area
-            Rectangle headerBounds = new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 25, MapScreenBounds.Width + 10, 20);
-
-            // Draw backgrounds for header and map
-            spriteBatch.Draw(pixel, headerBounds, _global.TerminalBg);
-            spriteBatch.Draw(pixel, MapScreenBounds, _global.TerminalBg);
-
-            // Draw frame lines
-            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 25, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Top
-            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y + MapScreenBounds.Height + 3, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Bottom
-            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 25, 2, frameHeight), _global.Palette_White); // Left
-            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.Right + 3, MapScreenBounds.Y - 25, 2, frameHeight), _global.Palette_White); // Right
-            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 5, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Separator
-
-            LayoutHeaderButtons();
-            foreach (var b in _headerButtons)
+            // --- Draw the animated header FIRST, so it appears behind the map frame ---
+            // Only draw if it's at least partially visible
+            if (_headerYOffset < HEADER_HIDDEN_Y_OFFSET - 1)
             {
-                b.Draw(spriteBatch, font, gameTime);
+                int headerWidth = MapScreenBounds.Width + 2;
+                int headerX = MapScreenBounds.X - 1;
+                int headerY = (int)(MapScreenBounds.Y - 25 + _headerYOffset);
+
+                Rectangle headerBounds = new Rectangle(headerX, headerY, headerWidth, 20);
+
+                // Draw header background
+                spriteBatch.Draw(pixel, headerBounds, _global.TerminalBg);
+
+                // Draw header frame lines (without the bottom line)
+                spriteBatch.Draw(pixel, new Rectangle(headerBounds.X, headerBounds.Y, headerBounds.Width, 2), _global.Palette_White); // Top
+                spriteBatch.Draw(pixel, new Rectangle(headerBounds.X, headerBounds.Y, 2, headerBounds.Height), _global.Palette_White); // Left
+                spriteBatch.Draw(pixel, new Rectangle(headerBounds.Right - 2, headerBounds.Y, 2, headerBounds.Height), _global.Palette_White); // Right
+
+                LayoutHeaderButtons();
+                foreach (var b in _headerButtons)
+                {
+                    b.Draw(spriteBatch, font, gameTime);
+                }
             }
+
+            // --- Now draw the main map frame and background, which will cover the header when it retracts ---
+            int mainFrameHeight = MapScreenBounds.Height + 10;
+            Rectangle fullFrameArea = new Rectangle(
+                MapScreenBounds.X - 5,
+                MapScreenBounds.Y - 5,
+                MapScreenBounds.Width + 10,
+                mainFrameHeight
+            );
+
+            // Draw the background for the entire framed area. This will paint over the header.
+            spriteBatch.Draw(pixel, fullFrameArea, _global.TerminalBg);
+
+            // Draw main frame lines on top of the background
+            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 5, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Top border (separator)
+            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Bottom + 3, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Bottom border
+            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 5, 2, mainFrameHeight), _global.Palette_White); // Left border
+            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.Right + 3, MapScreenBounds.Y - 5, 2, mainFrameHeight), _global.Palette_White); // Right border
         }
 
         public void LayoutHeaderButtons()
@@ -232,12 +264,15 @@ namespace ProjectVagabond
             const int buttonSpacing = 5;
             const int buttonWidth = 45;
 
+            int headerWidth = MapScreenBounds.Width + 2;
+            int headerX = MapScreenBounds.X - 1;
+
             int totalWidth = (buttonWidth * 3) + (buttonSpacing * 2);
-            int groupStartX = MapScreenBounds.X + (MapScreenBounds.Width - totalWidth) / 2;
+            int groupStartX = headerX + (headerWidth - totalWidth) / 2;
 
             int currentX = groupStartX;
-            // Center the button vertically within the 20px header area (which starts at Y-25 and ends at Y-5)
-            int headerCenterY = MapScreenBounds.Y - 15;
+            // Center the button vertically within the 20px header area and apply animation offset
+            int headerCenterY = (int)(MapScreenBounds.Y - 15 + _headerYOffset);
             int buttonY = headerCenterY - (buttonHeight / 2);
 
             if (_buttonMap.TryGetValue("clear", out Button clearButton))

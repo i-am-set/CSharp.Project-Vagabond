@@ -25,7 +25,6 @@ namespace ProjectVagabond.Scenes
         private readonly PreEncounterAnimationSystem _preEncounterAnimationSystem;
         private readonly PlayerInputSystem _playerInputSystem;
         private WaitDialog _waitDialog;
-        private EncounterDialog _encounterDialog;
         private ImageButton _settingsButton;
         private readonly LoadingScreen _loadingScreen;
 
@@ -48,12 +47,20 @@ namespace ProjectVagabond.Scenes
             _loadingScreen = new LoadingScreen();
         }
 
+        protected override Rectangle GetAnimatedBounds()
+        {
+            // The bounds should be the entire map frame.
+            // We need to calculate the layout once to get the correct bounds.
+            _mapRenderer.Update(new GameTime(), null); // A bit of a hack to force layout calculation
+            var mapBounds = _mapRenderer.MapScreenBounds;
+            return new Rectangle(mapBounds.X - 5, mapBounds.Y - 5, mapBounds.Width + 10, mapBounds.Height + 10);
+        }
+
         public override void Enter()
         {
             base.Enter();
             _core.IsMouseVisible = true;
             _waitDialog = new WaitDialog(this);
-            _encounterDialog = new EncounterDialog(this);
 
             if (_isInitialLoad)
             {
@@ -83,11 +90,6 @@ namespace ProjectVagabond.Scenes
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
         }
 
-        public void ShowEncounter(EncounterData encounterData)
-        {
-            _encounterDialog.Show(encounterData);
-        }
-
         private void OpenSettings()
         {
             var settingsScene = _sceneManager.GetScene(GameSceneState.Settings) as SettingsScene;
@@ -98,6 +100,8 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
+            base.Update(gameTime); // This now updates the intro animator
+
             if (_loadingScreen.IsActive)
             {
                 _loadingScreen.Update(gameTime);
@@ -120,8 +124,7 @@ namespace ProjectVagabond.Scenes
 
             var font = ServiceLocator.Get<BitmapFont>();
             _waitDialog.Update(gameTime);
-            _encounterDialog.Update(gameTime);
-            if (_waitDialog.IsActive || _encounterDialog.IsActive || _preEncounterAnimationSystem.IsAnimating)
+            if (_waitDialog.IsActive || _preEncounterAnimationSystem.IsAnimating || (_introAnimator != null && !_introAnimator.IsComplete))
             {
                 _previousKeyboardState = currentKeyboardState;
                 return;
@@ -176,14 +179,21 @@ namespace ProjectVagabond.Scenes
         {
             if (_loadingScreen.IsActive)
             {
+                // The loading screen is a special case that bypasses the intro animation
+                // and manages its own SpriteBatch.
                 spriteBatch.Begin(samplerState: SamplerState.PointClamp);
                 _loadingScreen.Draw(spriteBatch, font);
                 spriteBatch.End();
-                return;
             }
+            else
+            {
+                // For the normal scene, use the base Draw method which handles the intro animator.
+                base.Draw(spriteBatch, font, gameTime);
+            }
+        }
 
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-
+        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
             if (_gameState.IsInCombat)
             {
                 // Combat drawing logic
@@ -210,17 +220,19 @@ namespace ProjectVagabond.Scenes
                 _settingsButton.Bounds = new Rectangle(buttonX, buttonY, _settingsButton.Bounds.Width, _settingsButton.Bounds.Height);
                 _settingsButton.Draw(spriteBatch, font, gameTime);
             }
+        }
 
-            spriteBatch.End();
-
+        public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            // Dialogs manage their own SpriteBatch Begin/End calls and should be drawn
+            // outside the main scene's render loop. DrawUnderlay is a suitable place.
             _waitDialog.Draw(spriteBatch, font, gameTime);
-            _encounterDialog.Draw(spriteBatch, font, gameTime);
         }
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // The settings button has been moved to the main Draw method to ensure it scales.
-            // This method is now empty for this scene.
+            // This method is available for UI elements that need to be drawn on top of the entire scene,
+            // directly to the backbuffer.
         }
 
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);

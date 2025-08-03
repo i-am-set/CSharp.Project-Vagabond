@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using System;
 
 namespace ProjectVagabond.Scenes
 {
@@ -13,7 +14,9 @@ namespace ProjectVagabond.Scenes
         MainMenu,
         TerminalMap,
         Dialogue,
-        Settings
+        Settings,
+        Transition,
+        Encounter
     }
 
     /// <summary>
@@ -33,11 +36,14 @@ namespace ProjectVagabond.Scenes
         protected readonly Core _core;
 
         protected MouseState previousMouseState;
+        protected KeyboardState _previousKeyboardState;
         protected bool keyboardNavigatedLastFrame = false;
         protected bool firstTimeOpened = true;
 
         private const float INPUT_BLOCK_DURATION = 0.1f;
         private float _inputBlockTimer = 0f;
+
+        protected SceneIntroAnimator _introAnimator;
 
         /// <summary>
         /// The input device used to navigate to this scene.
@@ -70,7 +76,12 @@ namespace ProjectVagabond.Scenes
         public virtual void Enter()
         {
             previousMouseState = Mouse.GetState();
+            _previousKeyboardState = Keyboard.GetState();
             _inputBlockTimer = INPUT_BLOCK_DURATION;
+
+            _introAnimator = new SceneIntroAnimator();
+            var animationBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+            _introAnimator.Start(animationBounds);
 
             if (this.LastUsedInputForNav == InputDevice.Keyboard)
             {
@@ -93,12 +104,15 @@ namespace ProjectVagabond.Scenes
         /// </summary>
         public virtual void Update(GameTime gameTime)
         {
+            _introAnimator?.Update(gameTime);
+
             if (_inputBlockTimer > 0)
             {
                 _inputBlockTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
 
             var currentMouseState = Mouse.GetState();
+            var currentKeyboardState = Keyboard.GetState();
 
             if (keyboardNavigatedLastFrame)
             {
@@ -111,12 +125,36 @@ namespace ProjectVagabond.Scenes
                     _core.IsMouseVisible = true;
                 }
             }
+
+            // Update previous states at the end of the frame for the next frame's logic
+            previousMouseState = currentMouseState;
+            _previousKeyboardState = currentKeyboardState;
         }
 
         /// <summary>
         /// Called every frame to draw the scene.
         /// </summary>
-        public abstract void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime);
+        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            // The scene content is always drawn first.
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+            DrawSceneContent(spriteBatch, font, gameTime);
+            spriteBatch.End();
+
+            // The animator, if active, draws its mask on top of the already-drawn content.
+            if (_introAnimator != null && !_introAnimator.IsComplete)
+            {
+                // The animator's Draw method now only draws the mask and handles its own Begin/End.
+                _introAnimator.Draw(spriteBatch, font, gameTime, null);
+            }
+        }
+
+        /// <summary>
+        /// When implemented in a derived class, draws the primary content of the scene.
+        /// This is called by the base Draw method, potentially within an animation context.
+        /// </summary>
+        protected abstract void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime);
+
 
         /// <summary>
         /// Called every frame to draw full-screen effects underneath the main scene content.
@@ -142,6 +180,11 @@ namespace ProjectVagabond.Scenes
         {
             return null;
         }
+
+        /// <summary>
+        /// When overridden in a derived class, provides the bounds for the main element to be animated in.
+        /// </summary>
+        protected abstract Rectangle GetAnimatedBounds();
 
         /// <summary>
         /// Checks for a selectable element and moves the mouse to its center.

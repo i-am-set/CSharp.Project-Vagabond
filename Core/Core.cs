@@ -2,8 +2,10 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input; // Added for Keyboard state
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Dice; // Added using directive
 using ProjectVagabond.Encounters;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using System;
@@ -54,6 +56,7 @@ namespace ProjectVagabond
         private HapticsManager _hapticsManager;
         private SystemManager _systemManager;
         private TooltipManager _tooltipManager;
+        private ParticleSystemManager _particleSystemManager;
         private GameState _gameState;
         private ActionExecutionSystem _actionExecutionSystem;
         private AISystem _aiSystem;
@@ -138,6 +141,9 @@ namespace ProjectVagabond
 
             _tooltipManager = new TooltipManager();
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
+
+            _particleSystemManager = new ParticleSystemManager();
+            ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
 
             // Instantiate and register the individual dice controllers first.
             ServiceLocator.Register<DicePhysicsController>(new DicePhysicsController());
@@ -247,6 +253,8 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene()); // Changed to GameMapScene
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
+            _sceneManager.AddScene(GameSceneState.Encounter, new EncounterScene());
+            _sceneManager.AddScene(GameSceneState.Transition, new TransitionScene());
 
             OnResize(null, null);
             base.Initialize();
@@ -382,6 +390,7 @@ namespace ProjectVagabond
             // --- Frame-Rate Dependent Updates ---
             _sceneManager.Update(gameTime);
             _tooltipManager.Update(gameTime); // Tooltips should always update.
+            _particleSystemManager.Update(gameTime);
             _diceRollingSystem.Update(gameTime); // Update dice visuals and game logic every frame.
             _backgroundManager.Update(gameTime);
 
@@ -459,6 +468,9 @@ namespace ProjectVagabond
                 _spriteBatch.Draw(diceTexture, _finalRenderRectangle, Color.White);
                 _spriteBatch.End();
             }
+
+            // Draw particles on top of everything else, respecting the shake matrix.
+            _particleSystemManager.Draw(_spriteBatch, shakeMatrix);
 
             // Scene-specific overlays are drawn directly to the backbuffer.
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);

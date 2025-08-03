@@ -20,21 +20,27 @@ namespace ProjectVagabond.Scenes
             _global = ServiceLocator.Get<Global>();
         }
 
+        protected override Rectangle GetAnimatedBounds()
+        {
+            int screenWidth = Global.VIRTUAL_WIDTH;
+            int screenHeight = Global.VIRTUAL_HEIGHT;
+            return new Rectangle(100, screenHeight - 250, screenWidth - 200, 200);
+        }
+
         public override void Update(GameTime gameTime)
         {
+            base.Update(gameTime);
             if (Keyboard.GetState().IsKeyDown(Keys.Escape))
             {
                 _sceneManager.ChangeScene(GameSceneState.TerminalMap);
             }
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             int screenWidth = Global.VIRTUAL_WIDTH;
             int screenHeight = Global.VIRTUAL_HEIGHT;
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
-
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
             _mapRenderer.DrawMap(spriteBatch, font, gameTime);
 
@@ -46,15 +52,13 @@ namespace ProjectVagabond.Scenes
                 _statsRenderer.DrawStats(spriteBatch, font, new Vector2(10, Global.MAP_TOP_PADDING), leftColumnWidth - 20);
             }
 
-            Rectangle dialogueBox = new Rectangle(100, screenHeight - 250, screenWidth - 200, 200);
+            Rectangle dialogueBox = GetAnimatedBounds();
             spriteBatch.Draw(pixel, dialogueBox, _global.Palette_Black * 0.8f);
 
             string text = "This is a placeholder dialogue screen.\nPress ESC to return.";
             Vector2 textSize = font.MeasureString(text);
             Vector2 textPos = new Vector2(dialogueBox.X + (dialogueBox.Width - textSize.X) / 2, dialogueBox.Y + (dialogueBox.Height - textSize.Y) / 2);
             spriteBatch.DrawString(font, text, textPos, _global.Palette_BrightWhite);
-
-            spriteBatch.End();
         }
     }
 }

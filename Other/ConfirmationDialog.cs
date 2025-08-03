@@ -11,8 +11,6 @@ namespace ProjectVagabond.UI
 {
     public class ConfirmationDialog : Dialog
     {
-        private readonly Core _core;
-
         private string _prompt;
         private List<string> _details;
         private List<Button> _buttons;
@@ -25,7 +23,6 @@ namespace ProjectVagabond.UI
 
         public ConfirmationDialog(GameScene currentGameScene) : base(currentGameScene)
         {
-            _core = ServiceLocator.Get<Core>();
             _buttons = new List<Button>();
             _details = new List<string>();
         }

@@ -30,8 +30,6 @@ namespace ProjectVagabond.Scenes
         private const float TitleBobAmount = 3f;
         private const float TitleBobSpeed = 2f;
 
-        private KeyboardState _previousKeyboardState;
-
         private GameSettings _tempSettings;
         private ConfirmationDialog _confirmationDialog;
 
@@ -43,6 +41,11 @@ namespace ProjectVagabond.Scenes
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _graphics = ServiceLocator.Get<GraphicsDeviceManager>();
             _global = ServiceLocator.Get<Global>();
+        }
+
+        protected override Rectangle GetAnimatedBounds()
+        {
+            return new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
         }
 
         public override void Enter()
@@ -222,7 +225,7 @@ namespace ProjectVagabond.Scenes
             _tempSettings.Resolution = _settings.Resolution;
             _tempSettings.IsFullscreen = _settings.IsFullscreen;
             _tempSettings.IsVsync = _settings.IsVsync;
-            _tempSettings.IsFrameLimiterEnabled = _settings.IsFrameLimiterEnabled;
+            _tempSettings.IsFrameLimiterEnabled = _tempSettings.IsFrameLimiterEnabled;
             _tempSettings.TargetFramerate = _settings.TargetFramerate;
             _tempSettings.SmallerUi = _settings.SmallerUi;
             _tempSettings.UseImperialUnits = _settings.UseImperialUnits;
@@ -288,10 +291,8 @@ namespace ProjectVagabond.Scenes
             base.Update(gameTime);
             _titleBobTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if (IsInputBlocked)
+            if (IsInputBlocked || (_introAnimator != null && !_introAnimator.IsComplete))
             {
-                _previousKeyboardState = Keyboard.GetState();
-                previousMouseState = Mouse.GetState();
                 return;
             }
 
@@ -348,9 +349,6 @@ namespace ProjectVagabond.Scenes
             var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Apply");
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) AttemptToGoBack();
-
-            _previousKeyboardState = currentKeyboardState;
-            previousMouseState = currentMouseState;
         }
 
         private void HandleKeyboardInput(KeyboardState currentKeyboardState)
@@ -389,13 +387,11 @@ namespace ProjectVagabond.Scenes
             return currentIndex;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             int screenWidth = Global.VIRTUAL_WIDTH;
             var virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
             var pixel = ServiceLocator.Get<Texture2D>();
-
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
 
             string title = "Settings";
             Vector2 titleSize = font.MeasureString(title) * 2f;
@@ -452,12 +448,6 @@ namespace ProjectVagabond.Scenes
             {
                 Vector2 msgSize = font.MeasureString(_confirmationMessage);
                 spriteBatch.DrawString(font, _confirmationMessage, new Vector2(screenWidth / 2 - msgSize.X / 2, Global.VIRTUAL_HEIGHT - 50), _global.Palette_Teal);
-            }
-            spriteBatch.End();
-
-            if (_confirmationDialog.IsActive)
-            {
-                _confirmationDialog.Draw(spriteBatch, font, gameTime);
             }
         }
 
