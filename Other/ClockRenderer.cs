@@ -22,8 +22,6 @@ namespace ProjectVagabond
         private readonly int _clockSize;
         public int ClockSize => _clockSize;
 
-        private readonly RadioGroup _timeScaleGroup;
-        public RadioGroup TimeScaleGroup => _timeScaleGroup;
         private readonly ToggleButton _pausePlayButton;
         private readonly ImageButton _clockButton;
 
@@ -38,14 +36,6 @@ namespace ProjectVagabond
             _spriteManager = ServiceLocator.Get<SpriteManager>();
 
             _clockSize = (int)(BASE_CLOCK_SIZE * CLOCK_SCALE);
-
-            _timeScaleGroup = new RadioGroup(defaultIndex: 0);
-
-            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{_global.TimeScaleMultiplier1}x", customDefaultTextColor: _global.Palette_Gray, customToggledTextColor: _global.Palette_BrightWhite));
-            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{_global.TimeScaleMultiplier2}x", customDefaultTextColor: _global.Palette_Gray, customToggledTextColor: _global.Palette_BrightWhite));
-            _timeScaleGroup.AddButton(new ToggleButton(Rectangle.Empty, $"{_global.TimeScaleMultiplier3}x", customDefaultTextColor: _global.Palette_Gray, customToggledTextColor: _global.Palette_BrightWhite));
-
-            _timeScaleGroup.OnSelectionChanged += HandleTimeScaleChange;
 
             _pausePlayButton = new ToggleButton(Rectangle.Empty, "||");
             _pausePlayButton.OnClick += () => _gameState.TogglePause();
@@ -62,29 +52,6 @@ namespace ProjectVagabond
                     OnClockClicked?.Invoke();
                 }
             };
-
-            HandleTimeScaleChange(_timeScaleGroup.GetSelectedButton());
-        }
-
-        private void HandleTimeScaleChange(ToggleButton selectedButton)
-        {
-            if (selectedButton == null) return;
-
-            float newTimeScale = 1.0f;
-            if (selectedButton.Text == $"{_global.TimeScaleMultiplier1}x")
-            {
-                newTimeScale = _global.TimeScaleMultiplier1;
-            }
-            else if (selectedButton.Text == $"{_global.TimeScaleMultiplier2}x")
-            {
-                newTimeScale = _global.TimeScaleMultiplier2;
-            }
-            else if (selectedButton.Text == $"{_global.TimeScaleMultiplier3}x")
-            {
-                newTimeScale = _global.TimeScaleMultiplier3;
-            }
-
-            _worldClockManager.UpdateTimeScale(newTimeScale);
         }
 
         public void Update(GameTime gameTime)
@@ -108,7 +75,6 @@ namespace ProjectVagabond
                 _tooltipManager.RequestTooltip(_clockButton, tooltipText.ToUpper(), virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
             }
 
-            _timeScaleGroup.Update(currentMouseState);
             _pausePlayButton.Update(currentMouseState);
         }
 
@@ -173,39 +139,17 @@ namespace ProjectVagabond
             // Set button positions and draw them
             int buttonWidth = (int)(30 * CLOCK_SCALE);
             int buttonHeight = (int)(18 * CLOCK_SCALE);
-            int buttonSpacing = (int)Math.Max(1, 2 * CLOCK_SCALE);
 
             // Pause/Play Button
             _pausePlayButton.IsEnabled = _gameState.IsExecutingActions;
             _pausePlayButton.Text = _gameState.IsPaused ? "►" : "▐▐";
 
-            // Time Scale Buttons
-            var timeButtons = _timeScaleGroup.Buttons;
-            float totalGroupWidth = (buttonWidth * timeButtons.Count) + (buttonSpacing * (timeButtons.Count - 1));
-
-            // Add pause button width if it's visible
-            if (_pausePlayButton.IsEnabled)
-            {
-                totalGroupWidth += buttonWidth + buttonSpacing;
-            }
-
-            Vector2 groupStartPosition = new Vector2(clockCenter.X - (totalGroupWidth / 2), _clockPosition.Y + _clockSize + (int)Math.Max(2, 5 * CLOCK_SCALE));
-            float currentX = groupStartPosition.X;
-
             // Draw Pause/Play button if active
             if (_pausePlayButton.IsEnabled)
             {
-                _pausePlayButton.Bounds = new Rectangle((int)currentX, (int)groupStartPosition.Y, buttonWidth, buttonHeight);
+                Vector2 buttonPosition = new Vector2(clockCenter.X - (buttonWidth / 2f), _clockPosition.Y + _clockSize + (int)Math.Max(2, 5 * CLOCK_SCALE));
+                _pausePlayButton.Bounds = new Rectangle((int)buttonPosition.X, (int)buttonPosition.Y, buttonWidth, buttonHeight);
                 _pausePlayButton.Draw(spriteBatch, font, gameTime);
-                currentX += buttonWidth + buttonSpacing;
-            }
-
-            // Draw Time Scale buttons
-            for (int i = 0; i < timeButtons.Count; i++)
-            {
-                timeButtons[i].Bounds = new Rectangle((int)currentX, (int)groupStartPosition.Y, buttonWidth, buttonHeight);
-                timeButtons[i].Draw(spriteBatch, font, gameTime);
-                currentX += buttonWidth + buttonSpacing;
             }
         }
     }

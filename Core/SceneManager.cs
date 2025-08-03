@@ -165,14 +165,7 @@ namespace ProjectVagabond
 
             DrawFade(spriteBatch, _graphics.GraphicsDevice);
 
-            if (font != null)
-            {
-                string versionText = $"v{Global.GAME_VERSION}";
-                float padding = 5f;
-                var screenHeight = _graphics.PreferredBackBufferHeight;
-                var versionPosition = new Vector2(padding, screenHeight - font.LineHeight - padding);
-                spriteBatch.DrawString(font, versionText, versionPosition, _global.Palette_DarkGray);
-            }
+            // The version text is now drawn in Core.cs to ensure it scales with the render target.
 
             spriteBatch.End();
         }

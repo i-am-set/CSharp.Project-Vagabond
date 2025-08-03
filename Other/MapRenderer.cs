@@ -23,7 +23,6 @@ namespace ProjectVagabond
         private Vector2? _hoveredGridPos;
         private Rectangle _mapGridBounds;
         private readonly ContextMenu _contextMenu;
-        private Vector2 _timeTextPos;
         private readonly Dictionary<string, Button> _buttonMap;
 
         private readonly List<Button> _headerButtons = new List<Button>();
@@ -31,7 +30,6 @@ namespace ProjectVagabond
 
         public Vector2? HoveredGridPos => _hoveredGridPos;
         public ContextMenu MapContextMenu => _contextMenu;
-        public Vector2? RightClickedWorldPos { get; set; }
 
         // New public properties for dynamic layout
         public Rectangle MapScreenBounds { get; private set; }
@@ -77,20 +75,28 @@ namespace ProjectVagabond
             }
             else
             {
-                // --- UNIFIED SIZE CALCULATION ---
                 const int worldCellSize = Global.GRID_CELL_SIZE;
+                const int headerHeight = 25;
 
+                // --- SIZE CALCULATION (to keep the original, smaller map size) ---
                 int maxWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
+                // This calculation is what defines the original, smaller size by assuming a terminal is present.
                 int maxHeight = Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10;
                 int baseMapSize = Math.Min(maxWidth, maxHeight);
-
                 int baseGridSize = baseMapSize / worldCellSize;
                 int worldGridSize = baseGridSize + 4;
-
                 int finalMapSize = worldGridSize * worldCellSize;
 
-                int mapX = (Global.VIRTUAL_WIDTH - finalMapSize) / 2;
-                int mapY = Global.MAP_TOP_PADDING + 7; // Move map and header down by 7 pixels
+                // --- CENTERING CALCULATION (using the full screen height) ---
+                int availableHeight = Global.VIRTUAL_HEIGHT; // Use the whole screen for centering
+                int availableWidth = Global.VIRTUAL_WIDTH;
+
+                // Center the entire block (header + map) vertically and horizontally.
+                int totalBlockHeight = finalMapSize + headerHeight;
+                int blockStartY = (availableHeight - totalBlockHeight) / 2;
+
+                int mapY = blockStartY + headerHeight;
+                int mapX = (availableWidth - finalMapSize) / 2;
                 MapScreenBounds = new Rectangle(mapX, mapY, finalMapSize, finalMapSize);
             }
 
@@ -191,16 +197,6 @@ namespace ProjectVagabond
                 }
             }
 
-            if (RightClickedWorldPos.HasValue)
-            {
-                Vector2? screenPos = MapCoordsToScreen(RightClickedWorldPos.Value);
-                if (screenPos.HasValue)
-                {
-                    Rectangle markerRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, CellSize, CellSize);
-                    spriteBatch.Draw(_spriteManager.WorldMapHoverSelectorSprite, markerRect, Color.Cyan * 0.6f);
-                }
-            }
-
             if (_gameState.IsPaused) DrawPauseIcon(spriteBatch, font);
         }
 
@@ -209,18 +205,19 @@ namespace ProjectVagabond
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
             int frameHeight = MapScreenBounds.Height + 30;
 
-            // Draw the opaque background for the map area first.
+            // Define header area
+            Rectangle headerBounds = new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 25, MapScreenBounds.Width + 10, 20);
+
+            // Draw backgrounds for header and map
+            spriteBatch.Draw(pixel, headerBounds, _global.TerminalBg);
             spriteBatch.Draw(pixel, MapScreenBounds, _global.TerminalBg);
 
+            // Draw frame lines
             spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 25, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Top
             spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y + MapScreenBounds.Height + 3, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Bottom
             spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 25, 2, frameHeight), _global.Palette_White); // Left
             spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.Right + 3, MapScreenBounds.Y - 25, 2, frameHeight), _global.Palette_White); // Right
             spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 5, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Separator
-
-            string timeText = _worldClockManager.CurrentTime;
-            _timeTextPos = new Vector2(MapScreenBounds.X, MapScreenBounds.Y - 12 - font.LineHeight / 2);
-            spriteBatch.DrawString(font, timeText, _timeTextPos, _global.GameTextColor);
 
             LayoutHeaderButtons();
             foreach (var b in _headerButtons)
@@ -233,29 +230,31 @@ namespace ProjectVagabond
         {
             const int buttonHeight = 16;
             const int buttonSpacing = 5;
-            const int goStopButtonWidth = 45;
+            const int buttonWidth = 45;
 
-            int currentX = MapScreenBounds.Right - 2;
-            int buttonY = MapScreenBounds.Y - 12 - buttonHeight / 2;
+            int totalWidth = (buttonWidth * 3) + (buttonSpacing * 2);
+            int groupStartX = MapScreenBounds.X + (MapScreenBounds.Width - totalWidth) / 2;
 
-            if (_buttonMap.TryGetValue("stop", out Button stopButton))
+            int currentX = groupStartX;
+            // Center the button vertically within the 20px header area (which starts at Y-25 and ends at Y-5)
+            int headerCenterY = MapScreenBounds.Y - 15;
+            int buttonY = headerCenterY - (buttonHeight / 2);
+
+            if (_buttonMap.TryGetValue("clear", out Button clearButton))
             {
-                currentX -= goStopButtonWidth;
-                stopButton.Bounds = new Rectangle(currentX, buttonY, goStopButtonWidth, buttonHeight);
-                currentX -= buttonSpacing;
+                clearButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
+                currentX += buttonWidth + buttonSpacing;
             }
 
             if (_buttonMap.TryGetValue("go", out Button goButton))
             {
-                currentX -= goStopButtonWidth;
-                goButton.Bounds = new Rectangle(currentX, buttonY, goStopButtonWidth, buttonHeight);
-                currentX -= buttonSpacing;
+                goButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
+                currentX += buttonWidth + buttonSpacing;
             }
 
-            if (_buttonMap.TryGetValue("clear", out Button clearButton))
+            if (_buttonMap.TryGetValue("stop", out Button stopButton))
             {
-                currentX -= goStopButtonWidth;
-                clearButton.Bounds = new Rectangle(currentX, buttonY, goStopButtonWidth, buttonHeight);
+                stopButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
             }
         }
 

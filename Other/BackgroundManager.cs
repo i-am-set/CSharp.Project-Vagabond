@@ -44,12 +44,32 @@ namespace ProjectVagabond
             if (ScrollDirection != Vector2.Zero)
             {
                 // The effective speed is the base ScrollSpeed multiplied by the current time scale.
-                float effectiveSpeed = ScrollSpeed * (_worldClockManager.TimeScale*3);
+                float effectiveSpeed = ScrollSpeed * (_worldClockManager.TimeScale);
                 _offset += Vector2.Normalize(ScrollDirection) * effectiveSpeed * (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
         }
 
+        /// <summary>
+        /// Draws the tiled background to fill the virtual resolution area.
+        /// </summary>
         public void Draw(SpriteBatch spriteBatch)
+        {
+            DrawTiled(spriteBatch, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+        }
+
+        /// <summary>
+        /// Draws the tiled background to fill the entire physical screen.
+        /// </summary>
+        public void DrawFullScreen(SpriteBatch spriteBatch)
+        {
+            var pp = _graphicsDevice.PresentationParameters;
+            DrawTiled(spriteBatch, pp.BackBufferWidth, pp.BackBufferHeight);
+        }
+
+        /// <summary>
+        /// Private helper to draw the tiled texture to a specified width and height.
+        /// </summary>
+        private void DrawTiled(SpriteBatch spriteBatch, int width, int height)
         {
             if (_texture == null) return;
 
@@ -58,14 +78,10 @@ namespace ProjectVagabond
             float startX = -(_offset.X % _texture.Width);
             float startY = -(_offset.Y % _texture.Height);
 
-            // We need to draw enough tiles to cover the entire virtual screen.
-            int screenWidth = Global.VIRTUAL_WIDTH;
-            int screenHeight = Global.VIRTUAL_HEIGHT;
-
-            // Loop through and draw tiles to fill the screen.
-            for (float y = startY; y < screenHeight; y += _texture.Height)
+            // Loop through and draw tiles to fill the specified area.
+            for (float y = startY; y < height; y += _texture.Height)
             {
-                for (float x = startX; x < screenWidth; x += _texture.Width)
+                for (float x = startX; x < width; x += _texture.Width)
                 {
                     spriteBatch.Draw(_texture, new Vector2(x, y), Color.White);
                 }

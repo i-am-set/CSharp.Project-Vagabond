@@ -244,7 +244,7 @@ namespace ProjectVagabond
             _systemManager.RegisterSystem(_preEncounterAnimationSystem, 0f);
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
-            _sceneManager.AddScene(GameSceneState.TerminalMap, new TerminalMapScene());
+            _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene()); // Changed to GameMapScene
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
 
@@ -285,7 +285,7 @@ namespace ProjectVagabond
             _gameState.InitializeWorld();
             _gameState.InitializeRenderableEntities();
 
-            _sceneManager.ChangeScene(GameSceneState.MainMenu, fade_duration: 0.5f);
+            _sceneManager.ChangeScene(GameSceneState.MainMenu);
         }
 
         /// <summary>
@@ -394,7 +394,7 @@ namespace ProjectVagabond
                 if (_gameState.IsInCombat)
                 {
                 }
-                else if (_sceneManager.CurrentActiveScene is TerminalMapScene)
+                else if (_sceneManager.CurrentActiveScene is GameMapScene)
                 {
                     _gameState.UpdateActiveEntities();
                     _systemManager.Update(gameTime);
@@ -410,15 +410,28 @@ namespace ProjectVagabond
             GraphicsDevice.SetRenderTarget(_renderTarget);
             GraphicsDevice.Clear(Color.Transparent);
 
-            // Draw the tiling background first, inside the render target.
+            // The background is always drawn first into the render target to fill the virtual resolution.
+            // This ensures it scales correctly with the rest of the UI.
             _spriteBatch.Begin(samplerState: SamplerState.LinearWrap);
             _backgroundManager.Draw(_spriteBatch);
             _spriteBatch.End();
 
+            // The current scene is drawn on top of the background.
             _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime);
 
+            // Tooltips and other persistent UI elements are drawn into the main render target.
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _tooltipManager.Draw(_spriteBatch, _defaultFont);
+
+            // Draw the game version in the bottom-left corner of the virtual screen.
+            if (_defaultFont != null)
+            {
+                string versionText = $"v{Global.GAME_VERSION}";
+                float padding = 5f;
+                var versionPosition = new Vector2(padding, Global.VIRTUAL_HEIGHT - _defaultFont.LineHeight - padding);
+                _spriteBatch.DrawString(_defaultFont, versionText, versionPosition, _global.Palette_DarkGray);
+            }
+
             _spriteBatch.End();
 
             // --- 2. Draw the 3D dice to their own render target ---
@@ -426,19 +439,20 @@ namespace ProjectVagabond
 
             // --- 3. Draw everything to the screen ---
             GraphicsDevice.SetRenderTarget(null);
-            GraphicsDevice.Clear(Color.Black); // Use a solid color for letterboxing
+            GraphicsDevice.Clear(Color.Black); // Clear with black as a base for letterboxing.
 
+            // Scene-specific underlays (like dialog dimming) are drawn directly to the backbuffer.
             _sceneManager.DrawUnderlay(_spriteBatch, _defaultFont, gameTime);
 
             var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
 
-            // Draw the main 2D scene
+            // Draw the main 2D scene (which now includes the background) from the render target, scaled to fit the screen.
             _spriteBatch.Begin(samplerState: finalSamplerState, transformMatrix: shakeMatrix);
             _spriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
             _spriteBatch.End();
 
-            // Draw the dice texture on top of the 2D scene
+            // Draw the dice texture on top of the 2D scene, using the same scaling.
             if (diceTexture != null)
             {
                 _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: finalSamplerState, transformMatrix: shakeMatrix);
@@ -446,6 +460,7 @@ namespace ProjectVagabond
                 _spriteBatch.End();
             }
 
+            // Scene-specific overlays are drawn directly to the backbuffer.
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
 
             base.Draw(gameTime);

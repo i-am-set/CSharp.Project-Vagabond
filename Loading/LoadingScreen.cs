@@ -170,10 +170,6 @@ namespace ProjectVagabond.Scenes
             const int horizontalPadding = 2;
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-
-            // Black background
-            spriteBatch.Draw(pixel, screenBounds, _global.Palette_Black);
 
             // Loading text
             string loadingText = "Loading" + new string('.', _ellipsisCount);

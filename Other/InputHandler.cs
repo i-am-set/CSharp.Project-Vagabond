@@ -160,10 +160,6 @@ namespace ProjectVagabond
                 else
                 {
                     // Handle input for when the player is idle (not executing actions and terminal is closed)
-                    if (currentKeyboardState.IsKeyDown(Keys.Tab) && !_previousKeyboardState.IsKeyDown(Keys.Tab))
-                    {
-                        _clockRenderer.TimeScaleGroup.CycleNext();
-                    }
                 }
             }
             else // Terminal input is active
@@ -310,10 +306,6 @@ namespace ProjectVagabond
                             _autoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
                             _terminalRenderer.ResetCaratBlink();
                         }
-                        else
-                        {
-                            _clockRenderer.TimeScaleGroup.CycleNext();
-                        }
                     }
                     else if (key == Keys.Up && _autoCompleteManager.ShowingAutoCompleteSuggestions)
                     {
@@ -404,10 +396,6 @@ namespace ProjectVagabond
             {
                 if (!_previousKeyboardState.IsKeyDown(key))
                 {
-                    if (key == Keys.Tab)
-                    {
-                        _clockRenderer.TimeScaleGroup.CycleNext();
-                    }
                 }
             }
         }

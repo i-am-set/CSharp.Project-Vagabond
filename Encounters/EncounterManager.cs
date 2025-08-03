@@ -90,7 +90,7 @@ namespace ProjectVagabond
 
             if (_encounters.TryGetValue(encounterId, out var encounterData))
             {
-                if (_sceneManager.CurrentActiveScene is TerminalMapScene terminalMapScene)
+                if (_sceneManager.CurrentActiveScene is GameMapScene terminalMapScene)
                 {
                     terminalMapScene.ShowEncounter(encounterData);
                 }

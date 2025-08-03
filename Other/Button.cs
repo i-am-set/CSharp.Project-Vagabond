@@ -35,7 +35,6 @@ namespace ProjectVagabond.UI
         public float OverflowScrollSpeed { get; set; } = 0f;
         public StrikethroughType Strikethrough { get; set; } = StrikethroughType.None;
         public bool EnableHoverSway { get; set; } = true;
-        public bool ZoomHapticOnClick { get; set; } = true;
 
         public event Action OnClick;
 
@@ -52,7 +51,7 @@ namespace ProjectVagabond.UI
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
 #nullable enable
-        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, bool zoomHapticOnClick = true)
+        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true)
         {
             _global = ServiceLocator.Get<Global>();
 
@@ -70,7 +69,6 @@ namespace ProjectVagabond.UI
             AlignLeft = alignLeft;
             OverflowScrollSpeed = overflowScrollSpeed;
             EnableHoverSway = enableHoverSway;
-            ZoomHapticOnClick = zoomHapticOnClick;
         }
 #nullable restore
 
@@ -104,10 +102,6 @@ namespace ProjectVagabond.UI
         {
             if (IsEnabled)
             {
-                if (ZoomHapticOnClick)
-                {
-                    ServiceLocator.Get<HapticsManager>().QuickZoomInPulseSmall();
-                }
                 OnClick?.Invoke();
             }
         }

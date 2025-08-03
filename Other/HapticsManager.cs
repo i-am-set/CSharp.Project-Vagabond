@@ -68,7 +68,7 @@ namespace ProjectVagabond
 
         public void QuickZoomInPulseSmall()
         {
-            TriggerZoomPulse(1.01f, 0.05f);
+            TriggerZoomPulse(1.02f, 0.05f);
         }
 
         public void TriggerRandomHop(float intensity, float duration)

@@ -28,7 +28,7 @@ namespace ProjectVagabond.UI
         private const float SWAY_AMOUNT_Y = 1f;
 
         public ImageButton(Rectangle bounds, Texture2D defaultTexture = null, Texture2D hoverTexture = null, Texture2D clickedTexture = null, Texture2D disabledTexture = null, bool enableHoverSway = true, bool zoomHapticOnClick = true)
-            : base(bounds, "", enableHoverSway: enableHoverSway, zoomHapticOnClick: zoomHapticOnClick)
+            : base(bounds, "", enableHoverSway: enableHoverSway)
         {
             _defaultTexture = defaultTexture;
             _hoverTexture = hoverTexture;
@@ -39,23 +39,18 @@ namespace ProjectVagabond.UI
 
         public override void Update(MouseState currentMouseState)
         {
+            // Let the base class handle hover, click, and previous state management.
+            base.Update(currentMouseState);
+
+            // Add the specific logic for ImageButton.
             if (!IsEnabled)
             {
-                IsHovered = false;
                 _isHeldDown = false;
-                return;
             }
-
-            Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-            IsHovered = Bounds.Contains(virtualMousePos);
-
-            if (IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+            else
             {
-                TriggerClick();
+                _isHeldDown = IsHovered && currentMouseState.LeftButton == ButtonState.Pressed;
             }
-
-            _isHeldDown = IsHovered && currentMouseState.LeftButton == ButtonState.Pressed;
-            _previousMouseState = currentMouseState;
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover = false)

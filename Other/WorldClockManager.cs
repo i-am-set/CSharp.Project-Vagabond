@@ -49,7 +49,7 @@ namespace ProjectVagabond
         public int CurrentMinute => _minute;
         public int CurrentSecond => _second;
         public string CurrentTime => _global.Use24HourClock ? GetTimeString() : GetConverted24hToAmPm(GetTimeString());
-        public float TimeScale { get; private set; } = 1.0f;
+        public float TimeScale { get; private set; } = 2.0f;
         public TimeSpan CurrentTimeSpan { get; private set; }
         public TimeSpan VisualTimeSpan { get; private set; }
 
@@ -112,25 +112,6 @@ namespace ProjectVagabond
                     OnTimeChanged?.Invoke();
                 }
             }
-        }
-
-        public void UpdateTimeScale(float newTimeScale)
-        {
-            if (newTimeScale <= 0 || newTimeScale == this.TimeScale) return;
-
-            // Time scale changes should not affect the fixed duration of a movement tick.
-            // They only affect long-running "Wait" actions.
-            if (_isInterpolating && _currentActivity == ActivityType.Waiting)
-            {
-                double totalGameSecondsToPass = (_interpolationTargetTime - _interpolationStartTime).TotalSeconds;
-                float progress = _interpolationTimer / _interpolationDurationRealSeconds;
-                double gameSecondsPassedSoFar = totalGameSecondsToPass * progress;
-                double remainingGameSeconds = totalGameSecondsToPass - gameSecondsPassedSoFar;
-                float newRemainingRealSeconds = (float)remainingGameSeconds / newTimeScale;
-                _interpolationDurationRealSeconds = _interpolationTimer + newRemainingRealSeconds;
-            }
-
-            this.TimeScale = newTimeScale;
         }
 
         public void PassTime(double gameSecondsToPass, float realSecondsDuration, ActivityType activity)

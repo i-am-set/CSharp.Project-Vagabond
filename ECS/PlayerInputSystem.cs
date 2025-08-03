@@ -37,9 +37,7 @@ namespace ProjectVagabond
             if (playerStats == null || playerPosComp == null) return;
 
             var keyboardState = Keyboard.GetState();
-            var mode = keyboardState.IsKeyDown(Keys.LeftShift) || keyboardState.IsKeyDown(Keys.RightShift)
-                ? MovementMode.Run
-                : MovementMode.Jog;
+            var mode = MovementMode.Jog;
 
             Vector2 nextPos = playerPosComp.WorldPosition + direction;
 
