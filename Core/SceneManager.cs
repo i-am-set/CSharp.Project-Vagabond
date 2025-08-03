@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Scenes;
 using System.Collections.Generic;
 using MonoGame.Extended.BitmapFonts;
+using System;
 
 namespace ProjectVagabond
 {
@@ -10,25 +11,21 @@ namespace ProjectVagabond
     {
         Idle,
         FadingOut,
+        HoldingBlack,
         FadingIn
     }
 
     public class SceneManager
     {
-        // Injected Dependencies
-        private readonly Global _global;
-        private readonly GraphicsDeviceManager _graphics;
-
-        // Scene Management State
-        private readonly Dictionary<GameSceneState, GameScene> _scenes = new();
+        private readonly Dictionary<GameSceneState, GameScene> _scenes = new Dictionary<GameSceneState, GameScene>();
         private GameScene _currentScene;
-
-        // Fade Transition State
-        private FadeState _fadeState = FadeState.Idle;
-        private float _fadeAlpha = 0.0f;
-        private float _fadeDuration = 0.1f;
-        private Texture2D _fadeTexture;
         private GameSceneState _nextSceneState;
+
+        private SceneOutroAnimator _outroAnimator;
+        private bool _isTransitioning = false;
+        private bool _isHoldingBlack = false;
+        private float _holdTimer = 0f;
+        private const float HOLD_DURATION = 0.5f;
 
         /// <summary>
         /// The currently active scene.
@@ -40,12 +37,7 @@ namespace ProjectVagabond
         /// </summary>
         public InputDevice LastInputDevice { get; set; } = InputDevice.Mouse;
 
-        public SceneManager()
-        {
-            // Acquire dependencies from the ServiceLocator
-            _global = ServiceLocator.Get<Global>();
-            _graphics = ServiceLocator.Get<GraphicsDeviceManager>();
-        }
+        public SceneManager() { }
 
         /// <summary>
         /// Adds a scene to the manager and initializes it.
@@ -68,41 +60,30 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Initiates a hard-cut transition to a new scene via a temporary transition scene.
-        /// </summary>
-        /// <param name="nextState">The final destination scene.</param>
-        /// <param name="transitionDelay">The time to spend in the transition scene.</param>
-        public void TransitionToScene(GameSceneState nextState, float transitionDelay = 0.5f)
-        {
-            if (_scenes.TryGetValue(GameSceneState.Transition, out var scene) && scene is TransitionScene transitionScene)
-            {
-                transitionScene.SetTransition(nextState, transitionDelay);
-                ChangeScene(GameSceneState.Transition); // Instant switch to the transition scene
-            }
-        }
-
-        /// <summary>
-        /// Changes the currently active scene, with an optional fade transition.
+        /// Changes the currently active scene via an outro/intro animation sequence.
         /// </summary>
         /// <param name="state">The state of the scene to switch to.</param>
-        /// <param name="fade_duration">The duration of the fade transition. If 0, the switch is instant.</param>
-        public void ChangeScene(GameSceneState state, float fade_duration = 0.0f)
+        public void ChangeScene(GameSceneState state)
         {
-            if (_fadeState != FadeState.Idle)
-            {
-                return;
-            }
+            if (_isTransitioning) return;
 
-            if (fade_duration > 0.0f)
+            _isTransitioning = true;
+            _nextSceneState = state;
+
+            _outroAnimator = new SceneOutroAnimator();
+            _outroAnimator.OnComplete += HandleOutroComplete;
+            _outroAnimator.Start(new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT));
+        }
+
+        private void HandleOutroComplete()
+        {
+            if (_outroAnimator != null)
             {
-                _fadeDuration = fade_duration;
-                _nextSceneState = state;
-                _fadeState = FadeState.FadingOut;
+                _outroAnimator.OnComplete -= HandleOutroComplete;
+                _outroAnimator = null;
             }
-            else
-            {
-                SwitchToScene(state);
-            }
+            _isHoldingBlack = true;
+            _holdTimer = 0f;
         }
 
         /// <summary>
@@ -121,38 +102,23 @@ namespace ProjectVagabond
 
         public void Update(GameTime gameTime)
         {
-            if (_fadeState == FadeState.Idle)
+            if (_isTransitioning)
             {
-                _currentScene?.Update(gameTime);
+                _outroAnimator?.Update(gameTime);
+                if (_isHoldingBlack)
+                {
+                    _holdTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    if (_holdTimer >= HOLD_DURATION)
+                    {
+                        _isHoldingBlack = false;
+                        _isTransitioning = false;
+                        SwitchToScene(_nextSceneState);
+                    }
+                }
             }
             else
             {
-                UpdateFade(gameTime);
-            }
-        }
-
-        private void UpdateFade(GameTime gameTime)
-        {
-            float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            if (_fadeState == FadeState.FadingOut)
-            {
-                _fadeAlpha += delta / _fadeDuration;
-                if (_fadeAlpha >= 1.0f)
-                {
-                    _fadeAlpha = 1.0f;
-                    SwitchToScene(_nextSceneState);
-                    _fadeState = FadeState.FadingIn;
-                }
-            }
-            else if (_fadeState == FadeState.FadingIn)
-            {
-                _fadeAlpha -= delta / _fadeDuration;
-                if (_fadeAlpha <= 0.0f)
-                {
-                    _fadeAlpha = 0.0f;
-                    _fadeState = FadeState.Idle;
-                }
+                _currentScene?.Update(gameTime);
             }
         }
 
@@ -170,37 +136,17 @@ namespace ProjectVagabond
         {
             _currentScene?.DrawOverlay(spriteBatch, font, gameTime);
 
-            if (spriteBatch == null)
+            if (_isTransitioning && _outroAnimator != null)
             {
-                return;
+                _outroAnimator.Draw(spriteBatch, font, gameTime, null);
             }
 
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-
-            DrawFade(spriteBatch, _graphics.GraphicsDevice);
-
-            // The version text is now drawn in Core.cs to ensure it scales with the render target.
-
-            spriteBatch.End();
-        }
-
-        private void DrawFade(SpriteBatch spriteBatch, GraphicsDevice graphicsDevice)
-        {
-            if (_fadeAlpha <= 0.0f)
+            if (_isHoldingBlack)
             {
-                return;
+                spriteBatch.Begin();
+                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
+                spriteBatch.End();
             }
-
-            if (_fadeTexture == null)
-            {
-                _fadeTexture = new Texture2D(graphicsDevice, 1, 1);
-                _fadeTexture.SetData(new[] { Color.White });
-            }
-
-            var screenBounds = graphicsDevice.Viewport.Bounds;
-            var fadeColor = _global.Palette_Black * _fadeAlpha;
-
-            spriteBatch.Draw(_fadeTexture, screenBounds, fadeColor);
         }
     }
 }

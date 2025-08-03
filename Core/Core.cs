@@ -65,12 +65,15 @@ namespace ProjectVagabond
         private DiceRollingSystem _diceRollingSystem;
         private BackgroundManager _backgroundManager;
         private PreEncounterAnimationSystem _preEncounterAnimationSystem;
+        private LoadingScreen _loadingScreen;
 
         // Input State
         private KeyboardState _previousKeyboardState;
 
         // Physics Timestep
         private float _physicsTimeAccumulator = 0f;
+        private TimeSpan _scaledTotalGameTime = TimeSpan.Zero;
+        private bool _isTimeSlowed = false;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -97,6 +100,7 @@ namespace ProjectVagabond
             ServiceLocator.Register<GameSettings>(_settings);
 
             _global = ServiceLocator.Get<Global>();
+            _isTimeSlowed = _global.EnableMasterTimeScaleOnStart;
 
             // Phase 2: GraphicsDevice Registration
             ServiceLocator.Register<GraphicsDevice>(GraphicsDevice);
@@ -123,7 +127,9 @@ namespace ProjectVagabond
             var worldClockManager = new WorldClockManager();
             ServiceLocator.Register<WorldClockManager>(worldClockManager);
 
-
+            _loadingScreen = new LoadingScreen();
+            ServiceLocator.Register<LoadingScreen>(_loadingScreen);
+            _loadingScreen.OnComplete += () => _sceneManager.ChangeScene(GameSceneState.MainMenu);
 
             var noiseManager = new NoiseMapManager();
             ServiceLocator.Register<NoiseMapManager>(noiseManager);
@@ -254,7 +260,6 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
             _sceneManager.AddScene(GameSceneState.Encounter, new EncounterScene());
-            _sceneManager.AddScene(GameSceneState.Transition, new TransitionScene());
 
             OnResize(null, null);
             base.Initialize();
@@ -293,7 +298,8 @@ namespace ProjectVagabond
             _gameState.InitializeWorld();
             _gameState.InitializeRenderableEntities();
 
-            _sceneManager.ChangeScene(GameSceneState.MainMenu);
+            _loadingScreen.AddTask(new DiceWarmupTask());
+            _loadingScreen.Start();
         }
 
         /// <summary>
@@ -331,6 +337,10 @@ namespace ProjectVagabond
             if (currentKeyboardState.IsKeyDown(Keys.F1) && _previousKeyboardState.IsKeyUp(Keys.F1))
             {
                 _diceRollingSystem.DebugShowColliders = !_diceRollingSystem.DebugShowColliders;
+            }
+            if (currentKeyboardState.IsKeyDown(Keys.F4) && _previousKeyboardState.IsKeyUp(Keys.F4))
+            {
+                _isTimeSlowed = !_isTimeSlowed;
             }
 
             // Use F2 to trigger a sample grouped dice roll for demonstration.
@@ -374,9 +384,22 @@ namespace ProjectVagabond
 
             _previousKeyboardState = currentKeyboardState;
 
+            // Create a scaled GameTime object for slow-motion debugging.
+            float currentTimeScale = _isTimeSlowed ? _global.MasterTimeScale : 1.0f;
+            var scaledElapsedTime = TimeSpan.FromTicks((long)(gameTime.ElapsedGameTime.Ticks * currentTimeScale));
+            _scaledTotalGameTime += scaledElapsedTime;
+            var scaledGameTime = new GameTime(_scaledTotalGameTime, scaledElapsedTime);
+
+            if (_loadingScreen.IsActive)
+            {
+                _loadingScreen.Update(scaledGameTime);
+                _diceRollingSystem.Update(scaledGameTime); // Allow dice to update for warmup
+                return; // Block all other game updates
+            }
+
             // This ensures physics calculations are stable and not dependent on the frame rate.
             // We multiply by the simulation speed to "fast forward" the physics time.
-            float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float elapsedSeconds = (float)scaledGameTime.ElapsedGameTime.TotalSeconds;
             _physicsTimeAccumulator += elapsedSeconds * _global.DiceSimulationSpeedMultiplier;
 
             while (_physicsTimeAccumulator >= Global.FIXED_PHYSICS_TIMESTEP)
@@ -388,14 +411,14 @@ namespace ProjectVagabond
             }
 
             // --- Frame-Rate Dependent Updates ---
-            _sceneManager.Update(gameTime);
-            _tooltipManager.Update(gameTime); // Tooltips should always update.
-            _particleSystemManager.Update(gameTime);
-            _diceRollingSystem.Update(gameTime); // Update dice visuals and game logic every frame.
-            _backgroundManager.Update(gameTime);
+            _sceneManager.Update(scaledGameTime);
+            _tooltipManager.Update(scaledGameTime); // Tooltips should always update.
+            _particleSystemManager.Update(scaledGameTime);
+            _diceRollingSystem.Update(scaledGameTime); // Update dice visuals and game logic every frame.
+            _backgroundManager.Update(scaledGameTime);
 
             // This system handles core logic that must run even when paused (to handle interruptions).
-            _combatInitiationSystem.Update(gameTime);
+            _combatInitiationSystem.Update(scaledGameTime);
 
             // These systems handle game logic and should be paused.
             if (!_gameState.IsPaused)
@@ -406,11 +429,11 @@ namespace ProjectVagabond
                 else if (_sceneManager.CurrentActiveScene is GameMapScene)
                 {
                     _gameState.UpdateActiveEntities();
-                    _systemManager.Update(gameTime);
+                    _systemManager.Update(scaledGameTime);
                 }
             }
 
-            base.Update(gameTime);
+            base.Update(gameTime); // Base.Update uses the unscaled gameTime for window events.
         }
 
         protected override void Draw(GameTime gameTime)
@@ -474,6 +497,14 @@ namespace ProjectVagabond
 
             // Scene-specific overlays are drawn directly to the backbuffer.
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
+
+            // The loading screen is drawn last, on top of everything else.
+            if (_loadingScreen.IsActive)
+            {
+                _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+                _loadingScreen.Draw(_spriteBatch, _defaultFont);
+                _spriteBatch.End();
+            }
 
             base.Draw(gameTime);
         }

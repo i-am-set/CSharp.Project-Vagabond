@@ -64,7 +64,11 @@ namespace ProjectVagabond
 
             _buttonMap = _headerButtons.ToDictionary(b => b.Function.ToLowerInvariant(), b => b);
 
-            // Initialize header state to be hidden
+            ResetHeaderState();
+        }
+
+        public void ResetHeaderState()
+        {
             _headerYOffset = HEADER_HIDDEN_Y_OFFSET;
             _headerTargetYOffset = HEADER_HIDDEN_Y_OFFSET;
         }

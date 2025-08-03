@@ -112,6 +112,10 @@ namespace ProjectVagabond
         // INSTANCE VARIABLES
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
+        // Debugging variables
+        public bool EnableMasterTimeScaleOnStart { get; set; } = true;
+        public float MasterTimeScale { get; set; } = 0.1f; // 1.0f = normal speed
+
         // Settings variables
         public bool UseImperialUnits { get; set; } = false;
         public bool Use24HourClock { get; set; } = false;

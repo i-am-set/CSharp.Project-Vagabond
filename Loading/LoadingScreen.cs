@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -19,6 +20,7 @@ namespace ProjectVagabond.Scenes
         private int _ellipsisCount = 0;
 
         public bool IsActive { get; private set; }
+        public event Action OnComplete;
 
         // Progress bar animation
         private float _visualProgress = 0f;
@@ -95,6 +97,7 @@ namespace ProjectVagabond.Scenes
                 if (_holdTimer >= HOLD_DURATION && _progressAnimTimer >= PROGRESS_ANIM_DURATION)
                 {
                     IsActive = false;
+                    OnComplete?.Invoke();
                 }
             }
             // Only process tasks if not all are complete
@@ -171,21 +174,21 @@ namespace ProjectVagabond.Scenes
 
             var pixel = ServiceLocator.Get<Texture2D>();
 
+            // Loading bar layout
+            int segmentsAreaWidth = LOADING_BAR_SEGMENTS * (SEGMENT_WIDTH + SEGMENT_GAP) - SEGMENT_GAP;
+            int barWidth = segmentsAreaWidth + (horizontalPadding * 2);
+            int barX = (Global.VIRTUAL_WIDTH - barWidth) / 2;
+            int barY = (Global.VIRTUAL_HEIGHT - BAR_HEIGHT) / 2;
+            var barBounds = new Rectangle(barX, barY, barWidth, BAR_HEIGHT);
+
             // Loading text
             string loadingText = "Loading" + new string('.', _ellipsisCount);
             Vector2 textSize = font.MeasureString(loadingText);
             Vector2 textPosition = new Vector2(
                 (Global.VIRTUAL_WIDTH - textSize.X) / 2,
-                (Global.VIRTUAL_HEIGHT) - 45
+                barBounds.Y - textSize.Y - 10
             );
             spriteBatch.DrawString(font, loadingText, textPosition, _global.Palette_BrightWhite);
-
-            // Loading bar layout
-            int segmentsAreaWidth = LOADING_BAR_SEGMENTS * (SEGMENT_WIDTH + SEGMENT_GAP) - SEGMENT_GAP;
-            int barWidth = segmentsAreaWidth + (horizontalPadding * 2);
-            int barX = (Global.VIRTUAL_WIDTH - barWidth) / 2;
-            int barY = (Global.VIRTUAL_HEIGHT - 20 - (BAR_HEIGHT / 2));
-            var barBounds = new Rectangle(barX, barY, barWidth, BAR_HEIGHT);
 
             // Border
             var borderRect = new Rectangle(barBounds.X - 2, barBounds.Y - 2, barBounds.Width + 4, barBounds.Height + 4);

@@ -16,9 +16,7 @@ namespace ProjectVagabond
             public bool IsActive;
             public Vector2 WorldPosition;
             public float AnimationTimer;
-            public float CurrentScale;
             public Vector2 ShakeOffset;
-            public float YOffset;
         }
 
         // Dependencies
@@ -33,10 +31,9 @@ namespace ProjectVagabond
         private EncounterData _pendingEncounter;
 
         // Animation Tuning
-        private const float MaxScale = 3.0f;
-        private const float FinalScale = 1.2f;
-        private const float TimeToMaxSize = 0.4f; // Time to expand
-        private const float AnimationDuration = TimeToMaxSize + 0.2f; // Total duration (expand + shrink)
+        private const float INDICATOR_SCALE = 1f;
+        private const float SHAKE_MAGNITUDE = 1.0f;
+        private const float ANIMATION_DURATION = 0.7f;
 
         public bool IsAnimating => _indicator.IsActive;
 
@@ -57,9 +54,7 @@ namespace ProjectVagabond
             _pendingEncounter = e.Encounter;
             _indicator.WorldPosition = _gameState.PlayerWorldPos;
             _indicator.AnimationTimer = 0f;
-            _indicator.CurrentScale = 0f;
             _indicator.ShakeOffset = Vector2.Zero;
-            _indicator.YOffset = 0f;
             _indicator.IsActive = true;
         }
 
@@ -68,23 +63,14 @@ namespace ProjectVagabond
             if (!_indicator.IsActive) return;
 
             _indicator.AnimationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            float progress = MathHelper.Clamp(_indicator.AnimationTimer / AnimationDuration, 0f, 1f);
 
-            if (_indicator.AnimationTimer < TimeToMaxSize)
-            {
-                // Phase 1: Expand from 0 to MaxScale
-                float expandProgress = _indicator.AnimationTimer / TimeToMaxSize;
-                _indicator.CurrentScale = MathHelper.Lerp(0f, MaxScale, Easing.EaseOutCubic(expandProgress));
-            }
-            else
-            {
-                // Phase 2: Shrink from MaxScale to FinalScale
-                float shrinkDuration = AnimationDuration - TimeToMaxSize;
-                float shrinkProgress = (_indicator.AnimationTimer - TimeToMaxSize) / shrinkDuration;
-                _indicator.CurrentScale = MathHelper.Lerp(MaxScale, FinalScale, Easing.EaseInQuad(shrinkProgress));
-            }
+            // Apply a random shake offset each frame
+            _indicator.ShakeOffset = new Vector2(
+                (_random.NextSingle() * 2f - 1f) * SHAKE_MAGNITUDE,
+                (_random.NextSingle() * 2f - 1f) * SHAKE_MAGNITUDE
+            );
 
-            if (progress >= 1.0f)
+            if (_indicator.AnimationTimer >= ANIMATION_DURATION)
             {
                 _indicator.IsActive = false;
                 _encounterManager.TriggerEncounter(_pendingEncounter.Id);
@@ -103,11 +89,11 @@ namespace ProjectVagabond
             Vector2 textSize = font.MeasureString(text);
             Vector2 textOrigin = textSize / 2f;
 
-            // Position the indicator centered horizontally and just above the player's tile
-            Vector2 drawPosition = screenPos.Value + new Vector2(Global.GRID_CELL_SIZE / 2f, -textSize.Y / 2f + 2);
+            // Position the indicator centered horizontally and just above the player's tile, then apply the shake
+            Vector2 drawPosition = screenPos.Value + new Vector2(Global.GRID_CELL_SIZE / 2f, -textSize.Y / 2f) + _indicator.ShakeOffset;
 
-            // Draw main text without an outline
-            spriteBatch.DrawString(font, text, drawPosition, _global.Palette_Red, 0f, textOrigin, _indicator.CurrentScale, SpriteEffects.None, 0f);
+            // Draw main text with a fixed scale
+            spriteBatch.DrawString(font, text, drawPosition, _global.Palette_Red, 0f, textOrigin, INDICATOR_SCALE, SpriteEffects.None, 0f);
         }
     }
 }

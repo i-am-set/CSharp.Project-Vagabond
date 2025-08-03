@@ -26,10 +26,8 @@ namespace ProjectVagabond.Scenes
         private readonly PlayerInputSystem _playerInputSystem;
         private WaitDialog _waitDialog;
         private ImageButton _settingsButton;
-        private readonly LoadingScreen _loadingScreen;
 
         // State
-        private bool _isInitialLoad = true;
         private KeyboardState _previousKeyboardState;
 
         public GameMapScene()
@@ -44,7 +42,6 @@ namespace ProjectVagabond.Scenes
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _preEncounterAnimationSystem = ServiceLocator.Get<PreEncounterAnimationSystem>();
             _playerInputSystem = ServiceLocator.Get<PlayerInputSystem>();
-            _loadingScreen = new LoadingScreen();
         }
 
         protected override Rectangle GetAnimatedBounds()
@@ -61,13 +58,7 @@ namespace ProjectVagabond.Scenes
             base.Enter();
             _core.IsMouseVisible = true;
             _waitDialog = new WaitDialog(this);
-
-            if (_isInitialLoad)
-            {
-                _isInitialLoad = false;
-                _loadingScreen.AddTask(new DiceWarmupTask());
-                _loadingScreen.Start();
-            }
+            _mapRenderer.ResetHeaderState();
 
             if (_settingsButton == null)
             {
@@ -78,8 +69,15 @@ namespace ProjectVagabond.Scenes
                 {
                     UseScreenCoordinates = false // Render as part of the virtual scene
                 };
-                _settingsButton.OnClick += OpenSettings;
             }
+            // The event is unsubscribed in Exit(), so it must be re-subscribed every time the scene is entered.
+            _settingsButton.OnClick += OpenSettings;
+
+            // Set the button's position once, as it's static.
+            const int padding = 5;
+            int buttonX = Global.VIRTUAL_WIDTH - _settingsButton.Bounds.Width - padding;
+            int buttonY = Global.VIRTUAL_HEIGHT - _settingsButton.Bounds.Height - padding;
+            _settingsButton.Bounds = new Rectangle(buttonX, buttonY, _settingsButton.Bounds.Width, _settingsButton.Bounds.Height);
 
             _previousKeyboardState = Keyboard.GetState();
         }
@@ -102,13 +100,6 @@ namespace ProjectVagabond.Scenes
         {
             base.Update(gameTime); // This now updates the intro animator
 
-            if (_loadingScreen.IsActive)
-            {
-                _loadingScreen.Update(gameTime);
-                _diceRollingSystem.Update(gameTime);
-                return;
-            }
-
             if (_gameState.IsAwaitingTimePass)
             {
                 var worldClock = ServiceLocator.Get<WorldClockManager>();
@@ -120,10 +111,13 @@ namespace ProjectVagabond.Scenes
             }
 
             var currentKeyboardState = Keyboard.GetState();
-            _diceRollingSystem.Update(gameTime);
-
+            var currentMouseState = Mouse.GetState();
             var font = ServiceLocator.Get<BitmapFont>();
+
+            _diceRollingSystem.Update(gameTime);
             _waitDialog.Update(gameTime);
+            _settingsButton?.Update(currentMouseState);
+
             if (_waitDialog.IsActive || _preEncounterAnimationSystem.IsAnimating || (_introAnimator != null && !_introAnimator.IsComplete))
             {
                 _previousKeyboardState = currentKeyboardState;
@@ -151,9 +145,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            var currentMouseState = Mouse.GetState();
-            _settingsButton?.Update(currentMouseState);
-
             if (_gameState.IsPaused)
             {
                 _previousKeyboardState = currentKeyboardState;
@@ -177,19 +168,8 @@ namespace ProjectVagabond.Scenes
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            if (_loadingScreen.IsActive)
-            {
-                // The loading screen is a special case that bypasses the intro animation
-                // and manages its own SpriteBatch.
-                spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                _loadingScreen.Draw(spriteBatch, font);
-                spriteBatch.End();
-            }
-            else
-            {
-                // For the normal scene, use the base Draw method which handles the intro animator.
-                base.Draw(spriteBatch, font, gameTime);
-            }
+            // For the normal scene, use the base Draw method which handles the intro animator.
+            base.Draw(spriteBatch, font, gameTime);
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -211,15 +191,8 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Draw the settings button within the main render target so it scales correctly.
-            if (_settingsButton != null)
-            {
-                const int padding = 5;
-                int buttonX = Global.VIRTUAL_WIDTH - _settingsButton.Bounds.Width - padding;
-                int buttonY = Global.VIRTUAL_HEIGHT - _settingsButton.Bounds.Height - padding;
-                _settingsButton.Bounds = new Rectangle(buttonX, buttonY, _settingsButton.Bounds.Width, _settingsButton.Bounds.Height);
-                _settingsButton.Draw(spriteBatch, font, gameTime);
-            }
+            // Draw the settings button. Its position is now static and set in Enter().
+            _settingsButton?.Draw(spriteBatch, font, gameTime);
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

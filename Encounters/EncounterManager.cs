@@ -94,7 +94,7 @@ namespace ProjectVagabond
                 if (encounterScene != null)
                 {
                     encounterScene.SetEncounter(encounterData);
-                    _sceneManager.TransitionToScene(GameSceneState.Encounter);
+                    _sceneManager.ChangeScene(GameSceneState.Encounter);
                 }
                 else
                 {

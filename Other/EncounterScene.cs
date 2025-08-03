@@ -62,8 +62,6 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
-            _hapticsManager.QuickZoomInPulseSmall();
-
             _contentState = ContentState.Displaying;
             _choiceButtons.Clear();
             _wrappedDescription.Clear();
@@ -253,12 +251,12 @@ namespace ProjectVagabond.Scenes
             else if (miniGameReq != null)
             {
                 _encounterManager.ProcessOutcomes(new List<EncounterOutcomeData> { new EncounterOutcomeData { Type = "LogMessage", Value = "A mini-game would start here." } });
-                _sceneManager.TransitionToScene(GameSceneState.TerminalMap);
+                _sceneManager.ChangeScene(GameSceneState.TerminalMap);
             }
             else
             {
                 _encounterManager.ProcessOutcomes(choice.Outcomes);
-                _sceneManager.TransitionToScene(GameSceneState.TerminalMap);
+                _sceneManager.ChangeScene(GameSceneState.TerminalMap);
             }
         }
 
@@ -286,7 +284,7 @@ namespace ProjectVagabond.Scenes
 
                 System.Threading.Tasks.Task.Delay(1500).ContinueWith(t =>
                 {
-                    _sceneManager.TransitionToScene(GameSceneState.TerminalMap);
+                    _sceneManager.ChangeScene(GameSceneState.TerminalMap);
                 });
             }
         }

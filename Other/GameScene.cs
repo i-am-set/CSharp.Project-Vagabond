@@ -15,7 +15,6 @@ namespace ProjectVagabond.Scenes
         TerminalMap,
         Dialogue,
         Settings,
-        Transition,
         Encounter
     }
 
@@ -80,8 +79,9 @@ namespace ProjectVagabond.Scenes
             _inputBlockTimer = INPUT_BLOCK_DURATION;
 
             _introAnimator = new SceneIntroAnimator();
+            var contentBounds = GetAnimatedBounds();
             var animationBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-            _introAnimator.Start(animationBounds);
+            _introAnimator.Start(animationBounds, contentBounds);
 
             if (this.LastUsedInputForNav == InputDevice.Keyboard)
             {
@@ -136,12 +136,15 @@ namespace ProjectVagabond.Scenes
         /// </summary>
         public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // The scene content is always drawn first.
-            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp);
+            // Get the transform from the animator. It will be Matrix.Identity if not animating.
+            Matrix contentTransform = _introAnimator?.GetContentTransform() ?? Matrix.Identity;
+
+            // The scene content is always drawn first, with the potential transformation.
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: contentTransform);
             DrawSceneContent(spriteBatch, font, gameTime);
             spriteBatch.End();
 
-            // The animator, if active, draws its mask on top of the already-drawn content.
+            // The animator, if active, draws its mask on top of the scene.
             if (_introAnimator != null && !_introAnimator.IsComplete)
             {
                 // The animator's Draw method now only draws the mask and handles its own Begin/End.
