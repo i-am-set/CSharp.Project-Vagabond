@@ -95,8 +95,6 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime); // This now updates the intro animator
-
             if (_gameState.IsAwaitingTimePass)
             {
                 var worldClock = ServiceLocator.Get<WorldClockManager>();
@@ -117,7 +115,7 @@ namespace ProjectVagabond.Scenes
 
             if (_waitDialog.IsActive || _preEncounterAnimationSystem.IsAnimating || (_introAnimator != null && !_introAnimator.IsComplete))
             {
-                _previousKeyboardState = currentKeyboardState;
+                base.Update(gameTime);
                 return;
             }
 
@@ -144,7 +142,7 @@ namespace ProjectVagabond.Scenes
 
             if (_gameState.IsPaused)
             {
-                _previousKeyboardState = currentKeyboardState;
+                base.Update(gameTime);
                 return;
             }
 
@@ -160,7 +158,8 @@ namespace ProjectVagabond.Scenes
             }
 
             _hapticsManager.Update(gameTime);
-            _previousKeyboardState = currentKeyboardState;
+            
+            base.Update(gameTime); // This now updates the intro animator and previous input states
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

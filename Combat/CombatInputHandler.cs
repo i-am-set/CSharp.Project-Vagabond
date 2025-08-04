@@ -131,18 +131,23 @@ namespace ProjectVagabond.Combat
                 // If mouse moved but no card was hovered, handle deselection and focus change
                 if (mouseMoved && !cardInteractionFound)
                 {
+                    // If the mouse is in an activation area but not over a card,
+                    // focus that hand and deselect its current card.
                     if (_leftActionMenu.ActivationArea.Contains(VirtualMousePosition))
                     {
                         _focusedHand = HandType.Left;
-                        _leftSelectedIndex = -1; // Deselect card
+                        _leftSelectedIndex = -1;
                     }
                     else if (_rightActionMenu.ActivationArea.Contains(VirtualMousePosition))
                     {
                         _focusedHand = HandType.Right;
-                        _rightSelectedIndex = -1; // Deselect card
+                        _rightSelectedIndex = -1;
                     }
-                    // If mouse is outside all activation areas, we don't change focus,
-                    // preserving keyboard navigation state.
+                    else // If the mouse is outside both activation areas, deselect everything.
+                    {
+                        _leftSelectedIndex = -1;
+                        _rightSelectedIndex = -1;
+                    }
                 }
             }
 

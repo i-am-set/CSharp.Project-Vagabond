@@ -225,7 +225,7 @@ namespace ProjectVagabond.Scenes
             _tempSettings.Resolution = _settings.Resolution;
             _tempSettings.IsFullscreen = _settings.IsFullscreen;
             _tempSettings.IsVsync = _settings.IsVsync;
-            _tempSettings.IsFrameLimiterEnabled = _tempSettings.IsFrameLimiterEnabled;
+            _tempSettings.IsFrameLimiterEnabled = _settings.IsFrameLimiterEnabled;
             _tempSettings.TargetFramerate = _settings.TargetFramerate;
             _tempSettings.SmallerUi = _settings.SmallerUi;
             _tempSettings.UseImperialUnits = _settings.UseImperialUnits;
@@ -288,17 +288,18 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime);
             _titleBobTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             if (IsInputBlocked || (_introAnimator != null && !_introAnimator.IsComplete))
             {
+                base.Update(gameTime);
                 return;
             }
 
             if (_confirmationDialog.IsActive)
             {
                 _confirmationDialog.Update(gameTime);
+                base.Update(gameTime);
                 return;
             }
 
@@ -349,6 +350,8 @@ namespace ProjectVagabond.Scenes
             var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Apply");
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) AttemptToGoBack();
+
+            base.Update(gameTime);
         }
 
         private void HandleKeyboardInput(KeyboardState currentKeyboardState)

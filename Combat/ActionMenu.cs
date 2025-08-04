@@ -172,95 +172,114 @@ namespace ProjectVagabond.Combat.UI
         }
 
         /// <summary>
-        /// Draws the action menu at its current animated position.
-        /// This method uses origin-based drawing to support rotation.
+        /// Draws the action menu using a two-pass system to ensure the hovered card is on top.
         /// </summary>
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
+            CombatCard hoveredCard = null;
 
+            // First pass: Draw all non-hovered cards
             for (int i = 0; i < _cards.Count; i++)
             {
-                var card = _cards[i];
-                bool isHovered = i == _hoveredIndex;
-
-                // --- Common Properties for Drawing ---
-                var cardRotation = card.CurrentRotation;
-                var cardScale = card.CurrentScale;
-                var cardDrawPosition = card.CurrentBounds.Center;
-
-                // Apply rotational wiggle to the hovered card
-                if (isHovered)
+                if (i != _hoveredIndex)
                 {
-                    float wiggle = (float)Math.Sin(_wiggleTimer * WIGGLE_SPEED) * WIGGLE_ROTATION_RADIANS;
-                    cardRotation += wiggle;
+                    DrawCard(spriteBatch, font, gameTime, pixel, _cards[i], false);
                 }
-
-                // 1. Draw Border using lines for a perfect, rotatable outline
-                float borderThickness = isHovered ? 3f : 2f;
-                Color borderColor = BORDER_COLOR * (card.CurrentTint.A / 255f);
-
-                // Calculate the four corners of the card relative to its origin (0,0)
-                var halfSize = CARD_SIZE.ToVector2() / 2f;
-                var corners = new Vector2[4]
+                else
                 {
-                    new Vector2(-halfSize.X, -halfSize.Y), // Top-Left
-                    new Vector2( halfSize.X, -halfSize.Y), // Top-Right
-                    new Vector2( halfSize.X,  halfSize.Y), // Bottom-Right
-                    new Vector2(-halfSize.X,  halfSize.Y)  // Bottom-Left
-                };
-
-                // Create the transformation matrix using the potentially wiggled rotation
-                var transform = Matrix.CreateScale(cardScale)
-                              * Matrix.CreateRotationZ(cardRotation)
-                              * Matrix.CreateTranslation(cardDrawPosition.X, cardDrawPosition.Y, 0);
-
-                // Transform all corners
-                for (int j = 0; j < corners.Length; j++)
-                {
-                    corners[j] = Vector2.Transform(corners[j], transform);
+                    hoveredCard = _cards[i];
                 }
-
-                // Draw the lines connecting the transformed corners
-                spriteBatch.DrawLine(corners[0], corners[1], borderColor, borderThickness); // Top
-                spriteBatch.DrawLine(corners[1], corners[2], borderColor, borderThickness); // Right
-                spriteBatch.DrawLine(corners[2], corners[3], borderColor, borderThickness); // Bottom
-                spriteBatch.DrawLine(corners[3], corners[0], borderColor, borderThickness); // Left
-
-
-                // 2. Draw Card Background
-                var cardBaseOrigin = CARD_SIZE.ToVector2() / 2f;
-                spriteBatch.Draw(pixel, cardDrawPosition, null, card.CurrentTint, cardRotation, cardBaseOrigin, cardScale, SpriteEffects.None, 0f);
-
-                // 3. Draw placeholder image area
-                var imageAreaColor = new Color(CARD_IMAGE_AREA_COLOR.ToVector3() * card.CurrentTint.ToVector3());
-                var imageRect = new RectangleF(0, 0, CARD_SIZE.X, CARD_SIZE.Y * (2 / 3f));
-                Vector2 imageAreaOffset = new Vector2(0, -CARD_SIZE.Y * (1 / 6f)); // Offset from card center to image area center
-                Vector2 rotatedImageOffset = Vector2.Transform(imageAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));
-                Vector2 imageAreaDrawPos = cardDrawPosition + rotatedImageOffset;
-
-                // The origin for this sub-element is its own center.
-                var imageAreaOrigin = new Vector2(imageRect.Width / 2f, imageRect.Height / 2f);
-                spriteBatch.Draw(pixel, imageAreaDrawPos, new Rectangle(0, 0, (int)imageRect.Width, (int)imageRect.Height), imageAreaColor, cardRotation, imageAreaOrigin, cardScale, SpriteEffects.None, 0f);
-
-                // 4. Draw text background area
-                var textBgColor = new Color(CARD_TEXT_BG_COLOR.ToVector3() * card.CurrentTint.ToVector3());
-                var textBgRect = new RectangleF(0, 0, CARD_SIZE.X, CARD_SIZE.Y * (1 / 3f));
-                Vector2 textBgAreaOffset = new Vector2(0, CARD_SIZE.Y * (1 / 3f)); // Offset from card center to text area center
-                Vector2 rotatedTextBgOffset = Vector2.Transform(textBgAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));
-                Vector2 textBgAreaDrawPos = cardDrawPosition + rotatedTextBgOffset;
-
-                // The origin for this sub-element is its own center.
-                var textBgAreaOrigin = new Vector2(textBgRect.Width / 2f, textBgRect.Height / 2f);
-                spriteBatch.Draw(pixel, textBgAreaDrawPos, new Rectangle(0, 0, (int)textBgRect.Width, (int)textBgRect.Height), textBgColor, cardRotation, textBgAreaOrigin, cardScale, SpriteEffects.None, 0f);
-
-                // 5. Draw action name
-                var textColor = new Color(TEXT_COLOR.ToVector3() * card.CurrentTint.ToVector3());
-                float textDrawScale = card.CurrentScale;
-                Vector2 textSize = font.MeasureString(card.Action.Name);
-
-                spriteBatch.DrawString(font, card.Action.Name, textBgAreaDrawPos, textColor, cardRotation, textSize / 2f, textDrawScale, SpriteEffects.None, 0f);
             }
+
+            // Second pass: Draw the hovered card on top
+            if (hoveredCard != null)
+            {
+                DrawCard(spriteBatch, font, gameTime, pixel, hoveredCard, true);
+            }
+        }
+
+        /// <summary>
+        /// Helper method to draw a single card with all its visual elements.
+        /// </summary>
+        private void DrawCard(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Texture2D pixel, CombatCard card, bool isHovered)
+        {
+            // --- Common Properties for Drawing ---
+            var cardRotation = card.CurrentRotation;
+            var cardScale = card.CurrentScale;
+            var cardDrawPosition = card.CurrentBounds.Center;
+
+            // Apply rotational wiggle to the hovered card
+            if (isHovered)
+            {
+                float wiggle = (float)Math.Sin(_wiggleTimer * WIGGLE_SPEED) * WIGGLE_ROTATION_RADIANS;
+                cardRotation += wiggle;
+            }
+
+            // 1. Draw Border using lines for a perfect, rotatable outline
+            float borderThickness = isHovered ? 3f : 2f;
+            Color borderColor = BORDER_COLOR * (card.CurrentTint.A / 255f);
+
+            // Calculate the four corners of the card relative to its origin (0,0)
+            var halfSize = CARD_SIZE.ToVector2() / 2f;
+            var corners = new Vector2[4]
+            {
+                new Vector2(-halfSize.X, -halfSize.Y), // Top-Left
+                new Vector2( halfSize.X, -halfSize.Y), // Top-Right
+                new Vector2( halfSize.X,  halfSize.Y), // Bottom-Right
+                new Vector2(-halfSize.X,  halfSize.Y)  // Bottom-Left
+            };
+
+            // Create the transformation matrix using the potentially wiggled rotation
+            var transform = Matrix.CreateScale(cardScale)
+                          * Matrix.CreateRotationZ(cardRotation)
+                          * Matrix.CreateTranslation(cardDrawPosition.X, cardDrawPosition.Y, 0);
+
+            // Transform all corners
+            for (int j = 0; j < corners.Length; j++)
+            {
+                corners[j] = Vector2.Transform(corners[j], transform);
+            }
+
+            // Draw the lines connecting the transformed corners
+            spriteBatch.DrawLine(corners[0], corners[1], borderColor, borderThickness); // Top
+            spriteBatch.DrawLine(corners[1], corners[2], borderColor, borderThickness); // Right
+            spriteBatch.DrawLine(corners[2], corners[3], borderColor, borderThickness); // Bottom
+            spriteBatch.DrawLine(corners[3], corners[0], borderColor, borderThickness); // Left
+
+
+            // 2. Draw Card Background
+            var cardBaseOrigin = CARD_SIZE.ToVector2() / 2f;
+            spriteBatch.Draw(pixel, cardDrawPosition, null, card.CurrentTint, cardRotation, cardBaseOrigin, cardScale, SpriteEffects.None, 0f);
+
+            // 3. Draw placeholder image area
+            var imageAreaColor = new Color(CARD_IMAGE_AREA_COLOR.ToVector3() * card.CurrentTint.ToVector3());
+            var imageRect = new RectangleF(0, 0, CARD_SIZE.X, CARD_SIZE.Y * (2 / 3f));
+            Vector2 imageAreaOffset = new Vector2(0, -CARD_SIZE.Y * (1 / 6f)); // Offset from card center to image area center
+            Vector2 rotatedImageOffset = Vector2.Transform(imageAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));
+            Vector2 imageAreaDrawPos = cardDrawPosition + rotatedImageOffset;
+
+            // The origin for this sub-element is its own center.
+            var imageAreaOrigin = new Vector2(imageRect.Width / 2f, imageRect.Height / 2f);
+            spriteBatch.Draw(pixel, imageAreaDrawPos, new Rectangle(0, 0, (int)imageRect.Width, (int)imageRect.Height), imageAreaColor, cardRotation, imageAreaOrigin, cardScale, SpriteEffects.None, 0f);
+
+            // 4. Draw text background area
+            var textBgColor = new Color(CARD_TEXT_BG_COLOR.ToVector3() * card.CurrentTint.ToVector3());
+            var textBgRect = new RectangleF(0, 0, CARD_SIZE.X, CARD_SIZE.Y * (1 / 3f));
+            Vector2 textBgAreaOffset = new Vector2(0, CARD_SIZE.Y * (1 / 3f)); // Offset from card center to text area center
+            Vector2 rotatedTextBgOffset = Vector2.Transform(textBgAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));
+            Vector2 textBgAreaDrawPos = cardDrawPosition + rotatedTextBgOffset;
+
+            // The origin for this sub-element is its own center.
+            var textBgAreaOrigin = new Vector2(textBgRect.Width / 2f, textBgRect.Height / 2f);
+            spriteBatch.Draw(pixel, textBgAreaDrawPos, new Rectangle(0, 0, (int)textBgRect.Width, (int)textBgRect.Height), textBgColor, cardRotation, textBgAreaOrigin, cardScale, SpriteEffects.None, 0f);
+
+            // 5. Draw action name
+            var textColor = new Color(TEXT_COLOR.ToVector3() * card.CurrentTint.ToVector3());
+            float textDrawScale = card.CurrentScale;
+            Vector2 textSize = font.MeasureString(card.Action.Name);
+
+            spriteBatch.DrawString(font, card.Action.Name, textBgAreaDrawPos, textColor, cardRotation, textSize / 2f, textDrawScale, SpriteEffects.None, 0f);
         }
     }
 }

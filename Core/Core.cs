@@ -1,18 +1,18 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input; // Added for Keyboard state
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
-using ProjectVagabond.Combat; // Added for ActionManager
-using ProjectVagabond.Dice; // Added using directive
+using ProjectVagabond.Combat;
+using ProjectVagabond.Dice;
 using ProjectVagabond.Encounters;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using System;
-using System.Collections.Generic; // Added for List
-using System.Diagnostics;       // Added for Debug.WriteLine
-using System.Text;              // Added for StringBuilder
+using System.Collections.Generic; 
+using System.Diagnostics;
+using System.Text;           
 
 // TODO: generate different noise maps to generate different map things
 // TODO: add a way to generate different map elements based on the noise map
@@ -23,16 +23,10 @@ using System.Text;              // Added for StringBuilder
 // TODO: Wait command: (wait 3 hours 2 minutes)
 // TODO: Brainstorm a way to add POIs (think rust, darkwood, the long dark, tarkov)
 // TODO: Add a way to save and load the game state
-// TODO: Impliment dialogue logic into dialogue scene
-// TODO: Impliment combat logic into combat scene
-// TODO: Convert display to have larger map, smaller terminal, with the terminal input being hidden unless the player presses ~ to "open console"
 // TODO: Finish entity implimentation
 // TODO: Make "activeStatusEffectcomponent" a component that can be added to any entity, not just the player
 // TODO: Add a 1d8, 1d10, 1d12, and 1d20 to the dice rolling system; one at a time since its complex to impliment
-// TODO: Make the loading screen use the same display as the health bar
-// TODO: Make it so the game checks if a die is still moving before rerolling it, but if its moving outside of the bounds of the screen, then reroll, and on top of that have a 20 second timeout for rerolling dice that are still moving just in case the physics engine gets stuck
-// TODO: Make hit makrer number that appears on map entity
-// TODO: Speed up scrolling background and dice to match speed up
+// TODO: Make hit marker number that appears on map entity
 
 namespace ProjectVagabond
 {
@@ -485,9 +479,6 @@ namespace ProjectVagabond
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(Color.Black); // Clear with black as a base for letterboxing.
 
-            // Scene-specific underlays (like dialog dimming) are drawn directly to the backbuffer.
-            _sceneManager.DrawUnderlay(_spriteBatch, _defaultFont, gameTime);
-
             var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
 
@@ -503,6 +494,9 @@ namespace ProjectVagabond
                 _spriteBatch.Draw(diceTexture, _finalRenderRectangle, Color.White);
                 _spriteBatch.End();
             }
+
+            // Scene-specific underlays (like dialogs) are drawn directly to the backbuffer, on top of the main scene.
+            _sceneManager.DrawUnderlay(_spriteBatch, _defaultFont, gameTime);
 
             // Draw particles on top of everything else, respecting the shake matrix.
             _particleSystemManager.Draw(_spriteBatch, shakeMatrix);

@@ -111,16 +111,16 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime);
-
             if (IsInputBlocked || (_introAnimator != null && !_introAnimator.IsComplete))
             {
+                base.Update(gameTime);
                 return;
             }
 
             if (_confirmationDialog.IsActive)
             {
                 _confirmationDialog.Update(gameTime);
+                base.Update(gameTime);
                 return;
             }
 
@@ -203,6 +203,8 @@ namespace ProjectVagabond.Scenes
                     ConfirmExit();
                 }
             }
+
+            base.Update(gameTime);
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
