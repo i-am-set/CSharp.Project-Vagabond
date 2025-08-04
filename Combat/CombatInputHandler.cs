@@ -103,8 +103,7 @@ namespace ProjectVagabond.Combat
                             if (_combatManager.CurrentState == PlayerTurnState.Selecting)
                             {
                                 _focusedHand = HandType.Right;
-                                if (_rightActionMenu.Cards.Count > 0) _rightSelectedIndex = 0;
-                                else _rightSelectedIndex = -1;
+                                _rightSelectedIndex = -1; // For mouse, don't auto-select a card
                             }
                             return; // A click is a terminal action for this input frame
                         }
@@ -131,8 +130,7 @@ namespace ProjectVagabond.Combat
                                 if (_combatManager.CurrentState == PlayerTurnState.Selecting)
                                 {
                                     _focusedHand = HandType.Left;
-                                    if (_leftActionMenu.Cards.Count > 0) _leftSelectedIndex = 0;
-                                    else _leftSelectedIndex = -1;
+                                    _leftSelectedIndex = -1; // For mouse, don't auto-select a card
                                 }
                                 return; // A click is a terminal action for this input frame
                             }
@@ -144,17 +142,26 @@ namespace ProjectVagabond.Combat
                 // If mouse moved but no card was hovered, handle deselection and focus change
                 if (mouseMoved && !cardInteractionFound)
                 {
+                    bool leftSelected = !string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId);
+                    bool rightSelected = !string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId);
+
                     // If the mouse is in an activation area but not over a card,
-                    // focus that hand and deselect its current card.
+                    // focus that hand and deselect its current card, but only if that hand isn't already locked in.
                     if (_leftActionMenu.ActivationArea.Contains(VirtualMousePosition))
                     {
-                        _focusedHand = HandType.Left;
-                        _leftSelectedIndex = -1;
+                        if (!leftSelected)
+                        {
+                            _focusedHand = HandType.Left;
+                            _leftSelectedIndex = -1;
+                        }
                     }
                     else if (_rightActionMenu.ActivationArea.Contains(VirtualMousePosition))
                     {
-                        _focusedHand = HandType.Right;
-                        _rightSelectedIndex = -1;
+                        if (!rightSelected)
+                        {
+                            _focusedHand = HandType.Right;
+                            _rightSelectedIndex = -1;
+                        }
                     }
                     else // If the mouse is outside both activation areas, deselect everything.
                     {
