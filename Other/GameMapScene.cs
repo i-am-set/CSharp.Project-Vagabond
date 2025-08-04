@@ -27,9 +27,6 @@ namespace ProjectVagabond.Scenes
         private WaitDialog _waitDialog;
         private ImageButton _settingsButton;
 
-        // State
-        private KeyboardState _previousKeyboardState;
-
         public GameMapScene()
         {
             _gameState = ServiceLocator.Get<GameState>();

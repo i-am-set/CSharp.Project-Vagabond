@@ -76,8 +76,8 @@ namespace ProjectVagabond.Scenes
 
             _leftHandRenderer.Update(gameTime, _combatManager);
             _rightHandRenderer.Update(gameTime, _combatManager);
-            _leftActionMenu.Update(gameTime, _combatManager);
-            _rightActionMenu.Update(gameTime, _combatManager);
+            _leftActionMenu.Update(gameTime, _inputHandler);
+            _rightActionMenu.Update(gameTime, _inputHandler);
         }
 
         private void ResolveCurrentTurn()
@@ -130,8 +130,8 @@ namespace ProjectVagabond.Scenes
             _rightHandRenderer.Draw(spriteBatch, font, gameTime);
 
             // Draw the action menus on top
-            _leftActionMenu.Draw(spriteBatch, font, gameTime, _inputHandler.LeftSelectedIndex, _inputHandler.FocusedHand == HandType.Left);
-            _rightActionMenu.Draw(spriteBatch, font, gameTime, _inputHandler.RightSelectedIndex, _inputHandler.FocusedHand == HandType.Right);
+            _leftActionMenu.Draw(spriteBatch, font, gameTime);
+            _rightActionMenu.Draw(spriteBatch, font, gameTime);
 
             // Draw the "CAST" prompt if in the confirmation state
             if (_combatManager.CurrentState == PlayerTurnState.Confirming)

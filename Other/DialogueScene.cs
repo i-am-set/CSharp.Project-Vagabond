@@ -38,8 +38,6 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            int screenWidth = Global.VIRTUAL_WIDTH;
-            int screenHeight = Global.VIRTUAL_HEIGHT;
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             _mapRenderer.DrawMap(spriteBatch, font, gameTime);

@@ -28,12 +28,13 @@ namespace ProjectVagabond.Combat
 
         // Selection state
         private HandType _focusedHand = HandType.Left;
-        private int _leftSelectedIndex = 0;
-        private int _rightSelectedIndex = 0;
+        private int _leftSelectedIndex = -1;
+        private int _rightSelectedIndex = -1;
 
         public int LeftSelectedIndex => _leftSelectedIndex;
         public int RightSelectedIndex => _rightSelectedIndex;
         public HandType FocusedHand => _focusedHand;
+        public Vector2 VirtualMousePosition { get; private set; }
 
         public CombatInputHandler(CombatManager combatManager, HandRenderer leftHandRenderer, HandRenderer rightHandRenderer, ActionMenu leftActionMenu, ActionMenu rightActionMenu)
         {
@@ -50,77 +51,109 @@ namespace ProjectVagabond.Combat
         public void Reset()
         {
             _focusedHand = HandType.Left;
-            _leftSelectedIndex = 0;
-            _rightSelectedIndex = 0;
+            _leftSelectedIndex = -1; // Start with no card selected
+            _rightSelectedIndex = -1; // Start with no card selected
             _previousKeyboardState = Keyboard.GetState();
             _previousMouseState = Mouse.GetState();
+        }
+
+        public int GetSelectedIndexForHand(HandType hand)
+        {
+            return hand == HandType.Left ? _leftSelectedIndex : _rightSelectedIndex;
         }
 
         public void Update(GameTime gameTime)
         {
             var keyboardState = Keyboard.GetState();
             var mouseState = Mouse.GetState();
-            var virtualMousePos = Core.TransformMouse(mouseState.Position);
+            VirtualMousePosition = Core.TransformMouse(mouseState.Position);
 
-            HandleMouseInput(mouseState, virtualMousePos);
+            HandleMouseInput(mouseState);
             HandleKeyboardInput(gameTime, keyboardState);
 
             _previousKeyboardState = keyboardState;
             _previousMouseState = mouseState;
         }
 
-        private void HandleMouseInput(MouseState mouseState, Vector2 virtualMousePos)
+        private void HandleMouseInput(MouseState mouseState)
         {
             bool mouseMoved = mouseState.Position != _previousMouseState.Position;
+            bool isClick = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
 
-            // --- Menu Hover Logic (Mouse Priority) ---
+            // --- State: Selecting Actions ---
             if (_combatManager.CurrentState == PlayerTurnState.Selecting)
             {
-                // Check left menu
-                for (int i = 0; i < _leftActionMenu.TileBounds.Count; i++)
+                bool cardInteractionFound = false;
+
+                // Check left menu for hover or click
+                for (int i = 0; i < _leftActionMenu.Cards.Count; i++)
                 {
-                    if (_leftActionMenu.TileBounds[i].Contains(virtualMousePos))
+                    if (_leftActionMenu.Cards[i].CurrentBounds.Contains(VirtualMousePosition))
                     {
+                        cardInteractionFound = true;
                         if (mouseMoved)
                         {
                             _focusedHand = HandType.Left;
                             _leftSelectedIndex = i;
                         }
-                        if (mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+                        if (isClick)
                         {
-                            _combatManager.SelectAction(HandType.Left, _leftActionMenu.Actions[i].Id);
+                            _combatManager.SelectAction(HandType.Left, _leftActionMenu.Cards[i].Action.Id);
+                            return; // A click is a terminal action for this input frame
                         }
-                        return; // Mouse is over a menu, no need to check other inputs
+                        break; // Found hover, no need to check other cards in this menu
                     }
                 }
 
-                // Check right menu
-                for (int i = 0; i < _rightActionMenu.TileBounds.Count; i++)
+                // Check right menu if no interaction on left
+                if (!cardInteractionFound)
                 {
-                    if (_rightActionMenu.TileBounds[i].Contains(virtualMousePos))
+                    for (int i = 0; i < _rightActionMenu.Cards.Count; i++)
                     {
-                        if (mouseMoved)
+                        if (_rightActionMenu.Cards[i].CurrentBounds.Contains(VirtualMousePosition))
                         {
-                            _focusedHand = HandType.Right;
-                            _rightSelectedIndex = i;
+                            cardInteractionFound = true;
+                            if (mouseMoved)
+                            {
+                                _focusedHand = HandType.Right;
+                                _rightSelectedIndex = i;
+                            }
+                            if (isClick)
+                            {
+                                _combatManager.SelectAction(HandType.Right, _rightActionMenu.Cards[i].Action.Id);
+                                return; // A click is a terminal action for this input frame
+                            }
+                            break; // Found hover
                         }
-                        if (mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
-                        {
-                            _combatManager.SelectAction(HandType.Right, _rightActionMenu.Actions[i].Id);
-                        }
-                        return;
                     }
+                }
+
+                // If mouse moved but no card was hovered, handle deselection and focus change
+                if (mouseMoved && !cardInteractionFound)
+                {
+                    if (_leftActionMenu.ActivationArea.Contains(VirtualMousePosition))
+                    {
+                        _focusedHand = HandType.Left;
+                        _leftSelectedIndex = -1; // Deselect card
+                    }
+                    else if (_rightActionMenu.ActivationArea.Contains(VirtualMousePosition))
+                    {
+                        _focusedHand = HandType.Right;
+                        _rightSelectedIndex = -1; // Deselect card
+                    }
+                    // If mouse is outside all activation areas, we don't change focus,
+                    // preserving keyboard navigation state.
                 }
             }
 
-            // --- Hand Cancellation Click ---
-            if (mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+            // --- Hand Cancellation Click (can happen in any state) ---
+            if (isClick)
             {
-                if (!string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId) && _leftHandRenderer.Bounds.Contains(virtualMousePos))
+                if (!string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId) && _leftHandRenderer.Bounds.Contains(VirtualMousePosition))
                 {
                     _combatManager.CancelAction(HandType.Left);
                 }
-                else if (!string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId) && _rightHandRenderer.Bounds.Contains(virtualMousePos))
+                else if (!string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId) && _rightHandRenderer.Bounds.Contains(VirtualMousePosition))
                 {
                     _combatManager.CancelAction(HandType.Right);
                 }
@@ -153,11 +186,17 @@ namespace ProjectVagabond.Combat
             {
                 if (_focusedHand == HandType.Left)
                 {
-                    _combatManager.SelectAction(HandType.Left, _leftActionMenu.Actions[_leftSelectedIndex].Id);
+                    if (_leftSelectedIndex >= 0 && _leftSelectedIndex < _leftActionMenu.Cards.Count)
+                    {
+                        _combatManager.SelectAction(HandType.Left, _leftActionMenu.Cards[_leftSelectedIndex].Action.Id);
+                    }
                 }
                 else
                 {
-                    _combatManager.SelectAction(HandType.Right, _rightActionMenu.Actions[_rightSelectedIndex].Id);
+                    if (_rightSelectedIndex >= 0 && _rightSelectedIndex < _rightActionMenu.Cards.Count)
+                    {
+                        _combatManager.SelectAction(HandType.Right, _rightActionMenu.Cards[_rightSelectedIndex].Action.Id);
+                    }
                 }
             }
 
@@ -189,11 +228,35 @@ namespace ProjectVagabond.Combat
         {
             if (_focusedHand == HandType.Left)
             {
-                _leftSelectedIndex = (_leftSelectedIndex + direction + _leftActionMenu.Actions.Count) % _leftActionMenu.Actions.Count;
+                int count = _leftActionMenu.Cards.Count;
+                if (count == 0) return;
+
+                if (_leftSelectedIndex == -1)
+                {
+                    // If nothing is selected, start at the beginning or end
+                    _leftSelectedIndex = (direction > 0) ? 0 : count - 1;
+                }
+                else
+                {
+                    // Cycle through the available cards
+                    _leftSelectedIndex = (_leftSelectedIndex + direction + count) % count;
+                }
             }
-            else
+            else // Right Hand
             {
-                _rightSelectedIndex = (_rightSelectedIndex + direction + _rightActionMenu.Actions.Count) % _rightActionMenu.Actions.Count;
+                int count = _rightActionMenu.Cards.Count;
+                if (count == 0) return;
+
+                if (_rightSelectedIndex == -1)
+                {
+                    // If nothing is selected, start at the beginning or end
+                    _rightSelectedIndex = (direction > 0) ? 0 : count - 1;
+                }
+                else
+                {
+                    // Cycle through the available cards
+                    _rightSelectedIndex = (_rightSelectedIndex + direction + count) % count;
+                }
             }
         }
 
