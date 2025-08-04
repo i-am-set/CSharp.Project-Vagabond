@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
 using System;
 
@@ -99,6 +100,12 @@ namespace ProjectVagabond.Combat
                         if (isClick)
                         {
                             _combatManager.SelectAction(HandType.Left, _leftActionMenu.Cards[i].Action.Id);
+                            if (_combatManager.CurrentState == PlayerTurnState.Selecting)
+                            {
+                                _focusedHand = HandType.Right;
+                                if (_rightActionMenu.Cards.Count > 0) _rightSelectedIndex = 0;
+                                else _rightSelectedIndex = -1;
+                            }
                             return; // A click is a terminal action for this input frame
                         }
                         break; // Found hover, no need to check other cards in this menu
@@ -121,6 +128,12 @@ namespace ProjectVagabond.Combat
                             if (isClick)
                             {
                                 _combatManager.SelectAction(HandType.Right, _rightActionMenu.Cards[i].Action.Id);
+                                if (_combatManager.CurrentState == PlayerTurnState.Selecting)
+                                {
+                                    _focusedHand = HandType.Left;
+                                    if (_leftActionMenu.Cards.Count > 0) _leftSelectedIndex = 0;
+                                    else _leftSelectedIndex = -1;
+                                }
                                 return; // A click is a terminal action for this input frame
                             }
                             break; // Found hover
@@ -180,10 +193,58 @@ namespace ProjectVagabond.Combat
 
         private void HandleMenuNavigation(GameTime gameTime, KeyboardState keyboardState)
         {
+            // --- Cancellation ---
+            if (keyboardState.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape))
+            {
+                bool leftSelected = !string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId);
+                bool rightSelected = !string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId);
+
+                if (leftSelected && !rightSelected)
+                {
+                    _combatManager.CancelAction(HandType.Left);
+                    return;
+                }
+                if (!leftSelected && rightSelected)
+                {
+                    _combatManager.CancelAction(HandType.Right);
+                    return;
+                }
+            }
+
             // --- Focus Switching ---
             if (keyboardState.IsKeyDown(Keys.Tab) && _previousKeyboardState.IsKeyUp(Keys.Tab))
             {
-                _focusedHand = (_focusedHand == HandType.Left) ? HandType.Right : HandType.Left;
+                if (_focusedHand == HandType.Left)
+                {
+                    int mirroredIndex = _leftSelectedIndex;
+                    _focusedHand = HandType.Right;
+
+                    int rightCardCount = _rightActionMenu.Cards.Count;
+                    if (rightCardCount > 0)
+                    {
+                        // If nothing was selected, select the first card. Otherwise, mirror and clamp.
+                        _rightSelectedIndex = (mirroredIndex == -1) ? 0 : Math.Clamp(mirroredIndex, 0, rightCardCount - 1);
+                    }
+                    else
+                    {
+                        _rightSelectedIndex = -1;
+                    }
+                }
+                else // Focused hand was Right
+                {
+                    int mirroredIndex = _rightSelectedIndex;
+                    _focusedHand = HandType.Left;
+
+                    int leftCardCount = _leftActionMenu.Cards.Count;
+                    if (leftCardCount > 0)
+                    {
+                        _leftSelectedIndex = (mirroredIndex == -1) ? 0 : Math.Clamp(mirroredIndex, 0, leftCardCount - 1);
+                    }
+                    else
+                    {
+                        _leftSelectedIndex = -1;
+                    }
+                }
             }
 
             // --- Selection ---
@@ -194,6 +255,12 @@ namespace ProjectVagabond.Combat
                     if (_leftSelectedIndex >= 0 && _leftSelectedIndex < _leftActionMenu.Cards.Count)
                     {
                         _combatManager.SelectAction(HandType.Left, _leftActionMenu.Cards[_leftSelectedIndex].Action.Id);
+                        if (_combatManager.CurrentState == PlayerTurnState.Selecting)
+                        {
+                            _focusedHand = HandType.Right;
+                            if (_rightActionMenu.Cards.Count > 0) _rightSelectedIndex = 0;
+                            else _rightSelectedIndex = -1;
+                        }
                     }
                 }
                 else
@@ -201,6 +268,12 @@ namespace ProjectVagabond.Combat
                     if (_rightSelectedIndex >= 0 && _rightSelectedIndex < _rightActionMenu.Cards.Count)
                     {
                         _combatManager.SelectAction(HandType.Right, _rightActionMenu.Cards[_rightSelectedIndex].Action.Id);
+                        if (_combatManager.CurrentState == PlayerTurnState.Selecting)
+                        {
+                            _focusedHand = HandType.Left;
+                            if (_leftActionMenu.Cards.Count > 0) _leftSelectedIndex = 0;
+                            else _leftSelectedIndex = -1;
+                        }
                     }
                 }
             }
@@ -233,34 +306,102 @@ namespace ProjectVagabond.Combat
         {
             if (_focusedHand == HandType.Left)
             {
-                int count = _leftActionMenu.Cards.Count;
-                if (count == 0) return;
+                int leftCount = _leftActionMenu.Cards.Count;
+                int rightCount = _rightActionMenu.Cards.Count;
+                bool rightHandIsSelectable = rightCount > 0 && string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId);
+
+                if (leftCount == 0)
+                {
+                    if (rightHandIsSelectable)
+                    {
+                        _focusedHand = HandType.Right;
+                        _rightSelectedIndex = (direction > 0) ? 0 : rightCount - 1;
+                    }
+                    return;
+                }
 
                 if (_leftSelectedIndex == -1)
                 {
-                    // If nothing is selected, start at the beginning or end
-                    _leftSelectedIndex = (direction > 0) ? 0 : count - 1;
+                    _leftSelectedIndex = (direction > 0) ? 0 : leftCount - 1;
                 }
                 else
                 {
-                    // Cycle through the available cards
-                    _leftSelectedIndex = (_leftSelectedIndex + direction + count) % count;
+                    int nextIndex = _leftSelectedIndex + direction;
+
+                    if (nextIndex >= leftCount) // Moved right from the last card
+                    {
+                        if (rightHandIsSelectable)
+                        {
+                            _focusedHand = HandType.Right;
+                            _leftSelectedIndex = -1;
+                            _rightSelectedIndex = 0;
+                        }
+                        else { _leftSelectedIndex = 0; } // Wrap on same hand
+                    }
+                    else if (nextIndex < 0) // Moved left from the first card
+                    {
+                        if (rightHandIsSelectable)
+                        {
+                            _focusedHand = HandType.Right;
+                            _leftSelectedIndex = -1;
+                            _rightSelectedIndex = rightCount - 1;
+                        }
+                        else { _leftSelectedIndex = leftCount - 1; } // Wrap on same hand
+                    }
+                    else
+                    {
+                        _leftSelectedIndex = nextIndex;
+                    }
                 }
             }
             else // Right Hand
             {
-                int count = _rightActionMenu.Cards.Count;
-                if (count == 0) return;
+                int rightCount = _rightActionMenu.Cards.Count;
+                int leftCount = _leftActionMenu.Cards.Count;
+                bool leftHandIsSelectable = leftCount > 0 && string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId);
+
+                if (rightCount == 0)
+                {
+                    if (leftHandIsSelectable)
+                    {
+                        _focusedHand = HandType.Left;
+                        _leftSelectedIndex = (direction > 0) ? 0 : leftCount - 1;
+                    }
+                    return;
+                }
 
                 if (_rightSelectedIndex == -1)
                 {
-                    // If nothing is selected, start at the beginning or end
-                    _rightSelectedIndex = (direction > 0) ? 0 : count - 1;
+                    _rightSelectedIndex = (direction > 0) ? 0 : rightCount - 1;
                 }
                 else
                 {
-                    // Cycle through the available cards
-                    _rightSelectedIndex = (_rightSelectedIndex + direction + count) % count;
+                    int nextIndex = _rightSelectedIndex + direction;
+
+                    if (nextIndex >= rightCount) // Moved right from the last card
+                    {
+                        if (leftHandIsSelectable)
+                        {
+                            _focusedHand = HandType.Left;
+                            _rightSelectedIndex = -1;
+                            _leftSelectedIndex = 0;
+                        }
+                        else { _rightSelectedIndex = 0; } // Wrap on same hand
+                    }
+                    else if (nextIndex < 0) // Moved left from the first card
+                    {
+                        if (leftHandIsSelectable)
+                        {
+                            _focusedHand = HandType.Left;
+                            _rightSelectedIndex = -1;
+                            _leftSelectedIndex = leftCount - 1;
+                        }
+                        else { _rightSelectedIndex = rightCount - 1; } // Wrap on same hand
+                    }
+                    else
+                    {
+                        _rightSelectedIndex = nextIndex;
+                    }
                 }
             }
         }

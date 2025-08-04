@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
+using ProjectVagabond.Scenes;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -76,8 +77,8 @@ namespace ProjectVagabond.Scenes
 
             _leftHandRenderer.Update(gameTime, _combatManager);
             _rightHandRenderer.Update(gameTime, _combatManager);
-            _leftActionMenu.Update(gameTime, _inputHandler);
-            _rightActionMenu.Update(gameTime, _inputHandler);
+            _leftActionMenu.Update(gameTime, _inputHandler, _combatManager);
+            _rightActionMenu.Update(gameTime, _inputHandler, _combatManager);
         }
 
         private void ResolveCurrentTurn()

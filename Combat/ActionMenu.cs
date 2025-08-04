@@ -18,11 +18,14 @@ namespace ProjectVagabond.Combat.UI
         private List<CombatCard> _cards = new List<CombatCard>();
 
         // --- TUNING CONSTANTS ---
-        public static readonly Point CARD_SIZE = new Point(80, 112);
+        public static readonly Point CARD_SIZE = new Point(120, 168);
         private const int MENU_Y_POS = 400;
         private const int MENU_X_PADDING = 60; // Horizontal padding from screen edge
         private const int CARD_SPACING = -25; // Negative for overlap
-        private const float SPREAD_AMOUNT = 20f; // How far cards move apart when one is hovered
+        private const float SPREAD_AMOUNT = 30f; // How far cards move apart when one is hovered
+        private const float HOVER_Y_OFFSET = -40f; // How far the card moves up when hovered
+        private const float SELECTED_Y_OFFSET = 130f; // How far the selected hand's menu moves down
+        private const float OFFSCREEN_Y_OFFSET = 300f; // How far menus move down when both hands are selected
         private const float CARD_TILT_RADIANS = 0.15f; // Tilt angle for unselected cards
         private const float WIGGLE_SPEED = 8f; // Speed of the hovered border shimmer
         private const float WIGGLE_ROTATION_RADIANS = 0.02f; // Rotational intensity of the border shimmer
@@ -103,7 +106,7 @@ namespace ProjectVagabond.Combat.UI
         /// <summary>
         /// Updates the menu's animation state based on the combat manager and input.
         /// </summary>
-        public void Update(GameTime gameTime, CombatInputHandler inputHandler)
+        public void Update(GameTime gameTime, CombatInputHandler inputHandler, CombatManager combatManager)
         {
             _wiggleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -115,6 +118,9 @@ namespace ProjectVagabond.Combat.UI
             float totalTargetWidth = _cards.Count * (CARD_SIZE.X + CARD_SPACING) - CARD_SPACING;
             float startX = _menuCenterPosition.X - totalTargetWidth / 2f;
 
+            bool isThisHandSelected = (_handType == HandType.Left && !string.IsNullOrEmpty(combatManager.LeftHand.SelectedActionId))
+                                   || (_handType == HandType.Right && !string.IsNullOrEmpty(combatManager.RightHand.SelectedActionId));
+
             for (int i = 0; i < _cards.Count; i++)
             {
                 var card = _cards[i];
@@ -124,7 +130,7 @@ namespace ProjectVagabond.Combat.UI
                 float targetScale = DEFAULT_SCALE;
                 Color targetTint = FOCUSED_TINT;
 
-                if (!isMenuFocused && !isMouseInArea)
+                if (!isMenuFocused && !isMouseInArea && combatManager.CurrentState == PlayerTurnState.Selecting)
                 {
                     targetScale = UNFOCUSED_SCALE;
                     targetTint = UNFOCUSED_TINT;
@@ -146,7 +152,24 @@ namespace ProjectVagabond.Combat.UI
                 }
 
                 float targetX = baseCardX + xOffset - (CARD_SIZE.X * targetScale - CARD_SIZE.X) / 2f;
-                float targetY = MENU_Y_POS - (CARD_SIZE.Y * targetScale - CARD_SIZE.Y) / 2f;
+
+                // --- Y-Position Logic based on Combat State ---
+                float baseY = MENU_Y_POS;
+                if (combatManager.CurrentState == PlayerTurnState.Confirming)
+                {
+                    baseY += OFFSCREEN_Y_OFFSET;
+                }
+                else if (isThisHandSelected && combatManager.CurrentState == PlayerTurnState.Selecting)
+                {
+                    baseY += SELECTED_Y_OFFSET;
+                }
+
+                float targetY = baseY - (CARD_SIZE.Y * targetScale - CARD_SIZE.Y) / 2f;
+
+                if (isHovered)
+                {
+                    targetY += HOVER_Y_OFFSET;
+                }
 
                 // Determine Target Rotation
                 float targetRotation = 0f;
@@ -208,6 +231,7 @@ namespace ProjectVagabond.Combat.UI
             var cardRotation = card.CurrentRotation;
             var cardScale = card.CurrentScale;
             var cardDrawPosition = card.CurrentBounds.Center;
+            var pixelOrigin = new Vector2(0.5f); // Origin for a 1x1 texture is its center
 
             // Apply rotational wiggle to the hovered card
             if (isHovered)
@@ -216,11 +240,25 @@ namespace ProjectVagabond.Combat.UI
                 cardRotation += wiggle;
             }
 
-            // 1. Draw Border using lines for a perfect, rotatable outline
+            // 1. Draw FULL Card Background
+            var fullCardBgColor = new Color(CARD_TEXT_BG_COLOR.ToVector3() * card.CurrentTint.ToVector3());
+            spriteBatch.Draw(pixel, cardDrawPosition, null, fullCardBgColor, cardRotation, pixelOrigin, CARD_SIZE.ToVector2() * cardScale, SpriteEffects.None, 0f);
+
+            // 2. Draw placeholder image area (on top of the new background)
+            var imageAreaColor = new Color(CARD_IMAGE_AREA_COLOR.ToVector3() * card.CurrentTint.ToVector3());
+            var imageRectSize = new Vector2(CARD_SIZE.X, CARD_SIZE.Y * (2 / 3f));
+
+            // Calculate the center position of the image area, accounting for card scale and rotation.
+            Vector2 imageAreaOffset = new Vector2(0, -CARD_SIZE.Y * (1 / 6f)); // Offset from card center to image area center
+            Vector2 rotatedImageOffset = Vector2.Transform(imageAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));
+            Vector2 imageAreaCenterPos = cardDrawPosition + rotatedImageOffset;
+
+            spriteBatch.Draw(pixel, imageAreaCenterPos, null, imageAreaColor, cardRotation, pixelOrigin, imageRectSize * cardScale, SpriteEffects.None, 0f);
+
+            // 3. Draw Border using lines for a perfect, rotatable outline
             float borderThickness = isHovered ? 3f : 2f;
             Color borderColor = BORDER_COLOR * (card.CurrentTint.A / 255f);
 
-            // Calculate the four corners of the card relative to its origin (0,0)
             var halfSize = CARD_SIZE.ToVector2() / 2f;
             var corners = new Vector2[4]
             {
@@ -230,56 +268,31 @@ namespace ProjectVagabond.Combat.UI
                 new Vector2(-halfSize.X,  halfSize.Y)  // Bottom-Left
             };
 
-            // Create the transformation matrix using the potentially wiggled rotation
             var transform = Matrix.CreateScale(cardScale)
                           * Matrix.CreateRotationZ(cardRotation)
                           * Matrix.CreateTranslation(cardDrawPosition.X, cardDrawPosition.Y, 0);
 
-            // Transform all corners
             for (int j = 0; j < corners.Length; j++)
             {
                 corners[j] = Vector2.Transform(corners[j], transform);
             }
 
-            // Draw the lines connecting the transformed corners
             spriteBatch.DrawLine(corners[0], corners[1], borderColor, borderThickness); // Top
             spriteBatch.DrawLine(corners[1], corners[2], borderColor, borderThickness); // Right
             spriteBatch.DrawLine(corners[2], corners[3], borderColor, borderThickness); // Bottom
             spriteBatch.DrawLine(corners[3], corners[0], borderColor, borderThickness); // Left
 
-
-            // 2. Draw Card Background
-            var cardBaseOrigin = CARD_SIZE.ToVector2() / 2f;
-            spriteBatch.Draw(pixel, cardDrawPosition, null, card.CurrentTint, cardRotation, cardBaseOrigin, cardScale, SpriteEffects.None, 0f);
-
-            // 3. Draw placeholder image area
-            var imageAreaColor = new Color(CARD_IMAGE_AREA_COLOR.ToVector3() * card.CurrentTint.ToVector3());
-            var imageRect = new RectangleF(0, 0, CARD_SIZE.X, CARD_SIZE.Y * (2 / 3f));
-            Vector2 imageAreaOffset = new Vector2(0, -CARD_SIZE.Y * (1 / 6f)); // Offset from card center to image area center
-            Vector2 rotatedImageOffset = Vector2.Transform(imageAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));
-            Vector2 imageAreaDrawPos = cardDrawPosition + rotatedImageOffset;
-
-            // The origin for this sub-element is its own center.
-            var imageAreaOrigin = new Vector2(imageRect.Width / 2f, imageRect.Height / 2f);
-            spriteBatch.Draw(pixel, imageAreaDrawPos, new Rectangle(0, 0, (int)imageRect.Width, (int)imageRect.Height), imageAreaColor, cardRotation, imageAreaOrigin, cardScale, SpriteEffects.None, 0f);
-
-            // 4. Draw text background area
-            var textBgColor = new Color(CARD_TEXT_BG_COLOR.ToVector3() * card.CurrentTint.ToVector3());
-            var textBgRect = new RectangleF(0, 0, CARD_SIZE.X, CARD_SIZE.Y * (1 / 3f));
-            Vector2 textBgAreaOffset = new Vector2(0, CARD_SIZE.Y * (1 / 3f)); // Offset from card center to text area center
-            Vector2 rotatedTextBgOffset = Vector2.Transform(textBgAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));
-            Vector2 textBgAreaDrawPos = cardDrawPosition + rotatedTextBgOffset;
-
-            // The origin for this sub-element is its own center.
-            var textBgAreaOrigin = new Vector2(textBgRect.Width / 2f, textBgRect.Height / 2f);
-            spriteBatch.Draw(pixel, textBgAreaDrawPos, new Rectangle(0, 0, (int)textBgRect.Width, (int)textBgRect.Height), textBgColor, cardRotation, textBgAreaOrigin, cardScale, SpriteEffects.None, 0f);
-
-            // 5. Draw action name
+            // 4. Draw action name
             var textColor = new Color(TEXT_COLOR.ToVector3() * card.CurrentTint.ToVector3());
             float textDrawScale = card.CurrentScale;
             Vector2 textSize = font.MeasureString(card.Action.Name);
 
-            spriteBatch.DrawString(font, card.Action.Name, textBgAreaDrawPos, textColor, cardRotation, textSize / 2f, textDrawScale, SpriteEffects.None, 0f);
+            // Position the text in the lower third of the card
+            Vector2 textBgAreaOffset = new Vector2(0, CARD_SIZE.Y * (1 / 3f)); // Offset from card center to text area center
+            Vector2 rotatedTextBgOffset = Vector2.Transform(textBgAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));
+            Vector2 textDrawPosition = cardDrawPosition + rotatedTextBgOffset;
+
+            spriteBatch.DrawString(font, card.Action.Name, textDrawPosition, textColor, cardRotation, textSize / 2f, textDrawScale, SpriteEffects.None, 0f);
         }
     }
 }
