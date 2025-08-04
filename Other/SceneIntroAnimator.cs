@@ -76,7 +76,16 @@ namespace ProjectVagabond.Scenes
 
         private void UpdateAnimationProperties()
         {
-            _contentTransform = Matrix.Identity;
+            // Calculate overall progress from the start of the animation to the end.
+            float overallProgress = MathHelper.Clamp(_timer / EXPAND_END, 0f, 1f);
+
+            // Interpolate the stretch amount from 1.5x down to 1.0x over the entire duration.
+            // The content starts stretched and returns to normal.
+            float stretchAmount = MathHelper.Lerp(1.5f, 1.0f, Easing.EaseOutCubic(overallProgress));
+            var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+            _contentTransform = Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
+                                Matrix.CreateScale(stretchAmount, 1.0f, 1.0f) *
+                                Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0);
 
             switch (_state)
             {
@@ -94,7 +103,7 @@ namespace ProjectVagabond.Scenes
 
                 case AnimState.Stretching:
                     float stretchProgress = (_timer - DEFLATE_END) / (STRETCH_END - DEFLATE_END);
-                    float stretchWidth = MathHelper.Lerp(2, _finalBounds.Width, Easing.EaseInOutCubic(stretchProgress));
+                    float stretchWidth = MathHelper.Lerp(2, _finalBounds.Width, Easing.EaseInCirc(stretchProgress));
                     _currentRect = new Rectangle((int)(_centerPoint.X - stretchWidth / 2), (int)(_centerPoint.Y - 2 / 2), (int)stretchWidth, 2);
                     break;
 
@@ -102,17 +111,12 @@ namespace ProjectVagabond.Scenes
                     float expandProgress = (_timer - STRETCH_END) / (EXPAND_END - STRETCH_END);
                     float expandHeight = MathHelper.Lerp(2, _finalBounds.Height, Easing.EaseInOutCubic(expandProgress));
                     _currentRect = new Rectangle(_finalBounds.X, (int)(_centerPoint.Y - expandHeight / 2), _finalBounds.Width, (int)expandHeight);
-
-                    // Calculate content stretch effect, always centered on the screen.
-                    float stretchAmount = MathHelper.Lerp(1.5f, 1.0f, Easing.EaseOutCubic(expandProgress));
-                    var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-                    _contentTransform = Matrix.CreateTranslation(-screenCenter.X, -screenCenter.Y, 0) *
-                                        Matrix.CreateScale(stretchAmount, 1.0f, 1.0f) *
-                                        Matrix.CreateTranslation(screenCenter.X, screenCenter.Y, 0);
                     break;
 
                 case AnimState.Done:
                     _currentRect = _finalBounds;
+                    // When done, ensure the transform is back to identity to avoid any lingering effects.
+                    _contentTransform = Matrix.Identity;
                     break;
             }
         }

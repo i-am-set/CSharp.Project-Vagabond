@@ -4,6 +4,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Scenes
@@ -37,12 +38,24 @@ namespace ProjectVagabond.Scenes
 
         // Hold after complete
         private bool _allTasksComplete = false;
-        private float _holdTimer = 0f;
-        private const float HOLD_DURATION = 1.0f;
+
+        // Visual state
+        private bool _silentMode = false;
 
         public LoadingScreen()
         {
             _global = ServiceLocator.Get<Global>();
+        }
+
+        public void Clear()
+        {
+            _tasks.Clear();
+            _currentTaskIndex = -1;
+            _totalProgress = 0f;
+            _progressPerTask = 0f;
+            IsActive = false;
+            _allTasksComplete = false;
+            _silentMode = false;
         }
 
         public void AddTask(LoadingTask task)
@@ -58,6 +71,9 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
+            // If any task is a DelayTask, we enter silent mode (no bar or text).
+            _silentMode = _tasks.Any(t => t is DelayTask);
+
             IsActive = true;
             _currentTaskIndex = 0;
             _totalProgress = 0f;
@@ -72,7 +88,6 @@ namespace ProjectVagabond.Scenes
             _segmentFillTimer = 0f;
 
             _allTasksComplete = false;
-            _holdTimer = 0f;
 
             _tasks[_currentTaskIndex].Start();
         }
@@ -90,11 +105,11 @@ namespace ProjectVagabond.Scenes
                 _ellipsisCount = (_ellipsisCount + 1) % 4;
             }
 
-            // Handle hold timer after all tasks are complete
+            // Handle completion
             if (_allTasksComplete)
             {
-                _holdTimer += deltaTime;
-                if (_holdTimer >= HOLD_DURATION && _progressAnimTimer >= PROGRESS_ANIM_DURATION)
+                // The loading screen is finished once all tasks are done AND the visual progress bar has caught up.
+                if (_progressAnimTimer >= PROGRESS_ANIM_DURATION)
                 {
                     IsActive = false;
                     OnComplete?.Invoke();
@@ -163,52 +178,55 @@ namespace ProjectVagabond.Scenes
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font)
         {
-            if (!IsActive) return;
-
-            // --- Loading Bar Style Parameters ---
-            const int SEGMENT_WIDTH = 3;
-            const int SEGMENT_GAP = 2;
-            const int SEGMENT_HEIGHT = 6;
-            const int BAR_HEIGHT = 8;
-            const int horizontalPadding = 2;
+            if (!IsActive || _silentMode) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            // Loading bar layout
-            int segmentsAreaWidth = LOADING_BAR_SEGMENTS * (SEGMENT_WIDTH + SEGMENT_GAP) - SEGMENT_GAP;
-            int barWidth = segmentsAreaWidth + (horizontalPadding * 2);
-            int barX = (Global.VIRTUAL_WIDTH - barWidth) / 2;
-            int barY = (Global.VIRTUAL_HEIGHT - BAR_HEIGHT) / 2;
-            var barBounds = new Rectangle(barX, barY, barWidth, BAR_HEIGHT);
+            // --- New Bar Style Parameters ---
+            const int BAR_HEIGHT = 3;
+            const int TEXT_PADDING_ABOVE_BAR = 5;
 
-            // Loading text
-            string loadingText = "Loading" + new string('.', _ellipsisCount);
-            Vector2 textSize = font.MeasureString(loadingText);
-            Vector2 textPosition = new Vector2(
-                (Global.VIRTUAL_WIDTH - textSize.X) / 2,
-                barBounds.Y - textSize.Y - 10
-            );
-            spriteBatch.DrawString(font, loadingText, textPosition, _global.Palette_BrightWhite);
+            // 1. Calculate and draw the loading bar
+            int barWidth = (int)(Global.VIRTUAL_WIDTH * _visualProgress);
+            int barY = Global.VIRTUAL_HEIGHT - BAR_HEIGHT;
+            var barRect = new Rectangle(0, barY, barWidth, BAR_HEIGHT);
+            spriteBatch.Draw(pixel, barRect, _global.TerminalDarkGray);
 
-            // Border
-            var borderRect = new Rectangle(barBounds.X - 2, barBounds.Y - 2, barBounds.Width + 4, barBounds.Height + 4);
-            spriteBatch.Draw(pixel, borderRect, _global.Palette_DarkGray);
+            // 2. Get the current loading text
+            string loadingText;
+            if (_allTasksComplete)
+            {
+                loadingText = "Loading" + new string('.', _ellipsisCount);
+            }
+            else
+            {
+                string taskDescription = "";
+                if (_currentTaskIndex >= 0 && _currentTaskIndex < _tasks.Count)
+                {
+                    taskDescription = _tasks[_currentTaskIndex].Description;
+                }
 
-            // Draw the stylized, segmented bar
-            UIPrimitives.DrawSegmentedBar(
-                spriteBatch,
-                pixel,
-                barBounds,
-                _visualProgress,
-                LOADING_BAR_SEGMENTS,
-                _global.Palette_LightGreen,
-                Color.Lerp(_global.Palette_DarkGray, _global.Palette_LightGreen, 0.3f),
-                _global.Palette_DarkGray,
-                SEGMENT_WIDTH,
-                SEGMENT_GAP,
-                SEGMENT_HEIGHT,
-                horizontalPadding
-            );
+                if (!string.IsNullOrEmpty(taskDescription))
+                {
+                    loadingText = taskDescription + new string('.', _ellipsisCount);
+                }
+                else
+                {
+                    // This handles DelayTask or other tasks with no description
+                    loadingText = "";
+                }
+            }
+
+            // 3. Calculate and draw the loading text, if any
+            if (!string.IsNullOrEmpty(loadingText))
+            {
+                Vector2 textSize = font.MeasureString(loadingText);
+                Vector2 textPosition = new Vector2(
+                    (Global.VIRTUAL_WIDTH - textSize.X) / 2,
+                    barY - textSize.Y - TEXT_PADDING_ABOVE_BAR
+                );
+                spriteBatch.DrawString(font, loadingText, textPosition, _global.TerminalDarkGray);
+            }
         }
 
         private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
@@ -217,6 +235,43 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
             spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
+        }
+    }
+
+    /// <summary>
+    /// A generic, synchronous loading task that executes a given Action.
+    /// </summary>
+    public class GenericTask : LoadingTask
+    {
+        private readonly Action _loadAction;
+
+        public GenericTask(string description, Action loadAction) : base(description)
+        {
+            _loadAction = loadAction;
+        }
+
+        public override void Start()
+        {
+            // The action is executed synchronously and completes immediately.
+            try
+            {
+                _loadAction?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                // Log the error to the debug console to help diagnose loading issues.
+                Debug.WriteLine($"[ERROR] Loading task '{Description}' failed: {ex.Message}");
+                // Optionally, re-throw or handle the error in a more user-facing way.
+            }
+            finally
+            {
+                IsComplete = true;
+            }
+        }
+
+        public override void Update(GameTime gameTime)
+        {
+            // This task completes instantly in Start(), so Update does nothing.
         }
     }
 }

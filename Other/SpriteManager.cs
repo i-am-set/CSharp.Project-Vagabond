@@ -61,11 +61,32 @@ namespace ProjectVagabond
             _textureFactory = ServiceLocator.Get<TextureFactory>();
         }
 
-        public void LoadSpriteContent()
+        /// <summary>
+        /// Loads assets required for the main menu and essential UI elements that are always present.
+        /// </summary>
+        public void LoadEssentialContent()
         {
             try { _logoSprite = _core.Content.Load<Texture2D>("Sprites/logo"); }
             catch { _logoSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
+            try { _worldMapHoverSelectorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_world_map_selector"); }
+            catch { _worldMapHoverSelectorSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
+
+            try { _circleTextureSprite = _textureFactory.CreateCircleTexture(); }
+            catch { _circleTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
+
+            try { _settingsIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_settings_icon"); }
+            catch { _settingsIconSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
+
+            try { _turnIndicatorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_turn_indicator"); }
+            catch { _turnIndicatorSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
+        }
+
+        /// <summary>
+        /// Loads all assets related to the main game world, combat, and entities.
+        /// </summary>
+        public void LoadGameContent()
+        {
             try { _waterSprite = _core.Content.Load<Texture2D>("Sprites/water"); }
             catch { _waterSprite = _textureFactory.CreateWaterTexture(); }
 
@@ -105,18 +126,6 @@ namespace ProjectVagabond
             try { _speedMarkSprite = _core.Content.Load<Texture2D>("Sprites/speedMark"); }
             catch { _speedMarkSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-            try { _worldMapHoverSelectorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_world_map_selector"); }
-            catch { _worldMapHoverSelectorSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
-
-            try { _circleTextureSprite = _textureFactory.CreateCircleTexture(); }
-            catch { _circleTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
-
-            try { _settingsIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_settings_icon"); }
-            catch { _settingsIconSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
-
-            try { _turnIndicatorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_turn_indicator"); }
-            catch { _turnIndicatorSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
-
             // Load placeholder combat hand sprites
             try { _handIdleSprite = _core.Content.Load<Texture2D>("Sprites/Combat/hand_idle"); }
             catch { _handIdleSprite = _textureFactory.CreateColoredTexture(128, 256, Color.DarkGray); }
@@ -126,6 +135,13 @@ namespace ProjectVagabond
 
             try { _enemySprite = _core.Content.Load<Texture2D>("Sprites/Combat/enemy_placeholder"); }
             catch { _enemySprite = _textureFactory.CreateEnemyPlaceholderTexture(); }
+        }
+
+        [Obsolete("LoadSpriteContent is deprecated, please use LoadEssentialContent and LoadGameContent instead.")]
+        public void LoadSpriteContent()
+        {
+            LoadEssentialContent();
+            LoadGameContent();
         }
     }
 }

@@ -47,6 +47,14 @@ namespace ProjectVagabond
         private const float HEADER_ANIMATION_SPEED = 8f;
         private const float HEADER_HIDDEN_Y_OFFSET = 30f;
 
+        // Animation state for map frame sway
+        private readonly Random _random = new Random();
+        private float _swayTimerX;
+        private float _swayTimerY;
+        private const float SWAY_SPEED_X = 0.8f;
+        private const float SWAY_SPEED_Y = 0.6f;
+        private const float SWAY_AMOUNT = 1.5f;
+
         public MapRenderer()
         {
             _gameState = ServiceLocator.Get<GameState>();
@@ -64,6 +72,10 @@ namespace ProjectVagabond
 
             _buttonMap = _headerButtons.ToDictionary(b => b.Function.ToLowerInvariant(), b => b);
 
+            // Initialize timers at random points to desynchronize movements
+            _swayTimerX = (float)(_random.NextDouble() * Math.PI * 2);
+            _swayTimerY = (float)(_random.NextDouble() * Math.PI * 2);
+
             ResetHeaderState();
         }
 
@@ -80,9 +92,15 @@ namespace ProjectVagabond
             UpdateHover(virtualMousePos);
             _contextMenu.Update(mouseState, mouseState, virtualMousePos, font); // Note: prevMouseState is same as current here, might need adjustment if complex logic is added
 
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
             // --- Header Animation Logic ---
             _headerTargetYOffset = _gameState.PendingActions.Any() ? 0f : HEADER_HIDDEN_Y_OFFSET;
-            _headerYOffset = MathHelper.Lerp(_headerYOffset, _headerTargetYOffset, (float)gameTime.ElapsedGameTime.TotalSeconds * HEADER_ANIMATION_SPEED);
+            _headerYOffset = MathHelper.Lerp(_headerYOffset, _headerTargetYOffset, deltaTime * HEADER_ANIMATION_SPEED);
+
+            // --- Sway Animation Logic ---
+            _swayTimerX += deltaTime * SWAY_SPEED_X;
+            _swayTimerY += deltaTime * SWAY_SPEED_Y;
         }
 
         private void CalculateMapLayout(Rectangle? overrideBounds = null)
@@ -218,13 +236,26 @@ namespace ProjectVagabond
         {
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
+            // Calculate sway offset
+            float swayX = (float)Math.Sin(_swayTimerX) * SWAY_AMOUNT;
+            float swayY = (float)Math.Cos(_swayTimerY) * SWAY_AMOUNT;
+            var swayOffset = new Vector2(swayX, swayY);
+
+            // Create swayed versions of bounds for drawing
+            var swayedMapScreenBounds = new Rectangle(
+                MapScreenBounds.X + (int)swayOffset.X,
+                MapScreenBounds.Y + (int)swayOffset.Y,
+                MapScreenBounds.Width,
+                MapScreenBounds.Height
+            );
+
             // --- Draw the animated header FIRST, so it appears behind the map frame ---
             // Only draw if it's at least partially visible
             if (_headerYOffset < HEADER_HIDDEN_Y_OFFSET - 1)
             {
-                int headerWidth = MapScreenBounds.Width + 2;
-                int headerX = MapScreenBounds.X - 1;
-                int headerY = (int)(MapScreenBounds.Y - 25 + _headerYOffset);
+                int headerWidth = swayedMapScreenBounds.Width + 2;
+                int headerX = swayedMapScreenBounds.X - 1;
+                int headerY = (int)(swayedMapScreenBounds.Y - 25 + _headerYOffset);
 
                 Rectangle headerBounds = new Rectangle(headerX, headerY, headerWidth, 20);
 
@@ -236,7 +267,7 @@ namespace ProjectVagabond
                 spriteBatch.Draw(pixel, new Rectangle(headerBounds.X, headerBounds.Y, 2, headerBounds.Height), _global.Palette_White); // Left
                 spriteBatch.Draw(pixel, new Rectangle(headerBounds.Right - 2, headerBounds.Y, 2, headerBounds.Height), _global.Palette_White); // Right
 
-                LayoutHeaderButtons();
+                LayoutHeaderButtons(swayOffset);
                 foreach (var b in _headerButtons)
                 {
                     b.Draw(spriteBatch, font, gameTime);
@@ -244,11 +275,11 @@ namespace ProjectVagabond
             }
 
             // --- Now draw the main map frame and background, which will cover the header when it retracts ---
-            int mainFrameHeight = MapScreenBounds.Height + 10;
+            int mainFrameHeight = swayedMapScreenBounds.Height + 10;
             Rectangle fullFrameArea = new Rectangle(
-                MapScreenBounds.X - 5,
-                MapScreenBounds.Y - 5,
-                MapScreenBounds.Width + 10,
+                swayedMapScreenBounds.X - 5,
+                swayedMapScreenBounds.Y - 5,
+                swayedMapScreenBounds.Width + 10,
                 mainFrameHeight
             );
 
@@ -256,13 +287,13 @@ namespace ProjectVagabond
             spriteBatch.Draw(pixel, fullFrameArea, _global.TerminalBg);
 
             // Draw main frame lines on top of the background
-            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 5, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Top border (separator)
-            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Bottom + 3, MapScreenBounds.Width + 10, 2), _global.Palette_White); // Bottom border
-            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.X - 5, MapScreenBounds.Y - 5, 2, mainFrameHeight), _global.Palette_White); // Left border
-            spriteBatch.Draw(pixel, new Rectangle(MapScreenBounds.Right + 3, MapScreenBounds.Y - 5, 2, mainFrameHeight), _global.Palette_White); // Right border
+            spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.X - 5, swayedMapScreenBounds.Y - 5, swayedMapScreenBounds.Width + 10, 2), _global.Palette_White); // Top border (separator)
+            spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.X - 5, swayedMapScreenBounds.Bottom + 3, swayedMapScreenBounds.Width + 10, 2), _global.Palette_White); // Bottom border
+            spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.X - 5, swayedMapScreenBounds.Y - 5, 2, mainFrameHeight), _global.Palette_White); // Left border
+            spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.Right + 3, swayedMapScreenBounds.Y - 5, 2, mainFrameHeight), _global.Palette_White); // Right border
         }
 
-        public void LayoutHeaderButtons()
+        public void LayoutHeaderButtons(Vector2 swayOffset)
         {
             const int buttonHeight = 16;
             const int buttonSpacing = 5;
@@ -281,19 +312,19 @@ namespace ProjectVagabond
 
             if (_buttonMap.TryGetValue("clear", out Button clearButton))
             {
-                clearButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
+                clearButton.Bounds = new Rectangle(currentX + (int)swayOffset.X, buttonY + (int)swayOffset.Y, buttonWidth, buttonHeight);
                 currentX += buttonWidth + buttonSpacing;
             }
 
             if (_buttonMap.TryGetValue("go", out Button goButton))
             {
-                goButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
+                goButton.Bounds = new Rectangle(currentX + (int)swayOffset.X, buttonY + (int)swayOffset.Y, buttonWidth, buttonHeight);
                 currentX += buttonWidth + buttonSpacing;
             }
 
             if (_buttonMap.TryGetValue("stop", out Button stopButton))
             {
-                stopButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
+                stopButton.Bounds = new Rectangle(currentX + (int)swayOffset.X, buttonY + (int)swayOffset.Y, buttonWidth, buttonHeight);
             }
         }
 

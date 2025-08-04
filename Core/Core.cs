@@ -10,9 +10,9 @@ using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using System;
-using System.Collections.Generic; 
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;           
+using System.Text;
 
 // TODO: generate different noise maps to generate different map things
 // TODO: add a way to generate different map elements based on the noise map
@@ -69,6 +69,9 @@ namespace ProjectVagabond
         private float _physicsTimeAccumulator = 0f;
         private TimeSpan _scaledTotalGameTime = TimeSpan.Zero;
         private bool _isTimeSlowed = false;
+
+        // Loading State
+        private bool _isGameLoaded = false;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -127,7 +130,6 @@ namespace ProjectVagabond
 
             _loadingScreen = new LoadingScreen();
             ServiceLocator.Register<LoadingScreen>(_loadingScreen);
-            _loadingScreen.OnComplete += () => _sceneManager.ChangeScene(GameSceneState.MainMenu);
 
             var noiseManager = new NoiseMapManager();
             ServiceLocator.Register<NoiseMapManager>(noiseManager);
@@ -289,19 +291,14 @@ namespace ProjectVagabond
                 throw new Exception("Please add a BitmapFont to your 'Content/Fonts' folder");
             }
 
-            _spriteManager.LoadSpriteContent();
+            // Load only essential assets needed for the main menu and global UI.
+            _spriteManager.LoadEssentialContent();
             _backgroundManager.LoadContent();
-            ServiceLocator.Get<ItemManager>().LoadWeapons("Content/Items/Weapons");
-            ServiceLocator.Get<ActionManager>().LoadActions("Content/Actions");
-            _diceRollingSystem.Initialize(GraphicsDevice, Content);
-            _diceRollingSystem.OnRollCompleted += HandleRollCompleted; // Subscribe to the new event
-            ServiceLocator.Get<ArchetypeManager>().LoadArchetypes("Content/Archetypes");
-            ServiceLocator.Get<EncounterManager>().LoadEncounters("Content/Encounters");
-            _gameState.InitializeWorld();
-            _gameState.InitializeRenderableEntities();
 
-            _loadingScreen.AddTask(new DiceWarmupTask());
-            _loadingScreen.Start();
+            // The rest of the loading is deferred until the player clicks "Play".
+
+            // Set the initial scene to the main menu.
+            _sceneManager.ChangeScene(GameSceneState.MainMenu);
         }
 
         /// <summary>
@@ -346,7 +343,8 @@ namespace ProjectVagabond
             }
             if (currentKeyboardState.IsKeyDown(Keys.F5) && _previousKeyboardState.IsKeyUp(Keys.F5))
             {
-                _sceneManager.ChangeScene(GameSceneState.Combat);
+                var tasks = new List<LoadingTask> { new DelayTask(0.15f) };
+                _sceneManager.ChangeScene(GameSceneState.Combat, tasks);
             }
 
             // Use F2 to trigger a sample grouped dice roll for demonstration.
@@ -396,10 +394,16 @@ namespace ProjectVagabond
             _scaledTotalGameTime += scaledElapsedTime;
             var scaledGameTime = new GameTime(_scaledTotalGameTime, scaledElapsedTime);
 
+            // The loading screen now acts as a modal state that can be triggered at any time.
             if (_loadingScreen.IsActive)
             {
                 _loadingScreen.Update(scaledGameTime);
-                _diceRollingSystem.Update(scaledGameTime); // Allow dice to update for warmup
+                _sceneManager.Update(scaledGameTime); // Allow scene manager to update its transition state
+                // The dice system might be warming up, so it needs updates.
+                if (!_isGameLoaded)
+                {
+                    _diceRollingSystem.Update(scaledGameTime);
+                }
                 return; // Block all other game updates
             }
 
@@ -451,7 +455,12 @@ namespace ProjectVagabond
             // The background is always drawn first into the render target to fill the virtual resolution.
             // This ensures it scales correctly with the rest of the UI.
             _spriteBatch.Begin(samplerState: SamplerState.LinearWrap);
-            _backgroundManager.Draw(_spriteBatch);
+            // Do not draw the standard background if we are in a loading transition,
+            // which allows the loading screen to appear over a black background.
+            if (!_sceneManager.IsLoadingBetweenScenes)
+            {
+                _backgroundManager.Draw(_spriteBatch);
+            }
             _spriteBatch.End();
 
             // The current scene is drawn on top of the background.
