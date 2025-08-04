@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input; // Added for Keyboard state
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
+using ProjectVagabond.Combat; // Added for ActionManager
 using ProjectVagabond.Dice; // Added using directive
 using ProjectVagabond.Encounters;
 using ProjectVagabond.Particles;
@@ -124,6 +125,9 @@ namespace ProjectVagabond
             var itemManager = new ItemManager();
             ServiceLocator.Register<ItemManager>(itemManager);
 
+            var actionManager = new ActionManager();
+            ServiceLocator.Register<ActionManager>(actionManager);
+
             var worldClockManager = new WorldClockManager();
             ServiceLocator.Register<WorldClockManager>(worldClockManager);
 
@@ -232,6 +236,8 @@ namespace ProjectVagabond
             var clockRenderer = new ClockRenderer();
             ServiceLocator.Register<ClockRenderer>(clockRenderer);
 
+
+
             var inputHandler = new InputHandler();
             ServiceLocator.Register<InputHandler>(inputHandler);
 
@@ -260,6 +266,7 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
             _sceneManager.AddScene(GameSceneState.Encounter, new EncounterScene());
+            _sceneManager.AddScene(GameSceneState.Combat, new CombatScene());
 
             OnResize(null, null);
             base.Initialize();
@@ -291,6 +298,7 @@ namespace ProjectVagabond
             _spriteManager.LoadSpriteContent();
             _backgroundManager.LoadContent();
             ServiceLocator.Get<ItemManager>().LoadWeapons("Content/Items/Weapons");
+            ServiceLocator.Get<ActionManager>().LoadActions("Content/Actions");
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
             _diceRollingSystem.OnRollCompleted += HandleRollCompleted; // Subscribe to the new event
             ServiceLocator.Get<ArchetypeManager>().LoadArchetypes("Content/Archetypes");
@@ -341,6 +349,10 @@ namespace ProjectVagabond
             if (currentKeyboardState.IsKeyDown(Keys.F4) && _previousKeyboardState.IsKeyUp(Keys.F4))
             {
                 _isTimeSlowed = !_isTimeSlowed;
+            }
+            if (currentKeyboardState.IsKeyDown(Keys.F5) && _previousKeyboardState.IsKeyUp(Keys.F5))
+            {
+                _sceneManager.ChangeScene(GameSceneState.Combat);
             }
 
             // Use F2 to trigger a sample grouped dice roll for demonstration.

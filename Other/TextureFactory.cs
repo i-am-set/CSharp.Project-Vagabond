@@ -258,5 +258,27 @@ namespace ProjectVagabond
             texture.SetData(colorData);
             return texture;
         }
+
+        public Texture2D CreateEnemyPlaceholderTexture()
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            const int width = 256;
+            const int height = 256;
+            var texture = new Texture2D(graphicsDevice, width, height);
+            var colorData = new Color[width * height];
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    // Simple gradient for some visual interest
+                    float gradient = (float)y / height;
+                    colorData[y * width + x] = Color.Lerp(Color.MediumPurple, Color.DarkSlateBlue, gradient);
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
     }
 }

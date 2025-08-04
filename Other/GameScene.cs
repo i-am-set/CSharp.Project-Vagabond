@@ -15,7 +15,8 @@ namespace ProjectVagabond.Scenes
         TerminalMap,
         Dialogue,
         Settings,
-        Encounter
+        Encounter,
+        Combat
     }
 
     /// <summary>
