@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,16 +42,14 @@ namespace ProjectVagabond
         private readonly Dictionary<Vector2, float> _pathNodeAnimationOffsets = new Dictionary<Vector2, float>();
         private readonly Random _pathAnimRandom = new Random();
 
-        // Animation state for the header tab
-        private float _headerYOffset;
-        private float _headerTargetYOffset;
-        private const float HEADER_ANIMATION_SPEED = 8f;
-        private const float HEADER_HIDDEN_Y_OFFSET = 30f;
+        // Animation state for the footer tab
+        private float _footerYOffset;
+        private float _footerTargetYOffset;
+        private const float FOOTER_ANIMATION_SPEED = 8f;
+        private const float FOOTER_HIDDEN_Y_OFFSET = -20f; // Negative to move it UP, just enough to hide it
 
         // Animation state for map frame sway
-        private readonly Random _random = new Random();
-        private float _swayTimerX;
-        private float _swayTimerY;
+        public OrganicSwayAnimation SwayAnimation { get; }
         private const float SWAY_SPEED_X = 0.8f;
         private const float SWAY_SPEED_Y = 0.6f;
         private const float SWAY_AMOUNT = 1.5f;
@@ -72,17 +71,15 @@ namespace ProjectVagabond
 
             _buttonMap = _headerButtons.ToDictionary(b => b.Function.ToLowerInvariant(), b => b);
 
-            // Initialize timers at random points to desynchronize movements
-            _swayTimerX = (float)(_random.NextDouble() * Math.PI * 2);
-            _swayTimerY = (float)(_random.NextDouble() * Math.PI * 2);
+            SwayAnimation = new OrganicSwayAnimation(SWAY_SPEED_X, SWAY_SPEED_Y, SWAY_AMOUNT, SWAY_AMOUNT);
 
             ResetHeaderState();
         }
 
         public void ResetHeaderState()
         {
-            _headerYOffset = HEADER_HIDDEN_Y_OFFSET;
-            _headerTargetYOffset = HEADER_HIDDEN_Y_OFFSET;
+            _footerYOffset = FOOTER_HIDDEN_Y_OFFSET;
+            _footerTargetYOffset = FOOTER_HIDDEN_Y_OFFSET;
         }
 
         public void Update(GameTime gameTime, BitmapFont font)
@@ -94,13 +91,9 @@ namespace ProjectVagabond
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- Header Animation Logic ---
-            _headerTargetYOffset = _gameState.PendingActions.Any() ? 0f : HEADER_HIDDEN_Y_OFFSET;
-            _headerYOffset = MathHelper.Lerp(_headerYOffset, _headerTargetYOffset, deltaTime * HEADER_ANIMATION_SPEED);
-
-            // --- Sway Animation Logic ---
-            _swayTimerX += deltaTime * SWAY_SPEED_X;
-            _swayTimerY += deltaTime * SWAY_SPEED_Y;
+            // --- Footer Animation Logic ---
+            _footerTargetYOffset = _gameState.PendingActions.Any() ? 0f : FOOTER_HIDDEN_Y_OFFSET;
+            _footerYOffset = MathHelper.Lerp(_footerYOffset, _footerTargetYOffset, deltaTime * FOOTER_ANIMATION_SPEED);
         }
 
         private void CalculateMapLayout(Rectangle? overrideBounds = null)
@@ -237,9 +230,7 @@ namespace ProjectVagabond
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             // Calculate sway offset
-            float swayX = (float)Math.Sin(_swayTimerX) * SWAY_AMOUNT;
-            float swayY = (float)Math.Cos(_swayTimerY) * SWAY_AMOUNT;
-            var swayOffset = new Vector2(swayX, swayY);
+            var swayOffset = SwayAnimation.Offset;
 
             // Create swayed versions of bounds for drawing
             var swayedMapScreenBounds = new Rectangle(
@@ -249,32 +240,32 @@ namespace ProjectVagabond
                 MapScreenBounds.Height
             );
 
-            // --- Draw the animated header FIRST, so it appears behind the map frame ---
-            // Only draw if it's at least partially visible
-            if (_headerYOffset < HEADER_HIDDEN_Y_OFFSET - 1)
+            // --- 1. Draw the animated footer FIRST ---
+            // Only draw if it's not fully hidden
+            if (_footerYOffset > FOOTER_HIDDEN_Y_OFFSET + 1)
             {
-                int headerWidth = swayedMapScreenBounds.Width + 2;
-                int headerX = swayedMapScreenBounds.X - 1;
-                int headerY = (int)(swayedMapScreenBounds.Y - 25 + _headerYOffset);
+                int footerWidth = swayedMapScreenBounds.Width + 2;
+                int footerX = swayedMapScreenBounds.X - 1;
+                int footerY = (int)(swayedMapScreenBounds.Bottom + 5 + _footerYOffset);
 
-                Rectangle headerBounds = new Rectangle(headerX, headerY, headerWidth, 20);
+                Rectangle footerBounds = new Rectangle(footerX, footerY, footerWidth, 20);
 
-                // Draw header background
-                spriteBatch.Draw(pixel, headerBounds, _global.TerminalBg);
+                // Draw footer background
+                spriteBatch.Draw(pixel, footerBounds, _global.TerminalBg);
 
-                // Draw header frame lines (without the bottom line)
-                spriteBatch.Draw(pixel, new Rectangle(headerBounds.X, headerBounds.Y, headerBounds.Width, 2), _global.Palette_White); // Top
-                spriteBatch.Draw(pixel, new Rectangle(headerBounds.X, headerBounds.Y, 2, headerBounds.Height), _global.Palette_White); // Left
-                spriteBatch.Draw(pixel, new Rectangle(headerBounds.Right - 2, headerBounds.Y, 2, headerBounds.Height), _global.Palette_White); // Right
+                // Draw footer frame lines
+                spriteBatch.Draw(pixel, new Rectangle(footerBounds.X, footerBounds.Bottom - 2, footerBounds.Width, 2), _global.Palette_White); // Bottom
+                spriteBatch.Draw(pixel, new Rectangle(footerBounds.X, footerBounds.Y, 2, footerBounds.Height), _global.Palette_White); // Left
+                spriteBatch.Draw(pixel, new Rectangle(footerBounds.Right - 2, footerBounds.Y, 2, footerBounds.Height), _global.Palette_White); // Right
 
-                LayoutHeaderButtons(swayOffset);
+                LayoutAndPositionButtons(footerBounds);
                 foreach (var b in _headerButtons)
                 {
                     b.Draw(spriteBatch, font, gameTime);
                 }
             }
 
-            // --- Now draw the main map frame and background, which will cover the header when it retracts ---
+            // --- 2. Draw the main map frame and background on top of the footer ---
             int mainFrameHeight = swayedMapScreenBounds.Height + 10;
             Rectangle fullFrameArea = new Rectangle(
                 swayedMapScreenBounds.X - 5,
@@ -283,48 +274,43 @@ namespace ProjectVagabond
                 mainFrameHeight
             );
 
-            // Draw the background for the entire framed area. This will paint over the header.
+            // Draw the background for the entire framed area. This will paint over the footer.
             spriteBatch.Draw(pixel, fullFrameArea, _global.TerminalBg);
 
             // Draw main frame lines on top of the background
-            spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.X - 5, swayedMapScreenBounds.Y - 5, swayedMapScreenBounds.Width + 10, 2), _global.Palette_White); // Top border (separator)
+            spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.X - 5, swayedMapScreenBounds.Y - 5, swayedMapScreenBounds.Width + 10, 2), _global.Palette_White); // Top border
             spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.X - 5, swayedMapScreenBounds.Bottom + 3, swayedMapScreenBounds.Width + 10, 2), _global.Palette_White); // Bottom border
             spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.X - 5, swayedMapScreenBounds.Y - 5, 2, mainFrameHeight), _global.Palette_White); // Left border
             spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.Right + 3, swayedMapScreenBounds.Y - 5, 2, mainFrameHeight), _global.Palette_White); // Right border
         }
 
-        public void LayoutHeaderButtons(Vector2 swayOffset)
+        public void LayoutAndPositionButtons(Rectangle footerBounds)
         {
             const int buttonHeight = 16;
             const int buttonSpacing = 5;
             const int buttonWidth = 45;
 
-            int headerWidth = MapScreenBounds.Width + 2;
-            int headerX = MapScreenBounds.X - 1;
-
             int totalWidth = (buttonWidth * 3) + (buttonSpacing * 2);
-            int groupStartX = headerX + (headerWidth - totalWidth) / 2;
+            int groupStartX = footerBounds.X + (footerBounds.Width - totalWidth) / 2;
 
             int currentX = groupStartX;
-            // Center the button vertically within the 20px header area and apply animation offset
-            int headerCenterY = (int)(MapScreenBounds.Y - 15 + _headerYOffset);
-            int buttonY = headerCenterY - (buttonHeight / 2);
+            int buttonY = footerBounds.Y + (footerBounds.Height - buttonHeight) / 2;
 
             if (_buttonMap.TryGetValue("clear", out Button clearButton))
             {
-                clearButton.Bounds = new Rectangle(currentX + (int)swayOffset.X, buttonY + (int)swayOffset.Y, buttonWidth, buttonHeight);
+                clearButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
                 currentX += buttonWidth + buttonSpacing;
             }
 
             if (_buttonMap.TryGetValue("go", out Button goButton))
             {
-                goButton.Bounds = new Rectangle(currentX + (int)swayOffset.X, buttonY + (int)swayOffset.Y, buttonWidth, buttonHeight);
+                goButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
                 currentX += buttonWidth + buttonSpacing;
             }
 
             if (_buttonMap.TryGetValue("stop", out Button stopButton))
             {
-                stopButton.Bounds = new Rectangle(currentX + (int)swayOffset.X, buttonY + (int)swayOffset.Y, buttonWidth, buttonHeight);
+                stopButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
             }
         }
 

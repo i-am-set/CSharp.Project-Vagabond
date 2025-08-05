@@ -4,11 +4,13 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Combat;
+using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Encounters;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -61,6 +63,7 @@ namespace ProjectVagabond
         private BackgroundManager _backgroundManager;
         private PreEncounterAnimationSystem _preEncounterAnimationSystem;
         private LoadingScreen _loadingScreen;
+        private AnimationManager _animationManager;
 
         // Input State
         private KeyboardState _previousKeyboardState;
@@ -144,6 +147,9 @@ namespace ProjectVagabond
 
             _hapticsManager = new HapticsManager();
             ServiceLocator.Register<HapticsManager>(_hapticsManager);
+
+            _animationManager = new AnimationManager();
+            ServiceLocator.Register<AnimationManager>(_animationManager);
 
             _tooltipManager = new TooltipManager();
             ServiceLocator.Register<TooltipManager>(_tooltipManager);
@@ -426,6 +432,7 @@ namespace ProjectVagabond
             _particleSystemManager.Update(scaledGameTime);
             _diceRollingSystem.Update(scaledGameTime); // Update dice visuals and game logic every frame.
             _backgroundManager.Update(scaledGameTime);
+            _animationManager.Update(scaledGameTime);
 
             // This system handles core logic that must run even when paused (to handle interruptions).
             _combatInitiationSystem.Update(scaledGameTime);

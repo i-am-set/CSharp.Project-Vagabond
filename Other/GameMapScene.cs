@@ -6,6 +6,7 @@ using ProjectVagabond.Dice;
 using ProjectVagabond.Encounters;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Linq;
 
@@ -24,6 +25,7 @@ namespace ProjectVagabond.Scenes
         private readonly DiceRollingSystem _diceRollingSystem;
         private readonly PreEncounterAnimationSystem _preEncounterAnimationSystem;
         private readonly PlayerInputSystem _playerInputSystem;
+        private readonly AnimationManager _animationManager;
         private WaitDialog _waitDialog;
         private ImageButton _settingsButton;
 
@@ -39,6 +41,7 @@ namespace ProjectVagabond.Scenes
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _preEncounterAnimationSystem = ServiceLocator.Get<PreEncounterAnimationSystem>();
             _playerInputSystem = ServiceLocator.Get<PlayerInputSystem>();
+            _animationManager = ServiceLocator.Get<AnimationManager>();
         }
 
         protected override Rectangle GetAnimatedBounds()
@@ -77,12 +80,15 @@ namespace ProjectVagabond.Scenes
             _settingsButton.Bounds = new Rectangle(buttonX, buttonY, _settingsButton.Bounds.Width, _settingsButton.Bounds.Height);
 
             _previousKeyboardState = Keyboard.GetState();
+
+            _animationManager.Register("MapBorderSway", _mapRenderer.SwayAnimation);
         }
 
         public override void Exit()
         {
             base.Exit();
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
+            _animationManager.Unregister("MapBorderSway");
         }
 
         private void OpenSettings()
@@ -158,7 +164,7 @@ namespace ProjectVagabond.Scenes
             }
 
             _hapticsManager.Update(gameTime);
-            
+
             base.Update(gameTime); // This now updates the intro animator and previous input states
         }
 

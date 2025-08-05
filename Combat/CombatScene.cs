@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
@@ -20,6 +21,7 @@ namespace ProjectVagabond.Scenes
         private ActionMenu _rightActionMenu;
         private CombatInputHandler _inputHandler;
         private Texture2D _enemyTexture;
+        private AnimationManager _animationManager;
 
         public override void Initialize()
         {
@@ -35,6 +37,7 @@ namespace ProjectVagabond.Scenes
             _rightActionMenu = new ActionMenu(HandType.Right);
 
             _inputHandler = new CombatInputHandler(_combatManager, _leftHandRenderer, _rightHandRenderer, _leftActionMenu, _rightActionMenu);
+            _animationManager = ServiceLocator.Get<AnimationManager>();
         }
 
         public override void Enter()
@@ -59,6 +62,16 @@ namespace ProjectVagabond.Scenes
             _leftActionMenu.EnterScene();
             _rightActionMenu.EnterScene();
             _inputHandler.Reset();
+
+            _animationManager.Register("LeftHandSway", _leftHandRenderer.SwayAnimation);
+            _animationManager.Register("RightHandSway", _rightHandRenderer.SwayAnimation);
+        }
+
+        public override void Exit()
+        {
+            base.Exit();
+            _animationManager.Unregister("LeftHandSway");
+            _animationManager.Unregister("RightHandSway");
         }
 
         public override void Update(GameTime gameTime)
