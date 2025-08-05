@@ -195,7 +195,7 @@ namespace ProjectVagabond.UI
             _previousKeyboardState = currentKeyboardState;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (!IsActive) return;
 

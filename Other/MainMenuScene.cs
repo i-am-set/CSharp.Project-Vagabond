@@ -267,8 +267,15 @@ namespace ProjectVagabond.Scenes
 
             if (_confirmationDialog.IsActive)
             {
-                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.7f);
-                _confirmationDialog.Draw(spriteBatch, font, gameTime);
+                _confirmationDialog.DrawContent(spriteBatch, font, gameTime);
+            }
+        }
+
+        public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            if (_confirmationDialog.IsActive)
+            {
+                _confirmationDialog.DrawOverlay(spriteBatch);
             }
         }
 

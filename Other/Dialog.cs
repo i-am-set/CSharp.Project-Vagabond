@@ -32,7 +32,20 @@ namespace ProjectVagabond.UI
 
         public abstract void Update(GameTime gameTime);
 
-        public abstract void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime);
+        public void DrawOverlay(SpriteBatch spriteBatch)
+        {
+            if (!IsActive) return;
+
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var pixel = ServiceLocator.Get<Texture2D>();
+            var screenBounds = new Rectangle(0, 0, graphicsDevice.PresentationParameters.BackBufferWidth, graphicsDevice.PresentationParameters.BackBufferHeight);
+
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            spriteBatch.Draw(pixel, screenBounds, Color.Black * 0.7f);
+            spriteBatch.End();
+        }
+
+        public abstract void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime);
 
         protected bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
 

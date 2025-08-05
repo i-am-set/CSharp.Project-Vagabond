@@ -481,10 +481,13 @@ namespace ProjectVagabond
             }
             _spriteBatch.End();
 
+            // Scene-specific underlays (like dialog overlays) are drawn directly to the backbuffer, BEFORE the main scene.
+            _sceneManager.DrawUnderlay(_spriteBatch, _defaultFont, gameTime);
+
             var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
 
-            // Draw the main 2D scene (which now includes the background) from the render target, scaled to fit the screen.
+            // Draw the main 2D scene from the render target, scaled to fit the screen.
             _spriteBatch.Begin(samplerState: finalSamplerState, transformMatrix: shakeMatrix);
             _spriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
             _spriteBatch.End();
@@ -496,9 +499,6 @@ namespace ProjectVagabond
                 _spriteBatch.Draw(diceTexture, _finalRenderRectangle, Color.White);
                 _spriteBatch.End();
             }
-
-            // Scene-specific underlays (like dialogs) are drawn directly to the backbuffer, on top of the main scene.
-            _sceneManager.DrawUnderlay(_spriteBatch, _defaultFont, gameTime);
 
             // Draw particles on top of everything else, respecting the shake matrix.
             _particleSystemManager.Draw(_spriteBatch, shakeMatrix);
