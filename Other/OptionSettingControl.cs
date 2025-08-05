@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,8 +70,24 @@ namespace ProjectVagabond.UI
             if (key == Keys.Right || key == Keys.Enter) Increment();
         }
 
-        public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos)
+        private void CalculateBounds(Vector2 position, BitmapFont font)
         {
+            const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
+            string leftArrowText = "<";
+            string rightArrowText = ">";
+            Vector2 leftArrowSize = font.MeasureString(leftArrowText);
+            Vector2 rightArrowSize = font.MeasureString(rightArrowText);
+            int padding = 5;
+            float arrowVisualHeight = font.LineHeight;
+
+            _leftArrowRect = new Rectangle((int)(position.X + 340) - padding, (int)position.Y - padding, (int)leftArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
+            _rightArrowRect = new Rectangle((int)(position.X + 340 + valueDisplayWidth - rightArrowSize.X) - padding, (int)position.Y - padding, (int)rightArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
+        }
+
+        public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont font)
+        {
+            CalculateBounds(position, font);
+
             _isLeftArrowHovered = _leftArrowRect.Contains(virtualMousePos);
             _isRightArrowHovered = _rightArrowRect.Contains(virtualMousePos);
 
@@ -129,12 +146,6 @@ namespace ProjectVagabond.UI
             float spaceBetweenArrows = (valueAreaPosition.X + valueDisplayWidth - rightArrowSize.X) - (valueAreaPosition.X + leftArrowSize.X);
             float textX = valueAreaPosition.X + leftArrowSize.X + (spaceBetweenArrows - valueTextSize.X) * 0.5f;
             spriteBatch.DrawString(font, valueText, new Vector2(textX, valueAreaPosition.Y), baseValueColor);
-
-            int padding = 5;
-            float arrowVisualHeight = font.LineHeight;
-
-            _leftArrowRect = new Rectangle((int)(position.X + 340) - padding, (int)position.Y - padding, (int)leftArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
-            _rightArrowRect = new Rectangle((int)(position.X + 340 + valueDisplayWidth - rightArrowSize.X) - padding, (int)position.Y - padding, (int)rightArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
         }
     }
 }

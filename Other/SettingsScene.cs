@@ -288,23 +288,24 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime);
-
             _titleBobTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             if (IsInputBlocked)
             {
+                base.Update(gameTime);
                 return;
             }
 
             if (_confirmationDialog.IsActive)
             {
                 _confirmationDialog.Update(gameTime);
+                base.Update(gameTime);
                 return;
             }
 
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
+            var font = ServiceLocator.Get<BitmapFont>();
             _hoveredIndex = -1;
 
             if (currentMouseState.Position != previousMouseState.Position || (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released))
@@ -331,7 +332,7 @@ namespace ProjectVagabond.Scenes
                 {
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 460, 20);
                     if (hoverRect.Contains(virtualMousePos)) { _selectedIndex = i; _hoveredIndex = i; }
-                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 5), isSelected, currentMouseState, previousMouseState, virtualMousePos);
+                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 5), isSelected, currentMouseState, previousMouseState, virtualMousePos, font);
                     currentPos.Y += 20;
                 }
                 else if (item is Button button)
@@ -350,6 +351,8 @@ namespace ProjectVagabond.Scenes
             var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Apply");
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) AttemptToGoBack();
+
+            base.Update(gameTime);
         }
 
         private void HandleKeyboardInput(KeyboardState currentKeyboardState)

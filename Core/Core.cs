@@ -464,16 +464,6 @@ namespace ProjectVagabond
             // Tooltips and other persistent UI elements are drawn into the main render target.
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _tooltipManager.Draw(_spriteBatch, _defaultFont);
-
-            // Draw the game version in the bottom-left corner of the virtual screen.
-            if (_defaultFont != null)
-            {
-                string versionText = $"v{Global.GAME_VERSION}";
-                float padding = 5f;
-                var versionPosition = new Vector2(padding, Global.VIRTUAL_HEIGHT - _defaultFont.LineHeight - padding);
-                _spriteBatch.DrawString(_defaultFont, versionText, versionPosition, _global.Palette_DarkGray);
-            }
-
             _spriteBatch.End();
 
             // --- 2. Draw the 3D dice to their own render target ---
@@ -523,6 +513,18 @@ namespace ProjectVagabond
                 _loadingScreen.Draw(_spriteBatch, _defaultFont, GraphicsDevice.PresentationParameters.Bounds);
                 _spriteBatch.End();
             }
+
+            // Draw the game version last so it's on top of everything, anchored to the screen.
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            if (_defaultFont != null)
+            {
+                string versionText = $"v{Global.GAME_VERSION}";
+                float padding = 5f;
+                var screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
+                var versionPosition = new Vector2(padding, screenHeight - _defaultFont.LineHeight - padding);
+                _spriteBatch.DrawString(_defaultFont, versionText, versionPosition, _global.Palette_DarkGray);
+            }
+            _spriteBatch.End();
 
             base.Draw(gameTime);
         }
