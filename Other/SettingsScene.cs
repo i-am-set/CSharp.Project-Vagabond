@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
@@ -56,7 +55,7 @@ namespace ProjectVagabond.Scenes
             _tempSettings = new GameSettings
             {
                 Resolution = _settings.Resolution,
-                IsFullscreen = _settings.IsFullscreen,
+                Mode = _settings.Mode,
                 IsVsync = _settings.IsVsync,
                 IsFrameLimiterEnabled = _settings.IsFrameLimiterEnabled,
                 TargetFramerate = _settings.TargetFramerate,
@@ -118,8 +117,16 @@ namespace ProjectVagabond.Scenes
                 if (aspectIndex != -1) display = display.Substring(0, aspectIndex);
                 return new KeyValuePair<string, Point>(display, kvp.Value);
             }).ToList();
+
+            var windowModes = new List<KeyValuePair<string, WindowMode>>
+            {
+                new("Windowed", WindowMode.Windowed),
+                new("Borderless", WindowMode.Borderless),
+                new("Fullscreen", WindowMode.Fullscreen)
+            };
+
             _uiElements.Add(new OptionSettingControl<Point>("Resolution", resolutionDisplayList, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v));
-            _uiElements.Add(new BoolSettingControl("Fullscreen", () => _tempSettings.IsFullscreen, v => { _tempSettings.IsFullscreen = v; if (v) SetResolutionToNearestNative(); }));
+            _uiElements.Add(new OptionSettingControl<WindowMode>("Window Mode", windowModes, () => _tempSettings.Mode, v => { _tempSettings.Mode = v; if (v == WindowMode.Borderless) SetResolutionToNative(); }));
             _uiElements.Add(new BoolSettingControl("Smaller UI", () => _tempSettings.SmallerUi, v => _tempSettings.SmallerUi = v));
             _uiElements.Add(new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v));
             _uiElements.Add(new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v));
@@ -163,7 +170,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void SetResolutionToNearestNative()
+        private void SetResolutionToNative()
         {
             var nativeResolution = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
             var nativePoint = new Point(nativeResolution.Width, nativeResolution.Height);
@@ -202,7 +209,7 @@ namespace ProjectVagabond.Scenes
         private void ExecuteApplySettings()
         {
             _settings.Resolution = _tempSettings.Resolution;
-            _settings.IsFullscreen = _tempSettings.IsFullscreen;
+            _settings.Mode = _tempSettings.Mode;
             _settings.IsVsync = _tempSettings.IsVsync;
             _settings.IsFrameLimiterEnabled = _tempSettings.IsFrameLimiterEnabled;
             _settings.TargetFramerate = _tempSettings.TargetFramerate;
@@ -224,7 +231,7 @@ namespace ProjectVagabond.Scenes
         {
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.Revert();
             _tempSettings.Resolution = _settings.Resolution;
-            _tempSettings.IsFullscreen = _settings.IsFullscreen;
+            _tempSettings.Mode = _settings.Mode;
             _tempSettings.IsVsync = _settings.IsVsync;
             _tempSettings.IsFrameLimiterEnabled = _settings.IsFrameLimiterEnabled;
             _tempSettings.TargetFramerate = _settings.TargetFramerate;

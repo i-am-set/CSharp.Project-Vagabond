@@ -4,11 +4,18 @@ using System;
 
 namespace ProjectVagabond
 {
+    public enum WindowMode
+    {
+        Windowed,
+        Fullscreen,
+        Borderless
+    }
+
     public class GameSettings
     {
         // Graphics Settings
         public Point Resolution { get; set; }
-        public bool IsFullscreen { get; set; }
+        public WindowMode Mode { get; set; }
         public bool IsVsync { get; set; }
         public bool IsFrameLimiterEnabled { get; set; }
         public int TargetFramerate { get; set; }
@@ -25,7 +32,7 @@ namespace ProjectVagabond
         {
             // Default graphics settings
             Resolution = new Point(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-            IsFullscreen = false;
+            Mode = WindowMode.Windowed;
             IsVsync = true;
             IsFrameLimiterEnabled = true;
             TargetFramerate = 60;
@@ -49,14 +56,56 @@ namespace ProjectVagabond
             }
 
             gdm.SynchronizeWithVerticalRetrace = IsVsync;
-            gdm.IsFullScreen = IsFullscreen;
 
-            // Set the new resolution directly instead of using a static helper
-            gdm.PreferredBackBufferWidth = Resolution.X;
-            gdm.PreferredBackBufferHeight = Resolution.Y;
+            var displayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+            bool isNativeResolution = (Resolution.X == displayMode.Width && Resolution.Y == displayMode.Height);
+
+            WindowMode effectiveMode = Mode;
+            // If user selects Windowed mode but at their native resolution, upgrade it to Borderless
+            // to provide the best fit experience that respects the taskbar.
+            if (Mode == WindowMode.Windowed && isNativeResolution)
+            {
+                effectiveMode = WindowMode.Borderless;
+            }
+
+            // Handle window mode logic based on the effective mode
+            if (effectiveMode == WindowMode.Fullscreen)
+            {
+                gdm.IsFullScreen = true;
+                game.Window.IsBorderless = false;
+                gdm.PreferredBackBufferWidth = Resolution.X;
+                gdm.PreferredBackBufferHeight = Resolution.Y;
+            }
+            else if (effectiveMode == WindowMode.Borderless)
+            {
+                gdm.IsFullScreen = false;
+                game.Window.IsBorderless = true;
+                gdm.PreferredBackBufferWidth = displayMode.Width;
+                gdm.PreferredBackBufferHeight = displayMode.Height;
+            }
+            else // WindowMode.Windowed (and not native resolution)
+            {
+                gdm.IsFullScreen = false;
+                game.Window.IsBorderless = false;
+                gdm.PreferredBackBufferWidth = Resolution.X;
+                gdm.PreferredBackBufferHeight = Resolution.Y;
+            }
 
             // Apply all pending graphics changes
             gdm.ApplyChanges();
+
+            // Post-apply adjustments for window position
+            if (effectiveMode == WindowMode.Borderless)
+            {
+                game.Window.Position = Point.Zero;
+            }
+            else if (effectiveMode == WindowMode.Windowed)
+            {
+                // Center the window on the screen
+                int centerX = (displayMode.Width - game.Window.ClientBounds.Width) / 2;
+                int centerY = (displayMode.Height - game.Window.ClientBounds.Height) / 2;
+                game.Window.Position = new Point(centerX, centerY);
+            }
 
             // Notify the game of the resize to recalculate the render area
             game.OnResize(null, null);

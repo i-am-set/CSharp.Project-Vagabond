@@ -104,6 +104,7 @@ namespace ProjectVagabond
                 Directory.CreateDirectory(_settingsFolderPath);
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 options.Converters.Add(new PointJsonConverter());
+                options.Converters.Add(new JsonStringEnumConverter());
                 string jsonString = JsonSerializer.Serialize(settings, options);
                 File.WriteAllText(_settingsFilePath, jsonString);
             }
@@ -122,6 +123,7 @@ namespace ProjectVagabond
                     string jsonString = File.ReadAllText(_settingsFilePath);
                     var options = new JsonSerializerOptions();
                     options.Converters.Add(new PointJsonConverter());
+                    options.Converters.Add(new JsonStringEnumConverter());
                     var settings = JsonSerializer.Deserialize<GameSettings>(jsonString, options);
 
                     if (settings != null)
