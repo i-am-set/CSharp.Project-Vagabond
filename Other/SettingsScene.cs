@@ -278,7 +278,6 @@ namespace ProjectVagabond.Scenes
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.Apply();
             _confirmationMessage = "Settings Applied!";
             _confirmationTimer = 5f;
-            MoveMouseToSelected();
         }
 
         private void RevertChanges()
@@ -431,7 +430,11 @@ namespace ProjectVagabond.Scenes
             if (KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState)) { _sceneManager.LastInputDevice = InputDevice.Keyboard; _selectedIndex = FindNextSelectable(_selectedIndex, 1); selectionChanged = true; }
             if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState)) { _sceneManager.LastInputDevice = InputDevice.Keyboard; _selectedIndex = FindNextSelectable(_selectedIndex, -1); selectionChanged = true; }
 
-            if (selectionChanged) { MoveMouseToSelected(); _core.IsMouseVisible = false; keyboardNavigatedLastFrame = true; }
+            if (selectionChanged)
+            {
+                _core.IsMouseVisible = false;
+                keyboardNavigatedLastFrame = true;
+            }
 
             if (_selectedIndex >= 0 && _selectedIndex < _uiElements.Count)
             {
