@@ -30,6 +30,7 @@ namespace ProjectVagabond.UI
         private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
 
         public Func<T, Color?> GetValueColor { get; set; }
+        public Func<T, bool> IsOptionNotRecommended { get; set; }
 
         public OptionSettingControl(string label, List<KeyValuePair<string, T>> options, Func<T> getter, Action<T> setter)
         {
@@ -135,7 +136,13 @@ namespace ProjectVagabond.UI
             string rightArrowText = ">";
 
             Color baseValueColor;
-            if (IsDirty)
+            bool isNotRecommended = IsOptionNotRecommended?.Invoke(_currentValue) ?? false;
+
+            if (isSelected && isNotRecommended)
+            {
+                baseValueColor = _global.Palette_Orange;
+            }
+            else if (IsDirty)
             {
                 baseValueColor = _global.Palette_Teal;
             }

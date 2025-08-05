@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -20,6 +21,7 @@ namespace ProjectVagabond
         public bool IsFrameLimiterEnabled { get; set; }
         public int TargetFramerate { get; set; }
         public bool SmallerUi { get; set; }
+        public int DisplayIndex { get; set; }
 
         // Game Settings
         public bool UseImperialUnits { get; set; }
@@ -37,6 +39,7 @@ namespace ProjectVagabond
             IsFrameLimiterEnabled = true;
             TargetFramerate = 60;
             SmallerUi = false;
+            DisplayIndex = 0;
 
             // Default game settings. This class is the source of truth for defaults.
             UseImperialUnits = false;
@@ -58,56 +61,57 @@ namespace ProjectVagabond
             gdm.SynchronizeWithVerticalRetrace = IsVsync;
 
             var displayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
-            bool isNativeResolution = (Resolution.X == displayMode.Width && Resolution.Y == displayMode.Height);
 
-            WindowMode effectiveMode = Mode;
-            // If user selects Windowed mode but at their native resolution, upgrade it to Borderless
-            // to provide the best fit experience that respects the taskbar.
-            if (Mode == WindowMode.Windowed && isNativeResolution)
-            {
-                effectiveMode = WindowMode.Borderless;
-            }
-
-            // Handle window mode logic based on the effective mode
-            if (effectiveMode == WindowMode.Fullscreen)
+            // Handle window mode logic directly based on the user's selection.
+            if (Mode == WindowMode.Fullscreen)
             {
                 gdm.IsFullScreen = true;
                 game.Window.IsBorderless = false;
                 gdm.PreferredBackBufferWidth = Resolution.X;
                 gdm.PreferredBackBufferHeight = Resolution.Y;
             }
-            else if (effectiveMode == WindowMode.Borderless)
+            else if (Mode == WindowMode.Borderless)
             {
                 gdm.IsFullScreen = false;
                 game.Window.IsBorderless = true;
+                // For borderless, use the native resolution of the default monitor.
                 gdm.PreferredBackBufferWidth = displayMode.Width;
                 gdm.PreferredBackBufferHeight = displayMode.Height;
             }
-            else // WindowMode.Windowed (and not native resolution)
+            else // WindowMode.Windowed
             {
                 gdm.IsFullScreen = false;
                 game.Window.IsBorderless = false;
+
                 gdm.PreferredBackBufferWidth = Resolution.X;
                 gdm.PreferredBackBufferHeight = Resolution.Y;
             }
 
-            // Apply all pending graphics changes
             gdm.ApplyChanges();
 
             // Post-apply adjustments for window position
-            if (effectiveMode == WindowMode.Borderless)
+            if (Mode == WindowMode.Borderless)
             {
+                // For borderless, we want the window at the top-left of its monitor.
                 game.Window.Position = Point.Zero;
             }
-            else if (effectiveMode == WindowMode.Windowed)
+            else if (Mode == WindowMode.Windowed)
             {
-                // Center the window on the screen
-                int centerX = (displayMode.Width - game.Window.ClientBounds.Width) / 2;
-                int centerY = (displayMode.Height - game.Window.ClientBounds.Height) / 2;
-                game.Window.Position = new Point(centerX, centerY);
+                // Calculate center position relative to the primary display.
+                int screenWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+                int screenHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+
+                int windowWidth = game.Window.ClientBounds.Width;
+                int windowHeight = game.Window.ClientBounds.Height;
+
+                int centerX = (screenWidth - windowWidth) / 2;
+                int centerY = (screenHeight - windowHeight) / 2;
+
+                // Ensure the Y position is at least a small positive value (e.g., 20 pixels)
+                // to keep the title bar on screen and visible.
+                game.Window.Position = new Point(centerX, Math.Max(20, centerY));
             }
 
-            // Notify the game of the resize to recalculate the render area
             game.OnResize(null, null);
         }
 
@@ -116,7 +120,6 @@ namespace ProjectVagabond
         /// </summary>
         public void ApplyGameSettings()
         {
-            // Get the Global instance from the ServiceLocator to apply settings
             var global = ServiceLocator.Get<Global>();
             global.UseImperialUnits = UseImperialUnits;
             global.Use24HourClock = Use24HourClock;

@@ -32,6 +32,7 @@ namespace ProjectVagabond.Scenes
 
         private GameSettings _tempSettings;
         private ConfirmationDialog _confirmationDialog;
+        private RevertDialog _revertDialog;
 
         public GameSceneState ReturnScene { get; set; } = GameSceneState.MainMenu;
 
@@ -52,6 +53,7 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             _confirmationDialog = new ConfirmationDialog(this);
+            _revertDialog = new RevertDialog(this);
             
             RefreshUIFromSettings();
 
@@ -85,7 +87,8 @@ namespace ProjectVagabond.Scenes
                 TargetFramerate = _settings.TargetFramerate,
                 SmallerUi = _settings.SmallerUi,
                 UseImperialUnits = _settings.UseImperialUnits,
-                Use24HourClock = _settings.Use24HourClock
+                Use24HourClock = _settings.Use24HourClock,
+                DisplayIndex = _settings.DisplayIndex
             };
             _titleBobTimer = 0f;
             BuildInitialUI();
@@ -125,7 +128,6 @@ namespace ProjectVagabond.Scenes
                 return new KeyValuePair<string, Point>(display.Trim(), kvp.Value);
             }).ToList();
 
-            // Check if the current resolution is non-standard and add a "CUSTOM" entry if it is.
             bool isCustomResolution = !resolutionDisplayList.Any(kvp => kvp.Value == _tempSettings.Resolution);
             if (isCustomResolution)
             {
@@ -140,6 +142,10 @@ namespace ProjectVagabond.Scenes
             };
 
             var resolutionControl = new OptionSettingControl<Point>("Resolution", resolutionDisplayList, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v);
+            
+            var nativeDisplayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+            resolutionControl.IsOptionNotRecommended = (res) => res.X > nativeDisplayMode.Width || res.Y > nativeDisplayMode.Height;
+
             resolutionControl.GetValueColor = (pointValue) =>
             {
                 bool isStandard = SettingsManager.GetResolutions().Any(r => r.Value == pointValue);
@@ -147,13 +153,18 @@ namespace ProjectVagabond.Scenes
             };
             _uiElements.Add(resolutionControl);
 
-            _uiElements.Add(new OptionSettingControl<WindowMode>("Window Mode", windowModes, () => _tempSettings.Mode, v => { _tempSettings.Mode = v; if (v == WindowMode.Borderless) SetResolutionToNative(); }));
+            var windowModeControl = new OptionSettingControl<WindowMode>("Window Mode", windowModes, () => _tempSettings.Mode, v => {
+                _tempSettings.Mode = v;
+                if (v == WindowMode.Borderless) SetResolutionToNative();
+            });
+            _uiElements.Add(windowModeControl);
+
             _uiElements.Add(new BoolSettingControl("Smaller UI", () => _tempSettings.SmallerUi, v => _tempSettings.SmallerUi = v));
             _uiElements.Add(new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v));
             _uiElements.Add(new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v));
 
             var applyButton = new Button(new Rectangle(0, 0, 250, 20), "Apply");
-            applyButton.OnClick += ConfirmApplySettings;
+            applyButton.OnClick += ApplySettings;
             _uiElements.Add(applyButton);
 
             var backButton = new Button(new Rectangle(0, 0, 250, 20), "Back");
@@ -214,14 +225,41 @@ namespace ProjectVagabond.Scenes
             if (changed) LayoutUI();
         }
 
-        private void ConfirmApplySettings()
+        private void ApplySettings()
         {
             if (!IsDirty()) return;
-            var details = _uiElements.OfType<ISettingControl>().Where(c => c.IsDirty).Select(c => $"{c.Label}: {c.GetSavedValueAsString()} -> {c.GetCurrentValueAsString()}").ToList();
-            _confirmationDialog.Show("Apply the following changes?", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { ExecuteApplySettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide())) }, details);
+
+            bool graphicsChanged = _tempSettings.Resolution != _settings.Resolution || _tempSettings.Mode != _settings.Mode;
+
+            if (graphicsChanged)
+            {
+                var revertState = new GameSettings
+                {
+                    Resolution = _settings.Resolution,
+                    Mode = _settings.Mode
+                };
+
+                _tempSettings.ApplyGraphicsSettings(_graphics, _core);
+
+                _revertDialog.Show(
+                    "Keep these display settings?",
+                    onConfirm: () => {
+                        FinalizeAndSaveAllSettings();
+                    },
+                    onRevert: () => {
+                        revertState.ApplyGraphicsSettings(_graphics, _core);
+                        RevertChanges();
+                    },
+                    countdownDuration: 10f
+                );
+            }
+            else
+            {
+                FinalizeAndSaveAllSettings();
+            }
         }
 
-        private void ExecuteApplySettings()
+        private void FinalizeAndSaveAllSettings()
         {
             _settings.Resolution = _tempSettings.Resolution;
             _settings.Mode = _tempSettings.Mode;
@@ -231,6 +269,7 @@ namespace ProjectVagabond.Scenes
             _settings.SmallerUi = _tempSettings.SmallerUi;
             _settings.UseImperialUnits = _tempSettings.UseImperialUnits;
             _settings.Use24HourClock = _tempSettings.Use24HourClock;
+            _settings.DisplayIndex = _tempSettings.DisplayIndex;
 
             _settings.ApplyGraphicsSettings(_graphics, _core);
             _settings.ApplyGameSettings();
@@ -253,6 +292,7 @@ namespace ProjectVagabond.Scenes
             _tempSettings.SmallerUi = _settings.SmallerUi;
             _tempSettings.UseImperialUnits = _settings.UseImperialUnits;
             _tempSettings.Use24HourClock = _settings.Use24HourClock;
+            _tempSettings.DisplayIndex = _settings.DisplayIndex;
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
             UpdateFramerateControl();
         }
@@ -268,7 +308,7 @@ namespace ProjectVagabond.Scenes
             _tempSettings.Resolution = SettingsManager.FindClosestResolution(_tempSettings.Resolution);
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
             UpdateFramerateControl();
-            ExecuteApplySettings();
+            ApplySettings();
             _confirmationMessage = "Settings Reset to Default!";
             _confirmationTimer = 5f;
         }
@@ -277,7 +317,7 @@ namespace ProjectVagabond.Scenes
         {
             if (IsDirty())
             {
-                _confirmationDialog.Show("You have unsaved changes.", new List<Tuple<string, Action>> { Tuple.Create("APPLY", new Action(() => { ExecuteApplySettings(); _sceneManager.ChangeScene(ReturnScene); })), Tuple.Create("DISCARD", new Action(() => { RevertChanges(); _sceneManager.ChangeScene(ReturnScene); })), Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide())) });
+                _confirmationDialog.Show("You have unsaved changes.", new List<Tuple<string, Action>> { Tuple.Create("APPLY", new Action(() => { ApplySettings(); _sceneManager.ChangeScene(ReturnScene); })), Tuple.Create("DISCARD", new Action(() => { RevertChanges(); _sceneManager.ChangeScene(ReturnScene); })), Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide())) });
             }
             else
             {
@@ -322,6 +362,13 @@ namespace ProjectVagabond.Scenes
             if (_confirmationDialog.IsActive)
             {
                 _confirmationDialog.Update(gameTime);
+                base.Update(gameTime);
+                return;
+            }
+
+            if (_revertDialog.IsActive)
+            {
+                _revertDialog.Update(gameTime);
                 base.Update(gameTime);
                 return;
             }
@@ -426,6 +473,13 @@ namespace ProjectVagabond.Scenes
             Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, 75 + yOffset);
             spriteBatch.DrawString(font, title, titlePosition, _global.Palette_BrightWhite, 0f, Vector2.Zero, 2f, SpriteEffects.None, 0f);
 
+            if (_confirmationTimer > 0)
+            {
+                Vector2 msgSize = font.MeasureString(_confirmationMessage);
+                Vector2 messagePosition = new Vector2(screenWidth / 2 - msgSize.X / 2, 50);
+                spriteBatch.DrawString(font, _confirmationMessage, messagePosition, _global.Palette_Teal);
+            }
+
             Vector2 currentPos = new Vector2(0, _settingsStartY);
             for (int i = 0; i < _uiElements.Count; i++)
             {
@@ -486,21 +540,20 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (_confirmationTimer > 0)
-            {
-                Vector2 msgSize = font.MeasureString(_confirmationMessage);
-                spriteBatch.DrawString(font, _confirmationMessage, new Vector2(screenWidth / 2 - msgSize.X / 2, Global.VIRTUAL_HEIGHT - 50), _global.Palette_Teal);
-            }
-
             if (_confirmationDialog.IsActive)
             {
                 _confirmationDialog.DrawContent(spriteBatch, font, gameTime);
+            }
+
+            if (_revertDialog.IsActive)
+            {
+                _revertDialog.DrawContent(spriteBatch, font, gameTime);
             }
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            if (_confirmationDialog.IsActive)
+            if (_confirmationDialog.IsActive || _revertDialog.IsActive)
             {
                 _confirmationDialog.DrawOverlay(spriteBatch);
             }

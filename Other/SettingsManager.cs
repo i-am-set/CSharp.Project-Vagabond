@@ -121,8 +121,6 @@ namespace ProjectVagabond
 
                     if (settings != null)
                     {
-                        // Match loaded resolution to the closest available one
-                        settings.Resolution = FindClosestResolution(settings.Resolution);
                         return settings;
                     }
                 }

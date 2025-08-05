@@ -13,6 +13,7 @@ using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 // TODO: generate different noise maps to generate different map things
@@ -74,6 +75,10 @@ namespace ProjectVagabond
 
         // Loading State
         private bool _isGameLoaded = false;
+
+        // Custom Resolution Save State
+        private float _customResolutionSaveTimer = 0f;
+        private bool _isCustomResolutionSavePending = false;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -393,6 +398,19 @@ namespace ProjectVagabond
 
             _previousKeyboardState = currentKeyboardState;
 
+            // Handle delayed saving of custom resolutions
+            if (_isCustomResolutionSavePending)
+            {
+                _customResolutionSaveTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_customResolutionSaveTimer <= 0f)
+                {
+                    _isCustomResolutionSavePending = false;
+                    _settings.Resolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
+                    SettingsManager.SaveSettings(_settings);
+                    Debug.WriteLine($"[Settings] Custom resolution {_settings.Resolution} saved.");
+                }
+            }
+
             // Create a scaled GameTime object for slow-motion debugging.
             float currentTimeScale = _isTimeSlowed ? _global.MasterTimeScale : 1.0f;
             var scaledElapsedTime = TimeSpan.FromTicks((long)(gameTime.ElapsedGameTime.Ticks * currentTimeScale));
@@ -540,8 +558,21 @@ namespace ProjectVagabond
         {
             if (GraphicsDevice == null) return;
 
+            var newResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
+            bool isStandard = SettingsManager.GetResolutions().Any(r => r.Value == newResolution);
+
+            if (!isStandard)
+            {
+                _isCustomResolutionSavePending = true;
+                _customResolutionSaveTimer = 0.5f;
+            }
+            else
+            {
+                _isCustomResolutionSavePending = false;
+            }
+
             // Update the settings object with the new actual resolution from the window
-            _settings.Resolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
+            _settings.Resolution = newResolution;
 
             // If the settings scene is active, tell it to refresh its state to show the new resolution
             if (_sceneManager.CurrentActiveScene is SettingsScene settingsScene)
