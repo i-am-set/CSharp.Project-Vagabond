@@ -52,22 +52,8 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             _confirmationDialog = new ConfirmationDialog(this);
-            _tempSettings = new GameSettings
-            {
-                Resolution = _settings.Resolution,
-                Mode = _settings.Mode,
-                IsVsync = _settings.IsVsync,
-                IsFrameLimiterEnabled = _settings.IsFrameLimiterEnabled,
-                TargetFramerate = _settings.TargetFramerate,
-                SmallerUi = _settings.SmallerUi,
-                UseImperialUnits = _settings.UseImperialUnits,
-                Use24HourClock = _settings.Use24HourClock
-            };
-
-            _tempSettings.Resolution = SettingsManager.FindClosestResolution(_tempSettings.Resolution);
-            _titleBobTimer = 0f;
-
-            BuildInitialUI();
+            
+            RefreshUIFromSettings();
 
             if (this.LastUsedInputForNav == InputDevice.Keyboard)
             {
@@ -82,6 +68,27 @@ namespace ProjectVagabond.Scenes
 
             _previousKeyboardState = Keyboard.GetState();
             _currentInputDelay = _inputDelay;
+        }
+
+        /// <summary>
+        /// Refreshes the temporary settings from the master settings and rebuilds the UI.
+        /// This is called on scene entry and when the window is resized externally.
+        /// </summary>
+        public void RefreshUIFromSettings()
+        {
+            _tempSettings = new GameSettings
+            {
+                Resolution = _settings.Resolution,
+                Mode = _settings.Mode,
+                IsVsync = _settings.IsVsync,
+                IsFrameLimiterEnabled = _settings.IsFrameLimiterEnabled,
+                TargetFramerate = _settings.TargetFramerate,
+                SmallerUi = _settings.SmallerUi,
+                UseImperialUnits = _settings.UseImperialUnits,
+                Use24HourClock = _settings.Use24HourClock
+            };
+            _titleBobTimer = 0f;
+            BuildInitialUI();
         }
 
         protected override Rectangle? GetFirstSelectableElementBounds()
@@ -115,8 +122,15 @@ namespace ProjectVagabond.Scenes
                 string display = kvp.Key;
                 int aspectIndex = display.IndexOf(" (");
                 if (aspectIndex != -1) display = display.Substring(0, aspectIndex);
-                return new KeyValuePair<string, Point>(display, kvp.Value);
+                return new KeyValuePair<string, Point>(display.Trim(), kvp.Value);
             }).ToList();
+
+            // Check if the current resolution is non-standard and add a "CUSTOM" entry if it is.
+            bool isCustomResolution = !resolutionDisplayList.Any(kvp => kvp.Value == _tempSettings.Resolution);
+            if (isCustomResolution)
+            {
+                resolutionDisplayList.Insert(0, new KeyValuePair<string, Point>("CUSTOM", _tempSettings.Resolution));
+            }
 
             var windowModes = new List<KeyValuePair<string, WindowMode>>
             {
@@ -125,7 +139,14 @@ namespace ProjectVagabond.Scenes
                 new("Fullscreen", WindowMode.Fullscreen)
             };
 
-            _uiElements.Add(new OptionSettingControl<Point>("Resolution", resolutionDisplayList, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v));
+            var resolutionControl = new OptionSettingControl<Point>("Resolution", resolutionDisplayList, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v);
+            resolutionControl.GetValueColor = (pointValue) =>
+            {
+                bool isStandard = SettingsManager.GetResolutions().Any(r => r.Value == pointValue);
+                return isStandard ? (Color?)null : _global.Palette_LightYellow;
+            };
+            _uiElements.Add(resolutionControl);
+
             _uiElements.Add(new OptionSettingControl<WindowMode>("Window Mode", windowModes, () => _tempSettings.Mode, v => { _tempSettings.Mode = v; if (v == WindowMode.Borderless) SetResolutionToNative(); }));
             _uiElements.Add(new BoolSettingControl("Smaller UI", () => _tempSettings.SmallerUi, v => _tempSettings.SmallerUi = v));
             _uiElements.Add(new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v));
@@ -427,11 +448,26 @@ namespace ProjectVagabond.Scenes
                     setting.Draw(spriteBatch, font, new Vector2(currentPos.X, currentPos.Y + 5), isSelected, gameTime);
                     if (setting.Label == "Resolution")
                     {
-                        var originalEntry = SettingsManager.GetResolutions().FirstOrDefault(r => r.Value == _tempSettings.Resolution);
-                        if (originalEntry.Key != null && originalEntry.Key.Contains(" ("))
+                        string extraText = "";
+                        var currentResPoint = _tempSettings.Resolution;
+                        var standardEntry = SettingsManager.GetResolutions().FirstOrDefault(r => r.Value == currentResPoint);
+
+                        if (standardEntry.Key != null) // It's a standard resolution
                         {
-                            string aspectRatio = originalEntry.Key.Substring(originalEntry.Key.IndexOf(" (")).Trim();
-                            spriteBatch.DrawString(font, aspectRatio, new Vector2(currentPos.X + 460, currentPos.Y + 5), _global.Palette_DarkGray);
+                            int aspectIndex = standardEntry.Key.IndexOf(" (");
+                            if (aspectIndex != -1)
+                            {
+                                extraText = standardEntry.Key.Substring(aspectIndex).Trim();
+                            }
+                        }
+                        else // It's a custom resolution
+                        {
+                            extraText = $"({currentResPoint.X}x{currentResPoint.Y})";
+                        }
+
+                        if (!string.IsNullOrEmpty(extraText))
+                        {
+                            spriteBatch.DrawString(font, extraText, new Vector2(currentPos.X + 460, currentPos.Y + 5), _global.Palette_DarkGray);
                         }
                     }
                     currentPos.Y += 20;

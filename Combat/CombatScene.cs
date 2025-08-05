@@ -154,7 +154,7 @@ namespace ProjectVagabond.Scenes
                 Vector2 textSize = font.MeasureString(castText);
                 Vector2 position = new Vector2(
                     (Global.VIRTUAL_WIDTH - textSize.X) / 2,
-                    Global.VIRTUAL_HEIGHT - 150
+                    Global.VIRTUAL_HEIGHT - 100
                 );
                 spriteBatch.DrawString(font, castText, position, Color.Yellow);
             }

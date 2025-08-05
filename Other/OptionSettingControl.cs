@@ -29,6 +29,8 @@ namespace ProjectVagabond.UI
         private bool _isRightArrowHovered;
         private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
 
+        public Func<T, Color?> GetValueColor { get; set; }
+
         public OptionSettingControl(string label, List<KeyValuePair<string, T>> options, Func<T> getter, Action<T> setter)
         {
             _global = ServiceLocator.Get<Global>();
@@ -132,7 +134,17 @@ namespace ProjectVagabond.UI
             string valueText = _options[_currentIndex].Key;
             string rightArrowText = ">";
 
-            Color baseValueColor = IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite;
+            Color baseValueColor;
+            if (IsDirty)
+            {
+                baseValueColor = _global.Palette_Teal;
+            }
+            else
+            {
+                var customColor = GetValueColor?.Invoke(_currentValue);
+                baseValueColor = customColor ?? _global.Palette_BrightWhite;
+            }
+
             Color leftArrowColor = _isLeftArrowHovered ? _global.ButtonHoverColor : baseValueColor;
             Color rightArrowColor = _isRightArrowHovered ? _global.ButtonHoverColor : baseValueColor;
 

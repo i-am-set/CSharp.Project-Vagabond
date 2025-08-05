@@ -66,20 +66,13 @@ namespace ProjectVagabond
         {
             _resolutions = new List<KeyValuePair<string, Point>>
             {
-                new("800 x 600 (4:3)", new Point(800, 600)),
-                new("960 x 540 (16:9)", new Point(960, 540)),
-                new("1024 x 768 (4:3)", new Point(1024, 768)),
+                new("640 x 360 (16:9)", new Point(640, 360)),
+                new("854 x 480 (16:9)", new Point(854, 480)),
                 new("1280 x 720 (16:9)", new Point(1280, 720)),
-                new("1280 x 800 (16:10)", new Point(1280, 800)),
-                new("1440 x 900 (16:10)", new Point(1440, 900)),
                 new("1600 x 900 (16:9)", new Point(1600, 900)),
-                new("1680 x 1050 (16:10)", new Point(1680, 1050)),
                 new("1920 x 1080 (16:9)", new Point(1920, 1080)),
-                new("1920 x 1200 (16:10)", new Point(1920, 1200)),
-                new("2560 x 1080 (21:9)", new Point(2560, 1080)),
                 new("2560 x 1440 (16:9)", new Point(2560, 1440)),
-                new("3440 x 1440 (21:9)", new Point(3440, 1440)),
-                new("3840 x 2160 (4K)", new Point(3840, 2160)),
+                new("3840 x 2160 (16:9)", new Point(3840, 2160)),
             };
         }
 

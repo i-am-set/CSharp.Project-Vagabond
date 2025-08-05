@@ -85,7 +85,7 @@ namespace ProjectVagabond
 
             _graphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
             _graphics.PreferredBackBufferHeight = Global.VIRTUAL_HEIGHT;
-            Window.AllowUserResizing = false;
+            Window.AllowUserResizing = true;
             Window.ClientSizeChanged += OnResize;
         }
 
@@ -539,6 +539,15 @@ namespace ProjectVagabond
         public void OnResize(object sender, EventArgs e)
         {
             if (GraphicsDevice == null) return;
+
+            // Update the settings object with the new actual resolution from the window
+            _settings.Resolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
+
+            // If the settings scene is active, tell it to refresh its state to show the new resolution
+            if (_sceneManager.CurrentActiveScene is SettingsScene settingsScene)
+            {
+                settingsScene.RefreshUIFromSettings();
+            }
 
             var screenWidth = GraphicsDevice.PresentationParameters.BackBufferWidth;
             var screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
