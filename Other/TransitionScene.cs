@@ -21,7 +21,7 @@ namespace ProjectVagabond.Scenes
             _sceneManager = ServiceLocator.Get<SceneManager>();
         }
 
-        protected override Rectangle GetAnimatedBounds()
+        public override Rectangle GetAnimatedBounds()
         {
             return Rectangle.Empty;
         }

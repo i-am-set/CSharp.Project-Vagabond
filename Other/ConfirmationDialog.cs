@@ -195,9 +195,9 @@ namespace ProjectVagabond.UI
             _previousKeyboardState = currentKeyboardState;
         }
 
-        protected override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            if (!IsActive) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
             spriteBatch.Draw(pixel, _dialogBounds, _global.Palette_DarkGray);
@@ -253,8 +253,6 @@ namespace ProjectVagabond.UI
                     DrawRectangleBorder(spriteBatch, pixel, highlightRect, 1, _global.ButtonHoverColor);
                 }
             }
-
-            spriteBatch.End();
         }
 
         private (string text, Color? color) ParseButtonTextAndColor(string taggedText)

@@ -43,8 +43,6 @@ namespace ProjectVagabond.Scenes
         private const float INPUT_BLOCK_DURATION = 0.1f;
         private float _inputBlockTimer = 0f;
 
-        protected SceneIntroAnimator _introAnimator;
-
         /// <summary>
         /// The input device used to navigate to this scene.
         /// </summary>
@@ -79,11 +77,6 @@ namespace ProjectVagabond.Scenes
             _previousKeyboardState = Keyboard.GetState();
             _inputBlockTimer = INPUT_BLOCK_DURATION;
 
-            _introAnimator = new SceneIntroAnimator();
-            var contentBounds = GetAnimatedBounds();
-            var animationBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-            _introAnimator.Start(animationBounds, contentBounds);
-
             if (this.LastUsedInputForNav == InputDevice.Keyboard)
             {
                 _core.IsMouseVisible = false;
@@ -105,8 +98,6 @@ namespace ProjectVagabond.Scenes
         /// </summary>
         public virtual void Update(GameTime gameTime)
         {
-            _introAnimator?.Update(gameTime);
-
             if (_inputBlockTimer > 0)
             {
                 _inputBlockTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -135,22 +126,11 @@ namespace ProjectVagabond.Scenes
         /// <summary>
         /// Called every frame to draw the scene.
         /// </summary>
-        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // Get the transform from the animator. It will be Matrix.Identity if not animating.
-            Matrix contentTransform = _introAnimator?.GetContentTransform() ?? Matrix.Identity;
-
-            // The scene content is always drawn first, with the potential transformation.
-            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: contentTransform);
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             DrawSceneContent(spriteBatch, font, gameTime);
             spriteBatch.End();
-
-            // The animator, if active, draws its mask on top of the scene.
-            if (_introAnimator != null && !_introAnimator.IsComplete)
-            {
-                // The animator's Draw method now only draws the mask and handles its own Begin/End.
-                _introAnimator.Draw(spriteBatch, font, gameTime, null);
-            }
         }
 
         /// <summary>
@@ -188,7 +168,7 @@ namespace ProjectVagabond.Scenes
         /// <summary>
         /// When overridden in a derived class, provides the bounds for the main element to be animated in.
         /// </summary>
-        protected abstract Rectangle GetAnimatedBounds();
+        public abstract Rectangle GetAnimatedBounds();
 
         /// <summary>
         /// Checks for a selectable element and moves the mouse to its center.

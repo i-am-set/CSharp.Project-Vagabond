@@ -4,7 +4,6 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Combat;
-using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Encounters;
 using ProjectVagabond.Particles;
@@ -459,18 +458,7 @@ namespace ProjectVagabond
             GraphicsDevice.SetRenderTarget(_renderTarget);
             GraphicsDevice.Clear(Color.Transparent);
 
-            // The background is always drawn first into the render target to fill the virtual resolution.
-            // This ensures it scales correctly with the rest of the UI.
-            _spriteBatch.Begin(samplerState: SamplerState.LinearWrap);
-            // Do not draw the standard background if we are in a loading transition,
-            // which allows the loading screen to appear over a black background.
-            if (!_sceneManager.IsLoadingBetweenScenes)
-            {
-                _backgroundManager.Draw(_spriteBatch);
-            }
-            _spriteBatch.End();
-
-            // The current scene is drawn on top of the background.
+            // The scene is drawn first. The background is now handled outside the render target.
             _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime);
 
             // Tooltips and other persistent UI elements are drawn into the main render target.
@@ -494,6 +482,14 @@ namespace ProjectVagabond
             // --- 3. Draw everything to the screen ---
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(Color.Black); // Clear with black as a base for letterboxing.
+
+            // Draw the full-screen background first, directly to the backbuffer.
+            _spriteBatch.Begin(samplerState: SamplerState.LinearWrap);
+            if (!_sceneManager.IsLoadingBetweenScenes)
+            {
+                _backgroundManager.Draw(_spriteBatch, GraphicsDevice.PresentationParameters.Bounds);
+            }
+            _spriteBatch.End();
 
             var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
@@ -524,7 +520,7 @@ namespace ProjectVagabond
             if (_loadingScreen.IsActive)
             {
                 _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                _loadingScreen.Draw(_spriteBatch, _defaultFont);
+                _loadingScreen.Draw(_spriteBatch, _defaultFont, GraphicsDevice.PresentationParameters.Bounds);
                 _spriteBatch.End();
             }
 

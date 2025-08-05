@@ -50,20 +50,11 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Draws the tiled background to fill the virtual resolution area.
+        /// Draws the tiled background to fill the specified destination area.
         /// </summary>
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Rectangle destinationBounds)
         {
-            DrawTiled(spriteBatch, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-        }
-
-        /// <summary>
-        /// Draws the tiled background to fill the entire physical screen.
-        /// </summary>
-        public void DrawFullScreen(SpriteBatch spriteBatch)
-        {
-            var pp = _graphicsDevice.PresentationParameters;
-            DrawTiled(spriteBatch, pp.BackBufferWidth, pp.BackBufferHeight);
+            DrawTiled(spriteBatch, destinationBounds.Width, destinationBounds.Height);
         }
 
         /// <summary>

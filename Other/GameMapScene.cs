@@ -44,7 +44,7 @@ namespace ProjectVagabond.Scenes
             _animationManager = ServiceLocator.Get<AnimationManager>();
         }
 
-        protected override Rectangle GetAnimatedBounds()
+        public override Rectangle GetAnimatedBounds()
         {
             // The bounds should be the entire map frame.
             // We need to calculate the layout once to get the correct bounds.
@@ -119,7 +119,7 @@ namespace ProjectVagabond.Scenes
             _waitDialog.Update(gameTime);
             _settingsButton?.Update(currentMouseState);
 
-            if (_waitDialog.IsActive || _preEncounterAnimationSystem.IsAnimating || (_introAnimator != null && !_introAnimator.IsComplete))
+            if (_waitDialog.IsActive || _preEncounterAnimationSystem.IsAnimating || IsInputBlocked)
             {
                 base.Update(gameTime);
                 return;
@@ -168,12 +168,6 @@ namespace ProjectVagabond.Scenes
             base.Update(gameTime); // This now updates the intro animator and previous input states
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
-        {
-            // For the normal scene, use the base Draw method which handles the intro animator.
-            base.Draw(spriteBatch, font, gameTime);
-        }
-
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (_gameState.IsInCombat)
@@ -195,13 +189,12 @@ namespace ProjectVagabond.Scenes
 
             // Draw the settings button. Its position is now static and set in Enter().
             _settingsButton?.Draw(spriteBatch, font, gameTime);
-        }
 
-        public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
-        {
-            // Dialogs manage their own SpriteBatch Begin/End calls and should be drawn
-            // outside the main scene's render loop. DrawUnderlay is a suitable place.
-            _waitDialog.Draw(spriteBatch, font, gameTime);
+            if (_waitDialog.IsActive)
+            {
+                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.7f);
+                _waitDialog.Draw(spriteBatch, font, gameTime);
+            }
         }
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

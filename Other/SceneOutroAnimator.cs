@@ -116,10 +116,10 @@ namespace ProjectVagabond.Scenes
             var color = Color.Black;
 
             // Draw four rectangles around the animated "_currentRect" to create a "hole" or mask effect.
-            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, _currentRect.Top), color);
-            spriteBatch.Draw(pixel, new Rectangle(0, _currentRect.Bottom, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - _currentRect.Bottom), color);
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, _initialBounds.Width, _currentRect.Top), color);
+            spriteBatch.Draw(pixel, new Rectangle(0, _currentRect.Bottom, _initialBounds.Width, _initialBounds.Height - _currentRect.Bottom), color);
             spriteBatch.Draw(pixel, new Rectangle(0, _currentRect.Top, _currentRect.Left, _currentRect.Height), color);
-            spriteBatch.Draw(pixel, new Rectangle(_currentRect.Right, _currentRect.Top, Global.VIRTUAL_WIDTH - _currentRect.Right, _currentRect.Height), color);
+            spriteBatch.Draw(pixel, new Rectangle(_currentRect.Right, _currentRect.Top, _initialBounds.Width - _currentRect.Right, _currentRect.Height), color);
 
             spriteBatch.End();
         }

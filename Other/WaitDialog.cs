@@ -125,9 +125,9 @@ namespace ProjectVagabond.UI
             _previousKeyboardState = currentKeyboardState;
         }
 
-        protected override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            if (!IsActive) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
             spriteBatch.Draw(pixel, _dialogBounds, _global.Palette_DarkGray);
@@ -160,8 +160,6 @@ namespace ProjectVagabond.UI
 
             _confirmButton.Draw(spriteBatch, font, gameTime);
             _cancelButton.Draw(spriteBatch, font, gameTime);
-
-            spriteBatch.End();
         }
 
         private void DrawSliderTickMarks(SpriteBatch spriteBatch, Texture2D pixel, Slider slider, int majorTickInterval)

@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
 using System;
 
 namespace ProjectVagabond.Scenes
@@ -103,7 +104,7 @@ namespace ProjectVagabond.Scenes
 
                 case AnimState.Stretching:
                     float stretchProgress = (_timer - DEFLATE_END) / (STRETCH_END - DEFLATE_END);
-                    float stretchWidth = MathHelper.Lerp(2, _finalBounds.Width, Easing.EaseInCirc(stretchProgress));
+                    float stretchWidth = MathHelper.Lerp(2, _finalBounds.Width, Easing.EaseInOutCubic(stretchProgress));
                     _currentRect = new Rectangle((int)(_centerPoint.X - stretchWidth / 2), (int)(_centerPoint.Y - 2 / 2), (int)stretchWidth, 2);
                     break;
 
@@ -138,13 +139,13 @@ namespace ProjectVagabond.Scenes
 
             // Draw four rectangles around the animated "_currentRect" to create a "hole" or mask effect.
             // Top rectangle
-            spriteBatch.Draw(pixel, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, _currentRect.Top), color);
+            spriteBatch.Draw(pixel, new Rectangle(0, 0, _finalBounds.Width, _currentRect.Top), color);
             // Bottom rectangle
-            spriteBatch.Draw(pixel, new Rectangle(0, _currentRect.Bottom, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - _currentRect.Bottom), color);
+            spriteBatch.Draw(pixel, new Rectangle(0, _currentRect.Bottom, _finalBounds.Width, _finalBounds.Height - _currentRect.Bottom), color);
             // Left rectangle
             spriteBatch.Draw(pixel, new Rectangle(0, _currentRect.Top, _currentRect.Left, _currentRect.Height), color);
             // Right rectangle
-            spriteBatch.Draw(pixel, new Rectangle(_currentRect.Right, _currentRect.Top, Global.VIRTUAL_WIDTH - _currentRect.Right, _currentRect.Height), color);
+            spriteBatch.Draw(pixel, new Rectangle(_currentRect.Right, _currentRect.Top, _finalBounds.Width - _currentRect.Right, _currentRect.Height), color);
 
             spriteBatch.End();
         }

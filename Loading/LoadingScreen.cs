@@ -176,7 +176,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, Rectangle screenBounds)
         {
             if (!IsActive || _silentMode) return;
 
@@ -187,9 +187,9 @@ namespace ProjectVagabond.Scenes
             const int TEXT_PADDING_ABOVE_BAR = 5;
 
             // 1. Calculate and draw the loading bar
-            int barWidth = (int)(Global.VIRTUAL_WIDTH * _visualProgress);
-            int barY = Global.VIRTUAL_HEIGHT - BAR_HEIGHT;
-            var barRect = new Rectangle(0, barY, barWidth, BAR_HEIGHT);
+            int barWidth = (int)(screenBounds.Width * _visualProgress);
+            int barY = screenBounds.Bottom - BAR_HEIGHT;
+            var barRect = new Rectangle(screenBounds.X, barY, barWidth, BAR_HEIGHT);
             spriteBatch.Draw(pixel, barRect, _global.TerminalDarkGray);
 
             // 2. Get the current loading text
@@ -222,7 +222,7 @@ namespace ProjectVagabond.Scenes
             {
                 Vector2 textSize = font.MeasureString(loadingText);
                 Vector2 textPosition = new Vector2(
-                    (Global.VIRTUAL_WIDTH - textSize.X) / 2,
+                    screenBounds.X + (screenBounds.Width - textSize.X) / 2,
                     barY - textSize.Y - TEXT_PADDING_ABOVE_BAR
                 );
                 spriteBatch.DrawString(font, loadingText, textPosition, _global.TerminalDarkGray);

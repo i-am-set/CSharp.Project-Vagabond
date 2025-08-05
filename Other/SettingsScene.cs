@@ -43,7 +43,7 @@ namespace ProjectVagabond.Scenes
             _global = ServiceLocator.Get<Global>();
         }
 
-        protected override Rectangle GetAnimatedBounds()
+        public override Rectangle GetAnimatedBounds()
         {
             return new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
         }
@@ -288,18 +288,18 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
+            base.Update(gameTime);
+
             _titleBobTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if (IsInputBlocked || (_introAnimator != null && !_introAnimator.IsComplete))
+            if (IsInputBlocked)
             {
-                base.Update(gameTime);
                 return;
             }
 
             if (_confirmationDialog.IsActive)
             {
                 _confirmationDialog.Update(gameTime);
-                base.Update(gameTime);
                 return;
             }
 
@@ -350,8 +350,6 @@ namespace ProjectVagabond.Scenes
             var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Apply");
             if (applyButton != null) applyButton.IsEnabled = IsDirty();
             if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState)) AttemptToGoBack();
-
-            base.Update(gameTime);
         }
 
         private void HandleKeyboardInput(KeyboardState currentKeyboardState)
@@ -452,12 +450,10 @@ namespace ProjectVagabond.Scenes
                 Vector2 msgSize = font.MeasureString(_confirmationMessage);
                 spriteBatch.DrawString(font, _confirmationMessage, new Vector2(screenWidth / 2 - msgSize.X / 2, Global.VIRTUAL_HEIGHT - 50), _global.Palette_Teal);
             }
-        }
 
-        public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
-        {
             if (_confirmationDialog.IsActive)
             {
+                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.7f);
                 _confirmationDialog.Draw(spriteBatch, font, gameTime);
             }
         }

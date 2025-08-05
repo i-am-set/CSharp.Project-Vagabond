@@ -15,6 +15,7 @@ namespace ProjectVagabond
         HoldingBlack,
         FadingIn
     }
+
     public class SceneManager
     {
         private readonly Dictionary<GameSceneState, GameScene> _scenes = new Dictionary<GameSceneState, GameScene>();
@@ -22,6 +23,7 @@ namespace ProjectVagabond
         private GameSceneState _nextSceneState;
 
         private SceneOutroAnimator _outroAnimator;
+        private SceneIntroAnimator _introAnimator;
         private bool _isTransitioning = false;
         private bool _isHoldingBlack = false;
         private float _holdTimer = 0f;
@@ -81,10 +83,14 @@ namespace ProjectVagabond
             _nextSceneState = state;
             _pendingLoadingTasks = loadingTasks;
             _loadIsPending = _pendingLoadingTasks != null && _pendingLoadingTasks.Any();
+            _introAnimator = null; // Clear any existing intro animator
+
+            var gd = ServiceLocator.Get<GraphicsDevice>();
+            var screenBounds = new Rectangle(0, 0, gd.PresentationParameters.BackBufferWidth, gd.PresentationParameters.BackBufferHeight);
 
             _outroAnimator = new SceneOutroAnimator();
             _outroAnimator.OnComplete += HandleOutroComplete;
-            _outroAnimator.Start(new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT));
+            _outroAnimator.Start(screenBounds);
         }
 
         private void HandleOutroComplete()
@@ -133,6 +139,13 @@ namespace ProjectVagabond
                 _currentScene = newScene;
                 _currentScene.LastUsedInputForNav = this.LastInputDevice;
                 _currentScene.Enter();
+
+                // Start the intro animation for the new scene
+                _introAnimator = new SceneIntroAnimator();
+                var contentBounds = _currentScene.GetAnimatedBounds();
+                var gd = ServiceLocator.Get<GraphicsDevice>();
+                var animationBounds = new Rectangle(0, 0, gd.PresentationParameters.BackBufferWidth, gd.PresentationParameters.BackBufferHeight);
+                _introAnimator.Start(animationBounds, contentBounds);
             }
         }
 
@@ -163,6 +176,7 @@ namespace ProjectVagabond
             }
             else
             {
+                _introAnimator?.Update(gameTime);
                 _currentScene?.Update(gameTime);
             }
         }
@@ -176,7 +190,9 @@ namespace ProjectVagabond
             {
                 return;
             }
-            _currentScene?.Draw(spriteBatch, font, gameTime);
+
+            Matrix contentTransform = _introAnimator?.GetContentTransform() ?? Matrix.Identity;
+            _currentScene?.Draw(spriteBatch, font, gameTime, contentTransform);
         }
 
         public void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -188,6 +204,8 @@ namespace ProjectVagabond
         {
             _currentScene?.DrawOverlay(spriteBatch, font, gameTime);
 
+            _introAnimator?.Draw(spriteBatch, font, gameTime, null);
+
             if (_isTransitioning && _outroAnimator != null)
             {
                 _outroAnimator.Draw(spriteBatch, font, gameTime, null);
@@ -195,8 +213,10 @@ namespace ProjectVagabond
 
             if (_isHoldingBlack && !_loadIsPending)
             {
+                var gd = ServiceLocator.Get<GraphicsDevice>();
+                var screenBounds = new Rectangle(0, 0, gd.PresentationParameters.BackBufferWidth, gd.PresentationParameters.BackBufferHeight);
                 spriteBatch.Begin();
-                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black);
+                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), screenBounds, Color.Black);
                 spriteBatch.End();
             }
         }

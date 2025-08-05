@@ -20,7 +20,7 @@ namespace ProjectVagabond.Scenes
             _global = ServiceLocator.Get<Global>();
         }
 
-        protected override Rectangle GetAnimatedBounds()
+        public override Rectangle GetAnimatedBounds()
         {
             int screenWidth = Global.VIRTUAL_WIDTH;
             int screenHeight = Global.VIRTUAL_HEIGHT;

@@ -4,7 +4,9 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Encounters;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -52,7 +54,7 @@ namespace ProjectVagabond.Scenes
             _currentEncounter = data;
         }
 
-        protected override Rectangle GetAnimatedBounds()
+        public override Rectangle GetAnimatedBounds()
         {
             int panelWidth = 560;
             int panelHeight = 480;
@@ -116,11 +118,11 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime); // Updates the intro animator
+            base.Update(gameTime);
 
-            if (_introAnimator == null || !_introAnimator.IsComplete)
+            if (IsInputBlocked)
             {
-                return; // Wait for intro animation to finish
+                return;
             }
 
             if (_contentState == ContentState.Displaying)

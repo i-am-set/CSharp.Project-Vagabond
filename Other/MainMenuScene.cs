@@ -31,7 +31,7 @@ namespace ProjectVagabond.Scenes
             _global = ServiceLocator.Get<Global>();
         }
 
-        protected override Rectangle GetAnimatedBounds()
+        public override Rectangle GetAnimatedBounds()
         {
             return new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
         }
@@ -140,16 +140,16 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
-            if (IsInputBlocked || (_introAnimator != null && !_introAnimator.IsComplete))
+            base.Update(gameTime);
+
+            if (IsInputBlocked)
             {
-                base.Update(gameTime);
                 return;
             }
 
             if (_confirmationDialog.IsActive)
             {
                 _confirmationDialog.Update(gameTime);
-                base.Update(gameTime);
                 return;
             }
 
@@ -232,8 +232,6 @@ namespace ProjectVagabond.Scenes
                     ConfirmExit();
                 }
             }
-
-            base.Update(gameTime);
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -266,12 +264,10 @@ namespace ProjectVagabond.Scenes
                     DrawRectangleBorder(spriteBatch, pixel, highlightRect, 1, _global.ButtonHoverColor);
                 }
             }
-        }
 
-        public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
-        {
             if (_confirmationDialog.IsActive)
             {
+                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.Black * 0.7f);
                 _confirmationDialog.Draw(spriteBatch, font, gameTime);
             }
         }
