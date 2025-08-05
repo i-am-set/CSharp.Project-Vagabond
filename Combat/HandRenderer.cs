@@ -17,7 +17,7 @@ namespace ProjectVagabond.Combat.UI
         // --- TUNING CONSTANTS ---
         private const int HAND_WIDTH = 128;
         private const int HAND_HEIGHT = 256;
-        private const int IDLE_POS_Y_OFFSET = 80; // Vertical offset from the bottom of the screen
+        private const int IDLE_POS_Y_OFFSET = -20; // Vertical offset from the bottom of the screen
         private const int IDLE_POS_X_OFFSET = 50; // Horizontal offset from the center
         private const float ANIMATION_DURATION = 0.6f; // Duration for sliding in/out
         private const float IDLE_SWAY_SPEED_X = 0.8f;

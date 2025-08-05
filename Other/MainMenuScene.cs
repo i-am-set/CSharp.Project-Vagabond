@@ -44,7 +44,7 @@ namespace ProjectVagabond.Scenes
             int buttonWidth = 200;
             int buttonHeight = 20;
 
-            var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 260, buttonWidth, buttonHeight), "PLAY");
+            var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 180, buttonWidth, buttonHeight), "PLAY");
             playButton.OnClick += () =>
             {
                 var core = ServiceLocator.Get<Core>();
@@ -74,10 +74,10 @@ namespace ProjectVagabond.Scenes
                 _sceneManager.ChangeScene(GameSceneState.TerminalMap, loadingTasks);
             };
 
-            var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 280, buttonWidth, buttonHeight), "SETTINGS");
+            var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 205, buttonWidth, buttonHeight), "SETTINGS");
             settingsButton.OnClick += () => _sceneManager.ChangeScene(GameSceneState.Settings);
 
-            var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 300, buttonWidth, buttonHeight), "EXIT");
+            var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 230, buttonWidth, buttonHeight), "EXIT");
             exitButton.OnClick += ConfirmExit;
 
             _buttons.Add(playButton);
@@ -239,7 +239,7 @@ namespace ProjectVagabond.Scenes
             int screenWidth = Global.VIRTUAL_WIDTH;
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
-            spriteBatch.Draw(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 150), Color.White);
+            spriteBatch.Draw(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 50), Color.White);
 
             foreach (var button in _buttons)
             {

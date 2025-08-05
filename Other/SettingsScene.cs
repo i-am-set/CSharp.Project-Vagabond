@@ -131,12 +131,6 @@ namespace ProjectVagabond.Scenes
             _uiElements.Add(new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v));
             _uiElements.Add(new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v));
 
-            _uiElements.Add("Game");
-            _uiElements.Add(new BoolSettingControl("24-Hour Clock", () => _tempSettings.Use24HourClock, v => _tempSettings.Use24HourClock = v));
-            _uiElements.Add(new BoolSettingControl("Imperial Units", () => _tempSettings.UseImperialUnits, v => _tempSettings.UseImperialUnits = v));
-
-            _uiElements.Add("Controls");
-
             var applyButton = new Button(new Rectangle(0, 0, 250, 20), "Apply");
             applyButton.OnClick += ConfirmApplySettings;
             _uiElements.Add(applyButton);

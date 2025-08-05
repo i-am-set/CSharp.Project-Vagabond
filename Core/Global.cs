@@ -69,8 +69,8 @@ namespace ProjectVagabond
         public const float FIXED_PHYSICS_TIMESTEP = 1f / PHYSICS_UPDATES_PER_SECOND;
 
         // Virtual resolution for fixed aspect ratio rendering
-        public const int VIRTUAL_WIDTH = 960;
-        public const int VIRTUAL_HEIGHT = 540;
+        public const int VIRTUAL_WIDTH = 640;
+        public const int VIRTUAL_HEIGHT = 360;
 
         // Map settings Global
         public const float MAP_AREA_WIDTH_PERCENT = 0.8f;

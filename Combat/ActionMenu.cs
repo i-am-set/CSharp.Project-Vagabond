@@ -19,12 +19,12 @@ namespace ProjectVagabond.Combat.UI
 
         // --- TUNING CONSTANTS ---
         public static readonly Point CARD_SIZE = new Point(120, 168);
-        private const int MENU_Y_POS = 400;
+        private const int MENU_Y_POS = 250;
         private const int MENU_X_PADDING = 60; // Horizontal padding from screen edge
         private const int CARD_SPACING = -25; // Negative for overlap
         private const float SPREAD_AMOUNT = 30f; // How far cards move apart when one is hovered
         private const float HOVER_Y_OFFSET = -40f; // How far the card moves up when hovered
-        private const float SELECTED_Y_OFFSET = 130f; // How far the selected hand's menu moves down
+        private const float SELECTED_Y_OFFSET = 80f; // How far the selected hand's menu moves down
         private const float OFFSCREEN_Y_OFFSET = 300f; // How far menus move down when both hands are selected
         private const float CARD_TILT_RADIANS = 0.15f; // Tilt angle for unselected cards
         private const float WIGGLE_SPEED = 8f; // Speed of the hovered border shimmer
