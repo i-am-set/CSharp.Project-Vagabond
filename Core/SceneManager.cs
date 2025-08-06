@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using MonoGame.Extended.BitmapFonts;
 using System;
 using System.Linq;
+using ProjectVagabond.UI;
 
 namespace ProjectVagabond
 {
@@ -151,6 +152,8 @@ namespace ProjectVagabond
 
         public void Update(GameTime gameTime)
         {
+            UIInputManager.ResetFrameState();
+
             if (_isTransitioning)
             {
                 _outroAnimator?.Update(gameTime);

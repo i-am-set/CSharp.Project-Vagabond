@@ -69,6 +69,19 @@ namespace ProjectVagabond.Combat
             var mouseState = Mouse.GetState();
             VirtualMousePosition = Core.TransformMouse(mouseState.Position);
 
+            // Determine focus based on mouse position before handling input
+            if (_combatManager.CurrentState == PlayerTurnState.Selecting)
+            {
+                if (VirtualMousePosition.X < Global.VIRTUAL_WIDTH / 2)
+                {
+                    _focusedHand = HandType.Left;
+                }
+                else
+                {
+                    _focusedHand = HandType.Right;
+                }
+            }
+
             HandleMouseInput(mouseState);
             HandleKeyboardInput(gameTime, keyboardState);
 
@@ -78,96 +91,60 @@ namespace ProjectVagabond.Combat
 
         private void HandleMouseInput(MouseState mouseState)
         {
-            bool mouseMoved = mouseState.Position != _previousMouseState.Position;
             bool isClick = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
 
             // --- State: Selecting Actions ---
             if (_combatManager.CurrentState == PlayerTurnState.Selecting)
             {
-                bool cardInteractionFound = false;
-
-                // Check left menu for hover or click
-                for (int i = 0; i < _leftActionMenu.Cards.Count; i++)
+                bool cardHovered = false;
+                if (_focusedHand == HandType.Left)
                 {
-                    if (_leftActionMenu.Cards[i].CurrentBounds.Contains(VirtualMousePosition))
+                    _rightSelectedIndex = -1; // Clear selection on the other hand
+                    for (int i = 0; i < _leftActionMenu.Cards.Count; i++)
                     {
-                        cardInteractionFound = true;
-                        if (mouseMoved)
+                        if (_leftActionMenu.Cards[i].CurrentBounds.Contains(VirtualMousePosition))
                         {
-                            _focusedHand = HandType.Left;
+                            cardHovered = true;
                             _leftSelectedIndex = i;
-                        }
-                        if (isClick)
-                        {
-                            _combatManager.SelectAction(HandType.Left, _leftActionMenu.Cards[i].Action.Id);
-                            if (_combatManager.CurrentState == PlayerTurnState.Selecting)
+                            if (isClick)
                             {
-                                _focusedHand = HandType.Right;
-                                _rightSelectedIndex = -1; // For mouse, don't auto-select a card
+                                _combatManager.SelectAction(HandType.Left, _leftActionMenu.Cards[i].Action.Id);
+                                // After selecting, automatically focus the other hand if it's still selectable
+                                if (_combatManager.CurrentState == PlayerTurnState.Selecting)
+                                {
+                                    _focusedHand = HandType.Right;
+                                    _rightSelectedIndex = 0; // Auto-select first card for keyboard-like flow
+                                }
+                                return;
                             }
-                            return; // A click is a terminal action for this input frame
+                            break;
                         }
-                        break; // Found hover, no need to check other cards in this menu
                     }
+                    if (!cardHovered) _leftSelectedIndex = -1;
                 }
-
-                // Check right menu if no interaction on left
-                if (!cardInteractionFound)
+                else // Focused hand is Right
                 {
+                    _leftSelectedIndex = -1; // Clear selection on the other hand
                     for (int i = 0; i < _rightActionMenu.Cards.Count; i++)
                     {
                         if (_rightActionMenu.Cards[i].CurrentBounds.Contains(VirtualMousePosition))
                         {
-                            cardInteractionFound = true;
-                            if (mouseMoved)
-                            {
-                                _focusedHand = HandType.Right;
-                                _rightSelectedIndex = i;
-                            }
+                            cardHovered = true;
+                            _rightSelectedIndex = i;
                             if (isClick)
                             {
                                 _combatManager.SelectAction(HandType.Right, _rightActionMenu.Cards[i].Action.Id);
                                 if (_combatManager.CurrentState == PlayerTurnState.Selecting)
                                 {
                                     _focusedHand = HandType.Left;
-                                    _leftSelectedIndex = -1; // For mouse, don't auto-select a card
+                                    _leftSelectedIndex = 0;
                                 }
-                                return; // A click is a terminal action for this input frame
+                                return;
                             }
-                            break; // Found hover
+                            break;
                         }
                     }
-                }
-
-                // If mouse moved but no card was hovered, handle deselection and focus change
-                if (mouseMoved && !cardInteractionFound)
-                {
-                    bool leftSelected = !string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId);
-                    bool rightSelected = !string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId);
-
-                    // If the mouse is in an activation area but not over a card,
-                    // focus that hand and deselect its current card, but only if that hand isn't already locked in.
-                    if (_leftActionMenu.ActivationArea.Contains(VirtualMousePosition))
-                    {
-                        if (!leftSelected)
-                        {
-                            _focusedHand = HandType.Left;
-                            _leftSelectedIndex = -1;
-                        }
-                    }
-                    else if (_rightActionMenu.ActivationArea.Contains(VirtualMousePosition))
-                    {
-                        if (!rightSelected)
-                        {
-                            _focusedHand = HandType.Right;
-                            _rightSelectedIndex = -1;
-                        }
-                    }
-                    else // If the mouse is outside both activation areas, deselect everything.
-                    {
-                        _leftSelectedIndex = -1;
-                        _rightSelectedIndex = -1;
-                    }
+                    if (!cardHovered) _rightSelectedIndex = -1;
                 }
             }
 

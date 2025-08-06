@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics; // CRITICAL: This using directive is required for the SpriteBatch.Draw(RectangleF) extension method.
+using ProjectVagabond.Combat.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,16 +20,18 @@ namespace ProjectVagabond.Combat.UI
 
         // --- TUNING CONSTANTS ---
         public static readonly Point CARD_SIZE = new Point(120, 168);
-        private const int MENU_Y_POS = 250;
-        private const int MENU_X_PADDING = 60; // Horizontal padding from screen edge
+        private const int MENU_BASE_Y_POS = 250;
         private const int CARD_SPACING = -25; // Negative for overlap
         private const float SPREAD_AMOUNT = 30f; // How far cards move apart when one is hovered
         private const float HOVER_Y_OFFSET = -40f; // How far the card moves up when hovered
         private const float SELECTED_Y_OFFSET = 80f; // How far the selected hand's menu moves down
         private const float OFFSCREEN_Y_OFFSET = 300f; // How far menus move down when both hands are selected
         private const float CARD_TILT_RADIANS = 0.15f; // Tilt angle for unselected cards
-        private const float WIGGLE_SPEED = 8f; // Speed of the hovered border shimmer
+        private const float WIGGLE_SPEED = 4f; // Speed of the hovered border shimmer
         private const float WIGGLE_ROTATION_RADIANS = 0.02f; // Rotational intensity of the border shimmer
+        private const float FOCUSED_Y_OFFSET = 0f; // Y position offset when this menu is focused
+        private const float UNFOCUSED_Y_OFFSET = 60f; // Y position offset when this menu is NOT focused
+        private const float CARD_ARCH_AMOUNT = 10f; // How much higher the middle card is than the outer cards
 
         // State-based appearance
         public const float UNFOCUSED_SCALE = 0.8f;
@@ -36,6 +39,10 @@ namespace ProjectVagabond.Combat.UI
         public const float HOVERED_SCALE = 1.0f; // Size of the hovered card
         public static readonly Color UNFOCUSED_TINT = new Color(150, 150, 150);
         public static readonly Color FOCUSED_TINT = Color.White;
+        private const float UNFOCUSED_ALPHA = 0.2f;
+        private const float DEFAULT_ALPHA = 0.8f;
+        private const float HOVERED_ALPHA = 0.95f;
+
 
         // Placeholder card visuals
         public static readonly Color CARD_IMAGE_AREA_COLOR = new Color(50, 50, 80);
@@ -44,7 +51,6 @@ namespace ProjectVagabond.Combat.UI
         public static readonly Color BORDER_COLOR = Color.White;
 
         private Vector2 _menuCenterPosition;
-        public Rectangle ActivationArea { get; private set; }
 
         public IReadOnlyList<CombatCard> Cards => _cards;
 
@@ -83,24 +89,19 @@ namespace ProjectVagabond.Combat.UI
 
         private void CalculateLayout()
         {
-            // Calculate the total width of the menu when all cards are at their default, non-hovered size.
-            // This provides a stable anchor point for the menu's center.
-            int totalWidth = (int)(_cards.Count * (CARD_SIZE.X * DEFAULT_SCALE) + Math.Max(0, _cards.Count - 1) * CARD_SPACING);
-            int startX;
+            float menuX;
 
             if (_handType == HandType.Left)
             {
-                startX = MENU_X_PADDING;
-                _menuCenterPosition = new Vector2(startX + totalWidth / 2f, MENU_Y_POS);
+                // Center the menu in the left quadrant of the screen
+                menuX = Global.VIRTUAL_WIDTH / 4f;
             }
             else // Right Hand
             {
-                startX = Global.VIRTUAL_WIDTH - MENU_X_PADDING - totalWidth;
-                _menuCenterPosition = new Vector2(startX + totalWidth / 2f, MENU_Y_POS);
+                // Center the menu in the right quadrant of the screen
+                menuX = Global.VIRTUAL_WIDTH * 3 / 4f;
             }
-
-            // Define a larger area for mouse activation
-            ActivationArea = new Rectangle(startX - 20, MENU_Y_POS - 40, totalWidth + 40, CARD_SIZE.Y + 80);
+            _menuCenterPosition = new Vector2(menuX, MENU_BASE_Y_POS);
         }
 
         /// <summary>
@@ -111,7 +112,6 @@ namespace ProjectVagabond.Combat.UI
             _wiggleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             bool isMenuFocused = inputHandler.FocusedHand == _handType;
-            bool isMouseInArea = ActivationArea.Contains(inputHandler.VirtualMousePosition);
             _hoveredIndex = isMenuFocused ? inputHandler.GetSelectedIndexForHand(_handType) : -1;
 
             // This width is based on the original card size and is used to space out the cards' animation targets.
@@ -129,16 +129,19 @@ namespace ProjectVagabond.Combat.UI
                 // Determine Target State
                 float targetScale = DEFAULT_SCALE;
                 Color targetTint = FOCUSED_TINT;
+                float targetAlpha = DEFAULT_ALPHA;
 
-                if (!isMenuFocused && !isMouseInArea && combatManager.CurrentState == PlayerTurnState.Selecting)
+                if (!isMenuFocused && combatManager.CurrentState == PlayerTurnState.Selecting)
                 {
                     targetScale = UNFOCUSED_SCALE;
                     targetTint = UNFOCUSED_TINT;
+                    targetAlpha = UNFOCUSED_ALPHA;
                 }
 
                 if (isHovered)
                 {
                     targetScale = HOVERED_SCALE;
+                    targetAlpha = HOVERED_ALPHA;
                 }
 
                 // Determine Target Position
@@ -154,7 +157,9 @@ namespace ProjectVagabond.Combat.UI
                 float targetX = baseCardX + xOffset - (CARD_SIZE.X * targetScale - CARD_SIZE.X) / 2f;
 
                 // --- Y-Position Logic based on Combat State ---
-                float baseY = MENU_Y_POS;
+                float menuYOffset = isMenuFocused ? FOCUSED_Y_OFFSET : UNFOCUSED_Y_OFFSET;
+                float baseY = MENU_BASE_Y_POS + menuYOffset;
+
                 if (combatManager.CurrentState == PlayerTurnState.Confirming)
                 {
                     baseY += OFFSCREEN_Y_OFFSET;
@@ -164,7 +169,16 @@ namespace ProjectVagabond.Combat.UI
                     baseY += SELECTED_Y_OFFSET;
                 }
 
-                float targetY = baseY - (CARD_SIZE.Y * targetScale - CARD_SIZE.Y) / 2f;
+                // Calculate arch offset to create a fan shape
+                float archYOffset = 0f;
+                if (_cards.Count > 1)
+                {
+                    float middleIndex = (_cards.Count - 1) / 2.0f;
+                    // This creates a curve where the middle card is highest. We subtract from Y to move it up.
+                    archYOffset = -((1f - Math.Abs(i - middleIndex) / middleIndex) * CARD_ARCH_AMOUNT);
+                }
+
+                float targetY = baseY + archYOffset - (CARD_SIZE.Y * targetScale - CARD_SIZE.Y) / 2f;
 
                 if (isHovered)
                 {
@@ -189,7 +203,7 @@ namespace ProjectVagabond.Combat.UI
                     }
                 }
 
-                card.AnimateTo(new Vector2(targetX, targetY), targetScale, targetTint, targetRotation);
+                card.AnimateTo(new Vector2(targetX, targetY), targetScale, targetTint, targetRotation, targetAlpha);
                 card.Update(gameTime);
             }
         }
@@ -241,11 +255,11 @@ namespace ProjectVagabond.Combat.UI
             }
 
             // 1. Draw FULL Card Background
-            var fullCardBgColor = new Color(CARD_TEXT_BG_COLOR.ToVector3() * card.CurrentTint.ToVector3());
+            var fullCardBgColor = new Color(CARD_TEXT_BG_COLOR.ToVector3() * card.CurrentTint.ToVector3()) * card.CurrentAlpha;
             spriteBatch.Draw(pixel, cardDrawPosition, null, fullCardBgColor, cardRotation, pixelOrigin, CARD_SIZE.ToVector2() * cardScale, SpriteEffects.None, 0f);
 
             // 2. Draw placeholder image area (on top of the new background)
-            var imageAreaColor = new Color(CARD_IMAGE_AREA_COLOR.ToVector3() * card.CurrentTint.ToVector3());
+            var imageAreaColor = new Color(CARD_IMAGE_AREA_COLOR.ToVector3() * card.CurrentTint.ToVector3()) * card.CurrentAlpha;
             var imageRectSize = new Vector2(CARD_SIZE.X, CARD_SIZE.Y * (2 / 3f));
 
             // Calculate the center position of the image area, accounting for card scale and rotation.
@@ -257,7 +271,7 @@ namespace ProjectVagabond.Combat.UI
 
             // 3. Draw Border using lines for a perfect, rotatable outline
             float borderThickness = isHovered ? 3f : 2f;
-            Color borderColor = BORDER_COLOR * (card.CurrentTint.A / 255f);
+            Color borderColor = BORDER_COLOR * card.CurrentAlpha;
 
             var halfSize = CARD_SIZE.ToVector2() / 2f;
             var corners = new Vector2[4]
@@ -283,7 +297,7 @@ namespace ProjectVagabond.Combat.UI
             spriteBatch.DrawLine(corners[3], corners[0], borderColor, borderThickness); // Left
 
             // 4. Draw action name
-            var textColor = new Color(TEXT_COLOR.ToVector3() * card.CurrentTint.ToVector3());
+            var textColor = new Color(TEXT_COLOR.ToVector3() * card.CurrentTint.ToVector3()) * card.CurrentAlpha;
             float textDrawScale = card.CurrentScale;
             Vector2 textSize = font.MeasureString(card.Action.Name);
 

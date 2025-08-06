@@ -54,7 +54,7 @@ namespace ProjectVagabond.Scenes
             base.Enter();
             _confirmationDialog = new ConfirmationDialog(this);
             _revertDialog = new RevertDialog(this);
-            
+
             RefreshUIFromSettings();
 
             if (this.LastUsedInputForNav == InputDevice.Keyboard)
@@ -142,7 +142,7 @@ namespace ProjectVagabond.Scenes
             };
 
             var resolutionControl = new OptionSettingControl<Point>("Resolution", resolutionDisplayList, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v);
-            
+
             var nativeDisplayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
             resolutionControl.IsOptionNotRecommended = (res) => res.X > nativeDisplayMode.Width || res.Y > nativeDisplayMode.Height;
 
@@ -229,6 +229,10 @@ namespace ProjectVagabond.Scenes
         {
             if (!IsDirty()) return;
 
+            // Consume the click and prevent it from affecting other UI elements
+            // that might move under the cursor after the resolution change.
+            ResetInputBlockTimer();
+
             bool graphicsChanged = _tempSettings.Resolution != _settings.Resolution || _tempSettings.Mode != _settings.Mode;
 
             if (graphicsChanged)
@@ -298,16 +302,31 @@ namespace ProjectVagabond.Scenes
 
         private void ConfirmResetSettings()
         {
-            _confirmationDialog.Show("Reset all settings to default? This cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide())) });
+            _confirmationDialog.Show("Reset all settings to default?\n\nThis cannot be undone.", new List<Tuple<string, Action>> { Tuple.Create("YES", new Action(() => { ExecuteResetSettings(); _confirmationDialog.Hide(); })), Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide())) });
         }
 
         private void ExecuteResetSettings()
         {
+            // Preserve the current display settings
+            var preservedResolution = _tempSettings.Resolution;
+            var preservedWindowMode = _tempSettings.Mode;
+
+            // Create a new GameSettings instance to get all other default values
             _tempSettings = new GameSettings();
-            _tempSettings.Resolution = SettingsManager.FindClosestResolution(_tempSettings.Resolution);
-            foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
+
+            // Restore the preserved display settings
+            _tempSettings.Resolution = preservedResolution;
+            _tempSettings.Mode = preservedWindowMode;
+
+            // Refresh the UI to show the new default values for all controls
+            foreach (var item in _uiElements.OfType<ISettingControl>())
+            {
+                item.RefreshValue();
+            }
+
             UpdateFramerateControl();
-            ApplySettings();
+            ApplySettings(); // This will apply and save the new settings
+
             _confirmationMessage = "Settings Reset to Default!";
             _confirmationTimer = 5f;
         }

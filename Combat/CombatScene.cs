@@ -143,9 +143,13 @@ namespace ProjectVagabond.Scenes
             _leftHandRenderer.Draw(spriteBatch, font, gameTime);
             _rightHandRenderer.Draw(spriteBatch, font, gameTime);
 
-            // Draw the action menus on top
-            _leftActionMenu.Draw(spriteBatch, font, gameTime);
-            _rightActionMenu.Draw(spriteBatch, font, gameTime);
+            // Draw the action menus on top, with the focused menu last (on top)
+            var focusedHand = _inputHandler.FocusedHand;
+            var unfocusedMenu = (focusedHand == HandType.Left) ? _rightActionMenu : _leftActionMenu;
+            var focusedMenu = (focusedHand == HandType.Left) ? _leftActionMenu : _rightActionMenu;
+
+            unfocusedMenu.Draw(spriteBatch, font, gameTime);
+            focusedMenu.Draw(spriteBatch, font, gameTime);
 
             // Draw the "CAST" prompt if in the confirmation state
             if (_combatManager.CurrentState == PlayerTurnState.Confirming)

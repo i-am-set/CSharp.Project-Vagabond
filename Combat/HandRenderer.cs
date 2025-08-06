@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Utils;
 using System;
+using System.Diagnostics;
 
 namespace ProjectVagabond.Combat.UI
 {
@@ -17,8 +18,8 @@ namespace ProjectVagabond.Combat.UI
         // --- TUNING CONSTANTS ---
         private const int HAND_WIDTH = 128;
         private const int HAND_HEIGHT = 256;
-        private const int IDLE_POS_Y_OFFSET = -20; // Vertical offset from the bottom of the screen
-        private const int IDLE_POS_X_OFFSET = 50; // Horizontal offset from the center
+        private const int IDLE_POS_Y_OFFSET = 40; // Vertical offset from the bottom of the screen
+        private const int IDLE_POS_X_OFFSET = 180; // Horizontal offset from the center
         private const float ANIMATION_DURATION = 0.6f; // Duration for sliding in/out
         private const float IDLE_SWAY_SPEED_X = 0.8f;
         private const float IDLE_SWAY_SPEED_Y = 0.6f;
@@ -59,8 +60,31 @@ namespace ProjectVagabond.Combat.UI
 
         public void LoadContent()
         {
-            _idleTexture = _spriteManager.HandIdleSprite;
-            _holdTexture = _spriteManager.HandHoldSprite;
+            var core = ServiceLocator.Get<Core>();
+            var textureFactory = ServiceLocator.Get<TextureFactory>();
+            string spritePath = "";
+
+            try
+            {
+                if (_playerHand.Hand == HandType.Left)
+                {
+                    spritePath = "Sprites/Hands/cat_hand_left_1";
+                    _idleTexture = core.Content.Load<Texture2D>(spritePath);
+                }
+                else // Right Hand
+                {
+                    spritePath = "Sprites/Hands/cat_hand_right_1";
+                    _idleTexture = core.Content.Load<Texture2D>(spritePath);
+                }
+                // For now, the "hold" state uses the same sprite as the idle state.
+                _holdTexture = _idleTexture;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[ERROR] Could not load hand texture from '{spritePath}': {ex.Message}");
+                _idleTexture = textureFactory.CreateColoredTexture(HAND_WIDTH, HAND_HEIGHT, Color.DarkGray);
+                _holdTexture = textureFactory.CreateColoredTexture(HAND_WIDTH, HAND_HEIGHT, Color.CornflowerBlue);
+            }
         }
 
         private void CalculatePositions()

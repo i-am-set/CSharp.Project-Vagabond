@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
 using System;
 
 namespace ProjectVagabond.UI
@@ -80,9 +81,10 @@ namespace ProjectVagabond.UI
 
             UpdateHoverState(virtualMousePos);
 
-            if (IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+            if (UIInputManager.CanProcessMouseClick() && IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
             {
                 TriggerClick();
+                UIInputManager.ConsumeMouseClick();
             }
 
             _previousMouseState = currentMouseState;

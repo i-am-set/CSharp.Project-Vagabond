@@ -105,23 +105,20 @@ namespace ProjectVagabond
             else
             {
                 const int worldCellSize = Global.GRID_CELL_SIZE;
+                const int verticalPadding = 25;
 
-                // --- SIZE CALCULATION (to keep the original, smaller map size) ---
-                int maxWidth = (int)(Global.VIRTUAL_WIDTH * Global.MAP_AREA_WIDTH_PERCENT);
-                // This calculation is what defines the original, smaller size by assuming a terminal is present.
-                int maxHeight = Global.VIRTUAL_HEIGHT - Global.MAP_TOP_PADDING - Global.TERMINAL_AREA_HEIGHT - 10;
-                int baseMapSize = Math.Min(maxWidth, maxHeight);
-                int baseGridSize = baseMapSize / worldCellSize;
-                int worldGridSize = baseGridSize + 4;
-                int finalMapSize = worldGridSize * worldCellSize;
+                // --- SIZE CALCULATION ---
+                // The map is square, constrained by the available vertical space to meet padding requirements.
+                int availableHeight = Global.VIRTUAL_HEIGHT - (verticalPadding * 2);
 
-                // --- CENTERING CALCULATION (using the full screen height) ---
-                int availableHeight = Global.VIRTUAL_HEIGHT; // Use the whole screen for centering
-                int availableWidth = Global.VIRTUAL_WIDTH;
+                // The final map size must be a multiple of the cell size to ensure perfect grid alignment.
+                int finalMapSize = (availableHeight / worldCellSize) * worldCellSize;
 
-                // Center the map itself vertically, ignoring the header space for this calculation.
-                int mapY = (availableHeight - finalMapSize) / 2;
-                int mapX = (availableWidth - finalMapSize) / 2;
+                // --- CENTERING CALCULATION ---
+                // Center the map vertically within the screen.
+                int mapY = (Global.VIRTUAL_HEIGHT - finalMapSize) / 2;
+                // Center the map horizontally, which leaves space on the left for the stats panel.
+                int mapX = (Global.VIRTUAL_WIDTH - finalMapSize) / 2;
                 MapScreenBounds = new Rectangle(mapX, mapY, finalMapSize, finalMapSize);
             }
 

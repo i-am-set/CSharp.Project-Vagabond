@@ -282,26 +282,33 @@ namespace ProjectVagabond.UI
 
         private List<string> WrapText(BitmapFont font, string text, float maxLineWidth)
         {
-            var lines = new List<string>();
-            if (string.IsNullOrEmpty(text)) return lines;
+            var finalLines = new List<string>();
+            if (string.IsNullOrEmpty(text)) return finalLines;
 
-            var words = text.Split(' ');
-            var currentLine = "";
-            foreach (var word in words)
+            // First, split the text into paragraphs based on explicit newline characters.
+            var paragraphs = text.Split('\n');
+
+            foreach (var paragraph in paragraphs)
             {
-                var testLine = string.IsNullOrEmpty(currentLine) ? word : $"{currentLine} {word}";
-                if (font.MeasureString(testLine).Width > maxLineWidth)
+                // Then, apply word wrapping to each paragraph.
+                var words = paragraph.Split(' ');
+                var currentLine = "";
+                foreach (var word in words)
                 {
-                    lines.Add(currentLine);
-                    currentLine = word;
+                    var testLine = string.IsNullOrEmpty(currentLine) ? word : $"{currentLine} {word}";
+                    if (font.MeasureString(testLine).Width > maxLineWidth)
+                    {
+                        finalLines.Add(currentLine);
+                        currentLine = word;
+                    }
+                    else
+                    {
+                        currentLine = testLine;
+                    }
                 }
-                else
-                {
-                    currentLine = testLine;
-                }
+                finalLines.Add(currentLine);
             }
-            lines.Add(currentLine);
-            return lines;
+            return finalLines;
         }
     }
 }

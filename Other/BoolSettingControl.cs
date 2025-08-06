@@ -72,11 +72,12 @@ namespace ProjectVagabond.UI
             _isLeftArrowHovered = _leftArrowRect.Contains(virtualMousePos);
             _isRightArrowHovered = _rightArrowRect.Contains(virtualMousePos);
 
-            if (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
+            if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
             {
                 if (_isLeftArrowHovered || _isRightArrowHovered)
                 {
                     ToggleValue();
+                    UIInputManager.ConsumeMouseClick();
                 }
             }
         }
