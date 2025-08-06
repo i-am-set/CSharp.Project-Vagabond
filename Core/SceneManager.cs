@@ -184,18 +184,20 @@ namespace ProjectVagabond
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix? transform = null)
         {
-            // If we are in the middle of a transition that requires loading,
-            // and the outro is complete, don't draw the old scene. This results
-            // in a black background for the loading screen.
             if (IsLoadingBetweenScenes)
             {
                 return;
             }
 
+            Matrix baseTransform = transform ?? Matrix.Identity;
             Matrix contentTransform = _introAnimator?.GetContentTransform() ?? Matrix.Identity;
-            _currentScene?.Draw(spriteBatch, font, gameTime, contentTransform);
+
+            // The animation should happen in virtual space, then the whole thing is transformed to screen space.
+            Matrix finalTransform = contentTransform * baseTransform;
+
+            _currentScene?.Draw(spriteBatch, font, gameTime, finalTransform);
         }
 
         public void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

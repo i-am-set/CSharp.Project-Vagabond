@@ -23,6 +23,8 @@ namespace ProjectVagabond.Scenes
         private Texture2D _enemyTexture;
         private AnimationManager _animationManager;
 
+        public override bool UsesLetterboxing => false;
+
         public override void Initialize()
         {
             base.Initialize();

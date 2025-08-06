@@ -18,7 +18,7 @@ namespace ProjectVagabond.Combat.UI
         // --- TUNING CONSTANTS ---
         private const int HAND_WIDTH = 128;
         private const int HAND_HEIGHT = 256;
-        private const int IDLE_POS_Y_OFFSET = 40; // Vertical offset from the bottom of the screen
+        private const int IDLE_POS_Y_OFFSET = 10; // Vertical offset from the bottom of the screen
         private const int IDLE_POS_X_OFFSET = 180; // Horizontal offset from the center
         private const float ANIMATION_DURATION = 0.6f; // Duration for sliding in/out
         private const float IDLE_SWAY_SPEED_X = 0.8f;
@@ -89,20 +89,33 @@ namespace ProjectVagabond.Combat.UI
 
         private void CalculatePositions()
         {
-            float yPos = Global.VIRTUAL_HEIGHT - HAND_HEIGHT + IDLE_POS_Y_OFFSET;
+            var core = ServiceLocator.Get<Core>();
+            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+
+            // Anchor to the bottom of the actual screen's virtual bounds
+            float yPos = actualScreenVirtualBounds.Bottom - HAND_HEIGHT + IDLE_POS_Y_OFFSET;
             float xPos;
+
+            // The center point of the visible screen area
+            float screenCenterX = actualScreenVirtualBounds.X + (actualScreenVirtualBounds.Width / 2f);
+
+            // This shift compensates for the visual center of the hand sprites not being the geometric center of their texture.
+            float centeringShift = HAND_WIDTH / 4f;
 
             if (_playerHand.Hand == HandType.Left)
             {
-                xPos = (Global.VIRTUAL_WIDTH / 2f) - HAND_WIDTH - (IDLE_POS_X_OFFSET / 2f);
+                // Position the left hand to the left of the center point
+                xPos = screenCenterX - HAND_WIDTH - (IDLE_POS_X_OFFSET / 2f) - centeringShift;
             }
             else // Right Hand
             {
-                xPos = (Global.VIRTUAL_WIDTH / 2f) + (IDLE_POS_X_OFFSET / 2f);
+                // Position the right hand to the right of the center point
+                xPos = screenCenterX + (IDLE_POS_X_OFFSET / 2f) - centeringShift;
             }
 
             _idlePosition = new Vector2(xPos, yPos);
-            _offscreenPosition = new Vector2(xPos, Global.VIRTUAL_HEIGHT);
+            // Offscreen position should also be relative to the actual screen's virtual bounds
+            _offscreenPosition = new Vector2(xPos, actualScreenVirtualBounds.Bottom);
         }
 
         /// <summary>

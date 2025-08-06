@@ -472,26 +472,32 @@ namespace ProjectVagabond
 
         protected override void Draw(GameTime gameTime)
         {
-            // --- 1. Draw the main 2D scene to a render target ---
-            GraphicsDevice.SetRenderTarget(_renderTarget);
-            GraphicsDevice.Clear(Color.Transparent);
+            bool useLetterboxing = _sceneManager.CurrentActiveScene?.UsesLetterboxing ?? true;
 
-            // The scene is drawn first. The background is now handled outside the render target.
-            _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime);
+            Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
+            Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
+            var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
 
-            // Tooltips and other persistent UI elements are drawn into the main render target.
-            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            _tooltipManager.Draw(_spriteBatch, _defaultFont);
-            _spriteBatch.End();
+            // --- Phase 1: Render virtual-space content ---
+            if (useLetterboxing)
+            {
+                // For letterboxed scenes, draw everything to a single render target first.
+                GraphicsDevice.SetRenderTarget(_renderTarget);
+                GraphicsDevice.Clear(Color.Transparent);
 
-            // --- 2. Draw the 3D dice to their own render target ---
+                _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, Matrix.Identity);
+
+                _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+                _tooltipManager.Draw(_spriteBatch, _defaultFont);
+                _spriteBatch.End();
+            }
+
             var diceTexture = _diceRollingSystem.Draw(_defaultFont);
 
-            // --- 3. Draw everything to the screen ---
+            // --- Phase 2: Composite everything to the backbuffer ---
             GraphicsDevice.SetRenderTarget(null);
-            GraphicsDevice.Clear(Color.Black); // Clear with black as a base for letterboxing.
+            GraphicsDevice.Clear(Color.Black);
 
-            // Draw the full-screen background first, directly to the backbuffer.
             _spriteBatch.Begin(samplerState: SamplerState.LinearWrap);
             if (!_sceneManager.IsLoadingBetweenScenes)
             {
@@ -499,32 +505,44 @@ namespace ProjectVagabond
             }
             _spriteBatch.End();
 
-            // Scene-specific underlays (like dialog overlays) are drawn directly to the backbuffer, BEFORE the main scene.
             _sceneManager.DrawUnderlay(_spriteBatch, _defaultFont, gameTime);
 
-            var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
-            Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
-
-            // Draw the main 2D scene from the render target, scaled to fit the screen.
-            _spriteBatch.Begin(samplerState: finalSamplerState, transformMatrix: shakeMatrix);
-            _spriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
-            _spriteBatch.End();
-
-            // Draw the dice texture on top of the 2D scene, using the same scaling.
-            if (diceTexture != null)
+            // --- Draw the main content block ---
+            if (useLetterboxing)
             {
-                _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: finalSamplerState, transformMatrix: shakeMatrix);
-                _spriteBatch.Draw(diceTexture, _finalRenderRectangle, Color.White);
+                _spriteBatch.Begin(samplerState: finalSamplerState, transformMatrix: shakeMatrix);
+                _spriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
+                _spriteBatch.End();
+
+                if (diceTexture != null)
+                {
+                    _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: finalSamplerState, transformMatrix: shakeMatrix);
+                    _spriteBatch.Draw(diceTexture, _finalRenderRectangle, Color.White);
+                    _spriteBatch.End();
+                }
+            }
+            else // Fullscreen rendering (e.g., Combat)
+            {
+                Matrix fullScreenTransform = shakeMatrix * screenScaleMatrix;
+                _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, fullScreenTransform);
+
+                if (diceTexture != null)
+                {
+                    _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: finalSamplerState, transformMatrix: fullScreenTransform);
+                    _spriteBatch.Draw(diceTexture, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.White);
+                    _spriteBatch.End();
+                }
+
+                _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: fullScreenTransform);
+                _tooltipManager.Draw(_spriteBatch, _defaultFont);
                 _spriteBatch.End();
             }
 
-            // Draw particles on top of everything else, respecting the shake matrix.
-            _particleSystemManager.Draw(_spriteBatch, shakeMatrix);
+            Matrix particleTransform = useLetterboxing ? shakeMatrix : shakeMatrix * screenScaleMatrix;
+            _particleSystemManager.Draw(_spriteBatch, particleTransform);
 
-            // Scene-specific overlays are drawn directly to the backbuffer.
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
 
-            // The loading screen is drawn last, on top of everything else.
             if (_loadingScreen.IsActive)
             {
                 _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
@@ -532,7 +550,6 @@ namespace ProjectVagabond
                 _spriteBatch.End();
             }
 
-            // Draw the game version last so it's on top of everything, anchored to the screen.
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             if (_defaultFont != null)
             {
@@ -630,6 +647,24 @@ namespace ProjectVagabond
             var toScreenMatrix = Matrix.Invert(coreInstance.MouseTransformMatrix);
             var screenVector = Vector2.Transform(virtualPoint.ToVector2(), toScreenMatrix);
             return new Point((int)screenVector.X, (int)screenVector.Y);
+        }
+
+        /// <summary>
+        /// Returns a Rectangle in virtual coordinates that represents the actual visible area of the window.
+        /// This accounts for letterboxing or pillarboxing applied during scaling.
+        /// </summary>
+        public Rectangle GetActualScreenVirtualBounds()
+        {
+            // Get the top-left and bottom-right corners of the actual screen in virtual coordinates.
+            Vector2 topLeftVirtual = TransformMouse(new Point(0, 0));
+            Vector2 bottomRightVirtual = TransformMouse(new Point(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));
+
+            return new Rectangle(
+                (int)topLeftVirtual.X,
+                (int)topLeftVirtual.Y,
+                (int)(bottomRightVirtual.X - topLeftVirtual.X),
+                (int)(bottomRightVirtual.Y - topLeftVirtual.Y)
+            );
         }
 
         public void ExitApplication() => Exit();

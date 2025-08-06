@@ -53,6 +53,12 @@ namespace ProjectVagabond.Scenes
         /// </summary>
         protected bool IsInputBlocked => _inputBlockTimer > 0;
 
+        /// <summary>
+        /// Determines if the scene should be rendered within a letterboxed virtual resolution.
+        /// Override and return false for scenes that need to draw to the full window bounds.
+        /// </summary>
+        public virtual bool UsesLetterboxing => true;
+
         protected GameScene()
         {
             _core = ServiceLocator.Get<Core>();

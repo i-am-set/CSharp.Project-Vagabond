@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics; // CRITICAL: This using directive is required for the SpriteBatch.Draw(RectangleF) extension method.
-using ProjectVagabond.Combat.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +20,7 @@ namespace ProjectVagabond.Combat.UI
         // --- TUNING CONSTANTS ---
         public static readonly Point CARD_SIZE = new Point(120, 168);
         private const int MENU_BASE_Y_POS = 250;
+        private const int MENU_X_PADDING = 20; // Horizontal padding from screen edge
         private const int CARD_SPACING = -25; // Negative for overlap
         private const float SPREAD_AMOUNT = 30f; // How far cards move apart when one is hovered
         private const float HOVER_Y_OFFSET = -40f; // How far the card moves up when hovered
@@ -89,19 +89,24 @@ namespace ProjectVagabond.Combat.UI
 
         private void CalculateLayout()
         {
+            var core = ServiceLocator.Get<Core>();
+            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+
+            // Calculate the total width of the menu when all cards are at their default, non-hovered size.
+            int totalWidth = (int)(_cards.Count * (CARD_SIZE.X * DEFAULT_SCALE) + Math.Max(0, _cards.Count - 1) * CARD_SPACING);
             float menuX;
 
             if (_handType == HandType.Left)
             {
-                // Center the menu in the left quadrant of the screen
-                menuX = Global.VIRTUAL_WIDTH / 4f;
+                // Anchor to the left edge of the actual screen's virtual bounds
+                menuX = actualScreenVirtualBounds.X + MENU_X_PADDING;
             }
             else // Right Hand
             {
-                // Center the menu in the right quadrant of the screen
-                menuX = Global.VIRTUAL_WIDTH * 3 / 4f;
+                // Anchor to the right edge of the actual screen's virtual bounds
+                menuX = actualScreenVirtualBounds.Right - MENU_X_PADDING - totalWidth;
             }
-            _menuCenterPosition = new Vector2(menuX, MENU_BASE_Y_POS);
+            _menuCenterPosition = new Vector2(menuX + totalWidth / 2f, MENU_BASE_Y_POS);
         }
 
         /// <summary>
