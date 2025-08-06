@@ -20,7 +20,8 @@ namespace ProjectVagabond.Combat.UI
         private const int HAND_HEIGHT = 256;
         private const int IDLE_POS_Y_OFFSET = 10; // Vertical offset from the bottom of the screen
         private const int IDLE_POS_X_OFFSET = 180; // Horizontal offset from the center
-        private const float ANIMATION_DURATION = 0.6f; // Duration for sliding in/out
+        private const float SLIDE_ANIMATION_DURATION = 0.6f; // Duration for sliding in/out
+        private const float FOCUS_ANIMATION_DURATION = 0.5f; // Duration for focus movement
         private const float IDLE_SWAY_SPEED_X = 0.8f;
         private const float IDLE_SWAY_SPEED_Y = 0.6f;
         private const float IDLE_SWAY_AMOUNT = 1.5f;
@@ -36,6 +37,7 @@ namespace ProjectVagabond.Combat.UI
         private Vector2 _targetPosition;
         private Vector2 _startPosition;
         private float _animationTimer;
+        private float _currentAnimationDuration;
         private bool _isAnimating;
         public OrganicSwayAnimation SwayAnimation { get; }
 
@@ -54,6 +56,7 @@ namespace ProjectVagabond.Combat.UI
             _currentPosition = _offscreenPosition;
             _targetPosition = _offscreenPosition;
             _isAnimating = false;
+            _currentAnimationDuration = SLIDE_ANIMATION_DURATION;
 
             SwayAnimation = new OrganicSwayAnimation(IDLE_SWAY_SPEED_X, IDLE_SWAY_SPEED_Y, IDLE_SWAY_AMOUNT, IDLE_SWAY_AMOUNT);
         }
@@ -124,10 +127,10 @@ namespace ProjectVagabond.Combat.UI
         public void EnterScene()
         {
             _currentPosition = _offscreenPosition;
-            StartAnimation(_idlePosition);
+            StartAnimation(_idlePosition, SLIDE_ANIMATION_DURATION);
         }
 
-        private void StartAnimation(Vector2 newTarget)
+        private void StartAnimation(Vector2 newTarget, float duration)
         {
             if (_targetPosition != newTarget)
             {
@@ -135,20 +138,40 @@ namespace ProjectVagabond.Combat.UI
                 _targetPosition = newTarget;
                 _animationTimer = 0f;
                 _isAnimating = true;
+                _currentAnimationDuration = duration;
             }
         }
 
         /// <summary>
         /// Updates the hand's animation state.
         /// </summary>
-        public void Update(GameTime gameTime, CombatManager combatManager)
+        public void Update(GameTime gameTime, CombatManager combatManager, CombatInputHandler inputHandler)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Determine the desired position based on focus, but only during selection phase
+            if (combatManager.CurrentState == PlayerTurnState.Selecting)
+            {
+                bool isFocused = inputHandler.FocusedHand == _playerHand.Hand;
+                Vector2 focusOffset = Vector2.Zero;
+                if (isFocused)
+                {
+                    focusOffset = (_playerHand.Hand == HandType.Left) ? new Vector2(5, -10) : new Vector2(-5, -10);
+                }
+
+                Vector2 desiredPosition = _idlePosition + focusOffset;
+                StartAnimation(desiredPosition, FOCUS_ANIMATION_DURATION);
+            }
+            else
+            {
+                // If not in selection phase, ensure hands are at their base idle position
+                StartAnimation(_idlePosition, FOCUS_ANIMATION_DURATION);
+            }
 
             if (_isAnimating)
             {
                 _animationTimer += deltaTime;
-                float progress = Math.Min(1f, _animationTimer / ANIMATION_DURATION);
+                float progress = Math.Min(1f, _animationTimer / _currentAnimationDuration);
                 float easedProgress = Easing.EaseOutCubic(progress);
 
                 _currentPosition = Vector2.Lerp(_startPosition, _targetPosition, easedProgress);

@@ -90,8 +90,8 @@ namespace ProjectVagabond.Scenes
 
             _inputHandler.Update(gameTime);
 
-            _leftHandRenderer.Update(gameTime, _combatManager);
-            _rightHandRenderer.Update(gameTime, _combatManager);
+            _leftHandRenderer.Update(gameTime, _combatManager, _inputHandler);
+            _rightHandRenderer.Update(gameTime, _combatManager, _inputHandler);
             _leftActionMenu.Update(gameTime, _inputHandler, _combatManager);
             _rightActionMenu.Update(gameTime, _inputHandler, _combatManager);
         }
