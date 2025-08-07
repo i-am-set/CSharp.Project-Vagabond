@@ -51,7 +51,7 @@ namespace ProjectVagabond.Combat.UI
             _playerHand = playerHand;
             _spriteManager = ServiceLocator.Get<SpriteManager>();
 
-            CalculatePositions();
+            RecalculateLayout();
 
             _currentPosition = _offscreenPosition;
             _targetPosition = _offscreenPosition;
@@ -90,7 +90,11 @@ namespace ProjectVagabond.Combat.UI
             }
         }
 
-        private void CalculatePositions()
+        /// <summary>
+        /// Recalculates the hand's screen position based on the current window size.
+        /// This should be called whenever the resolution changes.
+        /// </summary>
+        public void RecalculateLayout()
         {
             var core = ServiceLocator.Get<Core>();
             Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();

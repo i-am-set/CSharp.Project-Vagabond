@@ -45,6 +45,8 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
+            EventBus.Subscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
+
             var gameState = ServiceLocator.Get<GameState>();
             var combatants = new List<int> { gameState.PlayerEntityId, -1 }; // Player and a dummy enemy
             _combatManager.StartCombat(combatants);
@@ -59,6 +61,8 @@ namespace ProjectVagabond.Scenes
             _leftHandRenderer.LoadContent();
             _rightHandRenderer.LoadContent();
 
+            RecalculateLayouts();
+
             _leftHandRenderer.EnterScene();
             _rightHandRenderer.EnterScene();
             _leftActionMenu.EnterScene();
@@ -72,8 +76,22 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
+            EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
             _animationManager.Unregister("LeftHandSway");
             _animationManager.Unregister("RightHandSway");
+        }
+
+        private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)
+        {
+            RecalculateLayouts();
+        }
+
+        private void RecalculateLayouts()
+        {
+            // This method is now the single source of truth for triggering layout updates
+            // in response to resolution changes or scene entry.
+            _leftHandRenderer.RecalculateLayout();
+            _rightHandRenderer.RecalculateLayout();
         }
 
         public override void Update(GameTime gameTime)

@@ -19,7 +19,7 @@ namespace ProjectVagabond.Combat.UI
 
         // --- TUNING CONSTANTS ---
         public static readonly Point CARD_SIZE = new Point(120, 168);
-        private const int MENU_BASE_Y_POS = 250;
+        private const int MENU_BOTTOM_PADDING = 110; // Distance from the bottom of the visible screen.
         private const int MENU_X_PADDING = 20; // Horizontal padding from screen edge
         private const int CARD_SPACING = -25; // Negative for overlap
         private const float SPREAD_AMOUNT = 30f; // How far cards move apart when one is hovered
@@ -29,8 +29,9 @@ namespace ProjectVagabond.Combat.UI
         private const float CARD_TILT_RADIANS = 0.15f; // Tilt angle for unselected cards
         private const float WIGGLE_SPEED = 4f; // Speed of the hovered border shimmer
         private const float WIGGLE_ROTATION_RADIANS = 0.02f; // Rotational intensity of the border shimmer
-        private const float FOCUSED_Y_OFFSET = 0f; // Y position offset when this menu is focused
-        private const float UNFOCUSED_Y_OFFSET = 60f; // Y position offset when this menu is NOT focused
+        private const float ACTIVE_Y_OFFSET = 0f; // Y position offset when this menu is fully interactive
+        private const float SIDE_FOCUS_Y_OFFSET = 50f; // Y position offset when mouse is on this menu's side of the screen
+        private const float IDLE_Y_OFFSET = 60f; // Y position offset when this menu is idle
         private const float CARD_ARCH_AMOUNT = 10f; // How much higher the middle card is than the outer cards
 
         // State-based appearance
@@ -61,7 +62,6 @@ namespace ProjectVagabond.Combat.UI
         public ActionMenu(HandType handType)
         {
             _handType = handType;
-            CalculateLayout();
         }
 
         /// <summary>
@@ -71,7 +71,6 @@ namespace ProjectVagabond.Combat.UI
         {
             // Take the first 3 actions for the hand display
             _cards = actions.Take(3).Select(a => new CombatCard(a)).ToList();
-            CalculateLayout();
         }
 
 
@@ -87,37 +86,47 @@ namespace ProjectVagabond.Combat.UI
             }
         }
 
-        private void CalculateLayout()
-        {
-            var core = ServiceLocator.Get<Core>();
-            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
-
-            // Calculate the total width of the menu when all cards are at their default, non-hovered size.
-            int totalWidth = (int)(_cards.Count * (CARD_SIZE.X * DEFAULT_SCALE) + Math.Max(0, _cards.Count - 1) * CARD_SPACING);
-            float menuX;
-
-            if (_handType == HandType.Left)
-            {
-                // Anchor to the left edge of the actual screen's virtual bounds
-                menuX = actualScreenVirtualBounds.X + MENU_X_PADDING;
-            }
-            else // Right Hand
-            {
-                // Anchor to the right edge of the actual screen's virtual bounds
-                menuX = actualScreenVirtualBounds.Right - MENU_X_PADDING - totalWidth;
-            }
-            _menuCenterPosition = new Vector2(menuX + totalWidth / 2f, MENU_BASE_Y_POS);
-        }
-
         /// <summary>
         /// Updates the menu's animation state based on the combat manager and input.
         /// </summary>
         public void Update(GameTime gameTime, CombatInputHandler inputHandler, CombatManager combatManager)
         {
+            // --- Recalculate Layout for Resolution/Aspect Ratio Changes ---
+            var core = ServiceLocator.Get<Core>();
+            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+
+            int totalWidth = (int)(_cards.Count * (CARD_SIZE.X * DEFAULT_SCALE) + Math.Max(0, _cards.Count - 1) * CARD_SPACING);
+            float menuX;
+
+            if (_handType == HandType.Left)
+            {
+                menuX = actualScreenVirtualBounds.X + MENU_X_PADDING;
+            }
+            else // Right Hand
+            {
+                menuX = actualScreenVirtualBounds.Right - MENU_X_PADDING - totalWidth;
+            }
+
+            // Anchor Y position to the bottom of the visible screen area
+            float menuBaseY = actualScreenVirtualBounds.Bottom - MENU_BOTTOM_PADDING;
+            _menuCenterPosition = new Vector2(menuX + totalWidth / 2f, menuBaseY);
+            // --- End Layout Calculation ---
+
             _wiggleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            bool isMenuFocused = inputHandler.FocusedHand == _handType;
-            _hoveredIndex = isMenuFocused ? inputHandler.GetSelectedIndexForHand(_handType) : -1;
+            // --- State Determination ---
+            // Define an invisible "activation zone" where the cards will be when the menu is active.
+            // This zone triggers the main animation when the mouse enters it.
+            float activationWidth = (_cards.Count * CARD_SIZE.X) + 40; // Generous width
+            float activationHeight = CARD_SIZE.Y * HOVERED_SCALE + Math.Abs(HOVER_Y_OFFSET) + 20; // Generous height
+            float activationX = _menuCenterPosition.X - activationWidth / 2f;
+            float activationY = menuBaseY + ACTIVE_Y_OFFSET + HOVER_Y_OFFSET; // Positioned at the highest point a card can reach
+            var activationZone = new RectangleF(activationX, activationY, activationWidth, activationHeight);
+
+            bool isSideFocused = inputHandler.FocusedHand == _handType;
+            bool isMenuActive = activationZone.Contains(inputHandler.VirtualMousePosition) && combatManager.CurrentState == PlayerTurnState.Selecting;
+
+            _hoveredIndex = isMenuActive ? inputHandler.GetSelectedIndexForHand(_handType) : -1;
 
             // This width is based on the original card size and is used to space out the cards' animation targets.
             float totalTargetWidth = _cards.Count * (CARD_SIZE.X + CARD_SPACING) - CARD_SPACING;
@@ -131,25 +140,19 @@ namespace ProjectVagabond.Combat.UI
                 var card = _cards[i];
                 bool isHovered = i == _hoveredIndex;
 
-                // Determine Target State
-                float targetScale = DEFAULT_SCALE;
-                Color targetTint = FOCUSED_TINT;
-                float targetAlpha = DEFAULT_ALPHA;
-
-                if (!isMenuFocused && combatManager.CurrentState == PlayerTurnState.Selecting)
-                {
-                    targetScale = UNFOCUSED_SCALE;
-                    targetTint = UNFOCUSED_TINT;
-                    targetAlpha = UNFOCUSED_ALPHA;
-                }
+                // Determine Target State (Visuals)
+                float targetScale = isMenuActive ? DEFAULT_SCALE : UNFOCUSED_SCALE;
+                Color targetTint = isMenuActive ? FOCUSED_TINT : UNFOCUSED_TINT;
+                float targetAlpha = isMenuActive ? DEFAULT_ALPHA : UNFOCUSED_ALPHA;
 
                 if (isHovered)
                 {
                     targetScale = HOVERED_SCALE;
                     targetAlpha = HOVERED_ALPHA;
+                    targetTint = FOCUSED_TINT; // Hovered card is always bright
                 }
 
-                // Determine Target Position
+                // Determine Target Position (X-axis)
                 float baseCardX = startX + i * (CARD_SIZE.X + CARD_SPACING);
                 float xOffset = 0;
 
@@ -162,8 +165,21 @@ namespace ProjectVagabond.Combat.UI
                 float targetX = baseCardX + xOffset - (CARD_SIZE.X * targetScale - CARD_SIZE.X) / 2f;
 
                 // --- Y-Position Logic based on Combat State ---
-                float menuYOffset = isMenuFocused ? FOCUSED_Y_OFFSET : UNFOCUSED_Y_OFFSET;
-                float baseY = MENU_BASE_Y_POS + menuYOffset;
+                float menuYOffset;
+                if (isMenuActive)
+                {
+                    menuYOffset = ACTIVE_Y_OFFSET;
+                }
+                else if (isSideFocused)
+                {
+                    menuYOffset = SIDE_FOCUS_Y_OFFSET;
+                }
+                else
+                {
+                    menuYOffset = IDLE_Y_OFFSET;
+                }
+
+                float baseY = menuBaseY + menuYOffset;
 
                 if (combatManager.CurrentState == PlayerTurnState.Confirming)
                 {

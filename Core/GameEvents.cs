@@ -88,5 +88,13 @@ namespace ProjectVagabond
         {
             public EncounterData Encounter { get; set; }
         }
+
+        /// <summary>
+        /// Published when the screen resolution or UI theme changes, signaling
+        /// UI elements to recalculate their layouts.
+        /// </summary>
+        public struct UIThemeOrResolutionChanged
+        {
+        }
     }
 }

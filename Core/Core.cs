@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Combat;
+using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Encounters;
 using ProjectVagabond.Particles;
@@ -43,6 +44,7 @@ namespace ProjectVagabond
         private Rectangle _finalRenderRectangle;
         private Matrix _mouseTransformMatrix;
         private bool _useLinearSampling;
+        private Point _previousResolution;
 
         public Matrix MouseTransformMatrix => _mouseTransformMatrix;
 
@@ -274,6 +276,7 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Encounter, new EncounterScene());
             _sceneManager.AddScene(GameSceneState.Combat, new CombatScene());
 
+            _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
             base.Initialize();
         }
@@ -576,6 +579,13 @@ namespace ProjectVagabond
             if (GraphicsDevice == null) return;
 
             var newResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
+
+            if (newResolution != _previousResolution)
+            {
+                EventBus.Publish(new GameEvents.UIThemeOrResolutionChanged());
+                _previousResolution = newResolution;
+            }
+
             bool isStandard = SettingsManager.GetResolutions().Any(r => r.Value == newResolution);
 
             if (!isStandard)
