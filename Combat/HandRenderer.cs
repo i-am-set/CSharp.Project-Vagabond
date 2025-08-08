@@ -1,8 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Combat;
+using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace ProjectVagabond.Combat.UI
@@ -40,6 +43,11 @@ namespace ProjectVagabond.Combat.UI
         private float _currentAnimationDuration;
         private bool _isAnimating;
         public OrganicSwayAnimation SwayAnimation { get; }
+
+        /// <summary>
+        /// When true, the hand will render a highlight to indicate it's a valid drop target.
+        /// </summary>
+        public bool IsPotentialDropTarget { get; set; }
 
         /// <summary>
         /// The current screen bounds of the hand renderer.
@@ -153,24 +161,8 @@ namespace ProjectVagabond.Combat.UI
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Determine the desired position based on focus, but only during selection phase
-            if (combatManager.CurrentState == PlayerTurnState.Selecting)
-            {
-                bool isFocused = inputHandler.FocusedHand == _playerHand.Hand;
-                Vector2 focusOffset = Vector2.Zero;
-                if (isFocused)
-                {
-                    focusOffset = (_playerHand.Hand == HandType.Left) ? new Vector2(5, -10) : new Vector2(-5, -10);
-                }
-
-                Vector2 desiredPosition = _idlePosition + focusOffset;
-                StartAnimation(desiredPosition, FOCUS_ANIMATION_DURATION);
-            }
-            else
-            {
-                // If not in selection phase, ensure hands are at their base idle position
-                StartAnimation(_idlePosition, FOCUS_ANIMATION_DURATION);
-            }
+            // During selection, hands are always at their idle position. Focus is now on the card hand.
+            StartAnimation(_idlePosition, FOCUS_ANIMATION_DURATION);
 
             if (_isAnimating)
             {
@@ -206,7 +198,8 @@ namespace ProjectVagabond.Combat.UI
 
             if (textureToDraw != null)
             {
-                spriteBatch.Draw(textureToDraw, finalPosition, Color.White);
+                Color tint = IsPotentialDropTarget ? Color.Lerp(Color.White, Color.Yellow, 0.5f) : Color.White;
+                spriteBatch.Draw(textureToDraw, finalPosition, tint);
             }
         }
     }

@@ -102,7 +102,8 @@ namespace ProjectVagabond.Combat
         /// <param name="hand">The hand whose action should be canceled.</param>
         public void CancelAction(HandType hand)
         {
-            if (CurrentState != PlayerTurnState.Selecting) return;
+            // Can now cancel from confirming state as well
+            if (CurrentState == PlayerTurnState.Resolving) return;
 
             if (hand == HandType.Left)
             {

@@ -17,8 +17,7 @@ namespace ProjectVagabond.Scenes
         private CombatManager _combatManager;
         private HandRenderer _leftHandRenderer;
         private HandRenderer _rightHandRenderer;
-        private ActionMenu _leftActionMenu;
-        private ActionMenu _rightActionMenu;
+        private ActionHandUI _actionHandUI;
         private CombatInputHandler _inputHandler;
         private Texture2D _enemyTexture;
         private AnimationManager _animationManager;
@@ -35,10 +34,9 @@ namespace ProjectVagabond.Scenes
             _leftHandRenderer = new HandRenderer(_combatManager.LeftHand);
             _rightHandRenderer = new HandRenderer(_combatManager.RightHand);
 
-            _leftActionMenu = new ActionMenu(HandType.Left);
-            _rightActionMenu = new ActionMenu(HandType.Right);
+            _actionHandUI = new ActionHandUI();
 
-            _inputHandler = new CombatInputHandler(_combatManager, _leftHandRenderer, _rightHandRenderer, _leftActionMenu, _rightActionMenu);
+            _inputHandler = new CombatInputHandler(_combatManager, _leftHandRenderer, _rightHandRenderer, _actionHandUI);
             _animationManager = ServiceLocator.Get<AnimationManager>();
         }
 
@@ -54,8 +52,7 @@ namespace ProjectVagabond.Scenes
             // Populate menus and load textures here, as Enter() is called after Core.LoadContent()
             var actionManager = ServiceLocator.Get<ActionManager>();
             var allActions = actionManager.GetAllActions();
-            _leftActionMenu.SetActions(allActions);
-            _rightActionMenu.SetActions(allActions);
+            _actionHandUI.SetActions(allActions);
 
             _enemyTexture = ServiceLocator.Get<SpriteManager>().EnemySprite;
             _leftHandRenderer.LoadContent();
@@ -65,8 +62,7 @@ namespace ProjectVagabond.Scenes
 
             _leftHandRenderer.EnterScene();
             _rightHandRenderer.EnterScene();
-            _leftActionMenu.EnterScene();
-            _rightActionMenu.EnterScene();
+            _actionHandUI.EnterScene();
             _inputHandler.Reset();
 
             _animationManager.Register("LeftHandSway", _leftHandRenderer.SwayAnimation);
@@ -110,8 +106,7 @@ namespace ProjectVagabond.Scenes
 
             _leftHandRenderer.Update(gameTime, _combatManager, _inputHandler);
             _rightHandRenderer.Update(gameTime, _combatManager, _inputHandler);
-            _leftActionMenu.Update(gameTime, _inputHandler, _combatManager);
-            _rightActionMenu.Update(gameTime, _inputHandler, _combatManager);
+            _actionHandUI.Update(gameTime, _inputHandler, _combatManager);
         }
 
         private void ResolveCurrentTurn()
@@ -163,13 +158,14 @@ namespace ProjectVagabond.Scenes
             _leftHandRenderer.Draw(spriteBatch, font, gameTime);
             _rightHandRenderer.Draw(spriteBatch, font, gameTime);
 
-            // Draw the action menus on top, with the focused menu last (on top)
-            var focusedHand = _inputHandler.FocusedHand;
-            var unfocusedMenu = (focusedHand == HandType.Left) ? _rightActionMenu : _leftActionMenu;
-            var focusedMenu = (focusedHand == HandType.Left) ? _leftActionMenu : _rightActionMenu;
+            // Draw the hand of cards, skipping the one being dragged
+            _actionHandUI.Draw(spriteBatch, font, gameTime, _inputHandler.DraggedCard);
 
-            unfocusedMenu.Draw(spriteBatch, font, gameTime);
-            focusedMenu.Draw(spriteBatch, font, gameTime);
+            // Draw the dragged card last so it's on top of everything
+            if (_inputHandler.DraggedCard != null)
+            {
+                _actionHandUI.DrawCard(spriteBatch, font, gameTime, _inputHandler.DraggedCard, true);
+            }
 
             // Draw the "CAST" prompt if in the confirmation state
             if (_combatManager.CurrentState == PlayerTurnState.Confirming)
