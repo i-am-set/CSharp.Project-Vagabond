@@ -115,6 +115,7 @@ namespace ProjectVagabond
         // Debugging variables
         public bool EnableMasterTimeScaleOnStart { get; set; } = false;
         public float MasterTimeScale { get; set; } = 0.1f; // 1.0f = normal speed
+        public bool ShowDebugOverlays { get; set; } = false;
 
         // Settings variables
         public bool UseImperialUnits { get; set; } = false;

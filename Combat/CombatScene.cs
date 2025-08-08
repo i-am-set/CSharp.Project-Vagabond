@@ -9,6 +9,8 @@ using ProjectVagabond.Utils;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using MonoGame.Extended;
+using MonoGame.Extended.Graphics;
 
 namespace ProjectVagabond.Scenes
 {
@@ -156,6 +158,29 @@ namespace ProjectVagabond.Scenes
             if (_inputHandler.DraggedCard != null)
             {
                 _actionHandUI.DrawCard(spriteBatch, font, gameTime, _inputHandler.DraggedCard, true);
+
+                // --- DEBUG: Draw the drop zone boundary ---
+                var global = ServiceLocator.Get<Global>();
+                if (global.ShowDebugOverlays)
+                {
+                    var core = ServiceLocator.Get<Core>();
+                    Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+
+                    float dropZoneHeight = actualScreenVirtualBounds.Height * CombatInputHandler.DROP_ZONE_TOP_PERCENTAGE;
+                    var leftDropZone = new RectangleF(
+                        actualScreenVirtualBounds.X,
+                        actualScreenVirtualBounds.Y,
+                        actualScreenVirtualBounds.Width / 2f,
+                        dropZoneHeight);
+                    var rightDropZone = new RectangleF(
+                        actualScreenVirtualBounds.Center.X,
+                        actualScreenVirtualBounds.Y,
+                        actualScreenVirtualBounds.Width / 2f,
+                        dropZoneHeight);
+
+                    spriteBatch.DrawRectangle(leftDropZone, Color.Red, 1f);
+                    spriteBatch.DrawRectangle(rightDropZone, Color.Blue, 1f);
+                }
             }
 
             // Draw the "CAST" prompt if in the confirmation state

@@ -348,7 +348,8 @@ namespace ProjectVagabond
             KeyboardState currentKeyboardState = Keyboard.GetState();
             if (currentKeyboardState.IsKeyDown(Keys.F1) && _previousKeyboardState.IsKeyUp(Keys.F1))
             {
-                _diceRollingSystem.DebugShowColliders = !_diceRollingSystem.DebugShowColliders;
+                _global.ShowDebugOverlays = !_global.ShowDebugOverlays;
+                _diceRollingSystem.DebugShowColliders = _global.ShowDebugOverlays;
             }
             if (currentKeyboardState.IsKeyDown(Keys.F4) && _previousKeyboardState.IsKeyUp(Keys.F4))
             {

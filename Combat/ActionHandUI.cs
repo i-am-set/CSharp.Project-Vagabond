@@ -28,12 +28,13 @@ namespace ProjectVagabond.Combat.UI
         private const float HOVER_Y_OFFSET = -40f; // How far the card moves up when hovered
         private const float CARD_TILT_RADIANS = 0.1f; // Tilt angle for unselected cards
         private const float CARD_ARCH_AMOUNT = 10f; // How much lower the outer cards are than the center card.
-        private const float HAND_Y_ANCHOR_OFFSET = 10f; // Additional pixels to push the hand down.
+        private const float HAND_Y_ANCHOR_OFFSET = -10f; // Vertical offset for the entire hand anchor. Negative moves it up.
         private const float HAND_ANIMATION_DURATION = 0.4f;
 
         // State-based Y positions
         private const float HIDDEN_Y_OFFSET = 250f;
-        private const float PEEKING_Y_OFFSET = 130f;
+        private const float PEEKING_Y_OFFSET = 110f; // Raised slightly for better default visibility
+        private const float LOWERED_Y_OFFSET = 140f; // Position when a card is being dragged into the drop zone
         private const float ACTIVE_Y_OFFSET = 0f;
 
         // Appearance
@@ -120,33 +121,34 @@ namespace ProjectVagabond.Combat.UI
                 isMouseInActiveZone = false;
             }
 
-            HandState targetState;
+            float newTargetYOffset;
+            bool isDraggingInDropZone = inputHandler.DraggedCard != null && inputHandler.PotentialDropHand != HandType.None;
+
             if (combatManager.CurrentState == PlayerTurnState.Confirming || combatManager.CurrentState == PlayerTurnState.Resolving)
             {
-                targetState = HandState.Hidden;
+                newTargetYOffset = HIDDEN_Y_OFFSET;
+            }
+            else if (isDraggingInDropZone)
+            {
+                newTargetYOffset = LOWERED_Y_OFFSET;
             }
             else if (isMouseInActiveZone && inputHandler.DraggedCard == null)
             {
-                targetState = HandState.Active;
+                newTargetYOffset = ACTIVE_Y_OFFSET;
             }
             else
             {
-                targetState = HandState.Peeking;
+                newTargetYOffset = PEEKING_Y_OFFSET;
             }
 
-            if (targetState != _currentState)
+            if (newTargetYOffset != _targetMenuYOffset)
             {
-                _currentState = targetState;
+                _targetMenuYOffset = newTargetYOffset;
                 _startYOffset = _menuYOffset;
-                _targetMenuYOffset = _currentState switch
-                {
-                    HandState.Active => ACTIVE_Y_OFFSET,
-                    HandState.Peeking => PEEKING_Y_OFFSET,
-                    _ => HIDDEN_Y_OFFSET,
-                };
                 _yAnimationTimer = 0f;
                 _isYAnimating = true;
             }
+
 
             // Animate the entire hand's Y position
             if (_isYAnimating)
@@ -159,7 +161,7 @@ namespace ProjectVagabond.Combat.UI
 
             // --- Card Layout Calculation ---
             _hoveredIndex = -1;
-            if (_currentState == HandState.Active)
+            if (newTargetYOffset == ACTIVE_Y_OFFSET) // Only allow hover when fully active
             {
                 // Iterate backwards to prioritize cards on top
                 for (int i = _cards.Count - 1; i >= 0; i--)

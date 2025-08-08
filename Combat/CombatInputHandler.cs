@@ -18,6 +18,13 @@ namespace ProjectVagabond.Combat
         private readonly HandRenderer _rightHandRenderer;
         private readonly ActionHandUI _actionHandUI;
 
+        // --- TUNING CONSTANTS ---
+        /// <summary>
+        /// Defines the vertical portion of the screen that acts as the drop zone for cards.
+        /// 0.9f means the top 90% of the screen is the drop zone.
+        /// </summary>
+        public const float DROP_ZONE_TOP_PERCENTAGE = 0.9f;
+
         // Input state
         private MouseState _previousMouseState;
         private KeyboardState _previousKeyboardState;
@@ -25,7 +32,7 @@ namespace ProjectVagabond.Combat
         // Drag & Drop State
         public CombatCard DraggedCard { get; private set; }
         private Vector2 _dragStartOffset;
-        private HandType _potentialDropHand;
+        public HandType PotentialDropHand { get; private set; }
 
         public Vector2 VirtualMousePosition { get; private set; }
 
@@ -45,7 +52,7 @@ namespace ProjectVagabond.Combat
             _previousMouseState = Mouse.GetState();
             _previousKeyboardState = Keyboard.GetState();
             DraggedCard = null;
-            _potentialDropHand = HandType.None;
+            PotentialDropHand = HandType.None;
         }
 
         public void Update(GameTime gameTime)
@@ -122,31 +129,34 @@ namespace ProjectVagabond.Combat
             // Update card position to follow mouse
             DraggedCard.ForcePosition(VirtualMousePosition - _dragStartOffset);
 
-            // Determine potential drop target (top 90% of the screen)
-            float dropZoneHeight = Global.VIRTUAL_HEIGHT * 0.9f;
-            var dropZone = new RectangleF(0, 0, Global.VIRTUAL_WIDTH, dropZoneHeight);
+            var core = ServiceLocator.Get<Core>();
+            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+
+            // Determine potential drop target based on the visible screen area
+            float dropZoneHeight = actualScreenVirtualBounds.Height * DROP_ZONE_TOP_PERCENTAGE;
+            var dropZone = new RectangleF(actualScreenVirtualBounds.X, actualScreenVirtualBounds.Y, actualScreenVirtualBounds.Width, dropZoneHeight);
 
             if (dropZone.Contains(VirtualMousePosition))
             {
-                _potentialDropHand = (VirtualMousePosition.X < Global.VIRTUAL_WIDTH / 2) ? HandType.Left : HandType.Right;
+                PotentialDropHand = (VirtualMousePosition.X < actualScreenVirtualBounds.Center.X) ? HandType.Left : HandType.Right;
             }
             else
             {
-                _potentialDropHand = HandType.None;
+                PotentialDropHand = HandType.None;
             }
 
             // Update hand renderers to show they are drop targets
-            _leftHandRenderer.IsPotentialDropTarget = (_potentialDropHand == HandType.Left);
-            _rightHandRenderer.IsPotentialDropTarget = (_potentialDropHand == HandType.Right);
+            _leftHandRenderer.IsPotentialDropTarget = (PotentialDropHand == HandType.Left);
+            _rightHandRenderer.IsPotentialDropTarget = (PotentialDropHand == HandType.Right);
 
             // Handle dropping the card
             if (isClickReleased)
             {
-                if (_potentialDropHand == HandType.Left && string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId))
+                if (PotentialDropHand == HandType.Left && string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId))
                 {
                     _combatManager.SelectAction(HandType.Left, DraggedCard.Action.Id);
                 }
-                else if (_potentialDropHand == HandType.Right && string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId))
+                else if (PotentialDropHand == HandType.Right && string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId))
                 {
                     _combatManager.SelectAction(HandType.Right, DraggedCard.Action.Id);
                 }
@@ -154,7 +164,7 @@ namespace ProjectVagabond.Combat
                 // Reset drag state
                 DraggedCard.IsBeingDragged = false;
                 DraggedCard = null;
-                _potentialDropHand = HandType.None;
+                PotentialDropHand = HandType.None;
                 _leftHandRenderer.IsPotentialDropTarget = false;
                 _rightHandRenderer.IsPotentialDropTarget = false;
             }
