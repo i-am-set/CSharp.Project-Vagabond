@@ -122,8 +122,8 @@ namespace ProjectVagabond.Combat
             // Update card position to follow mouse
             DraggedCard.ForcePosition(VirtualMousePosition - _dragStartOffset);
 
-            // Determine potential drop target (top 80% of the screen)
-            float dropZoneHeight = Global.VIRTUAL_HEIGHT * 0.8f;
+            // Determine potential drop target (top 90% of the screen)
+            float dropZoneHeight = Global.VIRTUAL_HEIGHT * 0.9f;
             var dropZone = new RectangleF(0, 0, Global.VIRTUAL_WIDTH, dropZoneHeight);
 
             if (dropZone.Contains(VirtualMousePosition))
