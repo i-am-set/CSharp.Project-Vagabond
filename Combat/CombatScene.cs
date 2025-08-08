@@ -46,6 +46,8 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             EventBus.Subscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
+            EventBus.Subscribe<GameEvents.CardPlayed>(OnCardPlayed);
+            EventBus.Subscribe<GameEvents.CardReturnedToHand>(OnCardReturned);
 
             var gameState = ServiceLocator.Get<GameState>();
             var combatants = new List<int> { gameState.PlayerEntityId, -1 }; // Player and a dummy enemy
@@ -73,9 +75,14 @@ namespace ProjectVagabond.Scenes
         {
             base.Exit();
             EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
+            EventBus.Unsubscribe<GameEvents.CardPlayed>(OnCardPlayed);
+            EventBus.Unsubscribe<GameEvents.CardReturnedToHand>(OnCardReturned);
             _animationManager.Unregister("LeftHandSway");
             _animationManager.Unregister("RightHandSway");
         }
+
+        private void OnCardPlayed(GameEvents.CardPlayed e) => _actionHandUI.RemoveCard(e.ActionId);
+        private void OnCardReturned(GameEvents.CardReturnedToHand e) => _actionHandUI.AddCard(e.CardActionData);
 
         private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)
         {

@@ -92,6 +92,8 @@ namespace ProjectVagabond.Combat
                 RightHand.SelectAction(actionId);
             }
 
+            EventBus.Publish(new GameEvents.CardPlayed { ActionId = actionId });
+
             UpdatePotentialSynergy();
             UpdateState();
         }
@@ -102,16 +104,27 @@ namespace ProjectVagabond.Combat
         /// <param name="hand">The hand whose action should be canceled.</param>
         public void CancelAction(HandType hand)
         {
-            // Can now cancel from confirming state as well
             if (CurrentState == PlayerTurnState.Resolving) return;
 
+            string actionIdToReturn = null;
             if (hand == HandType.Left)
             {
+                actionIdToReturn = LeftHand.SelectedActionId;
                 LeftHand.ClearSelection();
             }
             else if (hand == HandType.Right)
             {
+                actionIdToReturn = RightHand.SelectedActionId;
                 RightHand.ClearSelection();
+            }
+
+            if (!string.IsNullOrEmpty(actionIdToReturn))
+            {
+                var actionData = _actionManager.GetAction(actionIdToReturn);
+                if (actionData != null)
+                {
+                    EventBus.Publish(new GameEvents.CardReturnedToHand { CardActionData = actionData });
+                }
             }
 
             UpdatePotentialSynergy();
@@ -141,10 +154,24 @@ namespace ProjectVagabond.Combat
         /// </summary>
         public void ResetTurn()
         {
+            string leftActionId = LeftHand.SelectedActionId;
+            string rightActionId = RightHand.SelectedActionId;
+
             LeftHand.ClearSelection();
             RightHand.ClearSelection();
             PotentialSynergyActionId = null;
             CurrentState = PlayerTurnState.Selecting;
+
+            if (!string.IsNullOrEmpty(leftActionId))
+            {
+                var actionData = _actionManager.GetAction(leftActionId);
+                if (actionData != null) EventBus.Publish(new GameEvents.CardReturnedToHand { CardActionData = actionData });
+            }
+            if (!string.IsNullOrEmpty(rightActionId))
+            {
+                var actionData = _actionManager.GetAction(rightActionId);
+                if (actionData != null) EventBus.Publish(new GameEvents.CardReturnedToHand { CardActionData = actionData });
+            }
         }
 
         /// <summary>

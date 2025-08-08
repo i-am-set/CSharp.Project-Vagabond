@@ -1,4 +1,5 @@
 ﻿using ProjectVagabond.Encounters;
+using ProjectVagabond.Combat;
 
 namespace ProjectVagabond
 {
@@ -95,6 +96,22 @@ namespace ProjectVagabond
         /// </summary>
         public struct UIThemeOrResolutionChanged
         {
+        }
+
+        /// <summary>
+        /// Published when a card is selected from the hand UI to be played.
+        /// </summary>
+        public struct CardPlayed
+        {
+            public string ActionId { get; set; }
+        }
+
+        /// <summary>
+        /// Published when a played card is canceled and should be returned to the hand UI.
+        /// </summary>
+        public struct CardReturnedToHand
+        {
+            public ActionData CardActionData { get; set; }
         }
     }
 }

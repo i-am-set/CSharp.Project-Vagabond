@@ -108,8 +108,8 @@ namespace ProjectVagabond.Combat.UI
                 // The highest point is the top of a hovered middle card.
                 float activationTopY = menuBaseCenterY_Active + HOVER_Y_OFFSET - (CARD_SIZE.Y * HOVERED_SCALE / 2f);
 
-                // The lowest point is the bottom of the outer cards.
-                float activationBottomY = menuBaseCenterY_Active + CARD_ARCH_AMOUNT + (CARD_SIZE.Y * DEFAULT_SCALE / 2f);
+                // The lowest point is now the bottom of the visible screen area to prevent jittering.
+                float activationBottomY = actualScreenVirtualBounds.Bottom;
 
                 float activationHeight = activationBottomY - activationTopY;
 
