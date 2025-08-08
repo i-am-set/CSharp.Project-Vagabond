@@ -26,6 +26,8 @@ namespace ProjectVagabond.Combat.UI
         private const float IDLE_SWAY_SPEED_X = 0.8f;
         private const float IDLE_SWAY_SPEED_Y = 0.6f;
         private const float IDLE_SWAY_AMOUNT = 1.5f;
+        private const float HOVER_Y_LIFT = -10f; // How far the hand moves up when it's a drop target
+        private const float PULSE_SPEED = 8f;
 
         private Texture2D _idleTexture;
         private Texture2D _holdTexture;
@@ -41,6 +43,7 @@ namespace ProjectVagabond.Combat.UI
         private float _currentAnimationDuration;
         private bool _isAnimating;
         public OrganicSwayAnimation SwayAnimation { get; }
+        private float _pulseTimer = 0f;
 
         /// <summary>
         /// When true, the hand will render a highlight to indicate it's a valid drop target.
@@ -156,12 +159,17 @@ namespace ProjectVagabond.Combat.UI
             // --- End Layout Calculation ---
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _pulseTimer += deltaTime;
 
             bool isActionSelected = !string.IsNullOrEmpty(_playerHand.SelectedActionId);
             Vector2 desiredPosition = _idlePosition;
             if (isActionSelected)
             {
                 desiredPosition.Y += SELECTED_Y_OFFSET;
+            }
+            else if (IsPotentialDropTarget)
+            {
+                desiredPosition.Y += HOVER_Y_LIFT;
             }
 
             StartAnimation(desiredPosition, FOCUS_ANIMATION_DURATION);
@@ -200,7 +208,12 @@ namespace ProjectVagabond.Combat.UI
 
             if (textureToDraw != null)
             {
-                Color tint = IsPotentialDropTarget ? Color.Lerp(Color.White, Color.Yellow, 0.5f) : Color.White;
+                Color tint = Color.White;
+                if (IsPotentialDropTarget)
+                {
+                    float pulse = 0.75f + (float)Math.Sin(_pulseTimer * PULSE_SPEED) * 0.25f; // Varies between 0.5 and 1.0
+                    tint = Color.Lerp(Color.White, Color.Yellow, pulse);
+                }
                 spriteBatch.Draw(textureToDraw, finalPosition, tint);
             }
         }

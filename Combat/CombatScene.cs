@@ -1,16 +1,17 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
+using MonoGame.Extended.Graphics;
 using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
-using MonoGame.Extended;
-using MonoGame.Extended.Graphics;
 
 namespace ProjectVagabond.Scenes
 {
@@ -23,6 +24,7 @@ namespace ProjectVagabond.Scenes
         private CombatInputHandler _inputHandler;
         private Texture2D _enemyTexture;
         private AnimationManager _animationManager;
+        private float _castPromptPulseTimer = 0f;
 
         public override bool UsesLetterboxing => false;
 
@@ -82,7 +84,15 @@ namespace ProjectVagabond.Scenes
         }
 
         private void OnCardPlayed(GameEvents.CardPlayed e) => _actionHandUI.RemoveCard(e.ActionId);
-        private void OnCardReturned(GameEvents.CardReturnedToHand e) => _actionHandUI.AddCard(e.CardActionData);
+        private void OnCardReturned(GameEvents.CardReturnedToHand e)
+        {
+            Vector2 startPos = e.SourceHand == HandType.Left
+                ? _leftHandRenderer.Bounds.Center.ToVector2()
+                : _rightHandRenderer.Bounds.Center.ToVector2();
+
+            _actionHandUI.AddCard(e.CardActionData, startPos);
+        }
+
 
         private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)
         {
@@ -193,13 +203,18 @@ namespace ProjectVagabond.Scenes
             // Draw the "CAST" prompt if in the confirmation state
             if (_combatManager.CurrentState == PlayerTurnState.Confirming)
             {
+                _castPromptPulseTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                const float CAST_PULSE_SPEED = 4f;
+                const float CAST_PULSE_AMOUNT = 0.05f;
+                float pulse = 1.0f + (float)Math.Sin(_castPromptPulseTimer * CAST_PULSE_SPEED) * CAST_PULSE_AMOUNT;
+
                 string castText = "CAST";
                 Vector2 textSize = font.MeasureString(castText);
                 Vector2 position = new Vector2(
-                    (Global.VIRTUAL_WIDTH - textSize.X) / 2,
-                    Global.VIRTUAL_HEIGHT - 100
+                    (Global.VIRTUAL_WIDTH - textSize.X * pulse) / 2,
+                    Global.VIRTUAL_HEIGHT - 100 - (textSize.Y * (pulse - 1.0f) / 2f)
                 );
-                spriteBatch.DrawString(font, castText, position, Color.Yellow);
+                spriteBatch.DrawString(font, castText, position, Color.Yellow, 0f, Vector2.Zero, pulse, SpriteEffects.None, 0f);
             }
         }
 

@@ -123,7 +123,7 @@ namespace ProjectVagabond.Combat
                 var actionData = _actionManager.GetAction(actionIdToReturn);
                 if (actionData != null)
                 {
-                    EventBus.Publish(new GameEvents.CardReturnedToHand { CardActionData = actionData });
+                    EventBus.Publish(new GameEvents.CardReturnedToHand { CardActionData = actionData, SourceHand = hand });
                 }
             }
 
@@ -165,12 +165,12 @@ namespace ProjectVagabond.Combat
             if (!string.IsNullOrEmpty(leftActionId))
             {
                 var actionData = _actionManager.GetAction(leftActionId);
-                if (actionData != null) EventBus.Publish(new GameEvents.CardReturnedToHand { CardActionData = actionData });
+                if (actionData != null) EventBus.Publish(new GameEvents.CardReturnedToHand { CardActionData = actionData, SourceHand = HandType.Left });
             }
             if (!string.IsNullOrEmpty(rightActionId))
             {
                 var actionData = _actionManager.GetAction(rightActionId);
-                if (actionData != null) EventBus.Publish(new GameEvents.CardReturnedToHand { CardActionData = actionData });
+                if (actionData != null) EventBus.Publish(new GameEvents.CardReturnedToHand { CardActionData = actionData, SourceHand = HandType.Right });
             }
         }
 

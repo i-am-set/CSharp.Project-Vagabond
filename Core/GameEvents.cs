@@ -112,6 +112,7 @@ namespace ProjectVagabond
         public struct CardReturnedToHand
         {
             public ActionData CardActionData { get; set; }
+            public HandType SourceHand { get; set; }
         }
     }
 }

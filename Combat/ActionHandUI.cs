@@ -78,20 +78,29 @@ namespace ProjectVagabond.Combat.UI
         }
 
         /// <summary>
-        /// Adds a new card to the hand display.
+        /// Adds a new card to the hand display, optionally animating it from a starting position.
         /// </summary>
         /// <param name="actionData">The data for the action to add as a card.</param>
-        public void AddCard(ActionData actionData)
+        /// <param name="startPosition">Optional world position to animate the card from.</param>
+        public void AddCard(ActionData actionData, Vector2? startPosition = null)
         {
             if (actionData == null || _cards.Any(c => c.Action.Id.Equals(actionData.Id, StringComparison.OrdinalIgnoreCase)))
             {
                 return; // Do not add null cards or duplicates
             }
 
-            _cards.Add(new CombatCard(actionData));
+            var newCard = new CombatCard(actionData);
+            if (startPosition.HasValue)
+            {
+                // Start the card at the source position, transparent and slightly larger, ready to animate in.
+                newCard.SetInitialState(startPosition.Value - (ActionHandUI.CARD_SIZE.ToVector2() * 1.1f / 2f), 1.1f, Color.White, 0f, 0f);
+            }
+
+            _cards.Add(newCard);
             // Sort the hand to maintain a consistent order when cards are returned.
             _cards = _cards.OrderBy(c => c.Action.Name).ToList();
         }
+
 
         /// <summary>
         /// Called when the combat scene is entered to set initial positions.
