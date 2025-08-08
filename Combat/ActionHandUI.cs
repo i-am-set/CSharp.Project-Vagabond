@@ -15,9 +15,6 @@ namespace ProjectVagabond.Combat.UI
     /// </summary>
     public class ActionHandUI
     {
-        private enum HandState { Hidden, Peeking, Active }
-        private HandState _currentState = HandState.Peeking;
-
         private List<CombatCard> _cards = new List<CombatCard>();
 
         // --- TUNING CONSTANTS ---
@@ -30,6 +27,7 @@ namespace ProjectVagabond.Combat.UI
         private const float CARD_ARCH_AMOUNT = 10f; // How much lower the outer cards are than the center card.
         private const float HAND_Y_ANCHOR_OFFSET = -10f; // Vertical offset for the entire hand anchor. Negative moves it up.
         private const float HAND_ANIMATION_DURATION = 0.4f;
+        private const float HOVER_BOUNDS_Y_EXTENSION = 50f; // How many extra pixels to add to the bottom of the hover hitbox.
 
         // State-based Y positions
         private const float HIDDEN_Y_OFFSET = 250f;
@@ -68,6 +66,31 @@ namespace ProjectVagabond.Combat.UI
         public void SetActions(IEnumerable<ActionData> actions)
         {
             _cards = actions.Select(a => new CombatCard(a)).ToList();
+        }
+
+        /// <summary>
+        /// Removes a card from the hand display based on its action ID.
+        /// </summary>
+        /// <param name="actionId">The ID of the action associated with the card to remove.</param>
+        public void RemoveCard(string actionId)
+        {
+            _cards.RemoveAll(c => c.Action.Id.Equals(actionId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// Adds a new card to the hand display.
+        /// </summary>
+        /// <param name="actionData">The data for the action to add as a card.</param>
+        public void AddCard(ActionData actionData)
+        {
+            if (actionData == null || _cards.Any(c => c.Action.Id.Equals(actionData.Id, StringComparison.OrdinalIgnoreCase)))
+            {
+                return; // Do not add null cards or duplicates
+            }
+
+            _cards.Add(new CombatCard(actionData));
+            // Sort the hand to maintain a consistent order when cards are returned.
+            _cards = _cards.OrderBy(c => c.Action.Name).ToList();
         }
 
         /// <summary>
@@ -166,7 +189,9 @@ namespace ProjectVagabond.Combat.UI
                 // Iterate backwards to prioritize cards on top
                 for (int i = _cards.Count - 1; i >= 0; i--)
                 {
-                    if (_cards[i].CurrentBounds.Contains(inputHandler.VirtualMousePosition))
+                    var cardBounds = _cards[i].CurrentBounds;
+                    var hoverBounds = new RectangleF(cardBounds.X, cardBounds.Y, cardBounds.Width, cardBounds.Height + HOVER_BOUNDS_Y_EXTENSION);
+                    if (hoverBounds.Contains(inputHandler.VirtualMousePosition))
                     {
                         _hoveredIndex = i;
                         break;

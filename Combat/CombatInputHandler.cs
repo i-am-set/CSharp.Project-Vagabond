@@ -138,7 +138,16 @@ namespace ProjectVagabond.Combat
 
             if (dropZone.Contains(VirtualMousePosition))
             {
-                PotentialDropHand = (VirtualMousePosition.X < actualScreenVirtualBounds.Center.X) ? HandType.Left : HandType.Right;
+                if (VirtualMousePosition.X < actualScreenVirtualBounds.Center.X)
+                {
+                    // Only a valid target if the left hand is empty
+                    PotentialDropHand = string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId) ? HandType.Left : HandType.None;
+                }
+                else // Right side
+                {
+                    // Only a valid target if the right hand is empty
+                    PotentialDropHand = string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId) ? HandType.Right : HandType.None;
+                }
             }
             else
             {
@@ -152,11 +161,11 @@ namespace ProjectVagabond.Combat
             // Handle dropping the card
             if (isClickReleased)
             {
-                if (PotentialDropHand == HandType.Left && string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId))
+                if (PotentialDropHand == HandType.Left)
                 {
                     _combatManager.SelectAction(HandType.Left, DraggedCard.Action.Id);
                 }
-                else if (PotentialDropHand == HandType.Right && string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId))
+                else if (PotentialDropHand == HandType.Right)
                 {
                     _combatManager.SelectAction(HandType.Right, DraggedCard.Action.Id);
                 }
@@ -172,25 +181,36 @@ namespace ProjectVagabond.Combat
 
         private void HandleKeyboardInput(GameTime gameTime, KeyboardState keyboardState)
         {
-            // --- State-Specific Input ---
-            if (_combatManager.CurrentState == PlayerTurnState.Confirming)
-            {
-                HandleConfirmationInput(keyboardState);
-            }
-        }
-
-        private void HandleConfirmationInput(KeyboardState keyboardState)
-        {
-            // Confirm turn
-            if (keyboardState.IsKeyDown(Keys.Enter) && _previousKeyboardState.IsKeyUp(Keys.Enter))
-            {
-                _combatManager.ConfirmTurn();
-            }
-
-            // Cancel turn
             if (keyboardState.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape))
             {
-                _combatManager.CancelTurn();
+                if (_combatManager.CurrentState == PlayerTurnState.Confirming)
+                {
+                    _combatManager.CancelTurn();
+                    return;
+                }
+
+                if (_combatManager.CurrentState == PlayerTurnState.Selecting)
+                {
+                    bool leftSelected = !string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId);
+                    bool rightSelected = !string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId);
+
+                    if (leftSelected && !rightSelected)
+                    {
+                        _combatManager.CancelAction(HandType.Left);
+                    }
+                    else if (!leftSelected && rightSelected)
+                    {
+                        _combatManager.CancelAction(HandType.Right);
+                    }
+                }
+            }
+
+            if (_combatManager.CurrentState == PlayerTurnState.Confirming)
+            {
+                if (keyboardState.IsKeyDown(Keys.Enter) && _previousKeyboardState.IsKeyUp(Keys.Enter))
+                {
+                    _combatManager.ConfirmTurn();
+                }
             }
         }
     }

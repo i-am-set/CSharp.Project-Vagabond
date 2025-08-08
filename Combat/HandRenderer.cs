@@ -19,6 +19,7 @@ namespace ProjectVagabond.Combat.UI
         private const int HAND_WIDTH = 128;
         private const int HAND_HEIGHT = 256;
         private const int IDLE_POS_Y_OFFSET = 10; // Vertical offset from the bottom of the screen
+        private const int SELECTED_Y_OFFSET = 20; // How far the hand moves down when an action is selected
         private const int IDLE_POS_X_OFFSET = 180; // Horizontal offset from the center
         private const float SLIDE_ANIMATION_DURATION = 0.6f; // Duration for sliding in/out
         private const float FOCUS_ANIMATION_DURATION = 0.5f; // Duration for focus movement
@@ -156,9 +157,14 @@ namespace ProjectVagabond.Combat.UI
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // During selection, hands are always at their idle position.
-            // This will also correct the target if the window is resized.
-            StartAnimation(_idlePosition, FOCUS_ANIMATION_DURATION);
+            bool isActionSelected = !string.IsNullOrEmpty(_playerHand.SelectedActionId);
+            Vector2 desiredPosition = _idlePosition;
+            if (isActionSelected)
+            {
+                desiredPosition.Y += SELECTED_Y_OFFSET;
+            }
+
+            StartAnimation(desiredPosition, FOCUS_ANIMATION_DURATION);
 
             if (_isAnimating)
             {
