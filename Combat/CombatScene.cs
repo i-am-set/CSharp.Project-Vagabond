@@ -58,8 +58,6 @@ namespace ProjectVagabond.Scenes
             _leftHandRenderer.LoadContent();
             _rightHandRenderer.LoadContent();
 
-            RecalculateLayouts();
-
             _leftHandRenderer.EnterScene();
             _rightHandRenderer.EnterScene();
             _actionHandUI.EnterScene();
@@ -79,15 +77,8 @@ namespace ProjectVagabond.Scenes
 
         private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)
         {
-            RecalculateLayouts();
-        }
-
-        private void RecalculateLayouts()
-        {
-            // This method is now the single source of truth for triggering layout updates
-            // in response to resolution changes or scene entry.
-            _leftHandRenderer.RecalculateLayout();
-            _rightHandRenderer.RecalculateLayout();
+            // The HandRenderer now updates its layout dynamically every frame,
+            // so no explicit recalculation is needed here.
         }
 
         public override void Update(GameTime gameTime)

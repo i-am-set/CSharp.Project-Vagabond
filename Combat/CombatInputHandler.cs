@@ -85,7 +85,8 @@ namespace ProjectVagabond.Combat
                         {
                             DraggedCard = card;
                             DraggedCard.IsBeingDragged = true;
-                            _dragStartOffset = VirtualMousePosition - card.CurrentBounds.Position;
+                            // Set offset to snap the card's center to the mouse cursor
+                            _dragStartOffset = new Vector2(card.CurrentBounds.Width / 2f, card.CurrentBounds.Height / 2f);
 
                             // Trigger "pick up" animation
                             DraggedCard.AnimateTo(
@@ -121,8 +122,8 @@ namespace ProjectVagabond.Combat
             // Update card position to follow mouse
             DraggedCard.ForcePosition(VirtualMousePosition - _dragStartOffset);
 
-            // Determine potential drop target
-            float dropZoneHeight = Global.VIRTUAL_HEIGHT * (2.0f / 3.0f);
+            // Determine potential drop target (top 80% of the screen)
+            float dropZoneHeight = Global.VIRTUAL_HEIGHT * 0.8f;
             var dropZone = new RectangleF(0, 0, Global.VIRTUAL_WIDTH, dropZoneHeight);
 
             if (dropZone.Contains(VirtualMousePosition))

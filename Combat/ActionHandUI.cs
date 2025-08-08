@@ -27,7 +27,8 @@ namespace ProjectVagabond.Combat.UI
         private const float SPREAD_AMOUNT = 40f; // How far cards move apart when one is hovered
         private const float HOVER_Y_OFFSET = -40f; // How far the card moves up when hovered
         private const float CARD_TILT_RADIANS = 0.1f; // Tilt angle for unselected cards
-        private const float CARD_ARCH_AMOUNT = 25f; // How much higher the middle card is than the outer cards
+        private const float CARD_ARCH_AMOUNT = 10f; // How much lower the outer cards are than the center card.
+        private const float HAND_Y_ANCHOR_OFFSET = 10f; // Additional pixels to push the hand down.
         private const float HAND_ANIMATION_DURATION = 0.4f;
 
         // State-based Y positions
@@ -101,14 +102,13 @@ namespace ProjectVagabond.Combat.UI
                 float activationWidth = totalCardSpan + (SPREAD_AMOUNT * 2); // Add spread for when a card is hovered.
                 float activationX = screenCenterX - (activationWidth / 2f);
 
-                float menuBaseY_Active = actualScreenVirtualBounds.Bottom - CARD_SIZE.Y - MENU_BOTTOM_PADDING + ACTIVE_Y_OFFSET;
+                float menuBaseCenterY_Active = actualScreenVirtualBounds.Bottom - (CARD_SIZE.Y * DEFAULT_SCALE / 2f) + ACTIVE_Y_OFFSET + HAND_Y_ANCHOR_OFFSET;
 
-                // The highest point is the top of a hovered card.
-                float activationTopY = menuBaseY_Active + HOVER_Y_OFFSET - (CARD_SIZE.Y * HOVERED_SCALE - CARD_SIZE.Y) / 2f;
+                // The highest point is the top of a hovered middle card.
+                float activationTopY = menuBaseCenterY_Active + HOVER_Y_OFFSET - (CARD_SIZE.Y * HOVERED_SCALE / 2f);
 
                 // The lowest point is the bottom of the outer cards.
-                float outerCardTopY = menuBaseY_Active + CARD_ARCH_AMOUNT - (CARD_SIZE.Y * DEFAULT_SCALE - CARD_SIZE.Y) / 2f;
-                float activationBottomY = outerCardTopY + (CARD_SIZE.Y * DEFAULT_SCALE);
+                float activationBottomY = menuBaseCenterY_Active + CARD_ARCH_AMOUNT + (CARD_SIZE.Y * DEFAULT_SCALE / 2f);
 
                 float activationHeight = activationBottomY - activationTopY;
 
@@ -173,7 +173,7 @@ namespace ProjectVagabond.Combat.UI
             }
 
             float middleCardIndex = (_cards.Count - 1) / 2.0f;
-            float menuBaseY = actualScreenVirtualBounds.Bottom - CARD_SIZE.Y - MENU_BOTTOM_PADDING + _menuYOffset;
+            float menuBaseCenterY = actualScreenVirtualBounds.Bottom - (CARD_SIZE.Y * DEFAULT_SCALE / 2f) + _menuYOffset + HAND_Y_ANCHOR_OFFSET;
 
             for (int i = 0; i < _cards.Count; i++)
             {
@@ -207,14 +207,15 @@ namespace ProjectVagabond.Combat.UI
                 if (_cards.Count > 1 && middleCardIndex > 0)
                 {
                     float distanceFromMiddle = Math.Abs(i - middleCardIndex);
-                    // Use a parabolic curve for the arch, making it more pronounced
+                    // Make outer cards lower (positive Y offset)
                     archYOffset = (float)Math.Pow(distanceFromMiddle / middleCardIndex, 2) * CARD_ARCH_AMOUNT;
                 }
-                float targetY = menuBaseY + archYOffset - (CARD_SIZE.Y * targetScale - CARD_SIZE.Y) / 2f;
+                float targetCenterY = menuBaseCenterY + archYOffset;
                 if (isHovered)
                 {
-                    targetY += HOVER_Y_OFFSET;
+                    targetCenterY += HOVER_Y_OFFSET;
                 }
+                float targetY = targetCenterY - (CARD_SIZE.Y * targetScale) / 2f;
 
                 // Determine Target Rotation
                 float targetRotation = 0f;

@@ -1,11 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Combat;
-using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace ProjectVagabond.Combat.UI
@@ -58,14 +55,6 @@ namespace ProjectVagabond.Combat.UI
         {
             _playerHand = playerHand;
             _spriteManager = ServiceLocator.Get<SpriteManager>();
-
-            RecalculateLayout();
-
-            _currentPosition = _offscreenPosition;
-            _targetPosition = _offscreenPosition;
-            _isAnimating = false;
-            _currentAnimationDuration = SLIDE_ANIMATION_DURATION;
-
             SwayAnimation = new OrganicSwayAnimation(IDLE_SWAY_SPEED_X, IDLE_SWAY_SPEED_Y, IDLE_SWAY_AMOUNT, IDLE_SWAY_AMOUNT);
         }
 
@@ -99,38 +88,11 @@ namespace ProjectVagabond.Combat.UI
         }
 
         /// <summary>
-        /// Recalculates the hand's screen position based on the current window size.
-        /// This should be called whenever the resolution changes.
+        /// This method is now a no-op. Layout is calculated dynamically in Update().
         /// </summary>
         public void RecalculateLayout()
         {
-            var core = ServiceLocator.Get<Core>();
-            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
-
-            // Anchor to the bottom of the actual screen's virtual bounds
-            float yPos = actualScreenVirtualBounds.Bottom - HAND_HEIGHT + IDLE_POS_Y_OFFSET;
-            float xPos;
-
-            // The center point of the visible screen area
-            float screenCenterX = actualScreenVirtualBounds.X + (actualScreenVirtualBounds.Width / 2f);
-
-            // This shift compensates for the visual center of the hand sprites not being the geometric center of their texture.
-            float centeringShift = HAND_WIDTH / 4f;
-
-            if (_playerHand.Hand == HandType.Left)
-            {
-                // Position the left hand to the left of the center point
-                xPos = screenCenterX - HAND_WIDTH - (IDLE_POS_X_OFFSET / 2f) - centeringShift;
-            }
-            else // Right Hand
-            {
-                // Position the right hand to the right of the center point
-                xPos = screenCenterX + (IDLE_POS_X_OFFSET / 2f) - centeringShift;
-            }
-
-            _idlePosition = new Vector2(xPos, yPos);
-            // Offscreen position should also be relative to the actual screen's virtual bounds
-            _offscreenPosition = new Vector2(xPos, actualScreenVirtualBounds.Bottom);
+            // This logic is now handled in Update() to ensure it's always correct.
         }
 
         /// <summary>
@@ -138,8 +100,11 @@ namespace ProjectVagabond.Combat.UI
         /// </summary>
         public void EnterScene()
         {
-            _currentPosition = _offscreenPosition;
-            StartAnimation(_idlePosition, SLIDE_ANIMATION_DURATION);
+            // Set a temporary, invalid offscreen position. The first Update call will calculate the correct positions
+            // and trigger the animation from the correct offscreen location.
+            _currentPosition = new Vector2(0, Global.VIRTUAL_HEIGHT * 2);
+            _targetPosition = _currentPosition;
+            _isAnimating = false;
         }
 
         private void StartAnimation(Vector2 newTarget, float duration)
@@ -159,9 +124,40 @@ namespace ProjectVagabond.Combat.UI
         /// </summary>
         public void Update(GameTime gameTime, CombatManager combatManager, CombatInputHandler inputHandler)
         {
+            // --- Layout Calculation (every frame for robustness against resolution changes) ---
+            var core = ServiceLocator.Get<Core>();
+            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+            float windowBottomVirtualY = actualScreenVirtualBounds.Bottom;
+
+            float yPos = windowBottomVirtualY - HAND_HEIGHT + IDLE_POS_Y_OFFSET;
+            float xPos;
+            float screenCenterX = Global.VIRTUAL_WIDTH / 2f;
+            float centeringShift = HAND_WIDTH / 4f;
+
+            if (_playerHand.Hand == HandType.Left)
+            {
+                xPos = screenCenterX - HAND_WIDTH - (IDLE_POS_X_OFFSET / 2f) - centeringShift;
+            }
+            else // Right Hand
+            {
+                xPos = screenCenterX + (IDLE_POS_X_OFFSET / 2f) - centeringShift;
+            }
+
+            _idlePosition = new Vector2(xPos, yPos);
+            _offscreenPosition = new Vector2(xPos, windowBottomVirtualY + 5);
+
+            // If this is the first update (detected by the bogus start position), snap to offscreen and start animation.
+            if (_targetPosition.Y > Global.VIRTUAL_HEIGHT)
+            {
+                _currentPosition = _offscreenPosition;
+                StartAnimation(_idlePosition, SLIDE_ANIMATION_DURATION);
+            }
+            // --- End Layout Calculation ---
+
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // During selection, hands are always at their idle position. Focus is now on the card hand.
+            // During selection, hands are always at their idle position.
+            // This will also correct the target if the window is resized.
             StartAnimation(_idlePosition, FOCUS_ANIMATION_DURATION);
 
             if (_isAnimating)
