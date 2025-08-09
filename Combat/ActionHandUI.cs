@@ -43,6 +43,14 @@ namespace ProjectVagabond.Combat.UI
         private const float DEFAULT_ALPHA = 1f;
         private const float HOVERED_ALPHA = 1f;
 
+        // Shadow properties for different states
+        private const float HOVERED_SHADOW_ALPHA = 0.2f; // Shadow opacity when hovered normally
+        private const float HELD_SHADOW_ALPHA = 0.3f; // Shadow opacity when held (clicked but not yet dragged)
+        private const float SHADOW_SCALE_MULTIPLIER = 1.1f; // How much larger the shadow is than the card.
+        private const float SHADOW_BASE_VERTICAL_OFFSET = 8f; // Base downward offset for the shadow.
+        private const float SHADOW_HORIZONTAL_SHIFT_FACTOR = 0.05f; // How much the shadow shifts horizontally based on card position. 0 = no shift.
+
+
         // Placeholder card visuals
         public static readonly Color CARD_IMAGE_AREA_COLOR = new Color(50, 50, 80);
         public static readonly Color CARD_TEXT_BG_COLOR = new Color(30, 30, 45);
@@ -224,62 +232,73 @@ namespace ProjectVagabond.Combat.UI
             for (int i = 0; i < _cards.Count; i++)
             {
                 var card = _cards[i];
-                if (card.IsBeingDragged) continue;
+                if (card.IsBeingDragged) continue; // Dragged cards are handled by CombatInputHandler's ForcePosition
 
                 bool isHovered = i == _hoveredIndex;
+                bool isHeldButNotDragged = (card == inputHandler.HeldCard && inputHandler.DraggedCard == null);
+
 
                 // Determine Target State (Visuals)
                 float targetScale = DEFAULT_SCALE;
                 float targetAlpha = DEFAULT_ALPHA;
-                if (isHovered)
+                float targetShadowAlpha = 0f; // Default to no shadow
+                Vector2 calculatedTargetPosition; // Will hold the final top-left position
+                float targetRotation = 0f; // Default to no rotation
+
+                if (isHeldButNotDragged)
                 {
-                    // If this card is the one being held down by a click (but not yet dragged), give it a slightly larger scale for feedback.
-                    if (card == inputHandler.HeldCard && inputHandler.DraggedCard == null)
-                    {
-                        targetScale = HELD_SCALE;
-                    }
-                    else
+                    targetScale = HELD_SCALE;
+                    targetAlpha = HOVERED_ALPHA;
+                    targetShadowAlpha = HELD_SHADOW_ALPHA;
+                    // Center the card on the drag start position for "picked up" feel
+                    calculatedTargetPosition = inputHandler.DragStartPosition - (CARD_SIZE.ToVector2() * targetScale / 2f);
+                    targetRotation = 0f; // Held card should be straight
+                }
+                else // Regular hovered or default state
+                {
+                    if (isHovered)
                     {
                         targetScale = HOVERED_SCALE;
+                        targetAlpha = HOVERED_ALPHA;
+                        targetShadowAlpha = HOVERED_SHADOW_ALPHA;
                     }
-                    targetAlpha = HOVERED_ALPHA;
+
+                    // Determine Target Position (X-axis) based on fanning/spreading
+                    float cardBaseCenterX = screenCenterX + (i - middleCardIndex) * cardCenterDistance;
+                    float xOffset = 0;
+                    if (_hoveredIndex != -1) // If *any* card is hovered (including if the HeldCard is also the hoveredIndex)
+                    {
+                        if (i < _hoveredIndex) xOffset = -SPREAD_AMOUNT;
+                        if (i > _hoveredIndex) xOffset = SPREAD_AMOUNT;
+                    }
+                    float targetCenterX = cardBaseCenterX + xOffset;
+                    float targetX = targetCenterX - (CARD_SIZE.X * targetScale) / 2f; // Initial X based on center
+
+                    // Determine Target Position (Y-axis) based on arching/hovering
+                    float archYOffset = 0f;
+                    if (_cards.Count > 1 && middleCardIndex > 0)
+                    {
+                        float distanceFromMiddle = Math.Abs(i - middleCardIndex);
+                        archYOffset = (float)Math.Pow(distanceFromMiddle / middleCardIndex, 2) * CARD_ARCH_AMOUNT;
+                    }
+                    float targetCenterY = menuBaseCenterY + archYOffset;
+                    if (isHovered)
+                    {
+                        targetCenterY += HOVER_Y_OFFSET;
+                    }
+                    float targetY = targetCenterY - (CARD_SIZE.Y * targetScale) / 2f; // Initial Y based on center
+
+                    calculatedTargetPosition = new Vector2(targetX, targetY);
+
+                    // Determine Target Rotation (only if not held/dragged and part of a fanned hand)
+                    if (middleCardIndex > 0)
+                    {
+                        if (i < middleCardIndex) targetRotation = -CARD_TILT_RADIANS * (1 - (i / middleCardIndex));
+                        else if (i > middleCardIndex) targetRotation = CARD_TILT_RADIANS * ((i - middleCardIndex) / middleCardIndex);
+                    }
                 }
 
-                // Determine Target Position (X-axis)
-                float cardBaseCenterX = screenCenterX + (i - middleCardIndex) * cardCenterDistance;
-                float xOffset = 0;
-                if (_hoveredIndex != -1)
-                {
-                    if (i < _hoveredIndex) xOffset = -SPREAD_AMOUNT;
-                    if (i > _hoveredIndex) xOffset = SPREAD_AMOUNT;
-                }
-                float targetCenterX = cardBaseCenterX + xOffset;
-                float targetX = targetCenterX - (CARD_SIZE.X * targetScale) / 2f;
-
-                // Determine Target Position (Y-axis)
-                float archYOffset = 0f;
-                if (_cards.Count > 1 && middleCardIndex > 0)
-                {
-                    float distanceFromMiddle = Math.Abs(i - middleCardIndex);
-                    // Make outer cards lower (positive Y offset)
-                    archYOffset = (float)Math.Pow(distanceFromMiddle / middleCardIndex, 2) * CARD_ARCH_AMOUNT;
-                }
-                float targetCenterY = menuBaseCenterY + archYOffset;
-                if (isHovered)
-                {
-                    targetCenterY += HOVER_Y_OFFSET;
-                }
-                float targetY = targetCenterY - (CARD_SIZE.Y * targetScale) / 2f;
-
-                // Determine Target Rotation
-                float targetRotation = 0f;
-                if (!isHovered && middleCardIndex > 0)
-                {
-                    if (i < middleCardIndex) targetRotation = -CARD_TILT_RADIANS * (1 - (i / middleCardIndex));
-                    else if (i > middleCardIndex) targetRotation = CARD_TILT_RADIANS * ((i - middleCardIndex) / middleCardIndex);
-                }
-
-                card.AnimateTo(new Vector2(targetX, targetY), targetScale, DEFAULT_TINT, targetRotation, targetAlpha, 0f);
+                card.AnimateTo(calculatedTargetPosition, targetScale, DEFAULT_TINT, targetRotation, targetAlpha, targetShadowAlpha);
                 card.Update(gameTime);
             }
         }
@@ -320,7 +339,7 @@ namespace ProjectVagabond.Combat.UI
         public void DrawCard(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, CombatCard card, bool isHovered)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            var circle = ServiceLocator.Get<SpriteManager>().CircleTextureSprite;
+            var core = ServiceLocator.Get<Core>();
 
             var cardRotation = card.CurrentRotation;
             var cardScale = card.CurrentScale;
@@ -331,10 +350,21 @@ namespace ProjectVagabond.Combat.UI
             if (card.ShadowAlpha > 0.01f)
             {
                 var shadowColor = Color.Black * card.ShadowAlpha;
-                var shadowPosition = cardDrawPosition + card.ShadowOffset;
-                float shadowScaleMultiplier = 1.05f; // Make shadow slightly larger than card
-                var shadowScale = CARD_SIZE.ToVector2() * cardScale * shadowScaleMultiplier / circle.Width;
-                spriteBatch.Draw(circle, shadowPosition, null, shadowColor, cardRotation, circle.Bounds.Center.ToVector2(), shadowScale, SpriteEffects.None, 0f);
+
+                // The shadow shifts horizontally away from the center, creating a pseudo-3D effect.
+                float screenCenterX = core.GetActualScreenVirtualBounds().Center.X;
+                float horizontalDistanceFromCenter = cardDrawPosition.X - screenCenterX;
+                float dynamicShadowX = horizontalDistanceFromCenter * SHADOW_HORIZONTAL_SHIFT_FACTOR;
+
+                // Combine the base vertical offset with the card's own dynamic offset (e.g., when dragged).
+                var dynamicOffset = new Vector2(dynamicShadowX, SHADOW_BASE_VERTICAL_OFFSET);
+                var shadowPosition = cardDrawPosition + dynamicOffset + card.ShadowOffset;
+
+                // The scale of the shadow is based on the card's size, multiplied by the scale and the shadow multiplier.
+                var shadowSize = CARD_SIZE.ToVector2() * cardScale * SHADOW_SCALE_MULTIPLIER;
+
+                // Draw using the 1x1 pixel texture, scaled up to the shadow size.
+                spriteBatch.Draw(pixel, shadowPosition, null, shadowColor, cardRotation, pixelOrigin, shadowSize, SpriteEffects.None, 0f);
             }
 
             // 1. Draw Card Background

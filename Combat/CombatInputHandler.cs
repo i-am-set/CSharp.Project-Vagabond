@@ -39,7 +39,7 @@ namespace ProjectVagabond.Combat
         public CombatCard DraggedCard { get; private set; }
         public CombatCard HeldCard { get; private set; } // Card being held on click, but not yet dragged
         private Vector2 _dragStartOffset;
-        private Vector2 _dragStartPosition; // Mouse position where the click started
+        public Vector2 DragStartPosition { get; private set; } // Mouse position where the click started
         public HandType PotentialDropHand { get; private set; }
         private HandType _previousPotentialDropHand = HandType.None;
 
@@ -109,7 +109,7 @@ namespace ProjectVagabond.Combat
                 {
                     if (isClickHeld) // Mouse is still down
                     {
-                        float distSquared = Vector2.DistanceSquared(VirtualMousePosition, _dragStartPosition);
+                        float distSquared = Vector2.DistanceSquared(VirtualMousePosition, DragStartPosition);
                         if (distSquared > DRAG_START_THRESHOLD * DRAG_START_THRESHOLD)
                         {
                             // Threshold exceeded, start the actual drag
@@ -120,6 +120,7 @@ namespace ProjectVagabond.Combat
                             DraggedCard.StartDragSway();
                             _dragStartOffset = new Vector2(DraggedCard.CurrentBounds.Width / 2f, DraggedCard.CurrentBounds.Height / 2f);
 
+                            // Initial animation values when drag begins
                             DraggedCard.AnimateTo(
                                 position: DraggedCard.CurrentBounds.Position,
                                 scale: 1.2f,
@@ -146,7 +147,7 @@ namespace ProjectVagabond.Combat
                         if (card.CurrentBounds.Contains(VirtualMousePosition))
                         {
                             HeldCard = card;
-                            _dragStartPosition = VirtualMousePosition;
+                            DragStartPosition = VirtualMousePosition;
                             break;
                         }
                     }
