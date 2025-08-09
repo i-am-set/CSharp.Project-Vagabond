@@ -25,6 +25,11 @@ namespace ProjectVagabond.Combat
         /// 0.9f means the top 90% of the screen is the drop zone.
         /// </summary>
         public const float DROP_ZONE_TOP_PERCENTAGE = 0.9f;
+        /// <summary>
+        /// The minimum distance the mouse must move (in virtual pixels) after clicking a card
+        /// before a drag operation officially begins.
+        /// </summary>
+        public const float DRAG_START_THRESHOLD = 8f;
 
         // Input state
         private MouseState _previousMouseState;
@@ -32,7 +37,9 @@ namespace ProjectVagabond.Combat
 
         // Drag & Drop State
         public CombatCard DraggedCard { get; private set; }
+        public CombatCard HeldCard { get; private set; } // Card being held on click, but not yet dragged
         private Vector2 _dragStartOffset;
+        private Vector2 _dragStartPosition; // Mouse position where the click started
         public HandType PotentialDropHand { get; private set; }
         private HandType _previousPotentialDropHand = HandType.None;
 
@@ -55,6 +62,7 @@ namespace ProjectVagabond.Combat
             _previousMouseState = Mouse.GetState();
             _previousKeyboardState = Keyboard.GetState();
             DraggedCard = null;
+            HeldCard = null;
             PotentialDropHand = HandType.None;
         }
 
@@ -75,23 +83,60 @@ namespace ProjectVagabond.Combat
         {
             bool isClickReleased = mouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool isClickPressed = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
+            bool isClickHeld = mouseState.LeftButton == ButtonState.Pressed;
             bool isRightClickPressed = mouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
 
             // --- State: Selecting Actions ---
             if (_combatManager.CurrentState == PlayerTurnState.Selecting)
             {
-                // If we are currently dragging a card
-                if (DraggedCard != null)
+                // Check for cancellation first (right click or escape)
+                if (isRightClickPressed || (keyboardState.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape)))
                 {
-                    // Check for drag cancellation first
-                    if (isRightClickPressed || (keyboardState.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape)))
+                    if (DraggedCard != null || HeldCard != null)
                     {
                         CancelDrag();
-                        return;
+                        return; // End processing for this frame
                     }
+                }
+
+                // Handle an ongoing drag
+                if (DraggedCard != null)
+                {
                     HandleCardDrag(mouseState, isClickReleased);
                 }
-                // If we are not dragging, check if we should start dragging
+                // Handle a held card (primed for dragging)
+                else if (HeldCard != null)
+                {
+                    if (isClickHeld) // Mouse is still down
+                    {
+                        float distSquared = Vector2.DistanceSquared(VirtualMousePosition, _dragStartPosition);
+                        if (distSquared > DRAG_START_THRESHOLD * DRAG_START_THRESHOLD)
+                        {
+                            // Threshold exceeded, start the actual drag
+                            DraggedCard = HeldCard;
+                            HeldCard = null; // No longer just held
+
+                            DraggedCard.IsBeingDragged = true;
+                            DraggedCard.StartDragSway();
+                            _dragStartOffset = new Vector2(DraggedCard.CurrentBounds.Width / 2f, DraggedCard.CurrentBounds.Height / 2f);
+
+                            DraggedCard.AnimateTo(
+                                position: DraggedCard.CurrentBounds.Position,
+                                scale: 1.2f,
+                                tint: Color.White,
+                                rotation: (float)(new Random().NextDouble() * 0.1 - 0.05),
+                                alpha: 1f,
+                                shadowAlpha: 0.5f
+                            );
+                        }
+                    }
+
+                    if (isClickReleased) // Click was released without moving enough to drag
+                    {
+                        HeldCard = null;
+                    }
+                }
+                // Handle a new click to start holding a card
                 else if (isClickPressed)
                 {
                     // Iterate backwards so cards on top are picked first
@@ -100,29 +145,17 @@ namespace ProjectVagabond.Combat
                         var card = _actionHandUI.Cards[i];
                         if (card.CurrentBounds.Contains(VirtualMousePosition))
                         {
-                            DraggedCard = card;
-                            DraggedCard.IsBeingDragged = true;
-                            DraggedCard.StartDragSway();
-                            // Set offset to snap the card's center to the mouse cursor
-                            _dragStartOffset = new Vector2(card.CurrentBounds.Width / 2f, card.CurrentBounds.Height / 2f);
-
-                            // Trigger "pick up" animation with overshoot
-                            DraggedCard.AnimateTo(
-                                position: card.CurrentBounds.Position,
-                                scale: 1.2f, // Overshoot scale
-                                tint: Color.White,
-                                rotation: (float)(new Random().NextDouble() * 0.1 - 0.05), // Slight random tilt
-                                alpha: 1f,
-                                shadowAlpha: 0.5f
-                            );
+                            HeldCard = card;
+                            _dragStartPosition = VirtualMousePosition;
                             break;
                         }
                     }
                 }
             }
 
+
             // --- Hand Cancellation Click (can happen in any state) ---
-            if (isClickPressed && DraggedCard == null)
+            if (isClickPressed && DraggedCard == null && HeldCard == null)
             {
                 if (!string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId) && _leftHandRenderer.Bounds.Contains(VirtualMousePosition))
                 {
@@ -137,11 +170,14 @@ namespace ProjectVagabond.Combat
 
         private void CancelDrag()
         {
-            if (DraggedCard == null) return;
+            if (DraggedCard != null)
+            {
+                DraggedCard.StopDragSway();
+                DraggedCard.IsBeingDragged = false;
+            }
 
-            DraggedCard.StopDragSway();
-            DraggedCard.IsBeingDragged = false;
             DraggedCard = null;
+            HeldCard = null;
             PotentialDropHand = HandType.None;
             _leftHandRenderer.IsPotentialDropTarget = false;
             _rightHandRenderer.IsPotentialDropTarget = false;
@@ -212,7 +248,7 @@ namespace ProjectVagabond.Combat
         private void HandleKeyboardInput(GameTime gameTime, KeyboardState keyboardState)
         {
             // Drag cancellation is handled in HandleMouseInput to ensure correct priority
-            if (DraggedCard != null) return;
+            if (DraggedCard != null || HeldCard != null) return;
 
             if (keyboardState.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape))
             {

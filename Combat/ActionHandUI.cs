@@ -26,7 +26,7 @@ namespace ProjectVagabond.Combat.UI
         private const float CARD_TILT_RADIANS = 0.1f; // Tilt angle for unselected cards
         private const float CARD_ARCH_AMOUNT = 10f; // How much lower the outer cards are than the center card.
         private const float HAND_Y_ANCHOR_OFFSET = -10f; // Vertical offset for the entire hand anchor. Negative moves it up.
-        private const float HAND_ANIMATION_DURATION = 0.4f;
+        private const float HAND_ANIMATION_DURATION = 0.2f;
         private const float HOVER_BOUNDS_Y_EXTENSION = 50f; // How many extra pixels to add to the bottom of the hover hitbox.
 
         // State-based Y positions
@@ -38,6 +38,7 @@ namespace ProjectVagabond.Combat.UI
         // Appearance
         public const float DEFAULT_SCALE = 0.9f;
         public const float HOVERED_SCALE = 1.0f;
+        public const float HELD_SCALE = 1.1f; // Slightly larger than hover to show click feedback
         public static readonly Color DEFAULT_TINT = Color.White;
         private const float DEFAULT_ALPHA = 1f;
         private const float HOVERED_ALPHA = 1f;
@@ -195,18 +196,27 @@ namespace ProjectVagabond.Combat.UI
             _hoveredIndex = -1;
             if (newTargetYOffset == ACTIVE_Y_OFFSET) // Only allow hover when fully active
             {
-                // Iterate backwards to prioritize cards on top
-                for (int i = _cards.Count - 1; i >= 0; i--)
+                // If a card is being held on click, it takes priority for being "hovered" visually.
+                if (inputHandler.HeldCard != null)
                 {
-                    var cardBounds = _cards[i].CurrentBounds;
-                    var hoverBounds = new RectangleF(cardBounds.X, cardBounds.Y, cardBounds.Width, cardBounds.Height + HOVER_BOUNDS_Y_EXTENSION);
-                    if (hoverBounds.Contains(inputHandler.VirtualMousePosition))
+                    _hoveredIndex = _cards.IndexOf(inputHandler.HeldCard);
+                }
+                else // Otherwise, check for mouse hover as normal.
+                {
+                    // Iterate backwards to prioritize cards on top
+                    for (int i = _cards.Count - 1; i >= 0; i--)
                     {
-                        _hoveredIndex = i;
-                        break;
+                        var cardBounds = _cards[i].CurrentBounds;
+                        var hoverBounds = new RectangleF(cardBounds.X, cardBounds.Y, cardBounds.Width, cardBounds.Height + HOVER_BOUNDS_Y_EXTENSION);
+                        if (hoverBounds.Contains(inputHandler.VirtualMousePosition))
+                        {
+                            _hoveredIndex = i;
+                            break;
+                        }
                     }
                 }
             }
+
 
             float middleCardIndex = (_cards.Count - 1) / 2.0f;
             float menuBaseCenterY = actualScreenVirtualBounds.Bottom - (CARD_SIZE.Y * DEFAULT_SCALE / 2f) + _menuYOffset + HAND_Y_ANCHOR_OFFSET;
@@ -223,7 +233,15 @@ namespace ProjectVagabond.Combat.UI
                 float targetAlpha = DEFAULT_ALPHA;
                 if (isHovered)
                 {
-                    targetScale = HOVERED_SCALE;
+                    // If this card is the one being held down by a click (but not yet dragged), give it a slightly larger scale for feedback.
+                    if (card == inputHandler.HeldCard && inputHandler.DraggedCard == null)
+                    {
+                        targetScale = HELD_SCALE;
+                    }
+                    else
+                    {
+                        targetScale = HOVERED_SCALE;
+                    }
                     targetAlpha = HOVERED_ALPHA;
                 }
 
