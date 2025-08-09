@@ -1,7 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Combat;
+using ProjectVagabond.Combat.UI;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Text;
 
 namespace ProjectVagabond.Combat.UI
 {
@@ -51,7 +59,7 @@ namespace ProjectVagabond.Combat.UI
 
 
         private const float ANIMATION_DURATION = 0.3f;
-        private const float PLAY_ANIMATION_DURATION = 0.25f;
+        private const float PLAY_ANIMATION_DURATION = 0.15f;
         private static readonly Vector2 DRAGGED_SHADOW_OFFSET = new Vector2(0, 10);
 
         public CombatCard(ActionData action)

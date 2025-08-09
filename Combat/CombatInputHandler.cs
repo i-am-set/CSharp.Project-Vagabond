@@ -204,7 +204,7 @@ namespace ProjectVagabond.Combat
                     _hapticsManager.TriggerShake(1.5f, 0.15f);
                 }
 
-                // Reset drag state
+                // Reset drag state regardless of success
                 CancelDrag();
             }
         }

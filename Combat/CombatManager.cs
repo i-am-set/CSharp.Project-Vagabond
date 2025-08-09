@@ -92,7 +92,11 @@ namespace ProjectVagabond.Combat
                 RightHand.SelectAction(actionId);
             }
 
-            EventBus.Publish(new GameEvents.CardPlayed { ActionId = actionId });
+            var actionData = _actionManager.GetAction(actionId);
+            if (actionData != null)
+            {
+                EventBus.Publish(new GameEvents.CardPlayed { CardActionData = actionData, TargetHand = hand });
+            }
 
             UpdatePotentialSynergy();
             UpdateState();

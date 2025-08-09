@@ -55,6 +55,21 @@ namespace ProjectVagabond.Combat.UI
         /// </summary>
         public Rectangle Bounds => new Rectangle((int)_currentPosition.X, (int)_currentPosition.Y, HAND_WIDTH, HAND_HEIGHT);
 
+        /// <summary>
+        /// The calculated visual center of the hand, useful for animation targets.
+        /// </summary>
+        public Vector2 VisualCenter
+        {
+            get
+            {
+                // The visual center is where the hand "holds" things.
+                // This is an estimate based on the sprite's appearance.
+                float visualCenterY = Bounds.Y + Bounds.Height * 0.4f;
+                return new Vector2(Bounds.Center.X, visualCenterY);
+            }
+        }
+
+
         public HandRenderer(PlayerHand playerHand)
         {
             _playerHand = playerHand;

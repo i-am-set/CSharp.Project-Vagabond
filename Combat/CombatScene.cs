@@ -1,17 +1,18 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
-using MonoGame.Extended.Graphics;
 using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
+using MonoGame.Extended;
+using MonoGame.Extended.Graphics;
+using System.Linq;
+using System;
 
 namespace ProjectVagabond.Scenes
 {
@@ -25,6 +26,9 @@ namespace ProjectVagabond.Scenes
         private Texture2D _enemyTexture;
         private AnimationManager _animationManager;
         private float _castPromptPulseTimer = 0f;
+
+        // A list to manage cards that are currently in their "play" animation.
+        private readonly List<CombatCard> _playingCards = new List<CombatCard>();
 
         public override bool UsesLetterboxing => false;
 
@@ -59,6 +63,7 @@ namespace ProjectVagabond.Scenes
             var actionManager = ServiceLocator.Get<ActionManager>();
             var allActions = actionManager.GetAllActions();
             _actionHandUI.SetActions(allActions);
+            _playingCards.Clear();
 
             _enemyTexture = ServiceLocator.Get<SpriteManager>().EnemySprite;
             _leftHandRenderer.LoadContent();
@@ -83,12 +88,27 @@ namespace ProjectVagabond.Scenes
             _animationManager.Unregister("RightHandSway");
         }
 
-        private void OnCardPlayed(GameEvents.CardPlayed e) => _actionHandUI.RemoveCard(e.ActionId);
+        private void OnCardPlayed(GameEvents.CardPlayed e)
+        {
+            var cardToPlay = _actionHandUI.Cards.FirstOrDefault(c => c.Action.Id == e.CardActionData.Id);
+            if (cardToPlay != null)
+            {
+                _actionHandUI.RemoveCard(e.CardActionData.Id);
+                _playingCards.Add(cardToPlay);
+
+                Vector2 targetPos = e.TargetHand == HandType.Left
+                    ? _leftHandRenderer.VisualCenter
+                    : _rightHandRenderer.VisualCenter;
+
+                cardToPlay.AnimatePlay(targetPos);
+            }
+        }
+
         private void OnCardReturned(GameEvents.CardReturnedToHand e)
         {
             Vector2 startPos = e.SourceHand == HandType.Left
-                ? _leftHandRenderer.Bounds.Center.ToVector2()
-                : _rightHandRenderer.Bounds.Center.ToVector2();
+                ? _leftHandRenderer.VisualCenter
+                : _rightHandRenderer.VisualCenter;
 
             _actionHandUI.AddCard(e.CardActionData, startPos);
         }
@@ -103,6 +123,17 @@ namespace ProjectVagabond.Scenes
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
+
+            // Update and clean up playing cards
+            for (int i = _playingCards.Count - 1; i >= 0; i--)
+            {
+                var card = _playingCards[i];
+                card.Update(gameTime);
+                if (card.IsAnimationFinished)
+                {
+                    _playingCards.RemoveAt(i);
+                }
+            }
 
             if (_combatManager.CurrentState == PlayerTurnState.Resolving)
             {
@@ -170,6 +201,12 @@ namespace ProjectVagabond.Scenes
 
             // Draw the hand of cards, skipping the one being dragged
             _actionHandUI.Draw(spriteBatch, font, gameTime, _inputHandler.DraggedCard);
+
+            // Draw cards that are currently in their "play" animation
+            foreach (var card in _playingCards)
+            {
+                _actionHandUI.DrawCard(spriteBatch, font, gameTime, card, false);
+            }
 
             // Draw the dragged card last so it's on top of everything
             if (_inputHandler.DraggedCard != null)

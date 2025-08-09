@@ -103,7 +103,8 @@ namespace ProjectVagabond
         /// </summary>
         public struct CardPlayed
         {
-            public string ActionId { get; set; }
+            public ActionData CardActionData { get; set; }
+            public HandType TargetHand { get; set; }
         }
 
         /// <summary>
