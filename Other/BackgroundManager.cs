@@ -50,31 +50,43 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Draws the tiled background to fill the specified destination area.
+        /// Draws the tiled background to fill the specified destination area, respecting the integer scale.
         /// </summary>
-        public void Draw(SpriteBatch spriteBatch, Rectangle destinationBounds)
+        public void Draw(SpriteBatch spriteBatch, Rectangle destinationBounds, float scale)
         {
-            DrawTiled(spriteBatch, destinationBounds.Width, destinationBounds.Height);
+            DrawTiled(spriteBatch, destinationBounds.Width, destinationBounds.Height, scale);
         }
 
         /// <summary>
-        /// Private helper to draw the tiled texture to a specified width and height.
+        /// Private helper to draw the tiled and scaled texture.
         /// </summary>
-        private void DrawTiled(SpriteBatch spriteBatch, int width, int height)
+        private void DrawTiled(SpriteBatch spriteBatch, int screenWidth, int screenHeight, float scale)
         {
-            if (_texture == null) return;
+            if (_texture == null || scale <= 0) return;
 
-            // Calculate the starting position for the top-left tile based on the offset.
-            // The modulo operator ensures the position wraps around, creating the infinite tiling effect.
-            float startX = -(_offset.X % _texture.Width);
-            float startY = -(_offset.Y % _texture.Height);
+            float scaledTexWidth = _texture.Width * scale;
+            float scaledTexHeight = _texture.Height * scale;
 
-            // Loop through and draw tiles to fill the specified area.
-            for (float y = startY; y < height; y += _texture.Height)
+            if (scaledTexWidth == 0 || scaledTexHeight == 0) return;
+
+            // The amount of "scrolled" pixels on screen.
+            float scrolledX = _offset.X * scale;
+            float scrolledY = _offset.Y * scale;
+
+            // The starting position must wrap around the scaled texture size.
+            float startX = -(scrolledX % scaledTexWidth);
+            float startY = -(scrolledY % scaledTexHeight);
+
+            // If startX/Y is positive due to a negative offset, wrap it back so we start drawing off-screen.
+            if (startX > 0) startX -= scaledTexWidth;
+            if (startY > 0) startY -= scaledTexHeight;
+
+            // Loop through and draw scaled tiles to fill the specified area.
+            for (float y = startY; y < screenHeight; y += scaledTexHeight)
             {
-                for (float x = startX; x < width; x += _texture.Width)
+                for (float x = startX; x < screenWidth; x += scaledTexWidth)
                 {
-                    spriteBatch.Draw(_texture, new Vector2(x, y), Color.White);
+                    spriteBatch.Draw(_texture, new Vector2(x, y), null, Color.White, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
                 }
             }
         }

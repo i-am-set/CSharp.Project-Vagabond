@@ -45,6 +45,7 @@ namespace ProjectVagabond
         private Matrix _mouseTransformMatrix;
         private bool _useLinearSampling;
         private Point _previousResolution;
+        private float _finalScale = 1f;
 
         public Matrix MouseTransformMatrix => _mouseTransformMatrix;
 
@@ -502,10 +503,10 @@ namespace ProjectVagabond
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(Color.Black);
 
-            _spriteBatch.Begin(samplerState: SamplerState.LinearWrap);
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             if (!_sceneManager.IsLoadingBetweenScenes)
             {
-                _backgroundManager.Draw(_spriteBatch, GraphicsDevice.PresentationParameters.Bounds);
+                _backgroundManager.Draw(_spriteBatch, GraphicsDevice.PresentationParameters.Bounds, _finalScale);
             }
             _spriteBatch.End();
 
@@ -614,30 +615,28 @@ namespace ProjectVagabond
             float scaleX = (float)screenWidth / Global.VIRTUAL_WIDTH;
             float scaleY = (float)screenHeight / Global.VIRTUAL_HEIGHT;
 
-            float finalScale;
-
             if (screenWidth < Global.VIRTUAL_WIDTH || screenHeight < Global.VIRTUAL_HEIGHT)
             {
-                finalScale = Math.Min(scaleX, scaleY);
+                _finalScale = Math.Min(scaleX, scaleY);
                 _useLinearSampling = true;
             }
             else
             {
                 int integerScale = (int)Math.Min(scaleX, scaleY);
                 if (_settings.SmallerUi) integerScale--;
-                finalScale = Math.Max(1, integerScale);
+                _finalScale = Math.Max(1, integerScale);
                 _useLinearSampling = false;
             }
 
-            int destWidth = (int)(Global.VIRTUAL_WIDTH * finalScale);
-            int destHeight = (int)(Global.VIRTUAL_HEIGHT * finalScale);
+            int destWidth = (int)(Global.VIRTUAL_WIDTH * _finalScale);
+            int destHeight = (int)(Global.VIRTUAL_HEIGHT * _finalScale);
 
             int destX = (screenWidth - destWidth) / 2;
             int destY = (screenHeight - destHeight) / 2;
 
             _finalRenderRectangle = new Rectangle(destX, destY, destWidth, destHeight);
 
-            _mouseTransformMatrix = Matrix.CreateTranslation(-destX, -destY, 0) * Matrix.CreateScale(1.0f / finalScale);
+            _mouseTransformMatrix = Matrix.CreateTranslation(-destX, -destY, 0) * Matrix.CreateScale(1.0f / _finalScale);
         }
 
         /// <summary>

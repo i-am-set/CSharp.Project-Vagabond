@@ -24,7 +24,7 @@ namespace ProjectVagabond.Combat
         /// Defines the vertical portion of the screen that acts as the drop zone for cards.
         /// 0.9f means the top 90% of the screen is the drop zone.
         /// </summary>
-        public const float DROP_ZONE_TOP_PERCENTAGE = 0.9f;
+        public const float DROP_ZONE_TOP_PERCENTAGE = 0.85f;
         /// <summary>
         /// The minimum distance the mouse must move (in virtual pixels) after clicking a card
         /// before a drag operation officially begins.
