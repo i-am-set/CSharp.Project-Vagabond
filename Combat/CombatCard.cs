@@ -23,7 +23,7 @@ namespace ProjectVagabond.Combat.UI
         public RectangleF CurrentBounds { get; private set; }
         public Color CurrentTint { get; private set; }
         public float CurrentScale { get; private set; }
-        public float CurrentRotation { get; private set; }
+        public float CurrentRotation { get; set; }
         public float CurrentAlpha { get; private set; }
         public float ShadowAlpha { get; private set; }
         public Vector2 ShadowOffset { get; private set; }
@@ -59,8 +59,14 @@ namespace ProjectVagabond.Combat.UI
 
 
         private const float ANIMATION_DURATION = 0.3f;
-        private const float PLAY_ANIMATION_DURATION = 0.15f;
+        private const float PLAY_ANIMATION_DURATION = 0.075f;
         private static readonly Vector2 DRAGGED_SHADOW_OFFSET = new Vector2(0, 10);
+
+        // Drag-specific animation
+        private Vector2 _lastVelocity;
+        private const float DRAG_TILT_FACTOR = 0.04f; // How much to tilt based on velocity.X
+        private const float MAX_DRAG_TILT_RADIANS = 0.4f; // Max tilt in either direction
+        private const float DRAG_TILT_LERP_SPEED = 15f; // How quickly the tilt catches up
 
         public CombatCard(ActionData action)
         {
@@ -150,6 +156,14 @@ namespace ProjectVagabond.Combat.UI
             CurrentBounds = new RectangleF(finalPosition.X, finalPosition.Y, size.X, size.Y);
         }
 
+        /// <summary>
+        /// Called by the input handler to provide the card with its current velocity.
+        /// </summary>
+        public void SetDragVelocity(Vector2 velocity)
+        {
+            _lastVelocity = velocity;
+        }
+
         public void Update(GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -159,7 +173,11 @@ namespace ProjectVagabond.Combat.UI
             {
                 // When dragged, the shadow is always visible and offset
                 ShadowOffset = DRAGGED_SHADOW_OFFSET;
-                // The position is updated via ForcePosition, but other properties can still animate.
+
+                // --- New drag tilt logic ---
+                float targetTilt = _lastVelocity.X * DRAG_TILT_FACTOR;
+                targetTilt = MathHelper.Clamp(targetTilt, -MAX_DRAG_TILT_RADIANS, MAX_DRAG_TILT_RADIANS);
+                CurrentRotation = MathHelper.Lerp(CurrentRotation, targetTilt, DRAG_TILT_LERP_SPEED * deltaTime);
             }
 
             if (_isPlayAnimating)
@@ -183,19 +201,31 @@ namespace ProjectVagabond.Combat.UI
 
             float easedProgress = Easing.EaseOutCubic(progress);
             CurrentTint = Color.Lerp(_startTint, _targetTint, easedProgress);
-            CurrentRotation = MathHelper.Lerp(_startRotation, _targetRotation, easedProgress);
+
+            if (!IsBeingDragged)
+            {
+                CurrentRotation = MathHelper.Lerp(_startRotation, _targetRotation, easedProgress);
+            }
+
             CurrentAlpha = MathHelper.Lerp(_startAlpha, _targetAlpha, easedProgress);
             ShadowAlpha = MathHelper.Lerp(_startShadowAlpha, _targetShadowAlpha, easedProgress);
-            var currentPosition = Vector2.Lerp(_startPosition, _targetPosition, easedProgress);
 
-            UpdateRipple(deltaTime);
-            currentPosition += GetRippleOffset();
+            // Only allow the animation system to control position if the card is NOT being dragged.
+            if (!IsBeingDragged)
+            {
+                var currentPosition = Vector2.Lerp(_startPosition, _targetPosition, easedProgress);
+                UpdateRipple(deltaTime);
+                currentPosition += GetRippleOffset();
 
-            var size = new Vector2(ActionHandUI.CARD_SIZE.X * CurrentScale, ActionHandUI.CARD_SIZE.Y * CurrentScale);
-            CurrentBounds = new RectangleF(currentPosition.X, currentPosition.Y, size.X, size.Y);
+                var size = new Vector2(ActionHandUI.CARD_SIZE.X * CurrentScale, ActionHandUI.CARD_SIZE.Y * CurrentScale);
+                CurrentBounds = new RectangleF(currentPosition.X, currentPosition.Y, size.X, size.Y);
+            }
 
             // When not dragged, the shadow has no offset
-            ShadowOffset = Vector2.Lerp(DRAGGED_SHADOW_OFFSET, Vector2.Zero, easedProgress);
+            if (!IsBeingDragged)
+            {
+                ShadowOffset = Vector2.Lerp(DRAGGED_SHADOW_OFFSET, Vector2.Zero, easedProgress);
+            }
 
             if (progress >= 1f)
             {

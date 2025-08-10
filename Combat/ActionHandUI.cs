@@ -46,9 +46,12 @@ namespace ProjectVagabond.Combat.UI
         // Shadow properties for different states
         private const float HOVERED_SHADOW_ALPHA = 0.2f; // Shadow opacity when hovered normally
         private const float HELD_SHADOW_ALPHA = 0.3f; // Shadow opacity when held (clicked but not yet dragged)
-        private const float SHADOW_SCALE_MULTIPLIER = 1.1f; // How much larger the shadow is than the card.
+        private const float SHADOW_SCALE_MULTIPLIER = 1.05f; // How much larger the shadow is than the card.
         private const float SHADOW_BASE_VERTICAL_OFFSET = 8f; // Base downward offset for the shadow.
         private const float SHADOW_HORIZONTAL_SHIFT_FACTOR = 0.05f; // How much the shadow shifts horizontally based on card position. 0 = no shift.
+        private const float SHADOW_VERTICAL_SHIFT_FACTOR = 0.1f; // How much the shadow moves down as the card moves up.
+        private const int SHADOW_BLUR_LAYERS = 5; // Number of layers for the blur effect.
+        private const float SHADOW_BLUR_SPREAD = 0.01f; // How far each blur layer extends.
 
 
         // Placeholder card visuals
@@ -349,22 +352,37 @@ namespace ProjectVagabond.Combat.UI
             // 0. Draw Drop Shadow if it's visible
             if (card.ShadowAlpha > 0.01f)
             {
-                var shadowColor = Color.Black * card.ShadowAlpha;
+                var actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
 
                 // The shadow shifts horizontally away from the center, creating a pseudo-3D effect.
-                float screenCenterX = core.GetActualScreenVirtualBounds().Center.X;
+                float screenCenterX = actualScreenVirtualBounds.Center.X;
                 float horizontalDistanceFromCenter = cardDrawPosition.X - screenCenterX;
                 float dynamicShadowX = horizontalDistanceFromCenter * SHADOW_HORIZONTAL_SHIFT_FACTOR;
 
-                // Combine the base vertical offset with the card's own dynamic offset (e.g., when dragged).
-                var dynamicOffset = new Vector2(dynamicShadowX, SHADOW_BASE_VERTICAL_OFFSET);
-                var shadowPosition = cardDrawPosition + dynamicOffset + card.ShadowOffset;
+                // The shadow also shifts vertically based on the card's "height" from the bottom of the screen.
+                float cardHeightFromBottom = actualScreenVirtualBounds.Bottom - cardDrawPosition.Y;
+                float dynamicShadowY = SHADOW_BASE_VERTICAL_OFFSET + (cardHeightFromBottom * SHADOW_VERTICAL_SHIFT_FACTOR);
 
-                // The scale of the shadow is based on the card's size, multiplied by the scale and the shadow multiplier.
-                var shadowSize = CARD_SIZE.ToVector2() * cardScale * SHADOW_SCALE_MULTIPLIER;
+                // Combine all offsets.
+                var dynamicOffset = new Vector2(dynamicShadowX, dynamicShadowY);
+                var baseShadowPosition = cardDrawPosition + dynamicOffset + card.ShadowOffset;
 
-                // Draw using the 1x1 pixel texture, scaled up to the shadow size.
-                spriteBatch.Draw(pixel, shadowPosition, null, shadowColor, cardRotation, pixelOrigin, shadowSize, SpriteEffects.None, 0f);
+                float baseAlpha = card.ShadowAlpha;
+                Vector2 baseSize = CARD_SIZE.ToVector2() * cardScale * SHADOW_SCALE_MULTIPLIER;
+
+                // Draw multiple layers to simulate a blurred edge.
+                for (int i = 0; i < SHADOW_BLUR_LAYERS; i++)
+                {
+                    // Each layer is slightly larger and more transparent
+                    float layerScale = 1.0f + (i * SHADOW_BLUR_SPREAD);
+                    Vector2 layerSize = baseSize * layerScale;
+
+                    // The alpha decreases for each layer for a smooth falloff
+                    float layerAlpha = baseAlpha / (float)Math.Pow(2, i);
+                    Color layerColor = Color.Black * layerAlpha;
+
+                    spriteBatch.Draw(pixel, baseShadowPosition, null, layerColor, cardRotation, pixelOrigin, layerSize, SpriteEffects.None, 0f);
+                }
             }
 
             // 1. Draw Card Background

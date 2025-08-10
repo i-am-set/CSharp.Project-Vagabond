@@ -24,7 +24,7 @@ namespace ProjectVagabond.Combat
         /// Defines the vertical portion of the screen that acts as the drop zone for cards.
         /// 0.9f means the top 90% of the screen is the drop zone.
         /// </summary>
-        public const float DROP_ZONE_TOP_PERCENTAGE = 0.9f;
+        public const float DROP_ZONE_TOP_PERCENTAGE = 0.85f;
         /// <summary>
         /// The minimum distance the mouse must move (in virtual pixels) after clicking a card
         /// before a drag operation officially begins.
@@ -34,6 +34,7 @@ namespace ProjectVagabond.Combat
         // Input state
         private MouseState _previousMouseState;
         private KeyboardState _previousKeyboardState;
+        private Vector2 _previousVirtualMousePosition;
 
         // Drag & Drop State
         public CombatCard DraggedCard { get; private set; }
@@ -61,6 +62,7 @@ namespace ProjectVagabond.Combat
         {
             _previousMouseState = Mouse.GetState();
             _previousKeyboardState = Keyboard.GetState();
+            _previousVirtualMousePosition = Core.TransformMouse(_previousMouseState.Position);
             DraggedCard = null;
             HeldCard = null;
             PotentialDropHand = HandType.None;
@@ -72,14 +74,15 @@ namespace ProjectVagabond.Combat
             var mouseState = Mouse.GetState();
             VirtualMousePosition = Core.TransformMouse(mouseState.Position);
 
-            HandleMouseInput(mouseState, keyboardState);
+            HandleMouseInput(gameTime, mouseState, keyboardState);
             HandleKeyboardInput(gameTime, keyboardState);
 
             _previousMouseState = mouseState;
             _previousKeyboardState = keyboardState;
+            _previousVirtualMousePosition = VirtualMousePosition;
         }
 
-        private void HandleMouseInput(MouseState mouseState, KeyboardState keyboardState)
+        private void HandleMouseInput(GameTime gameTime, MouseState mouseState, KeyboardState keyboardState)
         {
             bool isClickReleased = mouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool isClickPressed = mouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
@@ -102,7 +105,7 @@ namespace ProjectVagabond.Combat
                 // Handle an ongoing drag
                 if (DraggedCard != null)
                 {
-                    HandleCardDrag(mouseState, isClickReleased);
+                    HandleCardDrag(gameTime, mouseState, isClickReleased);
                 }
                 // Handle a held card (primed for dragging)
                 else if (HeldCard != null)
@@ -125,7 +128,7 @@ namespace ProjectVagabond.Combat
                                 position: DraggedCard.CurrentBounds.Position,
                                 scale: 1.2f,
                                 tint: Color.White,
-                                rotation: (float)(new Random().NextDouble() * 0.1 - 0.05),
+                                rotation: 0f, // Ensure card is upright when dragged
                                 alpha: 1f,
                                 shadowAlpha: 0.5f
                             );
@@ -185,10 +188,14 @@ namespace ProjectVagabond.Combat
         }
 
 
-        private void HandleCardDrag(MouseState mouseState, bool isClickReleased)
+        private void HandleCardDrag(GameTime gameTime, MouseState mouseState, bool isClickReleased)
         {
-            // Update card position to follow mouse
+            Vector2 velocity = VirtualMousePosition - _previousVirtualMousePosition;
+
+            DraggedCard.SetDragVelocity(velocity);
             DraggedCard.ForcePosition(VirtualMousePosition - _dragStartOffset);
+            DraggedCard.Update(gameTime);
+
 
             var core = ServiceLocator.Get<Core>();
             Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
