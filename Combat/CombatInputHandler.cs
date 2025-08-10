@@ -24,7 +24,7 @@ namespace ProjectVagabond.Combat
         /// Defines the vertical portion of the screen that acts as the drop zone for cards.
         /// 0.9f means the top 90% of the screen is the drop zone.
         /// </summary>
-        public const float DROP_ZONE_TOP_PERCENTAGE = 0.85f;
+        public const float DROP_ZONE_TOP_PERCENTAGE = 0.9f;
         /// <summary>
         /// The minimum distance the mouse must move (in virtual pixels) after clicking a card
         /// before a drag operation officially begins.
@@ -42,6 +42,7 @@ namespace ProjectVagabond.Combat
         private Vector2 _dragStartOffset;
         public Vector2 DragStartPosition { get; private set; } // Mouse position where the click started
         public HandType PotentialDropHand { get; private set; }
+        public HandType InvalidDropHand { get; private set; }
         private HandType _previousPotentialDropHand = HandType.None;
 
         public Vector2 VirtualMousePosition { get; private set; }
@@ -66,6 +67,7 @@ namespace ProjectVagabond.Combat
             DraggedCard = null;
             HeldCard = null;
             PotentialDropHand = HandType.None;
+            InvalidDropHand = HandType.None;
         }
 
         public void Update(GameTime gameTime)
@@ -183,8 +185,11 @@ namespace ProjectVagabond.Combat
             DraggedCard = null;
             HeldCard = null;
             PotentialDropHand = HandType.None;
+            InvalidDropHand = HandType.None;
             _leftHandRenderer.IsPotentialDropTarget = false;
             _rightHandRenderer.IsPotentialDropTarget = false;
+            _leftHandRenderer.IsInvalidDropTarget = false;
+            _rightHandRenderer.IsInvalidDropTarget = false;
         }
 
 
@@ -204,22 +209,33 @@ namespace ProjectVagabond.Combat
             float dropZoneHeight = actualScreenVirtualBounds.Height * DROP_ZONE_TOP_PERCENTAGE;
             var dropZone = new RectangleF(actualScreenVirtualBounds.X, actualScreenVirtualBounds.Y, actualScreenVirtualBounds.Width, dropZoneHeight);
 
+            PotentialDropHand = HandType.None;
+            InvalidDropHand = HandType.None;
+
             if (dropZone.Contains(VirtualMousePosition))
             {
                 if (VirtualMousePosition.X < actualScreenVirtualBounds.Center.X)
                 {
-                    // Only a valid target if the left hand is empty
-                    PotentialDropHand = string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId) ? HandType.Left : HandType.None;
+                    if (string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId))
+                    {
+                        PotentialDropHand = HandType.Left;
+                    }
+                    else
+                    {
+                        InvalidDropHand = HandType.Left;
+                    }
                 }
                 else // Right side
                 {
-                    // Only a valid target if the right hand is empty
-                    PotentialDropHand = string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId) ? HandType.Right : HandType.None;
+                    if (string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId))
+                    {
+                        PotentialDropHand = HandType.Right;
+                    }
+                    else
+                    {
+                        InvalidDropHand = HandType.Right;
+                    }
                 }
-            }
-            else
-            {
-                PotentialDropHand = HandType.None;
             }
 
             // Trigger haptic feedback when entering a drop zone
@@ -233,6 +249,8 @@ namespace ProjectVagabond.Combat
             // Update hand renderers to show they are drop targets
             _leftHandRenderer.IsPotentialDropTarget = (PotentialDropHand == HandType.Left);
             _rightHandRenderer.IsPotentialDropTarget = (PotentialDropHand == HandType.Right);
+            _leftHandRenderer.IsInvalidDropTarget = (InvalidDropHand == HandType.Left);
+            _rightHandRenderer.IsInvalidDropTarget = (InvalidDropHand == HandType.Right);
 
             // Handle dropping the card
             if (isClickReleased)

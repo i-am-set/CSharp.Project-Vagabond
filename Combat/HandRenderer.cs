@@ -20,6 +20,7 @@ namespace ProjectVagabond.Combat.UI
         private const int HAND_HEIGHT = 256;
         private const int IDLE_POS_Y_OFFSET = 10; // Vertical offset from the bottom of the screen
         private const int SELECTED_Y_OFFSET = 20; // How far the hand moves down when an action is selected
+        private const int INVALID_DROP_Y_OFFSET = 40; // How far the hand moves down when it's an invalid drop target
         private const int IDLE_POS_X_OFFSET = 180; // Horizontal offset from the center
         private const float SLIDE_ANIMATION_DURATION = 0.6f; // Duration for sliding in/out
         private const float FOCUS_ANIMATION_DURATION = 0.5f; // Duration for focus movement
@@ -49,6 +50,11 @@ namespace ProjectVagabond.Combat.UI
         /// When true, the hand will render a highlight to indicate it's a valid drop target.
         /// </summary>
         public bool IsPotentialDropTarget { get; set; }
+
+        /// <summary>
+        /// When true, the hand will animate downwards to indicate it's an invalid drop target.
+        /// </summary>
+        public bool IsInvalidDropTarget { get; set; }
 
         /// <summary>
         /// The current screen bounds of the hand renderer.
@@ -177,14 +183,35 @@ namespace ProjectVagabond.Combat.UI
             _pulseTimer += deltaTime;
 
             bool isActionSelected = !string.IsNullOrEmpty(_playerHand.SelectedActionId);
+            bool isAnyCardBeingDragged = inputHandler.DraggedCard != null;
             Vector2 desiredPosition = _idlePosition;
-            if (isActionSelected)
+
+            if (isAnyCardBeingDragged)
             {
-                desiredPosition.Y += SELECTED_Y_OFFSET;
+                // A drag is in progress. Determine this hand's state during the drag.
+                if (isActionSelected)
+                {
+                    // This hand is occupied, so it's an invalid target and should move down.
+                    desiredPosition.Y += INVALID_DROP_Y_OFFSET;
+                }
+                else // This hand is empty
+                {
+                    // It's a potential target, so check if the input handler has marked it as such.
+                    if (IsPotentialDropTarget)
+                    {
+                        desiredPosition.Y += HOVER_Y_LIFT;
+                    }
+                    // If it's not the potential target (mouse is elsewhere), it just stays at idle.
+                }
             }
-            else if (IsPotentialDropTarget)
+            else
             {
-                desiredPosition.Y += HOVER_Y_LIFT;
+                // No drag is in progress. Apply standard passive/selected states.
+                if (isActionSelected)
+                {
+                    desiredPosition.Y += SELECTED_Y_OFFSET;
+                }
+                // If not selected, it just stays at the idle position.
             }
 
             StartAnimation(desiredPosition, FOCUS_ANIMATION_DURATION);
