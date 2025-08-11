@@ -19,16 +19,39 @@ namespace ProjectVagabond.Scenes
     public class CombatScene : GameScene
     {
         private CombatManager _combatManager;
-        private HandRenderer _leftHandRenderer;
-        private HandRenderer _rightHandRenderer;
         private ActionHandUI _actionHandUI;
         private CombatInputHandler _inputHandler;
-        private Texture2D _enemyTexture;
         private AnimationManager _animationManager;
-        private float _castPromptPulseTimer = 0f;
+
+        // --- TUNING CONSTANTS ---
+        // Enemy Layout
+        private const float ENEMY_BASE_Y = 150f; // The Y position of the CLOSEST enemy.
+        private const float ENEMY_SPACING_X = 150f;
+        private const float ENEMY_STAGGER_Y = 20f; // How much further UP (back) each enemy in the V-shape is.
+        private const float ENEMY_STAGGER_SCALE_FACTOR = 0.05f; // How much smaller each enemy gets per step back.
+
+        // Play Area
+        private const float PLAY_AREA_INSET_HORIZONTAL = 50f;
+        private const float PLAY_AREA_INSET_VERTICAL_TOP = 20f;
+        private const float PLAY_AREA_BOTTOM_EXCLUSION_PERCENT = 0.20f; // The bottom 20% of the screen is a cancel zone.
+
+        // Targeting Pointer
+        private const float POINTER_CURVE_OFFSET = 150f;
+        private const float POINTER_HORIZONTAL_PUSH = 50f;
+        private const int POINTER_DOT_COUNT = 50;
+        private static readonly Color POINTER_COLOR = Color.Yellow;
+        private const float POINTER_DOT_SIZE = 2f;
+        private const float POINTER_END_CIRCLE_RADIUS = 5f;
+        private const float POINTER_ANTS_SPEED = 15f; // Dots per second
+        private const int POINTER_ANTS_SPACING = 3; // Gap between dots (e.g., 3 means 1 dot drawn, 2 skipped)
+        private const float SELF_CAST_INDICATOR_BUFFER = 5f;
 
         // A list to manage cards that are currently in their "play" animation.
         private readonly List<CombatCard> _playingCards = new List<CombatCard>();
+        private readonly List<CombatEntity> _enemies = new List<CombatEntity>();
+        private float _pointerAntsTimer = 0f;
+
+        public RectangleF PlayArea { get; private set; }
 
         public override bool UsesLetterboxing => false;
 
@@ -36,15 +59,9 @@ namespace ProjectVagabond.Scenes
         {
             base.Initialize();
 
-            // For now, use default speeds. This would later be fetched from player stats.
-            _combatManager = new CombatManager(leftHandSpeed: 10f, rightHandSpeed: 8f);
-
-            _leftHandRenderer = new HandRenderer(_combatManager.LeftHand);
-            _rightHandRenderer = new HandRenderer(_combatManager.RightHand);
-
+            _combatManager = new CombatManager();
             _actionHandUI = new ActionHandUI();
-
-            _inputHandler = new CombatInputHandler(_combatManager, _leftHandRenderer, _rightHandRenderer, _actionHandUI);
+            _inputHandler = new CombatInputHandler(_combatManager, _actionHandUI, this);
             _animationManager = ServiceLocator.Get<AnimationManager>();
         }
 
@@ -56,27 +73,100 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.CardReturnedToHand>(OnCardReturned);
 
             var gameState = ServiceLocator.Get<GameState>();
-            var combatants = new List<int> { gameState.PlayerEntityId, -1 }; // Player and a dummy enemy
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+
+            // --- Enemy Setup ---
+            _enemies.Clear();
+            // Create some dummy enemies for testing
+            _enemies.Add(new CombatEntity(-1, 100, spriteManager.EnemySprite));
+            _enemies.Add(new CombatEntity(-2, 80, spriteManager.EnemySprite));
+            _enemies.Add(new CombatEntity(-3, 120, spriteManager.EnemySprite));
+            _enemies.Add(new CombatEntity(-4, 90, spriteManager.EnemySprite));
+            _enemies.Add(new CombatEntity(-5, 110, spriteManager.EnemySprite));
+
+            CalculateLayouts();
+
+            var combatants = new List<int> { gameState.PlayerEntityId };
+            combatants.AddRange(_enemies.Select(e => e.EntityId));
             _combatManager.StartCombat(combatants);
 
             // Populate menus and load textures here, as Enter() is called after Core.LoadContent()
             var actionManager = ServiceLocator.Get<ActionManager>();
             var allActions = actionManager.GetAllActions();
-            _actionHandUI.SetActions(allActions);
+            _actionHandUI.SetActions(allActions.Where(a => a.Id != "action_pass")); // Exclude pass for now
             _playingCards.Clear();
 
-            _enemyTexture = ServiceLocator.Get<SpriteManager>().EnemySprite;
-            _leftHandRenderer.LoadContent();
-            _rightHandRenderer.LoadContent();
-
-            _leftHandRenderer.EnterScene();
-            _rightHandRenderer.EnterScene();
             _actionHandUI.EnterScene();
             _inputHandler.Reset();
-
-            _animationManager.Register("LeftHandSway", _leftHandRenderer.SwayAnimation);
-            _animationManager.Register("RightHandSway", _rightHandRenderer.SwayAnimation);
         }
+
+        private void CalculateLayouts()
+        {
+            var core = ServiceLocator.Get<Core>();
+            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+
+            // Calculate Play Area, excluding the bottom part for cancellation.
+            float bottomInset = actualScreenVirtualBounds.Height * PLAY_AREA_BOTTOM_EXCLUSION_PERCENT;
+            PlayArea = new RectangleF(
+                actualScreenVirtualBounds.X + PLAY_AREA_INSET_HORIZONTAL,
+                actualScreenVirtualBounds.Y + PLAY_AREA_INSET_VERTICAL_TOP,
+                actualScreenVirtualBounds.Width - (PLAY_AREA_INSET_HORIZONTAL * 2),
+                actualScreenVirtualBounds.Height - PLAY_AREA_INSET_VERTICAL_TOP - bottomInset
+            );
+
+            // Calculate Enemy Layout
+            LayoutEnemies();
+        }
+
+        private void LayoutEnemies()
+        {
+            var core = ServiceLocator.Get<Core>();
+            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+            float screenCenterX = actualScreenVirtualBounds.X + actualScreenVirtualBounds.Width / 2f;
+
+            int enemyCount = _enemies.Count;
+            if (enemyCount == 0) return;
+
+            // Sort by a stable property like ID before layout to prevent swapping.
+            _enemies.Sort((a, b) => a.EntityId.CompareTo(b.EntityId));
+
+            if (enemyCount <= 3)
+            {
+                // Simple side-by-side layout for 1-3 enemies
+                float totalWidth = (enemyCount - 1) * ENEMY_SPACING_X;
+                float startX = screenCenterX - totalWidth / 2f;
+
+                for (int i = 0; i < enemyCount; i++)
+                {
+                    var enemy = _enemies[i];
+                    float x = startX + i * ENEMY_SPACING_X;
+                    enemy.SetLayout(new Vector2(x, ENEMY_BASE_Y), 1.0f);
+                }
+            }
+            else
+            {
+                // Inverted Chevron (V-shape) layout for 4+ enemies
+                float middleIndex = (enemyCount - 1) / 2.0f;
+
+                for (int i = 0; i < enemyCount; i++)
+                {
+                    var enemy = _enemies[i];
+                    float distanceFromMiddle = Math.Abs(i - middleIndex);
+
+                    float x = screenCenterX + (i - middleIndex) * ENEMY_SPACING_X;
+                    // The center enemy (distanceFromMiddle = 0) is at the highest Y (closest).
+                    // Wing enemies move UP (smaller Y) as they get further from the center.
+                    float y = ENEMY_BASE_Y - distanceFromMiddle * ENEMY_STAGGER_Y;
+                    float scale = 1.0f - distanceFromMiddle * ENEMY_STAGGER_SCALE_FACTOR;
+
+                    enemy.SetLayout(new Vector2(x, y), scale);
+                }
+            }
+
+            // Finally, sort by Y-position for correct draw order (back to front).
+            _enemies.Sort((a, b) => a.Position.Y.CompareTo(b.Position.Y));
+        }
+
 
         public override void Exit()
         {
@@ -84,8 +174,6 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
             EventBus.Unsubscribe<GameEvents.CardPlayed>(OnCardPlayed);
             EventBus.Unsubscribe<GameEvents.CardReturnedToHand>(OnCardReturned);
-            _animationManager.Unregister("LeftHandSway");
-            _animationManager.Unregister("RightHandSway");
         }
 
         private void OnCardPlayed(GameEvents.CardPlayed e)
@@ -96,9 +184,40 @@ namespace ProjectVagabond.Scenes
                 _actionHandUI.RemoveCard(e.CardActionData.Id);
                 _playingCards.Add(cardToPlay);
 
-                Vector2 targetPos = e.TargetHand == HandType.Left
-                    ? _leftHandRenderer.VisualCenter
-                    : _rightHandRenderer.VisualCenter;
+                Vector2 targetPos;
+                var core = ServiceLocator.Get<Core>();
+                Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+
+                if (e.TargetEntityIds != null && e.TargetEntityIds.Any())
+                {
+                    if (e.TargetEntityIds.Count == 1)
+                    {
+                        // Single target
+                        var targetEntity = _enemies.FirstOrDefault(enemy => enemy.EntityId == e.TargetEntityIds[0]);
+                        targetPos = targetEntity?.Bounds.Center.ToVector2() ?? actualScreenVirtualBounds.Center.ToVector2();
+                    }
+                    else
+                    {
+                        // Multiple targets (AoE) - find the average position
+                        Vector2 averagePos = Vector2.Zero;
+                        int count = 0;
+                        foreach (var targetId in e.TargetEntityIds)
+                        {
+                            var targetEntity = _enemies.FirstOrDefault(enemy => enemy.EntityId == targetId);
+                            if (targetEntity != null)
+                            {
+                                averagePos += targetEntity.Bounds.Center.ToVector2();
+                                count++;
+                            }
+                        }
+                        targetPos = (count > 0) ? averagePos / count : actualScreenVirtualBounds.Center.ToVector2();
+                    }
+                }
+                else
+                {
+                    // Self-cast (no targets) - animate to a spot above the hand
+                    targetPos = new Vector2(actualScreenVirtualBounds.Center.X, actualScreenVirtualBounds.Bottom - 150);
+                }
 
                 cardToPlay.AnimatePlay(targetPos);
             }
@@ -106,9 +225,10 @@ namespace ProjectVagabond.Scenes
 
         private void OnCardReturned(GameEvents.CardReturnedToHand e)
         {
-            Vector2 startPos = e.SourceHand == HandType.Left
-                ? _leftHandRenderer.VisualCenter
-                : _rightHandRenderer.VisualCenter;
+            // This logic might need adjustment if cards are returned from a specific enemy target
+            var core = ServiceLocator.Get<Core>();
+            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+            Vector2 startPos = actualScreenVirtualBounds.Center.ToVector2();
 
             _actionHandUI.AddCard(e.CardActionData, startPos);
         }
@@ -116,13 +236,13 @@ namespace ProjectVagabond.Scenes
 
         private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)
         {
-            // The HandRenderer now updates its layout dynamically every frame,
-            // so no explicit recalculation is needed here.
+            CalculateLayouts();
         }
 
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
+            _pointerAntsTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // Update and clean up playing cards
             for (int i = _playingCards.Count - 1; i >= 0; i--)
@@ -144,10 +264,12 @@ namespace ProjectVagabond.Scenes
             if (IsInputBlocked) return;
 
             _inputHandler.Update(gameTime);
-
-            _leftHandRenderer.Update(gameTime, _combatManager, _inputHandler);
-            _rightHandRenderer.Update(gameTime, _combatManager, _inputHandler);
             _actionHandUI.Update(gameTime, _inputHandler, _combatManager);
+
+            foreach (var enemy in _enemies)
+            {
+                enemy.Update(gameTime);
+            }
         }
 
         private void ResolveCurrentTurn()
@@ -164,6 +286,11 @@ namespace ProjectVagabond.Scenes
             // Reset for the next turn.
             _combatManager.ResetTurn();
             _inputHandler.Reset();
+
+            // For prototyping, redraw the same hand of cards.
+            var actionManager = ServiceLocator.Get<ActionManager>();
+            var allPlayerActions = actionManager.GetAllActions().Where(a => a.Id != "action_pass");
+            _actionHandUI.SetActions(allPlayerActions);
         }
 
         private void LogResolvedOrder(List<CombatAction> resolvedOrder)
@@ -175,6 +302,7 @@ namespace ProjectVagabond.Scenes
                 var action = resolvedOrder[i];
                 sb.Append($"{i + 1}. Caster: {action.CasterEntityId}, ");
                 sb.Append($"Action: '{action.ActionData.Name}', ");
+                sb.Append($"Targets: {string.Join(", ", action.TargetEntityIds)}, ");
                 sb.Append($"Priority: {action.ActionData.Priority}, ");
                 sb.Append($"Speed: {action.EffectiveCastSpeed:F1}");
                 sb.AppendLine();
@@ -185,19 +313,14 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // Draw placeholder enemy
-            if (_enemyTexture != null)
+            // Draw enemies first
+            foreach (var enemy in _enemies)
             {
-                var enemyPos = new Vector2(
-                    (Global.VIRTUAL_WIDTH - _enemyTexture.Width) / 2f,
-                    20
-                );
-                spriteBatch.Draw(_enemyTexture, enemyPos, Color.White);
+                enemy.Draw(spriteBatch);
             }
 
-            // Draw the hands first so they are in the background
-            _leftHandRenderer.Draw(spriteBatch, font, gameTime);
-            _rightHandRenderer.Draw(spriteBatch, font, gameTime);
+            // Draw targeting indicators underneath the dragged card
+            DrawTargetingIndicators(spriteBatch);
 
             // Draw the hand of cards, skipping the one being dragged
             _actionHandUI.Draw(spriteBatch, font, gameTime, _inputHandler.DraggedCard);
@@ -208,52 +331,170 @@ namespace ProjectVagabond.Scenes
                 _actionHandUI.DrawCard(spriteBatch, font, gameTime, card, false);
             }
 
-            // Draw the dragged card last so it's on top of everything
+            // Draw the dragged card on top of the pointer
             if (_inputHandler.DraggedCard != null)
             {
                 _actionHandUI.DrawCard(spriteBatch, font, gameTime, _inputHandler.DraggedCard, true);
-
-                // --- DEBUG: Draw the drop zone boundary ---
-                var global = ServiceLocator.Get<Global>();
-                if (global.ShowDebugOverlays)
-                {
-                    var core = ServiceLocator.Get<Core>();
-                    Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
-
-                    float dropZoneHeight = actualScreenVirtualBounds.Height * CombatInputHandler.DROP_ZONE_TOP_PERCENTAGE;
-                    var leftDropZone = new RectangleF(
-                        actualScreenVirtualBounds.X,
-                        actualScreenVirtualBounds.Y,
-                        actualScreenVirtualBounds.Width / 2f,
-                        dropZoneHeight);
-                    var rightDropZone = new RectangleF(
-                        actualScreenVirtualBounds.Center.X,
-                        actualScreenVirtualBounds.Y,
-                        actualScreenVirtualBounds.Width / 2f,
-                        dropZoneHeight);
-
-                    spriteBatch.DrawRectangle(leftDropZone, Color.Red, 1f);
-                    spriteBatch.DrawRectangle(rightDropZone, Color.Blue, 1f);
-                }
             }
 
-            // Draw the "CAST" prompt if in the confirmation state
-            if (_combatManager.CurrentState == PlayerTurnState.Confirming)
+            // --- DEBUG: Draw the play area boundary ---
+            var global = ServiceLocator.Get<Global>();
+            if (global.ShowDebugOverlays)
             {
-                _castPromptPulseTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                const float CAST_PULSE_SPEED = 4f;
-                const float CAST_PULSE_AMOUNT = 0.05f;
-                float pulse = 1.0f + (float)Math.Sin(_castPromptPulseTimer * CAST_PULSE_SPEED) * CAST_PULSE_AMOUNT;
-
-                string castText = "CAST";
-                Vector2 textSize = font.MeasureString(castText);
-                Vector2 position = new Vector2(
-                    (Global.VIRTUAL_WIDTH - textSize.X * pulse) / 2,
-                    Global.VIRTUAL_HEIGHT - 100 - (textSize.Y * (pulse - 1.0f) / 2f)
-                );
-                spriteBatch.DrawString(font, castText, position, Color.Yellow, 0f, Vector2.Zero, pulse, SpriteEffects.None, 0f);
+                spriteBatch.DrawRectangle(PlayArea, Color.Lime, 1f);
             }
         }
+
+        private void DrawTargetingIndicators(SpriteBatch spriteBatch)
+        {
+            if (_inputHandler.DraggedCard == null) return;
+
+            // Only draw indicators if the card is within the valid play area.
+            if (!PlayArea.Contains(_inputHandler.VirtualMousePosition))
+            {
+                return;
+            }
+
+            var actionType = _inputHandler.DraggedCard.Action.TargetType;
+
+            if (actionType == TargetType.Self)
+            {
+                DrawSelfCastIndicator(spriteBatch);
+            }
+            else if (actionType == TargetType.AllEnemies)
+            {
+                foreach (var enemy in _enemies)
+                {
+                    DrawPointerToTarget(spriteBatch, enemy);
+                }
+            }
+            else if (actionType == TargetType.SingleEnemy && _inputHandler.PotentialTargetId.HasValue)
+            {
+                var targetEnemy = _enemies.FirstOrDefault(e => e.EntityId == _inputHandler.PotentialTargetId.Value);
+                if (targetEnemy != null)
+                {
+                    DrawPointerToTarget(spriteBatch, targetEnemy);
+                }
+            }
+        }
+
+        private void DrawPointerToTarget(SpriteBatch spriteBatch, CombatEntity targetEnemy)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            Vector2 startPos = _inputHandler.DraggedCard.CurrentBounds.Center;
+            Vector2 endPos = targetEnemy.Bounds.Center.ToVector2();
+
+            var core = ServiceLocator.Get<Core>();
+            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+            float screenCenterX = actualScreenVirtualBounds.Center.X;
+            float halfScreenWidth = actualScreenVirtualBounds.Width / 2f;
+
+            float normalizedDistFromCenter = (startPos.X - screenCenterX) / halfScreenWidth;
+            float horizontalPush = -normalizedDistFromCenter * POINTER_HORIZONTAL_PUSH;
+
+            Vector2 controlPos = new Vector2(
+                (startPos.X + endPos.X) / 2 + horizontalPush,
+                Math.Min(startPos.Y, endPos.Y) - POINTER_CURVE_OFFSET
+            );
+
+            int dotOffset = (int)(_pointerAntsTimer * POINTER_ANTS_SPEED);
+
+            for (int i = 1; i < POINTER_DOT_COUNT; i++)
+            {
+                int effectiveIndex = i - dotOffset;
+                if (((effectiveIndex % POINTER_ANTS_SPACING) + POINTER_ANTS_SPACING) % POINTER_ANTS_SPACING != 0)
+                {
+                    continue;
+                }
+
+                float t = (float)i / POINTER_DOT_COUNT;
+                float oneMinusT = 1 - t;
+                Vector2 pointOnCurve = oneMinusT * oneMinusT * startPos + 2 * oneMinusT * t * controlPos + t * t * endPos;
+
+                spriteBatch.Draw(pixel, pointOnCurve, null, POINTER_COLOR, 0f, new Vector2(0.5f), POINTER_DOT_SIZE, SpriteEffects.None, 0f);
+            }
+
+            spriteBatch.DrawCircle(endPos, POINTER_END_CIRCLE_RADIUS, 12, POINTER_COLOR, POINTER_DOT_SIZE);
+        }
+
+        private void DrawSelfCastIndicator(SpriteBatch spriteBatch)
+        {
+            var cardBounds = _inputHandler.DraggedCard.CurrentBounds;
+
+            var indicatorBounds = new RectangleF(
+                cardBounds.X - SELF_CAST_INDICATOR_BUFFER,
+                cardBounds.Y - SELF_CAST_INDICATOR_BUFFER,
+                cardBounds.Width + SELF_CAST_INDICATOR_BUFFER * 2,
+                cardBounds.Height + SELF_CAST_INDICATOR_BUFFER * 2
+            );
+
+            var topLeft = new Vector2(indicatorBounds.Left, indicatorBounds.Top);
+            var topRight = new Vector2(indicatorBounds.Right, indicatorBounds.Top);
+            var bottomLeft = new Vector2(indicatorBounds.Left, indicatorBounds.Bottom);
+            var bottomRight = new Vector2(indicatorBounds.Right, indicatorBounds.Bottom);
+
+            DrawMarchingLine(spriteBatch, topLeft, topRight);
+            DrawMarchingLine(spriteBatch, topRight, bottomRight);
+            DrawMarchingLine(spriteBatch, bottomRight, bottomLeft);
+            DrawMarchingLine(spriteBatch, bottomLeft, topLeft);
+        }
+
+        private void DrawMarchingLine(SpriteBatch spriteBatch, Vector2 start, Vector2 end)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            float length = Vector2.Distance(start, end);
+            if (length < 1f) return;
+
+            Vector2 direction = Vector2.Normalize(end - start);
+            int numDots = (int)(length / POINTER_DOT_SIZE) + 1;
+            int dotOffset = (int)(_pointerAntsTimer * POINTER_ANTS_SPEED);
+
+            for (int i = 0; i < numDots; i++)
+            {
+                int effectiveIndex = i - dotOffset;
+                if (((effectiveIndex % POINTER_ANTS_SPACING) + POINTER_ANTS_SPACING) % POINTER_ANTS_SPACING != 0)
+                {
+                    continue;
+                }
+
+                float distanceAlongLine = i * POINTER_DOT_SIZE;
+                if (distanceAlongLine > length) break;
+
+                Vector2 pointOnLine = start + direction * distanceAlongLine;
+                spriteBatch.Draw(pixel, pointOnLine, null, POINTER_COLOR, 0f, new Vector2(0.5f), POINTER_DOT_SIZE, SpriteEffects.None, 0f);
+            }
+        }
+
+        #region Public Accessors for InputHandler
+        public CombatEntity FindClosestEnemyTo(Vector2 position)
+        {
+            return _enemies
+                .OrderBy(e => Vector2.DistanceSquared(e.Bounds.Center.ToVector2(), position))
+                .FirstOrDefault();
+        }
+
+        public void SetEntityTargeted(int entityId, bool isTargeted)
+        {
+            var entity = _enemies.FirstOrDefault(e => e.EntityId == entityId);
+            if (entity != null)
+            {
+                entity.IsTargeted = isTargeted;
+            }
+        }
+
+        public void SetAllEnemiesTargeted(bool isTargeted)
+        {
+            foreach (var enemy in _enemies)
+            {
+                enemy.IsTargeted = isTargeted;
+            }
+        }
+
+        public List<int> GetAllEnemyIds()
+        {
+            return _enemies.Select(e => e.EntityId).ToList();
+        }
+        #endregion
 
         public override Rectangle GetAnimatedBounds()
         {

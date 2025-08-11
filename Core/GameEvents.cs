@@ -1,5 +1,6 @@
 ﻿using ProjectVagabond.Encounters;
 using ProjectVagabond.Combat;
+using System.Collections.Generic;
 
 namespace ProjectVagabond
 {
@@ -104,7 +105,7 @@ namespace ProjectVagabond
         public struct CardPlayed
         {
             public ActionData CardActionData { get; set; }
-            public HandType TargetHand { get; set; }
+            public List<int> TargetEntityIds { get; set; }
         }
 
         /// <summary>
@@ -113,7 +114,6 @@ namespace ProjectVagabond
         public struct CardReturnedToHand
         {
             public ActionData CardActionData { get; set; }
-            public HandType SourceHand { get; set; }
         }
     }
 }

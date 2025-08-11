@@ -64,9 +64,13 @@ namespace ProjectVagabond.Combat.UI
 
         // Drag-specific animation
         private Vector2 _lastVelocity;
-        private const float DRAG_TILT_FACTOR = 0.04f; // How much to tilt based on velocity.X
-        private const float MAX_DRAG_TILT_RADIANS = 0.4f; // Max tilt in either direction
+        private const float DRAG_TILT_FACTOR = 0.08f; // How much to tilt based on velocity.X
+        private const float MAX_DRAG_TILT_RADIANS = 0.6f; // Max tilt in either direction
         private const float DRAG_TILT_LERP_SPEED = 15f; // How quickly the tilt catches up
+        private bool _isDragInPlayArea = true;
+        private const float DRAG_SCALE = 1.2f;
+        private const float DRAG_SCALE_OUTSIDE_AREA_MULTIPLIER = 0.9f;
+        private const float DRAG_SCALE_LERP_SPEED = 10f;
 
         public CombatCard(ActionData action)
         {
@@ -164,6 +168,14 @@ namespace ProjectVagabond.Combat.UI
             _lastVelocity = velocity;
         }
 
+        /// <summary>
+        /// Informs the card whether it is currently being dragged inside the valid play area.
+        /// </summary>
+        public void SetDragPlayAreaStatus(bool isInPlayArea)
+        {
+            _isDragInPlayArea = isInPlayArea;
+        }
+
         public void Update(GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -174,10 +186,14 @@ namespace ProjectVagabond.Combat.UI
                 // When dragged, the shadow is always visible and offset
                 ShadowOffset = DRAGGED_SHADOW_OFFSET;
 
-                // --- New drag tilt logic ---
+                // --- Drag tilt logic ---
                 float targetTilt = _lastVelocity.X * DRAG_TILT_FACTOR;
                 targetTilt = MathHelper.Clamp(targetTilt, -MAX_DRAG_TILT_RADIANS, MAX_DRAG_TILT_RADIANS);
                 CurrentRotation = MathHelper.Lerp(CurrentRotation, targetTilt, DRAG_TILT_LERP_SPEED * deltaTime);
+
+                // --- Drag scale logic ---
+                float targetScale = _isDragInPlayArea ? DRAG_SCALE : DRAG_SCALE * DRAG_SCALE_OUTSIDE_AREA_MULTIPLIER;
+                CurrentScale = MathHelper.Lerp(CurrentScale, targetScale, DRAG_SCALE_LERP_SPEED * deltaTime);
             }
 
             if (_isPlayAnimating)
@@ -255,8 +271,11 @@ namespace ProjectVagabond.Combat.UI
         public void StartDragSway()
         {
             const float SWAY_SPEED = 4f;
-            const float SWAY_AMOUNT = 2f;
+            const float SWAY_AMOUNT = 1f;
             _dragSway = new OrganicSwayAnimation(SWAY_SPEED, SWAY_SPEED * 1.2f, SWAY_AMOUNT, SWAY_AMOUNT);
+            // Set initial drag properties here instead of using AnimateTo
+            ShadowAlpha = 0.5f;
+            _isDragInPlayArea = true; // Assume it starts in a valid area
         }
 
         public void StopDragSway()

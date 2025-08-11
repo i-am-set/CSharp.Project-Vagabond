@@ -1,8 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
+using ProjectVagabond.Combat;
+using ProjectVagabond.Combat.UI;
+using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,7 +36,6 @@ namespace ProjectVagabond.Combat.UI
         // State-based Y positions
         private const float HIDDEN_Y_OFFSET = 250f;
         private const float PEEKING_Y_OFFSET = 110f; // Raised slightly for better default visibility
-        private const float LOWERED_Y_OFFSET = 140f; // Position when a card is being dragged into the drop zone
         private const float ACTIVE_Y_OFFSET = 0f;
 
         // Appearance
@@ -166,15 +169,10 @@ namespace ProjectVagabond.Combat.UI
             }
 
             float newTargetYOffset;
-            bool isDraggingInDropZone = inputHandler.DraggedCard != null && inputHandler.PotentialDropHand != HandType.None;
 
-            if (combatManager.CurrentState == PlayerTurnState.Confirming || combatManager.CurrentState == PlayerTurnState.Resolving)
+            if (combatManager.CurrentState == PlayerTurnState.Resolving)
             {
                 newTargetYOffset = HIDDEN_Y_OFFSET;
-            }
-            else if (isDraggingInDropZone)
-            {
-                newTargetYOffset = LOWERED_Y_OFFSET;
             }
             else if (isMouseInActiveZone && inputHandler.DraggedCard == null)
             {
@@ -423,3 +421,4 @@ namespace ProjectVagabond.Combat.UI
         }
     }
 }
+﻿

@@ -4,6 +4,25 @@ using System.Text.Json.Serialization;
 namespace ProjectVagabond.Combat
 {
     /// <summary>
+    /// Defines the targeting behavior of a combat action.
+    /// </summary>
+    public enum TargetType
+    {
+        /// <summary>
+        /// Targets a single enemy.
+        /// </summary>
+        SingleEnemy,
+        /// <summary>
+        /// Targets the caster.
+        /// </summary>
+        Self,
+        /// <summary>
+        /// Targets all enemies.
+        /// </summary>
+        AllEnemies
+    }
+
+    /// <summary>
     /// Represents a single spell or action that can be performed in combat.
     /// This class is designed to be deserialized from a JSON file.
     /// </summary>
@@ -18,11 +37,11 @@ namespace ProjectVagabond.Combat
         [JsonPropertyName("priority")]
         public int Priority { get; set; } = 0;
 
+        [JsonPropertyName("targetType")]
+        public TargetType TargetType { get; set; } = TargetType.SingleEnemy;
+
         [JsonPropertyName("sprites")]
         public ActionSpriteData Sprites { get; set; }
-
-        [JsonPropertyName("combinations")]
-        public List<SynergyData> Combinations { get; set; } = new List<SynergyData>();
     }
 
     /// <summary>
@@ -38,17 +57,5 @@ namespace ProjectVagabond.Combat
 
         [JsonPropertyName("release")]
         public string Release { get; set; }
-    }
-
-    /// <summary>
-    /// Defines a synergy rule, specifying what happens when this action is paired with another.
-    /// </summary>
-    public class SynergyData
-    {
-        [JsonPropertyName("pairedWith")]
-        public string PairedWith { get; set; }
-
-        [JsonPropertyName("combinesToBecome")]
-        public string CombinesToBecome { get; set; }
     }
 }

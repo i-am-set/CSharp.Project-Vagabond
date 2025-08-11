@@ -1,4 +1,9 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
+using ProjectVagabond.Combat;
+using ProjectVagabond.Combat.UI;
+using ProjectVagabond.Scenes;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -28,28 +33,28 @@ namespace ProjectVagabond.Combat
                     Id = "spell_fireball",
                     Name = "Fireball",
                     Priority = 0,
-                    Combinations = new List<SynergyData>
-                    {
-                        new SynergyData { PairedWith = "spell_wind_gust", CombinesToBecome = "spell_firestorm" }
-                    }
+                    TargetType = TargetType.SingleEnemy
                 },
                 new ActionData
                 {
                     Id = "spell_ice_shard",
                     Name = "Ice Shard",
-                    Priority = 0
+                    Priority = 0,
+                    TargetType = TargetType.SingleEnemy
                 },
                 new ActionData
                 {
                     Id = "spell_wind_gust",
                     Name = "Wind Gust",
-                    Priority = 1
+                    Priority = 1,
+                    TargetType = TargetType.AllEnemies
                 },
                 new ActionData
                 {
-                    Id = "spell_firestorm",
-                    Name = "Firestorm",
-                    Priority = 0
+                    Id = "spell_heal",
+                    Name = "Heal",
+                    Priority = 0,
+                    TargetType = TargetType.Self
                 },
                 new ActionData
                 {

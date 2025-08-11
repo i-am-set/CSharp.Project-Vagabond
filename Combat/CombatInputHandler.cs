@@ -3,7 +3,10 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
 using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
+using ProjectVagabond.Scenes;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Combat
 {
@@ -14,17 +17,11 @@ namespace ProjectVagabond.Combat
     public class CombatInputHandler
     {
         private readonly CombatManager _combatManager;
-        private readonly HandRenderer _leftHandRenderer;
-        private readonly HandRenderer _rightHandRenderer;
         private readonly ActionHandUI _actionHandUI;
         private readonly HapticsManager _hapticsManager;
+        private readonly CombatScene _combatScene;
 
         // --- TUNING CONSTANTS ---
-        /// <summary>
-        /// Defines the vertical portion of the screen that acts as the drop zone for cards.
-        /// 0.9f means the top 90% of the screen is the drop zone.
-        /// </summary>
-        public const float DROP_ZONE_TOP_PERCENTAGE = 0.85f;
         /// <summary>
         /// The minimum distance the mouse must move (in virtual pixels) after clicking a card
         /// before a drag operation officially begins.
@@ -41,18 +38,16 @@ namespace ProjectVagabond.Combat
         public CombatCard HeldCard { get; private set; } // Card being held on click, but not yet dragged
         private Vector2 _dragStartOffset;
         public Vector2 DragStartPosition { get; private set; } // Mouse position where the click started
-        public HandType PotentialDropHand { get; private set; }
-        public HandType InvalidDropHand { get; private set; }
-        private HandType _previousPotentialDropHand = HandType.None;
+        public int? PotentialTargetId { get; private set; }
+        private int? _previousPotentialTargetId = null;
 
         public Vector2 VirtualMousePosition { get; private set; }
 
-        public CombatInputHandler(CombatManager combatManager, HandRenderer leftHandRenderer, HandRenderer rightHandRenderer, ActionHandUI actionHandUI)
+        public CombatInputHandler(CombatManager combatManager, ActionHandUI actionHandUI, CombatScene combatScene)
         {
             _combatManager = combatManager;
-            _leftHandRenderer = leftHandRenderer;
-            _rightHandRenderer = rightHandRenderer;
             _actionHandUI = actionHandUI;
+            _combatScene = combatScene;
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
         }
 
@@ -66,8 +61,7 @@ namespace ProjectVagabond.Combat
             _previousVirtualMousePosition = Core.TransformMouse(_previousMouseState.Position);
             DraggedCard = null;
             HeldCard = null;
-            PotentialDropHand = HandType.None;
-            InvalidDropHand = HandType.None;
+            PotentialTargetId = null;
         }
 
         public void Update(GameTime gameTime)
@@ -124,16 +118,6 @@ namespace ProjectVagabond.Combat
                             DraggedCard.IsBeingDragged = true;
                             DraggedCard.StartDragSway();
                             _dragStartOffset = new Vector2(DraggedCard.CurrentBounds.Width / 2f, DraggedCard.CurrentBounds.Height / 2f);
-
-                            // Initial animation values when drag begins
-                            DraggedCard.AnimateTo(
-                                position: DraggedCard.CurrentBounds.Position,
-                                scale: 1.2f,
-                                tint: Color.White,
-                                rotation: 0f, // Ensure card is upright when dragged
-                                alpha: 1f,
-                                shadowAlpha: 0.5f
-                            );
                         }
                     }
 
@@ -158,20 +142,6 @@ namespace ProjectVagabond.Combat
                     }
                 }
             }
-
-
-            // --- Hand Cancellation Click (can happen in any state) ---
-            if (isClickPressed && DraggedCard == null && HeldCard == null)
-            {
-                if (!string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId) && _leftHandRenderer.Bounds.Contains(VirtualMousePosition))
-                {
-                    _combatManager.CancelAction(HandType.Left);
-                }
-                else if (!string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId) && _rightHandRenderer.Bounds.Contains(VirtualMousePosition))
-                {
-                    _combatManager.CancelAction(HandType.Right);
-                }
-            }
         }
 
         private void CancelDrag()
@@ -182,14 +152,17 @@ namespace ProjectVagabond.Combat
                 DraggedCard.IsBeingDragged = false;
             }
 
+            // Clear targeting visuals
+            if (PotentialTargetId.HasValue)
+            {
+                _combatScene.SetEntityTargeted(PotentialTargetId.Value, false);
+            }
+            _combatScene.SetAllEnemiesTargeted(false);
+
+
             DraggedCard = null;
             HeldCard = null;
-            PotentialDropHand = HandType.None;
-            InvalidDropHand = HandType.None;
-            _leftHandRenderer.IsPotentialDropTarget = false;
-            _rightHandRenderer.IsPotentialDropTarget = false;
-            _leftHandRenderer.IsInvalidDropTarget = false;
-            _rightHandRenderer.IsInvalidDropTarget = false;
+            PotentialTargetId = null;
         }
 
 
@@ -199,74 +172,82 @@ namespace ProjectVagabond.Combat
 
             DraggedCard.SetDragVelocity(velocity);
             DraggedCard.ForcePosition(VirtualMousePosition - _dragStartOffset);
+
+            // Inform the card of its status so it can adjust its scale
+            bool isInsidePlayArea = _combatScene.PlayArea.Contains(VirtualMousePosition);
+            DraggedCard.SetDragPlayAreaStatus(isInsidePlayArea);
+
             DraggedCard.Update(gameTime);
 
+            // --- Targeting Logic ---
+            PotentialTargetId = null;
+            _combatScene.SetAllEnemiesTargeted(false); // Clear previous AoE highlight
 
-            var core = ServiceLocator.Get<Core>();
-            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+            var actionType = DraggedCard.Action.TargetType;
 
-            // Determine potential drop target based on the visible screen area
-            float dropZoneHeight = actualScreenVirtualBounds.Height * DROP_ZONE_TOP_PERCENTAGE;
-            var dropZone = new RectangleF(actualScreenVirtualBounds.X, actualScreenVirtualBounds.Y, actualScreenVirtualBounds.Width, dropZoneHeight);
-
-            PotentialDropHand = HandType.None;
-            InvalidDropHand = HandType.None;
-
-            if (dropZone.Contains(VirtualMousePosition))
+            // Only check for targets if the card is in the valid play area.
+            if (isInsidePlayArea)
             {
-                if (VirtualMousePosition.X < actualScreenVirtualBounds.Center.X)
+                if (actionType == TargetType.AllEnemies)
                 {
-                    if (string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId))
-                    {
-                        PotentialDropHand = HandType.Left;
-                    }
-                    else
-                    {
-                        InvalidDropHand = HandType.Left;
-                    }
+                    _combatScene.SetAllEnemiesTargeted(true);
                 }
-                else // Right side
+                else if (actionType == TargetType.SingleEnemy)
                 {
-                    if (string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId))
-                    {
-                        PotentialDropHand = HandType.Right;
-                    }
-                    else
-                    {
-                        InvalidDropHand = HandType.Right;
-                    }
+                    PotentialTargetId = _combatScene.FindClosestEnemyTo(VirtualMousePosition)?.EntityId;
                 }
+                // For Self-cast, we don't need a specific target ID. Being in the play area is enough.
             }
 
-            // Trigger haptic feedback when entering a drop zone
-            if (PotentialDropHand != HandType.None && _previousPotentialDropHand == HandType.None)
+
+            // Update visual indicators for the potential target
+            if (_previousPotentialTargetId.HasValue && _previousPotentialTargetId != PotentialTargetId)
+            {
+                _combatScene.SetEntityTargeted(_previousPotentialTargetId.Value, false);
+            }
+            if (PotentialTargetId.HasValue)
+            {
+                _combatScene.SetEntityTargeted(PotentialTargetId.Value, true);
+            }
+
+            // Trigger haptic feedback when entering a target
+            if (PotentialTargetId.HasValue && !_previousPotentialTargetId.HasValue)
             {
                 _hapticsManager.TriggerWobble(0.5f, 0.1f, 20f);
             }
-            _previousPotentialDropHand = PotentialDropHand;
-
-
-            // Update hand renderers to show they are drop targets
-            _leftHandRenderer.IsPotentialDropTarget = (PotentialDropHand == HandType.Left);
-            _rightHandRenderer.IsPotentialDropTarget = (PotentialDropHand == HandType.Right);
-            _leftHandRenderer.IsInvalidDropTarget = (InvalidDropHand == HandType.Left);
-            _rightHandRenderer.IsInvalidDropTarget = (InvalidDropHand == HandType.Right);
+            _previousPotentialTargetId = PotentialTargetId;
 
             // Handle dropping the card
             if (isClickReleased)
             {
-                if (PotentialDropHand == HandType.Left)
+                bool actionPlayed = false;
+
+                // Only proceed if the card is dropped within the valid play area.
+                if (isInsidePlayArea)
                 {
-                    _combatManager.SelectAction(HandType.Left, DraggedCard.Action.Id);
-                    _hapticsManager.TriggerShake(1.5f, 0.15f);
+                    if (actionType == TargetType.SingleEnemy && PotentialTargetId.HasValue)
+                    {
+                        _combatManager.PlayAction(DraggedCard.Action.Id, new List<int> { PotentialTargetId.Value });
+                        actionPlayed = true;
+                    }
+                    else if (actionType == TargetType.AllEnemies)
+                    {
+                        _combatManager.PlayAction(DraggedCard.Action.Id, _combatScene.GetAllEnemyIds());
+                        actionPlayed = true;
+                    }
+                    else if (actionType == TargetType.Self)
+                    {
+                        _combatManager.PlayAction(DraggedCard.Action.Id, new List<int>()); // Empty list for self-cast
+                        actionPlayed = true;
+                    }
                 }
-                else if (PotentialDropHand == HandType.Right)
+
+                if (actionPlayed)
                 {
-                    _combatManager.SelectAction(HandType.Right, DraggedCard.Action.Id);
                     _hapticsManager.TriggerShake(1.5f, 0.15f);
                 }
 
-                // Reset drag state regardless of success
+                // Reset drag state regardless of success or cancellation.
                 CancelDrag();
             }
         }
@@ -276,37 +257,7 @@ namespace ProjectVagabond.Combat
             // Drag cancellation is handled in HandleMouseInput to ensure correct priority
             if (DraggedCard != null || HeldCard != null) return;
 
-            if (keyboardState.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape))
-            {
-                if (_combatManager.CurrentState == PlayerTurnState.Confirming)
-                {
-                    _combatManager.CancelTurn();
-                    return;
-                }
-
-                if (_combatManager.CurrentState == PlayerTurnState.Selecting)
-                {
-                    bool leftSelected = !string.IsNullOrEmpty(_combatManager.LeftHand.SelectedActionId);
-                    bool rightSelected = !string.IsNullOrEmpty(_combatManager.RightHand.SelectedActionId);
-
-                    if (leftSelected && !rightSelected)
-                    {
-                        _combatManager.CancelAction(HandType.Left);
-                    }
-                    else if (!leftSelected && rightSelected)
-                    {
-                        _combatManager.CancelAction(HandType.Right);
-                    }
-                }
-            }
-
-            if (_combatManager.CurrentState == PlayerTurnState.Confirming)
-            {
-                if (keyboardState.IsKeyDown(Keys.Enter) && _previousKeyboardState.IsKeyUp(Keys.Enter))
-                {
-                    _combatManager.ConfirmTurn();
-                }
-            }
+            // No keyboard shortcuts for turn confirmation in a single-action system yet.
         }
     }
 }
