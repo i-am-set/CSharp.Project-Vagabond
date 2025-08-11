@@ -1,7 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -202,14 +201,6 @@ namespace ProjectVagabond.Combat.UI
         }
 
         /// <summary>
-        /// This method is now a no-op. Layout is calculated dynamically in Update().
-        /// </summary>
-        public void RecalculateLayout()
-        {
-            // This logic is now handled in Update() to ensure it's always correct.
-        }
-
-        /// <summary>
         /// Called when the combat scene is entered to trigger the intro animation.
         /// </summary>
         public void EnterScene()
@@ -245,7 +236,7 @@ namespace ProjectVagabond.Combat.UI
 
             float yPos = windowBottomVirtualY - HAND_HEIGHT + IDLE_POS_Y_OFFSET;
             float xPos;
-            float screenCenterX = Global.VIRTUAL_WIDTH / 2f;
+            float screenCenterX = actualScreenVirtualBounds.Center.X;
             float centeringShift = HAND_WIDTH / 4f;
 
             if (_playerHand.Hand == HandType.Left)

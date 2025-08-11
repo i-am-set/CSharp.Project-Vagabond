@@ -9,6 +9,11 @@ namespace ProjectVagabond.Combat.FSM
     {
         public void OnEnter(CombatManager combatManager)
         {
+            // Animate the card hand into view.
+            combatManager.ActionHandUI?.EnterScene();
+
+            // Immediately begin the first turn.
+            combatManager.FSM.ChangeState(new TurnStartState(), combatManager);
         }
 
         public void OnExit(CombatManager combatManager)

@@ -1,4 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond.Scenes;
+using System.Diagnostics;
 
 namespace ProjectVagabond.Combat.FSM
 {
@@ -9,6 +11,11 @@ namespace ProjectVagabond.Combat.FSM
     {
         public void OnEnter(CombatManager combatManager)
         {
+            Debug.WriteLine("[INFO] Combat has ended. Transitioning back to map.");
+            // TODO: Display victory/defeat screen, grant rewards, etc.
+
+            var sceneManager = ServiceLocator.Get<SceneManager>();
+            sceneManager.ChangeScene(GameSceneState.TerminalMap);
         }
 
         public void OnExit(CombatManager combatManager)

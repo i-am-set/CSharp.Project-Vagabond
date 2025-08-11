@@ -22,6 +22,13 @@ namespace ProjectVagabond.Scenes
         private ActionHandUI _actionHandUI;
         private CombatInputHandler _inputHandler;
         private AnimationManager _animationManager;
+        private GameState _gameState;
+
+        // Player Hands
+        private PlayerHand _leftHand;
+        private PlayerHand _rightHand;
+        private HandRenderer _leftHandRenderer;
+        private HandRenderer _rightHandRenderer;
 
         // --- TUNING CONSTANTS ---
         // Enemy Layout
@@ -63,17 +70,32 @@ namespace ProjectVagabond.Scenes
             _actionHandUI = new ActionHandUI();
             _inputHandler = new CombatInputHandler(_combatManager, _actionHandUI, this);
             _animationManager = ServiceLocator.Get<AnimationManager>();
+            _gameState = ServiceLocator.Get<GameState>();
+
+            // Initialize player hands and their renderers
+            _leftHand = new PlayerHand(HandType.Left, 10f);
+            _rightHand = new PlayerHand(HandType.Right, 10f);
+            _leftHandRenderer = new HandRenderer(_leftHand);
+            _rightHandRenderer = new HandRenderer(_rightHand);
+
+            // Register UI components with the manager so states can access them.
+            _combatManager.RegisterComponents(_actionHandUI, _inputHandler, this);
         }
 
         public override void Enter()
         {
             base.Enter();
             EventBus.Subscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
-            EventBus.Subscribe<GameEvents.CardPlayed>(OnCardPlayed);
+            EventBus.Subscribe<GameEvents.PlayerActionConfirmed>(OnPlayerActionConfirmed);
             EventBus.Subscribe<GameEvents.CardReturnedToHand>(OnCardReturned);
 
-            var gameState = ServiceLocator.Get<GameState>();
             var spriteManager = ServiceLocator.Get<SpriteManager>();
+
+            // Load content for hand renderers
+            _leftHandRenderer.LoadContent();
+            _rightHandRenderer.LoadContent();
+            _leftHandRenderer.EnterScene();
+            _rightHandRenderer.EnterScene();
 
             // --- Enemy Setup ---
             _enemies.Clear();
@@ -86,7 +108,7 @@ namespace ProjectVagabond.Scenes
 
             CalculateLayouts();
 
-            var combatants = new List<int> { gameState.PlayerEntityId };
+            var combatants = new List<int> { _gameState.PlayerEntityId };
             combatants.AddRange(_enemies.Select(e => e.EntityId));
             _combatManager.StartCombat(combatants);
 
@@ -96,7 +118,6 @@ namespace ProjectVagabond.Scenes
             _actionHandUI.SetActions(allActions.Where(a => a.Id != "action_pass")); // Exclude pass for now
             _playingCards.Clear();
 
-            _actionHandUI.EnterScene();
             _inputHandler.Reset();
         }
 
@@ -172,11 +193,11 @@ namespace ProjectVagabond.Scenes
         {
             base.Exit();
             EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
-            EventBus.Unsubscribe<GameEvents.CardPlayed>(OnCardPlayed);
+            EventBus.Unsubscribe<GameEvents.PlayerActionConfirmed>(OnPlayerActionConfirmed);
             EventBus.Unsubscribe<GameEvents.CardReturnedToHand>(OnCardReturned);
         }
 
-        private void OnCardPlayed(GameEvents.CardPlayed e)
+        private void OnPlayerActionConfirmed(GameEvents.PlayerActionConfirmed e)
         {
             var cardToPlay = _actionHandUI.Cards.FirstOrDefault(c => c.Action.Id == e.CardActionData.Id);
             if (cardToPlay != null)
@@ -252,63 +273,45 @@ namespace ProjectVagabond.Scenes
                 if (card.IsAnimationFinished)
                 {
                     _playingCards.RemoveAt(i);
+                    EventBus.Publish(new GameEvents.ActionAnimationComplete());
                 }
             }
 
-            if (_combatManager.CurrentState == PlayerTurnState.Resolving)
-            {
-                ResolveCurrentTurn();
-                return; // Skip other updates for this frame
-            }
+            // The CombatManager's FSM now drives the logic flow.
+            _combatManager.Update(gameTime);
 
-            if (IsInputBlocked) return;
+            // Update hand renderers
+            _leftHandRenderer.Update(gameTime, _combatManager, _inputHandler);
+            _rightHandRenderer.Update(gameTime, _combatManager, _inputHandler);
 
-            _inputHandler.Update(gameTime);
-            _actionHandUI.Update(gameTime, _inputHandler, _combatManager);
-
+            // Enemy animations and other scene-specific visuals are updated here.
+            // The FSM controls when the player can interact.
             foreach (var enemy in _enemies)
             {
                 enemy.Update(gameTime);
             }
         }
 
-        private void ResolveCurrentTurn()
+        /// <summary>
+        /// Called by the ActionExecutionState to trigger the visual representation of an action.
+        /// </summary>
+        public void ExecuteActionVisuals(CombatAction action)
         {
-            var playerActions = _combatManager.GeneratePlayerActions();
-            // In a full game, we would gather actions from enemies as well.
-            var allActions = new List<CombatAction>(playerActions);
-
-            var resolvedOrder = TurnResolver.ResolveTurnOrder(allActions);
-
-            // For this prototype, we just log the result and reset.
-            LogResolvedOrder(resolvedOrder);
-
-            // Reset for the next turn.
-            _combatManager.ResetTurn();
-            _inputHandler.Reset();
-
-            // For prototyping, redraw the same hand of cards.
-            var actionManager = ServiceLocator.Get<ActionManager>();
-            var allPlayerActions = actionManager.GetAllActions().Where(a => a.Id != "action_pass");
-            _actionHandUI.SetActions(allPlayerActions);
-        }
-
-        private void LogResolvedOrder(List<CombatAction> resolvedOrder)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("--- TURN RESOLVED ---");
-            for (int i = 0; i < resolvedOrder.Count; i++)
+            if (action.CasterEntityId == _gameState.PlayerEntityId)
             {
-                var action = resolvedOrder[i];
-                sb.Append($"{i + 1}. Caster: {action.CasterEntityId}, ");
-                sb.Append($"Action: '{action.ActionData.Name}', ");
-                sb.Append($"Targets: {string.Join(", ", action.TargetEntityIds)}, ");
-                sb.Append($"Priority: {action.ActionData.Priority}, ");
-                sb.Append($"Speed: {action.EffectiveCastSpeed:F1}");
-                sb.AppendLine();
+                // The visual of the player's card flying to the target has already completed.
+                // This is where damage effects, sounds, and target reactions would be triggered.
+                Debug.WriteLine($"Player Caster {action.CasterEntityId} used '{action.ActionData.Name}' on targets: {string.Join(", ", action.TargetEntityIds)}");
+                // For now, the effect is instant.
+                EventBus.Publish(new GameEvents.ActionAnimationComplete());
             }
-            sb.AppendLine("---------------------");
-            Debug.WriteLine(sb.ToString());
+            else // AI Action
+            {
+                // TODO: Play AI animations (e.g., enemy sprite animation, particle effects).
+                Debug.WriteLine($"AI Caster {action.CasterEntityId} used '{action.ActionData.Name}' on targets: {string.Join(", ", action.TargetEntityIds)}");
+                // For now, AI actions are instant.
+                EventBus.Publish(new GameEvents.ActionAnimationComplete());
+            }
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -318,6 +321,10 @@ namespace ProjectVagabond.Scenes
             {
                 enemy.Draw(spriteBatch);
             }
+
+            // Draw player hands behind the card UI
+            _leftHandRenderer.Draw(spriteBatch, font, gameTime);
+            _rightHandRenderer.Draw(spriteBatch, font, gameTime);
 
             // Draw targeting indicators underneath the dragged card
             DrawTargetingIndicators(spriteBatch);

@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
 using ProjectVagabond.Combat;
+using ProjectVagabond.Combat.FSM;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Scenes;
 using System;
@@ -86,7 +87,7 @@ namespace ProjectVagabond.Combat
             bool isRightClickPressed = mouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
 
             // --- State: Selecting Actions ---
-            if (_combatManager.CurrentState == PlayerTurnState.Selecting)
+            if (_combatManager.FSM.CurrentState is PlayerActionSelectionState)
             {
                 // Check for cancellation first (right click or escape)
                 if (isRightClickPressed || (keyboardState.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape)))
@@ -227,17 +228,17 @@ namespace ProjectVagabond.Combat
                 {
                     if (actionType == TargetType.SingleEnemy && PotentialTargetId.HasValue)
                     {
-                        _combatManager.PlayAction(DraggedCard.Action.Id, new List<int> { PotentialTargetId.Value });
+                        _combatManager.AddPlayerAction(DraggedCard.Action.Id, new List<int> { PotentialTargetId.Value });
                         actionPlayed = true;
                     }
                     else if (actionType == TargetType.AllEnemies)
                     {
-                        _combatManager.PlayAction(DraggedCard.Action.Id, _combatScene.GetAllEnemyIds());
+                        _combatManager.AddPlayerAction(DraggedCard.Action.Id, _combatScene.GetAllEnemyIds());
                         actionPlayed = true;
                     }
                     else if (actionType == TargetType.Self)
                     {
-                        _combatManager.PlayAction(DraggedCard.Action.Id, new List<int>()); // Empty list for self-cast
+                        _combatManager.AddPlayerAction(DraggedCard.Action.Id, new List<int>()); // Empty list for self-cast
                         actionPlayed = true;
                     }
                 }

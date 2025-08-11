@@ -5,6 +5,7 @@ using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
 using ProjectVagabond.Combat;
+using ProjectVagabond.Combat.FSM;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Scenes;
 using System;
@@ -170,18 +171,23 @@ namespace ProjectVagabond.Combat.UI
 
             float newTargetYOffset;
 
-            if (combatManager.CurrentState == PlayerTurnState.Resolving)
+            if (combatManager.FSM.CurrentState is PlayerActionSelectionState)
             {
-                newTargetYOffset = HIDDEN_Y_OFFSET;
-            }
-            else if (isMouseInActiveZone && inputHandler.DraggedCard == null)
-            {
-                newTargetYOffset = ACTIVE_Y_OFFSET;
+                if (isMouseInActiveZone && inputHandler.DraggedCard == null)
+                {
+                    newTargetYOffset = ACTIVE_Y_OFFSET;
+                }
+                else
+                {
+                    newTargetYOffset = PEEKING_Y_OFFSET;
+                }
             }
             else
             {
-                newTargetYOffset = PEEKING_Y_OFFSET;
+                // Hide if not in player selection state (e.g., confirmed, executing, etc.)
+                newTargetYOffset = HIDDEN_Y_OFFSET;
             }
+
 
             if (newTargetYOffset != _targetMenuYOffset)
             {
@@ -421,4 +427,3 @@ namespace ProjectVagabond.Combat.UI
         }
     }
 }
-﻿

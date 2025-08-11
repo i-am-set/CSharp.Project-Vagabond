@@ -100,9 +100,9 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published when a card is selected from the hand UI to be played.
+        /// Published when the player confirms their action, triggering the card's "play" animation.
         /// </summary>
-        public struct CardPlayed
+        public struct PlayerActionConfirmed
         {
             public ActionData CardActionData { get; set; }
             public List<int> TargetEntityIds { get; set; }
@@ -114,6 +114,13 @@ namespace ProjectVagabond
         public struct CardReturnedToHand
         {
             public ActionData CardActionData { get; set; }
+        }
+
+        /// <summary>
+        /// Published when a combat action's visual animation is complete.
+        /// </summary>
+        public struct ActionAnimationComplete
+        {
         }
     }
 }

@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Combat;
+using ProjectVagabond.Combat.FSM;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
@@ -14,15 +15,6 @@ using System.Text;
 namespace ProjectVagabond.Combat
 {
     /// <summary>
-    /// Defines the distinct phases of the player's turn.
-    /// </summary>
-    public enum PlayerTurnState
-    {
-        Selecting,
-        Resolving
-    }
-
-    /// <summary>
     /// Manages the state of a combat encounter, including player action selection,
     /// and turn phase progression.
     /// </summary>
@@ -30,21 +22,20 @@ namespace ProjectVagabond.Combat
     {
         private readonly ActionManager _actionManager;
         private readonly GameState _gameState;
+        private CombatFSM _fsm;
+        public CombatFSM FSM => _fsm;
 
-        /// <summary>
-        /// The current phase of the player's turn.
-        /// </summary>
-        public PlayerTurnState CurrentState { get; private set; }
+        private readonly List<CombatAction> _actionsForTurn = new List<CombatAction>();
 
         /// <summary>
         /// A list of all entity IDs participating in the combat.
         /// </summary>
         public List<int> Combatants { get; private set; }
 
-        /// <summary>
-        /// The player's chosen action for the current turn.
-        /// </summary>
-        public CombatAction PlayerAction { get; private set; }
+        // UI and Input references for states to access
+        public ActionHandUI ActionHandUI { get; private set; }
+        public CombatInputHandler InputHandler { get; private set; }
+        public CombatScene Scene { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the CombatManager class.
@@ -54,7 +45,18 @@ namespace ProjectVagabond.Combat
             _actionManager = ServiceLocator.Get<ActionManager>();
             _gameState = ServiceLocator.Get<GameState>();
             Combatants = new List<int>();
-            CurrentState = PlayerTurnState.Selecting;
+            _fsm = new CombatFSM();
+            ServiceLocator.Register<CombatManager>(this); // Register self for event handlers
+        }
+
+        /// <summary>
+        /// Registers the core UI and input components with the manager so states can access them.
+        /// </summary>
+        public void RegisterComponents(ActionHandUI handUI, CombatInputHandler inputHandler, CombatScene scene)
+        {
+            ActionHandUI = handUI;
+            InputHandler = inputHandler;
+            Scene = scene;
         }
 
         /// <summary>
@@ -65,52 +67,64 @@ namespace ProjectVagabond.Combat
         {
             Combatants.Clear();
             Combatants.AddRange(combatants);
-            ResetTurn();
+            ClearActionsForTurn();
+            _fsm.ChangeState(new CombatStartState(), this);
         }
 
         /// <summary>
-        /// Sets the player's action for the turn and moves to the resolution phase.
+        /// Creates a CombatAction from player input, adds it to the list for the current turn,
+        /// triggers the card play animation, and transitions the FSM to wait for that animation.
         /// </summary>
         /// <param name="actionId">The ID of the action being played.</param>
         /// <param name="targetIds">A list of entity IDs being targeted.</param>
-        public void PlayAction(string actionId, List<int> targetIds)
+        public void AddPlayerAction(string actionId, List<int> targetIds)
         {
-            if (CurrentState != PlayerTurnState.Selecting) return;
-
             var actionData = _actionManager.GetAction(actionId);
             if (actionData == null) return;
 
             // In a full game, player speed would come from a stats component.
             const float playerSpeed = 10f;
 
-            PlayerAction = new CombatAction(_gameState.PlayerEntityId, actionData, playerSpeed, targetIds);
+            var playerAction = new CombatAction(_gameState.PlayerEntityId, actionData, playerSpeed, targetIds);
+            AddActionForTurn(playerAction);
 
-            EventBus.Publish(new GameEvents.CardPlayed { CardActionData = actionData, TargetEntityIds = targetIds });
+            // Publish the event that tells the UI to animate the card being played.
+            EventBus.Publish(new GameEvents.PlayerActionConfirmed { CardActionData = actionData, TargetEntityIds = targetIds });
 
-            CurrentState = PlayerTurnState.Resolving;
+            // Transition to a state that waits for the card animation to finish.
+            _fsm.ChangeState(new PlayerActionConfirmedState(), this);
         }
 
         /// <summary>
-        /// Resets the turn to its initial state, clearing all selections.
+        /// Adds a pre-constructed action to the list for the current turn.
         /// </summary>
-        public void ResetTurn()
+        public void AddActionForTurn(CombatAction action)
         {
-            PlayerAction = null;
-            CurrentState = PlayerTurnState.Selecting;
+            _actionsForTurn.Add(action);
         }
 
         /// <summary>
-        /// Generates the list of CombatAction objects based on the player's current selections.
+        /// Gets the list of actions queued for the current turn.
         /// </summary>
-        /// <returns>A list of CombatAction objects for the player's turn.</returns>
-        public List<CombatAction> GeneratePlayerActions()
+        public IReadOnlyList<CombatAction> GetActionsForTurn()
         {
-            var actions = new List<CombatAction>();
-            if (PlayerAction != null)
-            {
-                actions.Add(PlayerAction);
-            }
-            return actions;
+            return _actionsForTurn;
+        }
+
+        /// <summary>
+        /// Clears all actions queued for the current turn.
+        /// </summary>
+        public void ClearActionsForTurn()
+        {
+            _actionsForTurn.Clear();
+        }
+
+        /// <summary>
+        /// Updates the combat state machine.
+        /// </summary>
+        public void Update(GameTime gameTime)
+        {
+            _fsm?.Update(gameTime, this);
         }
     }
 }
