@@ -1,0 +1,13 @@
+{
+  "id": "spell_fireball",
+  "name": "Fireball",
+  "priority": 0,
+  "targetType": "SingleEnemy",
+  "effects": [
+    {
+      "type": "DealDamage",
+      "amount": "1d6",
+      "damageType": "Fire"
+    }
+  ]
+}

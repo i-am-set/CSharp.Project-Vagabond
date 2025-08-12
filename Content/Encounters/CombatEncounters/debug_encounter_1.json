@@ -1,0 +1,30 @@
+{
+  "Id": "debug_encounter_1",
+  "Enemies": [
+    {
+      "archetypeId": "basic_enemy",
+      "position": {
+        "X": 0,
+        "Y": 0
+      },
+      "statVariances": {
+        "s": 1,
+        "t": 2
+      }
+    },
+    {
+      "archetypeId": "pyromancer",
+      "position": {
+        "X": 0,
+        "Y": 0
+      }
+    },
+    {
+      "archetypeId": "basic_enemy",
+      "position": {
+        "X": 0,
+        "Y": 0
+      }
+    }
+  ]
+}

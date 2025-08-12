@@ -32,6 +32,7 @@ namespace ProjectVagabond
 
         private bool _loadIsPending = false;
         private List<LoadingTask> _pendingLoadingTasks;
+        private Action _onTransitionCompleteAction;
 
         /// <summary>
         /// The currently active scene.
@@ -78,11 +79,23 @@ namespace ProjectVagabond
         /// <param name="loadingTasks">An optional list of tasks to execute during the transition.</param>
         public void ChangeScene(GameSceneState state, List<LoadingTask> loadingTasks = null)
         {
+            ChangeScene(state, loadingTasks, null);
+        }
+
+        /// <summary>
+        /// Changes the currently active scene via an outro/intro animation sequence, with an action to execute upon completion.
+        /// </summary>
+        /// <param name="state">The state of the scene to switch to.</param>
+        /// <param name="loadingTasks">An optional list of tasks to execute during the transition.</param>
+        /// <param name="onComplete">An action to invoke after the new scene's Enter() method is called.</param>
+        public void ChangeScene(GameSceneState state, List<LoadingTask> loadingTasks, Action onComplete)
+        {
             if (_isTransitioning) return;
 
             _isTransitioning = true;
             _nextSceneState = state;
             _pendingLoadingTasks = loadingTasks;
+            _onTransitionCompleteAction = onComplete;
             _loadIsPending = _pendingLoadingTasks != null && _pendingLoadingTasks.Any();
             _introAnimator = null; // Clear any existing intro animator
 
@@ -93,6 +106,7 @@ namespace ProjectVagabond
             _outroAnimator.OnComplete += HandleOutroComplete;
             _outroAnimator.Start(screenBounds);
         }
+
 
         private void HandleOutroComplete()
         {
@@ -140,6 +154,10 @@ namespace ProjectVagabond
                 _currentScene = newScene;
                 _currentScene.LastUsedInputForNav = this.LastInputDevice;
                 _currentScene.Enter();
+
+                // Invoke the completion action after the scene has been entered.
+                _onTransitionCompleteAction?.Invoke();
+                _onTransitionCompleteAction = null; // Clear the action so it doesn't run again.
 
                 // Start the intro animation for the new scene
                 _introAnimator = new SceneIntroAnimator();

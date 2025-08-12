@@ -64,6 +64,7 @@ namespace ProjectVagabond.Scenes
                     new GenericTask("Initializing dice system...", () => diceSystem.Initialize(core.GraphicsDevice, core.Content)),
                     new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Archetypes")),
                     new GenericTask("Loading encounters...", () => encounterManager.LoadEncounters("Content/Encounters")),
+                    new GenericTask("Loading combat blueprints...", () => encounterManager.LoadCombatEncounters("Content/Encounters/CombatEncounters")),
                     new GenericTask("Generating world...", () => {
                         gameState.InitializeWorld();
                         gameState.InitializeRenderableEntities();

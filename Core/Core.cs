@@ -358,8 +358,21 @@ namespace ProjectVagabond
             }
             if (currentKeyboardState.IsKeyDown(Keys.F5) && _previousKeyboardState.IsKeyUp(Keys.F5))
             {
-                var tasks = new List<LoadingTask> { new DelayTask(0.15f) };
-                _sceneManager.ChangeScene(GameSceneState.Combat, tasks);
+                var encounterManager = ServiceLocator.Get<EncounterManager>();
+                var encounterData = encounterManager.GetRandomCombatEncounter();
+                if (encounterData != null)
+                {
+                    var enemyFactory = new EnemyFactory();
+                    var enemies = enemyFactory.CreateEnemies(encounterData);
+                    var combatScene = _sceneManager.GetScene(GameSceneState.Combat) as CombatScene;
+
+                    var tasks = new List<LoadingTask> { new DelayTask(0.15f) };
+                    _sceneManager.ChangeScene(GameSceneState.Combat, tasks, () => combatScene?.StartCombat(enemies));
+                }
+                else
+                {
+                    Debug.WriteLine("[ERROR] F5 pressed, but no combat encounters are loaded.");
+                }
             }
 
             // Use F2 to trigger a sample grouped dice roll for demonstration.

@@ -8,6 +8,7 @@ using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.FSM;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -77,7 +78,13 @@ namespace ProjectVagabond.Combat.UI
         private float _yAnimationTimer;
         private bool _isYAnimating;
 
-        public ActionHandUI() { }
+        public ActionHandUI()
+        {
+            // Initialize the hand in a default on-screen state.
+            // The FSM will drive it to other states like PEEKING or HIDDEN.
+            _menuYOffset = PEEKING_Y_OFFSET;
+            _targetMenuYOffset = PEEKING_Y_OFFSET;
+        }
 
         /// <summary>
         /// Sets the list of actions to be displayed in this menu.
@@ -130,15 +137,15 @@ namespace ProjectVagabond.Combat.UI
 
 
         /// <summary>
-        /// Called when the combat scene is entered to set initial positions.
+        /// Called by the CombatScene to reset the UI's state at the start of combat.
         /// </summary>
-        public void EnterScene()
+        public void EnterCombat()
         {
-            _menuYOffset = HIDDEN_Y_OFFSET;
+            // This method resets the UI to its default visible state at the beginning of combat.
+            _menuYOffset = PEEKING_Y_OFFSET;
             _targetMenuYOffset = PEEKING_Y_OFFSET;
-            _startYOffset = _menuYOffset;
+            _isYAnimating = false;
             _yAnimationTimer = 0f;
-            _isYAnimating = true;
         }
 
         /// <summary>

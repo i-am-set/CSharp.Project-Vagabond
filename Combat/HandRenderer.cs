@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Combat.FSM;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -65,10 +66,10 @@ namespace ProjectVagabond.Combat.UI
         {
             IdleLoop,
             IdleTwitch,
-            Holding
+            ActionConfirmed
         }
 
-        private readonly PlayerHand _playerHand;
+        private readonly HandType _handType;
         private readonly SpriteManager _spriteManager;
         private readonly Random _random = new Random();
 
@@ -77,15 +78,12 @@ namespace ProjectVagabond.Combat.UI
         private const int HAND_HEIGHT = 256;
         private const int IDLE_POS_Y_OFFSET = 10; // Vertical offset from the bottom of the screen
         private const int SELECTED_Y_OFFSET = 20; // How far the hand moves down when an action is selected
-        private const int INVALID_DROP_Y_OFFSET = 40; // How far the hand moves down when it's an invalid drop target
         private const int IDLE_POS_X_OFFSET = 180; // Horizontal offset from the center
         private const float SLIDE_ANIMATION_DURATION = 0.6f; // Duration for sliding in/out
         private const float FOCUS_ANIMATION_DURATION = 0.5f; // Duration for focus movement
         private const float IDLE_SWAY_SPEED_X = 0.8f;
         private const float IDLE_SWAY_SPEED_Y = 0.6f;
         private const float IDLE_SWAY_AMOUNT = 1.5f;
-        private const float HOVER_Y_LIFT = -10f; // How far the hand moves up when it's a drop target
-        private const float PULSE_SPEED = 8f;
         private const float MIN_IDLE_TWITCH_DELAY_SECONDS = 2.0f; // Minimum time before a random idle animation plays.
         private const float MAX_IDLE_TWITCH_DELAY_SECONDS = 6.0f; // Maximum time before a random idle animation plays.
 
@@ -105,41 +103,15 @@ namespace ProjectVagabond.Combat.UI
         private float _currentAnimationDuration;
         private bool _isAnimating;
         public OrganicSwayAnimation SwayAnimation { get; }
-        private float _pulseTimer = 0f;
-
-        /// <summary>
-        /// When true, the hand will render a highlight to indicate it's a valid drop target.
-        /// </summary>
-        public bool IsPotentialDropTarget { get; set; }
-
-        /// <summary>
-        /// When true, the hand will animate downwards to indicate it's an invalid drop target.
-        /// </summary>
-        public bool IsInvalidDropTarget { get; set; }
 
         /// <summary>
         /// The current screen bounds of the hand renderer.
         /// </summary>
         public Rectangle Bounds => new Rectangle((int)_currentPosition.X, (int)_currentPosition.Y, HAND_WIDTH, HAND_HEIGHT);
 
-        /// <summary>
-        /// The calculated visual center of the hand, useful for animation targets.
-        /// </summary>
-        public Vector2 VisualCenter
+        public HandRenderer(HandType handType)
         {
-            get
-            {
-                // The visual center is where the hand "holds" things.
-                // This is an estimate based on the sprite's appearance.
-                float visualCenterY = Bounds.Y + Bounds.Height * 0.4f;
-                return new Vector2(Bounds.Center.X, visualCenterY);
-            }
-        }
-
-
-        public HandRenderer(PlayerHand playerHand)
-        {
-            _playerHand = playerHand;
+            _handType = handType;
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             SwayAnimation = new OrganicSwayAnimation(IDLE_SWAY_SPEED_X, IDLE_SWAY_SPEED_Y, IDLE_SWAY_AMOUNT, IDLE_SWAY_AMOUNT);
         }
@@ -148,7 +120,7 @@ namespace ProjectVagabond.Combat.UI
         {
             var core = ServiceLocator.Get<Core>();
             var textureFactory = ServiceLocator.Get<TextureFactory>();
-            string handTypeString = _playerHand.Hand == HandType.Left ? "left" : "right";
+            string handTypeString = _handType == HandType.Left ? "left" : "right";
             string assetName = $"Sprites/Hands/cat_hand_{handTypeString}";
             string jsonPath = Path.Combine(core.Content.RootDirectory, $"{assetName}.json");
 
@@ -227,7 +199,7 @@ namespace ProjectVagabond.Combat.UI
         /// <summary>
         /// Updates the hand's animation state.
         /// </summary>
-        public void Update(GameTime gameTime, CombatManager combatManager, CombatInputHandler inputHandler)
+        public void Update(GameTime gameTime, CombatManager combatManager)
         {
             // --- Layout Calculation (every frame for robustness against resolution changes) ---
             var core = ServiceLocator.Get<Core>();
@@ -239,7 +211,7 @@ namespace ProjectVagabond.Combat.UI
             float screenCenterX = actualScreenVirtualBounds.Center.X;
             float centeringShift = HAND_WIDTH / 4f;
 
-            if (_playerHand.Hand == HandType.Left)
+            if (_handType == HandType.Left)
             {
                 xPos = screenCenterX - HAND_WIDTH - (IDLE_POS_X_OFFSET / 2f) - centeringShift;
             }
@@ -260,38 +232,14 @@ namespace ProjectVagabond.Combat.UI
             // --- End Layout Calculation ---
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _pulseTimer += deltaTime;
-
-            bool isActionSelected = !string.IsNullOrEmpty(_playerHand.SelectedActionId);
-            bool isAnyCardBeingDragged = inputHandler.DraggedCard != null;
             Vector2 desiredPosition = _idlePosition;
 
-            if (isAnyCardBeingDragged)
+            // The hand's position is now determined by the combat FSM state.
+            var fsmState = combatManager.FSM.CurrentState;
+            if (fsmState is PlayerActionConfirmedState || fsmState is ActionExecutionState)
             {
-                // A drag is in progress. Determine this hand's state during the drag.
-                if (isActionSelected)
-                {
-                    // This hand is occupied, so it's an invalid target and should move down.
-                    desiredPosition.Y += INVALID_DROP_Y_OFFSET;
-                }
-                else // This hand is empty
-                {
-                    // It's a potential target, so check if the input handler has marked it as such.
-                    if (IsPotentialDropTarget)
-                    {
-                        desiredPosition.Y += HOVER_Y_LIFT;
-                    }
-                    // If it's not the potential target (mouse is elsewhere), it just stays at idle.
-                }
-            }
-            else
-            {
-                // No drag is in progress. Apply standard passive/selected states.
-                if (isActionSelected)
-                {
-                    desiredPosition.Y += SELECTED_Y_OFFSET;
-                }
-                // If not selected, it just stays at the idle position.
+                // Move the hands down and out of the way while actions are executing.
+                desiredPosition.Y += SELECTED_Y_OFFSET;
             }
 
             StartAnimation(desiredPosition, FOCUS_ANIMATION_DURATION);
@@ -311,31 +259,33 @@ namespace ProjectVagabond.Combat.UI
             }
 
             // --- Animator State Machine ---
-            UpdateAnimationState(isActionSelected, deltaTime);
+            UpdateAnimationState(fsmState, deltaTime);
             _animator?.Update(gameTime);
         }
 
         /// <summary>
         /// Manages the state transitions for the hand's keyframed animations.
         /// </summary>
-        private void UpdateAnimationState(bool isActionSelected, float deltaTime)
+        private void UpdateAnimationState(ICombatState fsmState, float deltaTime)
         {
             if (_animator == null) return;
 
-            // --- State: Holding ---
-            if (isActionSelected)
+            bool isActionExecuting = fsmState is PlayerActionConfirmedState || fsmState is ActionExecutionState;
+
+            // --- State: ActionConfirmed ---
+            if (isActionExecuting)
             {
-                if (_currentState != HandAnimationState.Holding)
+                if (_currentState != HandAnimationState.ActionConfirmed)
                 {
-                    _animator.Play("hold");
-                    _currentState = HandAnimationState.Holding;
+                    _animator.Play("hold"); // Use the "hold" animation for this state
+                    _currentState = HandAnimationState.ActionConfirmed;
                 }
             }
             // --- State: Idle (Looping or Twitching) ---
             else
             {
-                // Transition from Holding back to Idle
-                if (_currentState == HandAnimationState.Holding)
+                // Transition from ActionConfirmed back to Idle
+                if (_currentState == HandAnimationState.ActionConfirmed)
                 {
                     _animator.Play("idle_loop");
                     _currentState = HandAnimationState.IdleLoop;
@@ -388,22 +338,15 @@ namespace ProjectVagabond.Combat.UI
 
             Vector2 finalPosition = _currentPosition;
 
-            // Apply idle sway only when not doing a major animation and action is not selected
-            if (!_isAnimating && string.IsNullOrEmpty(_playerHand.SelectedActionId))
+            // Apply idle sway only when not doing a major position animation.
+            if (!_isAnimating)
             {
                 finalPosition += SwayAnimation.Offset;
             }
 
-            Color tint = Color.White;
-            if (IsPotentialDropTarget)
-            {
-                float pulse = 0.75f + (float)Math.Sin(_pulseTimer * PULSE_SPEED) * 0.25f; // Varies between 0.5 and 1.0
-                tint = Color.Lerp(Color.White, Color.Yellow, pulse);
-            }
-
             // The animator is drawn at the final calculated position, which includes
             // both the base position animation and the procedural sway.
-            _animator.Draw(spriteBatch, finalPosition, tint);
+            _animator.Draw(spriteBatch, finalPosition, Color.White);
         }
     }
 }

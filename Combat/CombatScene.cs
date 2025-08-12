@@ -26,8 +26,6 @@ namespace ProjectVagabond.Scenes
         private ActionResolver _actionResolver;
 
         // Player Hands
-        private PlayerHand _leftHand;
-        private PlayerHand _rightHand;
         private HandRenderer _leftHandRenderer;
         private HandRenderer _rightHandRenderer;
 
@@ -81,10 +79,8 @@ namespace ProjectVagabond.Scenes
 
 
             // Initialize player hands and their renderers
-            _leftHand = new PlayerHand(HandType.Left, 10f);
-            _rightHand = new PlayerHand(HandType.Right, 10f);
-            _leftHandRenderer = new HandRenderer(_leftHand);
-            _rightHandRenderer = new HandRenderer(_rightHand);
+            _leftHandRenderer = new HandRenderer(HandType.Left);
+            _rightHandRenderer = new HandRenderer(HandType.Right);
 
             // Register UI components with the manager so states can access them.
             _combatManager.RegisterComponents(_actionHandUI, _inputHandler, this);
@@ -97,41 +93,44 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.PlayerActionConfirmed>(OnPlayerActionConfirmed);
             EventBus.Subscribe<GameEvents.CardReturnedToHand>(OnCardReturned);
 
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
-
             // Load content for hand renderers
             _leftHandRenderer.LoadContent();
             _rightHandRenderer.LoadContent();
             _leftHandRenderer.EnterScene();
             _rightHandRenderer.EnterScene();
 
+            // Clear any previous combat state
+            _enemies.Clear();
+            _playingCards.Clear();
+            _playerEntity = null;
+        }
+
+        /// <summary>
+        /// Initializes the combat with a specific set of dynamically created enemies.
+        /// This is called by the SceneManager after the scene has been entered.
+        /// </summary>
+        public void StartCombat(List<CombatEntity> enemies)
+        {
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+
             // --- Player and Enemy Setup ---
             _enemies.Clear();
-            // Create player entity
+            _enemies.AddRange(enemies);
             // TODO: Get real health from player stats component
             _playerEntity = new CombatEntity(_gameState.PlayerEntityId, 100, spriteManager.PlayerSprite);
 
-            // Create some dummy enemies for testing
-            _enemies.Add(new CombatEntity(-1, 100, spriteManager.EnemySprite));
-            _enemies.Add(new CombatEntity(-2, 80, spriteManager.EnemySprite));
-            _enemies.Add(new CombatEntity(-3, 120, spriteManager.EnemySprite));
-            _enemies.Add(new CombatEntity(-4, 90, spriteManager.EnemySprite));
-            _enemies.Add(new CombatEntity(-5, 110, spriteManager.EnemySprite));
-
             CalculateLayouts();
+
+            // Reset the UI state before starting the FSM
+            _actionHandUI.EnterCombat();
+            _playingCards.Clear();
+            _inputHandler.Reset();
 
             var combatants = new List<int> { _gameState.PlayerEntityId };
             combatants.AddRange(_enemies.Select(e => e.EntityId));
             _combatManager.StartCombat(combatants);
-
-            // Populate menus and load textures here, as Enter() is called after Core.LoadContent()
-            var actionManager = ServiceLocator.Get<ActionManager>();
-            var allActions = actionManager.GetAllActions();
-            _actionHandUI.SetActions(allActions.Where(a => a.Id != "action_pass")); // Exclude pass for now
-            _playingCards.Clear();
-
-            _inputHandler.Reset();
         }
+
 
         private void CalculateLayouts()
         {
@@ -301,8 +300,8 @@ namespace ProjectVagabond.Scenes
             _combatManager.Update(gameTime);
 
             // Update hand renderers
-            _leftHandRenderer.Update(gameTime, _combatManager, _inputHandler);
-            _rightHandRenderer.Update(gameTime, _combatManager, _inputHandler);
+            _leftHandRenderer.Update(gameTime, _combatManager);
+            _rightHandRenderer.Update(gameTime, _combatManager);
 
             // Enemy animations and other scene-specific visuals are updated here.
             // The FSM controls when the player can interact.

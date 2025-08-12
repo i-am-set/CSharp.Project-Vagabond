@@ -16,29 +16,19 @@ namespace ProjectVagabond.Combat.FSM
             string entityName = (currentEntityId == gameState.PlayerEntityId) ? "Player" : currentEntityId.ToString();
 
             var componentStore = ServiceLocator.Get<ComponentStore>();
-            var itemManager = ServiceLocator.Get<ItemManager>();
-
             var deckComp = componentStore.GetComponent<CombatDeckComponent>(currentEntityId);
 
             if (deckComp != null)
             {
                 // --- Discard Phase ---
-                var combatantComp = componentStore.GetComponent<CombatantComponent>(currentEntityId);
-                var equipmentComp = componentStore.GetComponent<EquipmentComponent>(currentEntityId);
-                string weaponId = equipmentComp?.EquippedWeaponId ?? combatantComp?.DefaultWeaponId;
-                string temporaryWeaponActionId = null;
-                if (!string.IsNullOrEmpty(weaponId))
-                {
-                    var weapon = itemManager.GetWeapon(weaponId);
-                    temporaryWeaponActionId = weapon?.GrantedActionIds?.FirstOrDefault();
-                }
-
-                // Move all non-temporary cards to discard pile
-                var cardsToDiscard = deckComp.Hand.Where(id => id != temporaryWeaponActionId).ToList();
-                deckComp.DiscardPile.AddRange(cardsToDiscard);
+                // Move all cards from hand to discard pile. Temporary cards are not in the hand list.
+                deckComp.DiscardPile.AddRange(deckComp.Hand);
                 deckComp.Hand.Clear();
-                Debug.WriteLine($"    ... Discarded {cardsToDiscard.Count} cards for Entity {currentEntityId}.");
+                Debug.WriteLine($"    ... Discarded {deckComp.DiscardPile.Count} cards for Entity {currentEntityId}.");
             }
+
+            // Clear any temporary actions created for this turn.
+            combatManager.ClearTemporaryActions();
 
             Debug.WriteLine($"  --- Turn End: Entity {entityName} ---");
 

@@ -1,7 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 
@@ -19,11 +21,10 @@ namespace ProjectVagabond
         public ArchetypeManager() { }
 
         /// <summary>
-        /// Creates a default set of archetypes for testing if none are loaded from files.
+        /// Creates a default, failsafe player archetype if the JSON file fails to load.
         /// </summary>
-        private void CreateDefaultArchetypes()
+        private void CreateFailsafePlayerArchetype()
         {
-            // Default Player
             var playerComponents = new List<IComponent>
             {
                 new ArchetypeIdComponent { ArchetypeId = "player" },
@@ -34,28 +35,13 @@ namespace ProjectVagabond
                 new HighImportanceComponent(),
                 new RenderableComponent { Color = ServiceLocator.Get<Global>().PlayerColor },
                 new HealthComponent { MaxHealth = 100, CurrentHealth = 100 },
-                new CombatantComponent { DefaultWeaponId = "weapon_unarmed_punch", InnateActionIds = new List<string> { "spell_fireball", "spell_ice_shard" } },
+                new CombatantComponent { DefaultWeaponId = "weapon_unarmed_punch", InnateActionIds = new List<string> { "spell_fireball", "spell_ice_shard", "spell_wind_gust", "spell_heal" } },
                 new EquipmentComponent(),
                 new ActiveStatusEffectComponent(),
                 new EnergyRegenComponent(),
                 new CombatDeckComponent()
             };
             _archetypes["player"] = new ArchetypeTemplate("player", "Player", playerComponents);
-
-            // Default Enemy
-            var enemyComponents = new List<IComponent>
-            {
-                new ArchetypeIdComponent { ArchetypeId = "basic_enemy" },
-                new PositionComponent(),
-                new StatsComponent { Strength = 3, Agility = 4, Tenacity = 3, Intelligence = 2, Charm = 1 },
-                new RenderableComponent { Color = ServiceLocator.Get<Global>().Palette_Red },
-                new HealthComponent { MaxHealth = 50, CurrentHealth = 50 },
-                new CombatantComponent { DefaultWeaponId = "weapon_unarmed_claw" },
-                new EquipmentComponent(),
-                new AIComponent { Intellect = AIIntellect.Normal },
-                new CombatDeckComponent()
-            };
-            _archetypes["basic_enemy"] = new ArchetypeTemplate("basic_enemy", "Bandit", enemyComponents);
         }
 
         /// <summary>
@@ -132,11 +118,12 @@ namespace ProjectVagabond
                 }
             }
 
-            // If after loading, no archetypes exist, create default ones for testing.
-            if (_archetypes.Count == 0)
+            // --- FAILSAFE ---
+            // The player archetype is essential for the game to run. If it's not loaded, create a default one.
+            if (!_archetypes.ContainsKey("player"))
             {
-                Console.WriteLine("[INFO] No archetype files found or loaded. Creating default archetypes for testing.");
-                CreateDefaultArchetypes();
+                Debug.WriteLine("[ArchetypeManager] [CRITICAL FAILURE] 'player.json' not found or failed to load. Creating a failsafe player archetype. Please ensure the file exists and its 'Copy to Output Directory' property is set to 'Copy if newer'.");
+                CreateFailsafePlayerArchetype();
             }
         }
 
@@ -169,8 +156,12 @@ namespace ProjectVagabond
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"[WARNING] Could not set property '{property.Name}' on component '{component.GetType().Name}': {ex.Message}");
+                        Debug.WriteLine($"[ArchetypeManager] [CRITICAL FAILURE] Could not set property '{property.Name}' on component '{component.GetType().Name}'. Reason: {ex.Message}. Check the JSON definition.");
                     }
+                }
+                else
+                {
+                    Debug.WriteLine($"[ArchetypeManager] [WARNING] Property '{property.Name}' not found or cannot be written to on component '{component.GetType().Name}'.");
                 }
             }
         }

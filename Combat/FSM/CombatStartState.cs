@@ -16,12 +16,43 @@ namespace ProjectVagabond.Combat.FSM
             BuildDecksForAllCombatants(combatManager);
             Debug.WriteLine("  ... Decks built for all combatants.");
 
-            // Animate the card hand into view.
-            combatManager.ActionHandUI?.EnterScene();
+            CalculateInitiativeOrder(combatManager);
+
+            // The ActionHandUI is now fully reactive to the FSM state in its Update loop.
+            // Proactively telling it to animate here caused a race condition where cards were
+            // added to the hand while it was still animating in from off-screen.
+            // combatManager.ActionHandUI?.EnterScene(); // This line is the source of the bug and has been removed.
 
             // Immediately begin the first turn.
             combatManager.FSM.ChangeState(new TurnStartState(), combatManager);
         }
+
+        private void CalculateInitiativeOrder(CombatManager combatManager)
+        {
+            var componentStore = ServiceLocator.Get<ComponentStore>();
+            var random = new System.Random();
+
+            // Create a list of tuples with (entityId, agilityScore)
+            var initiatives = combatManager.Combatants.Select(id => {
+                var stats = componentStore.GetComponent<StatsComponent>(id);
+                // Initiative is Agility + a small random factor to break ties
+                var agilityScore = (stats?.Agility ?? 1) + (float)random.NextDouble();
+                return (Id: id, Score: agilityScore);
+            }).ToList();
+
+            // Order by the score descending
+            var orderedIds = initiatives.OrderByDescending(x => x.Score).Select(x => x.Id).ToList();
+            combatManager.SetInitiativeOrder(orderedIds);
+
+            Debug.WriteLine("  ... Initiative order determined:");
+            for (int i = 0; i < orderedIds.Count; i++)
+            {
+                var entityId = orderedIds[i];
+                var entityName = (entityId == ServiceLocator.Get<GameState>().PlayerEntityId) ? "Player" : entityId.ToString();
+                Debug.WriteLine($"    {i + 1}. Entity {entityName} (Score: {initiatives.First(x => x.Id == entityId).Score:F2})");
+            }
+        }
+
 
         private void BuildDecksForAllCombatants(CombatManager combatManager)
         {
@@ -33,8 +64,12 @@ namespace ProjectVagabond.Combat.FSM
             {
                 var combatantComp = componentStore.GetComponent<CombatantComponent>(entityId);
                 var equipmentComp = componentStore.GetComponent<EquipmentComponent>(entityId);
-                var deckComp = new CombatDeckComponent();
-                componentStore.AddComponent(entityId, deckComp);
+                var deckComp = componentStore.GetComponent<CombatDeckComponent>(entityId);
+                if (deckComp == null)
+                {
+                    deckComp = new CombatDeckComponent();
+                    componentStore.AddComponent(entityId, deckComp);
+                }
 
                 var permanentActionIds = new List<string>();
 
@@ -44,8 +79,8 @@ namespace ProjectVagabond.Combat.FSM
                     permanentActionIds.AddRange(combatantComp.InnateActionIds);
                 }
 
-                // Add weapon actions
-                string weaponId = equipmentComp?.EquippedWeaponId ?? combatantComp?.DefaultWeaponId;
+                // Add special moves from the equipped weapon
+                string weaponId = equipmentComp?.EquippedWeaponId;
                 if (!string.IsNullOrEmpty(weaponId))
                 {
                     var weapon = itemManager.GetWeapon(weaponId);

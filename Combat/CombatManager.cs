@@ -28,6 +28,8 @@ namespace ProjectVagabond.Combat
         private readonly List<CombatAction> _actionsForTurn = new List<CombatAction>();
         private List<int> _initiativeOrder = new List<int>();
         private int _currentTurnIndex = -1;
+        private readonly Dictionary<string, ActionData> _temporaryActions = new Dictionary<string, ActionData>();
+
 
         /// <summary>
         /// A list of all entity IDs participating in the combat.
@@ -72,14 +74,17 @@ namespace ProjectVagabond.Combat
             Combatants.Clear();
             Combatants.AddRange(combatants);
             ClearActionsForTurn();
-
-            // Simple initiative: for now, player always goes first, then enemies.
-            _initiativeOrder.Clear();
-            _initiativeOrder.Add(_gameState.PlayerEntityId);
-            _initiativeOrder.AddRange(combatants.Where(id => id != _gameState.PlayerEntityId));
             _currentTurnIndex = 0;
-
             _fsm.ChangeState(new CombatStartState(), this);
+        }
+
+        /// <summary>
+        /// Sets the calculated initiative order for the combat.
+        /// </summary>
+        public void SetInitiativeOrder(List<int> order)
+        {
+            _initiativeOrder = order;
+            _currentTurnIndex = 0;
         }
 
         /// <summary>
@@ -141,6 +146,32 @@ namespace ProjectVagabond.Combat
         public void ClearActionsForTurn()
         {
             _actionsForTurn.Clear();
+        }
+
+        /// <summary>
+        /// Caches a dynamically generated action for the duration of the current turn.
+        /// </summary>
+        public void AddTemporaryAction(ActionData actionData)
+        {
+            if (actionData == null || string.IsNullOrEmpty(actionData.Id)) return;
+            _temporaryActions[actionData.Id] = actionData;
+        }
+
+        /// <summary>
+        /// Retrieves a temporary action from the cache.
+        /// </summary>
+        public ActionData GetTemporaryAction(string id)
+        {
+            _temporaryActions.TryGetValue(id, out var action);
+            return action;
+        }
+
+        /// <summary>
+        /// Clears all temporary actions from the cache. Should be called at the end of a turn.
+        /// </summary>
+        public void ClearTemporaryActions()
+        {
+            _temporaryActions.Clear();
         }
 
         /// <summary>

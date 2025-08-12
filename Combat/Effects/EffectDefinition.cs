@@ -1,7 +1,4 @@
-﻿using Microsoft.Xna.Framework.Graphics;
-using ProjectVagabond.Combat.Effects;
-using System.Collections.Generic;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace ProjectVagabond.Combat.Effects
 {

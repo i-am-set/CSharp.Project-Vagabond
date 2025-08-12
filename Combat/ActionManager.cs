@@ -5,9 +5,11 @@ using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ProjectVagabond.Combat
 {
@@ -22,114 +24,93 @@ namespace ProjectVagabond.Combat
         public ActionManager() { }
 
         /// <summary>
-        /// Creates a default set of actions for testing if none are loaded from files.
-        /// </summary>
-        private List<ActionData> CreateDefaultActions()
-        {
-            return new List<ActionData>
-            {
-                new ActionData
-                {
-                    Id = "spell_fireball",
-                    Name = "Fireball",
-                    Priority = 0,
-                    TargetType = TargetType.SingleEnemy
-                },
-                new ActionData
-                {
-                    Id = "spell_ice_shard",
-                    Name = "Ice Shard",
-                    Priority = 0,
-                    TargetType = TargetType.SingleEnemy
-                },
-                new ActionData
-                {
-                    Id = "spell_wind_gust",
-                    Name = "Wind Gust",
-                    Priority = 1,
-                    TargetType = TargetType.AllEnemies
-                },
-                new ActionData
-                {
-                    Id = "spell_heal",
-                    Name = "Heal",
-                    Priority = 0,
-                    TargetType = TargetType.Self
-                },
-                new ActionData
-                {
-                    Id = "action_pass",
-                    Name = "Pass",
-                    Priority = -10
-                }
-            };
-        }
-
-        /// <summary>
         /// Loads all .json files from a specified directory, deserializes them into
-        /// ActionData objects, and stores them for later use. If no files are found,
-        /// it populates the manager with a default set of actions.
+        //  ActionData objects, and stores them for later use.
         /// </summary>
         /// <param name="directoryPath">The path to the directory containing action JSON files.</param>
         public void LoadActions(string directoryPath)
         {
-            if (Directory.Exists(directoryPath))
+            Debug.WriteLine($"[ActionManager] --- Loading Actions from: {Path.GetFullPath(directoryPath)} ---");
+
+            if (!Directory.Exists(directoryPath))
             {
-                var jsonOptions = new JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true,
-                };
+                Debug.WriteLine($"[ActionManager] [ERROR] Action directory not found. No actions will be loaded.");
+                return;
+            }
 
-                string[] actionFiles = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories);
+            var jsonOptions = new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                Converters = { new JsonStringEnumConverter() }
+            };
 
-                foreach (var file in actionFiles)
+            string[] actionFiles = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories);
+            Debug.WriteLine($"[ActionManager] Found {actionFiles.Length} JSON files to process.");
+
+            foreach (var file in actionFiles)
+            {
+                try
                 {
-                    try
+                    string jsonContent = File.ReadAllText(file);
+                    var actionData = JsonSerializer.Deserialize<ActionData>(jsonContent, jsonOptions);
+
+                    if (actionData != null && !string.IsNullOrEmpty(actionData.Id))
                     {
-                        string jsonContent = File.ReadAllText(file);
-                        var actionData = JsonSerializer.Deserialize<ActionData>(jsonContent, jsonOptions);
-
-                        if (actionData != null && !string.IsNullOrEmpty(actionData.Id))
+                        if (!_actions.TryAdd(actionData.Id, actionData))
                         {
-                            if (!_actions.TryAdd(actionData.Id, actionData))
-                            {
-                                Console.WriteLine($"[WARNING] Duplicate action ID '{actionData.Id}' found in '{file}'. Overwriting previous entry.");
-                                _actions[actionData.Id] = actionData;
-                            }
+                            Debug.WriteLine($"[ActionManager] [WARNING] Duplicate action ID '{actionData.Id}' found in '{file}'. Overwriting.");
+                            _actions[actionData.Id] = actionData;
                         }
                         else
                         {
-                            Console.WriteLine($"[WARNING] Could not load action from {file}. Invalid format or missing ID.");
+                            Debug.WriteLine($"[ActionManager] Successfully loaded Action: '{actionData.Id}'");
                         }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        Console.WriteLine($"[ERROR] Failed to load or parse action file {file}: {ex.Message}");
+                        Debug.WriteLine($"[ActionManager] [WARNING] Could not load action from {file}. Invalid format or missing ID.");
                     }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[ActionManager] [ERROR] Failed to load or parse action file {file}: {ex.Message}");
                 }
             }
 
-            // If after loading, no actions exist, create default ones for testing.
-            if (_actions.Count == 0)
+            Debug.WriteLine($"[ActionManager] --- Finished loading. Total actions loaded: {_actions.Count} ---");
+
+            // --- FAILSAFE ---
+            // Ensure the essential generic attack action exists to prevent crashes.
+            if (!_actions.ContainsKey("action_attack"))
             {
-                Console.WriteLine("[INFO] No action files found or loaded. Creating default actions for testing.");
-                var defaultActions = CreateDefaultActions();
-                foreach (var action in defaultActions)
+                Debug.WriteLine("[ActionManager] [CRITICAL FAILURE] 'action_attack.json' not found or failed to load. Creating failsafe version.");
+                _actions["action_attack"] = new ActionData
                 {
-                    _actions[action.Id] = action;
-                }
+                    Id = "action_attack",
+                    Name = "Attack",
+                    TargetType = TargetType.SingleEnemy,
+                    Priority = 0
+                };
             }
         }
 
         /// <summary>
-        /// Retrieves a loaded action by its unique ID.
+        /// Retrieves a loaded action by its unique ID. It will also check the CombatManager's
+        /// temporary action cache for dynamically generated actions.
         /// </summary>
         /// <param name="id">The ID of the action to retrieve.</param>
         /// <returns>The ActionData object, or null if not found.</returns>
         public ActionData GetAction(string id)
         {
-            _actions.TryGetValue(id, out var action);
-            return action;
+            // First, try to get a permanent, loaded action.
+            if (_actions.TryGetValue(id, out var action))
+            {
+                return action;
+            }
+
+            // If not found, check the combat manager for a temporary action for the current turn.
+            var combatManager = ServiceLocator.Get<CombatManager>();
+            return combatManager?.GetTemporaryAction(id);
         }
 
         /// <summary>

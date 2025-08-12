@@ -1,0 +1,7 @@
+{
+  "id": "weapon_unarmed_punch",
+  "name": "Unarmed Strike",
+  "attackName": "Punch",
+  "damage": "1d4",
+  "damageType": "Blunt"
+}
