@@ -1,4 +1,5 @@
-﻿using ProjectVagabond.Encounters;
+﻿using ProjectVagabond.Combat;
+using ProjectVagabond.Encounters;
 using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
@@ -14,7 +15,9 @@ namespace ProjectVagabond
     public class EncounterManager
     {
         private readonly Dictionary<string, EncounterData> _encounters = new Dictionary<string, EncounterData>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, CombatEncounterData> _combatEncounters = new Dictionary<string, CombatEncounterData>(StringComparer.OrdinalIgnoreCase);
         private SceneManager _sceneManager; // Lazy loaded
+        private readonly Random _random = new Random();
 
         public EncounterManager() { }
 
@@ -63,6 +66,48 @@ namespace ProjectVagabond
                     Console.WriteLine($"[ERROR] Failed to load or parse encounter file {file}: {ex.Message}");
                 }
             }
+        }
+
+        /// <summary>
+        /// Loads all combat encounter blueprint .json files from a specified directory.
+        /// </summary>
+        public void LoadCombatEncounters(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+            {
+                Console.WriteLine($"[ERROR] Combat encounter directory not found: {directoryPath}");
+                return;
+            }
+
+            var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            string[] encounterFiles = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories);
+
+            foreach (var file in encounterFiles)
+            {
+                try
+                {
+                    string jsonContent = File.ReadAllText(file);
+                    var encounterData = JsonSerializer.Deserialize<CombatEncounterData>(jsonContent, jsonOptions);
+                    if (encounterData != null && !string.IsNullOrEmpty(encounterData.Id))
+                    {
+                        _combatEncounters[encounterData.Id] = encounterData;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ERROR] Failed to load or parse combat encounter file {file}: {ex.Message}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Retrieves a random combat encounter blueprint.
+        /// </summary>
+        /// <returns>A CombatEncounterData object, or null if none are loaded.</returns>
+        public CombatEncounterData GetRandomCombatEncounter()
+        {
+            if (_combatEncounters.Count == 0) return null;
+            return _combatEncounters.Values.ElementAt(_random.Next(_combatEncounters.Count));
         }
 
         /// <summary>

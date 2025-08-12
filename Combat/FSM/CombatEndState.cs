@@ -11,7 +11,8 @@ namespace ProjectVagabond.Combat.FSM
     {
         public void OnEnter(CombatManager combatManager)
         {
-            Debug.WriteLine("[INFO] Combat has ended. Transitioning back to map.");
+            Debug.WriteLine("--- Combat End ---");
+            Debug.WriteLine("  ... Combat has ended. Transitioning back to map.");
             // TODO: Display victory/defeat screen, grant rewards, etc.
 
             var sceneManager = ServiceLocator.Get<SceneManager>();

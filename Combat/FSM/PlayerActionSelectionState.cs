@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using System.Diagnostics;
 
 namespace ProjectVagabond.Combat.FSM
 {
@@ -9,8 +10,7 @@ namespace ProjectVagabond.Combat.FSM
     {
         public void OnEnter(CombatManager combatManager)
         {
-            // The ActionHandUI will automatically become interactive during Update
-            // because the FSM is in this state.
+            Debug.WriteLine("    ... Waiting for player input...");
         }
 
         public void OnExit(CombatManager combatManager)

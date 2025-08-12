@@ -41,22 +41,26 @@
     {
       "Type": "ProjectVagabond.CombatantComponent, ProjectVagabond",
       "Properties": {
-        "AttackPower": "1d6",
-        "AttackRange": 1.5,
-        "AggroRange": 0.0
+        "DefaultWeaponId": "weapon_unarmed_punch",
+        "InnateActionIds": [
+          "spell_fireball",
+          "spell_ice_shard",
+          "spell_wind_gust",
+          "spell_heal"
+        ]
       }
     },
     {
-      "Type": "ProjectVagabond.EquipmentComponent, ProjectVagabond",
-      "Properties": {
-        "EquippedWeaponId": "unarmed"
-      }
+      "Type": "ProjectVagabond.EquipmentComponent, ProjectVagabond"
     },
     {
       "Type": "ProjectVagabond.ActiveStatusEffectComponent, ProjectVagabond"
     },
     {
       "Type": "ProjectVagabond.EnergyRegenComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.CombatDeckComponent, ProjectVagabond"
     }
   ]
 }

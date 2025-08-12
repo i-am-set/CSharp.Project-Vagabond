@@ -46,6 +46,9 @@ namespace ProjectVagabond.Combat.UI
         public static readonly Color DEFAULT_TINT = Color.White;
         private const float DEFAULT_ALPHA = 1f;
         private const float HOVERED_ALPHA = 1f;
+        private const float TEMPORARY_CARD_ALPHA_MULTIPLIER = 0.75f;
+        private static readonly Color TEMPORARY_CARD_TINT = new Color(200, 220, 255);
+        private const float TEMPORARY_CARD_TINT_AMOUNT = 0.3f;
 
         // Shadow properties for different states
         private const float HOVERED_SHADOW_ALPHA = 0.2f; // Shadow opacity when hovered normally
@@ -82,6 +85,14 @@ namespace ProjectVagabond.Combat.UI
         public void SetActions(IEnumerable<ActionData> actions)
         {
             _cards = actions.Select(a => new CombatCard(a)).ToList();
+        }
+
+        /// <summary>
+        /// Sets the hand to a specific list of pre-configured CombatCard objects.
+        /// </summary>
+        public void SetHand(IEnumerable<CombatCard> cards)
+        {
+            _cards = cards.ToList();
         }
 
         /// <summary>
@@ -353,6 +364,15 @@ namespace ProjectVagabond.Combat.UI
             var cardDrawPosition = card.CurrentBounds.Center;
             var pixelOrigin = new Vector2(0.5f);
 
+            // --- Temporary Card Visuals ---
+            var finalTint = card.CurrentTint;
+            var finalAlpha = card.CurrentAlpha;
+            if (card.IsTemporary)
+            {
+                finalAlpha *= TEMPORARY_CARD_ALPHA_MULTIPLIER;
+                finalTint = Color.Lerp(finalTint, TEMPORARY_CARD_TINT, TEMPORARY_CARD_TINT_AMOUNT);
+            }
+
             // 0. Draw Drop Shadow if it's visible
             if (card.ShadowAlpha > 0.01f)
             {
@@ -371,7 +391,7 @@ namespace ProjectVagabond.Combat.UI
                 var dynamicOffset = new Vector2(dynamicShadowX, dynamicShadowY);
                 var baseShadowPosition = cardDrawPosition + dynamicOffset + card.ShadowOffset;
 
-                float baseAlpha = card.ShadowAlpha;
+                float baseAlpha = card.ShadowAlpha * (card.IsTemporary ? TEMPORARY_CARD_ALPHA_MULTIPLIER : 1f);
                 Vector2 baseSize = CARD_SIZE.ToVector2() * cardScale * SHADOW_SCALE_MULTIPLIER;
 
                 // Draw multiple layers to simulate a blurred edge.
@@ -390,11 +410,11 @@ namespace ProjectVagabond.Combat.UI
             }
 
             // 1. Draw Card Background
-            var cardBgColor = new Color(CARD_TEXT_BG_COLOR.ToVector3() * card.CurrentTint.ToVector3()) * card.CurrentAlpha;
+            var cardBgColor = new Color(CARD_TEXT_BG_COLOR.ToVector3() * finalTint.ToVector3()) * finalAlpha;
             spriteBatch.Draw(pixel, cardDrawPosition, null, cardBgColor, cardRotation, pixelOrigin, CARD_SIZE.ToVector2() * cardScale, SpriteEffects.None, 0f);
 
             // 2. Draw placeholder image area
-            var imageAreaColor = new Color(CARD_IMAGE_AREA_COLOR.ToVector3() * card.CurrentTint.ToVector3()) * card.CurrentAlpha;
+            var imageAreaColor = new Color(CARD_IMAGE_AREA_COLOR.ToVector3() * finalTint.ToVector3()) * finalAlpha;
             var imageRectSize = new Vector2(CARD_SIZE.X, CARD_SIZE.Y * (2 / 3f));
             Vector2 imageAreaOffset = new Vector2(0, -CARD_SIZE.Y * (1 / 6f));
             Vector2 rotatedImageOffset = Vector2.Transform(imageAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));
@@ -403,7 +423,7 @@ namespace ProjectVagabond.Combat.UI
 
             // 3. Draw Border
             float borderThickness = isHovered || card.IsBeingDragged ? 3f : 2f;
-            Color borderColor = BORDER_COLOR * card.CurrentAlpha;
+            Color borderColor = BORDER_COLOR * finalAlpha;
             var halfSize = CARD_SIZE.ToVector2() / 2f;
             var corners = new Vector2[4]
             {
@@ -418,7 +438,7 @@ namespace ProjectVagabond.Combat.UI
             spriteBatch.DrawLine(corners[3], corners[0], borderColor, borderThickness);
 
             // 4. Draw action name
-            var textColor = new Color(TEXT_COLOR.ToVector3() * card.CurrentTint.ToVector3()) * card.CurrentAlpha;
+            var textColor = new Color(TEXT_COLOR.ToVector3() * finalTint.ToVector3()) * finalAlpha;
             Vector2 textSize = font.MeasureString(card.Action.Name);
             Vector2 textBgAreaOffset = new Vector2(0, CARD_SIZE.Y * (1 / 3f));
             Vector2 rotatedTextBgOffset = Vector2.Transform(textBgAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));

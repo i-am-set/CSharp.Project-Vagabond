@@ -15,6 +15,7 @@ namespace ProjectVagabond.Combat.FSM
 
         public void OnEnter(CombatManager combatManager)
         {
+            Debug.WriteLine("    ... Waiting for player card animation...");
             _isWaitingForAnimation = true;
             _failsafeTimer = 0f;
             EventBus.Subscribe<GameEvents.ActionAnimationComplete>(OnPlayerActionAnimationCompleted);
@@ -32,7 +33,7 @@ namespace ProjectVagabond.Combat.FSM
                 _failsafeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (_failsafeTimer >= FAILSAFE_DURATION)
                 {
-                    Debug.WriteLine($"[WARNING] Player action confirmation animation timed out. Forcing next state.");
+                    Debug.WriteLine($"    ... [WARNING] Player action confirmation animation timed out. Forcing next state.");
                     OnPlayerActionAnimationCompleted(new GameEvents.ActionAnimationComplete());
                 }
             }
@@ -41,9 +42,10 @@ namespace ProjectVagabond.Combat.FSM
         private void OnPlayerActionAnimationCompleted(GameEvents.ActionAnimationComplete e)
         {
             if (!_isWaitingForAnimation) return;
+            Debug.WriteLine("    ... Player card animation complete.");
             _isWaitingForAnimation = false;
             var combatManager = ServiceLocator.Get<CombatManager>();
-            combatManager.FSM.ChangeState(new AIActionSelectionState(), combatManager);
+            combatManager.FSM.ChangeState(new ActionExecutionState(), combatManager);
         }
     }
 }

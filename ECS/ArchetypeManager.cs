@@ -19,6 +19,46 @@ namespace ProjectVagabond
         public ArchetypeManager() { }
 
         /// <summary>
+        /// Creates a default set of archetypes for testing if none are loaded from files.
+        /// </summary>
+        private void CreateDefaultArchetypes()
+        {
+            // Default Player
+            var playerComponents = new List<IComponent>
+            {
+                new ArchetypeIdComponent { ArchetypeId = "player" },
+                new PositionComponent(),
+                new StatsComponent { Strength = 5, Agility = 5, Tenacity = 5, Intelligence = 5, Charm = 5, SecondsPerEnergyPoint = 5.0f },
+                new ActionQueueComponent(),
+                new PlayerTagComponent(),
+                new HighImportanceComponent(),
+                new RenderableComponent { Color = ServiceLocator.Get<Global>().PlayerColor },
+                new HealthComponent { MaxHealth = 100, CurrentHealth = 100 },
+                new CombatantComponent { DefaultWeaponId = "weapon_unarmed_punch", InnateActionIds = new List<string> { "spell_fireball", "spell_ice_shard" } },
+                new EquipmentComponent(),
+                new ActiveStatusEffectComponent(),
+                new EnergyRegenComponent(),
+                new CombatDeckComponent()
+            };
+            _archetypes["player"] = new ArchetypeTemplate("player", "Player", playerComponents);
+
+            // Default Enemy
+            var enemyComponents = new List<IComponent>
+            {
+                new ArchetypeIdComponent { ArchetypeId = "basic_enemy" },
+                new PositionComponent(),
+                new StatsComponent { Strength = 3, Agility = 4, Tenacity = 3, Intelligence = 2, Charm = 1 },
+                new RenderableComponent { Color = ServiceLocator.Get<Global>().Palette_Red },
+                new HealthComponent { MaxHealth = 50, CurrentHealth = 50 },
+                new CombatantComponent { DefaultWeaponId = "weapon_unarmed_claw" },
+                new EquipmentComponent(),
+                new AIComponent { Intellect = AIIntellect.Normal },
+                new CombatDeckComponent()
+            };
+            _archetypes["basic_enemy"] = new ArchetypeTemplate("basic_enemy", "Bandit", enemyComponents);
+        }
+
+        /// <summary>
         /// Loads all .json files from a specified directory, "bakes" them
         /// into ArchetypeTemplate objects, and stores them for later use.
         /// This process uses reflection and should only be done at load time.
@@ -26,74 +66,77 @@ namespace ProjectVagabond
         /// <param name="directoryPath">The path to the directory containing archetype JSON files.</param>
         public void LoadArchetypes(string directoryPath)
         {
-            if (!Directory.Exists(directoryPath))
+            if (Directory.Exists(directoryPath))
             {
-                Console.WriteLine($"[ERROR] Archetype directory not found: {directoryPath}");
-                return;
+                var jsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                };
+
+                string[] archetypeFiles = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories);
+
+                foreach (var file in archetypeFiles)
+                {
+                    try
+                    {
+                        string jsonContent = File.ReadAllText(file);
+                        var archetypeDto = JsonSerializer.Deserialize<Archetype>(jsonContent, jsonOptions);
+
+                        if (archetypeDto != null && !string.IsNullOrEmpty(archetypeDto.Id))
+                        {
+                            var templateComponents = new List<IComponent>();
+
+                            // Add the ArchetypeIdComponent to the template so it gets cloned with the rest.
+                            templateComponents.Add(new ArchetypeIdComponent { ArchetypeId = archetypeDto.Id });
+
+                            // Process components from the JSON file using reflection.
+                            foreach (var componentDef in archetypeDto.Components)
+                            {
+                                string typeName = componentDef["Type"].ToString();
+                                Type componentType = Type.GetType(typeName, throwOnError: true);
+                                object componentInstance = Activator.CreateInstance(componentType);
+
+                                if (componentDef.TryGetValue("Properties", out object props) && props is JsonElement propertiesElement)
+                                {
+                                    PopulateComponentProperties(componentInstance, propertiesElement);
+                                }
+
+                                if (componentInstance is IInitializableComponent initializable)
+                                {
+                                    initializable.Initialize();
+                                }
+
+                                if (componentInstance is ICloneableComponent cloneableComponent)
+                                {
+                                    templateComponents.Add(cloneableComponent);
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"[WARNING] Component '{componentType.Name}' in archetype '{archetypeDto.Id}' does not implement ICloneableComponent and will not be added to the template.");
+                                }
+                            }
+
+                            // Create and store the final baked template.
+                            var template = new ArchetypeTemplate(archetypeDto.Id, archetypeDto.Name, templateComponents);
+                            _archetypes[template.Id] = template;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"[WARNING] Could not load archetype from {file}. Invalid format or missing ID.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[ERROR] Failed to load or parse archetype file {file}: {ex.Message}");
+                    }
+                }
             }
 
-            var jsonOptions = new JsonSerializerOptions
+            // If after loading, no archetypes exist, create default ones for testing.
+            if (_archetypes.Count == 0)
             {
-                PropertyNameCaseInsensitive = true,
-            };
-
-            string[] archetypeFiles = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories);
-
-            foreach (var file in archetypeFiles)
-            {
-                try
-                {
-                    string jsonContent = File.ReadAllText(file);
-                    var archetypeDto = JsonSerializer.Deserialize<Archetype>(jsonContent, jsonOptions);
-
-                    if (archetypeDto != null && !string.IsNullOrEmpty(archetypeDto.Id))
-                    {
-                        var templateComponents = new List<IComponent>();
-
-                        // Add the ArchetypeIdComponent to the template so it gets cloned with the rest.
-                        templateComponents.Add(new ArchetypeIdComponent { ArchetypeId = archetypeDto.Id });
-
-                        // Process components from the JSON file using reflection.
-                        foreach (var componentDef in archetypeDto.Components)
-                        {
-                            string typeName = componentDef["Type"].ToString();
-                            Type componentType = Type.GetType(typeName, throwOnError: true);
-                            object componentInstance = Activator.CreateInstance(componentType);
-
-                            if (componentDef.TryGetValue("Properties", out object props) && props is JsonElement propertiesElement)
-                            {
-                                PopulateComponentProperties(componentInstance, propertiesElement);
-                            }
-
-                            if (componentInstance is IInitializableComponent initializable)
-                            {
-                                initializable.Initialize();
-                            }
-
-                            if (componentInstance is ICloneableComponent cloneableComponent)
-                            {
-                                templateComponents.Add(cloneableComponent);
-                            }
-                            else
-                            {
-                                Console.WriteLine($"[WARNING] Component '{componentType.Name}' in archetype '{archetypeDto.Id}' does not implement ICloneableComponent and will not be added to the template.");
-                            }
-                        }
-
-                        // Create and store the final baked template.
-                        var template = new ArchetypeTemplate(archetypeDto.Id, archetypeDto.Name, templateComponents);
-                        _archetypes[template.Id] = template;
-                        Console.WriteLine($"[INFO] Baked archetype template: {template.Id}");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[WARNING] Could not load archetype from {file}. Invalid format or missing ID.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"[ERROR] Failed to load or parse archetype file {file}: {ex.Message}");
-                }
+                Console.WriteLine("[INFO] No archetype files found or loaded. Creating default archetypes for testing.");
+                CreateDefaultArchetypes();
             }
         }
 
@@ -176,8 +219,9 @@ namespace ProjectVagabond
                 case JsonValueKind.False:
                     return false;
 
+                case JsonValueKind.Object:
                 case JsonValueKind.Array:
-                    // Use the built-in deserializer to handle arrays of complex objects.
+                    // Use the built-in deserializer to handle complex objects and arrays.
                     var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                     return JsonSerializer.Deserialize(element.GetRawText(), targetType, options);
             }

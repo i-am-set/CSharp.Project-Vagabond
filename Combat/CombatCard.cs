@@ -28,6 +28,7 @@ namespace ProjectVagabond.Combat.UI
         public float ShadowAlpha { get; private set; }
         public Vector2 ShadowOffset { get; private set; }
         public bool IsBeingDragged { get; set; }
+        public bool IsTemporary { get; set; }
 
         // Animation targets
         private Vector2 _targetPosition;
@@ -81,6 +82,7 @@ namespace ProjectVagabond.Combat.UI
             CurrentAlpha = 1f;
             ShadowAlpha = 0f;
             ShadowOffset = Vector2.Zero;
+            IsTemporary = false;
         }
 
         /// <summary>

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond.Combat.FSM
 {
@@ -19,11 +20,14 @@ namespace ProjectVagabond.Combat.FSM
             _isWaitingForAnimation = false;
             _failsafeTimer = 0f;
 
-            // The ActionHandUI will hide automatically based on the FSM state.
-
             var actions = combatManager.GetActionsForTurn();
             var resolvedOrder = TurnResolver.ResolveTurnOrder(new List<CombatAction>(actions));
             _executionQueue = new Queue<CombatAction>(resolvedOrder);
+
+            if (!_executionQueue.Any())
+            {
+                Debug.WriteLine("    ... No actions to execute this turn.");
+            }
 
             EventBus.Subscribe<GameEvents.ActionAnimationComplete>(OnActionAnimationCompleted);
 
@@ -42,7 +46,7 @@ namespace ProjectVagabond.Combat.FSM
                 _failsafeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (_failsafeTimer >= FAILSAFE_DURATION)
                 {
-                    Debug.WriteLine($"[WARNING] Action animation timed out after {FAILSAFE_DURATION}s. Forcing next action.");
+                    Debug.WriteLine($"    ... [WARNING] Action animation timed out after {FAILSAFE_DURATION}s. Forcing next action.");
                     OnActionAnimationCompleted(new GameEvents.ActionAnimationComplete());
                 }
             }
@@ -53,13 +57,16 @@ namespace ProjectVagabond.Combat.FSM
             if (_executionQueue.Count > 0)
             {
                 var actionToExecute = _executionQueue.Dequeue();
+                Debug.WriteLine($"    ... Executing action: {actionToExecute.ActionData.Name} by Caster {actionToExecute.CasterEntityId}");
                 _isWaitingForAnimation = true;
                 _failsafeTimer = 0f;
+                Debug.WriteLine("    ... Waiting for action visuals...");
                 combatManager.Scene.ExecuteActionVisuals(actionToExecute);
             }
             else
             {
                 // All actions for the turn are complete.
+                Debug.WriteLine("    ... All actions executed.");
                 combatManager.FSM.ChangeState(new TurnEndState(), combatManager);
             }
         }
@@ -67,9 +74,9 @@ namespace ProjectVagabond.Combat.FSM
         private void OnActionAnimationCompleted(GameEvents.ActionAnimationComplete e)
         {
             if (!_isWaitingForAnimation) return; // Prevent double execution
-
+            Debug.WriteLine("    ... Action visuals complete.");
             _isWaitingForAnimation = false;
-            var combatManager = ServiceLocator.Get<CombatManager>(); // A bit of a hack, but necessary for event handlers
+            var combatManager = ServiceLocator.Get<CombatManager>();
             ProcessNextAction(combatManager);
         }
     }

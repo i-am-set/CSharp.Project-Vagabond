@@ -23,6 +23,11 @@ namespace ProjectVagabond
         /// </summary>
         public float ActionTimeBudget { get; set; } = 0;
 
+        /// <summary>
+        /// The intelligence level of the AI, determining how it chooses actions in combat.
+        /// </summary>
+        public AIIntellect Intellect { get; set; } = AIIntellect.Normal;
+
         public IComponent Clone()
         {
             return (IComponent)this.MemberwiseClone();

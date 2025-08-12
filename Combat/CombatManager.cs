@@ -26,11 +26,15 @@ namespace ProjectVagabond.Combat
         public CombatFSM FSM => _fsm;
 
         private readonly List<CombatAction> _actionsForTurn = new List<CombatAction>();
+        private List<int> _initiativeOrder = new List<int>();
+        private int _currentTurnIndex = -1;
 
         /// <summary>
         /// A list of all entity IDs participating in the combat.
         /// </summary>
         public List<int> Combatants { get; private set; }
+        public int CurrentTurnEntityId => _currentTurnIndex >= 0 && _currentTurnIndex < _initiativeOrder.Count ? _initiativeOrder[_currentTurnIndex] : -1;
+
 
         // UI and Input references for states to access
         public ActionHandUI ActionHandUI { get; private set; }
@@ -68,7 +72,26 @@ namespace ProjectVagabond.Combat
             Combatants.Clear();
             Combatants.AddRange(combatants);
             ClearActionsForTurn();
+
+            // Simple initiative: for now, player always goes first, then enemies.
+            _initiativeOrder.Clear();
+            _initiativeOrder.Add(_gameState.PlayerEntityId);
+            _initiativeOrder.AddRange(combatants.Where(id => id != _gameState.PlayerEntityId));
+            _currentTurnIndex = 0;
+
             _fsm.ChangeState(new CombatStartState(), this);
+        }
+
+        /// <summary>
+        /// Advances the turn to the next combatant in the initiative order.
+        /// </summary>
+        public void AdvanceTurn()
+        {
+            _currentTurnIndex++;
+            if (_currentTurnIndex >= _initiativeOrder.Count)
+            {
+                _currentTurnIndex = 0; // New round
+            }
         }
 
         /// <summary>
@@ -79,6 +102,7 @@ namespace ProjectVagabond.Combat
         /// <param name="targetIds">A list of entity IDs being targeted.</param>
         public void AddPlayerAction(string actionId, List<int> targetIds)
         {
+            Debug.WriteLine($"    ... Player action '{actionId}' confirmed.");
             var actionData = _actionManager.GetAction(actionId);
             if (actionData == null) return;
 

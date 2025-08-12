@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using ProjectVagabond.Combat.Effects;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace ProjectVagabond.Combat
@@ -40,22 +41,7 @@ namespace ProjectVagabond.Combat
         [JsonPropertyName("targetType")]
         public TargetType TargetType { get; set; } = TargetType.SingleEnemy;
 
-        [JsonPropertyName("sprites")]
-        public ActionSpriteData Sprites { get; set; }
-    }
-
-    /// <summary>
-    /// Contains the file paths for the different animation states of a hand performing an action.
-    /// </summary>
-    public class ActionSpriteData
-    {
-        [JsonPropertyName("hold")]
-        public string Hold { get; set; }
-
-        [JsonPropertyName("cast")]
-        public string Cast { get; set; }
-
-        [JsonPropertyName("release")]
-        public string Release { get; set; }
+        [JsonPropertyName("effects")]
+        public List<EffectDefinition> Effects { get; set; } = new List<EffectDefinition>();
     }
 }

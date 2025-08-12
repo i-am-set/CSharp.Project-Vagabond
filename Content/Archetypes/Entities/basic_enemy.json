@@ -1,0 +1,50 @@
+{
+  "Id": "basic_enemy",
+  "Name": "Bandit",
+  "Components": [
+    {
+      "Type": "ProjectVagabond.PositionComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.StatsComponent, ProjectVagabond",
+      "Properties": {
+        "Strength": 3,
+        "Agility": 4,
+        "Tenacity": 3,
+        "Intelligence": 2,
+        "Charm": 1
+      }
+    },
+    {
+      "Type": "ProjectVagabond.RenderableComponent, ProjectVagabond",
+      "Properties": {
+        "Color": "Palette_Red"
+      }
+    },
+    {
+      "Type": "ProjectVagabond.HealthComponent, ProjectVagabond",
+      "Properties": {
+        "MaxHealth": 50,
+        "CurrentHealth": 50
+      }
+    },
+    {
+      "Type": "ProjectVagabond.CombatantComponent, ProjectVagabond",
+      "Properties": {
+        "DefaultWeaponId": "weapon_unarmed_claw"
+      }
+    },
+    {
+      "Type": "ProjectVagabond.EquipmentComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.AIComponent, ProjectVagabond",
+      "Properties": {
+        "Intellect": "Normal"
+      }
+    },
+    {
+      "Type": "ProjectVagabond.CombatDeckComponent, ProjectVagabond"
+    }
+  ]
+}

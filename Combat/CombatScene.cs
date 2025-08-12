@@ -23,6 +23,7 @@ namespace ProjectVagabond.Scenes
         private CombatInputHandler _inputHandler;
         private AnimationManager _animationManager;
         private GameState _gameState;
+        private ActionResolver _actionResolver;
 
         // Player Hands
         private PlayerHand _leftHand;
@@ -36,6 +37,9 @@ namespace ProjectVagabond.Scenes
         private const float ENEMY_SPACING_X = 150f;
         private const float ENEMY_STAGGER_Y = 20f; // How much further UP (back) each enemy in the V-shape is.
         private const float ENEMY_STAGGER_SCALE_FACTOR = 0.05f; // How much smaller each enemy gets per step back.
+
+        // Player Layout
+        private const float PLAYER_BASE_Y_OFFSET = -80f; // Offset from the bottom of the screen.
 
         // Play Area
         private const float PLAY_AREA_INSET_HORIZONTAL = 50f;
@@ -56,6 +60,7 @@ namespace ProjectVagabond.Scenes
         // A list to manage cards that are currently in their "play" animation.
         private readonly List<CombatCard> _playingCards = new List<CombatCard>();
         private readonly List<CombatEntity> _enemies = new List<CombatEntity>();
+        private CombatEntity _playerEntity;
         private float _pointerAntsTimer = 0f;
 
         public RectangleF PlayArea { get; private set; }
@@ -71,6 +76,9 @@ namespace ProjectVagabond.Scenes
             _inputHandler = new CombatInputHandler(_combatManager, _actionHandUI, this);
             _animationManager = ServiceLocator.Get<AnimationManager>();
             _gameState = ServiceLocator.Get<GameState>();
+            _actionResolver = new ActionResolver();
+            ServiceLocator.Register<ActionResolver>(_actionResolver);
+
 
             // Initialize player hands and their renderers
             _leftHand = new PlayerHand(HandType.Left, 10f);
@@ -97,8 +105,12 @@ namespace ProjectVagabond.Scenes
             _leftHandRenderer.EnterScene();
             _rightHandRenderer.EnterScene();
 
-            // --- Enemy Setup ---
+            // --- Player and Enemy Setup ---
             _enemies.Clear();
+            // Create player entity
+            // TODO: Get real health from player stats component
+            _playerEntity = new CombatEntity(_gameState.PlayerEntityId, 100, spriteManager.PlayerSprite);
+
             // Create some dummy enemies for testing
             _enemies.Add(new CombatEntity(-1, 100, spriteManager.EnemySprite));
             _enemies.Add(new CombatEntity(-2, 80, spriteManager.EnemySprite));
@@ -134,6 +146,14 @@ namespace ProjectVagabond.Scenes
                 actualScreenVirtualBounds.Width - (PLAY_AREA_INSET_HORIZONTAL * 2),
                 actualScreenVirtualBounds.Height - PLAY_AREA_INSET_VERTICAL_TOP - bottomInset
             );
+
+            // Layout Player
+            if (_playerEntity != null)
+            {
+                float playerX = actualScreenVirtualBounds.Center.X;
+                float playerY = actualScreenVirtualBounds.Bottom + PLAYER_BASE_Y_OFFSET;
+                _playerEntity.SetLayout(new Vector2(playerX, playerY), 1.0f);
+            }
 
             // Calculate Enemy Layout
             LayoutEnemies();
@@ -297,18 +317,25 @@ namespace ProjectVagabond.Scenes
         /// </summary>
         public void ExecuteActionVisuals(CombatAction action)
         {
+            // Combine all combatants into a single list for the resolver
+            var allCombatants = new List<CombatEntity>(_enemies);
+            if (_playerEntity != null)
+            {
+                allCombatants.Add(_playerEntity);
+            }
+
+            _actionResolver.Resolve(action, allCombatants);
+
             if (action.CasterEntityId == _gameState.PlayerEntityId)
             {
                 // The visual of the player's card flying to the target has already completed.
                 // This is where damage effects, sounds, and target reactions would be triggered.
-                Debug.WriteLine($"Player Caster {action.CasterEntityId} used '{action.ActionData.Name}' on targets: {string.Join(", ", action.TargetEntityIds)}");
                 // For now, the effect is instant.
                 EventBus.Publish(new GameEvents.ActionAnimationComplete());
             }
             else // AI Action
             {
                 // TODO: Play AI animations (e.g., enemy sprite animation, particle effects).
-                Debug.WriteLine($"AI Caster {action.CasterEntityId} used '{action.ActionData.Name}' on targets: {string.Join(", ", action.TargetEntityIds)}");
                 // For now, AI actions are instant.
                 EventBus.Publish(new GameEvents.ActionAnimationComplete());
             }
@@ -316,7 +343,8 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // Draw enemies first
+            // Draw player and enemies
+            _playerEntity?.Draw(spriteBatch);
             foreach (var enemy in _enemies)
             {
                 enemy.Draw(spriteBatch);

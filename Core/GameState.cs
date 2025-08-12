@@ -71,6 +71,9 @@ namespace ProjectVagabond
         public int InitialActionCount { get; private set; }
         public bool IsActionQueueDirty { get; set; } = true;
 
+        // Player Progression State
+        public List<string> PlayerActionCollection { get; set; } = new List<string>();
+
         // Combat State
         public bool IsInCombat { get; private set; } = false;
         public List<int> Combatants { get; private set; } = new List<int>();
@@ -96,6 +99,13 @@ namespace ProjectVagabond
         public void InitializeWorld()
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0));
+
+            // Initialize the player's master action collection from their archetype's innate skills.
+            var playerCombatantComp = _componentStore.GetComponent<CombatantComponent>(PlayerEntityId);
+            if (playerCombatantComp != null)
+            {
+                PlayerActionCollection.AddRange(playerCombatantComp.InnateActionIds);
+            }
 
             _poiManagerSystem ??= ServiceLocator.Get<POIManagerSystem>();
             _poiManagerSystem.GeneratePOIs();
@@ -155,31 +165,7 @@ namespace ProjectVagabond
             EventBus.Publish(new GameEvents.CombatStateChanged { IsInCombat = true });
             IsInCombat = true;
             Combatants = new List<int>(initialCombatants);
-
-            InitiativeOrder.Clear();
-
-            var initiativeScores = new Dictionary<int, int>();
-
-            foreach (var entityId in Combatants)
-            {
-                var stats = _componentStore.GetComponent<StatsComponent>(entityId);
-                int agility = stats?.Agility ?? 0;
-                int initiative = _random.Next(1, 21) + agility;
-                initiativeScores[entityId] = initiative;
-            }
-
-            InitiativeOrder = Combatants.OrderByDescending(id => initiativeScores[id]).ToList();
-
-            EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = "[palette_yellow]Combat has begun! Initiative Order: " });
-
-            var uniqueNames = EntityNamer.GetUniqueNames(InitiativeOrder);
-            for (int i = 0; i < InitiativeOrder.Count; i++)
-            {
-                var entityId = InitiativeOrder[i];
-                string name = uniqueNames[entityId];
-                string lineMessage = $"[palette_yellow]  {i + 1}. {name} ({initiativeScores[entityId]})";
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = lineMessage });
-            }
+            InitiativeOrder.Clear(); // Initiative is now handled by CombatManager
 
             // No automatic target selection. Player must choose.
             SelectedTargetId = null;
