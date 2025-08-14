@@ -61,6 +61,12 @@
     },
     {
       "Type": "ProjectVagabond.CombatDeckComponent, ProjectVagabond"
+    },
+    {
+      "Type": "ProjectVagabond.PlayerDeckComponent, ProjectVagabond",
+      "Properties": {
+        "MasterDeck": []
+      }
     }
   ]
 }

@@ -67,6 +67,7 @@ namespace ProjectVagabond
         private PreEncounterAnimationSystem _preEncounterAnimationSystem;
         private LoadingScreen _loadingScreen;
         private AnimationManager _animationManager;
+        private DeckManager _deckManager;
 
         // Input State
         private KeyboardState _previousKeyboardState;
@@ -187,6 +188,10 @@ namespace ProjectVagabond
             // GameState must be registered before systems that depend on it in their constructor.
             _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
+
+            // DeckManager depends on GameState and ComponentStore, so it's registered after them.
+            _deckManager = new DeckManager();
+            ServiceLocator.Register<DeckManager>(_deckManager);
 
             // These systems depend on GameState being available in the ServiceLocator.
             var possibleEncounterListBuilder = new PossibleEncounterListBuilder();

@@ -1,5 +1,6 @@
-﻿using ProjectVagabond.Encounters;
+﻿using ProjectVagabond;
 using ProjectVagabond.Combat;
+using ProjectVagabond.Encounters;
 using System.Collections.Generic;
 
 namespace ProjectVagabond
@@ -121,6 +122,15 @@ namespace ProjectVagabond
         /// </summary>
         public struct ActionAnimationComplete
         {
+        }
+
+        /// <summary>
+        /// Published when the player's persistent master deck is modified (e.g., a card is added or removed).
+        /// </summary>
+        public struct PlayerDeckChanged
+        {
+            // This event can be expanded with more data if needed,
+            // but for now, its existence is enough to signal a refresh.
         }
     }
 }

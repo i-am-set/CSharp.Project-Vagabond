@@ -19,9 +19,8 @@ namespace ProjectVagabond.Combat.FSM
             CalculateInitiativeOrder(combatManager);
 
             // The ActionHandUI is now fully reactive to the FSM state in its Update loop.
-            // Proactively telling it to animate here caused a race condition where cards were
-            // added to the hand while it was still animating in from off-screen.
-            // combatManager.ActionHandUI?.EnterScene(); // This line is the source of the bug and has been removed.
+            // Proactively telling it to animate here caused a race condition. This line is removed.
+            // combatManager.ActionHandUI?.EnterScene();
 
             // Immediately begin the first turn.
             combatManager.FSM.ChangeState(new TurnStartState(), combatManager);
@@ -58,6 +57,7 @@ namespace ProjectVagabond.Combat.FSM
         {
             var componentStore = ServiceLocator.Get<ComponentStore>();
             var itemManager = ServiceLocator.Get<ItemManager>();
+            var gameState = ServiceLocator.Get<GameState>();
             var random = new System.Random();
 
             foreach (var entityId in combatManager.Combatants)
@@ -72,6 +72,16 @@ namespace ProjectVagabond.Combat.FSM
                 }
 
                 var permanentActionIds = new List<string>();
+
+                // If this is the player, add cards from their persistent master deck.
+                if (entityId == gameState.PlayerEntityId)
+                {
+                    var playerDeckComp = componentStore.GetComponent<PlayerDeckComponent>(entityId);
+                    if (playerDeckComp?.MasterDeck != null)
+                    {
+                        permanentActionIds.AddRange(playerDeckComp.MasterDeck);
+                    }
+                }
 
                 // Add innate actions
                 if (combatantComp?.InnateActionIds != null)
