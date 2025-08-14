@@ -1,4 +1,5 @@
 ﻿using ProjectVagabond.Combat;
+using ProjectVagabond.Combat.Effects;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -71,12 +72,32 @@ namespace ProjectVagabond
             if (!_weapons.ContainsKey("weapon_unarmed_punch"))
             {
                 Debug.WriteLine("[ItemManager] [CRITICAL FAILURE] 'weapon_unarmed_punch.json' not found or failed to load. Creating failsafe version.");
-                _weapons["weapon_unarmed_punch"] = new Weapon { Id = "weapon_unarmed_punch", Name = "Unarmed Strike", AttackName = "Punch", Damage = "1d4", DamageType = DamageType.Blunt };
+                _weapons["weapon_unarmed_punch"] = new Weapon
+                {
+                    Id = "weapon_unarmed_punch",
+                    Name = "Unarmed Strike",
+                    PrimaryAttack = new ActionData
+                    {
+                        Name = "Punch",
+                        TargetType = TargetType.SingleEnemy,
+                        Effects = new List<EffectDefinition> { new EffectDefinition { Type = "DealDamage", Amount = "3", DamageType = DamageType.Blunt } }
+                    }
+                };
             }
             if (!_weapons.ContainsKey("weapon_unarmed_claw"))
             {
                 Debug.WriteLine("[ItemManager] [CRITICAL FAILURE] 'weapon_unarmed_claw.json' not found or failed to load. Creating failsafe version.");
-                _weapons["weapon_unarmed_claw"] = new Weapon { Id = "weapon_unarmed_claw", Name = "Unarmed Strike", AttackName = "Claw", Damage = "1d4", DamageType = DamageType.Slashing };
+                _weapons["weapon_unarmed_claw"] = new Weapon
+                {
+                    Id = "weapon_unarmed_claw",
+                    Name = "Unarmed Strike",
+                    PrimaryAttack = new ActionData
+                    {
+                        Name = "Claw",
+                        TargetType = TargetType.SingleEnemy,
+                        Effects = new List<EffectDefinition> { new EffectDefinition { Type = "DealDamage", Amount = "3", DamageType = DamageType.Slashing } }
+                    }
+                };
             }
         }
 

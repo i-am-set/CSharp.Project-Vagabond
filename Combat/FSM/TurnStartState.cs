@@ -81,7 +81,6 @@ namespace ProjectVagabond.Combat.FSM
         private ActionData GenerateTemporaryAction(CombatManager combatManager, int entityId)
         {
             var componentStore = ServiceLocator.Get<ComponentStore>();
-            var actionManager = ServiceLocator.Get<ActionManager>();
             var itemManager = ServiceLocator.Get<ItemManager>();
 
             var combatantComp = componentStore.GetComponent<CombatantComponent>(entityId);
@@ -95,41 +94,21 @@ namespace ProjectVagabond.Combat.FSM
 
             if (string.IsNullOrEmpty(weaponId))
             {
-                Debug.WriteLine($"    ... [CRITICAL FAILURE] Entity {entityId} has no weapon or default weapon defined. No temporary attack generated. CombatantComponent dump: DefaultWeaponId='{combatantComp?.DefaultWeaponId}', InnateActionIds='{string.Join(",", combatantComp?.InnateActionIds ?? new List<string>())}'");
+                Debug.WriteLine($"    ... [CRITICAL FAILURE] Entity {entityId} has no weapon or default weapon defined. No temporary attack generated.");
                 return null;
             }
 
             var weapon = itemManager.GetWeapon(weaponId);
-            var attackTemplate = actionManager.GetAction("action_attack");
-
-            if (weapon == null)
+            if (weapon?.PrimaryAttack == null)
             {
-                Debug.WriteLine($"    ... [CRITICAL FAILURE] Failed to generate temporary action: Weapon '{weaponId}' not found in ItemManager. Check that the file exists and 'Copy to Output Directory' is set.");
-                return null;
-            }
-            if (attackTemplate == null)
-            {
-                Debug.WriteLine($"    ... [CRITICAL FAILURE] Failed to generate temporary action: Base 'action_attack' template not found in ActionManager. Check that 'action_attack.json' exists and is loading.");
+                Debug.WriteLine($"    ... [CRITICAL FAILURE] Failed to generate temporary action: Weapon '{weaponId}' not found or has no PrimaryAttack defined.");
                 return null;
             }
 
-            // Dynamically create an ActionData instance from the weapon's primary attack definition.
-            var temporaryWeaponAction = new ActionData
-            {
-                Id = $"temp_{weapon.Id}", // Simplified and robust ID
-                Name = weapon.AttackName,
-                TargetType = attackTemplate.TargetType, // Use target type from the template
-                Priority = attackTemplate.Priority,
-                Effects = new List<EffectDefinition>
-                {
-                    new EffectDefinition
-                    {
-                        Type = "DealDamage",
-                        Amount = weapon.Damage,
-                        DamageType = weapon.DamageType
-                    }
-                }
-            };
+            // The ActionData is now fully defined in the weapon data. We just need to give it a unique ID for this turn.
+            var temporaryWeaponAction = weapon.PrimaryAttack;
+            temporaryWeaponAction.Id = $"temp_{weapon.Id}"; // Assign a temporary, unique ID for this turn.
+
             combatManager.AddTemporaryAction(temporaryWeaponAction);
             Debug.WriteLine($"    ... Generated temporary weapon action '{temporaryWeaponAction.Name}' for Entity {entityId}.");
             return temporaryWeaponAction;

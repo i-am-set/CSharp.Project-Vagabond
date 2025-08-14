@@ -1,7 +1,0 @@
-{
-  "id": "action_attack",
-  "name": "Attack",
-  "priority": 0,
-  "targetType": "SingleEnemy",
-  "effects": []
-}

@@ -1,4 +1,10 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Combat;
+using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond
 {
@@ -20,7 +26,7 @@ namespace ProjectVagabond
         /// <param name="amount">The amount of damage to take. Must be non-negative.</param>
         public void TakeDamage(int amount)
         {
-            if (amount < 0) return; // Can't take negative damage
+            if (amount <= 0) return; // Can't take negative damage
             int oldHealth = CurrentHealth;
             CurrentHealth -= amount;
             if (CurrentHealth < 0)
@@ -30,7 +36,7 @@ namespace ProjectVagabond
 
             if (CurrentHealth != oldHealth)
             {
-                OnHealthChanged?.Invoke(oldHealth - CurrentHealth);
+                OnHealthChanged?.Invoke(-amount);
             }
         }
 
@@ -41,7 +47,7 @@ namespace ProjectVagabond
         /// <param name="amount">The amount of health to restore. Must be non-negative.</param>
         public void Heal(int amount)
         {
-            if (amount < 0) return; // Can't heal negative amounts
+            if (amount <= 0) return; // Can't heal negative amounts
             int oldHealth = CurrentHealth;
             CurrentHealth += amount;
             if (CurrentHealth > MaxHealth)
@@ -51,7 +57,7 @@ namespace ProjectVagabond
 
             if (CurrentHealth != oldHealth)
             {
-                OnHealthChanged?.Invoke(CurrentHealth - oldHealth);
+                OnHealthChanged?.Invoke(amount);
             }
         }
 

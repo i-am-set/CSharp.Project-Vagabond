@@ -41,6 +41,7 @@ namespace ProjectVagabond.Scenes
         // Player UI
         private static readonly Point PLAYER_HEALTH_BAR_SIZE = new Point(200, 12);
         private const int PLAYER_HEALTH_BAR_Y_OFFSET = 80; // Distance from the bottom of the screen.
+        private const int PLAYER_HIT_MARKER_Y_OFFSET = 10; // Distance above the health bar.
 
         // Play Area
         private const float PLAY_AREA_INSET_HORIZONTAL = 50f;
@@ -337,6 +338,9 @@ namespace ProjectVagabond.Scenes
             _leftHandRenderer.Draw(spriteBatch, font, gameTime);
             _rightHandRenderer.Draw(spriteBatch, font, gameTime);
 
+            // Draw Player Health Bar and Hit Markers
+            DrawPlayerUI(spriteBatch, font);
+
             // Draw targeting indicators underneath the dragged card
             DrawTargetingIndicators(spriteBatch);
 
@@ -355,15 +359,12 @@ namespace ProjectVagabond.Scenes
                 _actionHandUI.DrawCard(spriteBatch, font, gameTime, _inputHandler.DraggedCard, true);
             }
 
-            // Draw Hit Markers on top of everything else
-            _playerEntity?.DrawHitMarkers(spriteBatch, font);
+            // Draw Enemy Hit Markers on top of everything else
             foreach (var enemy in _enemies)
             {
-                enemy.DrawHitMarkers(spriteBatch, font);
+                var basePosition = new Vector2(enemy.Bounds.Center.X, enemy.Bounds.Top);
+                enemy.DrawHitMarkers(spriteBatch, font, basePosition);
             }
-
-            // Draw Player Health Bar
-            DrawPlayerHealthBar(spriteBatch, font);
 
             // --- DEBUG: Draw the play area boundary ---
             var global = ServiceLocator.Get<Global>();
@@ -373,14 +374,8 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void DrawPlayerHealthBar(SpriteBatch spriteBatch, BitmapFont font)
+        private void DrawPlayerUI(SpriteBatch spriteBatch, BitmapFont font)
         {
-            // Hide the health bar when the player is actively selecting a card.
-            if (_actionHandUI.IsHandActive)
-            {
-                return;
-            }
-
             var playerHealth = ServiceLocator.Get<ComponentStore>().GetComponent<HealthComponent>(_gameState.PlayerEntityId);
             if (playerHealth == null) return;
 
@@ -388,14 +383,14 @@ namespace ProjectVagabond.Scenes
             Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            float healthPercent = (float)playerHealth.CurrentHealth / playerHealth.MaxHealth;
-
+            // --- Health Bar ---
             int barWidth = PLAYER_HEALTH_BAR_SIZE.X;
             int barHeight = PLAYER_HEALTH_BAR_SIZE.Y;
             int barY = actualScreenVirtualBounds.Bottom - barHeight - PLAYER_HEALTH_BAR_Y_OFFSET;
             int barX = actualScreenVirtualBounds.Center.X - barWidth / 2;
-
             var bgRect = new Rectangle(barX, barY, barWidth, barHeight);
+
+            float healthPercent = (float)playerHealth.CurrentHealth / playerHealth.MaxHealth;
             var fillRect = new Rectangle(barX, barY, (int)(barWidth * healthPercent), barHeight);
 
             spriteBatch.Draw(pixel, bgRect, Color.DarkRed);
@@ -405,6 +400,10 @@ namespace ProjectVagabond.Scenes
             Vector2 textSize = font.MeasureString(healthText);
             Vector2 textPos = new Vector2(bgRect.Center.X - textSize.X / 2, bgRect.Center.Y - textSize.Y / 2);
             spriteBatch.DrawString(font, healthText, textPos, Color.White);
+
+            // --- Hit Markers ---
+            var hitMarkerBasePosition = new Vector2(bgRect.Center.X, bgRect.Top - PLAYER_HIT_MARKER_Y_OFFSET);
+            _playerEntity?.DrawHitMarkers(spriteBatch, font, hitMarkerBasePosition);
         }
 
         private void DrawTargetingIndicators(SpriteBatch spriteBatch)

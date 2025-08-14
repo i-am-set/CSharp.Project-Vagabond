@@ -21,7 +21,7 @@ namespace ProjectVagabond.Combat
 
         public HitMarker(int amount)
         {
-            if (amount > 0) // Healing
+            if (amount >= 0) // Healing
             {
                 Text = $"+{amount}";
                 Color = Color.LawnGreen;
@@ -82,9 +82,7 @@ namespace ProjectVagabond.Combat
 
         private void HandleHealthChange(int amount)
         {
-            // The event provides the delta. A positive delta is damage, negative is healing.
-            // We pass the negative of the amount to the HitMarker so damage is positive and healing is negative.
-            var marker = new HitMarker(-amount);
+            var marker = new HitMarker(amount);
             marker.Lifetime = HIT_MARKER_LIFETIME;
             _hitMarkers.Add(marker);
         }
@@ -145,7 +143,7 @@ namespace ProjectVagabond.Combat
 
         private void DrawHealthBar(SpriteBatch spriteBatch)
         {
-            if (_healthComponent == null) return;
+            if (_healthComponent == null || _healthComponent.CurrentHealth <= 0) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
             float healthPercent = (float)_healthComponent.CurrentHealth / _healthComponent.MaxHealth;
@@ -162,12 +160,11 @@ namespace ProjectVagabond.Combat
             spriteBatch.Draw(pixel, fillRect, Color.Red);
         }
 
-        public void DrawHitMarkers(SpriteBatch spriteBatch, BitmapFont font)
+        public void DrawHitMarkers(SpriteBatch spriteBatch, BitmapFont font, Vector2 basePosition)
         {
             foreach (var marker in _hitMarkers)
             {
                 Vector2 textSize = font.MeasureString(marker.Text);
-                Vector2 basePosition = new Vector2(Bounds.Center.X, Bounds.Top);
                 Vector2 drawPosition = basePosition + marker.PositionOffset - (textSize / 2f * marker.Scale);
 
                 spriteBatch.DrawString(font, marker.Text, drawPosition, marker.Color * marker.Alpha, 0f, Vector2.Zero, marker.Scale, SpriteEffects.None, 0f);
