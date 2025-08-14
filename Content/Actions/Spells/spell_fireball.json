@@ -6,7 +6,7 @@
   "effects": [
     {
       "type": "DealDamage",
-      "amount": "1d6",
+      "amount": "8",
       "damageType": "Fire"
     }
   ]

@@ -31,7 +31,9 @@
     {
       "Type": "ProjectVagabond.CombatantComponent, ProjectVagabond",
       "Properties": {
-        "DefaultWeaponId": "weapon_unarmed_claw"
+        "DefaultWeaponId": "weapon_unarmed_claw",
+        "Weaknesses": [ "Fire", "Blunt" ],
+        "Resistances": []
       }
     },
     {

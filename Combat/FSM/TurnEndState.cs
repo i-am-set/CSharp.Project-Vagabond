@@ -33,27 +33,57 @@ namespace ProjectVagabond.Combat.FSM
             Debug.WriteLine($"  --- Turn End: Entity {entityName} ---");
 
             // 1. Check for win/loss conditions
-            // TODO: Implement logic to check if all enemies or the player are defeated.
-            bool isCombatOver = false; // Placeholder
+            if (CheckForDefeat(combatManager, componentStore, gameState))
+            {
+                combatManager.FSM.ChangeState(new CombatDefeatState(), combatManager);
+                return;
+            }
 
-            if (isCombatOver)
+            if (CheckForVictory(combatManager, componentStore, gameState))
             {
                 combatManager.FSM.ChangeState(new CombatEndState(), combatManager);
+                return;
             }
-            else
+
+            // 2. Clear the actions from the completed turn.
+            combatManager.ClearActionsForTurn();
+
+            // 3. Advance to the next combatant's turn
+            combatManager.AdvanceTurn();
+            var nextEntityId = combatManager.CurrentTurnEntityId;
+            string nextEntityName = (nextEntityId == gameState.PlayerEntityId) ? "Player" : nextEntityId.ToString();
+            Debug.WriteLine($"  ... Next up: Entity {nextEntityName}");
+
+            // 4. Transition back to the start of the next turn.
+            combatManager.FSM.ChangeState(new TurnStartState(), combatManager);
+        }
+
+        private bool CheckForDefeat(CombatManager combatManager, ComponentStore componentStore, GameState gameState)
+        {
+            var playerHealth = componentStore.GetComponent<HealthComponent>(gameState.PlayerEntityId);
+            if (playerHealth != null && playerHealth.CurrentHealth <= 0)
             {
-                // 2. Clear the actions from the completed turn.
-                combatManager.ClearActionsForTurn();
-
-                // 3. Advance to the next combatant's turn
-                combatManager.AdvanceTurn();
-                var nextEntityId = combatManager.CurrentTurnEntityId;
-                string nextEntityName = (nextEntityId == gameState.PlayerEntityId) ? "Player" : nextEntityId.ToString();
-                Debug.WriteLine($"  ... Next up: Entity {nextEntityName}");
-
-                // 4. Transition back to the start of the next turn.
-                combatManager.FSM.ChangeState(new TurnStartState(), combatManager);
+                Debug.WriteLine("  !!! PLAYER DEFEATED !!!");
+                return true;
             }
+            return false;
+        }
+
+        private bool CheckForVictory(CombatManager combatManager, ComponentStore componentStore, GameState gameState)
+        {
+            var enemies = combatManager.Combatants.Where(id => id != gameState.PlayerEntityId);
+            bool allEnemiesDefeated = enemies.All(id =>
+            {
+                var health = componentStore.GetComponent<HealthComponent>(id);
+                return health != null && health.CurrentHealth <= 0;
+            });
+
+            if (allEnemiesDefeated)
+            {
+                Debug.WriteLine("  !!! VICTORY !!!");
+                return true;
+            }
+            return false;
         }
 
         public void OnExit(CombatManager combatManager)

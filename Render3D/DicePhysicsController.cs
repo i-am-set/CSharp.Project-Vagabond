@@ -3,6 +3,7 @@ using BepuPhysics.Collidables;
 using ProjectVagabond.Physics;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using BepuVector3 = System.Numerics.Vector3;
@@ -38,9 +39,8 @@ namespace ProjectVagabond.Dice
             _physicsWorldWidth = _physicsWorldHeight * aspectRatio;
             _physicsWorld = new PhysicsWorld(_physicsWorldWidth, _physicsWorldHeight);
 
-            // Pre-cache the default D6 and D4 shapes.
+            // Pre-cache the default D6 shape. The D4 requires model vertices and will be cached on its first roll.
             CacheShapeForScale(DieType.D6, 1.0f);
-            CacheShapeForScale(DieType.D4, 1.0f);
         }
 
         public void Update(float deltaTime)
@@ -61,16 +61,14 @@ namespace ProjectVagabond.Dice
             }
 
             var points = new List<BepuVector3>();
-            ConvexHull dieShape;
 
             switch (dieType)
             {
                 case DieType.D4:
                     if (modelVertices == null || !modelVertices.Any())
                     {
-                        // This can happen on the first pre-cache call. It's not an error.
-                        // The shape will be properly cached when a roll request provides the vertices.
-                        return;
+                        // This is a critical failure if we are trying to create a D4 shape without vertices.
+                        throw new InvalidOperationException("Cannot create a D4 physics shape without providing model vertices.");
                     }
                     var beveledPoints = new List<BepuVector3>();
                     var originalVertices = modelVertices.Select(v => v * scale).ToList();
@@ -107,7 +105,12 @@ namespace ProjectVagabond.Dice
                     break;
             }
 
-            dieShape = new ConvexHull(points.ToArray(), _physicsWorld.BufferPool, out _);
+            if (!points.Any())
+            {
+                throw new InvalidOperationException($"Failed to generate any physics points for DieType {dieType}.");
+            }
+
+            var dieShape = new ConvexHull(points.ToArray(), _physicsWorld.BufferPool, out _);
             float scaledMass = _global.DiceMass * (scale * scale * scale);
             var dieInertia = dieShape.ComputeInertia(scaledMass);
             var dieShapeIndex = _physicsWorld.Simulation.Shapes.Add(dieShape);

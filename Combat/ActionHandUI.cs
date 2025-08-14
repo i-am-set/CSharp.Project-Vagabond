@@ -8,7 +8,6 @@ using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.FSM;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Scenes;
-using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,6 +33,7 @@ namespace ProjectVagabond.Combat.UI
         private const float HAND_Y_ANCHOR_OFFSET = -10f; // Vertical offset for the entire hand anchor. Negative moves it up.
         private const float HAND_ANIMATION_DURATION = 0.2f;
         private const float HOVER_BOUNDS_Y_EXTENSION = 50f; // How many extra pixels to add to the bottom of the hover hitbox.
+        private const float TRIGGER_ZONE_HEIGHT = 60f; // The height of the initial hover area at the bottom of the screen.
 
         // State-based Y positions
         private const float HIDDEN_Y_OFFSET = 250f;
@@ -69,6 +69,11 @@ namespace ProjectVagabond.Combat.UI
         public static readonly Color BORDER_COLOR = Color.White;
 
         public IReadOnlyList<CombatCard> Cards => _cards;
+
+        /// <summary>
+        /// True when the hand is fully raised and active for player selection.
+        /// </summary>
+        public bool IsHandActive { get; private set; }
 
         // Animation state
         private int _hoveredIndex = -1;
@@ -161,43 +166,49 @@ namespace ProjectVagabond.Combat.UI
             float cardCenterDistance = (CARD_SIZE.X * DEFAULT_SCALE) + CARD_SPACING;
 
             // --- State Determination ---
-            bool isMouseInActiveZone;
-            if (_cards.Any())
-            {
-                // Calculate the dynamic activation zone based on where the cards will be in their 'Active' state.
-                float totalCardSpan = (_cards.Count - 1) * cardCenterDistance + (CARD_SIZE.X * HOVERED_SCALE);
-                float activationWidth = totalCardSpan + (SPREAD_AMOUNT * 2); // Add spread for when a card is hovered.
-                float activationX = screenCenterX - (activationWidth / 2f);
-
-                float menuBaseCenterY_Active = actualScreenVirtualBounds.Bottom - (CARD_SIZE.Y * DEFAULT_SCALE / 2f) + ACTIVE_Y_OFFSET + HAND_Y_ANCHOR_OFFSET;
-
-                // The highest point is the top of a hovered middle card.
-                float activationTopY = menuBaseCenterY_Active + HOVER_Y_OFFSET - (CARD_SIZE.Y * HOVERED_SCALE / 2f);
-
-                // The lowest point is now the bottom of the visible screen area to prevent jittering.
-                float activationBottomY = actualScreenVirtualBounds.Bottom;
-
-                float activationHeight = activationBottomY - activationTopY;
-
-                var activationZone = new RectangleF(activationX, activationTopY, activationWidth, activationHeight);
-                isMouseInActiveZone = activationZone.Contains(inputHandler.VirtualMousePosition);
-            }
-            else
-            {
-                isMouseInActiveZone = false;
-            }
-
             float newTargetYOffset;
 
             if (combatManager.FSM.CurrentState is PlayerActionSelectionState)
             {
-                if (isMouseInActiveZone && inputHandler.DraggedCard == null)
+                RectangleF activeZone = RectangleF.Empty;
+                if (_cards.Any())
                 {
-                    newTargetYOffset = ACTIVE_Y_OFFSET;
+                    // Calculate the large "active" zone (the green line area)
+                    float totalCardSpan = (_cards.Count - 1) * cardCenterDistance + (CARD_SIZE.X * HOVERED_SCALE);
+                    float activationWidth = totalCardSpan + (SPREAD_AMOUNT * 2);
+                    float activationX = screenCenterX - (activationWidth / 2f);
+                    float menuBaseCenterY_Active = actualScreenVirtualBounds.Bottom - (CARD_SIZE.Y * DEFAULT_SCALE / 2f) + ACTIVE_Y_OFFSET + HAND_Y_ANCHOR_OFFSET;
+                    float activationTopY = menuBaseCenterY_Active + HOVER_Y_OFFSET - (CARD_SIZE.Y * HOVERED_SCALE / 2f);
+                    float activationBottomY = actualScreenVirtualBounds.Bottom;
+                    float activationHeight = activationBottomY - activationTopY;
+                    activeZone = new RectangleF(activationX, activationTopY, activationWidth, activationHeight);
                 }
-                else
+
+                // Calculate the small "trigger" zone (the yellow line area)
+                var triggerZone = new RectangleF(
+                    activeZone.X,
+                    actualScreenVirtualBounds.Bottom - TRIGGER_ZONE_HEIGHT,
+                    activeZone.Width,
+                    TRIGGER_ZONE_HEIGHT
+                );
+
+                bool isMouseInActiveZone = activeZone.Contains(inputHandler.VirtualMousePosition);
+                bool isMouseInTriggerZone = triggerZone.Contains(inputHandler.VirtualMousePosition);
+
+                if (inputHandler.DraggedCard != null)
                 {
+                    // If dragging, always peek to get out of the way.
                     newTargetYOffset = PEEKING_Y_OFFSET;
+                }
+                else if (_targetMenuYOffset == ACTIVE_Y_OFFSET)
+                {
+                    // If we are currently active, we stay active as long as the mouse is in the big zone.
+                    newTargetYOffset = isMouseInActiveZone ? ACTIVE_Y_OFFSET : PEEKING_Y_OFFSET;
+                }
+                else // We are currently peeking or hidden
+                {
+                    // We transition to active only if the mouse enters the small trigger zone.
+                    newTargetYOffset = isMouseInTriggerZone ? ACTIVE_Y_OFFSET : PEEKING_Y_OFFSET;
                 }
             }
             else
@@ -206,6 +217,8 @@ namespace ProjectVagabond.Combat.UI
                 newTargetYOffset = HIDDEN_Y_OFFSET;
             }
 
+            // Update the public state property
+            IsHandActive = (newTargetYOffset == ACTIVE_Y_OFFSET);
 
             if (newTargetYOffset != _targetMenuYOffset)
             {

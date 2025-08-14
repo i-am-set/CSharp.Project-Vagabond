@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using ProjectVagabond.Combat;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace ProjectVagabond
@@ -33,6 +34,16 @@ namespace ProjectVagabond
         [JsonPropertyName("MagicPreference")]
         public Dictionary<string, int> MagicPreference { get; set; } = new Dictionary<string, int>();
 
+        /// <summary>
+        /// A list of damage types this entity is vulnerable to, taking increased damage.
+        /// </summary>
+        public List<DamageType> Weaknesses { get; set; } = new List<DamageType>();
+
+        /// <summary>
+        /// A list of damage types this entity is resistant to, taking reduced damage.
+        /// </summary>
+        public List<DamageType> Resistances { get; set; } = new List<DamageType>();
+
 
         public IComponent Clone()
         {
@@ -40,6 +51,8 @@ namespace ProjectVagabond
             // Create new list/dictionary instances for the clone to avoid shared references.
             clone.InnateActionIds = new List<string>(this.InnateActionIds);
             clone.MagicPreference = new Dictionary<string, int>(this.MagicPreference);
+            clone.Weaknesses = new List<DamageType>(this.Weaknesses);
+            clone.Resistances = new List<DamageType>(this.Resistances);
             return clone;
         }
     }

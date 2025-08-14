@@ -15,10 +15,13 @@ namespace ProjectVagabond.Combat.FSM
         private float _failsafeTimer;
         private const float FAILSAFE_DURATION = 10f; // 10 seconds
 
+        private ActionResolver _actionResolver;
+
         public void OnEnter(CombatManager combatManager)
         {
             _isWaitingForAnimation = false;
             _failsafeTimer = 0f;
+            _actionResolver = ServiceLocator.Get<ActionResolver>();
 
             var actions = combatManager.GetActionsForTurn();
             var resolvedOrder = TurnResolver.ResolveTurnOrder(new List<CombatAction>(actions));
@@ -61,7 +64,11 @@ namespace ProjectVagabond.Combat.FSM
                 _isWaitingForAnimation = true;
                 _failsafeTimer = 0f;
                 Debug.WriteLine("    ... Waiting for action visuals...");
-                combatManager.Scene.ExecuteActionVisuals(actionToExecute);
+
+                // The ActionResolver now handles the effect application synchronously and fires
+                // the ActionAnimationComplete event itself when it's done.
+                var allCombatants = combatManager.Scene.GetAllCombatEntities();
+                _actionResolver.Resolve(actionToExecute, allCombatants);
             }
             else
             {

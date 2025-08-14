@@ -2,6 +2,6 @@
   "id": "weapon_unarmed_claw",
   "name": "Unarmed Strike",
   "attackName": "Claw",
-  "damage": "1d4",
+  "damage": "3",
   "damageType": "Slashing"
 }

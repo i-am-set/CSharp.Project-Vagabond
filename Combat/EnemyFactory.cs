@@ -55,8 +55,7 @@ namespace ProjectVagabond.Combat
                 }
 
                 // 3. Create the visual CombatEntity object
-                var healthComp = _componentStore.GetComponent<HealthComponent>(entityId);
-                var newEnemy = new CombatEntity(entityId, healthComp?.MaxHealth ?? 10, spriteManager.EnemySprite);
+                var newEnemy = new CombatEntity(entityId, spriteManager.EnemySprite);
                 createdEnemies.Add(newEnemy);
             }
 

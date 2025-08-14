@@ -30,14 +30,17 @@ namespace ProjectVagabond.Scenes
         private HandRenderer _rightHandRenderer;
 
         // --- TUNING CONSTANTS ---
+        // Entity Sizing
+        private static readonly Point ENEMY_BASE_SIZE = new Point(64, 96); // Base dimensions (Width, Height) for enemies.
+
         // Enemy Layout
-        private const float ENEMY_BASE_Y = 150f; // The Y position of the CLOSEST enemy.
+        private const float ENEMY_BASE_Y = 100f; // The Y position of the CLOSEST enemy.
         private const float ENEMY_SPACING_X = 150f;
         private const float ENEMY_STAGGER_Y = 20f; // How much further UP (back) each enemy in the V-shape is.
-        private const float ENEMY_STAGGER_SCALE_FACTOR = 0.05f; // How much smaller each enemy gets per step back.
 
-        // Player Layout
-        private const float PLAYER_BASE_Y_OFFSET = -80f; // Offset from the bottom of the screen.
+        // Player UI
+        private static readonly Point PLAYER_HEALTH_BAR_SIZE = new Point(200, 12);
+        private const int PLAYER_HEALTH_BAR_Y_OFFSET = 80; // Distance from the bottom of the screen.
 
         // Play Area
         private const float PLAY_AREA_INSET_HORIZONTAL = 50f;
@@ -60,6 +63,9 @@ namespace ProjectVagabond.Scenes
         private readonly List<CombatEntity> _enemies = new List<CombatEntity>();
         private CombatEntity _playerEntity;
         private float _pointerAntsTimer = 0f;
+
+        // Layout state
+        private Rectangle _lastKnownBounds;
 
         public RectangleF PlayArea { get; private set; }
 
@@ -89,7 +95,6 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
-            EventBus.Subscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
             EventBus.Subscribe<GameEvents.PlayerActionConfirmed>(OnPlayerActionConfirmed);
             EventBus.Subscribe<GameEvents.CardReturnedToHand>(OnCardReturned);
 
@@ -116,10 +121,10 @@ namespace ProjectVagabond.Scenes
             // --- Player and Enemy Setup ---
             _enemies.Clear();
             _enemies.AddRange(enemies);
-            // TODO: Get real health from player stats component
-            _playerEntity = new CombatEntity(_gameState.PlayerEntityId, 100, spriteManager.PlayerSprite);
+            _playerEntity = new CombatEntity(_gameState.PlayerEntityId, spriteManager.PlayerSprite);
 
             CalculateLayouts();
+            _lastKnownBounds = ServiceLocator.Get<Core>().GetActualScreenVirtualBounds();
 
             // Reset the UI state before starting the FSM
             _actionHandUI.EnterCombat();
@@ -146,12 +151,12 @@ namespace ProjectVagabond.Scenes
                 actualScreenVirtualBounds.Height - PLAY_AREA_INSET_VERTICAL_TOP - bottomInset
             );
 
-            // Layout Player
+            // Layout Player (position only, as it is not rendered)
             if (_playerEntity != null)
             {
                 float playerX = actualScreenVirtualBounds.Center.X;
-                float playerY = actualScreenVirtualBounds.Bottom + PLAYER_BASE_Y_OFFSET;
-                _playerEntity.SetLayout(new Vector2(playerX, playerY), 1.0f);
+                float playerY = actualScreenVirtualBounds.Bottom; // Player anchor is at the bottom
+                _playerEntity.SetLayout(new Vector2(playerX, playerY), Point.Zero);
             }
 
             // Calculate Enemy Layout
@@ -180,7 +185,7 @@ namespace ProjectVagabond.Scenes
                 {
                     var enemy = _enemies[i];
                     float x = startX + i * ENEMY_SPACING_X;
-                    enemy.SetLayout(new Vector2(x, ENEMY_BASE_Y), 1.0f);
+                    enemy.SetLayout(new Vector2(x, ENEMY_BASE_Y), ENEMY_BASE_SIZE);
                 }
             }
             else
@@ -197,9 +202,8 @@ namespace ProjectVagabond.Scenes
                     // The center enemy (distanceFromMiddle = 0) is at the highest Y (closest).
                     // Wing enemies move UP (smaller Y) as they get further from the center.
                     float y = ENEMY_BASE_Y - distanceFromMiddle * ENEMY_STAGGER_Y;
-                    float scale = 1.0f - distanceFromMiddle * ENEMY_STAGGER_SCALE_FACTOR;
 
-                    enemy.SetLayout(new Vector2(x, y), scale);
+                    enemy.SetLayout(new Vector2(x, y), ENEMY_BASE_SIZE);
                 }
             }
 
@@ -211,9 +215,15 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
-            EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
             EventBus.Unsubscribe<GameEvents.PlayerActionConfirmed>(OnPlayerActionConfirmed);
             EventBus.Unsubscribe<GameEvents.CardReturnedToHand>(OnCardReturned);
+
+            // Unsubscribe from health events to prevent memory leaks
+            _playerEntity?.UnsubscribeEvents();
+            foreach (var enemy in _enemies)
+            {
+                enemy.UnsubscribeEvents();
+            }
         }
 
         private void OnPlayerActionConfirmed(GameEvents.PlayerActionConfirmed e)
@@ -273,15 +283,18 @@ namespace ProjectVagabond.Scenes
             _actionHandUI.AddCard(e.CardActionData, startPos);
         }
 
-
-        private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)
-        {
-            CalculateLayouts();
-        }
-
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
+
+            // Check for resolution changes to trigger layout recalculation.
+            var currentBounds = ServiceLocator.Get<Core>().GetActualScreenVirtualBounds();
+            if (currentBounds != _lastKnownBounds)
+            {
+                CalculateLayouts();
+                _lastKnownBounds = currentBounds;
+            }
+
             _pointerAntsTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // Update and clean up playing cards
@@ -309,41 +322,12 @@ namespace ProjectVagabond.Scenes
             {
                 enemy.Update(gameTime);
             }
-        }
-
-        /// <summary>
-        /// Called by the ActionExecutionState to trigger the visual representation of an action.
-        /// </summary>
-        public void ExecuteActionVisuals(CombatAction action)
-        {
-            // Combine all combatants into a single list for the resolver
-            var allCombatants = new List<CombatEntity>(_enemies);
-            if (_playerEntity != null)
-            {
-                allCombatants.Add(_playerEntity);
-            }
-
-            _actionResolver.Resolve(action, allCombatants);
-
-            if (action.CasterEntityId == _gameState.PlayerEntityId)
-            {
-                // The visual of the player's card flying to the target has already completed.
-                // This is where damage effects, sounds, and target reactions would be triggered.
-                // For now, the effect is instant.
-                EventBus.Publish(new GameEvents.ActionAnimationComplete());
-            }
-            else // AI Action
-            {
-                // TODO: Play AI animations (e.g., enemy sprite animation, particle effects).
-                // For now, AI actions are instant.
-                EventBus.Publish(new GameEvents.ActionAnimationComplete());
-            }
+            _playerEntity?.Update(gameTime);
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // Draw player and enemies
-            _playerEntity?.Draw(spriteBatch);
+            // Draw enemies
             foreach (var enemy in _enemies)
             {
                 enemy.Draw(spriteBatch);
@@ -371,12 +355,56 @@ namespace ProjectVagabond.Scenes
                 _actionHandUI.DrawCard(spriteBatch, font, gameTime, _inputHandler.DraggedCard, true);
             }
 
+            // Draw Hit Markers on top of everything else
+            _playerEntity?.DrawHitMarkers(spriteBatch, font);
+            foreach (var enemy in _enemies)
+            {
+                enemy.DrawHitMarkers(spriteBatch, font);
+            }
+
+            // Draw Player Health Bar
+            DrawPlayerHealthBar(spriteBatch, font);
+
             // --- DEBUG: Draw the play area boundary ---
             var global = ServiceLocator.Get<Global>();
             if (global.ShowDebugOverlays)
             {
                 spriteBatch.DrawRectangle(PlayArea, Color.Lime, 1f);
             }
+        }
+
+        private void DrawPlayerHealthBar(SpriteBatch spriteBatch, BitmapFont font)
+        {
+            // Hide the health bar when the player is actively selecting a card.
+            if (_actionHandUI.IsHandActive)
+            {
+                return;
+            }
+
+            var playerHealth = ServiceLocator.Get<ComponentStore>().GetComponent<HealthComponent>(_gameState.PlayerEntityId);
+            if (playerHealth == null) return;
+
+            var core = ServiceLocator.Get<Core>();
+            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+            var pixel = ServiceLocator.Get<Texture2D>();
+
+            float healthPercent = (float)playerHealth.CurrentHealth / playerHealth.MaxHealth;
+
+            int barWidth = PLAYER_HEALTH_BAR_SIZE.X;
+            int barHeight = PLAYER_HEALTH_BAR_SIZE.Y;
+            int barY = actualScreenVirtualBounds.Bottom - barHeight - PLAYER_HEALTH_BAR_Y_OFFSET;
+            int barX = actualScreenVirtualBounds.Center.X - barWidth / 2;
+
+            var bgRect = new Rectangle(barX, barY, barWidth, barHeight);
+            var fillRect = new Rectangle(barX, barY, (int)(barWidth * healthPercent), barHeight);
+
+            spriteBatch.Draw(pixel, bgRect, Color.DarkRed);
+            spriteBatch.Draw(pixel, fillRect, Color.Red);
+
+            string healthText = $"{playerHealth.CurrentHealth} / {playerHealth.MaxHealth}";
+            Vector2 textSize = font.MeasureString(healthText);
+            Vector2 textPos = new Vector2(bgRect.Center.X - textSize.X / 2, bgRect.Center.Y - textSize.Y / 2);
+            spriteBatch.DrawString(font, healthText, textPos, Color.White);
         }
 
         private void DrawTargetingIndicators(SpriteBatch spriteBatch)
@@ -527,6 +555,16 @@ namespace ProjectVagabond.Scenes
         public List<int> GetAllEnemyIds()
         {
             return _enemies.Select(e => e.EntityId).ToList();
+        }
+
+        public List<CombatEntity> GetAllCombatEntities()
+        {
+            var allCombatants = new List<CombatEntity>(_enemies);
+            if (_playerEntity != null)
+            {
+                allCombatants.Add(_playerEntity);
+            }
+            return allCombatants;
         }
         #endregion
 

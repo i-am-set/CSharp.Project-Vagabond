@@ -32,11 +32,14 @@
       "Type": "ProjectVagabond.CombatantComponent, ProjectVagabond",
       "Properties": {
         "DefaultWeaponId": "weapon_unarmed_punch",
+        "InnateActionIds": [ "spell_fireball" ],
         "BaseDeckSize": 10,
         "MagicPreference": {
           "Fire": 10,
           "Arcane": 3
-        }
+        },
+        "Weaknesses": [ "Water", "Slashing" ],
+        "Resistances": [ "Fire" ]
       }
     },
     {
