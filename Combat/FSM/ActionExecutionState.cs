@@ -15,11 +15,20 @@ namespace ProjectVagabond.Combat.FSM
         private float _failsafeTimer;
         private const float FAILSAFE_DURATION = 10f; // 10 seconds
 
+        // --- TUNING ---
+        /// <summary>
+        /// A short delay after each action resolves to improve game feel and pacing.
+        /// </summary>
+        private const float POST_ACTION_DELAY = 0.5f;
+        private float _postActionTimer;
+        private bool _isDelaying;
+
         private ActionResolver _actionResolver;
 
         public void OnEnter(CombatManager combatManager)
         {
             _isWaitingForAnimation = false;
+            _isDelaying = false;
             _failsafeTimer = 0f;
             _actionResolver = ServiceLocator.Get<ActionResolver>();
 
@@ -53,6 +62,15 @@ namespace ProjectVagabond.Combat.FSM
                     OnActionAnimationCompleted(new GameEvents.ActionAnimationComplete());
                 }
             }
+            else if (_isDelaying)
+            {
+                _postActionTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_postActionTimer <= 0)
+                {
+                    _isDelaying = false;
+                    ProcessNextAction(combatManager);
+                }
+            }
         }
 
         private void ProcessNextAction(CombatManager combatManager)
@@ -83,8 +101,10 @@ namespace ProjectVagabond.Combat.FSM
             if (!_isWaitingForAnimation) return; // Prevent double execution
             Debug.WriteLine("    ... Action visuals complete.");
             _isWaitingForAnimation = false;
-            var combatManager = ServiceLocator.Get<CombatManager>();
-            ProcessNextAction(combatManager);
+
+            // Start the post-action delay
+            _postActionTimer = POST_ACTION_DELAY;
+            _isDelaying = true;
         }
     }
 }

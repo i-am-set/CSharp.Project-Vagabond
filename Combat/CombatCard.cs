@@ -69,8 +69,8 @@ namespace ProjectVagabond.Combat.UI
         private const float MAX_DRAG_TILT_RADIANS = 0.6f; // Max tilt in either direction
         private const float DRAG_TILT_LERP_SPEED = 15f; // How quickly the tilt catches up
         private bool _isDragInPlayArea = true;
-        private const float DRAG_SCALE = 1.2f;
-        private const float DRAG_SCALE_OUTSIDE_AREA_MULTIPLIER = 0.9f;
+        private const float DRAG_SCALE_IN_PLAY_AREA = 0.65f; // Scale of the card when inside the targeting area.
+        private const float DRAG_SCALE_OUTSIDE_PLAY_AREA = 1.0f; // Scale of the card when outside the targeting area.
         private const float DRAG_SCALE_LERP_SPEED = 10f;
 
         public CombatCard(ActionData action)
@@ -152,14 +152,17 @@ namespace ProjectVagabond.Combat.UI
 
 
         /// <summary>
-        /// Instantly moves the card to a new position, bypassing the animation system. Used for dragging.
+        /// Instantly moves the card to a new center position, bypassing the animation system. Used for dragging.
         /// </summary>
-        public void ForcePosition(Vector2 position)
+        public void ForcePosition(Vector2 centerPosition)
         {
             var swayOffset = _dragSway?.Offset ?? Vector2.Zero;
-            var finalPosition = position + swayOffset;
-            var size = new Vector2(ActionHandUI.CARD_SIZE.X * CurrentScale, ActionHandUI.CARD_SIZE.Y * CurrentScale);
-            CurrentBounds = new RectangleF(finalPosition.X, finalPosition.Y, size.X, size.Y);
+            var finalCenterPosition = centerPosition + swayOffset;
+
+            var size = ActionHandUI.CARD_SIZE.ToVector2() * CurrentScale;
+            var topLeftPosition = finalCenterPosition - (size / 2f);
+
+            CurrentBounds = new RectangleF(topLeftPosition.X, topLeftPosition.Y, size.X, size.Y);
         }
 
         /// <summary>
@@ -194,7 +197,7 @@ namespace ProjectVagabond.Combat.UI
                 CurrentRotation = MathHelper.Lerp(CurrentRotation, targetTilt, DRAG_TILT_LERP_SPEED * deltaTime);
 
                 // --- Drag scale logic ---
-                float targetScale = _isDragInPlayArea ? DRAG_SCALE : DRAG_SCALE * DRAG_SCALE_OUTSIDE_AREA_MULTIPLIER;
+                float targetScale = _isDragInPlayArea ? DRAG_SCALE_IN_PLAY_AREA : DRAG_SCALE_OUTSIDE_PLAY_AREA;
                 CurrentScale = MathHelper.Lerp(CurrentScale, targetScale, DRAG_SCALE_LERP_SPEED * deltaTime);
             }
 

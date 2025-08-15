@@ -48,22 +48,24 @@ namespace ProjectVagabond.Scenes
         private const float PLAY_AREA_INSET_VERTICAL_TOP = 20f;
         private const float PLAY_AREA_BOTTOM_EXCLUSION_PERCENT = 0.20f; // The bottom 20% of the screen is a cancel zone.
 
-        // Targeting Pointer
-        private const float POINTER_CURVE_OFFSET = 150f;
-        private const float POINTER_HORIZONTAL_PUSH = 50f;
-        private const int POINTER_DOT_COUNT = 50;
-        private static readonly Color POINTER_COLOR = Color.Yellow;
-        private const float POINTER_DOT_SIZE = 2f;
-        private const float POINTER_END_CIRCLE_RADIUS = 5f;
+        // Targeting Indicator
+        private static readonly Point TARGET_INDICATOR_SIZE = new Point(32, 32);
+        private static readonly Color TARGET_INDICATOR_COLOR = Color.Yellow;
+        private const float TARGET_INDICATOR_Y_OFFSET = 10f;
+        private const float TARGET_INDICATOR_BOB_DISTANCE = 1f;
+        private const float TARGET_INDICATOR_BOB_DURATION = 0.5f;
+
+        // Self-Cast Indicator
+        private const float SELF_CAST_INDICATOR_BUFFER = 5f;
         private const float POINTER_ANTS_SPEED = 15f; // Dots per second
         private const int POINTER_ANTS_SPACING = 3; // Gap between dots (e.g., 3 means 1 dot drawn, 2 skipped)
-        private const float SELF_CAST_INDICATOR_BUFFER = 5f;
+        private const float SELF_CAST_DOT_SIZE = 2f; // The size of each dot in the marching ants line.
 
         // A list to manage cards that are currently in their "play" animation.
         private readonly List<CombatCard> _playingCards = new List<CombatCard>();
         private readonly List<CombatEntity> _enemies = new List<CombatEntity>();
         private CombatEntity _playerEntity;
-        private float _pointerAntsTimer = 0f;
+        private float _indicatorAnimationTimer = 0f;
 
         // Layout state
         private Rectangle _lastKnownBounds;
@@ -296,7 +298,11 @@ namespace ProjectVagabond.Scenes
                 _lastKnownBounds = currentBounds;
             }
 
-            _pointerAntsTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _indicatorAnimationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_indicatorAnimationTimer >= TARGET_INDICATOR_BOB_DURATION)
+            {
+                _indicatorAnimationTimer -= TARGET_INDICATOR_BOB_DURATION;
+            }
 
             // Update and clean up playing cards
             for (int i = _playingCards.Count - 1; i >= 0; i--)
@@ -426,7 +432,7 @@ namespace ProjectVagabond.Scenes
             {
                 foreach (var enemy in _enemies)
                 {
-                    DrawPointerToTarget(spriteBatch, enemy);
+                    DrawTargetIndicator(spriteBatch, enemy);
                 }
             }
             else if (actionType == TargetType.SingleEnemy && _inputHandler.PotentialTargetId.HasValue)
@@ -434,48 +440,31 @@ namespace ProjectVagabond.Scenes
                 var targetEnemy = _enemies.FirstOrDefault(e => e.EntityId == _inputHandler.PotentialTargetId.Value);
                 if (targetEnemy != null)
                 {
-                    DrawPointerToTarget(spriteBatch, targetEnemy);
+                    DrawTargetIndicator(spriteBatch, targetEnemy);
                 }
             }
         }
 
-        private void DrawPointerToTarget(SpriteBatch spriteBatch, CombatEntity targetEnemy)
+        private void DrawTargetIndicator(SpriteBatch spriteBatch, CombatEntity target)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            Vector2 startPos = _inputHandler.DraggedCard.CurrentBounds.Center;
-            Vector2 endPos = targetEnemy.Bounds.Center.ToVector2();
 
-            var core = ServiceLocator.Get<Core>();
-            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
-            float screenCenterX = actualScreenVirtualBounds.Center.X;
-            float halfScreenWidth = actualScreenVirtualBounds.Width / 2f;
-
-            float normalizedDistFromCenter = (startPos.X - screenCenterX) / halfScreenWidth;
-            float horizontalPush = -normalizedDistFromCenter * POINTER_HORIZONTAL_PUSH;
-
-            Vector2 controlPos = new Vector2(
-                (startPos.X + endPos.X) / 2 + horizontalPush,
-                Math.Min(startPos.Y, endPos.Y) - POINTER_CURVE_OFFSET
-            );
-
-            int dotOffset = (int)(_pointerAntsTimer * POINTER_ANTS_SPEED);
-
-            for (int i = 1; i < POINTER_DOT_COUNT; i++)
+            // Calculate rigid bobbing offset
+            float yOffset = 0;
+            if (_indicatorAnimationTimer < TARGET_INDICATOR_BOB_DURATION / 2f)
             {
-                int effectiveIndex = i - dotOffset;
-                if (((effectiveIndex % POINTER_ANTS_SPACING) + POINTER_ANTS_SPACING) % POINTER_ANTS_SPACING != 0)
-                {
-                    continue;
-                }
-
-                float t = (float)i / POINTER_DOT_COUNT;
-                float oneMinusT = 1 - t;
-                Vector2 pointOnCurve = oneMinusT * oneMinusT * startPos + 2 * oneMinusT * t * controlPos + t * t * endPos;
-
-                spriteBatch.Draw(pixel, pointOnCurve, null, POINTER_COLOR, 0f, new Vector2(0.5f), POINTER_DOT_SIZE, SpriteEffects.None, 0f);
+                yOffset = -TARGET_INDICATOR_BOB_DISTANCE;
             }
 
-            spriteBatch.DrawCircle(endPos, POINTER_END_CIRCLE_RADIUS, 12, POINTER_COLOR, POINTER_DOT_SIZE);
+            // Calculate position above the target's sprite
+            Vector2 indicatorPosition = new Vector2(
+                target.Bounds.Center.X - TARGET_INDICATOR_SIZE.X / 2f,
+                target.Bounds.Top - TARGET_INDICATOR_SIZE.Y - TARGET_INDICATOR_Y_OFFSET + yOffset
+            );
+
+            var indicatorRect = new Rectangle((int)indicatorPosition.X, (int)indicatorPosition.Y, TARGET_INDICATOR_SIZE.X, TARGET_INDICATOR_SIZE.Y);
+
+            spriteBatch.Draw(pixel, indicatorRect, TARGET_INDICATOR_COLOR);
         }
 
         private void DrawSelfCastIndicator(SpriteBatch spriteBatch)
@@ -507,8 +496,8 @@ namespace ProjectVagabond.Scenes
             if (length < 1f) return;
 
             Vector2 direction = Vector2.Normalize(end - start);
-            int numDots = (int)(length / POINTER_DOT_SIZE) + 1;
-            int dotOffset = (int)(_pointerAntsTimer * POINTER_ANTS_SPEED);
+            int numDots = (int)(length / SELF_CAST_DOT_SIZE) + 1;
+            int dotOffset = (int)(_indicatorAnimationTimer * POINTER_ANTS_SPEED);
 
             for (int i = 0; i < numDots; i++)
             {
@@ -518,11 +507,11 @@ namespace ProjectVagabond.Scenes
                     continue;
                 }
 
-                float distanceAlongLine = i * POINTER_DOT_SIZE;
+                float distanceAlongLine = i * SELF_CAST_DOT_SIZE;
                 if (distanceAlongLine > length) break;
 
                 Vector2 pointOnLine = start + direction * distanceAlongLine;
-                spriteBatch.Draw(pixel, pointOnLine, null, POINTER_COLOR, 0f, new Vector2(0.5f), POINTER_DOT_SIZE, SpriteEffects.None, 0f);
+                spriteBatch.Draw(pixel, pointOnLine, null, Color.Yellow, 0f, new Vector2(0.5f), SELF_CAST_DOT_SIZE, SpriteEffects.None, 0f);
             }
         }
 

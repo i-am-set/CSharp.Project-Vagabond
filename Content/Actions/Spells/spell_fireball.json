@@ -9,5 +9,30 @@
       "amount": "8",
       "damageType": "Fire"
     }
-  ]
+  ],
+  "timeline": {
+    "duration": 1.2,
+    "tracks": [
+      {
+        "target": "LeftHand",
+        "keyframes": [
+          { "time": 0.0, "type": "PlayAnimation", "animation": "cast_start" },
+          { "time": 0.8, "type": "PlayAnimation", "animation": "idle_loop" }
+        ]
+      },
+      {
+        "target": "RightHand",
+        "keyframes": [
+          { "time": 0.0, "type": "PlayAnimation", "animation": "cast_start" },
+          { "time": 0.8, "type": "PlayAnimation", "animation": "idle_loop" }
+        ]
+      },
+      {
+        "target": "VFX",
+        "keyframes": [
+          { "time": 0.4, "type": "TriggerEffects" }
+        ]
+      }
+    ]
+  }
 }

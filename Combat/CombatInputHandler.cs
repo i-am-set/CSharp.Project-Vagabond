@@ -37,7 +37,6 @@ namespace ProjectVagabond.Combat
         // Drag & Drop State
         public CombatCard DraggedCard { get; private set; }
         public CombatCard HeldCard { get; private set; } // Card being held on click, but not yet dragged
-        private Vector2 _dragStartOffset;
         public Vector2 DragStartPosition { get; private set; } // Mouse position where the click started
         public int? PotentialTargetId { get; private set; }
         private int? _previousPotentialTargetId = null;
@@ -118,7 +117,6 @@ namespace ProjectVagabond.Combat
 
                             DraggedCard.IsBeingDragged = true;
                             DraggedCard.StartDragSway();
-                            _dragStartOffset = new Vector2(DraggedCard.CurrentBounds.Width / 2f, DraggedCard.CurrentBounds.Height / 2f);
                         }
                     }
 
@@ -172,7 +170,8 @@ namespace ProjectVagabond.Combat
             Vector2 velocity = VirtualMousePosition - _previousVirtualMousePosition;
 
             DraggedCard.SetDragVelocity(velocity);
-            DraggedCard.ForcePosition(VirtualMousePosition - _dragStartOffset);
+            // The card is now responsible for centering itself on the cursor position.
+            DraggedCard.ForcePosition(VirtualMousePosition);
 
             // Inform the card of its status so it can adjust its scale
             bool isInsidePlayArea = _combatScene.PlayArea.Contains(VirtualMousePosition);
