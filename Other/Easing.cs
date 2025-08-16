@@ -1,4 +1,6 @@
-﻿using System;
+﻿using ProjectVagabond;
+using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond
 {
@@ -9,6 +11,55 @@ namespace ProjectVagabond
     /// </summary>
     public static class Easing
     {
+        private static readonly Dictionary<string, Func<float, float>> _easingFunctions = new Dictionary<string, Func<float, float>>(StringComparer.OrdinalIgnoreCase)
+        {
+            { "Linear", x => x },
+            { "EaseInSine", EaseInSine },
+            { "EaseOutSine", EaseOutSine },
+            { "EaseInOutSine", EaseInOutSine },
+            { "EaseInQuad", EaseInQuad },
+            { "EaseOutQuad", EaseOutQuad },
+            { "EaseInOutQuad", EaseInOutQuad },
+            { "EaseInCubic", EaseInCubic },
+            { "EaseOutCubic", EaseOutCubic },
+            { "EaseInOutCubic", EaseInOutCubic },
+            { "EaseInQuart", EaseInQuart },
+            { "EaseOutQuart", EaseOutQuart },
+            { "EaseInOutQuart", EaseInOutQuart },
+            { "EaseInQuint", EaseInQuint },
+            { "EaseOutQuint", EaseOutQuint },
+            { "EaseInOutQuint", EaseInOutQuint },
+            { "EaseInExpo", EaseInExpo },
+            { "EaseOutExpo", EaseOutExpo },
+            { "EaseInOutExpo", EaseInOutExpo },
+            { "EaseInCirc", EaseInCirc },
+            { "EaseOutCirc", EaseOutCirc },
+            { "EaseInOutCirc", EaseInOutCirc },
+            { "EaseInBack", EaseInBack },
+            { "EaseOutBack", EaseOutBack },
+            { "EaseInOutBack", EaseInOutBack },
+            { "EaseInElastic", EaseInElastic },
+            { "EaseOutElastic", EaseOutElastic },
+            { "EaseInOutElastic", EaseInOutElastic },
+            { "EaseInBounce", EaseInBounce },
+            { "EaseOutBounce", EaseOutBounce },
+            { "EaseInOutBounce", EaseInOutBounce }
+        };
+
+        /// <summary>
+        /// Retrieves an easing function delegate by its name.
+        /// </summary>
+        /// <param name="name">The case-insensitive name of the easing function.</param>
+        /// <returns>The easing function delegate, or a linear function if the name is not found.</returns>
+        public static Func<float, float> GetEasingFunction(string name)
+        {
+            if (string.IsNullOrEmpty(name) || !_easingFunctions.TryGetValue(name, out var func))
+            {
+                return _easingFunctions["Linear"]; // Fallback to linear
+            }
+            return func;
+        }
+
         public static float EaseInSine(float x)
         {
             return 1 - (float)Math.Cos((x * Math.PI) / 2);

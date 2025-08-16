@@ -61,7 +61,6 @@ namespace ProjectVagabond
         private ActionExecutionSystem _actionExecutionSystem;
         private AISystem _aiSystem;
         private SpriteManager _spriteManager;
-        private CombatInitiationSystem _combatInitiationSystem;
         private DiceRollingSystem _diceRollingSystem;
         private BackgroundManager _backgroundManager;
         private PreEncounterAnimationSystem _preEncounterAnimationSystem;
@@ -206,14 +205,8 @@ namespace ProjectVagabond
             _actionExecutionSystem = new ActionExecutionSystem();
             ServiceLocator.Register<ActionExecutionSystem>(_actionExecutionSystem);
 
-            var combatTurnSystem = new CombatTurnSystem();
-            ServiceLocator.Register<CombatTurnSystem>(combatTurnSystem);
-
             _aiSystem = new AISystem();
             ServiceLocator.Register<AISystem>(_aiSystem);
-
-            _combatInitiationSystem = new CombatInitiationSystem();
-            ServiceLocator.Register<CombatInitiationSystem>(_combatInitiationSystem);
 
             var statusEffectSystem = new StatusEffectSystem();
             ServiceLocator.Register<StatusEffectSystem>(statusEffectSystem);
@@ -268,7 +261,6 @@ namespace ProjectVagabond
             ServiceLocator.Register<Texture2D>(_pixel);
 
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
-            _systemManager.RegisterSystem(_combatInitiationSystem, 0f);
             _systemManager.RegisterSystem(_aiSystem, 0f);
             _systemManager.RegisterSystem(energySystem, 0f);
             _systemManager.RegisterSystem(poiManagerSystem, 0f);
@@ -474,16 +466,10 @@ namespace ProjectVagabond
             _backgroundManager.Update(scaledGameTime);
             _animationManager.Update(scaledGameTime);
 
-            // This system handles core logic that must run even when paused (to handle interruptions).
-            _combatInitiationSystem.Update(scaledGameTime);
-
             // These systems handle game logic and should be paused.
             if (!_gameState.IsPaused)
             {
-                if (_gameState.IsInCombat)
-                {
-                }
-                else if (_sceneManager.CurrentActiveScene is GameMapScene)
+                if (_sceneManager.CurrentActiveScene is GameMapScene)
                 {
                     _gameState.UpdateActiveEntities();
                     _systemManager.Update(scaledGameTime);

@@ -442,7 +442,7 @@ namespace ProjectVagabond.Combat.UI
             spriteBatch.Draw(pixel, imageAreaCenterPos, null, imageAreaColor, cardRotation, pixelOrigin, imageRectSize * cardScale, SpriteEffects.None, 0f);
 
             // 3. Draw Border
-            float borderThickness = isHovered || card.IsBeingDragged ? 3f : 2f;
+            float borderThickness = isHovered || card.IsBeingDragged ? 2f : 1f;
             Color borderColor = BORDER_COLOR * finalAlpha;
             var halfSize = CARD_SIZE.ToVector2() / 2f;
             var corners = new Vector2[4]

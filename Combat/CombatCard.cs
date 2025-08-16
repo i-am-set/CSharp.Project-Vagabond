@@ -65,13 +65,18 @@ namespace ProjectVagabond.Combat.UI
 
         // Drag-specific animation
         private Vector2 _lastVelocity;
-        private const float DRAG_TILT_FACTOR = 0.08f; // How much to tilt based on velocity.X
-        private const float MAX_DRAG_TILT_RADIANS = 0.6f; // Max tilt in either direction
+        private const float DRAG_TILT_FACTOR = 0.02f; // How much to tilt based on velocity.X
+        private const float MAX_DRAG_TILT_RADIANS = 0.2f; // Max tilt in either direction
         private const float DRAG_TILT_LERP_SPEED = 15f; // How quickly the tilt catches up
         private bool _isDragInPlayArea = true;
         private const float DRAG_SCALE_IN_PLAY_AREA = 0.65f; // Scale of the card when inside the targeting area.
         private const float DRAG_SCALE_OUTSIDE_PLAY_AREA = 1.0f; // Scale of the card when outside the targeting area.
         private const float DRAG_SCALE_LERP_SPEED = 10f;
+        private const float DRAG_LERP_SPEED = 25f; // How quickly the card follows the mouse. Higher is snappier.
+
+        // Input smoothing for dragging
+        private Vector2 _visualPosition; // The smoothed position used for drawing
+        private Vector2 _logicalPosition; // The actual, immediate mouse position
 
         public CombatCard(ActionData action)
         {
@@ -152,17 +157,12 @@ namespace ProjectVagabond.Combat.UI
 
 
         /// <summary>
-        /// Instantly moves the card to a new center position, bypassing the animation system. Used for dragging.
+        /// Instantly moves the card's logical target to a new center position. Used for dragging.
+        /// The visual position will smoothly interpolate towards this logical position.
         /// </summary>
         public void ForcePosition(Vector2 centerPosition)
         {
-            var swayOffset = _dragSway?.Offset ?? Vector2.Zero;
-            var finalCenterPosition = centerPosition + swayOffset;
-
-            var size = ActionHandUI.CARD_SIZE.ToVector2() * CurrentScale;
-            var topLeftPosition = finalCenterPosition - (size / 2f);
-
-            CurrentBounds = new RectangleF(topLeftPosition.X, topLeftPosition.Y, size.X, size.Y);
+            _logicalPosition = centerPosition;
         }
 
         /// <summary>
@@ -199,6 +199,15 @@ namespace ProjectVagabond.Combat.UI
                 // --- Drag scale logic ---
                 float targetScale = _isDragInPlayArea ? DRAG_SCALE_IN_PLAY_AREA : DRAG_SCALE_OUTSIDE_PLAY_AREA;
                 CurrentScale = MathHelper.Lerp(CurrentScale, targetScale, DRAG_SCALE_LERP_SPEED * deltaTime);
+
+                // --- Drag position smoothing ---
+                _visualPosition = Vector2.Lerp(_visualPosition, _logicalPosition, DRAG_LERP_SPEED * deltaTime);
+
+                var swayOffset = _dragSway?.Offset ?? Vector2.Zero;
+                var finalCenterPosition = _visualPosition + swayOffset;
+                var size = ActionHandUI.CARD_SIZE.ToVector2() * CurrentScale;
+                var topLeftPosition = finalCenterPosition - (size / 2f);
+                CurrentBounds = new RectangleF(topLeftPosition.X, topLeftPosition.Y, size.X, size.Y);
             }
 
             if (_isPlayAnimating)
@@ -281,6 +290,9 @@ namespace ProjectVagabond.Combat.UI
             // Set initial drag properties here instead of using AnimateTo
             ShadowAlpha = 0.5f;
             _isDragInPlayArea = true; // Assume it starts in a valid area
+
+            // Initialize visual and logical positions to prevent jumping at the start of a drag.
+            _logicalPosition = _visualPosition = this.CurrentBounds.Center;
         }
 
         public void StopDragSway()

@@ -36,7 +36,6 @@ namespace ProjectVagabond.Combat
             if (caster == null)
             {
                 Debug.WriteLine($"[ERROR] ActionResolver: Caster with ID {action.CasterEntityId} not found. Aborting action.");
-                EventBus.Publish(new GameEvents.ActionAnimationComplete());
                 return;
             }
 
@@ -86,9 +85,6 @@ namespace ProjectVagabond.Combat
             }
 
             EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = logBuilder.ToString() });
-
-            // Signal completion
-            EventBus.Publish(new GameEvents.ActionAnimationComplete());
         }
 
         private void HandleDamageEffect(EffectDefinition effectDef, int baseAmount, List<CombatEntity> targets, StringBuilder logBuilder)

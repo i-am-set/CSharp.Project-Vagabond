@@ -59,7 +59,7 @@ namespace ProjectVagabond.Scenes
                 var loadingTasks = new List<LoadingTask>
                 {
                     new GenericTask("Loading game sprites...", () => spriteManager.LoadGameContent()),
-                    new GenericTask("Loading item data...", () => itemManager.LoadWeapons("Content/Items/Weapons")),
+                    new GenericTask("Loading item data...", () => itemManager.LoadWeapons("Content/Weapons")),
                     new GenericTask("Loading action data...", () => actionManager.LoadActions("Content/Actions")),
                     new GenericTask("Initializing dice system...", () => diceSystem.Initialize(core.GraphicsDevice, core.Content)),
                     new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Archetypes")),

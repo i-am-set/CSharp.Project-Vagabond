@@ -26,7 +26,6 @@ namespace ProjectVagabond
 
         // Lazyloaded System Dependencies
         private ActionExecutionSystem _actionExecutionSystem;
-        private CombatTurnSystem _combatTurnSystem;
         private POIManagerSystem _poiManagerSystem;
 
         private bool _isExecutingActions = false;
@@ -37,10 +36,6 @@ namespace ProjectVagabond
         // State Flags
         public bool IsAwaitingTimePass { get; set; } = false;
         public float TimePassFailsafeTimer { get; set; } = 0f;
-
-        // Combat Initiation State
-        public bool IsCombatInitiationPending { get; private set; } = false;
-        public List<int> PendingCombatants { get; private set; } = new List<int>();
 
 
         public MapView PathExecutionMapView { get; private set; }
@@ -76,11 +71,6 @@ namespace ProjectVagabond
 
         // Combat State
         public bool IsInCombat { get; private set; } = false;
-        public List<int> Combatants { get; private set; } = new List<int>();
-        public List<int> InitiativeOrder { get; private set; } = new List<int>();
-        public int CurrentTurnEntityId { get; private set; }
-        public int? SelectedTargetId { get; set; } = null;
-        public MovementMode CombatMovePreviewMode { get; set; } = MovementMode.Walk;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -94,6 +84,7 @@ namespace ProjectVagabond
             _spriteManager = spriteManager;
 
             EventBus.Subscribe<GameEvents.ActionQueueChanged>(e => IsActionQueueDirty = true); // Subscribe to the event to mark the queue as dirty whenever it's changed.
+            EventBus.Subscribe<GameEvents.CombatStateChanged>(e => IsInCombat = e.IsInCombat);
         }
 
         public void InitializeWorld()
@@ -137,77 +128,6 @@ namespace ProjectVagabond
                     renderable.Texture = ServiceLocator.Get<Texture2D>();
                 }
             }
-        }
-
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        // COMBAT MANAGEMENT
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        public void RequestCombatInitiation(int requestingEntityId)
-        {
-            if (IsCombatInitiationPending || IsInCombat) return;
-
-            IsCombatInitiationPending = true;
-            PendingCombatants.Clear();
-            PendingCombatants.Add(PlayerEntityId);
-            PendingCombatants.Add(requestingEntityId);
-        }
-
-        public void ClearCombatInitiationRequest()
-        {
-            IsCombatInitiationPending = false;
-            PendingCombatants.Clear();
-        }
-
-        public void InitiateCombat(List<int> initialCombatants)
-        {
-            if (IsInCombat) return;
-
-            EventBus.Publish(new GameEvents.CombatStateChanged { IsInCombat = true });
-            IsInCombat = true;
-            Combatants = new List<int>(initialCombatants);
-            InitiativeOrder.Clear(); // Initiative is now handled by CombatManager
-
-            // No automatic target selection. Player must choose.
-            SelectedTargetId = null;
-
-            _combatTurnSystem ??= ServiceLocator.Get<CombatTurnSystem>();
-            _combatTurnSystem.StartCombat();
-        }
-
-        public void AddEntityToCombat(int entityId)
-        {
-            // Logic to add an entity to an ongoing combat will be implemented later.
-        }
-
-        public void EndCombat()
-        {
-            if (!IsInCombat) return;
-
-            IsInCombat = false;
-            Combatants.Clear();
-            InitiativeOrder.Clear();
-            SelectedTargetId = null;
-
-            _componentStore.GetComponent<ActionQueueComponent>(PlayerEntityId)?.ActionQueue.Clear();
-            _worldClockManager.CancelInterpolation();
-
-            EventBus.Publish(new GameEvents.CombatStateChanged { IsInCombat = false });
-        }
-
-        public void RemoveEntityFromCombat(int entityId)
-        {
-            Combatants.Remove(entityId);
-            InitiativeOrder.Remove(entityId);
-        }
-
-        public void SetCurrentTurnEntity(int entityId)
-        {
-            CurrentTurnEntityId = entityId;
-        }
-
-        public bool CanPlayerMoveInCombat()
-        {
-            return false; // Placeholder until combat is refactored
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -289,7 +209,7 @@ namespace ProjectVagabond
 
         public bool IsTileOccupied(Vector2 position, int askingEntityId)
         {
-            var entitiesToCheck = IsInCombat ? Combatants : ActiveEntities;
+            var entitiesToCheck = ActiveEntities;
             foreach (var entityId in entitiesToCheck)
             {
                 if (entityId == askingEntityId) continue;
@@ -488,7 +408,7 @@ namespace ProjectVagabond
         public List<int> GetEntitiesAtGridPos(Vector2 gridPos)
         {
             var entitiesOnTile = new List<int>();
-            var entitiesToCheck = IsInCombat ? Combatants : ActiveEntities;
+            var entitiesToCheck = ActiveEntities;
             foreach (var entityId in entitiesToCheck)
             {
                 var worldPosComp = _componentStore.GetComponent<PositionComponent>(entityId);

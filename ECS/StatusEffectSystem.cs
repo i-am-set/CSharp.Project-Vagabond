@@ -52,17 +52,6 @@ namespace ProjectVagabond
             RemoveExpiredEffects(effectsToRemove);
         }
 
-        /// <summary>
-        /// Processes status effects for a single entity at the start of its turn IN COMBAT.
-        /// </summary>
-        public void ProcessCombatTurnStart(int entityId)
-        {
-            _gameState ??= ServiceLocator.Get<GameState>();
-            if (!_gameState.IsInCombat) return;
-
-            // Body of this method is now empty.
-        }
-
         private void RemoveExpiredEffects(List<(int entityId, ActiveStatusEffect effect)> effectsToRemove)
         {
             foreach (var (entityId, effect) in effectsToRemove)

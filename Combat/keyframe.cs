@@ -15,7 +15,7 @@ namespace ProjectVagabond.Combat
         public float Time { get; set; }
 
         /// <summary>
-        /// The type of instruction for this keyframe (e.g., "MoveTo", "PlayAnimation", "SpawnParticle", "TriggerEffects").
+        /// The type of instruction for this keyframe (e.g., "MoveTo", "RotateTo", "ScaleTo", "PlayAnimation", "TriggerEffects", "Wait").
         /// </summary>
         [JsonPropertyName("type")]
         public string Type { get; set; }
@@ -27,16 +27,28 @@ namespace ProjectVagabond.Combat
         public string Position { get; set; }
 
         /// <summary>
-        /// The name of a particle effect to spawn. Used with "SpawnParticle" type.
+        /// The target rotation in degrees. Used with "RotateTo" type.
         /// </summary>
-        [JsonPropertyName("effect")]
-        public string Effect { get; set; }
+        [JsonPropertyName("rotation")]
+        public float Rotation { get; set; }
 
         /// <summary>
-        /// The location to spawn a particle effect (e.g., "SingularityPoint", "Target"). Used with "SpawnParticle" type.
+        /// The target scale multiplier. Used with "ScaleTo" type.
         /// </summary>
-        [JsonPropertyName("at")]
-        public string At { get; set; }
+        [JsonPropertyName("scale")]
+        public float Scale { get; set; } = 1f;
+
+        /// <summary>
+        /// The duration of the tweening animation in seconds. Used with "MoveTo", "RotateTo", and "ScaleTo" types.
+        /// </summary>
+        [JsonPropertyName("duration")]
+        public float Duration { get; set; } = 0.3f;
+
+        /// <summary>
+        /// The name of the easing function to use for the tween (e.g., "EaseOutCubic"). Used with transform types.
+        /// </summary>
+        [JsonPropertyName("easing")]
+        public string Easing { get; set; } = "EaseOutCubic";
 
         /// <summary>
         /// The name of an animation to play on the target (e.g., "cast_start", "cast_release"). Used with "PlayAnimation" type.

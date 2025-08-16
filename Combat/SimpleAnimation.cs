@@ -79,6 +79,11 @@ namespace ProjectVagabond.Utils
             _spriteSheet = spriteSheet;
         }
 
+        public bool HasAnimation(string animationName)
+        {
+            return _spriteSheet.Cycles.ContainsKey(animationName);
+        }
+
         public void Play(string animationName)
         {
             if (_spriteSheet.Cycles.TryGetValue(animationName, out var newCycle))
@@ -126,14 +131,15 @@ namespace ProjectVagabond.Utils
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, Vector2 position, Color color)
+        public void Draw(SpriteBatch spriteBatch, Vector2 position, Color color, float rotation = 0f, float scale = 1f)
         {
             if (_currentCycle != null)
             {
                 var frame = _currentCycle.Frames[_currentFrameIndex];
-                spriteBatch.Draw(_spriteSheet.Texture, position, frame.SourceRectangle, color);
+                // The origin is now the bottom-center of the sprite, acting as a pivot for the wrist.
+                var origin = new Vector2(frame.SourceRectangle.Width / 2f, frame.SourceRectangle.Height);
+                spriteBatch.Draw(_spriteSheet.Texture, position, frame.SourceRectangle, color, rotation, origin, scale, SpriteEffects.None, 0f);
             }
         }
     }
 }
-﻿

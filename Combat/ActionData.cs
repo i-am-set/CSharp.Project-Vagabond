@@ -43,5 +43,8 @@ namespace ProjectVagabond.Combat
 
         [JsonPropertyName("effects")]
         public List<EffectDefinition> Effects { get; set; } = new List<EffectDefinition>();
+
+        [JsonPropertyName("timeline")]
+        public AnimationTimeline Timeline { get; set; }
     }
 }

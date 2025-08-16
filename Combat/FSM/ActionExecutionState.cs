@@ -23,14 +23,14 @@ namespace ProjectVagabond.Combat.FSM
         private float _postActionTimer;
         private bool _isDelaying;
 
-        private ActionResolver _actionResolver;
+        private ActionAnimator _actionAnimator;
 
         public void OnEnter(CombatManager combatManager)
         {
             _isWaitingForAnimation = false;
             _isDelaying = false;
             _failsafeTimer = 0f;
-            _actionResolver = ServiceLocator.Get<ActionResolver>();
+            _actionAnimator = combatManager.Scene.ActionAnimator;
 
             var actions = combatManager.GetActionsForTurn();
             var resolvedOrder = TurnResolver.ResolveTurnOrder(new List<CombatAction>(actions));
@@ -83,10 +83,9 @@ namespace ProjectVagabond.Combat.FSM
                 _failsafeTimer = 0f;
                 Debug.WriteLine("    ... Waiting for action visuals...");
 
-                // The ActionResolver now handles the effect application synchronously and fires
-                // the ActionAnimationComplete event itself when it's done.
-                var allCombatants = combatManager.Scene.GetAllCombatEntities();
-                _actionResolver.Resolve(actionToExecute, allCombatants);
+                // The ActionAnimator now plays the timeline. The timeline itself will trigger
+                // the ActionResolver and the ActionAnimationComplete event when finished.
+                _actionAnimator.Play(actionToExecute);
             }
             else
             {

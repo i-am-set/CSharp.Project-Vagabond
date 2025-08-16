@@ -16,21 +16,156 @@
       {
         "target": "LeftHand",
         "keyframes": [
-          { "time": 0.0, "type": "PlayAnimation", "animation": "cast_start" },
-          { "time": 0.8, "type": "PlayAnimation", "animation": "idle_loop" }
+          {
+            "time": 0.0,
+            "type": "PlayAnimation",
+            "animation": "hold"
+          },
+          {
+            "time": 0.1,
+            "type": "MoveTo",
+            "position": "LeftHandCast",
+            "duration": 0.3,
+            "easing": "EaseOutCubic"
+          },
+          {
+            "time": 0.1,
+            "type": "RotateTo",
+            "rotation": -15,
+            "duration": 0.3,
+            "easing": "EaseOutCubic"
+          },
+          {
+            "time": 0.1,
+            "type": "ScaleTo",
+            "scale": 1.1,
+            "duration": 0.3,
+            "easing": "EaseOutCubic"
+          },
+          {
+            "time": 0.4,
+            "type": "TriggerEffects"
+          },
+          {
+            "time": 0.41,
+            "type": "MoveTo",
+            "position": "LeftHandRecoil",
+            "duration": 0.08,
+            "easing": "EaseOutQuad"
+          },
+          {
+            "time": 0.41,
+            "type": "ScaleTo",
+            "scale": 1.0,
+            "duration": 0.08,
+            "easing": "EaseOutQuad"
+          },
+          {
+            "time": 0.5,
+            "type": "MoveTo",
+            "position": "LeftHandCast",
+            "duration": 0.3,
+            "easing": "EaseOutCubic"
+          },
+          {
+            "time": 0.8,
+            "type": "MoveTo",
+            "position": "LeftHandIdle",
+            "duration": 0.4,
+            "easing": "EaseInCubic"
+          },
+          {
+            "time": 0.8,
+            "type": "RotateTo",
+            "rotation": 0,
+            "duration": 0.4,
+            "easing": "EaseInCubic"
+          },
+          {
+            "time": 0.9,
+            "type": "PlayAnimation",
+            "animation": "idle_loop"
+          }
         ]
       },
       {
         "target": "RightHand",
         "keyframes": [
-          { "time": 0.0, "type": "PlayAnimation", "animation": "cast_start" },
-          { "time": 0.8, "type": "PlayAnimation", "animation": "idle_loop" }
+          {
+            "time": 0.0,
+            "type": "PlayAnimation",
+            "animation": "hold"
+          },
+          {
+            "time": 0.1,
+            "type": "MoveTo",
+            "position": "RightHandCast",
+            "duration": 0.3,
+            "easing": "EaseOutCubic"
+          },
+          {
+            "time": 0.1,
+            "type": "RotateTo",
+            "rotation": 15,
+            "duration": 0.3,
+            "easing": "EaseOutCubic"
+          },
+          {
+            "time": 0.1,
+            "type": "ScaleTo",
+            "scale": 1.1,
+            "duration": 0.3,
+            "easing": "EaseOutCubic"
+          },
+          {
+            "time": 0.41,
+            "type": "MoveTo",
+            "position": "RightHandRecoil",
+            "duration": 0.08,
+            "easing": "EaseOutQuad"
+          },
+          {
+            "time": 0.41,
+            "type": "ScaleTo",
+            "scale": 1.0,
+            "duration": 0.08,
+            "easing": "EaseOutQuad"
+          },
+          {
+            "time": 0.5,
+            "type": "MoveTo",
+            "position": "RightHandCast",
+            "duration": 0.3,
+            "easing": "EaseOutCubic"
+          },
+          {
+            "time": 0.8,
+            "type": "MoveTo",
+            "position": "RightHandIdle",
+            "duration": 0.4,
+            "easing": "EaseInCubic"
+          },
+          {
+            "time": 0.8,
+            "type": "RotateTo",
+            "rotation": 0,
+            "duration": 0.4,
+            "easing": "EaseInCubic"
+          },
+          {
+            "time": 0.9,
+            "type": "PlayAnimation",
+            "animation": "idle_loop"
+          }
         ]
       },
       {
         "target": "VFX",
         "keyframes": [
-          { "time": 0.4, "type": "TriggerEffects" }
+          {
+            "time": 0.4,
+            "type": "TriggerEffects"
+          }
         ]
       }
     ]

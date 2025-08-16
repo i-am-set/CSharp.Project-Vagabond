@@ -49,10 +49,6 @@ namespace ProjectVagabond
         {
         }
 
-        public void ProcessCombatTurn(int entityId)
-        {
-        }
-
         public void UpdateDecisions()
         {
         }

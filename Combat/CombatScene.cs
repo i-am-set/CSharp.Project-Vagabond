@@ -24,12 +24,24 @@ namespace ProjectVagabond.Scenes
         private AnimationManager _animationManager;
         private GameState _gameState;
         private ActionResolver _actionResolver;
+        private ActionAnimator _actionAnimator;
+        public ActionAnimator ActionAnimator => _actionAnimator;
+
 
         // Player Hands
         private HandRenderer _leftHandRenderer;
         private HandRenderer _rightHandRenderer;
 
+        // Animation Anchor Points
+        public Dictionary<string, Vector2> AnimationAnchors { get; private set; }
+
         // --- TUNING CONSTANTS ---
+        // Hand Layout
+        private const float HAND_IDLE_Y_OFFSET = 30f; // How far from the bottom of the screen the hands are.
+        private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 116f; // How far from the center the hands are.
+        private static readonly Vector2 HAND_CAST_OFFSET = new Vector2(60, -30); // Offset from idle position for casting.
+        private static readonly Vector2 HAND_RECOIL_OFFSET = new Vector2(-10, 15); // Offset from cast position for recoil.
+
         // Entity Sizing
         private static readonly Point ENEMY_BASE_SIZE = new Point(64, 96); // Base dimensions (Width, Height) for enemies.
 
@@ -58,7 +70,7 @@ namespace ProjectVagabond.Scenes
         // Self-Cast Indicator
         private const float SELF_CAST_INDICATOR_BUFFER = 5f;
         private const float POINTER_ANTS_SPEED = 15f; // Dots per second
-        private const int POINTER_ANTS_SPACING = 3; // Gap between dots (e.g., 3 means 1 dot drawn, 2 skipped)
+        private const int POINTER_ANTS_SPACING = 3; // Gap between dots (e.g., 1 dot drawn, 2 skipped)
         private const float SELF_CAST_DOT_SIZE = 2f; // The size of each dot in the marching ants line.
 
         // A list to manage cards that are currently in their "play" animation.
@@ -86,10 +98,13 @@ namespace ProjectVagabond.Scenes
             _actionResolver = new ActionResolver();
             ServiceLocator.Register<ActionResolver>(_actionResolver);
 
+            // Initialize player hands and their renderers with a temporary position.
+            // The correct positions will be calculated and set in CalculateLayouts.
+            _leftHandRenderer = new HandRenderer(HandType.Left, Vector2.Zero);
+            _rightHandRenderer = new HandRenderer(HandType.Right, Vector2.Zero);
 
-            // Initialize player hands and their renderers
-            _leftHandRenderer = new HandRenderer(HandType.Left);
-            _rightHandRenderer = new HandRenderer(HandType.Right);
+            // Create the ActionAnimator here, after its dependencies are ready.
+            _actionAnimator = new ActionAnimator(_actionResolver, this, _leftHandRenderer, _rightHandRenderer);
 
             // Register UI components with the manager so states can access them.
             _combatManager.RegisterComponents(_actionHandUI, _inputHandler, this);
@@ -104,8 +119,6 @@ namespace ProjectVagabond.Scenes
             // Load content for hand renderers
             _leftHandRenderer.LoadContent();
             _rightHandRenderer.LoadContent();
-            _leftHandRenderer.EnterScene();
-            _rightHandRenderer.EnterScene();
 
             // Clear any previous combat state
             _enemies.Clear();
@@ -162,9 +175,42 @@ namespace ProjectVagabond.Scenes
                 _playerEntity.SetLayout(new Vector2(playerX, playerY), Point.Zero);
             }
 
+            // Calculate dynamic anchor points for hands
+            CalculateHandAnchors(actualScreenVirtualBounds);
+
+            // Now that anchors are calculated, tell the hands to enter the scene at their correct idle positions.
+            _leftHandRenderer.EnterScene();
+            _rightHandRenderer.EnterScene();
+
             // Calculate Enemy Layout
             LayoutEnemies();
         }
+
+        private void CalculateHandAnchors(Rectangle actualScreenVirtualBounds)
+        {
+            float screenCenterX = actualScreenVirtualBounds.Center.X;
+            float screenBottom = actualScreenVirtualBounds.Bottom;
+
+            var leftHandIdle = new Vector2(screenCenterX - HAND_IDLE_X_OFFSET_FROM_CENTER, screenBottom - HAND_IDLE_Y_OFFSET);
+            var rightHandIdle = new Vector2(screenCenterX + HAND_IDLE_X_OFFSET_FROM_CENTER, screenBottom - HAND_IDLE_Y_OFFSET);
+            var leftHandCast = leftHandIdle + new Vector2(HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
+            var rightHandCast = rightHandIdle + new Vector2(-HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
+
+            AnimationAnchors = new Dictionary<string, Vector2>
+            {
+                { "LeftHandIdle", leftHandIdle },
+                { "RightHandIdle", rightHandIdle },
+                { "LeftHandCast", leftHandCast },
+                { "RightHandCast", rightHandCast },
+                { "LeftHandRecoil", leftHandCast + new Vector2(HAND_RECOIL_OFFSET.X, HAND_RECOIL_OFFSET.Y) },
+                { "RightHandRecoil", rightHandCast + new Vector2(-HAND_RECOIL_OFFSET.X, HAND_RECOIL_OFFSET.Y) }
+            };
+
+            // Update the renderers with their new initial positions
+            _leftHandRenderer.SetIdlePosition(leftHandIdle);
+            _rightHandRenderer.SetIdlePosition(rightHandIdle);
+        }
+
 
         private void LayoutEnemies()
         {
@@ -316,12 +362,15 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
+            // Update the action animator
+            _actionAnimator.Update(gameTime);
+
             // The CombatManager's FSM now drives the logic flow.
             _combatManager.Update(gameTime);
 
             // Update hand renderers
-            _leftHandRenderer.Update(gameTime, _combatManager);
-            _rightHandRenderer.Update(gameTime, _combatManager);
+            _leftHandRenderer.Update(gameTime);
+            _rightHandRenderer.Update(gameTime);
 
             // Enemy animations and other scene-specific visuals are updated here.
             // The FSM controls when the player can interact.
