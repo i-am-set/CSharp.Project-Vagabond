@@ -90,6 +90,21 @@ namespace ProjectVagabond.Combat
 
         private void TriggerKeyframe(AnimationTrack track, Keyframe keyframe)
         {
+            // --- Caster-Aware Animation Logic ---
+            // Check if the keyframe targets a player-specific element. If so, ensure the player is the caster.
+            var gameState = ServiceLocator.Get<GameState>();
+            bool isPlayerCasting = _currentAction.CasterEntityId == gameState.PlayerEntityId;
+
+            if (track.Target == "LeftHand" || track.Target == "RightHand")
+            {
+                if (!isPlayerCasting)
+                {
+                    // This is an AI action trying to animate the player's hands. Skip it.
+                    Debug.WriteLine($"[ActionAnimator] Skipping player-only keyframe for AI caster (Target: {track.Target}).");
+                    return;
+                }
+            }
+
             Debug.WriteLine($"[ActionAnimator] Triggering keyframe: Time={keyframe.Time}, Type={keyframe.Type}, Target={track.Target}");
             HandRenderer targetHand = GetTargetHand(track.Target);
             var easingFunc = Easing.GetEasingFunction(keyframe.Easing);
@@ -140,17 +155,21 @@ namespace ProjectVagabond.Combat
             Debug.WriteLine($"[ActionAnimator] Timeline for '{_currentAction.ActionData.Name}' finished.");
             _isPlaying = false;
 
-            // Ensure hands return to their idle state after the animation is complete.
-            if (_combatScene.AnimationAnchors.TryGetValue("LeftHandIdle", out var leftIdle))
+            // Ensure hands return to their idle state after the animation is complete, but only if the player was the caster.
+            var gameState = ServiceLocator.Get<GameState>();
+            if (_currentAction.CasterEntityId == gameState.PlayerEntityId)
             {
-                _leftHand.MoveTo(leftIdle, 0.3f, Easing.EaseOutCubic);
+                if (_combatScene.AnimationAnchors.TryGetValue("LeftHandIdle", out var leftIdle))
+                {
+                    _leftHand.MoveTo(leftIdle, 0.3f, Easing.EaseOutCubic);
+                }
+                if (_combatScene.AnimationAnchors.TryGetValue("RightHandIdle", out var rightIdle))
+                {
+                    _rightHand.MoveTo(rightIdle, 0.3f, Easing.EaseOutCubic);
+                }
+                _leftHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
+                _rightHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
             }
-            if (_combatScene.AnimationAnchors.TryGetValue("RightHandIdle", out var rightIdle))
-            {
-                _rightHand.MoveTo(rightIdle, 0.3f, Easing.EaseOutCubic);
-            }
-            _leftHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
-            _rightHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
 
 
             _currentAction = null;

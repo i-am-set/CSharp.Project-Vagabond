@@ -37,7 +37,7 @@ namespace ProjectVagabond.Scenes
 
         // --- TUNING CONSTANTS ---
         // Hand Layout
-        private const float HAND_IDLE_Y_OFFSET = 30f; // How far from the bottom of the screen the hands are.
+        private const float HAND_IDLE_Y_OFFSET = -50f; // How far from the bottom of the screen the hands are.
         private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 116f; // How far from the center the hands are.
         private static readonly Vector2 HAND_CAST_OFFSET = new Vector2(60, -30); // Offset from idle position for casting.
         private static readonly Vector2 HAND_RECOIL_OFFSET = new Vector2(-10, 15); // Offset from cast position for recoil.
@@ -216,7 +216,7 @@ namespace ProjectVagabond.Scenes
         {
             var core = ServiceLocator.Get<Core>();
             Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
-            float screenCenterX = actualScreenVirtualBounds.X + actualScreenVirtualBounds.Width / 2f;
+            float screenCenterX = actualScreenVirtualBounds.Center.X;
 
             int enemyCount = _enemies.Count;
             if (enemyCount == 0) return;
@@ -472,6 +472,7 @@ namespace ProjectVagabond.Scenes
             }
 
             var actionType = _inputHandler.DraggedCard.Action.TargetType;
+            var componentStore = ServiceLocator.Get<ComponentStore>();
 
             if (actionType == TargetType.Self)
             {
@@ -481,7 +482,11 @@ namespace ProjectVagabond.Scenes
             {
                 foreach (var enemy in _enemies)
                 {
-                    DrawTargetIndicator(spriteBatch, enemy);
+                    var health = componentStore.GetComponent<HealthComponent>(enemy.EntityId);
+                    if (health != null && health.CurrentHealth > 0)
+                    {
+                        DrawTargetIndicator(spriteBatch, enemy);
+                    }
                 }
             }
             else if (actionType == TargetType.SingleEnemy && _inputHandler.PotentialTargetId.HasValue)
@@ -567,7 +572,9 @@ namespace ProjectVagabond.Scenes
         #region Public Accessors for InputHandler
         public CombatEntity FindClosestEnemyTo(Vector2 position)
         {
+            var componentStore = ServiceLocator.Get<ComponentStore>();
             return _enemies
+                .Where(e => componentStore.GetComponent<HealthComponent>(e.EntityId)?.CurrentHealth > 0)
                 .OrderBy(e => Vector2.DistanceSquared(e.Bounds.Center.ToVector2(), position))
                 .FirstOrDefault();
         }
@@ -591,7 +598,11 @@ namespace ProjectVagabond.Scenes
 
         public List<int> GetAllEnemyIds()
         {
-            return _enemies.Select(e => e.EntityId).ToList();
+            var componentStore = ServiceLocator.Get<ComponentStore>();
+            return _enemies
+                .Where(e => componentStore.GetComponent<HealthComponent>(e.EntityId)?.CurrentHealth > 0)
+                .Select(e => e.EntityId)
+                .ToList();
         }
 
         public List<CombatEntity> GetAllCombatEntities()
