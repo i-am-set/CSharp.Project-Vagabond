@@ -34,6 +34,8 @@ namespace ProjectVagabond.Scenes
         private ConfirmationDialog _confirmationDialog;
         private RevertDialog _revertDialog;
 
+        private bool _isApplyingSettings = false;
+
         public GameSceneState ReturnScene { get; set; } = GameSceneState.MainMenu;
 
         public SettingsScene()
@@ -52,6 +54,7 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
+            _isApplyingSettings = false; // Ensure the state flag is reset on scene entry.
             _confirmationDialog = new ConfirmationDialog(this);
             _revertDialog = new RevertDialog(this);
 
@@ -78,6 +81,9 @@ namespace ProjectVagabond.Scenes
         /// </summary>
         public void RefreshUIFromSettings()
         {
+            // Block UI refresh if we are in the middle of applying settings to prevent state corruption.
+            if (_isApplyingSettings) return;
+
             _tempSettings = new GameSettings
             {
                 Resolution = _settings.Resolution,
@@ -229,9 +235,8 @@ namespace ProjectVagabond.Scenes
         {
             if (!IsDirty()) return;
 
-            // Consume the click and prevent it from affecting other UI elements
-            // that might move under the cursor after the resolution change.
             ResetInputBlockTimer();
+            _isApplyingSettings = true; // Set flag to prevent UI refresh during apply
 
             bool graphicsChanged = _tempSettings.Resolution != _settings.Resolution || _tempSettings.Mode != _settings.Mode;
 
@@ -282,6 +287,7 @@ namespace ProjectVagabond.Scenes
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.Apply();
             _confirmationMessage = "Settings Applied!";
             _confirmationTimer = 5f;
+            _isApplyingSettings = false; // Unset flag
         }
 
         private void RevertChanges()
@@ -298,6 +304,7 @@ namespace ProjectVagabond.Scenes
             _tempSettings.DisplayIndex = _settings.DisplayIndex;
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
             UpdateFramerateControl();
+            _isApplyingSettings = false; // Unset flag
         }
 
         private void ConfirmResetSettings()
