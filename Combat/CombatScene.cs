@@ -37,7 +37,7 @@ namespace ProjectVagabond.Scenes
 
         // --- TUNING CONSTANTS ---
         // Hand Layout
-        private const float HAND_IDLE_Y_OFFSET = -50f; // How far from the bottom of the screen the hands are.
+        private const float HAND_IDLE_Y_OFFSET = -100f; // How far from the bottom of the screen the hands are.
         private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 116f; // How far from the center the hands are.
         private static readonly Vector2 HAND_CAST_OFFSET = new Vector2(60, -30); // Offset from idle position for casting.
         private static readonly Vector2 HAND_RECOIL_OFFSET = new Vector2(-10, 15); // Offset from cast position for recoil.
@@ -216,7 +216,7 @@ namespace ProjectVagabond.Scenes
         {
             var core = ServiceLocator.Get<Core>();
             Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
-            float screenCenterX = actualScreenVirtualBounds.Center.X;
+            float screenCenterX = actualScreenVirtualBounds.X + actualScreenVirtualBounds.Width / 2f;
 
             int enemyCount = _enemies.Count;
             if (enemyCount == 0) return;
