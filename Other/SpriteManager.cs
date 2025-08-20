@@ -1,6 +1,4 @@
-﻿// --- START OF FILE SpriteManager.cs ---
-
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 
@@ -32,6 +30,7 @@ namespace ProjectVagabond
         private Texture2D _handIdleSprite;
         private Texture2D _handHoldSprite;
         private Texture2D _enemySprite;
+        private Texture2D _cardBaseSprite;
 
         public Texture2D LogoSprite => _logoSprite;
         public Texture2D WaterSprite => _waterSprite;
@@ -54,6 +53,7 @@ namespace ProjectVagabond
         public Texture2D HandIdleSprite => _handIdleSprite;
         public Texture2D HandHoldSprite => _handHoldSprite;
         public Texture2D EnemySprite => _enemySprite;
+        public Texture2D CardBaseSprite => _cardBaseSprite;
 
         public SpriteManager()
         {
@@ -135,6 +135,9 @@ namespace ProjectVagabond
 
             try { _enemySprite = _core.Content.Load<Texture2D>("Sprites/Combat/enemy_placeholder"); }
             catch { _enemySprite = _textureFactory.CreateEnemyPlaceholderTexture(); }
+
+            try { _cardBaseSprite = _core.Content.Load<Texture2D>("Sprites/Cards/card_base"); }
+            catch { _cardBaseSprite = _textureFactory.CreateColoredTexture(120, 168, Color.Magenta); }
         }
 
         [Obsolete("LoadSpriteContent is deprecated, please use LoadEssentialContent and LoadGameContent instead.")]

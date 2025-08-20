@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -378,11 +378,11 @@ namespace ProjectVagabond.Combat.UI
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             var core = ServiceLocator.Get<Core>();
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
 
             var cardRotation = card.CurrentRotation;
             var cardScale = card.CurrentScale;
             var cardDrawPosition = card.CurrentBounds.Center;
-            var pixelOrigin = new Vector2(0.5f);
 
             // --- Temporary Card Visuals ---
             var finalTint = card.CurrentTint;
@@ -425,23 +425,20 @@ namespace ProjectVagabond.Combat.UI
                     float layerAlpha = baseAlpha / (float)Math.Pow(2, i);
                     Color layerColor = Color.Black * layerAlpha;
 
-                    spriteBatch.Draw(pixel, baseShadowPosition, null, layerColor, cardRotation, pixelOrigin, layerSize, SpriteEffects.None, 0f);
+                    spriteBatch.Draw(pixel, baseShadowPosition, null, layerColor, cardRotation, new Vector2(0.5f), layerSize, SpriteEffects.None, 0f);
                 }
             }
 
-            // 1. Draw Card Background
-            var cardBgColor = new Color(CARD_TEXT_BG_COLOR.ToVector3() * finalTint.ToVector3()) * finalAlpha;
-            spriteBatch.Draw(pixel, cardDrawPosition, null, cardBgColor, cardRotation, pixelOrigin, CARD_SIZE.ToVector2() * cardScale, SpriteEffects.None, 0f);
+            // 1. Draw Card Texture
+            var cardTexture = spriteManager.CardBaseSprite;
+            if (cardTexture != null)
+            {
+                var textureOrigin = new Vector2(cardTexture.Width / 2f, cardTexture.Height / 2f);
+                var finalColor = finalTint * finalAlpha;
+                spriteBatch.Draw(cardTexture, cardDrawPosition, null, finalColor, cardRotation, textureOrigin, cardScale, SpriteEffects.None, 0f);
+            }
 
-            // 2. Draw placeholder image area
-            var imageAreaColor = new Color(CARD_IMAGE_AREA_COLOR.ToVector3() * finalTint.ToVector3()) * finalAlpha;
-            var imageRectSize = new Vector2(CARD_SIZE.X, CARD_SIZE.Y * (2 / 3f));
-            Vector2 imageAreaOffset = new Vector2(0, -CARD_SIZE.Y * (1 / 6f));
-            Vector2 rotatedImageOffset = Vector2.Transform(imageAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));
-            Vector2 imageAreaCenterPos = cardDrawPosition + rotatedImageOffset;
-            spriteBatch.Draw(pixel, imageAreaCenterPos, null, imageAreaColor, cardRotation, pixelOrigin, imageRectSize * cardScale, SpriteEffects.None, 0f);
-
-            // 3. Draw Border
+            // 2. Draw Border
             float borderThickness = isHovered || card.IsBeingDragged ? 2f : 1f;
             Color borderColor = BORDER_COLOR * finalAlpha;
             var halfSize = CARD_SIZE.ToVector2() / 2f;
@@ -457,7 +454,7 @@ namespace ProjectVagabond.Combat.UI
             spriteBatch.DrawLine(corners[2], corners[3], borderColor, borderThickness);
             spriteBatch.DrawLine(corners[3], corners[0], borderColor, borderThickness);
 
-            // 4. Draw action name
+            // 3. Draw action name
             var textColor = new Color(TEXT_COLOR.ToVector3() * finalTint.ToVector3()) * finalAlpha;
             Vector2 textSize = font.MeasureString(card.Action.Name);
             Vector2 textBgAreaOffset = new Vector2(0, CARD_SIZE.Y * (1 / 3f));
