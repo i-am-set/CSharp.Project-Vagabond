@@ -31,6 +31,7 @@ namespace ProjectVagabond
         private Texture2D _handHoldSprite;
         private Texture2D _enemySprite;
         private Texture2D _cardBaseSprite;
+        public Effect CardShaderEffect { get; private set; }
 
         public Texture2D LogoSprite => _logoSprite;
         public Texture2D WaterSprite => _waterSprite;
@@ -138,6 +139,9 @@ namespace ProjectVagabond
 
             try { _cardBaseSprite = _core.Content.Load<Texture2D>("Sprites/Cards/card_base"); }
             catch { _cardBaseSprite = _textureFactory.CreateColoredTexture(120, 168, Color.Magenta); }
+
+            try { CardShaderEffect = _core.Content.Load<Effect>("Shaders/CardShader"); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ERROR] Could not load shader 'Shaders/CardShader'. Please ensure it's in the Content project. {ex.Message}"); }
         }
 
         [Obsolete("LoadSpriteContent is deprecated, please use LoadEssentialContent and LoadGameContent instead.")]

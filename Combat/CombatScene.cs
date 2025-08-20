@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -381,8 +381,11 @@ namespace ProjectVagabond.Scenes
             _playerEntity?.Update(gameTime);
         }
 
-        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            // --- Main Scene Content (Normal Batch) ---
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+
             // Draw enemies
             foreach (var enemy in _enemies)
             {
@@ -399,20 +402,22 @@ namespace ProjectVagabond.Scenes
             // Draw targeting indicators underneath the dragged card
             DrawTargetingIndicators(spriteBatch);
 
-            // Draw the hand of cards, skipping the one being dragged
-            _actionHandUI.Draw(spriteBatch, font, gameTime, _inputHandler.DraggedCard);
+            spriteBatch.End();
 
+
+            // --- Card UI (Handled by ActionHandUI) ---
+            // ActionHandUI now manages its own SpriteBatch Begin/End calls to apply the shader.
+            _actionHandUI.Draw(spriteBatch, font, gameTime, _inputHandler.DraggedCard, transform);
+
+
+            // --- Overlays (Normal Batch) ---
             // Draw cards that are currently in their "play" animation
             foreach (var card in _playingCards)
             {
                 _actionHandUI.DrawCard(spriteBatch, font, gameTime, card, false);
             }
 
-            // Draw the dragged card on top of the pointer
-            if (_inputHandler.DraggedCard != null)
-            {
-                _actionHandUI.DrawCard(spriteBatch, font, gameTime, _inputHandler.DraggedCard, true);
-            }
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
             // Draw Enemy Hit Markers on top of everything else
             foreach (var enemy in _enemies)
@@ -427,6 +432,8 @@ namespace ProjectVagabond.Scenes
             {
                 spriteBatch.DrawRectangle(PlayArea, Color.Lime, 1f);
             }
+
+            spriteBatch.End();
         }
 
         private void DrawPlayerUI(SpriteBatch spriteBatch, BitmapFont font)
@@ -619,6 +626,13 @@ namespace ProjectVagabond.Scenes
         public override Rectangle GetAnimatedBounds()
         {
             return new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+        }
+
+        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            // This method is required by the abstract base class.
+            // However, all drawing logic for this scene is now handled by the overridden Draw method
+            // to allow for custom SpriteBatch management needed for shaders.
         }
     }
 }

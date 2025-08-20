@@ -127,6 +127,18 @@
 /processorParam:TextureFormat=Compressed
 /build:Models/die.fbx
 
+#begin Shaders/CardShader.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/CardShader.fx
+
+#begin Shaders/CRTShader.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/CRTShader.fx
+
 #begin Sprites/Cards/card_base.png
 /importer:TextureImporter
 /processor:TextureProcessor

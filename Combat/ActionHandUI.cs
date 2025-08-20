@@ -342,49 +342,103 @@ namespace ProjectVagabond.Combat.UI
         }
 
         /// <summary>
-        /// Draws all cards except for a specified dragged card.
+        /// Draws all cards in the hand, handling shaders and layering correctly.
         /// </summary>
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, CombatCard draggedCard)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, CombatCard draggedCard, Matrix transformMatrix)
         {
-            CombatCard hoveredCard = null;
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+            var cardShader = spriteManager.CardShaderEffect;
 
-            // First pass: Draw all non-hovered, non-dragged cards
+            // Create a list of all cards to draw, sorted by their draw order (which is just their list order).
+            // The hovered card will be separated and drawn last to ensure it's on top.
+            var cardsToDraw = new List<CombatCard>();
+            CombatCard hoveredCard = (_hoveredIndex >= 0 && _hoveredIndex < _cards.Count) ? _cards[_hoveredIndex] : null;
+
             for (int i = 0; i < _cards.Count; i++)
             {
                 var card = _cards[i];
-                if (card == draggedCard) continue;
-
-                if (i != _hoveredIndex)
+                if (card != draggedCard && card != hoveredCard)
                 {
-                    DrawCard(spriteBatch, font, gameTime, card, false);
-                }
-                else
-                {
-                    hoveredCard = card;
+                    cardsToDraw.Add(card);
                 }
             }
-
-            // Second pass: Draw the hovered card on top
-            if (hoveredCard != null)
+            // Add the hovered card last so it's drawn on top of non-hovered cards.
+            if (hoveredCard != null && hoveredCard != draggedCard)
             {
-                DrawCard(spriteBatch, font, gameTime, hoveredCard, true);
+                cardsToDraw.Add(hoveredCard);
+            }
+            // The dragged card is always on top of the hand.
+            if (draggedCard != null)
+            {
+                cardsToDraw.Add(draggedCard);
+            }
+
+            // --- Render each card sequentially to respect depth ---
+            foreach (var card in cardsToDraw)
+            {
+                bool isHovered = (card == hoveredCard || card == draggedCard);
+
+                // Pass 1: Draw Shadow (No Shader)
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transformMatrix);
+                DrawCardShadow(spriteBatch, card);
+                spriteBatch.End();
+
+                // Pass 2: Draw Texture (With Shader)
+                spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, cardShader, transformMatrix);
+                DrawCardTexture(spriteBatch, gameTime, card);
+                spriteBatch.End();
+
+                // Pass 3: Draw Overlays (No Shader)
+                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transformMatrix);
+                DrawCardOverlays(spriteBatch, font, card, isHovered);
+                spriteBatch.End();
             }
         }
 
-        /// <summary>
-        /// Helper method to draw a single card with all its visual elements.
-        /// </summary>
-        public void DrawCard(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, CombatCard card, bool isHovered)
+        private void DrawCardShadow(SpriteBatch spriteBatch, CombatCard card)
         {
+            if (card.ShadowAlpha <= 0.01f) return;
+
             var pixel = ServiceLocator.Get<Texture2D>();
             var core = ServiceLocator.Get<Core>();
+            var actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
+
+            float screenCenterX = actualScreenVirtualBounds.Center.X;
+            float horizontalDistanceFromCenter = card.CurrentBounds.Center.X - screenCenterX;
+            float dynamicShadowX = horizontalDistanceFromCenter * SHADOW_HORIZONTAL_SHIFT_FACTOR;
+            float cardHeightFromBottom = actualScreenVirtualBounds.Bottom - card.CurrentBounds.Center.Y;
+            float dynamicShadowY = SHADOW_BASE_VERTICAL_OFFSET + (cardHeightFromBottom * SHADOW_VERTICAL_SHIFT_FACTOR);
+            var dynamicOffset = new Vector2(dynamicShadowX, dynamicShadowY);
+            var baseShadowPosition = card.CurrentBounds.Center + dynamicOffset + card.ShadowOffset;
+
+            float baseAlpha = card.ShadowAlpha * (card.IsTemporary ? TEMPORARY_CARD_ALPHA_MULTIPLIER : 1f);
+            Vector2 baseSize = CARD_SIZE.ToVector2() * card.CurrentScale * SHADOW_SCALE_MULTIPLIER;
+
+            for (int i = 0; i < SHADOW_BLUR_LAYERS; i++)
+            {
+                float layerScale = 1.0f + (i * SHADOW_BLUR_SPREAD);
+                Vector2 layerSize = baseSize * layerScale;
+                float layerAlpha = baseAlpha / (float)Math.Pow(2, i);
+                Color layerColor = Color.Black * layerAlpha;
+                spriteBatch.Draw(pixel, baseShadowPosition, null, layerColor, card.CurrentRotation, new Vector2(0.5f), layerSize, SpriteEffects.None, 0f);
+            }
+        }
+
+        private void DrawCardTexture(SpriteBatch spriteBatch, GameTime gameTime, CombatCard card)
+        {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
+            var cardTexture = spriteManager.CardBaseSprite;
+            if (cardTexture == null) return;
 
-            var cardRotation = card.CurrentRotation;
-            var cardScale = card.CurrentScale;
-            var cardDrawPosition = card.CurrentBounds.Center;
+            // Set the shader parameter based on the card's state.
+            var cardShader = spriteManager.CardShaderEffect;
+            if (cardShader != null)
+            {
+                // The parameter name "IsTemporary" must match the uniform variable in the .fx file.
+                cardShader.Parameters["IsTemporary"]?.SetValue(card.IsTemporary ? 1.0f : 0.0f);
+                cardShader.Parameters["Time"]?.SetValue((float)gameTime.TotalGameTime.TotalSeconds);
+            }
 
-            // --- Temporary Card Visuals ---
             var finalTint = card.CurrentTint;
             var finalAlpha = card.CurrentAlpha;
             if (card.IsTemporary)
@@ -393,52 +447,22 @@ namespace ProjectVagabond.Combat.UI
                 finalTint = Color.Lerp(finalTint, TEMPORARY_CARD_TINT, TEMPORARY_CARD_TINT_AMOUNT);
             }
 
-            // 0. Draw Drop Shadow if it's visible
-            if (card.ShadowAlpha > 0.01f)
+            var textureOrigin = new Vector2(cardTexture.Width / 2f, cardTexture.Height / 2f);
+            var finalColor = finalTint * finalAlpha;
+            spriteBatch.Draw(cardTexture, card.CurrentBounds.Center, null, finalColor, card.CurrentRotation, textureOrigin, card.CurrentScale, SpriteEffects.None, 0f);
+        }
+
+        private void DrawCardOverlays(SpriteBatch spriteBatch, BitmapFont font, CombatCard card, bool isHovered)
+        {
+            var finalTint = card.CurrentTint;
+            var finalAlpha = card.CurrentAlpha;
+            if (card.IsTemporary)
             {
-                var actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
-
-                // The shadow shifts horizontally away from the center, creating a pseudo-3D effect.
-                float screenCenterX = actualScreenVirtualBounds.Center.X;
-                float horizontalDistanceFromCenter = cardDrawPosition.X - screenCenterX;
-                float dynamicShadowX = horizontalDistanceFromCenter * SHADOW_HORIZONTAL_SHIFT_FACTOR;
-
-                // The shadow also shifts vertically based on the card's "height" from the bottom of the screen.
-                float cardHeightFromBottom = actualScreenVirtualBounds.Bottom - cardDrawPosition.Y;
-                float dynamicShadowY = SHADOW_BASE_VERTICAL_OFFSET + (cardHeightFromBottom * SHADOW_VERTICAL_SHIFT_FACTOR);
-
-                // Combine all offsets.
-                var dynamicOffset = new Vector2(dynamicShadowX, dynamicShadowY);
-                var baseShadowPosition = cardDrawPosition + dynamicOffset + card.ShadowOffset;
-
-                float baseAlpha = card.ShadowAlpha * (card.IsTemporary ? TEMPORARY_CARD_ALPHA_MULTIPLIER : 1f);
-                Vector2 baseSize = CARD_SIZE.ToVector2() * cardScale * SHADOW_SCALE_MULTIPLIER;
-
-                // Draw multiple layers to simulate a blurred edge.
-                for (int i = 0; i < SHADOW_BLUR_LAYERS; i++)
-                {
-                    // Each layer is slightly larger and more transparent
-                    float layerScale = 1.0f + (i * SHADOW_BLUR_SPREAD);
-                    Vector2 layerSize = baseSize * layerScale;
-
-                    // The alpha decreases for each layer for a smooth falloff
-                    float layerAlpha = baseAlpha / (float)Math.Pow(2, i);
-                    Color layerColor = Color.Black * layerAlpha;
-
-                    spriteBatch.Draw(pixel, baseShadowPosition, null, layerColor, cardRotation, new Vector2(0.5f), layerSize, SpriteEffects.None, 0f);
-                }
+                finalAlpha *= TEMPORARY_CARD_ALPHA_MULTIPLIER;
+                finalTint = Color.Lerp(finalTint, TEMPORARY_CARD_TINT, TEMPORARY_CARD_TINT_AMOUNT);
             }
 
-            // 1. Draw Card Texture
-            var cardTexture = spriteManager.CardBaseSprite;
-            if (cardTexture != null)
-            {
-                var textureOrigin = new Vector2(cardTexture.Width / 2f, cardTexture.Height / 2f);
-                var finalColor = finalTint * finalAlpha;
-                spriteBatch.Draw(cardTexture, cardDrawPosition, null, finalColor, cardRotation, textureOrigin, cardScale, SpriteEffects.None, 0f);
-            }
-
-            // 2. Draw Border
+            // Draw Border
             float borderThickness = isHovered || card.IsBeingDragged ? 2f : 1f;
             Color borderColor = BORDER_COLOR * finalAlpha;
             var halfSize = CARD_SIZE.ToVector2() / 2f;
@@ -447,20 +471,45 @@ namespace ProjectVagabond.Combat.UI
                 new Vector2(-halfSize.X, -halfSize.Y), new Vector2(halfSize.X, -halfSize.Y),
                 new Vector2(halfSize.X, halfSize.Y), new Vector2(-halfSize.X, halfSize.Y)
             };
-            var transform = Matrix.CreateScale(cardScale) * Matrix.CreateRotationZ(cardRotation) * Matrix.CreateTranslation(cardDrawPosition.X, cardDrawPosition.Y, 0);
+            var transform = Matrix.CreateScale(card.CurrentScale) * Matrix.CreateRotationZ(card.CurrentRotation) * Matrix.CreateTranslation(card.CurrentBounds.Center.X, card.CurrentBounds.Center.Y, 0);
             for (int j = 0; j < corners.Length; j++) corners[j] = Vector2.Transform(corners[j], transform);
             spriteBatch.DrawLine(corners[0], corners[1], borderColor, borderThickness);
             spriteBatch.DrawLine(corners[1], corners[2], borderColor, borderThickness);
             spriteBatch.DrawLine(corners[2], corners[3], borderColor, borderThickness);
             spriteBatch.DrawLine(corners[3], corners[0], borderColor, borderThickness);
 
-            // 3. Draw action name
+            // Draw action name
             var textColor = new Color(TEXT_COLOR.ToVector3() * finalTint.ToVector3()) * finalAlpha;
             Vector2 textSize = font.MeasureString(card.Action.Name);
             Vector2 textBgAreaOffset = new Vector2(0, CARD_SIZE.Y * (1 / 3f));
-            Vector2 rotatedTextBgOffset = Vector2.Transform(textBgAreaOffset * cardScale, Matrix.CreateRotationZ(cardRotation));
-            Vector2 textDrawPosition = cardDrawPosition + rotatedTextBgOffset;
-            spriteBatch.DrawString(font, card.Action.Name, textDrawPosition, textColor, cardRotation, textSize / 2f, card.CurrentScale, SpriteEffects.None, 0f);
+            Vector2 rotatedTextBgOffset = Vector2.Transform(textBgAreaOffset * card.CurrentScale, Matrix.CreateRotationZ(card.CurrentRotation));
+            Vector2 textDrawPosition = card.CurrentBounds.Center + rotatedTextBgOffset;
+            spriteBatch.DrawString(font, card.Action.Name, textDrawPosition, textColor, card.CurrentRotation, textSize / 2f, card.CurrentScale, SpriteEffects.None, 0f);
+        }
+
+        /// <summary>
+        /// Helper method to draw a single card with all its visual elements.
+        /// </summary>
+        public void DrawCard(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, CombatCard card, bool isHovered)
+        {
+            // This method is now a convenience wrapper for the multi-pass system,
+            // primarily for drawing single cards like the 'playing' cards.
+            var transform = Matrix.Identity; // Assuming no special transform for single cards.
+
+            // Pass 1: Draw Shadow (No Shader)
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+            DrawCardShadow(spriteBatch, card);
+            spriteBatch.End();
+
+            // Pass 2: Draw Texture (With Shader)
+            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, ServiceLocator.Get<SpriteManager>().CardShaderEffect, transform);
+            DrawCardTexture(spriteBatch, gameTime, card);
+            spriteBatch.End();
+
+            // Pass 3: Draw Overlays (No Shader)
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
+            DrawCardOverlays(spriteBatch, font, card, isHovered);
+            spriteBatch.End();
         }
     }
 }
