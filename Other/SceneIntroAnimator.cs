@@ -38,6 +38,8 @@ namespace ProjectVagabond.Scenes
 
         public void Start(Rectangle finalBounds, Rectangle contentBounds)
         {
+            // IMPORTANT: The finalBounds must be the full physical screen bounds (e.g., from GraphicsDevice),
+            // not the virtual resolution, for the wipe to cover the entire window.
             _finalBounds = finalBounds;
             _contentBounds = contentBounds;
             _centerPoint = finalBounds.Center.ToVector2();
@@ -133,7 +135,6 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             var pixel = ServiceLocator.Get<Texture2D>();
             var color = Color.Black;
 
@@ -146,8 +147,6 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Draw(pixel, new Rectangle(0, _currentRect.Top, _currentRect.Left, _currentRect.Height), color);
             // Right rectangle
             spriteBatch.Draw(pixel, new Rectangle(_currentRect.Right, _currentRect.Top, _finalBounds.Width - _currentRect.Right, _currentRect.Height), color);
-
-            spriteBatch.End();
         }
     }
 }

@@ -152,6 +152,11 @@ namespace ProjectVagabond.Scenes
         public virtual void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime) { }
 
         /// <summary>
+        /// Called every frame to draw UI elements that should render to the full screen, outside the letterbox.
+        /// </summary>
+        public virtual void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform) { }
+
+        /// <summary>
         /// Called every frame to draw full-screen effects over the main scene content.
         /// </summary>
         public virtual void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime) { }

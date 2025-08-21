@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using System;
@@ -36,6 +37,8 @@ namespace ProjectVagabond.Scenes
 
         public void Start(Rectangle initialBounds)
         {
+            // IMPORTANT: The initialBounds must be the full physical screen bounds (e.g., from GraphicsDevice),
+            // not the virtual resolution, for the wipe to cover the entire window.
             _initialBounds = initialBounds;
             _centerPoint = initialBounds.Center.ToVector2();
             _currentRect = _initialBounds;
@@ -111,7 +114,6 @@ namespace ProjectVagabond.Scenes
         {
             if (IsComplete) return;
 
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             var pixel = ServiceLocator.Get<Texture2D>();
             var color = Color.Black;
 
@@ -120,8 +122,6 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Draw(pixel, new Rectangle(0, _currentRect.Bottom, _initialBounds.Width, _initialBounds.Height - _currentRect.Bottom), color);
             spriteBatch.Draw(pixel, new Rectangle(0, _currentRect.Top, _currentRect.Left, _currentRect.Height), color);
             spriteBatch.Draw(pixel, new Rectangle(_currentRect.Right, _currentRect.Top, _initialBounds.Width - _currentRect.Right, _currentRect.Height), color);
-
-            spriteBatch.End();
         }
     }
 }

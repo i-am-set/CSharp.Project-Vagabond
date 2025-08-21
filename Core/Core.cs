@@ -40,12 +40,17 @@ namespace ProjectVagabond
         private SpriteBatch _spriteBatch;
         private BitmapFont _defaultFont;
         private Texture2D _pixel;
-        private RenderTarget2D _renderTarget;
         private Rectangle _finalRenderRectangle;
         private Matrix _mouseTransformMatrix;
         private bool _useLinearSampling;
         private Point _previousResolution;
         private float _finalScale = 1f;
+
+        // --- Post-Processing Members ---
+        private RenderTarget2D _sceneRenderTarget;
+        private RenderTarget2D _finalCompositeTarget;
+        private Effect _crtEffect;
+
 
         public Matrix MouseTransformMatrix => _mouseTransformMatrix;
 
@@ -112,6 +117,16 @@ namespace ProjectVagabond
 
             // Phase 2: GraphicsDevice Registration
             ServiceLocator.Register<GraphicsDevice>(GraphicsDevice);
+
+            // Initialize the virtual resolution render target
+            _sceneRenderTarget = new RenderTarget2D(
+                GraphicsDevice,
+                Global.VIRTUAL_WIDTH,
+                Global.VIRTUAL_HEIGHT,
+                false,
+                GraphicsDevice.PresentationParameters.BackBufferFormat,
+                DepthFormat.Depth24);
+
 
             // Phase 3: Instantiate and Register Managers & Systems in Dependency Order
             var entityManager = new EntityManager();
@@ -276,6 +291,16 @@ namespace ProjectVagabond
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
+
+            // Initialize the full-screen composite render target
+            _finalCompositeTarget = new RenderTarget2D(
+                GraphicsDevice,
+                Window.ClientBounds.Width,
+                Window.ClientBounds.Height,
+                false,
+                GraphicsDevice.PresentationParameters.BackBufferFormat,
+                DepthFormat.Depth24);
+
             base.Initialize();
         }
 
@@ -284,13 +309,16 @@ namespace ProjectVagabond
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             ServiceLocator.Register<SpriteBatch>(_spriteBatch);
 
-            _renderTarget = new RenderTarget2D(
-                GraphicsDevice,
-                Global.VIRTUAL_WIDTH,
-                Global.VIRTUAL_HEIGHT,
-                false,
-                GraphicsDevice.PresentationParameters.BackBufferFormat,
-                DepthFormat.Depth24);
+            // Load the CRT shader
+            try
+            {
+                _crtEffect = Content.Load<Effect>("Shaders/CRTShader");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[FATAL ERROR] Could not load CRT Shader: {ex.Message}");
+                _crtEffect = null;
+            }
 
             try
             {
@@ -481,85 +509,58 @@ namespace ProjectVagabond
 
         protected override void Draw(GameTime gameTime)
         {
-            bool useLetterboxing = _sceneManager.CurrentActiveScene?.UsesLetterboxing ?? true;
+            // --- Phase 1: Render the letterboxed game world to its render target ---
+            GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
+            GraphicsDevice.Clear(Color.Transparent);
 
-            Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
-            var finalSamplerState = _useLinearSampling ? SamplerState.LinearClamp : SamplerState.PointClamp;
+            Matrix virtualSpaceTransform = shakeMatrix;
 
-            // --- Phase 1: Render virtual-space content ---
-            if (useLetterboxing)
-            {
-                // For letterboxed scenes, draw everything to a single render target first.
-                GraphicsDevice.SetRenderTarget(_renderTarget);
-                GraphicsDevice.Clear(Color.Transparent);
+            _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, virtualSpaceTransform);
 
-                _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, Matrix.Identity);
-
-                _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                _tooltipManager.Draw(_spriteBatch, _defaultFont);
-                _spriteBatch.End();
-            }
-
-            var diceTexture = _diceRollingSystem.Draw(_defaultFont);
-
-            // --- Phase 2: Composite everything to the backbuffer ---
-            GraphicsDevice.SetRenderTarget(null);
+            // --- Phase 2: Composite everything onto the full-screen render target ---
+            GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
             GraphicsDevice.Clear(Color.Black);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            if (!_sceneManager.IsLoadingBetweenScenes)
+            // Only draw the background and scene if we are NOT in a transition hold/load state.
+            if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
             {
-                _backgroundManager.Draw(_spriteBatch, GraphicsDevice.PresentationParameters.Bounds, _finalScale);
+                _backgroundManager.Draw(_spriteBatch, _finalCompositeTarget.Bounds, _finalScale);
+                _spriteBatch.Draw(_sceneRenderTarget, _finalRenderRectangle, Color.White);
             }
             _spriteBatch.End();
 
-            _sceneManager.DrawUnderlay(_spriteBatch, _defaultFont, gameTime);
+            // Draw any full-screen UI (like the combat hand) on top of that
+            Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
+            _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, screenScaleMatrix);
 
-            // --- Draw the main content block ---
-            if (useLetterboxing)
+            // --- Phase 3: Render the final composite to the screen with the CRT shader ---
+            GraphicsDevice.SetRenderTarget(null);
+            GraphicsDevice.Clear(Color.Black);
+
+            _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp);
+
+            if (_crtEffect != null)
             {
-                _spriteBatch.Begin(samplerState: finalSamplerState, transformMatrix: shakeMatrix);
-                _spriteBatch.Draw(_renderTarget, _finalRenderRectangle, Color.White);
-                _spriteBatch.End();
-
-                if (diceTexture != null)
-                {
-                    _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: finalSamplerState, transformMatrix: shakeMatrix);
-                    _spriteBatch.Draw(diceTexture, _finalRenderRectangle, Color.White);
-                    _spriteBatch.End();
-                }
-            }
-            else // Fullscreen rendering (e.g., Combat)
-            {
-                Matrix fullScreenTransform = shakeMatrix * screenScaleMatrix;
-                _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, fullScreenTransform);
-
-                if (diceTexture != null)
-                {
-                    _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: finalSamplerState, transformMatrix: fullScreenTransform);
-                    _spriteBatch.Draw(diceTexture, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), Color.White);
-                    _spriteBatch.End();
-                }
-
-                _spriteBatch.Begin(samplerState: SamplerState.PointClamp, transformMatrix: fullScreenTransform);
-                _tooltipManager.Draw(_spriteBatch, _defaultFont);
-                _spriteBatch.End();
+                _crtEffect.Parameters["Time"]?.SetValue((float)gameTime.TotalGameTime.TotalSeconds);
+                _crtEffect.Parameters["ScreenResolution"]?.SetValue(new Vector2(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));
+                _crtEffect.CurrentTechnique.Passes[0].Apply();
             }
 
-            Matrix particleTransform = useLetterboxing ? shakeMatrix : shakeMatrix * screenScaleMatrix;
-            _particleSystemManager.Draw(_spriteBatch, particleTransform);
+            var fullScreenRect = new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight);
+            _spriteBatch.Draw(_finalCompositeTarget, fullScreenRect, Color.White);
+            _spriteBatch.End();
 
+            // --- Phase 4: Draw UI elements that should NOT have the shader applied ---
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
 
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             if (_loadingScreen.IsActive)
             {
-                _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
                 _loadingScreen.Draw(_spriteBatch, _defaultFont, GraphicsDevice.PresentationParameters.Bounds);
-                _spriteBatch.End();
             }
 
-            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             if (_defaultFont != null)
             {
                 string versionText = $"v{Global.GAME_VERSION}";
@@ -572,6 +573,7 @@ namespace ProjectVagabond
 
             base.Draw(gameTime);
         }
+
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -641,6 +643,16 @@ namespace ProjectVagabond
             _finalRenderRectangle = new Rectangle(destX, destY, destWidth, destHeight);
 
             _mouseTransformMatrix = Matrix.CreateTranslation(-destX, -destY, 0) * Matrix.CreateScale(1.0f / _finalScale);
+
+            // Recreate the full-screen render target to match the new window size
+            _finalCompositeTarget?.Dispose();
+            _finalCompositeTarget = new RenderTarget2D(
+                GraphicsDevice,
+                Window.ClientBounds.Width,
+                Window.ClientBounds.Height,
+                false,
+                GraphicsDevice.PresentationParameters.BackBufferFormat,
+                DepthFormat.Depth24);
         }
 
         /// <summary>

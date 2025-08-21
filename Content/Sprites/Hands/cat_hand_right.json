@@ -19,7 +19,7 @@
    },
    {
     "filename": "cat_hand_right 2.ase",
-    "frame": { "x": 0, "y": 0, "w": 192, "h": 384 },
+    "frame": { "x": 384, "y": 0, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
@@ -28,33 +28,6 @@
    },
    {
     "filename": "cat_hand_right 3.ase",
-    "frame": { "x": 384, "y": 0, "w": 192, "h": 384 },
-    "rotated": false,
-    "trimmed": false,
-    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
-    "sourceSize": { "w": 192, "h": 384 },
-    "duration": 100
-   },
-   {
-    "filename": "cat_hand_right 4.ase",
-    "frame": { "x": 0, "y": 0, "w": 192, "h": 384 },
-    "rotated": false,
-    "trimmed": false,
-    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
-    "sourceSize": { "w": 192, "h": 384 },
-    "duration": 100
-   },
-   {
-    "filename": "cat_hand_right 5.ase",
-    "frame": { "x": 0, "y": 0, "w": 192, "h": 384 },
-    "rotated": false,
-    "trimmed": false,
-    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
-    "sourceSize": { "w": 192, "h": 384 },
-    "duration": 100
-   },
-   {
-    "filename": "cat_hand_right 6.ase",
     "frame": { "x": 576, "y": 0, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
@@ -63,7 +36,25 @@
     "duration": 100
    },
    {
-    "filename": "cat_hand_right 7.ase",
+    "filename": "cat_hand_right 4.ase",
+    "frame": { "x": 384, "y": 0, "w": 192, "h": 384 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
+    "sourceSize": { "w": 192, "h": 384 },
+    "duration": 100
+   },
+   {
+    "filename": "cat_hand_right 5.ase",
+    "frame": { "x": 384, "y": 0, "w": 192, "h": 384 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
+    "sourceSize": { "w": 192, "h": 384 },
+    "duration": 100
+   },
+   {
+    "filename": "cat_hand_right 6.ase",
     "frame": { "x": 0, "y": 384, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
@@ -72,7 +63,7 @@
     "duration": 100
    },
    {
-    "filename": "cat_hand_right 8.ase",
+    "filename": "cat_hand_right 7.ase",
     "frame": { "x": 192, "y": 384, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
@@ -81,7 +72,7 @@
     "duration": 100
    },
    {
-    "filename": "cat_hand_right 9.ase",
+    "filename": "cat_hand_right 8.ase",
     "frame": { "x": 384, "y": 384, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
@@ -90,7 +81,7 @@
     "duration": 100
    },
    {
-    "filename": "cat_hand_right 10.ase",
+    "filename": "cat_hand_right 9.ase",
     "frame": { "x": 576, "y": 384, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
@@ -99,8 +90,17 @@
     "duration": 100
    },
    {
+    "filename": "cat_hand_right 10.ase",
+    "frame": { "x": 0, "y": 768, "w": 192, "h": 384 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
+    "sourceSize": { "w": 192, "h": 384 },
+    "duration": 100
+   },
+   {
     "filename": "cat_hand_right 11.ase",
-    "frame": { "x": 0, "y": 0, "w": 192, "h": 384 },
+    "frame": { "x": 384, "y": 0, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
@@ -109,7 +109,7 @@
    },
    {
     "filename": "cat_hand_right 12.ase",
-    "frame": { "x": 0, "y": 0, "w": 192, "h": 384 },
+    "frame": { "x": 384, "y": 0, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
@@ -118,7 +118,7 @@
    },
    {
     "filename": "cat_hand_right 13.ase",
-    "frame": { "x": 384, "y": 0, "w": 192, "h": 384 },
+    "frame": { "x": 576, "y": 0, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
@@ -127,15 +127,6 @@
    },
    {
     "filename": "cat_hand_right 14.ase",
-    "frame": { "x": 0, "y": 0, "w": 192, "h": 384 },
-    "rotated": false,
-    "trimmed": false,
-    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
-    "sourceSize": { "w": 192, "h": 384 },
-    "duration": 100
-   },
-   {
-    "filename": "cat_hand_right 15.ase",
     "frame": { "x": 384, "y": 0, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
@@ -144,8 +135,17 @@
     "duration": 100
    },
    {
+    "filename": "cat_hand_right 15.ase",
+    "frame": { "x": 576, "y": 0, "w": 192, "h": 384 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
+    "sourceSize": { "w": 192, "h": 384 },
+    "duration": 100
+   },
+   {
     "filename": "cat_hand_right 16.ase",
-    "frame": { "x": 0, "y": 0, "w": 192, "h": 384 },
+    "frame": { "x": 384, "y": 0, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
@@ -154,7 +154,7 @@
    },
    {
     "filename": "cat_hand_right 17.ase",
-    "frame": { "x": 0, "y": 768, "w": 192, "h": 384 },
+    "frame": { "x": 192, "y": 768, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },
@@ -163,7 +163,7 @@
    },
    {
     "filename": "cat_hand_right 18.ase",
-    "frame": { "x": 192, "y": 768, "w": 192, "h": 384 },
+    "frame": { "x": 384, "y": 768, "w": 192, "h": 384 },
     "rotated": false,
     "trimmed": false,
     "spriteSourceSize": { "x": 0, "y": 0, "w": 192, "h": 384 },

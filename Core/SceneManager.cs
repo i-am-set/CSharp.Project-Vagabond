@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Scenes;
 using System.Collections.Generic;
@@ -44,6 +44,11 @@ namespace ProjectVagabond
         /// This is used by the Core loop to suppress drawing of the old scene and background.
         /// </summary>
         public bool IsLoadingBetweenScenes => _isTransitioning && _loadIsPending && _outroAnimator == null;
+
+        /// <summary>
+        /// True when the manager is holding a black screen between the outro and intro animations.
+        /// </summary>
+        public bool IsHoldingBlack => _isHoldingBlack;
 
         /// <summary>
         /// The last input device used to trigger a major action, like changing a scene.
@@ -202,14 +207,14 @@ namespace ProjectVagabond
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix? transform = null)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (IsLoadingBetweenScenes)
             {
                 return;
             }
 
-            Matrix baseTransform = transform ?? Matrix.Identity;
+            Matrix baseTransform = transform;
             Matrix contentTransform = _introAnimator?.GetContentTransform() ?? Matrix.Identity;
 
             // The animation should happen in virtual space, then the whole thing is transformed to screen space.
@@ -227,6 +232,9 @@ namespace ProjectVagabond
         {
             _currentScene?.DrawOverlay(spriteBatch, font, gameTime);
 
+            // The animators are now drawn without any transformation, directly to the screen.
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
             _introAnimator?.Draw(spriteBatch, font, gameTime, null);
 
             if (_isTransitioning && _outroAnimator != null)
@@ -234,14 +242,7 @@ namespace ProjectVagabond
                 _outroAnimator.Draw(spriteBatch, font, gameTime, null);
             }
 
-            if (_isHoldingBlack && !_loadIsPending)
-            {
-                var gd = ServiceLocator.Get<GraphicsDevice>();
-                var screenBounds = new Rectangle(0, 0, gd.PresentationParameters.BackBufferWidth, gd.PresentationParameters.BackBufferHeight);
-                spriteBatch.Begin();
-                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), screenBounds, Color.Black);
-                spriteBatch.End();
-            }
+            spriteBatch.End();
         }
     }
 }

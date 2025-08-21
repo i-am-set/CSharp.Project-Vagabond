@@ -151,6 +151,7 @@ namespace ProjectVagabond.Combat.UI
             _targetMenuYOffset = PEEKING_Y_OFFSET;
             _isYAnimating = false;
             _yAnimationTimer = 0f;
+            _cards.Clear();
         }
 
         /// <summary>
@@ -342,21 +343,23 @@ namespace ProjectVagabond.Combat.UI
         }
 
         /// <summary>
-        /// Draws all cards in the hand, handling shaders and layering correctly.
+        /// Draws all cards in the hand and any animating "playing" cards.
         /// </summary>
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, CombatCard draggedCard, Matrix transformMatrix)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, CombatCard draggedCard, IEnumerable<CombatCard> playingCards, Matrix transformMatrix)
         {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var cardShader = spriteManager.CardShaderEffect;
 
-            // Create a list of all cards to draw, sorted by their draw order (which is just their list order).
-            // The hovered card will be separated and drawn last to ensure it's on top.
+            // Combine hand cards and playing cards into a single list for rendering.
+            var allCardsToRender = new List<CombatCard>(_cards);
+            allCardsToRender.AddRange(playingCards);
+
+            // Determine draw order: non-hovered, then hovered, then dragged.
             var cardsToDraw = new List<CombatCard>();
             CombatCard hoveredCard = (_hoveredIndex >= 0 && _hoveredIndex < _cards.Count) ? _cards[_hoveredIndex] : null;
 
-            for (int i = 0; i < _cards.Count; i++)
+            foreach (var card in allCardsToRender)
             {
-                var card = _cards[i];
                 if (card != draggedCard && card != hoveredCard)
                 {
                     cardsToDraw.Add(card);
@@ -434,7 +437,7 @@ namespace ProjectVagabond.Combat.UI
             var cardShader = spriteManager.CardShaderEffect;
             if (cardShader != null)
             {
-                // The parameter name "IsTemporary" must match the uniform variable in the .fx file.
+                // MODIFIED: Pass a float (1.0f or 0.0f) instead of a bool.
                 cardShader.Parameters["IsTemporary"]?.SetValue(card.IsTemporary ? 1.0f : 0.0f);
                 cardShader.Parameters["Time"]?.SetValue((float)gameTime.TotalGameTime.TotalSeconds);
             }
@@ -485,31 +488,6 @@ namespace ProjectVagabond.Combat.UI
             Vector2 rotatedTextBgOffset = Vector2.Transform(textBgAreaOffset * card.CurrentScale, Matrix.CreateRotationZ(card.CurrentRotation));
             Vector2 textDrawPosition = card.CurrentBounds.Center + rotatedTextBgOffset;
             spriteBatch.DrawString(font, card.Action.Name, textDrawPosition, textColor, card.CurrentRotation, textSize / 2f, card.CurrentScale, SpriteEffects.None, 0f);
-        }
-
-        /// <summary>
-        /// Helper method to draw a single card with all its visual elements.
-        /// </summary>
-        public void DrawCard(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, CombatCard card, bool isHovered)
-        {
-            // This method is now a convenience wrapper for the multi-pass system,
-            // primarily for drawing single cards like the 'playing' cards.
-            var transform = Matrix.Identity; // Assuming no special transform for single cards.
-
-            // Pass 1: Draw Shadow (No Shader)
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
-            DrawCardShadow(spriteBatch, card);
-            spriteBatch.End();
-
-            // Pass 2: Draw Texture (With Shader)
-            spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, ServiceLocator.Get<SpriteManager>().CardShaderEffect, transform);
-            DrawCardTexture(spriteBatch, gameTime, card);
-            spriteBatch.End();
-
-            // Pass 3: Draw Overlays (No Shader)
-            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, transform);
-            DrawCardOverlays(spriteBatch, font, card, isHovered);
-            spriteBatch.End();
         }
     }
 }

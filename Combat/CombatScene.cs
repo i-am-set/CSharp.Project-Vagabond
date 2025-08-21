@@ -188,11 +188,15 @@ namespace ProjectVagabond.Scenes
 
         private void CalculateHandAnchors(Rectangle actualScreenVirtualBounds)
         {
+            var core = ServiceLocator.Get<Core>();
             float screenCenterX = actualScreenVirtualBounds.Center.X;
-            float screenBottom = actualScreenVirtualBounds.Bottom;
 
-            var leftHandIdle = new Vector2(screenCenterX - HAND_IDLE_X_OFFSET_FROM_CENTER, screenBottom - HAND_IDLE_Y_OFFSET);
-            var rightHandIdle = new Vector2(screenCenterX + HAND_IDLE_X_OFFSET_FROM_CENTER, screenBottom - HAND_IDLE_Y_OFFSET);
+            // ANCHOR FIX: Anchor Y position calculation to the physical window bottom, not the virtual bounds.
+            var windowBottomRight = new Point(core.GraphicsDevice.PresentationParameters.BackBufferWidth, core.GraphicsDevice.PresentationParameters.BackBufferHeight);
+            float screenBottomInVirtualCoords = Core.TransformMouse(windowBottomRight).Y;
+
+            var leftHandIdle = new Vector2(screenCenterX - HAND_IDLE_X_OFFSET_FROM_CENTER, screenBottomInVirtualCoords - HAND_IDLE_Y_OFFSET);
+            var rightHandIdle = new Vector2(screenCenterX + HAND_IDLE_X_OFFSET_FROM_CENTER, screenBottomInVirtualCoords - HAND_IDLE_Y_OFFSET);
             var leftHandCast = leftHandIdle + new Vector2(HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
             var rightHandCast = rightHandIdle + new Vector2(-HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
 
@@ -381,49 +385,36 @@ namespace ProjectVagabond.Scenes
             _playerEntity?.Update(gameTime);
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // --- Main Scene Content (Normal Batch) ---
+            // --- Player Hands and UI (Drawn to full screen) ---
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
-
-            // Draw enemies
-            foreach (var enemy in _enemies)
-            {
-                enemy.Draw(spriteBatch);
-            }
-
-            // Draw player hands behind the card UI
             _leftHandRenderer.Draw(spriteBatch, font, gameTime);
             _rightHandRenderer.Draw(spriteBatch, font, gameTime);
-
-            // Draw Player Health Bar and Hit Markers
             DrawPlayerUI(spriteBatch, font);
-
-            // Draw targeting indicators underneath the dragged card
-            DrawTargetingIndicators(spriteBatch);
-
             spriteBatch.End();
 
+            // --- Card UI (Manages its own batches for shaders) ---
+            _actionHandUI.Draw(spriteBatch, font, gameTime, _inputHandler.DraggedCard, _playingCards, transform);
 
-            // --- Card UI (Handled by ActionHandUI) ---
-            // ActionHandUI now manages its own SpriteBatch Begin/End calls to apply the shader.
-            _actionHandUI.Draw(spriteBatch, font, gameTime, _inputHandler.DraggedCard, transform);
-
-
-            // --- Overlays (Normal Batch) ---
-            // Draw cards that are currently in their "play" animation
-            foreach (var card in _playingCards)
-            {
-                _actionHandUI.DrawCard(spriteBatch, font, gameTime, card, false);
-            }
-
+            // --- Overlays (Drawn to full screen) ---
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
-
+            DrawTargetingIndicators(spriteBatch);
             // Draw Enemy Hit Markers on top of everything else
             foreach (var enemy in _enemies)
             {
                 var basePosition = new Vector2(enemy.Bounds.Center.X, enemy.Bounds.Top);
                 enemy.DrawHitMarkers(spriteBatch, font, basePosition);
+            }
+            spriteBatch.End();
+        }
+
+        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            // This method now only draws the in-world elements that should be letterboxed.
+            foreach (var enemy in _enemies)
+            {
+                enemy.Draw(spriteBatch);
             }
 
             // --- DEBUG: Draw the play area boundary ---
@@ -432,8 +423,6 @@ namespace ProjectVagabond.Scenes
             {
                 spriteBatch.DrawRectangle(PlayArea, Color.Lime, 1f);
             }
-
-            spriteBatch.End();
         }
 
         private void DrawPlayerUI(SpriteBatch spriteBatch, BitmapFont font)
@@ -445,10 +434,14 @@ namespace ProjectVagabond.Scenes
             Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
             var pixel = ServiceLocator.Get<Texture2D>();
 
+            // ANCHOR FIX: Anchor Y position calculation to the physical window bottom, not the virtual bounds.
+            var windowBottomRight = new Point(core.GraphicsDevice.PresentationParameters.BackBufferWidth, core.GraphicsDevice.PresentationParameters.BackBufferHeight);
+            float screenBottomInVirtualCoords = Core.TransformMouse(windowBottomRight).Y;
+
             // --- Health Bar ---
             int barWidth = PLAYER_HEALTH_BAR_SIZE.X;
             int barHeight = PLAYER_HEALTH_BAR_SIZE.Y;
-            int barY = actualScreenVirtualBounds.Bottom - barHeight - PLAYER_HEALTH_BAR_Y_OFFSET;
+            int barY = (int)screenBottomInVirtualCoords - barHeight - PLAYER_HEALTH_BAR_Y_OFFSET;
             int barX = actualScreenVirtualBounds.Center.X - barWidth / 2;
             var bgRect = new Rectangle(barX, barY, barWidth, barHeight);
 
@@ -626,13 +619,6 @@ namespace ProjectVagabond.Scenes
         public override Rectangle GetAnimatedBounds()
         {
             return new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-        }
-
-        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
-        {
-            // This method is required by the abstract base class.
-            // However, all drawing logic for this scene is now handled by the overridden Draw method
-            // to allow for custom SpriteBatch management needed for shaders.
         }
     }
 }

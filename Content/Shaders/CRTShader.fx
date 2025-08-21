@@ -11,20 +11,43 @@
 uniform float Time;
 uniform float2 ScreenResolution;
 
-// --- Tweakable Constants (Corrected with 'static const') ---
+//------------------------------------------------------------------------------------
+// HOW TO TWEAK THE CRT EFFECTS
+//------------------------------------------------------------------------------------
+// To enable or disable an effect, add or remove the "//" before a #define line.
+// To change the intensity of an effect, modify the 'static const float' values below.
+// After making changes, you must REBUILD your Content.mgcb project for them to apply.
+//
+// CONTRAST_AMOUNT: Controls the intensity of colors.
+//   - 1.0 = Normal contrast.
+//   - 1.2 = A good, noticeable boost that makes whites pop.
+//   - 1.5+ = A very high-contrast, stylized look.
+//------------------------------------------------------------------------------------
+
+// --- Effect Toggles ---
 #define ENABLE_CURVATURE
 #define ENABLE_VIGNETTE
 #define ENABLE_SCANLINES
 #define ENABLE_SHADOW_MASK
 #define ENABLE_CHROMATIC_ABERRATION
 #define ENABLE_DITHERING
+#define ENABLE_ROLLING_SCANLINE
+#define ENABLE_CONTRAST // <-- NEW EFFECT TOGGLE
 
-static const float CURVATURE_AMOUNT = 0.03;
-static const float VIGNETTE_INTENSITY = 0.6;
-static const float SCANLINE_INTENSITY = 0.15;
-static const float SHADOW_MASK_INTENSITY = 0.1;
+// --- Effect Intensity Values ---
+static const float CURVATURE_AMOUNT = 0.1;
+static const float VIGNETTE_INTENSITY = 0.8;
+static const float SCANLINE_INTENSITY = 0.4;
+static const float SHADOW_MASK_INTENSITY = 0.15;
 static const float CHROMATIC_ABERRATION_AMOUNT = 2.0;
 static const float DITHER_THRESHOLD = 1.0 / 255.0;
+static const float CONTRAST_AMOUNT = 1.2; // <-- NEW: Added contrast value
+// --- Rolling Scanline Parameters ---
+static const float ROLLING_SCANLINE_SPEED = 0.15;
+static const float ROLLING_SCANLINE_HEIGHT = 0.02;
+static const float ROLLING_SCANLINE_DISTORTION = 0.002;
+static const float ROLLING_SCANLINE_FREQUENCY = 4.0;
+
 
 // --- Shader Globals ---
 Texture2D SpriteTexture;
@@ -38,41 +61,19 @@ static const float DITHER_MATRIX[16] = {
     15.0,  7.0, 13.0,  5.0
 };
 
-// Input from the application to the vertex shader.
-struct VertexShaderInput
-{
-    float4 Position : POSITION0;
-    float4 Color : COLOR0;
-    float2 TexCoord : TEXCOORD0;
-};
-
-// Output from the vertex shader, passed to the pixel shader.
-struct VertexShaderOutput
+struct PixelShaderInput
 {
 	float4 Position : SV_POSITION;
 	float4 Color : COLOR0;
 	float2 TexCoord : TEXCOORD0;
-    // We will pass the screen position here using a compatible semantic.
-    float4 ScreenPosition : TEXCOORD1; 
 };
 
-// --- Vertex Shader ---
-VertexShaderOutput MainVS(in VertexShaderInput input)
-{
-    VertexShaderOutput output = (VertexShaderOutput)0;
-    output.Position = input.Position;
-    output.Color = input.Color;
-    output.TexCoord = input.TexCoord;
-    // Copy the final screen position to our new variable.
-    output.ScreenPosition = input.Position; 
-    return output;
-}
-
 // --- Pixel Shader ---
-float4 MainPS(VertexShaderOutput input) : COLOR
+float4 MainPS(PixelShaderInput input) : COLOR
 {
     float2 uv = input.TexCoord - 0.5; 
     float2 sampleCoords = input.TexCoord;
+    float2 screenCoords = input.TexCoord * ScreenResolution;
 
 #ifdef ENABLE_CURVATURE
     float dist = dot(uv, uv);
@@ -80,6 +81,20 @@ float4 MainPS(VertexShaderOutput input) : COLOR
     if (sampleCoords.x < 0 || sampleCoords.x > 1 || sampleCoords.y < 0 || sampleCoords.y > 1)
     {
         return float4(0, 0, 0, 1);
+    }
+#endif
+
+#ifdef ENABLE_ROLLING_SCANLINE
+    float wrappedTime = fmod(Time * ROLLING_SCANLINE_SPEED, ROLLING_SCANLINE_FREQUENCY);
+    if (wrappedTime < 1.0)
+    {
+        float lineY = wrappedTime;
+        float distFromLine = abs(input.TexCoord.y - lineY);
+        if (distFromLine < ROLLING_SCANLINE_HEIGHT / 2.0)
+        {
+            float falloff = 1.0 - (distFromLine / (ROLLING_SCANLINE_HEIGHT / 2.0));
+            sampleCoords.x += ROLLING_SCANLINE_DISTORTION * falloff;
+        }
     }
 #endif
 
@@ -96,25 +111,31 @@ float4 MainPS(VertexShaderOutput input) : COLOR
 #endif
 
 #ifdef ENABLE_SCANLINES
-    float scanline = sin(input.TexCoord.y * ScreenResolution.y * 3.14159);
-    color.rgb *= 1.0 - (scanline * SCANLINE_INTENSITY);
+    if (fmod(screenCoords.y, 2.0) < 1.0)
+    {
+        color.rgb -= SCANLINE_INTENSITY;
+    }
 #endif
 
 #ifdef ENABLE_SHADOW_MASK
-    float mask = sin(input.TexCoord.x * ScreenResolution.x * 3.14159) * sin(input.TexCoord.y * ScreenResolution.y * 3.14159);
+    float mask = sin(screenCoords.x * 3.14159) * sin(screenCoords.y * 3.14159);
     color.rgb *= 1.0 - (mask * SHADOW_MASK_INTENSITY);
 #endif
 
 #ifdef ENABLE_VIGNETTE
-    float vignette = smoothstep(0.4, 1.0, length(uv));
+    float vignette = smoothstep(0.2, 0.8, length(uv));
     color.rgb *= 1.0 - (vignette * VIGNETTE_INTENSITY);
 #endif
 
 #ifdef ENABLE_DITHERING
-    // Use the compatible ScreenPosition variable instead of the problematic input.Position
-    int matrix_index = (int)(fmod(input.ScreenPosition.x, 4)) + (int)(fmod(input.ScreenPosition.y, 4)) * 4;
+    int matrix_index = (int)(fmod(screenCoords.x, 4)) + (int)(fmod(screenCoords.y, 4)) * 4;
     float dither_val = (DITHER_MATRIX[matrix_index] / 16.0 - 0.5) * DITHER_THRESHOLD;
     color.rgb += dither_val;
+#endif
+
+#ifdef ENABLE_CONTRAST
+    // Interpolate from mid-gray towards the sampled color to increase contrast.
+    color.rgb = lerp(0.5, color.rgb, CONTRAST_AMOUNT);
 #endif
 
 	return color;
@@ -124,8 +145,6 @@ technique CRT
 {
 	pass P0
 	{
-        // Tell the technique to use our new vertex shader.
-        VertexShader = compile VS_SHADERMODEL MainVS();
 		PixelShader = compile PS_SHADERMODEL MainPS();
 	}
 };
