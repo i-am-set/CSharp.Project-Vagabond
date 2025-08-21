@@ -18,10 +18,19 @@ uniform float2 ScreenResolution;
 // To change the intensity of an effect, modify the 'static const float' values below.
 // After making changes, you must REBUILD your Content.mgcb project for them to apply.
 //
-// CONTRAST_AMOUNT: Controls the intensity of colors.
-//   - 1.0 = Normal contrast.
-//   - 1.2 = A good, noticeable boost that makes whites pop.
-//   - 1.5+ = A very high-contrast, stylized look.
+// JITTER_FREQUENCY: How often the jitter effect happens (in seconds).
+//   - 5.0 = A jitter event will occur once every 5 seconds.
+//
+// JITTER_DURATION: How long the jitter event lasts (in seconds).
+//   - 0.2 = The screen will shake for a brief 0.2 seconds.
+//
+// JITTER_SPEED: How many times the screen "jolts" to a new position per second
+// during a jitter event.
+//   - 10.0 = The screen will jump 10 times per second. A lower value is slower.
+//
+// JITTER_INTENSITY: How far the screen shakes. Measured in virtual pixels.
+//   - 1.0 = A very subtle, 1-pixel shake.
+//   - 3.0+ = A much more noticeable, glitchy shake.
 //------------------------------------------------------------------------------------
 
 // --- Effect Toggles ---
@@ -32,7 +41,8 @@ uniform float2 ScreenResolution;
 #define ENABLE_CHROMATIC_ABERRATION
 #define ENABLE_DITHERING
 #define ENABLE_ROLLING_SCANLINE
-#define ENABLE_CONTRAST // <-- NEW EFFECT TOGGLE
+#define ENABLE_CONTRAST
+#define ENABLE_JITTER // <-- NEW EFFECT TOGGLE
 
 // --- Effect Intensity Values ---
 static const float CURVATURE_AMOUNT = 0.1;
@@ -41,12 +51,17 @@ static const float SCANLINE_INTENSITY = 0.4;
 static const float SHADOW_MASK_INTENSITY = 0.15;
 static const float CHROMATIC_ABERRATION_AMOUNT = 2.0;
 static const float DITHER_THRESHOLD = 1.0 / 255.0;
-static const float CONTRAST_AMOUNT = 1.2; // <-- NEW: Added contrast value
+static const float CONTRAST_AMOUNT = 1.2;
 // --- Rolling Scanline Parameters ---
 static const float ROLLING_SCANLINE_SPEED = 0.15;
 static const float ROLLING_SCANLINE_HEIGHT = 0.02;
 static const float ROLLING_SCANLINE_DISTORTION = 0.002;
 static const float ROLLING_SCANLINE_FREQUENCY = 4.0;
+// --- NEW: Jitter Parameters ---
+static const float JITTER_FREQUENCY = 4.0; // Jitter will happen once every 4 seconds.
+static const float JITTER_DURATION = 0.2;  // It will last for 0.2 seconds.
+static const float JITTER_SPEED = 12.0;    // It will jolt 12 times per second during the event.
+static const float JITTER_INTENSITY = 1.5; // It will shake by a maximum of 1.5 pixels.
 
 
 // --- Shader Globals ---
@@ -60,6 +75,12 @@ static const float DITHER_MATRIX[16] = {
      3.0, 11.0,  1.0,  9.0,
     15.0,  7.0, 13.0,  5.0
 };
+
+// A simple hash function to generate pseudo-random numbers in the shader.
+float rand(float2 co)
+{
+    return frac(sin(dot(co.xy, float2(12.9898, 78.233))) * 43758.5453);
+}
 
 struct PixelShaderInput
 {
@@ -95,6 +116,20 @@ float4 MainPS(PixelShaderInput input) : COLOR
             float falloff = 1.0 - (distFromLine / (ROLLING_SCANLINE_HEIGHT / 2.0));
             sampleCoords.x += ROLLING_SCANLINE_DISTORTION * falloff;
         }
+    }
+#endif
+
+#ifdef ENABLE_JITTER
+    // Check if we are inside the sporadic jitter event window
+    if (fmod(Time, JITTER_FREQUENCY) < JITTER_DURATION)
+    {
+        // Create a "stepped" time to make the jitter change slower than every frame
+        float steppedTime = floor(Time * JITTER_SPEED);
+        // Generate two random numbers based on the stepped time for X and Y offsets
+        float offsetX = (rand(float2(steppedTime, steppedTime * 0.5)) - 0.5) * (JITTER_INTENSITY / ScreenResolution.x);
+        float offsetY = (rand(float2(steppedTime * 0.8, steppedTime)) - 0.5) * (JITTER_INTENSITY / ScreenResolution.y);
+        // Apply the offset
+        sampleCoords += float2(offsetX, offsetY);
     }
 #endif
 
@@ -134,7 +169,6 @@ float4 MainPS(PixelShaderInput input) : COLOR
 #endif
 
 #ifdef ENABLE_CONTRAST
-    // Interpolate from mid-gray towards the sampled color to increase contrast.
     color.rgb = lerp(0.5, color.rgb, CONTRAST_AMOUNT);
 #endif
 
