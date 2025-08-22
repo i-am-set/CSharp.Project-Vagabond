@@ -25,6 +25,7 @@ namespace ProjectVagabond.UI
         // --- UI State for Mouse Interaction ---
         private Rectangle _barAreaRect;
         private bool _isDragging;
+        private int _hoveredSegmentIndex = -1;
         private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
 
         // --- Visual Tuning Constants ---
@@ -82,6 +83,12 @@ namespace ProjectVagabond.UI
             // Calculate the bounds of the interactive elements for this frame
             CalculateBounds(position, font);
 
+            _hoveredSegmentIndex = -1; // Reset hover index each frame
+            if (_barAreaRect.Contains(virtualMousePos))
+            {
+                UpdateHoveredSegment(virtualMousePos);
+            }
+
             bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickHeld = currentMouseState.LeftButton == ButtonState.Pressed;
             bool leftClickReleased = currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
@@ -107,36 +114,23 @@ namespace ProjectVagabond.UI
             }
         }
 
-        /// <summary>
-        /// Calculates the correct value based on which segment hitbox the mouse is over.
-        /// </summary>
+        private void UpdateHoveredSegment(Vector2 virtualMousePos)
+        {
+            float relativeMouseX = virtualMousePos.X - _barAreaRect.X;
+            int segmentUnitWidth = SEGMENT_WIDTH + SEGMENT_GAP;
+            if (segmentUnitWidth <= 0) return;
+
+            _hoveredSegmentIndex = (int)(relativeMouseX / segmentUnitWidth);
+            _hoveredSegmentIndex = Math.Clamp(_hoveredSegmentIndex, 0, _segmentCount - 1);
+        }
+
         private void UpdateValueFromMousePosition(Vector2 virtualMousePos)
         {
-            // The Y position of the segments, centered within the row.
-            int segmentY = _barAreaRect.Y + (_barAreaRect.Height - SEGMENT_HEIGHT) / 2;
-
-            // Loop through each segment to find which one is being clicked/dragged over.
-            for (int i = 0; i < _segmentCount; i++)
+            UpdateHoveredSegment(virtualMousePos);
+            if (_hoveredSegmentIndex != -1)
             {
-                // Calculate the visual rectangle for the current segment.
-                var segmentRect = new Rectangle(
-                    _barAreaRect.X + i * (SEGMENT_WIDTH + SEGMENT_GAP),
-                    segmentY,
-                    SEGMENT_WIDTH,
-                    SEGMENT_HEIGHT
-                );
-
-                // Create a slightly larger hitbox for easier clicking.
-                var hitboxRect = segmentRect;
-                hitboxRect.Inflate(1, 1);
-
-                if (hitboxRect.Contains(virtualMousePos))
-                {
-                    // If the mouse is over this segment, calculate the corresponding value and set it.
-                    float newValue = _minValue + i * _step;
-                    SetValue(newValue);
-                    break; // Found the correct segment, no need to check others.
-                }
+                float newValue = _minValue + _hoveredSegmentIndex * _step;
+                SetValue(newValue);
             }
         }
 
@@ -187,11 +181,8 @@ namespace ProjectVagabond.UI
             int filledSegments = (int)Math.Round(progress * (_segmentCount - 1)) + 1;
 
             Color emptyColor = _global.Palette_DarkGray;
-            Color fillColor = IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite;
-            if (isSelected)
-            {
-                fillColor = _global.ButtonHoverColor;
-            }
+            Color baseFillColor = IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite;
+            Color hoverColor = _global.ButtonHoverColor;
 
             // Draw the segments
             for (int i = 0; i < _segmentCount; i++)
@@ -202,13 +193,24 @@ namespace ProjectVagabond.UI
                     SEGMENT_WIDTH,
                     SEGMENT_HEIGHT
                 );
-                Color segmentColor = (i < filledSegments) ? fillColor : emptyColor;
-                spriteBatch.Draw(pixel, segmentRect, segmentColor);
+
+                // --- NEW DRAWING LOGIC ---
+                // First, draw the base layer: the current value (or empty).
+                Color baseColor = (i < filledSegments) ? baseFillColor : emptyColor;
+                spriteBatch.Draw(pixel, segmentRect, baseColor);
+
+                // Then, if selected and hovered, draw the red preview layer on top.
+                if (isSelected && _hoveredSegmentIndex != -1)
+                {
+                    if (i <= _hoveredSegmentIndex)
+                    {
+                        spriteBatch.Draw(pixel, segmentRect, hoverColor);
+                    }
+                }
             }
 
             // --- Numeric Value ---
             string valueString = GetCurrentValueAsString();
-            // Position the numeric value to the far right, aligned with the resolution's extra text.
             Vector2 valuePosition = new Vector2(position.X + 460, position.Y);
             spriteBatch.DrawString(font, valueString, valuePosition, _global.Palette_DarkGray);
         }
