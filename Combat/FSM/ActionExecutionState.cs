@@ -38,6 +38,17 @@ namespace ProjectVagabond.Combat.FSM
             {
                 Debug.WriteLine("  > No actions to execute this round.");
             }
+            else
+            {
+                // Set all enemies to their inactive "background" state.
+                foreach (var entity in combatManager.Scene.GetAllCombatEntities())
+                {
+                    if (entity.EntityId != ServiceLocator.Get<GameState>().PlayerEntityId)
+                    {
+                        entity.SetInactiveVisuals();
+                    }
+                }
+            }
 
             EventBus.Subscribe<GameEvents.ActionAnimationComplete>(OnActionAnimationCompleted);
 
@@ -47,6 +58,13 @@ namespace ProjectVagabond.Combat.FSM
         public void OnExit(CombatManager combatManager)
         {
             EventBus.Unsubscribe<GameEvents.ActionAnimationComplete>(OnActionAnimationCompleted);
+
+            // Ensure all entities are returned to their normal state when leaving this phase.
+            foreach (var entity in combatManager.Scene.GetAllCombatEntities())
+            {
+                entity.SetActiveVisuals();
+            }
+            combatManager.Scene.CurrentExecutingAction = null;
         }
 
         public void Update(GameTime gameTime, CombatManager combatManager)
@@ -78,13 +96,37 @@ namespace ProjectVagabond.Combat.FSM
                 var actionToExecute = _executionQueue.Dequeue();
                 string entityName = EntityNamer.GetName(actionToExecute.CasterEntityId);
 
-                // NEW: Check if the combatant is dead before executing their turn.
+                // MODIFIED: Check if the combatant is dead BEFORE doing anything else.
                 var health = ServiceLocator.Get<ComponentStore>().GetComponent<HealthComponent>(actionToExecute.CasterEntityId);
                 if (health != null && health.CurrentHealth <= 0)
                 {
                     Debug.WriteLine($"  > {entityName}'s turn skipped (defeated).");
-                    ProcessNextAction(combatManager); // Immediately process the next in queue.
+                    ProcessNextAction(combatManager); // Immediately process the next in queue without any delay or animation.
                     return;
+                }
+
+                // If the combatant is alive, proceed with the turn.
+                combatManager.Scene.CurrentExecutingAction = actionToExecute;
+
+                // Set the visual state for all entities based on this action.
+                var allEntities = combatManager.Scene.GetAllCombatEntities();
+                var player = allEntities.FirstOrDefault(e => e.EntityId == ServiceLocator.Get<GameState>().PlayerEntityId);
+
+                foreach (var entity in allEntities)
+                {
+                    if (entity == player) continue; // Player sprite isn't shown, so skip.
+
+                    bool isCaster = entity.EntityId == actionToExecute.CasterEntityId;
+                    bool isTarget = actionToExecute.TargetEntityIds.Contains(entity.EntityId);
+
+                    if (isCaster || isTarget)
+                    {
+                        entity.SetActiveVisuals();
+                    }
+                    else
+                    {
+                        entity.SetInactiveVisuals();
+                    }
                 }
 
                 Debug.WriteLine($"  > Executing: {entityName}'s {actionToExecute.ActionData.Name}");
@@ -105,6 +147,7 @@ namespace ProjectVagabond.Combat.FSM
         {
             if (!_isWaitingForAnimation) return; // Prevent double execution
             _isWaitingForAnimation = false;
+            ServiceLocator.Get<CombatManager>().Scene.CurrentExecutingAction = null;
 
             // Start the post-action delay
             _postActionTimer = POST_ACTION_DELAY;

@@ -13,6 +13,7 @@ using MonoGame.Extended;
 using MonoGame.Extended.Graphics;
 using System.Linq;
 using System;
+using ProjectVagabond.Combat.FSM; // MODIFIED: Added the required using directive.
 
 namespace ProjectVagabond.Scenes
 {
@@ -27,6 +28,8 @@ namespace ProjectVagabond.Scenes
         private ActionAnimator _actionAnimator;
         public ActionAnimator ActionAnimator => _actionAnimator;
 
+        // NEW: Tracks the action currently being animated for UI purposes.
+        public CombatAction CurrentExecutingAction { get; set; }
 
         // Player Hands
         private HandRenderer _leftHandRenderer;
@@ -41,7 +44,7 @@ namespace ProjectVagabond.Scenes
         private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 116f; // How far from the center the hands are.
         private static readonly Vector2 HAND_CAST_OFFSET = new Vector2(60, -30); // Offset from idle position for casting.
         private static readonly Vector2 HAND_RECOIL_OFFSET = new Vector2(-10, 15); // Offset from cast position for recoil.
-        private const float HAND_OFFSCREEN_Y_OFFSET = 250f; // MODIFIED: Increased from 150f to make hands idle lower.
+        private const float HAND_OFFSCREEN_Y_OFFSET = 250f;
 
         // Entity Sizing
         private static readonly Point ENEMY_BASE_SIZE = new Point(64, 96); // Base dimensions (Width, Height) for enemies.
@@ -201,7 +204,6 @@ namespace ProjectVagabond.Scenes
             var leftHandCast = leftHandIdle + new Vector2(HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
             var rightHandCast = rightHandIdle + new Vector2(-HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
 
-            // NEW: Calculate off-screen positions based on the idle positions.
             var leftHandOffscreen = new Vector2(leftHandIdle.X, screenBottomInVirtualCoords + HAND_OFFSCREEN_Y_OFFSET);
             var rightHandOffscreen = new Vector2(rightHandIdle.X, screenBottomInVirtualCoords + HAND_OFFSCREEN_Y_OFFSET);
 
@@ -448,7 +450,7 @@ namespace ProjectVagabond.Scenes
             float screenBottomInVirtualCoords = Core.TransformMouse(windowBottomRight).Y;
 
             // --- Hit Markers ---
-            // MODIFIED: The health bar is no longer drawn, but we still need its position to anchor the hit markers.
+            // The health bar is no longer drawn, but we still need its position to anchor the hit markers.
             int barHeight = PLAYER_HEALTH_BAR_SIZE.Y;
             int barY = (int)screenBottomInVirtualCoords - barHeight - PLAYER_HEALTH_BAR_Y_OFFSET;
             int barX = actualScreenVirtualBounds.Center.X;
@@ -458,38 +460,33 @@ namespace ProjectVagabond.Scenes
 
         private void DrawTargetingIndicators(SpriteBatch spriteBatch)
         {
-            if (_inputHandler.DraggedCard == null) return;
-
-            // Only draw indicators if the card is within the valid play area.
-            if (!PlayArea.Contains(_inputHandler.VirtualMousePosition))
+            // This block handles the targeting indicator during the ACTION SELECTION phase.
+            if (_combatManager.FSM.CurrentState is ActionSelectionState && _inputHandler.DraggedCard != null)
             {
-                return;
-            }
+                if (!PlayArea.Contains(_inputHandler.VirtualMousePosition)) return;
 
-            var actionType = _inputHandler.DraggedCard.Action.TargetType;
-            var componentStore = ServiceLocator.Get<ComponentStore>();
-
-            if (actionType == TargetType.Self)
-            {
-                DrawSelfCastIndicator(spriteBatch);
-            }
-            else if (actionType == TargetType.AllEnemies)
-            {
-                foreach (var enemy in _enemies)
+                var actionType = _inputHandler.DraggedCard.Action.TargetType;
+                if (actionType == TargetType.AllEnemies)
                 {
-                    var health = componentStore.GetComponent<HealthComponent>(enemy.EntityId);
-                    if (health != null && health.CurrentHealth > 0)
-                    {
-                        DrawTargetIndicator(spriteBatch, enemy);
-                    }
+                    foreach (var enemy in _enemies.Where(e => e.IsTargeted)) DrawTargetIndicator(spriteBatch, enemy);
+                }
+                else if (actionType == TargetType.SingleEnemy && _inputHandler.PotentialTargetId.HasValue)
+                {
+                    var targetEnemy = _enemies.FirstOrDefault(e => e.EntityId == _inputHandler.PotentialTargetId.Value);
+                    if (targetEnemy != null) DrawTargetIndicator(spriteBatch, targetEnemy);
+                }
+                else if (actionType == TargetType.Self)
+                {
+                    DrawSelfCastIndicator(spriteBatch);
                 }
             }
-            else if (actionType == TargetType.SingleEnemy && _inputHandler.PotentialTargetId.HasValue)
+            // This block handles the targeting indicator during the ACTION EXECUTION phase.
+            else if (_combatManager.FSM.CurrentState is ActionExecutionState && CurrentExecutingAction != null)
             {
-                var targetEnemy = _enemies.FirstOrDefault(e => e.EntityId == _inputHandler.PotentialTargetId.Value);
-                if (targetEnemy != null)
+                foreach (var targetId in CurrentExecutingAction.TargetEntityIds)
                 {
-                    DrawTargetIndicator(spriteBatch, targetEnemy);
+                    var targetEnemy = _enemies.FirstOrDefault(e => e.EntityId == targetId);
+                    if (targetEnemy != null) DrawTargetIndicator(spriteBatch, targetEnemy);
                 }
             }
         }
