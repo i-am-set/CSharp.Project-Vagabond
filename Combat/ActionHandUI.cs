@@ -23,7 +23,7 @@ namespace ProjectVagabond.Combat.UI
         private List<CombatCard> _cards = new List<CombatCard>();
 
         // --- TUNING CONSTANTS ---
-        public static readonly Point CARD_SIZE = new Point(120, 168);
+        public static readonly Point CARD_SIZE = new Point(120, 168); 
         private const int MENU_BOTTOM_PADDING = 20; // Distance from the bottom of the visible screen.
         private const int CARD_SPACING = -45; // Negative for overlap
         private const float SPREAD_AMOUNT = 40f; // How far cards move apart when one is hovered

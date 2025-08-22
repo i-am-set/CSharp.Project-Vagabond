@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
@@ -137,7 +137,7 @@ namespace ProjectVagabond.Combat
             var gameState = ServiceLocator.Get<GameState>();
             if (EntityId != gameState.PlayerEntityId)
             {
-                DrawHealthBar(spriteBatch);
+                // DrawHealthBar(spriteBatch); // MODIFIED: Health bar is no longer drawn.
             }
         }
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Scenes;
 using System;
@@ -155,17 +155,17 @@ namespace ProjectVagabond.Combat
             Debug.WriteLine($"[ActionAnimator] Timeline for '{_currentAction.ActionData.Name}' finished.");
             _isPlaying = false;
 
-            // Ensure hands return to their idle state after the animation is complete, but only if the player was the caster.
+            // Ensure hands return to their off-screen state after the animation is complete.
             var gameState = ServiceLocator.Get<GameState>();
             if (_currentAction.CasterEntityId == gameState.PlayerEntityId)
             {
-                if (_combatScene.AnimationAnchors.TryGetValue("LeftHandIdle", out var leftIdle))
+                if (_combatScene.AnimationAnchors.TryGetValue("LeftHandOffscreen", out var leftOffscreen))
                 {
-                    _leftHand.MoveTo(leftIdle, 0.3f, Easing.EaseOutCubic);
+                    _leftHand.MoveTo(leftOffscreen, 0.3f, Easing.EaseOutCubic);
                 }
-                if (_combatScene.AnimationAnchors.TryGetValue("RightHandIdle", out var rightIdle))
+                if (_combatScene.AnimationAnchors.TryGetValue("RightHandOffscreen", out var rightOffscreen))
                 {
-                    _rightHand.MoveTo(rightIdle, 0.3f, Easing.EaseOutCubic);
+                    _rightHand.MoveTo(rightOffscreen, 0.3f, Easing.EaseOutCubic);
                 }
                 _leftHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
                 _rightHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);

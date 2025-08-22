@@ -41,6 +41,7 @@ namespace ProjectVagabond.Scenes
         private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 116f; // How far from the center the hands are.
         private static readonly Vector2 HAND_CAST_OFFSET = new Vector2(60, -30); // Offset from idle position for casting.
         private static readonly Vector2 HAND_RECOIL_OFFSET = new Vector2(-10, 15); // Offset from cast position for recoil.
+        private const float HAND_OFFSCREEN_Y_OFFSET = 150f; // How far below the screen the hands start/end.
 
         // Entity Sizing
         private static readonly Point ENEMY_BASE_SIZE = new Point(64, 96); // Base dimensions (Width, Height) for enemies.
@@ -200,6 +201,10 @@ namespace ProjectVagabond.Scenes
             var leftHandCast = leftHandIdle + new Vector2(HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
             var rightHandCast = rightHandIdle + new Vector2(-HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
 
+            // NEW: Calculate off-screen positions based on the idle positions.
+            var leftHandOffscreen = new Vector2(leftHandIdle.X, screenBottomInVirtualCoords + HAND_OFFSCREEN_Y_OFFSET);
+            var rightHandOffscreen = new Vector2(rightHandIdle.X, screenBottomInVirtualCoords + HAND_OFFSCREEN_Y_OFFSET);
+
             AnimationAnchors = new Dictionary<string, Vector2>
             {
                 { "LeftHandIdle", leftHandIdle },
@@ -207,12 +212,16 @@ namespace ProjectVagabond.Scenes
                 { "LeftHandCast", leftHandCast },
                 { "RightHandCast", rightHandCast },
                 { "LeftHandRecoil", leftHandCast + new Vector2(HAND_RECOIL_OFFSET.X, HAND_RECOIL_OFFSET.Y) },
-                { "RightHandRecoil", rightHandCast + new Vector2(-HAND_RECOIL_OFFSET.X, HAND_RECOIL_OFFSET.Y) }
+                { "RightHandRecoil", rightHandCast + new Vector2(-HAND_RECOIL_OFFSET.X, HAND_RECOIL_OFFSET.Y) },
+                { "LeftHandOffscreen", leftHandOffscreen },
+                { "RightHandOffscreen", rightHandOffscreen }
             };
 
             // Update the renderers with their new initial positions
             _leftHandRenderer.SetIdlePosition(leftHandIdle);
             _rightHandRenderer.SetIdlePosition(rightHandIdle);
+            _leftHandRenderer.SetOffscreenPosition(leftHandOffscreen);
+            _rightHandRenderer.SetOffscreenPosition(rightHandOffscreen);
         }
 
 
@@ -438,26 +447,12 @@ namespace ProjectVagabond.Scenes
             var windowBottomRight = new Point(core.GraphicsDevice.PresentationParameters.BackBufferWidth, core.GraphicsDevice.PresentationParameters.BackBufferHeight);
             float screenBottomInVirtualCoords = Core.TransformMouse(windowBottomRight).Y;
 
-            // --- Health Bar ---
-            int barWidth = PLAYER_HEALTH_BAR_SIZE.X;
+            // --- Hit Markers ---
+            // MODIFIED: The health bar is no longer drawn, but we still need its position to anchor the hit markers.
             int barHeight = PLAYER_HEALTH_BAR_SIZE.Y;
             int barY = (int)screenBottomInVirtualCoords - barHeight - PLAYER_HEALTH_BAR_Y_OFFSET;
-            int barX = actualScreenVirtualBounds.Center.X - barWidth / 2;
-            var bgRect = new Rectangle(barX, barY, barWidth, barHeight);
-
-            float healthPercent = (float)playerHealth.CurrentHealth / playerHealth.MaxHealth;
-            var fillRect = new Rectangle(barX, barY, (int)(barWidth * healthPercent), barHeight);
-
-            spriteBatch.Draw(pixel, bgRect, Color.DarkRed);
-            spriteBatch.Draw(pixel, fillRect, Color.Red);
-
-            string healthText = $"{playerHealth.CurrentHealth} / {playerHealth.MaxHealth}";
-            Vector2 textSize = font.MeasureString(healthText);
-            Vector2 textPos = new Vector2(bgRect.Center.X - textSize.X / 2, bgRect.Center.Y - textSize.Y / 2);
-            spriteBatch.DrawString(font, healthText, textPos, Color.White);
-
-            // --- Hit Markers ---
-            var hitMarkerBasePosition = new Vector2(bgRect.Center.X, bgRect.Top - PLAYER_HIT_MARKER_Y_OFFSET);
+            int barX = actualScreenVirtualBounds.Center.X;
+            var hitMarkerBasePosition = new Vector2(barX, barY - PLAYER_HIT_MARKER_Y_OFFSET);
             _playerEntity?.DrawHitMarkers(spriteBatch, font, hitMarkerBasePosition);
         }
 

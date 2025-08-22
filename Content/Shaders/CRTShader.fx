@@ -19,12 +19,20 @@ uniform float Gamma;
 // To change the intensity of an effect, modify the 'static const float' values below.
 // After making changes, you must REBUILD your Content.mgcb project for them to apply.
 //
-// VHS_GLITCH_FREQUENCY: How often a glitch event *might* happen (in seconds).
-//   - 8.0 = A new glitch has a chance to appear every 8 seconds.
+// GLITCH_FREQUENCY: How often a glitch event *might* happen (in seconds).
+//   - 5.0 = A new glitch has a chance to appear every 5 seconds.
 //
-// VHS_GLITCH_PROBABILITY: The chance (0.0 to 1.0) that a glitch will actually occur
+// GLITCH_PROBABILITY: The chance (0.0 to 1.0) that a glitch will actually occur
 // during its frequency window.
-//   - 0.5 = There is a 50% chance of a glitch happening every 8 seconds.
+//   - 0.4 = There is a 40% chance of a glitch happening in that window.
+//
+// GLITCH_BLOCK_HEIGHT: The vertical size of the tearing blocks as a percentage of screen height.
+//   - 0.05 = Many small, thin tear lines.
+//   - 0.2 = A few large, chunky tear blocks.
+//
+// GLITCH_INTENSITY: How far the screen tears horizontally as a percentage of screen width.
+//   - 0.01 = A subtle, 1% screen width tear.
+//   - 0.1+ = A very strong, jarring tear that shifts a large portion of the screen.
 //------------------------------------------------------------------------------------
 
 // --- Effect Toggles ---
@@ -37,7 +45,7 @@ uniform float Gamma;
 #define ENABLE_ROLLING_SCANLINE
 #define ENABLE_CONTRAST
 #define ENABLE_FILM_GRAIN
-#define ENABLE_VHS_GLITCH
+#define ENABLE_GLITCH // <-- NEW EFFECT TOGGLE
 
 // --- Effect Intensity Values ---
 static const float CURVATURE_AMOUNT = 0.1;
@@ -48,16 +56,18 @@ static const float CHROMATIC_ABERRATION_AMOUNT = 2.0;
 static const float DITHER_THRESHOLD = 1.0 / 255.0;
 static const float CONTRAST_AMOUNT = 1.2;
 // --- Rolling Scanline Parameters ---
-static const float ROLLING_SCANLINE_SPEED = 0.15;
-static const float ROLLING_SCANLINE_HEIGHT = 0.02;
+static const float ROLLING_SCANLINE_SPEED = 0.25;
+static const float ROLLING_SCANLINE_HEIGHT = 0.01;
 static const float ROLLING_SCANLINE_DISTORTION = 0.002;
 static const float ROLLING_SCANLINE_FREQUENCY = 4.0;
 // --- Film Grain Parameters ---
-static const float FILM_GRAIN_INTENSITY = 0.05;
-// --- VHS Glitch Parameters ---
-static const float VHS_GLITCH_FREQUENCY = 6.0;
-static const float VHS_GLITCH_PROBABILITY = 0.6;
-static const float VHS_GLITCH_INTENSITY = 0.03;
+static const float FILM_GRAIN_INTENSITY = 0.04;
+// --- NEW: Glitch Parameters ---
+static const float GLITCH_FREQUENCY = 5.0;
+static const float GLITCH_PROBABILITY = 0.4;
+static const float GLITCH_DURATION = 0.1;
+static const float GLITCH_BLOCK_HEIGHT = 0.08;
+static const float GLITCH_INTENSITY = 0.01;
 
 
 // --- Shader Globals ---
@@ -115,6 +125,30 @@ float4 MainPS(PixelShaderInput input) : COLOR
     }
 #endif
 
+#ifdef ENABLE_GLITCH
+    // Create a unique ID for each time cycle. This will be our random seed.
+    float cycle_id = floor(Time / GLITCH_FREQUENCY);
+    
+    // Generate a random number to decide if a glitch happens in this cycle.
+    float glitch_trigger = rand(float2(cycle_id, cycle_id));
+
+    if (glitch_trigger < GLITCH_PROBABILITY)
+    {
+        float time_in_cycle = fmod(Time, GLITCH_FREQUENCY);
+
+        // Only apply the effect during its short duration.
+        if (time_in_cycle < GLITCH_DURATION)
+        {
+            // Determine which horizontal block this pixel is in.
+            float block_id = floor(input.TexCoord.y / GLITCH_BLOCK_HEIGHT);
+            // Generate a random offset for this specific block during this specific glitch event.
+            float glitch_offset = (rand(float2(cycle_id, block_id)) - 0.5) * 2.0 * GLITCH_INTENSITY;
+            // Apply the offset.
+            sampleCoords.x += glitch_offset;
+        }
+    }
+#endif
+
     float4 color = (float4)0;
 
 #ifdef ENABLE_CHROMATIC_ABERRATION
@@ -125,41 +159,6 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color = float4(r, g, b, 1.0);
 #else
     color = tex2D(s0, sampleCoords);
-#endif
-
-#ifdef ENABLE_VHS_GLITCH
-    // Create a unique ID for each time cycle. This will be our random seed.
-    float cycle_id = floor(Time / VHS_GLITCH_FREQUENCY);
-    
-    // Generate a random number to decide if a glitch happens in this cycle.
-    float glitch_trigger = rand(float2(cycle_id, cycle_id));
-
-    if (glitch_trigger < VHS_GLITCH_PROBABILITY)
-    {
-        // If the glitch is triggered, generate random parameters for it.
-        float glitch_duration = 0.1 + rand(float2(cycle_id * 1.2, cycle_id * 0.8)) * 0.4; // Duration from 0.1 to 0.5 seconds
-        float time_in_cycle = fmod(Time, VHS_GLITCH_FREQUENCY);
-
-        // Only apply the effect during its short, random duration.
-        if (time_in_cycle < glitch_duration)
-        {
-            // Randomize the speed and height of the glitch bar for this event.
-            float glitch_speed = 1.0 + rand(float2(cycle_id * 0.7, cycle_id * 1.3)) * 2.0; // MODIFIED: Max speed is now 3.0 instead of 5.0
-            float glitch_height = 0.01 + rand(float2(cycle_id * 1.5, cycle_id * 0.5)) * 0.2; // MODIFIED: Max height is now 21% of screen instead of 11%
-            float glitch_intensity = VHS_GLITCH_INTENSITY * (0.5 + rand(float2(cycle_id * 0.9, cycle_id * 1.1)));
-
-            float bandY = frac(time_in_cycle * glitch_speed);
-            float distFromBand = abs(input.TexCoord.y - bandY);
-
-            if (distFromBand < glitch_height / 2.0)
-            {
-                sampleCoords.x += (rand(input.TexCoord.yy + Time) - 0.5) * glitch_intensity;
-                color = tex2D(s0, sampleCoords);
-                color.r += rand(input.TexCoord + Time * 1.3) * 0.2;
-                color.b += rand(input.TexCoord + Time * 1.9) * 0.2;
-            }
-        }
-    }
 #endif
 
 #ifdef ENABLE_SCANLINES

@@ -41,7 +41,7 @@ namespace ProjectVagabond
             TargetFramerate = 60;
             SmallerUi = false;
             DisplayIndex = 0;
-            Gamma = 1.0f;
+            Gamma = 1.5f;
 
             // Default game settings. This class is the source of truth for defaults.
             UseImperialUnits = false;

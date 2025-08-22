@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Utils;
@@ -60,6 +60,7 @@ namespace ProjectVagabond.Combat.UI
     {
         private readonly HandType _handType;
         private Vector2 _initialPosition;
+        private Vector2 _offscreenPosition;
         private readonly Random _random = new Random();
 
         // --- TUNING CONSTANTS ---
@@ -105,6 +106,7 @@ namespace ProjectVagabond.Combat.UI
         {
             _handType = handType;
             _initialPosition = initialPosition;
+            _offscreenPosition = initialPosition;
             _currentPosition = initialPosition;
             _currentRotation = 0f;
             _currentScale = 1f;
@@ -117,11 +119,14 @@ namespace ProjectVagabond.Combat.UI
         public void SetIdlePosition(Vector2 position)
         {
             _initialPosition = position;
-            // If not currently in a tween, snap to the new idle position.
-            if (!_isMoving)
-            {
-                _currentPosition = position;
-            }
+        }
+
+        /// <summary>
+        /// Sets the hand's off-screen starting/ending position.
+        /// </summary>
+        public void SetOffscreenPosition(Vector2 position)
+        {
+            _offscreenPosition = position;
         }
 
         public void LoadContent()
@@ -166,7 +171,7 @@ namespace ProjectVagabond.Combat.UI
 
         public void EnterScene()
         {
-            _currentPosition = _initialPosition;
+            _currentPosition = _offscreenPosition;
             _currentRotation = 0f;
             _currentScale = 1f;
             _isMoving = _isRotating = _isScaling = false;
