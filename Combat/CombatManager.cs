@@ -25,7 +25,7 @@ namespace ProjectVagabond.Combat
         private CombatFSM _fsm;
         public CombatFSM FSM => _fsm;
 
-        private readonly List<CombatAction> _actionsForTurn = new List<CombatAction>();
+        private List<CombatAction> _actionsForTurn = new List<CombatAction>();
         private List<int> _initiativeOrder = new List<int>();
         private int _currentTurnIndex = -1;
         private readonly Dictionary<string, ActionData> _temporaryActions = new Dictionary<string, ActionData>();
@@ -74,12 +74,12 @@ namespace ProjectVagabond.Combat
             Combatants.Clear();
             Combatants.AddRange(combatants);
             ClearActionsForTurn();
-            _currentTurnIndex = -1; // Will be set to 0 by AdvanceTurn in TurnEndState
+            _currentTurnIndex = 0;
             _fsm.ChangeState(new CombatStartState(), this);
         }
 
         /// <summary>
-        /// Sets the calculated turn order for the combat.
+        /// Sets the fixed order for action selection.
         /// </summary>
         public void SetInitiativeOrder(List<int> order)
         {
@@ -88,16 +88,15 @@ namespace ProjectVagabond.Combat
         }
 
         /// <summary>
-        /// Advances the turn to the next combatant in the order.
+        /// Advances the turn to the next combatant in the selection order.
         /// </summary>
         public void AdvanceTurn()
         {
             _currentTurnIndex++;
-            // Note: We now allow the index to go out of bounds to check for the end of the round.
         }
 
         /// <summary>
-        /// Checks if the turn index has reset, indicating a new round of selections/actions.
+        /// Checks if the selection turn index has reset, indicating a new round.
         /// </summary>
         public bool IsNewRound()
         {
@@ -111,24 +110,24 @@ namespace ProjectVagabond.Combat
 
         /// <summary>
         /// Creates a CombatAction from player input, adds it to the list for the current turn,
-        /// triggers the card play animation, and transitions the FSM to wait for that animation.
+        /// triggers the card play animation, and notifies the current state.
         /// </summary>
-        /// <param name="actionId">The ID of the action being played.</param>
-        /// <param name="targetIds">A list of entity IDs being targeted.</param>
         public void AddPlayerAction(string actionId, List<int> targetIds)
         {
-            Debug.WriteLine($"    ... Player action '{actionId}' confirmed.");
+            Debug.WriteLine($"    > Player action '{actionId}' confirmed for targets [{string.Join(", ", targetIds)}].");
             var actionData = _actionManager.GetAction(actionId);
             if (actionData == null) return;
 
             var playerAction = new CombatAction(_gameState.PlayerEntityId, actionData, targetIds);
             AddActionForTurn(playerAction);
 
-            // Publish the event that tells the UI to animate the card being played.
             EventBus.Publish(new GameEvents.PlayerActionConfirmed { CardActionData = actionData, TargetEntityIds = targetIds });
 
-            // Transition to a state that waits for the card animation to finish.
-            _fsm.ChangeState(new PlayerActionConfirmedState(), this);
+            // Notify the current state that the player has made their choice.
+            if (FSM.CurrentState is ActionSelectionState actionSelectionState)
+            {
+                actionSelectionState.OnPlayerActionConfirmed();
+            }
         }
 
         /// <summary>
@@ -137,6 +136,14 @@ namespace ProjectVagabond.Combat
         public void AddActionForTurn(CombatAction action)
         {
             _actionsForTurn.Add(action);
+        }
+
+        /// <summary>
+        /// Overwrites the current list of actions with a new, sorted list after speed rolls.
+        /// </summary>
+        public void SetResolvedActionsForTurn(List<CombatAction> sortedActions)
+        {
+            _actionsForTurn = sortedActions;
         }
 
         /// <summary>

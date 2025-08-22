@@ -49,7 +49,7 @@ namespace ProjectVagabond.Combat
             // This handles basic attacks or actions without complex animations.
             if (action?.ActionData?.Timeline == null)
             {
-                Debug.WriteLine($"[ActionAnimator] Action '{action?.ActionData?.Name}' has no timeline. Resolving effects immediately.");
+                Debug.WriteLine($"    [ActionAnimator] Action '{action?.ActionData?.Name}' has no timeline. Resolving effects immediately.");
                 if (action != null)
                 {
                     _actionResolver.Resolve(action, _combatScene.GetAllCombatEntities());
@@ -83,7 +83,7 @@ namespace ProjectVagabond.Combat
                 }
             }
 
-            Debug.WriteLine($"[ActionAnimator] Playing timeline for '{_currentAction.ActionData.Name}' (Duration: {_currentTimeline.Duration}s)");
+            Debug.WriteLine($"    [ActionAnimator] Playing timeline for '{_currentAction.ActionData.Name}' (Duration: {_currentTimeline.Duration}s)");
         }
 
         public void Update(GameTime gameTime)
@@ -140,12 +140,10 @@ namespace ProjectVagabond.Combat
                 if (!isPlayerCasting)
                 {
                     // This is an AI action trying to animate the player's hands. Skip it.
-                    Debug.WriteLine($"[ActionAnimator] Skipping player-only keyframe for AI caster (Target: {track.Target}).");
                     return;
                 }
             }
 
-            Debug.WriteLine($"[ActionAnimator] Triggering keyframe: Time={keyframe.Time}, Type={keyframe.Type}, Target={track.Target}");
             HandRenderer targetHand = GetTargetHand(track.Target);
             var easingFunc = Easing.GetEasingFunction(keyframe.Easing);
 
@@ -192,7 +190,7 @@ namespace ProjectVagabond.Combat
 
         private void Stop()
         {
-            Debug.WriteLine($"[ActionAnimator] Timeline for '{_currentAction.ActionData.Name}' finished.");
+            Debug.WriteLine($"    [ActionAnimator] Timeline for '{_currentAction.ActionData.Name}' finished.");
             _isPlaying = false;
 
             // Ensure hands return to their off-screen state after the animation is complete.
@@ -201,11 +199,11 @@ namespace ProjectVagabond.Combat
             {
                 if (_combatScene.AnimationAnchors.TryGetValue("LeftHandOffscreen", out var leftOffscreen))
                 {
-                    _leftHand.MoveTo(leftOffscreen, 0.4f, Easing.EaseOutQuint); // MODIFIED: Increased from 0.3f
+                    _leftHand.MoveTo(leftOffscreen, 0.4f, Easing.EaseOutQuint);
                 }
                 if (_combatScene.AnimationAnchors.TryGetValue("RightHandOffscreen", out var rightOffscreen))
                 {
-                    _rightHand.MoveTo(rightOffscreen, 0.4f, Easing.EaseOutQuint); // MODIFIED: Increased from 0.3f
+                    _rightHand.MoveTo(rightOffscreen, 0.4f, Easing.EaseOutQuint);
                 }
                 _leftHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
                 _rightHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);

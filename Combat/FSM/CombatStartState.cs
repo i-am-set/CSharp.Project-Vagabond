@@ -1,4 +1,5 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿
+﻿using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -12,17 +13,18 @@ namespace ProjectVagabond.Combat.FSM
     {
         public void OnEnter(CombatManager combatManager)
         {
-            Debug.WriteLine("--- Combat Start ---");
+            Debug.WriteLine("\n--- PHASE: COMBAT START ---");
             BuildDecksForAllCombatants(combatManager);
-            Debug.WriteLine("  ... Decks built for all combatants.");
+            Debug.WriteLine("  > Decks built for all combatants.");
 
             // The turn order is now fixed and simple, not based on initiative rolls.
             combatManager.SetInitiativeOrder(new List<int>(combatManager.Combatants));
-            Debug.WriteLine("  ... Fixed turn selection order established.");
+            Debug.WriteLine("  > Fixed action selection order established.");
+            Debug.WriteLine("--- END PHASE: COMBAT START ---\n");
+            Debug.WriteLine(">>> Starting New Round <<<\n");
 
-            // Immediately begin the first turn.
-            // MODIFIED: Changed 'this' to 'combatManager' to pass the correct argument.
-            combatManager.FSM.ChangeState(new TurnStartState(), combatManager);
+            // Immediately begin the first turn's action selection.
+            combatManager.FSM.ChangeState(new ActionSelectionState(), combatManager);
         }
 
         private void BuildDecksForAllCombatants(CombatManager combatManager)

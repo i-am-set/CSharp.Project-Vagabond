@@ -5,13 +5,13 @@ using System.Linq;
 namespace ProjectVagabond.Combat.FSM
 {
     /// <summary>
-    /// Handles end-of-turn effects and checks for victory or defeat conditions.
+    /// Handles end-of-round effects, checks for victory or defeat, and loops back to action selection.
     /// </summary>
-    public class TurnEndState : ICombatState
+    public class RoundEndState : ICombatState
     {
         public void OnEnter(CombatManager combatManager)
         {
-            Debug.WriteLine("  --- Round End ---");
+            Debug.WriteLine("\n--- PHASE: ACTION EXECUTION ROUND END ---");
 
             var componentStore = ServiceLocator.Get<ComponentStore>();
             var gameState = ServiceLocator.Get<GameState>();
@@ -26,38 +26,42 @@ namespace ProjectVagabond.Combat.FSM
                     deckComp.Hand.Clear();
                 }
             }
-            Debug.WriteLine("    ... All hands discarded.");
+            Debug.WriteLine("  > All hands discarded.");
 
-            // Clear any temporary actions created for this turn.
             combatManager.ClearTemporaryActions();
 
             // 1. Check for win/loss conditions
-            if (CheckForDefeat(combatManager, componentStore, gameState))
+            if (CheckForDefeat(componentStore, gameState))
             {
+                Debug.WriteLine("--- END PHASE: ACTION EXECUTION ROUND END ---\n");
                 combatManager.FSM.ChangeState(new CombatDefeatState(), combatManager);
                 return;
             }
 
             if (CheckForVictory(combatManager, componentStore, gameState))
             {
+                Debug.WriteLine("--- END PHASE: ACTION EXECUTION ROUND END ---\n");
                 combatManager.FSM.ChangeState(new CombatEndState(), combatManager);
                 return;
             }
 
-            // 2. Clear the actions from the completed turn.
+            // 2. Clear the actions from the completed round.
             combatManager.ClearActionsForTurn();
+            Debug.WriteLine("  > Action list cleared for next round.");
 
-            // 3. Transition back to the start of the next turn selection phase.
-            Debug.WriteLine("  --- Starting New Round ---");
-            combatManager.FSM.ChangeState(new TurnStartState(), combatManager);
+            // 3. Transition back to the start of the next action selection phase.
+            Debug.WriteLine("--- END PHASE: ACTION EXECUTION ROUND END ---");
+            Debug.WriteLine("\n\n\n>>> Starting New Round <<<\n");
+            // MODIFIED: Changed TurnStartState to the new ActionSelectionState.
+            combatManager.FSM.ChangeState(new ActionSelectionState(), combatManager);
         }
 
-        private bool CheckForDefeat(CombatManager combatManager, ComponentStore componentStore, GameState gameState)
+        private bool CheckForDefeat(ComponentStore componentStore, GameState gameState)
         {
             var playerHealth = componentStore.GetComponent<HealthComponent>(gameState.PlayerEntityId);
             if (playerHealth != null && playerHealth.CurrentHealth <= 0)
             {
-                Debug.WriteLine("  !!! PLAYER DEFEATED !!!");
+                Debug.WriteLine("  > Condition Met: Player Defeat");
                 return true;
             }
             return false;
@@ -74,18 +78,13 @@ namespace ProjectVagabond.Combat.FSM
 
             if (allEnemiesDefeated)
             {
-                Debug.WriteLine("  !!! VICTORY !!!");
+                Debug.WriteLine("  > Condition Met: Victory");
                 return true;
             }
             return false;
         }
 
-        public void OnExit(CombatManager combatManager)
-        {
-        }
-
-        public void Update(GameTime gameTime, CombatManager combatManager)
-        {
-        }
+        public void OnExit(CombatManager combatManager) { }
+        public void Update(GameTime gameTime, CombatManager combatManager) { }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
 using ProjectVagabond.Combat;
@@ -86,7 +86,7 @@ namespace ProjectVagabond.Combat
             bool isRightClickPressed = mouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
 
             // --- State: Selecting Actions ---
-            if (_combatManager.FSM.CurrentState is PlayerActionSelectionState)
+            if (_combatManager.FSM.CurrentState is ActionSelectionState)
             {
                 // Check for cancellation first (right click or escape)
                 if (isRightClickPressed || (keyboardState.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape)))

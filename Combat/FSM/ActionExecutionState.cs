@@ -1,5 +1,4 @@
 ﻿﻿using Microsoft.Xna.Framework;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -7,7 +6,7 @@ using System.Linq;
 namespace ProjectVagabond.Combat.FSM
 {
     /// <summary>
-    /// The "cinematic" state where selected actions are visually executed.
+    /// The "cinematic" state where selected actions are visually executed in their resolved order.
     /// </summary>
     public class ActionExecutionState : ICombatState
     {
@@ -17,9 +16,6 @@ namespace ProjectVagabond.Combat.FSM
         private const float FAILSAFE_DURATION = 10f; // 10 seconds
 
         // --- TUNING ---
-        /// <summary>
-        /// A short delay after each action resolves to improve game feel and pacing.
-        /// </summary>
         private const float POST_ACTION_DELAY = 0.5f;
         private float _postActionTimer;
         private bool _isDelaying;
@@ -28,39 +24,19 @@ namespace ProjectVagabond.Combat.FSM
 
         public void OnEnter(CombatManager combatManager)
         {
+            Debug.WriteLine("--- PHASE: ACTION EXECUTION ROUND START ---");
             _isWaitingForAnimation = false;
             _isDelaying = false;
             _failsafeTimer = 0f;
             _actionAnimator = combatManager.Scene.ActionAnimator;
 
-            var actions = combatManager.GetActionsForTurn();
-            var componentStore = ServiceLocator.Get<ComponentStore>();
-            var random = new Random();
-
-            Debug.WriteLine("  --- Rolling for Turn Speed ---");
-            foreach (var action in actions)
-            {
-                var stats = componentStore.GetComponent<StatsComponent>(action.CasterEntityId);
-                if (stats == null)
-                {
-                    action.TurnSpeed = 0;
-                    continue;
-                }
-
-                int agilityMod = stats.GetStatModifier(StatType.Agility);
-                int d20Roll = random.Next(1, 21);
-                action.TurnSpeed = d20Roll + agilityMod;
-
-                string entityName = EntityNamer.GetName(action.CasterEntityId);
-                Debug.WriteLine($"    > {entityName} ({action.ActionData.Name}): Roll {d20Roll} + AgiMod {agilityMod} = Speed {action.TurnSpeed}");
-            }
-
-            var resolvedOrder = TurnResolver.ResolveTurnOrder(new List<CombatAction>(actions));
+            // The list of actions is now pre-rolled and pre-sorted. We just need to enqueue it.
+            var resolvedOrder = combatManager.GetActionsForTurn();
             _executionQueue = new Queue<CombatAction>(resolvedOrder);
 
             if (!_executionQueue.Any())
             {
-                Debug.WriteLine("    ... No actions to execute this turn.");
+                Debug.WriteLine("  > No actions to execute this round.");
             }
 
             EventBus.Subscribe<GameEvents.ActionAnimationComplete>(OnActionAnimationCompleted);
@@ -80,7 +56,7 @@ namespace ProjectVagabond.Combat.FSM
                 _failsafeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (_failsafeTimer >= FAILSAFE_DURATION)
                 {
-                    Debug.WriteLine($"    ... [WARNING] Action animation timed out after {FAILSAFE_DURATION}s. Forcing next action.");
+                    Debug.WriteLine($"    [WARNING] Action animation timed out after {FAILSAFE_DURATION}s. Forcing next action.");
                     OnActionAnimationCompleted(new GameEvents.ActionAnimationComplete());
                 }
             }
@@ -100,27 +76,34 @@ namespace ProjectVagabond.Combat.FSM
             if (_executionQueue.Count > 0)
             {
                 var actionToExecute = _executionQueue.Dequeue();
-                Debug.WriteLine($"    ... Executing action: {actionToExecute.ActionData.Name} by Caster {actionToExecute.CasterEntityId}");
+                string entityName = EntityNamer.GetName(actionToExecute.CasterEntityId);
+
+                // NEW: Check if the combatant is dead before executing their turn.
+                var health = ServiceLocator.Get<ComponentStore>().GetComponent<HealthComponent>(actionToExecute.CasterEntityId);
+                if (health != null && health.CurrentHealth <= 0)
+                {
+                    Debug.WriteLine($"  > {entityName}'s turn skipped (defeated).");
+                    ProcessNextAction(combatManager); // Immediately process the next in queue.
+                    return;
+                }
+
+                Debug.WriteLine($"  > Executing: {entityName}'s {actionToExecute.ActionData.Name}");
                 _isWaitingForAnimation = true;
                 _failsafeTimer = 0f;
-                Debug.WriteLine("    ... Waiting for action visuals...");
 
-                // The ActionAnimator now plays the timeline. The timeline itself will trigger
-                // the ActionResolver and the ActionAnimationComplete event when finished.
                 _actionAnimator.Play(actionToExecute);
             }
             else
             {
                 // All actions for the turn are complete.
-                Debug.WriteLine("    ... All actions executed.");
-                combatManager.FSM.ChangeState(new TurnEndState(), combatManager);
+                Debug.WriteLine("--- END PHASE: ACTION EXECUTION ROUND ---");
+                combatManager.FSM.ChangeState(new RoundEndState(), combatManager);
             }
         }
 
         private void OnActionAnimationCompleted(GameEvents.ActionAnimationComplete e)
         {
             if (!_isWaitingForAnimation) return; // Prevent double execution
-            Debug.WriteLine("    ... Action visuals complete.");
             _isWaitingForAnimation = false;
 
             // Start the post-action delay

@@ -61,11 +61,11 @@ static const float ROLLING_SCANLINE_HEIGHT = 0.01;
 static const float ROLLING_SCANLINE_DISTORTION = 0.002;
 static const float ROLLING_SCANLINE_FREQUENCY = 4.0;
 // --- Film Grain Parameters ---
-static const float FILM_GRAIN_INTENSITY = 0.04;
+static const float FILM_GRAIN_INTENSITY = 0.025;
 // --- NEW: Glitch Parameters ---
 static const float GLITCH_FREQUENCY = 5.0;
 static const float GLITCH_PROBABILITY = 0.4;
-static const float GLITCH_DURATION = 0.05;
+static const float GLITCH_DURATION = 0.15;
 static const float GLITCH_BLOCK_HEIGHT = 0.08;
 static const float GLITCH_INTENSITY = 0.005;
 

@@ -23,7 +23,7 @@ namespace ProjectVagabond.Combat.UI
         private List<CombatCard> _cards = new List<CombatCard>();
 
         // --- TUNING CONSTANTS ---
-        public static readonly Point CARD_SIZE = new Point(120, 168); 
+        public static readonly Point CARD_SIZE = new Point(120, 168);
         private const int MENU_BOTTOM_PADDING = 20; // Distance from the bottom of the visible screen.
         private const int CARD_SPACING = -45; // Negative for overlap
         private const float SPREAD_AMOUNT = 40f; // How far cards move apart when one is hovered
@@ -162,6 +162,11 @@ namespace ProjectVagabond.Combat.UI
             var core = ServiceLocator.Get<Core>();
             Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
 
+            // ANCHOR FIX: Get the physical bottom of the window and transform it into our virtual coordinate space.
+            // This is the anchor for all bottom-aligned UI to ensure it works with any aspect ratio.
+            var windowBottomRight = new Point(core.GraphicsDevice.PresentationParameters.BackBufferWidth, core.GraphicsDevice.PresentationParameters.BackBufferHeight);
+            float screenBottomInVirtualCoords = Core.TransformMouse(windowBottomRight).Y;
+
             // Declare layout variables once in a shared scope.
             float screenCenterX = actualScreenVirtualBounds.X + actualScreenVirtualBounds.Width / 2f;
             float cardCenterDistance = (CARD_SIZE.X * DEFAULT_SCALE) + CARD_SPACING;
@@ -169,7 +174,8 @@ namespace ProjectVagabond.Combat.UI
             // --- State Determination ---
             float newTargetYOffset;
 
-            if (combatManager.FSM.CurrentState is PlayerActionSelectionState)
+            // MODIFIED: Check for the new, correct state.
+            if (combatManager.FSM.CurrentState is ActionSelectionState)
             {
                 RectangleF activeZone = RectangleF.Empty;
                 if (_cards.Any())
@@ -178,17 +184,21 @@ namespace ProjectVagabond.Combat.UI
                     float totalCardSpan = (_cards.Count - 1) * cardCenterDistance + (CARD_SIZE.X * HOVERED_SCALE);
                     float activationWidth = totalCardSpan + (SPREAD_AMOUNT * 2);
                     float activationX = screenCenterX - (activationWidth / 2f);
-                    float menuBaseCenterY_Active = actualScreenVirtualBounds.Bottom - (CARD_SIZE.Y * DEFAULT_SCALE / 2f) + ACTIVE_Y_OFFSET + HAND_Y_ANCHOR_OFFSET;
+
+                    // ANCHOR FIX: Anchor Y position calculation to the physical window bottom, not the virtual bounds.
+                    float menuBaseCenterY_Active = screenBottomInVirtualCoords - (CARD_SIZE.Y * DEFAULT_SCALE / 2f) + ACTIVE_Y_OFFSET + HAND_Y_ANCHOR_OFFSET;
+
                     float activationTopY = menuBaseCenterY_Active + HOVER_Y_OFFSET - (CARD_SIZE.Y * HOVERED_SCALE / 2f);
-                    float activationBottomY = actualScreenVirtualBounds.Bottom;
+                    float activationBottomY = screenBottomInVirtualCoords; // Use the transformed bottom coordinate
                     float activationHeight = activationBottomY - activationTopY;
                     activeZone = new RectangleF(activationX, activationTopY, activationWidth, activationHeight);
                 }
 
                 // Calculate the small "trigger" zone (the yellow line area)
+                // ANCHOR FIX: The trigger zone must also be anchored to the physical screen bottom.
                 var triggerZone = new RectangleF(
                     activeZone.X,
-                    actualScreenVirtualBounds.Bottom - TRIGGER_ZONE_HEIGHT,
+                    screenBottomInVirtualCoords - TRIGGER_ZONE_HEIGHT,
                     activeZone.Width,
                     TRIGGER_ZONE_HEIGHT
                 );
@@ -266,7 +276,8 @@ namespace ProjectVagabond.Combat.UI
 
 
             float middleCardIndex = (_cards.Count - 1) / 2.0f;
-            float menuBaseCenterY = actualScreenVirtualBounds.Bottom - (CARD_SIZE.Y * DEFAULT_SCALE / 2f) + _menuYOffset + HAND_Y_ANCHOR_OFFSET;
+            // ANCHOR FIX: Anchor Y position calculation to the physical window bottom.
+            float menuBaseCenterY = screenBottomInVirtualCoords - (CARD_SIZE.Y * DEFAULT_SCALE / 2f) + _menuYOffset + HAND_Y_ANCHOR_OFFSET;
 
             for (int i = 0; i < _cards.Count; i++)
             {
