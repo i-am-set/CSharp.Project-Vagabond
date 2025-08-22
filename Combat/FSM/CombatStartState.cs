@@ -1,5 +1,4 @@
-﻿
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -44,6 +43,11 @@ namespace ProjectVagabond.Combat.FSM
                     deckComp = new CombatDeckComponent();
                     componentStore.AddComponent(entityId, deckComp);
                 }
+
+                // MODIFIED: Explicitly clear all piles to ensure a clean slate for every combat.
+                deckComp.DrawPile.Clear();
+                deckComp.Hand.Clear();
+                deckComp.DiscardPile.Clear();
 
                 var permanentActionIds = new List<string>();
 

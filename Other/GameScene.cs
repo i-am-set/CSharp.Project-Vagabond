@@ -16,7 +16,8 @@ namespace ProjectVagabond.Scenes
         Dialogue,
         Settings,
         Encounter,
-        Combat
+        Combat,
+        Transition // MODIFIED: Added the missing Transition state.
     }
 
     /// <summary>

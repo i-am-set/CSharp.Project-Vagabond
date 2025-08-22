@@ -1,56 +1,49 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 
 namespace ProjectVagabond.Scenes
 {
     /// <summary>
-    /// A simple scene that waits for a specified duration and then transitions to another scene.
-    /// Used to create a "hard cut" effect where the background is visible for a moment.
+    /// A dedicated scene for handling transitions between other scenes.
+    /// It ensures a solid black background during loading and transition animations.
     /// </summary>
     public class TransitionScene : GameScene
     {
-        private SceneManager _sceneManager;
-        private GameSceneState _nextSceneState;
-        private float _delay;
-        private float _timer;
+        private readonly SceneManager _sceneManager;
 
-        public override void Initialize()
+        public TransitionScene()
         {
-            base.Initialize();
             _sceneManager = ServiceLocator.Get<SceneManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
         {
-            return Rectangle.Empty;
-        }
-
-        public void SetTransition(GameSceneState nextScene, float delay)
-        {
-            _nextSceneState = nextScene;
-            _delay = delay;
+            // This scene covers the entire screen, so its animated bounds are the full virtual resolution.
+            return new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
         }
 
         public override void Enter()
         {
-            // We don't call base.Enter() because we don't want the intro animator for this scene.
-            _timer = 0f;
+            // We don't call base.Enter() here because we don't want the input block timer
+            // or mouse positioning logic for this scene. It's purely visual.
+            // The SceneManager will handle starting its animators.
         }
 
         public override void Update(GameTime gameTime)
         {
-            // We don't call base.Update() for the same reason.
-            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_timer >= _delay)
-            {
-                _sceneManager.ChangeScene(_nextSceneState);
-            }
+            // This scene doesn't have its own complex logic, it just exists to be drawn.
+            // The SceneManager's Update loop will handle updating its animators.
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // This scene is intentionally blank. The background is drawn by Core.cs.
+            // This scene intentionally draws nothing here.
+            // It relies on the Core.Draw method to clear the screen to black
+            // and then the SceneManager.DrawOverlay to draw the transition animations.
         }
+
+        // This scene does not draw any underlay or overlay content itself.
+        // The SceneManager's DrawOverlay handles the transition animations.
     }
 }

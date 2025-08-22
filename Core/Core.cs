@@ -264,6 +264,8 @@ namespace ProjectVagabond
 
             _sceneManager = new SceneManager();
             ServiceLocator.Register<SceneManager>(_sceneManager);
+            // MODIFIED: Add the TransitionScene to the SceneManager.
+            _sceneManager.AddScene(GameSceneState.Transition, new TransitionScene());
 
             // Phase 4: Final Setup
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
@@ -509,42 +511,46 @@ namespace ProjectVagabond
         protected override void Draw(GameTime gameTime)
         {
             // --- Phase 1: Render the letterboxed game world to its render target ---
-            GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
-            GraphicsDevice.Clear(Color.Transparent);
-
-            Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
-            Matrix virtualSpaceTransform = shakeMatrix;
-
-            _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, virtualSpaceTransform);
-
-            // --- Phase 2: Composite everything onto the full-screen render target ---
-            GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
-            GraphicsDevice.Clear(Color.Black);
-
-            // Pass 2a: Draw the background with a smooth (LinearClamp) filter.
-            // This applies anti-aliasing to the background texture as it scrolls, reducing jitter.
-            _spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
-            if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
+            // This phase is skipped entirely if the TransitionScene is active.
+            if (_sceneManager.CurrentActiveScene?.GetType() != typeof(TransitionScene))
             {
+                GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
+                GraphicsDevice.Clear(Color.Transparent);
+
+                Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
+                Matrix virtualSpaceTransform = shakeMatrix;
+
+                _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, virtualSpaceTransform);
+
+                // --- Phase 2: Composite everything onto the full-screen render target ---
+                GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
+                GraphicsDevice.Clear(Color.Black);
+
+                // Pass 2a: Draw the background with a smooth (LinearClamp) filter.
+                _spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
                 _backgroundManager.Draw(_spriteBatch, _finalCompositeTarget.Bounds, _finalScale);
-            }
-            _spriteBatch.End();
+                _spriteBatch.End();
 
-            // Pass 2b: Draw the pixel-perfect game scene on top of the background.
-            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
-            {
+                // Pass 2b: Draw the pixel-perfect game scene on top of the background.
+                _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
                 _spriteBatch.Draw(_sceneRenderTarget, _finalRenderRectangle, Color.White);
-            }
-            _spriteBatch.End();
+                _spriteBatch.End();
 
-            // Draw any full-screen UI (like the combat hand) on top of that
-            Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
-            _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, screenScaleMatrix);
+                // Draw any full-screen UI (like the combat hand) on top of that
+                Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
+                _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, screenScaleMatrix);
+            }
+            else
+            {
+                // If TransitionScene is active, clear the composite target to black.
+                // This ensures the CRT shader receives a black texture, not old game content.
+                GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
+                GraphicsDevice.Clear(Color.Black);
+            }
 
             // --- Phase 3: Render the final composite to the screen with the CRT shader ---
             GraphicsDevice.SetRenderTarget(null);
-            GraphicsDevice.Clear(Color.Black);
+            GraphicsDevice.Clear(Color.Black); // This creates the letterbox bars
 
             _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp);
 
@@ -561,13 +567,9 @@ namespace ProjectVagabond
             _spriteBatch.End();
 
             // --- Phase 4: Draw UI elements that should NOT have the shader applied ---
-            _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
-
+            // This now includes the transition animations and loading screen, drawn directly to the backbuffer.
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            if (_loadingScreen.IsActive)
-            {
-                _loadingScreen.Draw(_spriteBatch, _defaultFont, GraphicsDevice.PresentationParameters.Bounds);
-            }
+            _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime); // This now draws animators AND loading screen.
 
             if (_defaultFont != null)
             {

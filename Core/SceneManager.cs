@@ -105,11 +105,15 @@ namespace ProjectVagabond
             _introAnimator = null; // Clear any existing intro animator
 
             var gd = ServiceLocator.Get<GraphicsDevice>();
+            // MODIFIED: Use the physical window dimensions for the screen wipe.
             var screenBounds = new Rectangle(0, 0, gd.PresentationParameters.BackBufferWidth, gd.PresentationParameters.BackBufferHeight);
 
             _outroAnimator = new SceneOutroAnimator();
             _outroAnimator.OnComplete += HandleOutroComplete;
             _outroAnimator.Start(screenBounds);
+
+            // MODIFIED: Immediately switch to the TransitionScene to handle the black screen and loading.
+            SwitchToSceneInternal(GameSceneState.Transition);
         }
 
 
@@ -151,7 +155,7 @@ namespace ProjectVagabond
         /// <summary>
         /// Performs the actual scene switch.
         /// </summary>
-        private void SwitchToScene(GameSceneState state)
+        private void SwitchToSceneInternal(GameSceneState state)
         {
             if (_scenes.TryGetValue(state, out var newScene))
             {
@@ -161,15 +165,23 @@ namespace ProjectVagabond
                 _currentScene.Enter();
 
                 // Invoke the completion action after the scene has been entered.
-                _onTransitionCompleteAction?.Invoke();
-                _onTransitionCompleteAction = null; // Clear the action so it doesn't run again.
+                // This is only for the *final* scene, not the TransitionScene itself.
+                if (state != GameSceneState.Transition)
+                {
+                    _onTransitionCompleteAction?.Invoke();
+                    _onTransitionCompleteAction = null; // Clear the action so it doesn't run again.
+                }
 
                 // Start the intro animation for the new scene
-                _introAnimator = new SceneIntroAnimator();
-                var contentBounds = _currentScene.GetAnimatedBounds();
-                var gd = ServiceLocator.Get<GraphicsDevice>();
-                var animationBounds = new Rectangle(0, 0, gd.PresentationParameters.BackBufferWidth, gd.PresentationParameters.BackBufferHeight);
-                _introAnimator.Start(animationBounds, contentBounds);
+                // This is only for the *final* scene, not the TransitionScene itself.
+                if (state != GameSceneState.Transition)
+                {
+                    _introAnimator = new SceneIntroAnimator();
+                    var contentBounds = _currentScene.GetAnimatedBounds();
+                    var gd = ServiceLocator.Get<GraphicsDevice>();
+                    var animationBounds = new Rectangle(0, 0, gd.PresentationParameters.BackBufferWidth, gd.PresentationParameters.BackBufferHeight);
+                    _introAnimator.Start(animationBounds, contentBounds);
+                }
             }
         }
 
@@ -186,6 +198,8 @@ namespace ProjectVagabond
                 // The callback from the loading screen will set _loadIsPending to false, allowing the transition to continue.
                 if (_loadIsPending)
                 {
+                    // MODIFIED: Update the TransitionScene while loading.
+                    _currentScene?.Update(gameTime);
                     return; // Do nothing until loading is complete.
                 }
 
@@ -196,7 +210,8 @@ namespace ProjectVagabond
                     {
                         _isHoldingBlack = false;
                         _isTransitioning = false;
-                        SwitchToScene(_nextSceneState);
+                        // MODIFIED: Switch to the final target scene.
+                        SwitchToSceneInternal(_nextSceneState);
                     }
                 }
             }
@@ -209,32 +224,35 @@ namespace ProjectVagabond
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            if (IsLoadingBetweenScenes)
+            // MODIFIED: Only draw the current scene if it's NOT the TransitionScene.
+            // The TransitionScene is handled by DrawOverlay.
+            if (_currentScene != null && _currentScene.GetType() != typeof(TransitionScene))
             {
-                return;
+                Matrix baseTransform = transform;
+                Matrix contentTransform = _introAnimator?.GetContentTransform() ?? Matrix.Identity;
+
+                // The animation should happen in virtual space, then the whole thing is transformed to screen space.
+                Matrix finalTransform = contentTransform * baseTransform;
+
+                _currentScene?.Draw(spriteBatch, font, gameTime, finalTransform);
             }
-
-            Matrix baseTransform = transform;
-            Matrix contentTransform = _introAnimator?.GetContentTransform() ?? Matrix.Identity;
-
-            // The animation should happen in virtual space, then the whole thing is transformed to screen space.
-            Matrix finalTransform = contentTransform * baseTransform;
-
-            _currentScene?.Draw(spriteBatch, font, gameTime, finalTransform);
         }
 
         public void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            _currentScene?.DrawUnderlay(spriteBatch, font, gameTime);
+            // MODIFIED: Only draw underlay if it's NOT the TransitionScene.
+            if (_currentScene != null && _currentScene.GetType() != typeof(TransitionScene))
+            {
+                _currentScene?.DrawUnderlay(spriteBatch, font, gameTime);
+            }
         }
 
         public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            _currentScene?.DrawOverlay(spriteBatch, font, gameTime);
+            // MODIFIED: This method now handles drawing the transition animations and the loading screen.
+            // It assumes a SpriteBatch.Begin() has already been called by Core.
 
-            // The animators are now drawn without any transformation, directly to the screen.
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-
+            // Draw the intro/outro animators if active.
             _introAnimator?.Draw(spriteBatch, font, gameTime, null);
 
             if (_isTransitioning && _outroAnimator != null)
@@ -242,7 +260,11 @@ namespace ProjectVagabond
                 _outroAnimator.Draw(spriteBatch, font, gameTime, null);
             }
 
-            spriteBatch.End();
+            // Draw the loading screen if active.
+            if (ServiceLocator.Get<LoadingScreen>().IsActive)
+            {
+                ServiceLocator.Get<LoadingScreen>().Draw(spriteBatch, font, ServiceLocator.Get<GraphicsDevice>().PresentationParameters.Bounds);
+            }
         }
     }
 }
