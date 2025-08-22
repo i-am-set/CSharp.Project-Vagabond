@@ -10,7 +10,7 @@
 // --- Uniforms (Variables from C#) ---
 uniform float Time;
 uniform float2 ScreenResolution;
-uniform float Gamma; // NEW: Gamma value from settings
+uniform float Gamma;
 
 //------------------------------------------------------------------------------------
 // HOW TO TWEAK THE CRT EFFECTS
@@ -19,10 +19,12 @@ uniform float Gamma; // NEW: Gamma value from settings
 // To change the intensity of an effect, modify the 'static const float' values below.
 // After making changes, you must REBUILD your Content.mgcb project for them to apply.
 //
-// CONTRAST_AMOUNT: Controls the intensity of colors.
-//   - 1.0 = Normal contrast.
-//   - 1.2 = A good, noticeable boost that makes whites pop.
-//   - 1.5+ = A very high-contrast, stylized look.
+// VHS_GLITCH_FREQUENCY: How often a glitch event *might* happen (in seconds).
+//   - 8.0 = A new glitch has a chance to appear every 8 seconds.
+//
+// VHS_GLITCH_PROBABILITY: The chance (0.0 to 1.0) that a glitch will actually occur
+// during its frequency window.
+//   - 0.5 = There is a 50% chance of a glitch happening every 8 seconds.
 //------------------------------------------------------------------------------------
 
 // --- Effect Toggles ---
@@ -34,6 +36,8 @@ uniform float Gamma; // NEW: Gamma value from settings
 #define ENABLE_DITHERING
 #define ENABLE_ROLLING_SCANLINE
 #define ENABLE_CONTRAST
+#define ENABLE_FILM_GRAIN
+#define ENABLE_VHS_GLITCH
 
 // --- Effect Intensity Values ---
 static const float CURVATURE_AMOUNT = 0.1;
@@ -48,6 +52,12 @@ static const float ROLLING_SCANLINE_SPEED = 0.15;
 static const float ROLLING_SCANLINE_HEIGHT = 0.02;
 static const float ROLLING_SCANLINE_DISTORTION = 0.002;
 static const float ROLLING_SCANLINE_FREQUENCY = 4.0;
+// --- Film Grain Parameters ---
+static const float FILM_GRAIN_INTENSITY = 0.05;
+// --- VHS Glitch Parameters ---
+static const float VHS_GLITCH_FREQUENCY = 6.0;
+static const float VHS_GLITCH_PROBABILITY = 0.6;
+static const float VHS_GLITCH_INTENSITY = 0.03;
 
 
 // --- Shader Globals ---
@@ -61,6 +71,12 @@ static const float DITHER_MATRIX[16] = {
      3.0, 11.0,  1.0,  9.0,
     15.0,  7.0, 13.0,  5.0
 };
+
+// A simple hash function to generate pseudo-random numbers in the shader.
+float rand(float2 co)
+{
+    return frac(sin(dot(co.xy, float2(12.9898, 78.233))) * 43758.5453);
+}
 
 struct PixelShaderInput
 {
@@ -111,6 +127,41 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color = tex2D(s0, sampleCoords);
 #endif
 
+#ifdef ENABLE_VHS_GLITCH
+    // Create a unique ID for each time cycle. This will be our random seed.
+    float cycle_id = floor(Time / VHS_GLITCH_FREQUENCY);
+    
+    // Generate a random number to decide if a glitch happens in this cycle.
+    float glitch_trigger = rand(float2(cycle_id, cycle_id));
+
+    if (glitch_trigger < VHS_GLITCH_PROBABILITY)
+    {
+        // If the glitch is triggered, generate random parameters for it.
+        float glitch_duration = 0.1 + rand(float2(cycle_id * 1.2, cycle_id * 0.8)) * 0.4; // Duration from 0.1 to 0.5 seconds
+        float time_in_cycle = fmod(Time, VHS_GLITCH_FREQUENCY);
+
+        // Only apply the effect during its short, random duration.
+        if (time_in_cycle < glitch_duration)
+        {
+            // Randomize the speed and height of the glitch bar for this event.
+            float glitch_speed = 1.0 + rand(float2(cycle_id * 0.7, cycle_id * 1.3)) * 2.0; // MODIFIED: Max speed is now 3.0 instead of 5.0
+            float glitch_height = 0.01 + rand(float2(cycle_id * 1.5, cycle_id * 0.5)) * 0.2; // MODIFIED: Max height is now 21% of screen instead of 11%
+            float glitch_intensity = VHS_GLITCH_INTENSITY * (0.5 + rand(float2(cycle_id * 0.9, cycle_id * 1.1)));
+
+            float bandY = frac(time_in_cycle * glitch_speed);
+            float distFromBand = abs(input.TexCoord.y - bandY);
+
+            if (distFromBand < glitch_height / 2.0)
+            {
+                sampleCoords.x += (rand(input.TexCoord.yy + Time) - 0.5) * glitch_intensity;
+                color = tex2D(s0, sampleCoords);
+                color.r += rand(input.TexCoord + Time * 1.3) * 0.2;
+                color.b += rand(input.TexCoord + Time * 1.9) * 0.2;
+            }
+        }
+    }
+#endif
+
 #ifdef ENABLE_SCANLINES
     if (fmod(screenCoords.y, 2.0) < 1.0)
     {
@@ -138,7 +189,12 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color.rgb = lerp(0.5, color.rgb, CONTRAST_AMOUNT);
 #endif
 
-    // Clamp the color to be non-negative before applying gamma.
+#ifdef ENABLE_FILM_GRAIN
+    float grain = (rand(input.TexCoord + Time) - 0.5) * FILM_GRAIN_INTENSITY;
+    color.rgb += grain;
+#endif
+
+    // Apply gamma correction as the final step before returning.
     color.rgb = max(color.rgb, 0.0);
     color.rgb = pow(color.rgb, 1.0 / Gamma);
 
