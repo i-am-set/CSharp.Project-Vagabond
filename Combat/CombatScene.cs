@@ -41,7 +41,7 @@ namespace ProjectVagabond.Scenes
         private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 116f; // How far from the center the hands are.
         private static readonly Vector2 HAND_CAST_OFFSET = new Vector2(60, -30); // Offset from idle position for casting.
         private static readonly Vector2 HAND_RECOIL_OFFSET = new Vector2(-10, 15); // Offset from cast position for recoil.
-        private const float HAND_OFFSCREEN_Y_OFFSET = 150f; // How far below the screen the hands start/end.
+        private const float HAND_OFFSCREEN_Y_OFFSET = 250f; // MODIFIED: Increased from 150f to make hands idle lower.
 
         // Entity Sizing
         private static readonly Point ENEMY_BASE_SIZE = new Point(64, 96); // Base dimensions (Width, Height) for enemies.

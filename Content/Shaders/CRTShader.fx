@@ -65,9 +65,9 @@ static const float FILM_GRAIN_INTENSITY = 0.04;
 // --- NEW: Glitch Parameters ---
 static const float GLITCH_FREQUENCY = 5.0;
 static const float GLITCH_PROBABILITY = 0.4;
-static const float GLITCH_DURATION = 0.1;
+static const float GLITCH_DURATION = 0.05;
 static const float GLITCH_BLOCK_HEIGHT = 0.08;
-static const float GLITCH_INTENSITY = 0.01;
+static const float GLITCH_INTENSITY = 0.005;
 
 
 // --- Shader Globals ---

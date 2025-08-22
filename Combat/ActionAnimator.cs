@@ -26,6 +26,11 @@ namespace ProjectVagabond.Combat
         private readonly HashSet<Keyframe> _triggeredKeyframes = new HashSet<Keyframe>();
         private bool _isPlaying;
 
+        // State for the intro tween
+        private bool _isDoingIntroTween;
+        private float _introTweenTimer;
+        private const float INTRO_TWEEN_DURATION = 0.8f;
+
         public ActionAnimator(ActionResolver resolver, CombatScene scene, HandRenderer leftHand, HandRenderer rightHand)
         {
             _actionResolver = resolver;
@@ -57,7 +62,27 @@ namespace ProjectVagabond.Combat
             _currentTimeline = action.ActionData.Timeline;
             _timer = 0f;
             _triggeredKeyframes.Clear();
-            _isPlaying = true;
+            _isPlaying = true; // This now means "animator is active"
+
+            _isDoingIntroTween = false; // Reset state
+
+            var gameState = ServiceLocator.Get<GameState>();
+            if (_currentAction.CasterEntityId == gameState.PlayerEntityId)
+            {
+                _isDoingIntroTween = true;
+                _introTweenTimer = 0f;
+
+                // Command hands to move from their current (off-screen) position to idle.
+                if (_combatScene.AnimationAnchors.TryGetValue("LeftHandIdle", out var leftIdle))
+                {
+                    _leftHand.MoveTo(leftIdle, INTRO_TWEEN_DURATION, Easing.EaseOutQuint);
+                }
+                if (_combatScene.AnimationAnchors.TryGetValue("RightHandIdle", out var rightIdle))
+                {
+                    _rightHand.MoveTo(rightIdle, INTRO_TWEEN_DURATION, Easing.EaseOutQuint);
+                }
+            }
+
             Debug.WriteLine($"[ActionAnimator] Playing timeline for '{_currentAction.ActionData.Name}' (Duration: {_currentTimeline.Duration}s)");
         }
 
@@ -65,7 +90,22 @@ namespace ProjectVagabond.Combat
         {
             if (!_isPlaying) return;
 
-            _timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Handle the initial tween from off-screen to idle
+            if (_isDoingIntroTween)
+            {
+                _introTweenTimer += deltaTime;
+                if (_introTweenTimer >= INTRO_TWEEN_DURATION)
+                {
+                    _isDoingIntroTween = false;
+                    // The main timeline timer starts NOW.
+                    _timer = 0f;
+                }
+                return; // Don't process the main timeline yet
+            }
+
+            _timer += deltaTime;
 
             // Process keyframes
             foreach (var track in _currentTimeline.Tracks)
@@ -161,11 +201,11 @@ namespace ProjectVagabond.Combat
             {
                 if (_combatScene.AnimationAnchors.TryGetValue("LeftHandOffscreen", out var leftOffscreen))
                 {
-                    _leftHand.MoveTo(leftOffscreen, 0.3f, Easing.EaseOutCubic);
+                    _leftHand.MoveTo(leftOffscreen, 0.4f, Easing.EaseOutQuint); // MODIFIED: Increased from 0.3f
                 }
                 if (_combatScene.AnimationAnchors.TryGetValue("RightHandOffscreen", out var rightOffscreen))
                 {
-                    _rightHand.MoveTo(rightOffscreen, 0.3f, Easing.EaseOutCubic);
+                    _rightHand.MoveTo(rightOffscreen, 0.4f, Easing.EaseOutQuint); // MODIFIED: Increased from 0.3f
                 }
                 _leftHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
                 _rightHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
