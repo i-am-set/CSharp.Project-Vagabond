@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using System.Diagnostics;
 using System.Linq;
 
@@ -11,26 +11,25 @@ namespace ProjectVagabond.Combat.FSM
     {
         public void OnEnter(CombatManager combatManager)
         {
-            var gameState = ServiceLocator.Get<GameState>();
-            var currentEntityId = combatManager.CurrentTurnEntityId;
-            string entityName = (currentEntityId == gameState.PlayerEntityId) ? "Player" : currentEntityId.ToString();
+            Debug.WriteLine("  --- Round End ---");
 
             var componentStore = ServiceLocator.Get<ComponentStore>();
-            var deckComp = componentStore.GetComponent<CombatDeckComponent>(currentEntityId);
+            var gameState = ServiceLocator.Get<GameState>();
 
-            if (deckComp != null)
+            // --- Discard Phase for ALL combatants ---
+            foreach (var entityId in combatManager.Combatants)
             {
-                // --- Discard Phase ---
-                // Move all cards from hand to discard pile. Temporary cards are not in the hand list.
-                deckComp.DiscardPile.AddRange(deckComp.Hand);
-                deckComp.Hand.Clear();
-                Debug.WriteLine($"    ... Discarded {deckComp.DiscardPile.Count} cards for Entity {currentEntityId}.");
+                var deckComp = componentStore.GetComponent<CombatDeckComponent>(entityId);
+                if (deckComp != null)
+                {
+                    deckComp.DiscardPile.AddRange(deckComp.Hand);
+                    deckComp.Hand.Clear();
+                }
             }
+            Debug.WriteLine("    ... All hands discarded.");
 
             // Clear any temporary actions created for this turn.
             combatManager.ClearTemporaryActions();
-
-            Debug.WriteLine($"  --- Turn End: Entity {entityName} ---");
 
             // 1. Check for win/loss conditions
             if (CheckForDefeat(combatManager, componentStore, gameState))
@@ -48,13 +47,8 @@ namespace ProjectVagabond.Combat.FSM
             // 2. Clear the actions from the completed turn.
             combatManager.ClearActionsForTurn();
 
-            // 3. Advance to the next combatant's turn
-            combatManager.AdvanceTurn();
-            var nextEntityId = combatManager.CurrentTurnEntityId;
-            string nextEntityName = (nextEntityId == gameState.PlayerEntityId) ? "Player" : nextEntityId.ToString();
-            Debug.WriteLine($"  ... Next up: Entity {nextEntityName}");
-
-            // 4. Transition back to the start of the next turn.
+            // 3. Transition back to the start of the next turn selection phase.
+            Debug.WriteLine("  --- Starting New Round ---");
             combatManager.FSM.ChangeState(new TurnStartState(), combatManager);
         }
 

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Combat;
@@ -74,12 +74,12 @@ namespace ProjectVagabond.Combat
             Combatants.Clear();
             Combatants.AddRange(combatants);
             ClearActionsForTurn();
-            _currentTurnIndex = 0;
+            _currentTurnIndex = -1; // Will be set to 0 by AdvanceTurn in TurnEndState
             _fsm.ChangeState(new CombatStartState(), this);
         }
 
         /// <summary>
-        /// Sets the calculated initiative order for the combat.
+        /// Sets the calculated turn order for the combat.
         /// </summary>
         public void SetInitiativeOrder(List<int> order)
         {
@@ -88,15 +88,25 @@ namespace ProjectVagabond.Combat
         }
 
         /// <summary>
-        /// Advances the turn to the next combatant in the initiative order.
+        /// Advances the turn to the next combatant in the order.
         /// </summary>
         public void AdvanceTurn()
         {
             _currentTurnIndex++;
+            // Note: We now allow the index to go out of bounds to check for the end of the round.
+        }
+
+        /// <summary>
+        /// Checks if the turn index has reset, indicating a new round of selections/actions.
+        /// </summary>
+        public bool IsNewRound()
+        {
             if (_currentTurnIndex >= _initiativeOrder.Count)
             {
-                _currentTurnIndex = 0; // New round
+                _currentTurnIndex = 0;
+                return true;
             }
+            return false;
         }
 
         /// <summary>
@@ -111,10 +121,7 @@ namespace ProjectVagabond.Combat
             var actionData = _actionManager.GetAction(actionId);
             if (actionData == null) return;
 
-            // In a full game, player speed would come from a stats component.
-            const float playerSpeed = 10f;
-
-            var playerAction = new CombatAction(_gameState.PlayerEntityId, actionData, playerSpeed, targetIds);
+            var playerAction = new CombatAction(_gameState.PlayerEntityId, actionData, targetIds);
             AddActionForTurn(playerAction);
 
             // Publish the event that tells the UI to animate the card being played.

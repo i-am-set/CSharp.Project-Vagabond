@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -33,6 +34,27 @@ namespace ProjectVagabond.Combat.FSM
             _actionAnimator = combatManager.Scene.ActionAnimator;
 
             var actions = combatManager.GetActionsForTurn();
+            var componentStore = ServiceLocator.Get<ComponentStore>();
+            var random = new Random();
+
+            Debug.WriteLine("  --- Rolling for Turn Speed ---");
+            foreach (var action in actions)
+            {
+                var stats = componentStore.GetComponent<StatsComponent>(action.CasterEntityId);
+                if (stats == null)
+                {
+                    action.TurnSpeed = 0;
+                    continue;
+                }
+
+                int agilityMod = stats.GetStatModifier(StatType.Agility);
+                int d20Roll = random.Next(1, 21);
+                action.TurnSpeed = d20Roll + agilityMod;
+
+                string entityName = EntityNamer.GetName(action.CasterEntityId);
+                Debug.WriteLine($"    > {entityName} ({action.ActionData.Name}): Roll {d20Roll} + AgiMod {agilityMod} = Speed {action.TurnSpeed}");
+            }
+
             var resolvedOrder = TurnResolver.ResolveTurnOrder(new List<CombatAction>(actions));
             _executionQueue = new Queue<CombatAction>(resolvedOrder);
 

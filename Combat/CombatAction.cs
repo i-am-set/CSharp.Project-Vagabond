@@ -1,4 +1,4 @@
-﻿using ProjectVagabond.Combat; // For ActionData
+﻿﻿using ProjectVagabond.Combat; // For ActionData
 using System.Collections.Generic; // For List
 
 namespace ProjectVagabond.Combat
@@ -30,9 +30,10 @@ namespace ProjectVagabond.Combat
         public ActionData ActionData { get; }
 
         /// <summary>
-        /// The effective speed of the caster for this specific action, used for tie-breaking initiative.
+        /// The calculated speed of this action for the turn, after rolling.
+        /// This needs a public setter so it can be assigned in the ActionExecutionState.
         /// </summary>
-        public float EffectiveCastSpeed { get; }
+        public int TurnSpeed { get; set; }
 
         /// <summary>
         /// A list of entity IDs that are the target(s) of this action.
@@ -45,14 +46,13 @@ namespace ProjectVagabond.Combat
         /// </summary>
         /// <param name="casterEntityId">The ID of the entity performing the action.</param>
         /// <param name="actionData">The resolved ActionData for this action.</param>
-        /// <param name="effectiveCastSpeed">The effective speed of the caster for this action.</param>
         /// <param name="targetEntityIds">A list of entity IDs targeted by the action.</param>
-        public CombatAction(int casterEntityId, ActionData actionData, float effectiveCastSpeed, List<int> targetEntityIds)
+        public CombatAction(int casterEntityId, ActionData actionData, List<int> targetEntityIds)
         {
             CasterEntityId = casterEntityId;
             ActionData = actionData;
-            EffectiveCastSpeed = effectiveCastSpeed;
             TargetEntityIds = targetEntityIds ?? new List<int>();
+            TurnSpeed = 0; // Default to 0; will be calculated before execution.
         }
     }
 }

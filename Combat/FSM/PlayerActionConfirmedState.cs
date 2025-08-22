@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using System.Diagnostics;
 
 namespace ProjectVagabond.Combat.FSM
@@ -45,7 +45,21 @@ namespace ProjectVagabond.Combat.FSM
             Debug.WriteLine("    ... Player card animation complete.");
             _isWaitingForAnimation = false;
             var combatManager = ServiceLocator.Get<CombatManager>();
-            combatManager.FSM.ChangeState(new ActionExecutionState(), combatManager);
+
+            // MODIFIED: After player selects, advance to the next combatant for their selection.
+            combatManager.AdvanceTurn();
+
+            // If we've looped back to the start, everyone has selected their action.
+            if (combatManager.IsNewRound())
+            {
+                Debug.WriteLine("  --- All combatants have selected actions. Proceeding to execution. ---");
+                combatManager.FSM.ChangeState(new ActionExecutionState(), combatManager);
+            }
+            else
+            {
+                // Otherwise, start the next combatant's turn for selection.
+                combatManager.FSM.ChangeState(new TurnStartState(), combatManager);
+            }
         }
     }
 }
