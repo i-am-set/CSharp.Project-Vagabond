@@ -42,7 +42,6 @@ namespace ProjectVagabond
         private Texture2D _pixel;
         private Rectangle _finalRenderRectangle;
         private Matrix _mouseTransformMatrix;
-        private bool _useLinearSampling;
         private Point _previousResolution;
         private float _finalScale = 1f;
 
@@ -545,6 +544,7 @@ namespace ProjectVagabond
             {
                 _crtEffect.Parameters["Time"]?.SetValue((float)gameTime.TotalGameTime.TotalSeconds);
                 _crtEffect.Parameters["ScreenResolution"]?.SetValue(new Vector2(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));
+                _crtEffect.Parameters["Gamma"]?.SetValue(_settings.Gamma);
                 _crtEffect.CurrentTechnique.Passes[0].Apply();
             }
 
@@ -624,14 +624,12 @@ namespace ProjectVagabond
             if (screenWidth < Global.VIRTUAL_WIDTH || screenHeight < Global.VIRTUAL_HEIGHT)
             {
                 _finalScale = Math.Min(scaleX, scaleY);
-                _useLinearSampling = true;
             }
             else
             {
                 int integerScale = (int)Math.Min(scaleX, scaleY);
                 if (_settings.SmallerUi) integerScale--;
                 _finalScale = Math.Max(1, integerScale);
-                _useLinearSampling = false;
             }
 
             int destWidth = (int)(Global.VIRTUAL_WIDTH * _finalScale);

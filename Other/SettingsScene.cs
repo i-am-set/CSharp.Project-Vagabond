@@ -94,7 +94,8 @@ namespace ProjectVagabond.Scenes
                 SmallerUi = _settings.SmallerUi,
                 UseImperialUnits = _settings.UseImperialUnits,
                 Use24HourClock = _settings.Use24HourClock,
-                DisplayIndex = _settings.DisplayIndex
+                DisplayIndex = _settings.DisplayIndex,
+                Gamma = _settings.Gamma
             };
             _titleBobTimer = 0f;
             BuildInitialUI();
@@ -165,6 +166,8 @@ namespace ProjectVagabond.Scenes
             });
             _uiElements.Add(windowModeControl);
 
+            // MODIFIED: Changed segment count from 10 to 11.
+            _uiElements.Add(new SegmentedBarSettingControl("Gamma", 0.5f, 1.5f, 11, () => _tempSettings.Gamma, v => _tempSettings.Gamma = v));
             _uiElements.Add(new BoolSettingControl("Smaller UI", () => _tempSettings.SmallerUi, v => _tempSettings.SmallerUi = v));
             _uiElements.Add(new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v));
             _uiElements.Add(new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v));
@@ -279,6 +282,7 @@ namespace ProjectVagabond.Scenes
             _settings.UseImperialUnits = _tempSettings.UseImperialUnits;
             _settings.Use24HourClock = _tempSettings.Use24HourClock;
             _settings.DisplayIndex = _tempSettings.DisplayIndex;
+            _settings.Gamma = _tempSettings.Gamma;
 
             _settings.ApplyGraphicsSettings(_graphics, _core);
             _settings.ApplyGameSettings();
@@ -302,6 +306,7 @@ namespace ProjectVagabond.Scenes
             _tempSettings.UseImperialUnits = _settings.UseImperialUnits;
             _tempSettings.Use24HourClock = _settings.Use24HourClock;
             _tempSettings.DisplayIndex = _settings.DisplayIndex;
+            _tempSettings.Gamma = _settings.Gamma;
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
             UpdateFramerateControl();
             _isApplyingSettings = false; // Unset flag

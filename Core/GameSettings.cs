@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Linq;
@@ -22,6 +22,7 @@ namespace ProjectVagabond
         public int TargetFramerate { get; set; }
         public bool SmallerUi { get; set; }
         public int DisplayIndex { get; set; }
+        public float Gamma { get; set; }
 
         // Game Settings
         public bool UseImperialUnits { get; set; }
@@ -40,6 +41,7 @@ namespace ProjectVagabond
             TargetFramerate = 60;
             SmallerUi = false;
             DisplayIndex = 0;
+            Gamma = 1.0f;
 
             // Default game settings. This class is the source of truth for defaults.
             UseImperialUnits = false;

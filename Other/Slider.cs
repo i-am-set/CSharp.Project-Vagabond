@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -10,13 +10,14 @@ namespace ProjectVagabond.UI
     {
         private readonly Global _global;
 
-        public Rectangle Bounds { get; }
+        public Rectangle Bounds { get; set; }
         public string Label { get; }
         public float MinValue { get; }
         public float MaxValue { get; }
         public float Step { get; }
         public float CurrentValue { get; private set; }
         public bool IsEnabled { get; set; } = true;
+        public Color? CustomValueColor { get; set; }
 
         private Rectangle _handleBounds;
         private bool _isDragging;
@@ -105,13 +106,13 @@ namespace ProjectVagabond.UI
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             Color labelColor = IsEnabled ? ElementColor : DisabledSliderColor;
-            Color valueColor = IsEnabled ? ElementColor : DisabledSliderColor;
+            Color valueColor = CustomValueColor ?? (IsEnabled ? ElementColor : DisabledSliderColor);
             Color handleColor = IsEnabled ? ElementColor : DisabledSliderColor;
             Color railColor = IsEnabled ? SubElementColor : DisabledSliderColor;
 
             spriteBatch.DrawString(font, Label, new Vector2(Bounds.X, Bounds.Y - font.LineHeight - 2), labelColor);
 
-            string valueString = CurrentValue.ToString("F0");
+            string valueString = CurrentValue.ToString("F2");
             Vector2 valueSize = font.MeasureString(valueString);
             spriteBatch.DrawString(font, valueString, new Vector2(Bounds.Right - valueSize.X, Bounds.Y - font.LineHeight - 2), valueColor);
 
