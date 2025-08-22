@@ -44,7 +44,7 @@ namespace ProjectVagabond.UI
 
             _savedValue = getter();
             _currentValue = _savedValue;
-            // A 10-segment bar represents 10 distinct values, so there are 9 "steps" between them.
+            // An 11-segment bar represents 11 distinct values, so there are 10 "steps" between them.
             _step = (_maxValue - _minValue) / (_segmentCount - 1);
         }
 
@@ -91,6 +91,7 @@ namespace ProjectVagabond.UI
                 if (_barAreaRect.Contains(virtualMousePos))
                 {
                     _isDragging = true;
+                    UpdateValueFromMousePosition(virtualMousePos); // Update on initial click
                     UIInputManager.ConsumeMouseClick();
                 }
             }
@@ -102,10 +103,40 @@ namespace ProjectVagabond.UI
 
             if (_isDragging && leftClickHeld)
             {
-                float mouseX = Math.Clamp(virtualMousePos.X, _barAreaRect.X, _barAreaRect.Right);
-                float progress = (_barAreaRect.Width > 0) ? (mouseX - _barAreaRect.X) / _barAreaRect.Width : 0;
-                float newValue = _minValue + progress * (_maxValue - _minValue);
-                SetValue(newValue);
+                UpdateValueFromMousePosition(virtualMousePos); // Update while dragging
+            }
+        }
+
+        /// <summary>
+        /// Calculates the correct value based on which segment hitbox the mouse is over.
+        /// </summary>
+        private void UpdateValueFromMousePosition(Vector2 virtualMousePos)
+        {
+            // The Y position of the segments, centered within the row.
+            int segmentY = _barAreaRect.Y + (_barAreaRect.Height - SEGMENT_HEIGHT) / 2;
+
+            // Loop through each segment to find which one is being clicked/dragged over.
+            for (int i = 0; i < _segmentCount; i++)
+            {
+                // Calculate the visual rectangle for the current segment.
+                var segmentRect = new Rectangle(
+                    _barAreaRect.X + i * (SEGMENT_WIDTH + SEGMENT_GAP),
+                    segmentY,
+                    SEGMENT_WIDTH,
+                    SEGMENT_HEIGHT
+                );
+
+                // Create a slightly larger hitbox for easier clicking.
+                var hitboxRect = segmentRect;
+                hitboxRect.Inflate(1, 1);
+
+                if (hitboxRect.Contains(virtualMousePos))
+                {
+                    // If the mouse is over this segment, calculate the corresponding value and set it.
+                    float newValue = _minValue + i * _step;
+                    SetValue(newValue);
+                    break; // Found the correct segment, no need to check others.
+                }
             }
         }
 
@@ -177,8 +208,7 @@ namespace ProjectVagabond.UI
 
             // --- Numeric Value ---
             string valueString = GetCurrentValueAsString();
-            // MODIFIED: The value position is now based on the original, non-animated 'position'
-            // to keep it stationary, just like the resolution text.
+            // Position the numeric value to the far right, aligned with the resolution's extra text.
             Vector2 valuePosition = new Vector2(position.X + 460, position.Y);
             spriteBatch.DrawString(font, valueString, valuePosition, _global.Palette_DarkGray);
         }
