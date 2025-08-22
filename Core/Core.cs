@@ -521,11 +521,19 @@ namespace ProjectVagabond
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
             GraphicsDevice.Clear(Color.Black);
 
-            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            // Only draw the background and scene if we are NOT in a transition hold/load state.
+            // Pass 2a: Draw the background with a smooth (LinearClamp) filter.
+            // This applies anti-aliasing to the background texture as it scrolls, reducing jitter.
+            _spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
             if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
             {
                 _backgroundManager.Draw(_spriteBatch, _finalCompositeTarget.Bounds, _finalScale);
+            }
+            _spriteBatch.End();
+
+            // Pass 2b: Draw the pixel-perfect game scene on top of the background.
+            _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
+            {
                 _spriteBatch.Draw(_sceneRenderTarget, _finalRenderRectangle, Color.White);
             }
             _spriteBatch.End();
