@@ -45,10 +45,10 @@ uniform float Gamma;
 #define ENABLE_ROLLING_SCANLINE
 #define ENABLE_CONTRAST
 #define ENABLE_FILM_GRAIN
-#define ENABLE_GLITCH // <-- NEW EFFECT TOGGLE
+#define ENABLE_GLITCH
 
 // --- Effect Intensity Values ---
-static const float CURVATURE_AMOUNT = 0.1;
+static const float CURVATURE_AMOUNT = 0.15;
 static const float VIGNETTE_INTENSITY = 0.8;
 static const float SCANLINE_INTENSITY = 0.4;
 static const float SHADOW_MASK_INTENSITY = 0.15;
@@ -56,18 +56,18 @@ static const float CHROMATIC_ABERRATION_AMOUNT = 2.0;
 static const float DITHER_THRESHOLD = 1.0 / 255.0;
 static const float CONTRAST_AMOUNT = 1.2;
 // --- Rolling Scanline Parameters ---
-static const float ROLLING_SCANLINE_SPEED = 0.25;
-static const float ROLLING_SCANLINE_HEIGHT = 0.01;
+static const float ROLLING_SCANLINE_SPEED = 0.15;
+static const float ROLLING_SCANLINE_HEIGHT = 0.02;
 static const float ROLLING_SCANLINE_DISTORTION = 0.002;
 static const float ROLLING_SCANLINE_FREQUENCY = 4.0;
 // --- Film Grain Parameters ---
-static const float FILM_GRAIN_INTENSITY = 0.025;
-// --- NEW: Glitch Parameters ---
+static const float FILM_GRAIN_INTENSITY = 0.03; // MODIFIED: Changed from 0.05
+// --- Glitch Parameters ---
 static const float GLITCH_FREQUENCY = 5.0;
 static const float GLITCH_PROBABILITY = 0.4;
-static const float GLITCH_DURATION = 0.15;
+static const float GLITCH_DURATION = 0.2;      // MODIFIED: Changed from 0.1
 static const float GLITCH_BLOCK_HEIGHT = 0.08;
-static const float GLITCH_INTENSITY = 0.005;
+static const float GLITCH_INTENSITY = 0.02;     // MODIFIED: Changed from 0.01
 
 
 // --- Shader Globals ---
