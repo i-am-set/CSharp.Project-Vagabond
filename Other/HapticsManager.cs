@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using System;
 
 namespace ProjectVagabond
@@ -33,6 +33,7 @@ namespace ProjectVagabond
 
         public void TriggerShake(float magnitude, float duration, bool isDecayed = true)
         {
+            System.Diagnostics.Debug.WriteLine($"[DEBUG CHECK 2] STATE: HapticsManager received shake trigger. Duration: {duration}, Magnitude: {magnitude}");
             _shake.Trigger(magnitude, duration, decayed: isDecayed);
         }
 
@@ -107,6 +108,11 @@ namespace ProjectVagabond
             float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation;
             float totalScale = GetCurrentScale();
 
+            if (totalOffset != Vector2.Zero)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DEBUG CHECK 3] MATRIX: Generating shake matrix. Offset: {totalOffset}");
+            }
+
             var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
 
             Matrix offsetMatrix = Matrix.CreateTranslation(totalOffset.X, totalOffset.Y, 0);
@@ -139,8 +145,6 @@ namespace ProjectVagabond
             return _zoomPulse.Scale;
         }
 
-        private enum HapticType { Shake, Hop, Pulse, Wobble, Drift, Bounce, ZoomPulse }
-
         private class HapticEffect
         {
             private readonly HapticType _type;
@@ -150,6 +154,7 @@ namespace ProjectVagabond
             private Vector2 _offset;
             private float _rotation;
             private float _scale;
+            private float _initialIntensity; // Store the starting intensity for stable decay
 
             public HapticEffect(HapticType type)
             {
@@ -165,6 +170,7 @@ namespace ProjectVagabond
             public void Trigger(float intensity, float duration, bool decayed = true, float frequency = 0f, Vector2 direction = default)
             {
                 _intensity = intensity;
+                _initialIntensity = intensity; // Store the starting intensity
                 _duration = duration;
                 _timer = duration;
                 _decayed = decayed;
@@ -178,6 +184,7 @@ namespace ProjectVagabond
                 _timer = 0f;
                 _duration = 0f;
                 _intensity = 0f;
+                _initialIntensity = 0f;
                 _frequency = 0f;
                 _direction = Vector2.Zero;
                 _offset = Vector2.Zero;
@@ -199,15 +206,19 @@ namespace ProjectVagabond
                     case HapticType.Shake:
                         if (_timer > 0)
                         {
-                            float offsetX = (float)(random.NextDouble() * 2 - 1) * _intensity;
-                            float offsetY = (float)(random.NextDouble() * 2 - 1) * _intensity;
+                            float currentMagnitude = _intensity;
+                            if (_decayed)
+                            {
+                                // MODIFIED: Use a stable decay based on progress, not remaining time.
+                                currentMagnitude = _initialIntensity * (1.0f - Easing.EaseOutQuad(progress));
+                            }
+
+                            float offsetX = (float)(random.NextDouble() * 2 - 1) * currentMagnitude;
+                            float offsetY = (float)(random.NextDouble() * 2 - 1) * currentMagnitude;
                             _offset = new Vector2(offsetX, offsetY);
 
-                            float maxRotation = _intensity * 0.005f;
+                            float maxRotation = currentMagnitude * 0.005f;
                             _rotation = (float)(random.NextDouble() * 2 - 1) * maxRotation;
-
-                            if (_decayed && _timer > 0)
-                                _intensity *= (1.0f - deltaTime / _timer);
                         }
                         break;
                     case HapticType.Hop:

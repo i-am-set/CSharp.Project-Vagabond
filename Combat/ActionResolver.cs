@@ -1,10 +1,11 @@
-﻿using ProjectVagabond.Combat.Effects;
+﻿﻿using ProjectVagabond.Combat.Effects;
 using ProjectVagabond.Dice;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using Microsoft.Xna.Framework;
 
 namespace ProjectVagabond.Combat
 {
@@ -20,10 +21,16 @@ namespace ProjectVagabond.Combat
         private const float RESISTANCE_MULTIPLIER = 0.5f;
 
         private readonly ComponentStore _componentStore;
+        private readonly GameState _gameState;
+        private readonly HapticsManager _hapticsManager;
+        private readonly Core _core;
 
         public ActionResolver()
         {
             _componentStore = ServiceLocator.Get<ComponentStore>();
+            _gameState = ServiceLocator.Get<GameState>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _core = ServiceLocator.Get<Core>();
         }
 
         /// <summary>
@@ -114,6 +121,14 @@ namespace ProjectVagabond.Combat
                 int damageToDeal = Math.Max(0, (int)Math.Round(finalDamage));
                 targetHealthComp.TakeDamage(damageToDeal);
                 targetNames.Add($"{EntityNamer.GetName(target.EntityId)} for {damageToDeal} {effectDef.DamageType} damage");
+
+                // If the player is the one being damaged, trigger screen effects.
+                if (target.EntityId == _gameState.PlayerEntityId)
+                {
+                    // MODIFIED: Replaced screen shake with the new impact glitch effect.
+                    _core.TriggerFullscreenGlitch(0.2f);
+                    _core.TriggerFullscreenFlash(new Color(150, 40, 40), 0.15f);
+                }
             }
 
             if (targetNames.Any())

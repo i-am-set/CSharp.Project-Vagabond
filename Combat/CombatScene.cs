@@ -13,7 +13,7 @@ using MonoGame.Extended;
 using MonoGame.Extended.Graphics;
 using System.Linq;
 using System;
-using ProjectVagabond.Combat.FSM; // MODIFIED: Added the required using directive.
+using ProjectVagabond.Combat.FSM;
 
 namespace ProjectVagabond.Scenes
 {
@@ -28,7 +28,6 @@ namespace ProjectVagabond.Scenes
         private ActionAnimator _actionAnimator;
         public ActionAnimator ActionAnimator => _actionAnimator;
 
-        // NEW: Tracks the action currently being animated for UI purposes.
         public CombatAction CurrentExecutingAction { get; set; }
 
         // Player Hands
@@ -402,7 +401,6 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             _leftHandRenderer.Draw(spriteBatch, font, gameTime);
             _rightHandRenderer.Draw(spriteBatch, font, gameTime);
-            DrawPlayerUI(spriteBatch, font);
             spriteBatch.End();
 
             // --- Card UI (Manages its own batches for shaders) ---
@@ -411,12 +409,6 @@ namespace ProjectVagabond.Scenes
             // --- Overlays (Drawn to full screen) ---
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             DrawTargetingIndicators(spriteBatch);
-            // Draw Enemy Hit Markers on top of everything else
-            foreach (var enemy in _enemies)
-            {
-                var basePosition = new Vector2(enemy.Bounds.Center.X, enemy.Bounds.Top);
-                enemy.DrawHitMarkers(spriteBatch, font, basePosition);
-            }
             spriteBatch.End();
         }
 
@@ -434,28 +426,6 @@ namespace ProjectVagabond.Scenes
             {
                 spriteBatch.DrawRectangle(PlayArea, Color.Lime, 1f);
             }
-        }
-
-        private void DrawPlayerUI(SpriteBatch spriteBatch, BitmapFont font)
-        {
-            var playerHealth = ServiceLocator.Get<ComponentStore>().GetComponent<HealthComponent>(_gameState.PlayerEntityId);
-            if (playerHealth == null) return;
-
-            var core = ServiceLocator.Get<Core>();
-            Rectangle actualScreenVirtualBounds = core.GetActualScreenVirtualBounds();
-            var pixel = ServiceLocator.Get<Texture2D>();
-
-            // ANCHOR FIX: Anchor Y position calculation to the physical window bottom, not the virtual bounds.
-            var windowBottomRight = new Point(core.GraphicsDevice.PresentationParameters.BackBufferWidth, core.GraphicsDevice.PresentationParameters.BackBufferHeight);
-            float screenBottomInVirtualCoords = Core.TransformMouse(windowBottomRight).Y;
-
-            // --- Hit Markers ---
-            // The health bar is no longer drawn, but we still need its position to anchor the hit markers.
-            int barHeight = PLAYER_HEALTH_BAR_SIZE.Y;
-            int barY = (int)screenBottomInVirtualCoords - barHeight - PLAYER_HEALTH_BAR_Y_OFFSET;
-            int barX = actualScreenVirtualBounds.Center.X;
-            var hitMarkerBasePosition = new Vector2(barX, barY - PLAYER_HIT_MARKER_Y_OFFSET);
-            _playerEntity?.DrawHitMarkers(spriteBatch, font, hitMarkerBasePosition);
         }
 
         private void DrawTargetingIndicators(SpriteBatch spriteBatch)

@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
@@ -65,7 +65,7 @@ namespace ProjectVagabond.Combat.UI
 
         // Drag-specific animation
         private Vector2 _lastVelocity;
-        private const float DRAG_TILT_FACTOR = 0.02f; // How much to tilt based on velocity.X
+        private const float DRAG_TILT_FACTOR = 0.2f; // How much to tilt based on velocity.X
         private const float MAX_DRAG_TILT_RADIANS = 0.2f; // Max tilt in either direction
         private const float DRAG_TILT_LERP_SPEED = 15f; // How quickly the tilt catches up
         private bool _isDragInPlayArea = true;
@@ -205,9 +205,10 @@ namespace ProjectVagabond.Combat.UI
 
                 var swayOffset = _dragSway?.Offset ?? Vector2.Zero;
                 var finalCenterPosition = _visualPosition + swayOffset;
-                var size = ActionHandUI.CARD_SIZE.ToVector2() * CurrentScale;
-                var topLeftPosition = finalCenterPosition - (size / 2f);
-                CurrentBounds = new RectangleF(topLeftPosition.X, topLeftPosition.Y, size.X, size.Y);
+                var finalSize = ActionHandUI.CARD_SIZE.ToVector2() * CurrentScale;
+                var topLeftPosition = finalCenterPosition - (finalSize / 2f);
+                CurrentBounds = new RectangleF(topLeftPosition.X, topLeftPosition.Y, finalSize.X, finalSize.Y);
+                return; // Exit early to prevent animation logic from interfering
             }
 
             if (_isPlayAnimating)
@@ -232,30 +233,19 @@ namespace ProjectVagabond.Combat.UI
             float easedProgress = Easing.EaseOutCubic(progress);
             CurrentTint = Color.Lerp(_startTint, _targetTint, easedProgress);
 
-            if (!IsBeingDragged)
-            {
-                CurrentRotation = MathHelper.Lerp(_startRotation, _targetRotation, easedProgress);
-            }
-
+            CurrentRotation = MathHelper.Lerp(_startRotation, _targetRotation, easedProgress);
             CurrentAlpha = MathHelper.Lerp(_startAlpha, _targetAlpha, easedProgress);
             ShadowAlpha = MathHelper.Lerp(_startShadowAlpha, _targetShadowAlpha, easedProgress);
 
-            // Only allow the animation system to control position if the card is NOT being dragged.
-            if (!IsBeingDragged)
-            {
-                var currentPosition = Vector2.Lerp(_startPosition, _targetPosition, easedProgress);
-                UpdateRipple(deltaTime);
-                currentPosition += GetRippleOffset();
+            var currentPosition = Vector2.Lerp(_startPosition, _targetPosition, easedProgress);
+            UpdateRipple(deltaTime);
+            currentPosition += GetRippleOffset();
 
-                var size = new Vector2(ActionHandUI.CARD_SIZE.X * CurrentScale, ActionHandUI.CARD_SIZE.Y * CurrentScale);
-                CurrentBounds = new RectangleF(currentPosition.X, currentPosition.Y, size.X, size.Y);
-            }
+            var size = new Vector2(ActionHandUI.CARD_SIZE.X * CurrentScale, ActionHandUI.CARD_SIZE.Y * CurrentScale);
+            CurrentBounds = new RectangleF(currentPosition.X, currentPosition.Y, size.X, size.Y);
 
             // When not dragged, the shadow has no offset
-            if (!IsBeingDragged)
-            {
-                ShadowOffset = Vector2.Lerp(DRAGGED_SHADOW_OFFSET, Vector2.Zero, easedProgress);
-            }
+            ShadowOffset = Vector2.Lerp(DRAGGED_SHADOW_OFFSET, Vector2.Zero, easedProgress);
 
             if (progress >= 1f)
             {
@@ -280,6 +270,17 @@ namespace ProjectVagabond.Combat.UI
             {
                 _isPlayAnimating = false;
             }
+        }
+
+        /// <summary>
+        /// Prepares the card for a drag operation, cancelling any other animations.
+        /// </summary>
+        public void BeginDrag()
+        {
+            IsBeingDragged = true;
+            _isAnimating = false; // This is the crucial fix.
+            _isPlayAnimating = false;
+            StartDragSway();
         }
 
         public void StartDragSway()

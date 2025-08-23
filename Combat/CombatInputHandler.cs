@@ -115,8 +115,7 @@ namespace ProjectVagabond.Combat
                             DraggedCard = HeldCard;
                             HeldCard = null; // No longer just held
 
-                            DraggedCard.IsBeingDragged = true;
-                            DraggedCard.StartDragSway();
+                            DraggedCard.BeginDrag();
                         }
                     }
 

@@ -8,35 +8,6 @@ using System.Collections.Generic;
 namespace ProjectVagabond.Combat
 {
     /// <summary>
-    /// A self-contained visual effect for displaying damage or healing numbers.
-    /// </summary>
-    public class HitMarker
-    {
-        public string Text { get; }
-        public Color Color { get; }
-        public float Lifetime { get; set; }
-        public Vector2 PositionOffset { get; set; }
-        public float Alpha { get; set; }
-        public float Scale { get; set; }
-
-        public HitMarker(int amount)
-        {
-            if (amount >= 0) // Healing
-            {
-                Text = $"+{amount}";
-                Color = Color.LawnGreen;
-            }
-            else // Damage
-            {
-                Text = $"{Math.Abs(amount)}";
-                Color = Color.White;
-            }
-            Alpha = 1f;
-            Scale = 1f;
-        }
-    }
-
-    /// <summary>
     /// Represents a single entity (player or enemy) within the combat scene.
     /// It manages its own visual state, such as position, scale, and targeting indicators.
     /// </summary>
@@ -63,17 +34,22 @@ namespace ProjectVagabond.Combat
         private bool _isAnimating;
         private const float ANIMATION_DURATION = 0.2f;
 
+        // --- NEW: Hit Effect State ---
+        private float _shakeTimer;
+        private int _flashFrames; // How many frames the flash should last
+        private readonly Random _random = new Random();
+
         // --- TUNING CONSTANTS ---
-        private const float HIT_MARKER_LIFETIME = 0.75f;
-        private const float HIT_MARKER_FLOAT_SPEED = 30f;
         private static readonly Vector2 INACTIVE_OFFSET = new Vector2(0, -10);
         private const float INACTIVE_SCALE = 0.9f;
         private static readonly Color INACTIVE_TINT = Color.Gray;
-        private static readonly Color DEFEATED_TINT = new Color(100, 20, 20); // Dim red for defeated state
+        private static readonly Color DEFEATED_TINT = new Color(100, 20, 20);
+        private const float HIT_SHAKE_DURATION = 0.3f;
+        private const float HIT_SHAKE_MAGNITUDE = 5.0f;
+        private static readonly Color HIT_FLASH_COLOR = Color.White;
 
 
         private readonly HealthComponent _healthComponent;
-        private readonly List<HitMarker> _hitMarkers = new List<HitMarker>();
 
         public CombatEntity(int entityId, Texture2D texture)
         {
@@ -104,14 +80,25 @@ namespace ProjectVagabond.Combat
 
         private void HandleHealthChange(int amount)
         {
-            var marker = new HitMarker(amount);
-            marker.Lifetime = HIT_MARKER_LIFETIME;
-            _hitMarkers.Add(marker);
+            // Only trigger effects on taking damage.
+            if (amount < 0)
+            {
+                TriggerHitEffects();
+            }
 
             if (_healthComponent.CurrentHealth <= 0)
             {
                 IsDefeated = true;
             }
+        }
+
+        /// <summary>
+        /// Activates the shake and flash effects for one hit.
+        /// </summary>
+        public void TriggerHitEffects()
+        {
+            _shakeTimer = HIT_SHAKE_DURATION;
+            _flashFrames = 2; // Flash for two frames
         }
 
         /// <summary>
@@ -150,30 +137,34 @@ namespace ProjectVagabond.Combat
                 }
             }
 
-            // Update hit markers
-            for (int i = _hitMarkers.Count - 1; i >= 0; i--)
+            // Update shake effect timer
+            if (_shakeTimer > 0)
             {
-                var marker = _hitMarkers[i];
-                marker.Lifetime -= deltaTime;
-
-                if (marker.Lifetime <= 0)
-                {
-                    _hitMarkers.RemoveAt(i);
-                }
-                else
-                {
-                    // Animate position and fade
-                    marker.PositionOffset -= new Vector2(0, HIT_MARKER_FLOAT_SPEED * deltaTime);
-                    float progress = marker.Lifetime / HIT_MARKER_LIFETIME;
-                    marker.Alpha = Math.Clamp(progress * 2f, 0f, 1f); // Fade out in the last half of its life
-                    marker.Scale = 1f + (1f - progress); // "Pop" effect
-                }
+                _shakeTimer -= deltaTime;
             }
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
             if (Texture == null) return;
+
+            // Calculate shake offset
+            Vector2 shakeOffset = Vector2.Zero;
+            if (_shakeTimer > 0)
+            {
+                // Ease out the magnitude over the duration of the shake.
+                float progress = _shakeTimer / HIT_SHAKE_DURATION;
+                float currentMagnitude = HIT_SHAKE_MAGNITUDE * Easing.EaseOutCubic(progress);
+                shakeOffset.X = (float)(_random.NextDouble() * 2 - 1) * currentMagnitude;
+            }
+
+            // Determine final tint (flash takes priority)
+            Color finalTint = VisualTint;
+            if (_flashFrames > 0)
+            {
+                finalTint = HIT_FLASH_COLOR;
+                _flashFrames--; // Decrement the flash frame counter
+            }
 
             // If the entity is defeated, it uses a special, static visual state.
             if (IsDefeated)
@@ -184,13 +175,13 @@ namespace ProjectVagabond.Combat
 
             // Otherwise, use the dynamic visual state properties for drawing.
             Rectangle destinationRect = new Rectangle(
-                (int)(Bounds.X + VisualOffset.X),
-                (int)(Bounds.Y + VisualOffset.Y),
+                (int)(Bounds.X + VisualOffset.X + shakeOffset.X), // Apply shake
+                (int)(Bounds.Y + VisualOffset.Y + shakeOffset.Y), // Apply shake
                 (int)(Bounds.Width * VisualScale),
                 (int)(Bounds.Height * VisualScale)
             );
 
-            spriteBatch.Draw(Texture, destinationRect, null, VisualTint, 0f, Vector2.Zero, SpriteEffects.None, 0f);
+            spriteBatch.Draw(Texture, destinationRect, null, finalTint, 0f, Vector2.Zero, SpriteEffects.None, 0f);
         }
 
         public void SetActiveVisuals()
@@ -213,17 +204,6 @@ namespace ProjectVagabond.Combat
             _targetTint = targetTint;
             _animationTimer = 0f;
             _isAnimating = true;
-        }
-
-        public void DrawHitMarkers(SpriteBatch spriteBatch, BitmapFont font, Vector2 basePosition)
-        {
-            foreach (var marker in _hitMarkers)
-            {
-                Vector2 textSize = font.MeasureString(marker.Text);
-                Vector2 drawPosition = basePosition + marker.PositionOffset - (textSize / 2f * marker.Scale);
-
-                spriteBatch.DrawString(font, marker.Text, drawPosition, marker.Color * marker.Alpha, 0f, Vector2.Zero, marker.Scale, SpriteEffects.None, 0f);
-            }
         }
     }
 }
