@@ -57,7 +57,7 @@ static const float GLITCH_BLOCK_HEIGHT = 0.08;
 static const float GLITCH_INTENSITY = 0.005;
 // --- Impact Glitch Parameters ---
 static const float IMPACT_GLITCH_BLOCK_HEIGHT = 0.002; // MODIFIED: Changed from 0.01
-static const float IMPACT_GLITCH_INTENSITY = 0.05;
+static const float IMPACT_GLITCH_INTENSITY = 0.02;
 
 
 // --- Shader Globals ---

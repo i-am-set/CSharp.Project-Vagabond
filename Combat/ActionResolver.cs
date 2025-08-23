@@ -1,4 +1,4 @@
-﻿﻿using ProjectVagabond.Combat.Effects;
+﻿using ProjectVagabond.Combat.Effects;
 using ProjectVagabond.Dice;
 using System;
 using System.Collections.Generic;
@@ -125,7 +125,7 @@ namespace ProjectVagabond.Combat
                 // If the player is the one being damaged, trigger screen effects.
                 if (target.EntityId == _gameState.PlayerEntityId)
                 {
-                    // MODIFIED: Replaced screen shake with the new impact glitch effect.
+                    _hapticsManager.TriggerShake(10.0f, 0.5f);
                     _core.TriggerFullscreenGlitch(0.2f);
                     _core.TriggerFullscreenFlash(new Color(150, 40, 40), 0.15f);
                 }

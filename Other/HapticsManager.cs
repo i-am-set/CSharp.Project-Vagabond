@@ -108,11 +108,6 @@ namespace ProjectVagabond
             float totalRotation = _shake.Rotation + _hop.Rotation + _pulse.Rotation + _wobble.Rotation + _drift.Rotation + _bounce.Rotation + _zoomPulse.Rotation;
             float totalScale = GetCurrentScale();
 
-            if (totalOffset != Vector2.Zero)
-            {
-                System.Diagnostics.Debug.WriteLine($"[DEBUG CHECK 3] MATRIX: Generating shake matrix. Offset: {totalOffset}");
-            }
-
             var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
 
             Matrix offsetMatrix = Matrix.CreateTranslation(totalOffset.X, totalOffset.Y, 0);
