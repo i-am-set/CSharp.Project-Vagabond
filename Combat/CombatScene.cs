@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -43,6 +43,7 @@ namespace ProjectVagabond.Scenes
         private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 116f; // How far from the center the hands are.
         private static readonly Vector2 HAND_CAST_OFFSET = new Vector2(60, -30); // Offset from idle position for casting.
         private static readonly Vector2 HAND_RECOIL_OFFSET = new Vector2(-10, 15); // Offset from cast position for recoil.
+        private const float HAND_THROW_Y_OFFSET = -20f; // How far UP the hands move for a "throw" motion.
         private const float HAND_OFFSCREEN_Y_OFFSET = 250f;
 
         // Entity Sizing
@@ -202,6 +203,8 @@ namespace ProjectVagabond.Scenes
             var rightHandIdle = new Vector2(screenCenterX + HAND_IDLE_X_OFFSET_FROM_CENTER, screenBottomInVirtualCoords - HAND_IDLE_Y_OFFSET);
             var leftHandCast = leftHandIdle + new Vector2(HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
             var rightHandCast = rightHandIdle + new Vector2(-HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
+            var leftHandThrow = leftHandCast + new Vector2(0, HAND_THROW_Y_OFFSET);
+            var rightHandThrow = rightHandCast + new Vector2(0, HAND_THROW_Y_OFFSET);
 
             var leftHandOffscreen = new Vector2(leftHandIdle.X, screenBottomInVirtualCoords + HAND_OFFSCREEN_Y_OFFSET);
             var rightHandOffscreen = new Vector2(rightHandIdle.X, screenBottomInVirtualCoords + HAND_OFFSCREEN_Y_OFFSET);
@@ -214,6 +217,8 @@ namespace ProjectVagabond.Scenes
                 { "RightHandCast", rightHandCast },
                 { "LeftHandRecoil", leftHandCast + new Vector2(HAND_RECOIL_OFFSET.X, HAND_RECOIL_OFFSET.Y) },
                 { "RightHandRecoil", rightHandCast + new Vector2(-HAND_RECOIL_OFFSET.X, HAND_RECOIL_OFFSET.Y) },
+                { "LeftHandThrow", leftHandThrow },
+                { "RightHandThrow", rightHandThrow },
                 { "LeftHandOffscreen", leftHandOffscreen },
                 { "RightHandOffscreen", rightHandOffscreen }
             };
