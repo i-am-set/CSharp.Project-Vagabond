@@ -1,5 +1,6 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using ProjectVagabond.Combat.UI;
+using ProjectVagabond.Editor;
 using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ namespace ProjectVagabond.Combat
     public class ActionAnimator
     {
         private readonly ActionResolver _actionResolver;
-        private readonly CombatScene _combatScene;
+        private readonly IAnimationPlaybackContext _context;
         private readonly HandRenderer _leftHand;
         private readonly HandRenderer _rightHand;
 
@@ -24,17 +25,21 @@ namespace ProjectVagabond.Combat
         private AnimationTimeline _currentTimeline;
         private float _timer;
         private readonly HashSet<Keyframe> _triggeredKeyframes = new HashSet<Keyframe>();
-        private bool _isPlaying;
+
+        public bool IsPlaying { get; private set; }
+        public bool IsPaused { get; private set; }
+        public float PlaybackTime => _timer;
+
 
         // State for the intro tween
         private bool _isDoingIntroTween;
         private float _introTweenTimer;
         private const float INTRO_TWEEN_DURATION = 0.8f;
 
-        public ActionAnimator(ActionResolver resolver, CombatScene scene, HandRenderer leftHand, HandRenderer rightHand)
+        public ActionAnimator(IAnimationPlaybackContext context, ActionResolver resolver, HandRenderer leftHand, HandRenderer rightHand)
         {
+            _context = context;
             _actionResolver = resolver;
-            _combatScene = scene;
             _leftHand = leftHand;
             _rightHand = rightHand;
         }
@@ -50,9 +55,10 @@ namespace ProjectVagabond.Combat
             if (action?.ActionData?.Timeline == null)
             {
                 Debug.WriteLine($"    [ActionAnimator] Action '{action?.ActionData?.Name}' has no timeline. Resolving effects immediately.");
-                if (action != null)
+                if (action != null && _actionResolver != null)
                 {
-                    _actionResolver.Resolve(action, _combatScene.GetAllCombatEntities());
+                    // In the editor, resolver can be null.
+                    _actionResolver.Resolve(action, (_context as CombatScene)?.GetAllCombatEntities() ?? new List<CombatEntity>());
                 }
                 EventBus.Publish(new GameEvents.ActionAnimationComplete());
                 return;
@@ -62,22 +68,23 @@ namespace ProjectVagabond.Combat
             _currentTimeline = action.ActionData.Timeline;
             _timer = 0f;
             _triggeredKeyframes.Clear();
-            _isPlaying = true; // This now means "animator is active"
+            IsPlaying = true;
+            IsPaused = false;
 
             _isDoingIntroTween = false; // Reset state
 
             var gameState = ServiceLocator.Get<GameState>();
-            if (_currentAction.CasterEntityId == gameState.PlayerEntityId)
+            if (gameState != null && _currentAction.CasterEntityId == gameState.PlayerEntityId)
             {
                 _isDoingIntroTween = true;
                 _introTweenTimer = 0f;
 
                 // Command hands to move from their current (off-screen) position to idle.
-                if (_combatScene.AnimationAnchors.TryGetValue("LeftHandIdle", out var leftIdle))
+                if (_context.AnimationAnchors.TryGetValue("LeftHandIdle", out var leftIdle))
                 {
                     _leftHand.MoveTo(leftIdle, INTRO_TWEEN_DURATION, Easing.EaseOutQuint);
                 }
-                if (_combatScene.AnimationAnchors.TryGetValue("RightHandIdle", out var rightIdle))
+                if (_context.AnimationAnchors.TryGetValue("RightHandIdle", out var rightIdle))
                 {
                     _rightHand.MoveTo(rightIdle, INTRO_TWEEN_DURATION, Easing.EaseOutQuint);
                 }
@@ -86,9 +93,12 @@ namespace ProjectVagabond.Combat
             Debug.WriteLine($"    [ActionAnimator] Playing timeline for '{_currentAction.ActionData.Name}' (Duration: {_currentTimeline.Duration}s)");
         }
 
+        public void Pause() => IsPaused = true;
+        public void Resume() => IsPaused = false;
+
         public void Update(GameTime gameTime)
         {
-            if (!_isPlaying) return;
+            if (!IsPlaying || IsPaused) return;
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -112,6 +122,8 @@ namespace ProjectVagabond.Combat
             {
                 foreach (var keyframe in track.Keyframes)
                 {
+                    if (keyframe.State == KeyframeState.Deleted) continue;
+
                     // Check if it's time to trigger and if it hasn't been triggered yet
                     if (_timer >= keyframe.Time * _currentTimeline.Duration && !_triggeredKeyframes.Contains(keyframe))
                     {
@@ -124,16 +136,69 @@ namespace ProjectVagabond.Combat
             // Check for timeline completion
             if (_timer >= _currentTimeline.Duration)
             {
-                Stop();
+                OnTimelineFinished(true);
             }
         }
+
+        /// <summary>
+        /// Instantly moves the animation playback to a specific time.
+        /// This is a performant method for timeline scrubbing that snaps to the state defined
+        /// by the most recent keyframes, rather than simulating the time in-between.
+        /// </summary>
+        public void Seek(float newTime)
+        {
+            if (_currentTimeline == null) return;
+
+            IsPlaying = true;
+            IsPaused = true;
+            _timer = newTime;
+
+            // For each hand, find the state it should be in by looking at the last keyframe for each property.
+            SeekHandState(_leftHand, "LeftHand");
+            SeekHandState(_rightHand, "RightHand");
+        }
+
+        private void SeekHandState(HandRenderer hand, string trackName)
+        {
+            var track = _currentTimeline.Tracks.FirstOrDefault(t => t.Target == trackName);
+            if (track == null) return;
+
+            float timeRatio = _timer / _currentTimeline.Duration;
+
+            // Find the last keyframe for each property type that should have already occurred.
+            var lastMove = track.Keyframes.LastOrDefault(k => k.Type == "MoveTo" && k.Time <= timeRatio && k.State != KeyframeState.Deleted);
+            var lastRotate = track.Keyframes.LastOrDefault(k => k.Type == "RotateTo" && k.Time <= timeRatio && k.State != KeyframeState.Deleted);
+            var lastScale = track.Keyframes.LastOrDefault(k => k.Type == "ScaleTo" && k.Time <= timeRatio && k.State != KeyframeState.Deleted);
+
+            Vector2 finalPos = _context.AnimationAnchors.TryGetValue("LeftHandIdle", out var idlePos) ? idlePos : Vector2.Zero;
+            if (lastMove != null && _context.AnimationAnchors.TryGetValue(lastMove.Position, out var anchorPos))
+            {
+                finalPos = anchorPos;
+            }
+
+            float finalRot = 0f;
+            if (lastRotate != null)
+            {
+                finalRot = MathHelper.ToRadians(lastRotate.Rotation);
+            }
+
+            float finalScale = 1f;
+            if (lastScale != null)
+            {
+                finalScale = lastScale.Scale;
+            }
+
+            hand.ForcePositionAndRotation(finalPos, finalRot);
+            hand.ForceScale(finalScale);
+        }
+
 
         private void TriggerKeyframe(AnimationTrack track, Keyframe keyframe)
         {
             // --- Caster-Aware Animation Logic ---
             // Check if the keyframe targets a player-specific element. If so, ensure the player is the caster.
             var gameState = ServiceLocator.Get<GameState>();
-            bool isPlayerCasting = _currentAction.CasterEntityId == gameState.PlayerEntityId;
+            bool isPlayerCasting = gameState == null || _currentAction.CasterEntityId == gameState.PlayerEntityId;
 
             if (track.Target == "LeftHand" || track.Target == "RightHand")
             {
@@ -154,11 +219,18 @@ namespace ProjectVagabond.Combat
                     break;
 
                 case "TriggerEffects":
-                    _actionResolver.Resolve(_currentAction, _combatScene.GetAllCombatEntities());
+                    if (_actionResolver != null && _context is CombatScene combatScene)
+                    {
+                        _actionResolver.Resolve(_currentAction, combatScene.GetAllCombatEntities());
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"    [ActionAnimator] TriggerEffects fired at t={_timer:F2}s (No ActionResolver available in this context)");
+                    }
                     break;
 
                 case "MoveTo":
-                    if (targetHand != null && _combatScene.AnimationAnchors.TryGetValue(keyframe.Position, out var targetPos))
+                    if (targetHand != null && _context.AnimationAnchors.TryGetValue(keyframe.Position, out var targetPos))
                     {
                         targetHand.MoveTo(targetPos, keyframe.Duration, easingFunc);
                     }
@@ -188,20 +260,30 @@ namespace ProjectVagabond.Combat
             };
         }
 
-        private void Stop()
+        public void Stop()
         {
-            Debug.WriteLine($"    [ActionAnimator] Timeline for '{_currentAction.ActionData.Name}' finished.");
-            _isPlaying = false;
+            OnTimelineFinished(false);
+        }
+
+        private void OnTimelineFinished(bool publishEvent)
+        {
+            if (!IsPlaying) return;
+
+            if (_currentAction != null)
+                Debug.WriteLine($"    [ActionAnimator] Timeline for '{_currentAction.ActionData.Name}' finished.");
+
+            IsPlaying = false;
+            IsPaused = false;
 
             // Ensure hands return to their off-screen state after the animation is complete.
             var gameState = ServiceLocator.Get<GameState>();
-            if (_currentAction.CasterEntityId == gameState.PlayerEntityId)
+            if (gameState != null && _currentAction != null && _currentAction.CasterEntityId == gameState.PlayerEntityId)
             {
-                if (_combatScene.AnimationAnchors.TryGetValue("LeftHandOffscreen", out var leftOffscreen))
+                if (_context.AnimationAnchors.TryGetValue("LeftHandOffscreen", out var leftOffscreen))
                 {
                     _leftHand.MoveTo(leftOffscreen, 0.4f, Easing.EaseOutQuint);
                 }
-                if (_combatScene.AnimationAnchors.TryGetValue("RightHandOffscreen", out var rightOffscreen))
+                if (_context.AnimationAnchors.TryGetValue("RightHandOffscreen", out var rightOffscreen))
                 {
                     _rightHand.MoveTo(rightOffscreen, 0.4f, Easing.EaseOutQuint);
                 }
@@ -209,12 +291,14 @@ namespace ProjectVagabond.Combat
                 _rightHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
             }
 
-
             _currentAction = null;
             _currentTimeline = null;
 
-            // The animator is the authority on when the *visuals* are complete.
-            EventBus.Publish(new GameEvents.ActionAnimationComplete());
+            if (publishEvent)
+            {
+                // The animator is the authority on when the *visuals* are complete.
+                EventBus.Publish(new GameEvents.ActionAnimationComplete());
+            }
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -17,7 +17,8 @@ namespace ProjectVagabond.Scenes
         Settings,
         Encounter,
         Combat,
-        Transition // MODIFIED: Added the missing Transition state.
+        Transition,
+        AnimationEditor
     }
 
     /// <summary>

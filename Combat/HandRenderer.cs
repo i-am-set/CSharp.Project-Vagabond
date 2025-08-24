@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Utils;
@@ -72,9 +72,9 @@ namespace ProjectVagabond.Combat.UI
         private SimpleAnimator _animator;
 
         // Transform State (Position, Rotation, Scale)
-        private Vector2 _currentPosition;
-        private float _currentRotation;
-        private float _currentScale;
+        public Vector2 CurrentPosition { get; private set; }
+        public float CurrentRotation { get; private set; }
+        public float CurrentScale { get; private set; }
 
         // Tweening State for Position
         private bool _isMoving;
@@ -107,9 +107,9 @@ namespace ProjectVagabond.Combat.UI
             _handType = handType;
             _initialPosition = initialPosition;
             _offscreenPosition = initialPosition;
-            _currentPosition = initialPosition;
-            _currentRotation = 0f;
-            _currentScale = 1f;
+            CurrentPosition = initialPosition;
+            CurrentRotation = 0f;
+            CurrentScale = 1f;
             SwayAnimation = new OrganicSwayAnimation(IDLE_SWAY_SPEED_X, IDLE_SWAY_SPEED_Y, IDLE_SWAY_AMOUNT, IDLE_SWAY_AMOUNT);
         }
 
@@ -171,9 +171,9 @@ namespace ProjectVagabond.Combat.UI
 
         public void EnterScene()
         {
-            _currentPosition = _offscreenPosition;
-            _currentRotation = 0f;
-            _currentScale = 1f;
+            CurrentPosition = _offscreenPosition;
+            CurrentRotation = 0f;
+            CurrentScale = 1f;
             _isMoving = _isRotating = _isScaling = false;
         }
 
@@ -186,7 +186,7 @@ namespace ProjectVagabond.Combat.UI
             {
                 _moveTimer += deltaTime;
                 float progress = Math.Clamp(_moveTimer / _moveDuration, 0f, 1f);
-                _currentPosition = Vector2.Lerp(_startPosition, _targetPosition, _moveEasing(progress));
+                CurrentPosition = Vector2.Lerp(_startPosition, _targetPosition, _moveEasing(progress));
                 if (progress >= 1f) _isMoving = false;
             }
 
@@ -195,7 +195,7 @@ namespace ProjectVagabond.Combat.UI
             {
                 _rotateTimer += deltaTime;
                 float progress = Math.Clamp(_rotateTimer / _rotateDuration, 0f, 1f);
-                _currentRotation = MathHelper.Lerp(_startRotation, _targetRotation, _rotateEasing(progress));
+                CurrentRotation = MathHelper.Lerp(_startRotation, _targetRotation, _rotateEasing(progress));
                 if (progress >= 1f) _isRotating = false;
             }
 
@@ -204,7 +204,7 @@ namespace ProjectVagabond.Combat.UI
             {
                 _scaleTimer += deltaTime;
                 float progress = Math.Clamp(_scaleTimer / _scaleDuration, 0f, 1f);
-                _currentScale = MathHelper.Lerp(_startScale, _targetScale, _scaleEasing(progress));
+                CurrentScale = MathHelper.Lerp(_startScale, _targetScale, _scaleEasing(progress));
                 if (progress >= 1f) _isScaling = false;
             }
 
@@ -230,7 +230,7 @@ namespace ProjectVagabond.Combat.UI
 
         public void MoveTo(Vector2 targetPosition, float duration, Func<float, float> easing)
         {
-            _startPosition = _currentPosition;
+            _startPosition = CurrentPosition;
             _targetPosition = targetPosition;
             _moveDuration = duration;
             _moveEasing = easing;
@@ -240,7 +240,7 @@ namespace ProjectVagabond.Combat.UI
 
         public void RotateTo(float targetRotation, float duration, Func<float, float> easing)
         {
-            _startRotation = _currentRotation;
+            _startRotation = CurrentRotation;
             _targetRotation = targetRotation;
             _rotateDuration = duration;
             _rotateEasing = easing;
@@ -250,7 +250,7 @@ namespace ProjectVagabond.Combat.UI
 
         public void ScaleTo(float targetScale, float duration, Func<float, float> easing)
         {
-            _startScale = _currentScale;
+            _startScale = CurrentScale;
             _targetScale = targetScale;
             _scaleDuration = duration;
             _scaleEasing = easing;
@@ -258,17 +258,69 @@ namespace ProjectVagabond.Combat.UI
             _isScaling = true;
         }
 
+        public void ForcePositionAndRotation(Vector2 position, float rotation)
+        {
+            _isMoving = false;
+            _isRotating = false;
+            CurrentPosition = position;
+            CurrentRotation = rotation;
+        }
+
+        public void ForceScale(float scale)
+        {
+            _isScaling = false;
+            CurrentScale = scale;
+        }
+
+        public Rectangle GetInteractionBounds()
+        {
+            if (_animator == null) return Rectangle.Empty;
+            // This is a simplified approximation. A more accurate method would use the sprite's actual frame.
+            int width = 80;
+            int height = 200;
+            return new Rectangle((int)(CurrentPosition.X - width / 2f), (int)(CurrentPosition.Y - height), width, height);
+        }
+
+        public Vector2 GetPivotPoint() => CurrentPosition;
+
+        public Vector2[] GetWorldCorners()
+        {
+            if (_animator == null) return new Vector2[4];
+
+            var frame = _animator.CurrentFrame;
+            float w = frame.SourceRectangle.Width * CurrentScale;
+            float h = frame.SourceRectangle.Height * CurrentScale;
+
+            // Local corners relative to the pivot (bottom-center)
+            var corners = new Vector2[4];
+            corners[0] = new Vector2(-w / 2, -h); // Top-left
+            corners[1] = new Vector2(w / 2, -h);  // Top-right
+            corners[2] = new Vector2(w / 2, 0);   // Bottom-right
+            corners[3] = new Vector2(-w / 2, 0);  // Bottom-left
+
+            // Rotate and translate
+            var transform = Matrix.CreateRotationZ(CurrentRotation) * Matrix.CreateTranslation(CurrentPosition.X, CurrentPosition.Y, 0);
+            Vector2.Transform(corners, ref transform, corners);
+
+            return corners;
+        }
+
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            Draw(spriteBatch, font, gameTime, Color.White);
+        }
+
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Color tint)
         {
             if (_animator == null) return;
 
-            Vector2 finalPosition = _currentPosition;
+            Vector2 finalPosition = CurrentPosition;
             if (!_isMoving)
             {
                 finalPosition += SwayAnimation.Offset;
             }
 
-            _animator.Draw(spriteBatch, finalPosition, Color.White, _currentRotation, _currentScale);
+            _animator.Draw(spriteBatch, finalPosition, tint, CurrentRotation, CurrentScale);
         }
     }
 }

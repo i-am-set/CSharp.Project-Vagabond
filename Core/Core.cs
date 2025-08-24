@@ -2,10 +2,12 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using MonoGame.Extended.Graphics;
 using ProjectVagabond;
 using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Editor;
 using ProjectVagabond.Encounters;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -293,6 +295,7 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
             _sceneManager.AddScene(GameSceneState.Encounter, new EncounterScene());
             _sceneManager.AddScene(GameSceneState.Combat, new CombatScene());
+            _sceneManager.AddScene(GameSceneState.AnimationEditor, new AnimationEditorScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
@@ -433,6 +436,17 @@ namespace ProjectVagabond
                     Debug.WriteLine("[ERROR] F5 pressed, but no combat encounters are loaded.");
                 }
             }
+            if (currentKeyboardState.IsKeyDown(Keys.F12) && _previousKeyboardState.IsKeyUp(Keys.F12))
+            {
+                if (_sceneManager.CurrentActiveScene is AnimationEditorScene)
+                {
+                    _sceneManager.ChangeScene(GameSceneState.MainMenu);
+                }
+                else
+                {
+                    _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
+                }
+            }
 
             // Use F2 to trigger a sample grouped dice roll for demonstration.
             if (currentKeyboardState.IsKeyDown(Keys.F2) && _previousKeyboardState.IsKeyUp(Keys.F2))
@@ -561,7 +575,7 @@ namespace ProjectVagabond
             GraphicsDevice.Clear(Color.Black);
 
             _spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
-            if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
+            if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack && !(_sceneManager.CurrentActiveScene is AnimationEditorScene))
             {
                 _backgroundManager.Draw(_spriteBatch, _finalCompositeTarget.Bounds, _finalScale);
             }
@@ -584,7 +598,9 @@ namespace ProjectVagabond
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
             _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp, null, null, null, shakeMatrix);
 
-            if (_crtEffect != null)
+            bool applyCrtEffect = _crtEffect != null && !(_sceneManager.CurrentActiveScene is AnimationEditorScene);
+
+            if (applyCrtEffect)
             {
                 _crtEffect.Parameters["Time"]?.SetValue((float)gameTime.TotalGameTime.TotalSeconds);
                 _crtEffect.Parameters["ScreenResolution"]?.SetValue(new Vector2(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));

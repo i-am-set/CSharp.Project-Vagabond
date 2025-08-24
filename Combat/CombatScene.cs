@@ -14,10 +14,11 @@ using MonoGame.Extended.Graphics;
 using System.Linq;
 using System;
 using ProjectVagabond.Combat.FSM;
+using ProjectVagabond.Editor;
 
 namespace ProjectVagabond.Scenes
 {
-    public class CombatScene : GameScene
+    public class CombatScene : GameScene, IAnimationPlaybackContext
     {
         private CombatManager _combatManager;
         private ActionHandUI _actionHandUI;
@@ -108,7 +109,7 @@ namespace ProjectVagabond.Scenes
             _rightHandRenderer = new HandRenderer(HandType.Right, Vector2.Zero);
 
             // Create the ActionAnimator here, after its dependencies are ready.
-            _actionAnimator = new ActionAnimator(_actionResolver, this, _leftHandRenderer, _rightHandRenderer);
+            _actionAnimator = new ActionAnimator(this, _actionResolver, _leftHandRenderer, _rightHandRenderer);
 
             // Register UI components with the manager so states can access them.
             _combatManager.RegisterComponents(_actionHandUI, _inputHandler, this);

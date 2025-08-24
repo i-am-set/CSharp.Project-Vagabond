@@ -73,6 +73,8 @@ namespace ProjectVagabond.Utils
         private float _frameTimer;
 
         public bool IsAnimationFinished { get; private set; }
+        public AnimationFrame CurrentFrame => _currentCycle?.Frames[_currentFrameIndex] ?? default;
+
 
         public SimpleAnimator(SimpleSpriteSheet spriteSheet)
         {
