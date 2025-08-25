@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xna.Framework;
-using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Editor;
 using ProjectVagabond.Scenes;
@@ -17,6 +16,26 @@ namespace ProjectVagabond.Combat
     /// </summary>
     public class ActionAnimator
     {
+        /// <summary>
+        /// A private cache to hold pre-sorted lists of keyframes for a single track,
+        /// optimizing lookups during timeline scrubbing.
+        /// </summary>
+        private class KeyframeCache
+        {
+            public readonly List<Keyframe> MoveKeyframes;
+            public readonly List<Keyframe> RotateKeyframes;
+            public readonly List<Keyframe> ScaleKeyframes;
+            public readonly List<Keyframe> AnimKeyframes;
+
+            public KeyframeCache(AnimationTrack track)
+            {
+                MoveKeyframes = track.Keyframes.Where(k => k.Type == "MoveTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
+                RotateKeyframes = track.Keyframes.Where(k => k.Type == "RotateTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
+                ScaleKeyframes = track.Keyframes.Where(k => k.Type == "ScaleTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
+                AnimKeyframes = track.Keyframes.Where(k => k.Type == "PlayAnimation" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
+            }
+        }
+
         private readonly ActionResolver _actionResolver;
         private readonly IAnimationPlaybackContext _context;
         private readonly HandRenderer _leftHand;
@@ -26,6 +45,8 @@ namespace ProjectVagabond.Combat
         private AnimationTimeline _currentTimeline;
         private float _timer;
         private readonly HashSet<Keyframe> _triggeredKeyframes = new HashSet<Keyframe>();
+        private readonly Dictionary<string, KeyframeCache> _trackCaches = new Dictionary<string, KeyframeCache>();
+
 
         public bool IsPlaying { get; private set; }
         public bool IsPaused { get; private set; }
@@ -72,10 +93,18 @@ namespace ProjectVagabond.Combat
             IsPlaying = true;
             IsPaused = false;
 
+            // Pre-process and cache the keyframes for fast lookups during scrubbing.
+            _trackCaches.Clear();
+            foreach (var track in _currentTimeline.Tracks)
+            {
+                _trackCaches[track.Target] = new KeyframeCache(track);
+            }
+
             _isDoingIntroTween = false; // Reset state
 
             var gameState = ServiceLocator.Get<GameState>();
-            if (gameState != null && _currentAction.CasterEntityId == gameState.PlayerEntityId)
+            // The intro tween should only happen for the player in the actual combat scene, not the editor.
+            if (gameState != null && _currentAction.CasterEntityId == gameState.PlayerEntityId && _context is CombatScene)
             {
                 _isDoingIntroTween = true;
                 _introTweenTimer = 0f;
@@ -99,43 +128,50 @@ namespace ProjectVagabond.Combat
 
         public void Update(GameTime gameTime)
         {
-            if (!IsPlaying || IsPaused) return;
-
-            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            // Handle the initial tween from off-screen to idle
             if (_isDoingIntroTween)
             {
-                _introTweenTimer += deltaTime;
+                float introDelta = (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _introTweenTimer += introDelta;
                 if (_introTweenTimer >= INTRO_TWEEN_DURATION)
                 {
                     _isDoingIntroTween = false;
-                    // The main timeline timer starts NOW.
                     _timer = 0f;
                 }
-                return; // Don't process the main timeline yet
+                // Let the HandRenderer's internal tweening handle this part
+                return;
             }
 
-            _timer += deltaTime;
+            if (!IsPlaying) return;
 
-            // Process keyframes
-            foreach (var track in _currentTimeline.Tracks)
+            if (!IsPaused)
             {
-                foreach (var keyframe in track.Keyframes)
-                {
-                    if (keyframe.State == KeyframeState.Deleted) continue;
+                float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _timer += deltaTime;
 
-                    // Check if it's time to trigger and if it hasn't been triggered yet
-                    if (_timer >= keyframe.Time * _currentTimeline.Duration && !_triggeredKeyframes.Contains(keyframe))
+                // Process one-shot keyframes as the timer passes them
+                foreach (var track in _currentTimeline.Tracks)
+                {
+                    foreach (var keyframe in track.Keyframes)
                     {
-                        TriggerKeyframe(track, keyframe);
-                        _triggeredKeyframes.Add(keyframe);
+                        if (keyframe.State == KeyframeState.Deleted) continue;
+
+                        // Only trigger non-continuous, one-shot keyframes here.
+                        bool isOneShot = keyframe.Type == "PlayAnimation" || keyframe.Type == "TriggerEffects";
+                        if (!isOneShot) continue;
+
+                        if (_timer >= keyframe.Time * _currentTimeline.Duration && !_triggeredKeyframes.Contains(keyframe))
+                        {
+                            TriggerOneShotKeyframe(track, keyframe);
+                            _triggeredKeyframes.Add(keyframe);
+                        }
                     }
                 }
             }
 
-            // Check for timeline completion
-            if (_timer >= _currentTimeline.Duration)
+            // Continuously update transforms based on the timer, even when paused.
+            UpdateHandTransforms();
+
+            if (!IsPaused && _timer >= _currentTimeline.Duration)
             {
                 OnTimelineFinished(true);
             }
@@ -147,24 +183,29 @@ namespace ProjectVagabond.Combat
         /// </summary>
         public void Seek(float newTime)
         {
-            if (_currentTimeline == null)
-            {
-                return;
-            }
+            if (_currentTimeline == null) return;
 
             IsPlaying = true;
             IsPaused = true;
             _timer = newTime;
 
-            // For each hand, find the state it should be in by interpolating between keyframes.
-            SeekHandState(_leftHand, "LeftHand");
-            SeekHandState(_rightHand, "RightHand");
+            // A single call to update the transforms is enough when seeking.
+            UpdateHandTransforms();
         }
 
-        private void SeekHandState(HandRenderer hand, string trackName)
+        private void UpdateHandTransforms()
         {
-            var track = _currentTimeline.Tracks.FirstOrDefault(t => t.Target == trackName);
-            if (track == null || _currentTimeline.Duration <= 0) return;
+            if (_currentTimeline == null) return;
+            SetHandStateAtTime(_leftHand, "LeftHand");
+            SetHandStateAtTime(_rightHand, "RightHand");
+        }
+
+        private void SetHandStateAtTime(HandRenderer hand, string trackName)
+        {
+            if (!_trackCaches.TryGetValue(trackName, out var cache) || _currentTimeline.Duration <= 0)
+            {
+                return;
+            }
 
             // --- Get Idle Defaults ---
             string idleAnchorName = trackName == "LeftHand" ? "LeftHandIdle" : "RightHandIdle";
@@ -172,23 +213,13 @@ namespace ProjectVagabond.Combat
             float idleRot = 0f;
             float idleScale = 1f;
 
-            // --- POSITION ---
-            var moveKeyframes = track.Keyframes.Where(k => k.Type == "MoveTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
-            Vector2 finalPos = CalculateInterpolatedValue(moveKeyframes, key => _context.AnimationAnchors.TryGetValue(key.Position, out var pos) ? pos : idlePos, idlePos, Vector2.Lerp);
+            // --- Calculate Final Values ---
+            Vector2 finalPos = CalculateInterpolatedValue(cache.MoveKeyframes, key => _context.AnimationAnchors.TryGetValue(key.Position, out var pos) ? pos : idlePos, idlePos, Vector2.Lerp);
+            float finalRot = CalculateInterpolatedValue(cache.RotateKeyframes, key => MathHelper.ToRadians(key.Rotation), idleRot, MathHelper.Lerp);
+            float finalScale = CalculateInterpolatedValue(cache.ScaleKeyframes, key => key.Scale, idleScale, MathHelper.Lerp);
+            string finalAnimation = GetCurrentAnimation(cache.AnimKeyframes);
 
-            // --- ROTATION ---
-            var rotateKeyframes = track.Keyframes.Where(k => k.Type == "RotateTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
-            float finalRot = CalculateInterpolatedValue(rotateKeyframes, key => MathHelper.ToRadians(key.Rotation), idleRot, MathHelper.Lerp);
-
-            // --- SCALE ---
-            var scaleKeyframes = track.Keyframes.Where(k => k.Type == "ScaleTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
-            float finalScale = CalculateInterpolatedValue(scaleKeyframes, key => key.Scale, idleScale, MathHelper.Lerp);
-
-            // --- ANIMATION ---
-            var animKeyframes = track.Keyframes.Where(k => k.Type == "PlayAnimation" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
-            string finalAnimation = GetCurrentAnimation(animKeyframes);
-
-            // --- APPLY FINAL STATE ---
+            // --- Apply Final State ---
             hand.ForcePositionAndRotation(finalPos, finalRot);
             hand.ForceScale(finalScale);
             if (!string.IsNullOrEmpty(finalAnimation))
@@ -197,66 +228,76 @@ namespace ProjectVagabond.Combat
             }
         }
 
-        private T CalculateInterpolatedValue<T>(List<Keyframe> keyframes, Func<Keyframe, T> valueSelector, T idleValue, Func<T, T, float, T> lerpFunc)
+        /// <summary>
+        /// A generic, performant method to calculate the interpolated value of any property at the current time.
+        /// </summary>
+        private T CalculateInterpolatedValue<T>(List<Keyframe> sortedKeyframes, Func<Keyframe, T> valueSelector, T idleValue, Func<T, T, float, T> lerpFunc)
         {
-            if (!keyframes.Any()) return idleValue;
+            if (!sortedKeyframes.Any()) return idleValue;
 
-            // 1. Find if we are currently in the middle of a tween.
-            Keyframe activeTweenKey = keyframes.FirstOrDefault(k => {
-                float startTime = k.Time * _currentTimeline.Duration;
-                // A tween is active if the timer is between its start and end.
-                return _timer >= startTime && _timer < startTime + k.Duration;
-            });
+            // Find the index of the last keyframe whose trigger time is before or at the current time.
+            int lastKeyIndex = FindLastIndexBefore(sortedKeyframes, _timer / _currentTimeline.Duration);
 
-            if (activeTweenKey != null)
+            if (lastKeyIndex == -1)
             {
-                // We are actively tweening.
-                Keyframe keyBefore = keyframes.LastOrDefault(k => k.Time < activeTweenKey.Time);
-                T startValue = (keyBefore != null) ? valueSelector(keyBefore) : idleValue;
-                T endValue = valueSelector(activeTweenKey);
+                return idleValue; // Current time is before the very first keyframe.
+            }
 
-                float tweenStartTime = activeTweenKey.Time * _currentTimeline.Duration;
-                // Ensure duration is not zero to avoid division errors.
-                float tweenDuration = activeTweenKey.Duration > 0 ? activeTweenKey.Duration : 1f;
+            Keyframe lastKey = sortedKeyframes[lastKeyIndex];
+            float tweenStartTime = lastKey.Time * _currentTimeline.Duration;
+
+            // Check if the current time falls within the tweening duration of this last keyframe.
+            if (_timer < tweenStartTime + lastKey.Duration)
+            {
+                Keyframe keyBefore = (lastKeyIndex > 0) ? sortedKeyframes[lastKeyIndex - 1] : null;
+                T startValue = (keyBefore != null) ? valueSelector(keyBefore) : idleValue;
+                T endValue = valueSelector(lastKey);
+
+                float tweenDuration = lastKey.Duration > 0 ? lastKey.Duration : 1f;
                 float progress = (_timer - tweenStartTime) / tweenDuration;
-                var easingFunc = Easing.GetEasingFunction(activeTweenKey.Easing);
+                var easingFunc = Easing.GetEasingFunction(lastKey.Easing);
                 return lerpFunc(startValue, endValue, easingFunc(progress));
             }
             else
             {
-                // We are NOT in a tween. The state is static, defined by the last keyframe that was triggered.
-                Keyframe lastKey = keyframes.LastOrDefault(k => k.Time * _currentTimeline.Duration <= _timer);
-                return (lastKey != null) ? valueSelector(lastKey) : idleValue;
+                // The time is past this keyframe's tween, so snap to its final value.
+                return valueSelector(lastKey);
             }
+        }
+
+        /// <summary>
+        /// Efficiently finds the index of the last keyframe in a sorted list that occurs at or before the given time ratio.
+        /// </summary>
+        private int FindLastIndexBefore(List<Keyframe> keyframes, float timeRatio)
+        {
+            int index = -1;
+            for (int i = 0; i < keyframes.Count; i++)
+            {
+                if (keyframes[i].Time <= timeRatio)
+                {
+                    index = i;
+                }
+                else
+                {
+                    // Since the list is sorted, we can exit early.
+                    break;
+                }
+            }
+            return index;
         }
 
         private string GetCurrentAnimation(List<Keyframe> keyframes)
         {
             if (!keyframes.Any() || _currentTimeline.Duration == 0) return null;
             float timeRatio = _timer / _currentTimeline.Duration;
-            Keyframe lastKey = keyframes.LastOrDefault(k => k.Time <= timeRatio);
-            return lastKey?.AnimationName;
+            int lastKeyIndex = FindLastIndexBefore(keyframes, timeRatio);
+            return (lastKeyIndex != -1) ? keyframes[lastKeyIndex].AnimationName : null;
         }
 
 
-        private void TriggerKeyframe(AnimationTrack track, Keyframe keyframe)
+        private void TriggerOneShotKeyframe(AnimationTrack track, Keyframe keyframe)
         {
-            // --- Caster-Aware Animation Logic ---
-            // Check if the keyframe targets a player-specific element. If so, ensure the player is the caster.
-            var gameState = ServiceLocator.Get<GameState>();
-            bool isPlayerCasting = gameState == null || _currentAction.CasterEntityId == gameState.PlayerEntityId;
-
-            if (track.Target == "LeftHand" || track.Target == "RightHand")
-            {
-                if (!isPlayerCasting)
-                {
-                    // This is an AI action trying to animate the player's hands. Skip it.
-                    return;
-                }
-            }
-
             HandRenderer targetHand = GetTargetHand(track.Target);
-            var easingFunc = Easing.GetEasingFunction(keyframe.Easing);
 
             switch (keyframe.Type)
             {
@@ -273,25 +314,6 @@ namespace ProjectVagabond.Combat
                     {
                         Debug.WriteLine($"    [ActionAnimator] TriggerEffects fired at t={_timer:F2}s (No ActionResolver available in this context)");
                     }
-                    break;
-
-                case "MoveTo":
-                    if (targetHand != null && _context.AnimationAnchors.TryGetValue(keyframe.Position, out var targetPos))
-                    {
-                        targetHand.MoveTo(targetPos, keyframe.Duration, easingFunc);
-                    }
-                    break;
-
-                case "RotateTo":
-                    targetHand?.RotateTo(MathHelper.ToRadians(keyframe.Rotation), keyframe.Duration, easingFunc);
-                    break;
-
-                case "ScaleTo":
-                    targetHand?.ScaleTo(keyframe.Scale, keyframe.Duration, easingFunc);
-                    break;
-
-                case "Wait":
-                    // This keyframe type does nothing but act as a marker in the timeline.
                     break;
             }
         }
@@ -339,6 +361,7 @@ namespace ProjectVagabond.Combat
 
             _currentAction = null;
             _currentTimeline = null;
+            _trackCaches.Clear();
 
             if (publishEvent)
             {

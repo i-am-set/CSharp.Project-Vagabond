@@ -21,6 +21,7 @@ namespace ProjectVagabond.Editor
         public event Action OnPlay;
         public event Action OnPause;
         public event Action OnStop;
+        public event Action OnReset;
         public event Action<float> OnScrub;
         public event Action OnSetKeyframe;
         public event Action OnSave;
@@ -29,6 +30,7 @@ namespace ProjectVagabond.Editor
 
 
         private AnimationTimeline _timeline;
+        private Button _resetButton;
         private Button _playButton;
         private Button _pauseButton;
         private Button _stopButton;
@@ -42,6 +44,9 @@ namespace ProjectVagabond.Editor
         private Keyframe _hoveredKeyframe;
         private AnimationTrack _hoveredTrack;
         private Rectangle _scrubberGrabberRect;
+        private Keyframe _draggedKeyframe;
+        private AnimationTrack _draggedKeyframeTrack;
+        private bool _isDraggingKeyframe;
 
 
         // --- Layout & Tuning ---
@@ -68,6 +73,9 @@ namespace ProjectVagabond.Editor
 
         public TimelineUI()
         {
+            _resetButton = new Button(Rectangle.Empty, "[]");
+            _resetButton.OnClick += () => OnReset?.Invoke();
+
             _playButton = new Button(Rectangle.Empty, "Play");
             _playButton.OnClick += () => OnPlay?.Invoke();
 
@@ -105,6 +113,7 @@ namespace ProjectVagabond.Editor
             // Other controls are only interactive if not in edit mode.
             if (!isEditMode)
             {
+                _resetButton.Update(mouseState);
                 _playButton.Update(mouseState);
                 _pauseButton.Update(mouseState);
                 _stopButton.Update(mouseState);
@@ -113,7 +122,9 @@ namespace ProjectVagabond.Editor
                 _saveButton.Update(mouseState);
 
                 bool leftClickPressed = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
-                bool leftClickReleased = mouseState.LeftButton == ButtonState.Released;
+                bool leftClickHeld = mouseState.LeftButton == ButtonState.Pressed;
+                bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
+                bool rightClickPressed = mouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released;
 
                 // --- Layout Calculation ---
                 _mainTimelineArea = new Rectangle(Bounds.X + TIMELINE_START_X_OFFSET, Bounds.Y + TOP_CONTROLS_AREA_HEIGHT, Bounds.Width - (TIMELINE_START_X_OFFSET * 2), Bounds.Height - TOP_CONTROLS_AREA_HEIGHT - 10);
@@ -128,62 +139,100 @@ namespace ProjectVagabond.Editor
                     _scrubberGrabberRect = Rectangle.Empty;
                 }
 
-
-                // --- Hover and Click Logic ---
-                _hoveredKeyframe = null;
-                _hoveredTrack = null;
-
-                if (_mainTimelineArea.Contains(virtualMousePos) || _scrubberGrabberRect.Contains(virtualMousePos))
+                // --- Handle Keyframe Dragging ---
+                if (_isDraggingKeyframe)
                 {
-                    if (_timeline != null)
+                    if (leftClickHeld)
                     {
-                        // Find hovered keyframe by checking each sub-track
-                        float currentY = _mainTimelineArea.Y;
-                        foreach (var mainTrack in _timeline.Tracks.OrderBy(t => t.Target))
+                        float timelinePixelWidth = _mainTimelineArea.Width - TRACK_LABEL_WIDTH;
+                        if (timelinePixelWidth > 0)
                         {
-                            currentY += SUB_TRACK_HEIGHT; // Skip main track label
-                            foreach (var subTrackDef in _subTrackLayout.OrderBy(l => l.Value.Order))
+                            float newTimeRatio = (virtualMousePos.X - (_mainTimelineArea.X + TRACK_LABEL_WIDTH)) / timelinePixelWidth;
+                            _draggedKeyframe.Time = Math.Clamp(newTimeRatio, 0f, 1f);
+
+                            if (_draggedKeyframe.State == KeyframeState.Unmodified)
                             {
-                                var subTrackRect = new Rectangle(_mainTimelineArea.X, (int)currentY, _mainTimelineArea.Width, SUB_TRACK_HEIGHT);
-                                if (subTrackRect.Contains(virtualMousePos))
-                                {
-                                    foreach (var keyframe in mainTrack.Keyframes.Where(k => k.Type == subTrackDef.Key))
-                                    {
-                                        int keyframeX = _mainTimelineArea.X + TRACK_LABEL_WIDTH + (int)(keyframe.Time * (_mainTimelineArea.Width - TRACK_LABEL_WIDTH));
-                                        int keyframeY = subTrackRect.Y + (subTrackRect.Height / 2);
-                                        var keyframeHitbox = new Rectangle(keyframeX - KEYFRAME_SIZE, keyframeY - KEYFRAME_SIZE, KEYFRAME_SIZE * 2, KEYFRAME_SIZE * 2);
-                                        if (keyframeHitbox.Contains(virtualMousePos))
-                                        {
-                                            _hoveredKeyframe = keyframe;
-                                            _hoveredTrack = mainTrack;
-                                            goto HoverFound; // Exit both loops
-                                        }
-                                    }
-                                }
-                                currentY += SUB_TRACK_HEIGHT;
+                                _draggedKeyframe.State = KeyframeState.Added; // Mark as modified
                             }
-                            currentY += TRACK_SPACING;
+                            OnScrub?.Invoke(_draggedKeyframe.Time * _timeline.Duration);
                         }
                     }
-                HoverFound:;
-
-                    if (leftClickPressed && UIInputManager.CanProcessMouseClick())
+                    else // Mouse was released
                     {
-                        if (_hoveredKeyframe != null)
-                        {
-                            OnKeyframeClicked?.Invoke(_hoveredTrack, _hoveredKeyframe);
-                            UIInputManager.ConsumeMouseClick();
-                            return;
-                        }
-
-                        if (_scrubberGrabberRect.Contains(virtualMousePos))
-                        {
-                            _isScrubbing = true;
-                            UIInputManager.ConsumeMouseClick();
-                        }
+                        _draggedKeyframeTrack.Keyframes.Sort((a, b) => a.Time.CompareTo(b.Time));
+                        _isDraggingKeyframe = false;
+                        _draggedKeyframe = null;
+                        _draggedKeyframeTrack = null;
                     }
                 }
 
+                // --- Hover and New Clicks (only if not already dragging a keyframe) ---
+                if (!_isDraggingKeyframe)
+                {
+                    _hoveredKeyframe = null;
+                    _hoveredTrack = null;
+
+                    if (_mainTimelineArea.Contains(virtualMousePos) || _scrubberGrabberRect.Contains(virtualMousePos))
+                    {
+                        if (_timeline != null)
+                        {
+                            float currentY = _mainTimelineArea.Y;
+                            foreach (var mainTrack in _timeline.Tracks.OrderBy(t => t.Target))
+                            {
+                                currentY += SUB_TRACK_HEIGHT;
+                                foreach (var subTrackDef in _subTrackLayout.OrderBy(l => l.Value.Order))
+                                {
+                                    var subTrackRect = new Rectangle(_mainTimelineArea.X, (int)currentY, _mainTimelineArea.Width, SUB_TRACK_HEIGHT);
+                                    if (subTrackRect.Contains(virtualMousePos))
+                                    {
+                                        foreach (var keyframe in mainTrack.Keyframes.Where(k => k.Type == subTrackDef.Key))
+                                        {
+                                            int keyframeX = _mainTimelineArea.X + TRACK_LABEL_WIDTH + (int)(keyframe.Time * (_mainTimelineArea.Width - TRACK_LABEL_WIDTH));
+                                            int keyframeY = subTrackRect.Y + (subTrackRect.Height / 2);
+                                            var keyframeHitbox = new Rectangle(keyframeX - KEYFRAME_SIZE, keyframeY - KEYFRAME_SIZE, KEYFRAME_SIZE * 2, KEYFRAME_SIZE * 2);
+                                            if (keyframeHitbox.Contains(virtualMousePos))
+                                            {
+                                                _hoveredKeyframe = keyframe;
+                                                _hoveredTrack = mainTrack;
+                                                goto HoverFound;
+                                            }
+                                        }
+                                    }
+                                    currentY += SUB_TRACK_HEIGHT;
+                                }
+                                currentY += TRACK_SPACING;
+                            }
+                        }
+                    HoverFound:;
+
+                        if (UIInputManager.CanProcessMouseClick())
+                        {
+                            if (leftClickPressed)
+                            {
+                                if (_hoveredKeyframe != null)
+                                {
+                                    _isDraggingKeyframe = true;
+                                    _draggedKeyframe = _hoveredKeyframe;
+                                    _draggedKeyframeTrack = _hoveredTrack;
+                                    UIInputManager.ConsumeMouseClick();
+                                }
+                                else if (_scrubberGrabberRect.Contains(virtualMousePos))
+                                {
+                                    _isScrubbing = true;
+                                    UIInputManager.ConsumeMouseClick();
+                                }
+                            }
+                            else if (rightClickPressed)
+                            {
+                                if (_hoveredKeyframe != null)
+                                {
+                                    OnKeyframeClicked?.Invoke(_hoveredTrack, _hoveredKeyframe);
+                                    UIInputManager.ConsumeMouseClick();
+                                }
+                            }
+                        }
+                    }
+                }
 
                 if (leftClickReleased)
                 {
@@ -218,14 +267,22 @@ namespace ProjectVagabond.Editor
             int buttonWidth = 60;
             int buttonHeight = 20;
             int buttonY = Bounds.Y + (TOP_CONTROLS_AREA_HEIGHT - buttonHeight) / 2;
-            _playButton.Bounds = new Rectangle(Bounds.X + 10, buttonY, buttonWidth, buttonHeight);
-            _pauseButton.Bounds = new Rectangle(Bounds.X + 10 + buttonWidth + 5, buttonY, buttonWidth, buttonHeight);
-            _stopButton.Bounds = new Rectangle(Bounds.X + 10 + (buttonWidth + 5) * 2, buttonY, buttonWidth, buttonHeight);
-            _setKeyframeButton.Bounds = new Rectangle(Bounds.X + 10 + (buttonWidth + 5) * 3, buttonY, buttonWidth, buttonHeight);
-            _editButton.Bounds = new Rectangle(Bounds.X + 10 + (buttonWidth + 5) * 4, buttonY, buttonWidth, buttonHeight);
+            int currentX = Bounds.X + 10;
+
+            _resetButton.Bounds = new Rectangle(currentX, buttonY, buttonHeight, buttonHeight); // Square button
+            currentX += buttonHeight + 5;
+            _playButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
+            currentX += buttonWidth + 5;
+            _pauseButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
+            currentX += buttonWidth + 5;
+            _stopButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
+            currentX += buttonWidth + 5;
+            _setKeyframeButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
+            currentX += buttonWidth + 5;
+            _editButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
             _saveButton.Bounds = new Rectangle(Bounds.Right - buttonWidth - 10, buttonY, buttonWidth, buttonHeight);
 
-
+            _resetButton.Draw(spriteBatch, font, gameTime);
             _playButton.Draw(spriteBatch, font, gameTime);
             _pauseButton.Draw(spriteBatch, font, gameTime);
             _stopButton.Draw(spriteBatch, font, gameTime);
@@ -253,7 +310,8 @@ namespace ProjectVagabond.Editor
                         foreach (var keyframe in mainTrack.Keyframes.Where(k => k.Type == subTrackDef.Key))
                         {
                             Color keyColor;
-                            if (keyframe == _hoveredKeyframe) keyColor = global.Palette_LightBlue;
+                            if (keyframe == _draggedKeyframe) keyColor = Color.White;
+                            else if (keyframe == _hoveredKeyframe) keyColor = global.Palette_LightBlue;
                             else if (keyframe.State == KeyframeState.Added) keyColor = global.Palette_Yellow;
                             else if (keyframe.State == KeyframeState.Deleted) keyColor = global.Palette_Red;
                             else keyColor = global.Palette_LightGray;

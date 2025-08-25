@@ -67,6 +67,7 @@ namespace ProjectVagabond.Editor
             _timelineUI.OnPlay += OnPlaybackPlay;
             _timelineUI.OnPause += OnPlaybackPause;
             _timelineUI.OnStop += OnPlaybackStop;
+            _timelineUI.OnReset += OnPlaybackReset;
             _timelineUI.OnScrub += OnPlaybackScrub;
             _timelineUI.OnSetKeyframe += OnSetKeyframe;
             _timelineUI.OnSave += OnSave;
@@ -192,6 +193,20 @@ namespace ProjectVagabond.Editor
                 {
                     _selectedHand = null;
                     _transformGizmo.Detach();
+                }
+
+                // Handle playback controls when not editing
+                if (kbs.IsKeyDown(Keys.Space) && _previousKeyboardState.IsKeyUp(Keys.Space))
+                {
+                    if (_actionAnimator.IsPlaying)
+                    {
+                        if (_actionAnimator.IsPaused) { OnPlaybackPlay(); }
+                        else { OnPlaybackPause(); }
+                    }
+                    else
+                    {
+                        OnPlaybackPlay();
+                    }
                 }
             }
 
@@ -338,18 +353,17 @@ namespace ProjectVagabond.Editor
         {
             if (_loadedAction == null) return;
 
-            // Force hands to a known state before starting playback to prevent issues from stale positions.
-            _leftHand.ForcePositionAndRotation(AnimationAnchors["LeftHandIdle"], 0);
-            _rightHand.ForcePositionAndRotation(AnimationAnchors["RightHandIdle"], 0);
-            _leftHand.ForceScale(1.0f);
-            _rightHand.ForceScale(1.0f);
-
-            if (_actionAnimator.IsPaused)
+            // If it's already playing but paused, just resume.
+            if (_actionAnimator.IsPlaying && _actionAnimator.IsPaused)
             {
                 _actionAnimator.Resume();
             }
-            else
+            else // If it's not playing at all (i.e., it was stopped), start from the beginning.
             {
+                _leftHand.ForcePositionAndRotation(AnimationAnchors["LeftHandIdle"], 0);
+                _rightHand.ForcePositionAndRotation(AnimationAnchors["RightHandIdle"], 0);
+                _leftHand.ForceScale(1.0f);
+                _rightHand.ForceScale(1.0f);
                 _actionAnimator.Play(_dummyCombatAction);
             }
         }
@@ -368,6 +382,19 @@ namespace ProjectVagabond.Editor
             _rightHand.MoveTo(AnimationAnchors["RightHandIdle"], 0.3f, Easing.EaseOutCubic);
             _leftHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
             _rightHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
+        }
+
+        private void OnPlaybackReset()
+        {
+            if (_loadedAction == null) return;
+            // Prime the animator if it's not already playing/paused
+            if (!_actionAnimator.IsPlaying)
+            {
+                _actionAnimator.Play(_dummyCombatAction);
+                _actionAnimator.Pause();
+            }
+            _actionAnimator.Seek(0f);
+            _timelineUI.CurrentTime = 0f;
         }
 
         private void OnPlaybackScrub(float newTime)
