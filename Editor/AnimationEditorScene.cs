@@ -373,6 +373,15 @@ namespace ProjectVagabond.Editor
         private void OnPlaybackScrub(float newTime)
         {
             if (_loadedAction == null) return;
+
+            // If the animator is stopped, it has no context of what timeline to scrub.
+            // We need to "prime" it by calling Play() and then immediately pausing it.
+            if (!_actionAnimator.IsPlaying)
+            {
+                _actionAnimator.Play(_dummyCombatAction);
+                _actionAnimator.Pause();
+            }
+
             _actionAnimator.Seek(newTime);
             _timelineUI.CurrentTime = newTime;
         }

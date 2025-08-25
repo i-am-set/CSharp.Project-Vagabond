@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Editor;
 using ProjectVagabond.Scenes;
@@ -146,7 +147,10 @@ namespace ProjectVagabond.Combat
         /// </summary>
         public void Seek(float newTime)
         {
-            if (_currentTimeline == null) return;
+            if (_currentTimeline == null)
+            {
+                return;
+            }
 
             IsPlaying = true;
             IsPaused = true;
@@ -170,63 +174,15 @@ namespace ProjectVagabond.Combat
 
             // --- POSITION ---
             var moveKeyframes = track.Keyframes.Where(k => k.Type == "MoveTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
-            Vector2 finalPos;
-            Keyframe activeMoveTween = moveKeyframes.FirstOrDefault(k => _timer >= k.Time * _currentTimeline.Duration && _timer < k.Time * _currentTimeline.Duration + k.Duration);
-            if (activeMoveTween != null)
-            {
-                Keyframe keyBefore = moveKeyframes.LastOrDefault(k => k.Time < activeMoveTween.Time);
-                Vector2 startValue = (keyBefore != null && _context.AnimationAnchors.TryGetValue(keyBefore.Position, out var pPos)) ? pPos : idlePos;
-                _context.AnimationAnchors.TryGetValue(activeMoveTween.Position, out var endValue);
-                float tweenStartTime = activeMoveTween.Time * _currentTimeline.Duration;
-                float progress = (_timer - tweenStartTime) / activeMoveTween.Duration;
-                var easingFunc = Easing.GetEasingFunction(activeMoveTween.Easing);
-                finalPos = Vector2.Lerp(startValue, endValue, easingFunc(progress));
-            }
-            else
-            {
-                Keyframe lastKey = moveKeyframes.LastOrDefault(k => k.Time * _currentTimeline.Duration <= _timer);
-                finalPos = (lastKey != null && _context.AnimationAnchors.TryGetValue(lastKey.Position, out var lPos)) ? lPos : idlePos;
-            }
+            Vector2 finalPos = CalculateInterpolatedValue(moveKeyframes, key => _context.AnimationAnchors.TryGetValue(key.Position, out var pos) ? pos : idlePos, idlePos, Vector2.Lerp);
 
             // --- ROTATION ---
             var rotateKeyframes = track.Keyframes.Where(k => k.Type == "RotateTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
-            float finalRot;
-            Keyframe activeRotateTween = rotateKeyframes.FirstOrDefault(k => _timer >= k.Time * _currentTimeline.Duration && _timer < k.Time * _currentTimeline.Duration + k.Duration);
-            if (activeRotateTween != null)
-            {
-                Keyframe keyBefore = rotateKeyframes.LastOrDefault(k => k.Time < activeRotateTween.Time);
-                float startValue = keyBefore != null ? MathHelper.ToRadians(keyBefore.Rotation) : idleRot;
-                float endValue = MathHelper.ToRadians(activeRotateTween.Rotation);
-                float tweenStartTime = activeRotateTween.Time * _currentTimeline.Duration;
-                float progress = (_timer - tweenStartTime) / activeRotateTween.Duration;
-                var easingFunc = Easing.GetEasingFunction(activeRotateTween.Easing);
-                finalRot = MathHelper.Lerp(startValue, endValue, easingFunc(progress));
-            }
-            else
-            {
-                Keyframe lastKey = rotateKeyframes.LastOrDefault(k => k.Time * _currentTimeline.Duration <= _timer);
-                finalRot = lastKey != null ? MathHelper.ToRadians(lastKey.Rotation) : idleRot;
-            }
+            float finalRot = CalculateInterpolatedValue(rotateKeyframes, key => MathHelper.ToRadians(key.Rotation), idleRot, MathHelper.Lerp);
 
             // --- SCALE ---
             var scaleKeyframes = track.Keyframes.Where(k => k.Type == "ScaleTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
-            float finalScale;
-            Keyframe activeScaleTween = scaleKeyframes.FirstOrDefault(k => _timer >= k.Time * _currentTimeline.Duration && _timer < k.Time * _currentTimeline.Duration + k.Duration);
-            if (activeScaleTween != null)
-            {
-                Keyframe keyBefore = scaleKeyframes.LastOrDefault(k => k.Time < activeScaleTween.Time);
-                float startValue = keyBefore != null ? keyBefore.Scale : idleScale;
-                float endValue = activeScaleTween.Scale;
-                float tweenStartTime = activeScaleTween.Time * _currentTimeline.Duration;
-                float progress = (_timer - tweenStartTime) / activeScaleTween.Duration;
-                var easingFunc = Easing.GetEasingFunction(activeScaleTween.Easing);
-                finalScale = MathHelper.Lerp(startValue, endValue, easingFunc(progress));
-            }
-            else
-            {
-                Keyframe lastKey = scaleKeyframes.LastOrDefault(k => k.Time * _currentTimeline.Duration <= _timer);
-                finalScale = lastKey != null ? lastKey.Scale : idleScale;
-            }
+            float finalScale = CalculateInterpolatedValue(scaleKeyframes, key => key.Scale, idleScale, MathHelper.Lerp);
 
             // --- ANIMATION ---
             var animKeyframes = track.Keyframes.Where(k => k.Type == "PlayAnimation" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
@@ -238,6 +194,39 @@ namespace ProjectVagabond.Combat
             if (!string.IsNullOrEmpty(finalAnimation))
             {
                 hand.PlayAnimation(finalAnimation);
+            }
+        }
+
+        private T CalculateInterpolatedValue<T>(List<Keyframe> keyframes, Func<Keyframe, T> valueSelector, T idleValue, Func<T, T, float, T> lerpFunc)
+        {
+            if (!keyframes.Any()) return idleValue;
+
+            // 1. Find if we are currently in the middle of a tween.
+            Keyframe activeTweenKey = keyframes.FirstOrDefault(k => {
+                float startTime = k.Time * _currentTimeline.Duration;
+                // A tween is active if the timer is between its start and end.
+                return _timer >= startTime && _timer < startTime + k.Duration;
+            });
+
+            if (activeTweenKey != null)
+            {
+                // We are actively tweening.
+                Keyframe keyBefore = keyframes.LastOrDefault(k => k.Time < activeTweenKey.Time);
+                T startValue = (keyBefore != null) ? valueSelector(keyBefore) : idleValue;
+                T endValue = valueSelector(activeTweenKey);
+
+                float tweenStartTime = activeTweenKey.Time * _currentTimeline.Duration;
+                // Ensure duration is not zero to avoid division errors.
+                float tweenDuration = activeTweenKey.Duration > 0 ? activeTweenKey.Duration : 1f;
+                float progress = (_timer - tweenStartTime) / tweenDuration;
+                var easingFunc = Easing.GetEasingFunction(activeTweenKey.Easing);
+                return lerpFunc(startValue, endValue, easingFunc(progress));
+            }
+            else
+            {
+                // We are NOT in a tween. The state is static, defined by the last keyframe that was triggered.
+                Keyframe lastKey = keyframes.LastOrDefault(k => k.Time * _currentTimeline.Duration <= _timer);
+                return (lastKey != null) ? valueSelector(lastKey) : idleValue;
             }
         }
 
