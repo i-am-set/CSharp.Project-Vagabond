@@ -1,6 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Combat.UI;
+using ProjectVagabond.Editor;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -275,10 +280,24 @@ namespace ProjectVagabond.Combat.UI
         public Rectangle GetInteractionBounds()
         {
             if (_animator == null) return Rectangle.Empty;
-            // This is a simplified approximation. A more accurate method would use the sprite's actual frame.
-            int width = 80;
-            int height = 200;
-            return new Rectangle((int)(CurrentPosition.X - width / 2f), (int)(CurrentPosition.Y - height), width, height);
+
+            var corners = GetWorldCorners();
+            if (corners.Length < 4) return Rectangle.Empty;
+
+            float minX = corners[0].X;
+            float minY = corners[0].Y;
+            float maxX = corners[0].X;
+            float maxY = corners[0].Y;
+
+            for (int i = 1; i < corners.Length; i++)
+            {
+                minX = Math.Min(minX, corners[i].X);
+                minY = Math.Min(minY, corners[i].Y);
+                maxX = Math.Max(maxX, corners[i].X);
+                maxY = Math.Max(maxY, corners[i].Y);
+            }
+
+            return new Rectangle((int)minX, (int)minY, (int)(maxX - minX), (int)(maxY - minY));
         }
 
         public Vector2 GetPivotPoint() => CurrentPosition;

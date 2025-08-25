@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -30,22 +31,32 @@ namespace ProjectVagabond.Editor
         private Vector2 _dragStartPivot;
         private float _dragStartDistance;
 
+        // Cached state for drawing
         private readonly Dictionary<DragHandle, Rectangle> _handleRects = new();
+        private Vector2[] _worldCorners = new Vector2[4];
+        private bool _hasValidStateForDrawing = false;
 
         public void Attach(HandRenderer hand)
         {
             _attachedHand = hand;
+            // Immediately update the state to prevent drawing with stale data for one frame
+            UpdateHandlePositions();
         }
 
         public void Detach()
         {
             _attachedHand = null;
             _activeHandle = DragHandle.None;
+            _hasValidStateForDrawing = false;
         }
 
         public void Update(MouseState mouse, MouseState prevMouse)
         {
-            if (_attachedHand == null) return;
+            if (_attachedHand == null)
+            {
+                _hasValidStateForDrawing = false;
+                return;
+            }
 
             UpdateHandlePositions();
 
@@ -81,6 +92,8 @@ namespace ProjectVagabond.Editor
             if (_activeHandle != DragHandle.None)
             {
                 ProcessDrag(virtualMousePos);
+                // After dragging, the positions have changed, so we need to update the handles for the next frame's draw call.
+                UpdateHandlePositions();
             }
         }
 
@@ -118,32 +131,35 @@ namespace ProjectVagabond.Editor
         private void UpdateHandlePositions()
         {
             _handleRects.Clear();
+            _hasValidStateForDrawing = false;
             if (_attachedHand == null) return;
 
-            var corners = _attachedHand.GetWorldCorners();
+            _worldCorners = _attachedHand.GetWorldCorners();
             var center = _attachedHand.GetPivotPoint();
             var halfHandle = HANDLE_SIZE / 2;
 
             _handleRects[DragHandle.Body] = _attachedHand.GetInteractionBounds();
-            _handleRects[DragHandle.TopLeft] = new Rectangle((int)corners[0].X - halfHandle, (int)corners[0].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
-            _handleRects[DragHandle.TopRight] = new Rectangle((int)corners[1].X - halfHandle, (int)corners[1].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
-            _handleRects[DragHandle.BottomRight] = new Rectangle((int)corners[2].X - halfHandle, (int)corners[2].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
-            _handleRects[DragHandle.BottomLeft] = new Rectangle((int)corners[3].X - halfHandle, (int)corners[3].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
+            _handleRects[DragHandle.TopLeft] = new Rectangle((int)_worldCorners[0].X - halfHandle, (int)_worldCorners[0].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
+            _handleRects[DragHandle.TopRight] = new Rectangle((int)_worldCorners[1].X - halfHandle, (int)_worldCorners[1].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
+            _handleRects[DragHandle.BottomRight] = new Rectangle((int)_worldCorners[2].X - halfHandle, (int)_worldCorners[2].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
+            _handleRects[DragHandle.BottomLeft] = new Rectangle((int)_worldCorners[3].X - halfHandle, (int)_worldCorners[3].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
 
             // Calculate rotation handle positions
             Vector2 up = new Vector2((float)Math.Sin(_attachedHand.CurrentRotation), -(float)Math.Cos(_attachedHand.CurrentRotation));
-            Vector2 topCenter = (corners[0] + corners[1]) / 2f;
+            Vector2 topCenter = (_worldCorners[0] + _worldCorners[1]) / 2f;
 
             _handleRects[DragHandle.TopRotation] = new Rectangle((int)(topCenter.X + up.X * ROTATION_HANDLE_OFFSET) - halfHandle, (int)(topCenter.Y + up.Y * ROTATION_HANDLE_OFFSET) - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
             _handleRects[DragHandle.BottomRotation] = new Rectangle((int)center.X - halfHandle, (int)center.Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
+
+            _hasValidStateForDrawing = true;
         }
 
         public void Draw(SpriteBatch spriteBatch)
         {
-            if (_attachedHand == null) return;
+            if (!_hasValidStateForDrawing) return;
 
             var global = ServiceLocator.Get<Global>();
-            var corners = _attachedHand.GetWorldCorners();
+            var corners = _worldCorners; // Use the cached corners
 
             // Draw bounding box
             spriteBatch.DrawLine(corners[0], corners[1], global.Palette_White, 1f);
@@ -161,8 +177,11 @@ namespace ProjectVagabond.Editor
             }
 
             // Draw line to top rotation handle
-            var topCenter = (corners[0] + corners[1]) / 2f;
-            spriteBatch.DrawLine(topCenter, _handleRects[DragHandle.TopRotation].Center.ToVector2(), global.Palette_White, 1f);
+            if (_handleRects.TryGetValue(DragHandle.TopRotation, out var topRotationRect))
+            {
+                var topCenter = (corners[0] + corners[1]) / 2f;
+                spriteBatch.DrawLine(topCenter, topRotationRect.Center.ToVector2(), global.Palette_White, 1f);
+            }
         }
     }
 }

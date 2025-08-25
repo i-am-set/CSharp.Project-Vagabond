@@ -228,20 +228,12 @@ namespace ProjectVagabond.Editor
 
             bool leftClickPressed = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
 
-            // If the gizmo is active, it handles all input. Don't allow re-selection.
+            // If the gizmo is active and being dragged, it handles all input.
+            // This prevents re-selection while manipulating a handle.
             if (_transformGizmo.IsDragging) return;
 
-            // Don't allow selection if UI panels are being interacted with, unless the click has already been handled by the gizmo
-            if (UIInputManager.CanProcessMouseClick() && (_fileBrowser.Bounds.Contains(virtualMousePos) || _timelineUI.Bounds.Contains(virtualMousePos)))
-            {
-                if (leftClickPressed)
-                {
-                    _selectedHand = null;
-                    _transformGizmo.Detach();
-                }
-                return;
-            }
-
+            // When a click occurs, check for selection on a hand. If no hand is clicked,
+            // deselect the current one. This logic now correctly ignores UI panels in edit mode.
             if (leftClickPressed && UIInputManager.CanProcessMouseClick())
             {
                 // Prioritize left hand if overlapping

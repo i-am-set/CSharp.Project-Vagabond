@@ -141,9 +141,8 @@ namespace ProjectVagabond.Combat
         }
 
         /// <summary>
-        /// Instantly moves the animation playback to a specific time.
-        /// This is a performant method for timeline scrubbing that snaps to the state defined
-        /// by the most recent keyframes, rather than simulating the time in-between.
+        /// Instantly moves the animation playback to a specific time, smoothly interpolating
+        /// the state between keyframes.
         /// </summary>
         public void Seek(float newTime)
         {
@@ -153,7 +152,7 @@ namespace ProjectVagabond.Combat
             IsPaused = true;
             _timer = newTime;
 
-            // For each hand, find the state it should be in by looking at the last keyframe for each property.
+            // For each hand, find the state it should be in by interpolating between keyframes.
             SeekHandState(_leftHand, "LeftHand");
             SeekHandState(_rightHand, "RightHand");
         }
@@ -161,35 +160,93 @@ namespace ProjectVagabond.Combat
         private void SeekHandState(HandRenderer hand, string trackName)
         {
             var track = _currentTimeline.Tracks.FirstOrDefault(t => t.Target == trackName);
-            if (track == null) return;
+            if (track == null || _currentTimeline.Duration <= 0) return;
 
-            float timeRatio = _timer / _currentTimeline.Duration;
+            // --- Get Idle Defaults ---
+            string idleAnchorName = trackName == "LeftHand" ? "LeftHandIdle" : "RightHandIdle";
+            _context.AnimationAnchors.TryGetValue(idleAnchorName, out var idlePos);
+            float idleRot = 0f;
+            float idleScale = 1f;
 
-            // Find the last keyframe for each property type that should have already occurred.
-            var lastMove = track.Keyframes.LastOrDefault(k => k.Type == "MoveTo" && k.Time <= timeRatio && k.State != KeyframeState.Deleted);
-            var lastRotate = track.Keyframes.LastOrDefault(k => k.Type == "RotateTo" && k.Time <= timeRatio && k.State != KeyframeState.Deleted);
-            var lastScale = track.Keyframes.LastOrDefault(k => k.Type == "ScaleTo" && k.Time <= timeRatio && k.State != KeyframeState.Deleted);
-
-            Vector2 finalPos = _context.AnimationAnchors.TryGetValue("LeftHandIdle", out var idlePos) ? idlePos : Vector2.Zero;
-            if (lastMove != null && _context.AnimationAnchors.TryGetValue(lastMove.Position, out var anchorPos))
+            // --- POSITION ---
+            var moveKeyframes = track.Keyframes.Where(k => k.Type == "MoveTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
+            Vector2 finalPos;
+            Keyframe activeMoveTween = moveKeyframes.FirstOrDefault(k => _timer >= k.Time * _currentTimeline.Duration && _timer < k.Time * _currentTimeline.Duration + k.Duration);
+            if (activeMoveTween != null)
             {
-                finalPos = anchorPos;
+                Keyframe keyBefore = moveKeyframes.LastOrDefault(k => k.Time < activeMoveTween.Time);
+                Vector2 startValue = (keyBefore != null && _context.AnimationAnchors.TryGetValue(keyBefore.Position, out var pPos)) ? pPos : idlePos;
+                _context.AnimationAnchors.TryGetValue(activeMoveTween.Position, out var endValue);
+                float tweenStartTime = activeMoveTween.Time * _currentTimeline.Duration;
+                float progress = (_timer - tweenStartTime) / activeMoveTween.Duration;
+                var easingFunc = Easing.GetEasingFunction(activeMoveTween.Easing);
+                finalPos = Vector2.Lerp(startValue, endValue, easingFunc(progress));
+            }
+            else
+            {
+                Keyframe lastKey = moveKeyframes.LastOrDefault(k => k.Time * _currentTimeline.Duration <= _timer);
+                finalPos = (lastKey != null && _context.AnimationAnchors.TryGetValue(lastKey.Position, out var lPos)) ? lPos : idlePos;
             }
 
-            float finalRot = 0f;
-            if (lastRotate != null)
+            // --- ROTATION ---
+            var rotateKeyframes = track.Keyframes.Where(k => k.Type == "RotateTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
+            float finalRot;
+            Keyframe activeRotateTween = rotateKeyframes.FirstOrDefault(k => _timer >= k.Time * _currentTimeline.Duration && _timer < k.Time * _currentTimeline.Duration + k.Duration);
+            if (activeRotateTween != null)
             {
-                finalRot = MathHelper.ToRadians(lastRotate.Rotation);
+                Keyframe keyBefore = rotateKeyframes.LastOrDefault(k => k.Time < activeRotateTween.Time);
+                float startValue = keyBefore != null ? MathHelper.ToRadians(keyBefore.Rotation) : idleRot;
+                float endValue = MathHelper.ToRadians(activeRotateTween.Rotation);
+                float tweenStartTime = activeRotateTween.Time * _currentTimeline.Duration;
+                float progress = (_timer - tweenStartTime) / activeRotateTween.Duration;
+                var easingFunc = Easing.GetEasingFunction(activeRotateTween.Easing);
+                finalRot = MathHelper.Lerp(startValue, endValue, easingFunc(progress));
+            }
+            else
+            {
+                Keyframe lastKey = rotateKeyframes.LastOrDefault(k => k.Time * _currentTimeline.Duration <= _timer);
+                finalRot = lastKey != null ? MathHelper.ToRadians(lastKey.Rotation) : idleRot;
             }
 
-            float finalScale = 1f;
-            if (lastScale != null)
+            // --- SCALE ---
+            var scaleKeyframes = track.Keyframes.Where(k => k.Type == "ScaleTo" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
+            float finalScale;
+            Keyframe activeScaleTween = scaleKeyframes.FirstOrDefault(k => _timer >= k.Time * _currentTimeline.Duration && _timer < k.Time * _currentTimeline.Duration + k.Duration);
+            if (activeScaleTween != null)
             {
-                finalScale = lastScale.Scale;
+                Keyframe keyBefore = scaleKeyframes.LastOrDefault(k => k.Time < activeScaleTween.Time);
+                float startValue = keyBefore != null ? keyBefore.Scale : idleScale;
+                float endValue = activeScaleTween.Scale;
+                float tweenStartTime = activeScaleTween.Time * _currentTimeline.Duration;
+                float progress = (_timer - tweenStartTime) / activeScaleTween.Duration;
+                var easingFunc = Easing.GetEasingFunction(activeScaleTween.Easing);
+                finalScale = MathHelper.Lerp(startValue, endValue, easingFunc(progress));
+            }
+            else
+            {
+                Keyframe lastKey = scaleKeyframes.LastOrDefault(k => k.Time * _currentTimeline.Duration <= _timer);
+                finalScale = lastKey != null ? lastKey.Scale : idleScale;
             }
 
+            // --- ANIMATION ---
+            var animKeyframes = track.Keyframes.Where(k => k.Type == "PlayAnimation" && k.State != KeyframeState.Deleted).OrderBy(k => k.Time).ToList();
+            string finalAnimation = GetCurrentAnimation(animKeyframes);
+
+            // --- APPLY FINAL STATE ---
             hand.ForcePositionAndRotation(finalPos, finalRot);
             hand.ForceScale(finalScale);
+            if (!string.IsNullOrEmpty(finalAnimation))
+            {
+                hand.PlayAnimation(finalAnimation);
+            }
+        }
+
+        private string GetCurrentAnimation(List<Keyframe> keyframes)
+        {
+            if (!keyframes.Any() || _currentTimeline.Duration == 0) return null;
+            float timeRatio = _timer / _currentTimeline.Duration;
+            Keyframe lastKey = keyframes.LastOrDefault(k => k.Time <= timeRatio);
+            return lastKey?.AnimationName;
         }
 
 
