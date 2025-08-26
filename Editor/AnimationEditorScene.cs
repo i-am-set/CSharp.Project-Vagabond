@@ -21,13 +21,15 @@ namespace ProjectVagabond.Editor
     {
         // --- TUNING ---
         private const int FILE_BROWSER_WIDTH = 180;
-        private const int TIMELINE_HEIGHT = 200;
+        private const int TIMELINE_HEIGHT = 240;
         private const int PANEL_PADDING = 5;
         private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 116f;
         private const float HAND_IDLE_Y_OFFSET_EDITOR = -80f; // Adjusted for editor view
         private const float HAND_CAST_Y_OFFSET = -30f;
         private const float HAND_THROW_Y_OFFSET = -20f;
+        private const float TIMELINE_KEY_SCRUB_AMOUNT = 0.01f;
 
+        private enum EditorSubMode { Normal, AwaitingKeySelection }
 
         private HandRenderer _leftHand;
         private HandRenderer _rightHand;
@@ -35,6 +37,7 @@ namespace ProjectVagabond.Editor
         private FileBrowser _fileBrowser;
         private TimelineUI _timelineUI;
         private TransformGizmo _transformGizmo;
+        private ContextMenu _animationContextMenu;
 
         private ActionData _loadedAction;
         private string _loadedActionPath;
@@ -45,6 +48,8 @@ namespace ProjectVagabond.Editor
         // --- Interactive Editing State ---
         private HandRenderer _selectedHand;
         private bool _isEditMode = false;
+        private EditorSubMode _subMode = EditorSubMode.Normal;
+        private readonly HashSet<int> _selectedKeyTracks = new HashSet<int>();
 
         public Dictionary<string, Vector2> AnimationAnchors { get; private set; }
 
@@ -69,12 +74,15 @@ namespace ProjectVagabond.Editor
             _timelineUI.OnStop += OnPlaybackStop;
             _timelineUI.OnReset += OnPlaybackReset;
             _timelineUI.OnScrub += OnPlaybackScrub;
-            _timelineUI.OnSetKeyframe += OnSetKeyframe;
+            _timelineUI.OnSetKeyframe += ToggleSetKeyMode; // Changed from OnSetKeyframe
             _timelineUI.OnSave += OnSave;
             _timelineUI.OnKeyframeClicked += OnKeyframeClicked;
             _timelineUI.OnToggleEditMode += ToggleEditMode;
 
             _transformGizmo = new TransformGizmo();
+            _transformGizmo.OnAnimationGizmoClicked += ShowAnimationMenu;
+
+            _animationContextMenu = new ContextMenu();
         }
 
         public override void Enter()
@@ -99,6 +107,7 @@ namespace ProjectVagabond.Editor
         {
             base.Exit();
             EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
+            _transformGizmo.OnAnimationGizmoClicked -= ShowAnimationMenu;
             OnPlaybackStop(); // Ensure animator is stopped
         }
 
@@ -169,6 +178,10 @@ namespace ProjectVagabond.Editor
         public override void Update(GameTime gameTime)
         {
             var kbs = Keyboard.GetState();
+            var ms = Mouse.GetState();
+            var vms = Core.TransformMouse(ms.Position);
+            var font = ServiceLocator.Get<BitmapFont>();
+
             if (kbs.IsKeyDown(Keys.F12) && _previousKeyboardState.IsKeyUp(Keys.F12))
             {
                 // TODO: Add "are you sure you want to exit" prompt
@@ -178,13 +191,48 @@ namespace ProjectVagabond.Editor
 
             if (kbs.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape))
             {
-                ToggleEditMode();
+                if (_subMode == EditorSubMode.AwaitingKeySelection)
+                {
+                    _subMode = EditorSubMode.Normal; // Cancel key selection
+                }
+                else
+                {
+                    ToggleEditMode();
+                }
             }
+
+            // Handle keyboard scrubbing in both modes
+            if (_loadedAction?.Timeline != null)
+            {
+                bool leftPressed = (kbs.IsKeyDown(Keys.Left) && _previousKeyboardState.IsKeyUp(Keys.Left)) || (kbs.IsKeyDown(Keys.A) && _previousKeyboardState.IsKeyUp(Keys.A));
+                bool rightPressed = (kbs.IsKeyDown(Keys.Right) && _previousKeyboardState.IsKeyUp(Keys.Right)) || (kbs.IsKeyDown(Keys.D) && _previousKeyboardState.IsKeyUp(Keys.D));
+
+                if (leftPressed || rightPressed)
+                {
+                    float increment = rightPressed ? TIMELINE_KEY_SCRUB_AMOUNT : -TIMELINE_KEY_SCRUB_AMOUNT;
+                    float newTime = _timelineUI.CurrentTime + increment;
+                    OnPlaybackScrub(newTime);
+                }
+            }
+
+            _animationContextMenu.Update(ms, previousMouseState, vms, font);
 
             if (_isEditMode)
             {
-                _transformGizmo.Update(Mouse.GetState(), previousMouseState);
-                HandleHandSelection();
+                if (_subMode == EditorSubMode.Normal)
+                {
+                    _transformGizmo.Update(ms, previousMouseState);
+                    HandleHandSelection();
+                }
+                else if (_subMode == EditorSubMode.AwaitingKeySelection)
+                {
+                    HandleKeySelectionInput(kbs);
+                }
+
+                if (kbs.IsKeyDown(Keys.Space) && _previousKeyboardState.IsKeyUp(Keys.Space))
+                {
+                    ToggleSetKeyMode();
+                }
             }
             else
             {
@@ -213,16 +261,24 @@ namespace ProjectVagabond.Editor
             _fileBrowser.Update(gameTime, _isEditMode);
             _timelineUI.Update(gameTime, previousMouseState, IsDirty, _isEditMode);
 
-            _actionAnimator.Update(gameTime);
+            // Only update the animator if we are NOT in edit mode.
+            // This prevents it from overriding the user's manual transforms.
+            if (!_isEditMode)
+            {
+                _actionAnimator.Update(gameTime);
+            }
+
             _leftHand.Update(gameTime);
             _rightHand.Update(gameTime);
 
-            if (_actionAnimator.IsPlaying)
+            // Only sync the UI time from the animator when not in edit mode.
+            // In edit mode, the UI is the source of truth for the current time.
+            if (_actionAnimator.IsPlaying && !_isEditMode)
             {
                 _timelineUI.CurrentTime = _actionAnimator.PlaybackTime;
             }
 
-            // Base update must be last to correctly handle previous input state for the next frame.
+            // Base update must be last to correctly handle previous input states for the next frame.
             base.Update(gameTime);
         }
 
@@ -233,6 +289,8 @@ namespace ProjectVagabond.Editor
             {
                 _selectedHand = null;
                 _transformGizmo.Detach();
+                // When exiting edit mode, snap the hands back to their correct timeline position.
+                OnPlaybackScrub(_timelineUI.CurrentTime);
             }
         }
 
@@ -282,7 +340,7 @@ namespace ProjectVagabond.Editor
             // Batch 1: Main scene content (background, hands, unclipped UI)
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             DrawSceneContent(spriteBatch, font, gameTime);
-            _timelineUI.Draw(spriteBatch, font, gameTime);
+            _timelineUI.Draw(spriteBatch, font, gameTime, _subMode == EditorSubMode.AwaitingKeySelection ? _selectedKeyTracks : null);
             spriteBatch.End();
 
             // Batch 2: File browser with clipping
@@ -301,7 +359,7 @@ namespace ProjectVagabond.Editor
             // --- Hands (drawn last, on top of UI panels and letterboxing) ---
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
-            Color handColor = _isEditMode ? Color.White : Color.White * 0.2f;
+            Color handColor = _isEditMode ? Color.White * 0.8f : Color.White * 0.2f;
             _leftHand.Draw(spriteBatch, font, gameTime, handColor);
             _rightHand.Draw(spriteBatch, font, gameTime, handColor);
 
@@ -309,6 +367,8 @@ namespace ProjectVagabond.Editor
             {
                 _transformGizmo.Draw(spriteBatch);
             }
+
+            _animationContextMenu.Draw(spriteBatch, font);
 
             spriteBatch.End();
         }
@@ -401,33 +461,70 @@ namespace ProjectVagabond.Editor
         {
             if (_loadedAction == null) return;
 
-            // If the animator is stopped, it has no context of what timeline to scrub.
-            // We need to "prime" it by calling Play() and then immediately pausing it.
-            if (!_actionAnimator.IsPlaying)
-            {
-                _actionAnimator.Play(_dummyCombatAction);
-                _actionAnimator.Pause();
-            }
+            // Clamp and snap the time to the nearest 0.01s increment.
+            float duration = _loadedAction.Timeline.Duration;
+            float snappedTime = MathF.Round(Math.Clamp(newTime, 0, duration) * 100f) / 100f;
 
-            _actionAnimator.Seek(newTime);
-            _timelineUI.CurrentTime = newTime;
+            // Always update the UI's time.
+            _timelineUI.CurrentTime = snappedTime;
+
+            // Only update the animation preview if not in edit mode.
+            if (!_isEditMode)
+            {
+                // Prime the animator if it's not already playing/paused
+                if (!_actionAnimator.IsPlaying)
+                {
+                    _actionAnimator.Play(_dummyCombatAction);
+                    _actionAnimator.Pause();
+                }
+                _actionAnimator.Seek(snappedTime);
+            }
         }
 
-        private void OnSetKeyframe()
+        private void ToggleSetKeyMode()
         {
-            if (_loadedAction?.Timeline == null) return;
+            if (_subMode == EditorSubMode.Normal)
+            {
+                _subMode = EditorSubMode.AwaitingKeySelection;
+                _selectedKeyTracks.Clear();
+            }
+            else // Was AwaitingKeySelection
+            {
+                PlaceSelectedKeyframes();
+                _subMode = EditorSubMode.Normal;
+            }
+        }
+
+        private void PlaceSelectedKeyframes()
+        {
+            if (_loadedAction?.Timeline == null || !_selectedKeyTracks.Any()) return;
 
             float time = _timelineUI.CurrentTime / _loadedAction.Timeline.Duration;
 
-            // Set keyframes for both hands based on their current state
-            SetKeyframeForHand(_leftHand, "LeftHand", time);
-            SetKeyframeForHand(_rightHand, "RightHand", time);
+            var trackMap = new Dictionary<int, (HandRenderer hand, string trackName, string property)>
+            {
+                { 1, (_leftHand, "LeftHand", "MoveTo") },
+                { 2, (_leftHand, "LeftHand", "RotateTo") },
+                { 3, (_leftHand, "LeftHand", "ScaleTo") },
+                { 4, (_leftHand, "LeftHand", "PlayAnimation") },
+                { 5, (_rightHand, "RightHand", "MoveTo") },
+                { 6, (_rightHand, "RightHand", "RotateTo") },
+                { 7, (_rightHand, "RightHand", "ScaleTo") },
+                { 8, (_rightHand, "RightHand", "PlayAnimation") }
+            };
 
-            // Refresh the timeline UI to show the new keyframe markers
-            _timelineUI.SetTimeline(_loadedAction.Timeline);
+            foreach (int trackIndex in _selectedKeyTracks)
+            {
+                if (trackMap.TryGetValue(trackIndex, out var info))
+                {
+                    SetKeyframeForHandProperty(info.hand, info.trackName, time, info.property);
+                }
+            }
+
+            _timelineUI.SetTimeline(_loadedAction.Timeline); // Refresh UI
         }
 
-        private void SetKeyframeForHand(HandRenderer hand, string trackName, float time)
+        private void SetKeyframeForHandProperty(HandRenderer hand, string trackName, float time, string property)
         {
             var timeline = _loadedAction.Timeline;
             var track = timeline.Tracks.FirstOrDefault(t => t.Target == trackName);
@@ -437,25 +534,73 @@ namespace ProjectVagabond.Editor
                 timeline.Tracks.Add(track);
             }
 
-            // Find closest position anchor
-            string closestAnchor = FindClosestAnchor(hand.CurrentPosition);
+            Keyframe newKey = null;
+            switch (property)
+            {
+                case "MoveTo":
+                    string closestAnchor = FindClosestAnchor(hand.CurrentPosition);
+                    newKey = new Keyframe { Time = time, Type = "MoveTo", Position = closestAnchor, Easing = "EaseOutCubic" };
+                    break;
+                case "RotateTo":
+                    newKey = new Keyframe { Time = time, Type = "RotateTo", Rotation = MathHelper.ToDegrees(hand.CurrentRotation), Easing = "EaseOutCubic" };
+                    break;
+                case "ScaleTo":
+                    newKey = new Keyframe { Time = time, Type = "ScaleTo", Scale = hand.CurrentScale, Easing = "EaseOutCubic" };
+                    break;
+                case "PlayAnimation":
+                    // This type is set differently, perhaps via a popup in the future. For now, it's a placeholder.
+                    // newKey = new Keyframe { Time = time, Type = "PlayAnimation", AnimationName = "idle_loop" };
+                    break;
+            }
 
-            // Create keyframes
-            var moveKey = new Keyframe { Time = time, Type = "MoveTo", Position = closestAnchor, Duration = 0.3f, Easing = "EaseOutCubic" };
-            var rotateKey = new Keyframe { Time = time, Type = "RotateTo", Rotation = MathHelper.ToDegrees(hand.CurrentRotation), Duration = 0.3f, Easing = "EaseOutCubic" };
-            var scaleKey = new Keyframe { Time = time, Type = "ScaleTo", Scale = hand.CurrentScale, Duration = 0.3f, Easing = "EaseOutCubic" };
+            if (newKey != null)
+            {
+                track.AddOrUpdateKeyframe(newKey);
+            }
+        }
 
-            // Add or update them in the track
-            track.AddOrUpdateKeyframe(moveKey);
-            track.AddOrUpdateKeyframe(rotateKey);
-            track.AddOrUpdateKeyframe(scaleKey);
+        private void HandleKeySelectionInput(KeyboardState kbs)
+        {
+            var keyMap = new Dictionary<Keys, int>
+            {
+                { Keys.D1, 1 }, { Keys.D2, 2 }, { Keys.D3, 3 }, { Keys.D4, 4 },
+                { Keys.D5, 5 }, { Keys.D6, 6 }, { Keys.D7, 7 }, { Keys.D8, 8 }
+            };
+
+            foreach (var pair in keyMap)
+            {
+                if (kbs.IsKeyDown(pair.Key) && _previousKeyboardState.IsKeyUp(pair.Key))
+                {
+                    if (_selectedKeyTracks.Contains(pair.Value))
+                    {
+                        _selectedKeyTracks.Remove(pair.Value);
+                    }
+                    else
+                    {
+                        _selectedKeyTracks.Add(pair.Value);
+                    }
+                }
+            }
+
+            if (kbs.IsKeyDown(Keys.Tab) && _previousKeyboardState.IsKeyUp(Keys.Tab))
+            {
+                // If not all tracks are selected, select all. Otherwise, clear selection.
+                if (_selectedKeyTracks.Count < 8)
+                {
+                    for (int i = 1; i <= 8; i++) _selectedKeyTracks.Add(i);
+                }
+                else
+                {
+                    _selectedKeyTracks.Clear();
+                }
+            }
         }
 
         private string FindClosestAnchor(Vector2 position)
         {
             if (AnimationAnchors == null || !AnimationAnchors.Any())
             {
-                return "LeftHandIdle"; // Failsafe
+                return "LeftHandIdle";
             }
 
             return AnimationAnchors.OrderBy(kvp => Vector2.DistanceSquared(kvp.Value, position)).First().Key;
@@ -465,17 +610,14 @@ namespace ProjectVagabond.Editor
         {
             if (keyframe.State == KeyframeState.Added)
             {
-                // If it's a newly added keyframe, remove it completely.
                 track.Keyframes.Remove(keyframe);
             }
             else if (keyframe.State == KeyframeState.Deleted)
             {
-                // If it's already marked for deletion, restore it.
                 keyframe.State = KeyframeState.Unmodified;
             }
             else
             {
-                // Otherwise, mark it for deletion.
                 keyframe.State = KeyframeState.Deleted;
             }
             // Immediately update the preview to reflect the change
@@ -486,7 +628,6 @@ namespace ProjectVagabond.Editor
         {
             if (!IsDirty || string.IsNullOrEmpty(_loadedActionPath)) return;
 
-            // 1. Create a clean copy of the ActionData for serialization.
             var dataToSave = new ActionData
             {
                 Id = _loadedAction.Id,
@@ -497,7 +638,6 @@ namespace ProjectVagabond.Editor
                 Timeline = new AnimationTimeline { Duration = _loadedAction.Timeline.Duration }
             };
 
-            // 2. Copy only the non-deleted keyframes to the new timeline.
             foreach (var track in _loadedAction.Timeline.Tracks)
             {
                 var newTrack = new AnimationTrack { Target = track.Target };
@@ -508,7 +648,6 @@ namespace ProjectVagabond.Editor
                 }
             }
 
-            // 3. Serialize and save the clean data.
             try
             {
                 var jsonOptions = new JsonSerializerOptions
@@ -520,12 +659,9 @@ namespace ProjectVagabond.Editor
                 File.WriteAllText(_loadedActionPath, jsonString);
                 Debug.WriteLine($"[Editor] Saved changes to {_loadedActionPath}");
 
-                // 4. Post-save cleanup: apply changes to the in-memory _loadedAction.
                 foreach (var track in _loadedAction.Timeline.Tracks)
                 {
-                    // Remove keyframes that were marked for deletion.
                     track.Keyframes.RemoveAll(k => k.State == KeyframeState.Deleted);
-                    // Reset the state of all remaining keyframes to Unmodified.
                     foreach (var keyframe in track.Keyframes)
                     {
                         keyframe.State = KeyframeState.Unmodified;
@@ -535,8 +671,28 @@ namespace ProjectVagabond.Editor
             catch (Exception ex)
             {
                 Debug.WriteLine($"[Editor] [ERROR] Failed to save file: {ex.Message}");
-                // Optionally, show an error message to the user.
             }
+        }
+
+        private void ShowAnimationMenu(HandRenderer hand)
+        {
+            var font = ServiceLocator.Get<BitmapFont>();
+            var mousePos = Core.TransformMouse(Mouse.GetState().Position);
+            var animNames = hand.GetAvailableAnimationNames();
+
+            var menuItems = new List<ContextMenuItem>();
+            foreach (var name in animNames.OrderBy(n => n))
+            {
+                // Capture the loop variable for the lambda
+                var currentName = name;
+                menuItems.Add(new ContextMenuItem
+                {
+                    Text = currentName,
+                    OnClick = () => hand.PlayAnimation(currentName)
+                });
+            }
+
+            _animationContextMenu.Show(mousePos, menuItems, font);
         }
     }
 }

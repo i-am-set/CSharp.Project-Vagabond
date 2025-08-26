@@ -59,12 +59,6 @@ namespace ProjectVagabond.Combat
         public float Scale { get; set; } = 1f;
 
         /// <summary>
-        /// The duration of the tweening animation in seconds. Used with "MoveTo", "RotateTo", and "ScaleTo" types.
-        /// </summary>
-        [JsonPropertyName("duration")]
-        public float Duration { get; set; } = 0.3f;
-
-        /// <summary>
         /// The name of the easing function to use for the tween (e.g., "EaseOutCubic"). Used with transform types.
         /// </summary>
         [JsonPropertyName("easing")]
@@ -116,7 +110,6 @@ namespace ProjectVagabond.Combat
                 existingKeyframe.Position = newKeyframe.Position;
                 existingKeyframe.Rotation = newKeyframe.Rotation;
                 existingKeyframe.Scale = newKeyframe.Scale;
-                existingKeyframe.Duration = newKeyframe.Duration;
                 existingKeyframe.Easing = newKeyframe.Easing;
                 existingKeyframe.AnimationName = newKeyframe.AnimationName;
                 // Mark it as added/modified if it was previously unmodified or deleted

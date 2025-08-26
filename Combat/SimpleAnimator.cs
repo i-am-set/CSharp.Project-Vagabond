@@ -86,6 +86,11 @@ namespace ProjectVagabond.Utils
             return _spriteSheet.Cycles.ContainsKey(animationName);
         }
 
+        public IEnumerable<string> GetAnimationNames()
+        {
+            return _spriteSheet?.Cycles.Keys ?? Enumerable.Empty<string>();
+        }
+
         public void Play(string animationName)
         {
             if (_spriteSheet.Cycles.TryGetValue(animationName, out var newCycle))

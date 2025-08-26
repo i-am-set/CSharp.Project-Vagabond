@@ -195,7 +195,18 @@ namespace ProjectVagabond.Combat
 
         private void UpdateHandTransforms()
         {
-            if (_currentTimeline == null) return;
+            if (_currentTimeline == null || _currentAction == null) return;
+
+            // --- ARCHITECTURAL GUARD ---
+            // Only update player hand transforms if the player is the one casting the action.
+            var gameState = ServiceLocator.Get<GameState>();
+            if (gameState != null && _currentAction.CasterEntityId != gameState.PlayerEntityId)
+            {
+                // This is an AI action with a timeline that targets hands. Do not animate the player's hands.
+                // In the future, this is where AI-specific animation logic would go.
+                return;
+            }
+
             SetHandStateAtTime(_leftHand, "LeftHand");
             SetHandStateAtTime(_rightHand, "RightHand");
         }
@@ -228,41 +239,43 @@ namespace ProjectVagabond.Combat
             }
         }
 
-        /// <summary>
-        /// A generic, performant method to calculate the interpolated value of any property at the current time.
-        /// </summary>
         private T CalculateInterpolatedValue<T>(List<Keyframe> sortedKeyframes, Func<Keyframe, T> valueSelector, T idleValue, Func<T, T, float, T> lerpFunc)
         {
             if (!sortedKeyframes.Any()) return idleValue;
 
-            // Find the index of the last keyframe whose trigger time is before or at the current time.
-            int lastKeyIndex = FindLastIndexBefore(sortedKeyframes, _timer / _currentTimeline.Duration);
+            // Find the keyframe that defines the END of the current animation segment.
+            int nextKeyIndex = sortedKeyframes.FindIndex(k => k.Time * _currentTimeline.Duration >= _timer);
 
-            if (lastKeyIndex == -1)
+            if (nextKeyIndex == -1) // We are past the last keyframe, so hold its state.
             {
-                return idleValue; // Current time is before the very first keyframe.
+                return valueSelector(sortedKeyframes.Last());
             }
 
-            Keyframe lastKey = sortedKeyframes[lastKeyIndex];
-            float tweenStartTime = lastKey.Time * _currentTimeline.Duration;
+            Keyframe nextKey = sortedKeyframes[nextKeyIndex];
+            Keyframe prevKey = (nextKeyIndex > 0) ? sortedKeyframes[nextKeyIndex - 1] : null;
 
-            // Check if the current time falls within the tweening duration of this last keyframe.
-            if (_timer < tweenStartTime + lastKey.Duration)
+            // If we are before the first keyframe, hold the idle state.
+            if (prevKey == null)
             {
-                Keyframe keyBefore = (lastKeyIndex > 0) ? sortedKeyframes[lastKeyIndex - 1] : null;
-                T startValue = (keyBefore != null) ? valueSelector(keyBefore) : idleValue;
-                T endValue = valueSelector(lastKey);
+                return idleValue;
+            }
 
-                float tweenDuration = lastKey.Duration > 0 ? lastKey.Duration : 1f;
-                float progress = (_timer - tweenStartTime) / tweenDuration;
-                var easingFunc = Easing.GetEasingFunction(lastKey.Easing);
-                return lerpFunc(startValue, endValue, easingFunc(progress));
-            }
-            else
+            // We are between prevKey and nextKey.
+            T startValue = valueSelector(prevKey);
+            T endValue = valueSelector(nextKey);
+
+            float segmentStartTime = prevKey.Time * _currentTimeline.Duration;
+            float segmentEndTime = nextKey.Time * _currentTimeline.Duration;
+            float segmentDuration = segmentEndTime - segmentStartTime;
+
+            if (segmentDuration <= 0)
             {
-                // The time is past this keyframe's tween, so snap to its final value.
-                return valueSelector(lastKey);
+                return endValue; // Instant snap if keyframes are at the same time.
             }
+
+            float progress = (_timer - segmentStartTime) / segmentDuration;
+            var easingFunc = Easing.GetEasingFunction(nextKey.Easing); // Easing is on the destination keyframe.
+            return lerpFunc(startValue, endValue, easingFunc(progress));
         }
 
         /// <summary>
@@ -297,6 +310,20 @@ namespace ProjectVagabond.Combat
 
         private void TriggerOneShotKeyframe(AnimationTrack track, Keyframe keyframe)
         {
+            // --- Caster-Aware Animation Logic ---
+            // Check if the keyframe targets a player-specific element. If so, ensure the player is the caster.
+            var gameState = ServiceLocator.Get<GameState>();
+            bool isPlayerCasting = gameState == null || _currentAction.CasterEntityId == gameState.PlayerEntityId;
+
+            if (track.Target == "LeftHand" || track.Target == "RightHand")
+            {
+                if (!isPlayerCasting)
+                {
+                    // This is an AI action trying to animate the player's hands. Skip it.
+                    return;
+                }
+            }
+
             HandRenderer targetHand = GetTargetHand(track.Target);
 
             switch (keyframe.Type)

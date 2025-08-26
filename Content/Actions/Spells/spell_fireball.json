@@ -25,14 +25,12 @@
             "time": 0.0,
             "type": "MoveTo",
             "position": "LeftHandCast",
-            "duration": 0.5,
             "easing": "EaseOutCubic"
           },
           {
             "time": 0.0,
             "type": "RotateTo",
             "rotation": 10,
-            "duration": 0.5,
             "easing": "EaseOutCubic"
           },
           {
@@ -43,28 +41,24 @@
             "time": 0.5,
             "type": "RotateTo",
             "rotation": 0,
-            "duration": 0.1,
             "easing": "EaseOutQuad"
           },
           {
             "time": 0.5,
             "type": "MoveTo",
             "position": "LeftHandThrow",
-            "duration": 0.1,
             "easing": "EaseOutQuad"
           },
           {
             "time": 0.6,
             "type": "MoveTo",
             "position": "LeftHandCast",
-            "duration": 0.1,
             "easing": "EaseInQuad"
           },
           {
             "time": 0.7,
             "type": "MoveTo",
             "position": "LeftHandIdle",
-            "duration": 0.5,
             "easing": "EaseInOutCubic"
           },
           {
@@ -86,42 +80,36 @@
             "time": 0.0,
             "type": "MoveTo",
             "position": "RightHandCast",
-            "duration": 0.5,
             "easing": "EaseOutCubic"
           },
           {
             "time": 0.0,
             "type": "RotateTo",
             "rotation": -10,
-            "duration": 0.5,
             "easing": "EaseOutCubic"
           },
           {
             "time": 0.5,
             "type": "RotateTo",
             "rotation": 0,
-            "duration": 0.1,
             "easing": "EaseOutQuad"
           },
           {
             "time": 0.5,
             "type": "MoveTo",
             "position": "RightHandThrow",
-            "duration": 0.1,
             "easing": "EaseOutQuad"
           },
           {
             "time": 0.6,
             "type": "MoveTo",
             "position": "RightHandCast",
-            "duration": 0.1,
             "easing": "EaseInQuad"
           },
           {
             "time": 0.7,
             "type": "MoveTo",
             "position": "RightHandIdle",
-            "duration": 0.5,
             "easing": "EaseInOutCubic"
           },
           {

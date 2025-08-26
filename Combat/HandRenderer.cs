@@ -233,6 +233,11 @@ namespace ProjectVagabond.Combat.UI
             }
         }
 
+        public IEnumerable<string> GetAvailableAnimationNames()
+        {
+            return _animator?.GetAnimationNames() ?? Enumerable.Empty<string>();
+        }
+
         public void MoveTo(Vector2 targetPosition, float duration, Func<float, float> easing)
         {
             _startPosition = CurrentPosition;
