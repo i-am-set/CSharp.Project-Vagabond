@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Xna.Framework;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
 
@@ -42,9 +43,24 @@ namespace ProjectVagabond.Combat
 
         /// <summary>
         /// A named position for the target to move to (e.g., "CastingPointA", "Idle"). Used with "MoveTo" type.
+        /// This is for legacy animations; new keyframes should use TargetX/TargetY.
         /// </summary>
         [JsonPropertyName("position")]
         public string Position { get; set; }
+
+        /// <summary>
+        /// The explicit target X coordinate. If set, this overrides the named 'Position'.
+        /// </summary>
+        [JsonPropertyName("targetX")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public float? TargetX { get; set; }
+
+        /// <summary>
+        /// The explicit target Y coordinate. If set, this overrides the named 'Position'.
+        /// </summary>
+        [JsonPropertyName("targetY")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public float? TargetY { get; set; }
 
         /// <summary>
         /// The target rotation in degrees. Used with "RotateTo" type.
@@ -112,6 +128,8 @@ namespace ProjectVagabond.Combat
                 existingKeyframe.Scale = newKeyframe.Scale;
                 existingKeyframe.Easing = newKeyframe.Easing;
                 existingKeyframe.AnimationName = newKeyframe.AnimationName;
+                existingKeyframe.TargetX = newKeyframe.TargetX;
+                existingKeyframe.TargetY = newKeyframe.TargetY;
                 // Mark it as added/modified if it was previously unmodified or deleted
                 if (existingKeyframe.State != KeyframeState.Added)
                 {

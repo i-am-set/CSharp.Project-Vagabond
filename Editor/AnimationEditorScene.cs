@@ -189,6 +189,12 @@ namespace ProjectVagabond.Editor
                 return;
             }
 
+            bool isCtrlDown = kbs.IsKeyDown(Keys.LeftControl) || kbs.IsKeyDown(Keys.RightControl);
+            if (isCtrlDown && kbs.IsKeyDown(Keys.S) && _previousKeyboardState.IsKeyUp(Keys.S))
+            {
+                OnSave();
+            }
+
             if (kbs.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape))
             {
                 if (_subMode == EditorSubMode.AwaitingKeySelection)
@@ -289,7 +295,13 @@ namespace ProjectVagabond.Editor
             {
                 _selectedHand = null;
                 _transformGizmo.Detach();
+
+                // Stop the animator to clear its current state and force it to rebuild
+                // its keyframe cache from the (potentially modified) timeline data.
+                _actionAnimator.Stop();
+
                 // When exiting edit mode, snap the hands back to their correct timeline position.
+                // This will re-prime the animator with the updated timeline.
                 OnPlaybackScrub(_timelineUI.CurrentTime);
             }
         }
@@ -538,8 +550,14 @@ namespace ProjectVagabond.Editor
             switch (property)
             {
                 case "MoveTo":
-                    string closestAnchor = FindClosestAnchor(hand.CurrentPosition);
-                    newKey = new Keyframe { Time = time, Type = "MoveTo", Position = closestAnchor, Easing = "EaseOutCubic" };
+                    newKey = new Keyframe
+                    {
+                        Time = time,
+                        Type = "MoveTo",
+                        TargetX = hand.CurrentPosition.X,
+                        TargetY = hand.CurrentPosition.Y,
+                        Easing = "EaseOutCubic"
+                    };
                     break;
                 case "RotateTo":
                     newKey = new Keyframe { Time = time, Type = "RotateTo", Rotation = MathHelper.ToDegrees(hand.CurrentRotation), Easing = "EaseOutCubic" };
@@ -548,8 +566,11 @@ namespace ProjectVagabond.Editor
                     newKey = new Keyframe { Time = time, Type = "ScaleTo", Scale = hand.CurrentScale, Easing = "EaseOutCubic" };
                     break;
                 case "PlayAnimation":
-                    // This type is set differently, perhaps via a popup in the future. For now, it's a placeholder.
-                    // newKey = new Keyframe { Time = time, Type = "PlayAnimation", AnimationName = "idle_loop" };
+                    string currentAnimation = hand.CurrentAnimationName;
+                    if (!string.IsNullOrEmpty(currentAnimation))
+                    {
+                        newKey = new Keyframe { Time = time, Type = "PlayAnimation", AnimationName = currentAnimation };
+                    }
                     break;
             }
 

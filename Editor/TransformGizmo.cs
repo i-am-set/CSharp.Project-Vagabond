@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -13,10 +14,10 @@ namespace ProjectVagabond.Editor
     public class TransformGizmo
     {
         private enum DragHandle { None, Body, TopLeft, TopRight, BottomLeft, BottomRight, TopRotation, BottomRotation, Animation }
+
         // --- Tuning ---
         private const int HANDLE_SIZE = 8;
         private const int ROTATION_HANDLE_OFFSET = 20;
-        private const int ANIMATION_HANDLE_OFFSET = 35;
 
         private HandRenderer _attachedHand;
         private DragHandle _activeHandle = DragHandle.None;
@@ -36,6 +37,15 @@ namespace ProjectVagabond.Editor
         private bool _hasValidStateForDrawing = false;
 
         public event Action<HandRenderer> OnAnimationGizmoClicked;
+
+        // Define the order in which handles are checked for input to prioritize smaller handles over larger ones.
+        private static readonly DragHandle[] HandleCheckOrder =
+        {
+            DragHandle.Animation, DragHandle.TopRotation, DragHandle.BottomRotation,
+            DragHandle.TopLeft, DragHandle.TopRight, DragHandle.BottomLeft, DragHandle.BottomRight,
+            DragHandle.Body
+        };
+
 
         public void Attach(HandRenderer hand)
         {
@@ -67,19 +77,20 @@ namespace ProjectVagabond.Editor
 
             if (leftClickPressed && UIInputManager.CanProcessMouseClick())
             {
-                // Check handles first, as they are on top
-                foreach (var handle in _handleRects)
+                // Check handles in a specific priority order.
+                foreach (var handleType in HandleCheckOrder)
                 {
-                    if (handle.Value.Contains(virtualMousePos))
+                    if (_handleRects.TryGetValue(handleType, out var handleRect) && handleRect.Contains(virtualMousePos))
                     {
-                        if (handle.Key == DragHandle.Animation)
+                        if (handleType == DragHandle.Animation)
                         {
                             OnAnimationGizmoClicked?.Invoke(_attachedHand);
                             UIInputManager.ConsumeMouseClick();
-                            return;
+                            return; // Stop processing after handling the click
                         }
 
-                        _activeHandle = handle.Key;
+                        // If it's any other handle, start a drag operation.
+                        _activeHandle = handleType;
                         _dragStartMousePos = virtualMousePos;
                         _dragStartPosition = _attachedHand.CurrentPosition;
                         _dragStartRotation = _attachedHand.CurrentRotation;
@@ -87,10 +98,11 @@ namespace ProjectVagabond.Editor
                         _dragStartPivot = _attachedHand.GetPivotPoint();
                         _dragStartDistance = Vector2.Distance(_dragStartPivot, virtualMousePos);
                         UIInputManager.ConsumeMouseClick();
-                        return;
+                        return; // Stop after finding the first handle
                     }
                 }
             }
+
 
             if (leftClickReleased)
             {
@@ -145,20 +157,24 @@ namespace ProjectVagabond.Editor
             _worldCorners = _attachedHand.GetWorldCorners();
             var center = _attachedHand.GetPivotPoint();
             var halfHandle = HANDLE_SIZE / 2;
+            var interactionBounds = _attachedHand.GetInteractionBounds();
+            var centerOfBounds = interactionBounds.Center;
 
-            _handleRects[DragHandle.Body] = _attachedHand.GetInteractionBounds();
+            _handleRects[DragHandle.Body] = interactionBounds;
             _handleRects[DragHandle.TopLeft] = new Rectangle((int)_worldCorners[0].X - halfHandle, (int)_worldCorners[0].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
             _handleRects[DragHandle.TopRight] = new Rectangle((int)_worldCorners[1].X - halfHandle, (int)_worldCorners[1].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
             _handleRects[DragHandle.BottomRight] = new Rectangle((int)_worldCorners[2].X - halfHandle, (int)_worldCorners[2].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
             _handleRects[DragHandle.BottomLeft] = new Rectangle((int)_worldCorners[3].X - halfHandle, (int)_worldCorners[3].Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
 
-            // Calculate rotation and animation handle positions
+            // Calculate rotation handle positions
             Vector2 up = new Vector2((float)Math.Sin(_attachedHand.CurrentRotation), -(float)Math.Cos(_attachedHand.CurrentRotation));
             Vector2 topCenter = (_worldCorners[0] + _worldCorners[1]) / 2f;
 
             _handleRects[DragHandle.TopRotation] = new Rectangle((int)(topCenter.X + up.X * ROTATION_HANDLE_OFFSET) - halfHandle, (int)(topCenter.Y + up.Y * ROTATION_HANDLE_OFFSET) - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
             _handleRects[DragHandle.BottomRotation] = new Rectangle((int)center.X - halfHandle, (int)center.Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
-            _handleRects[DragHandle.Animation] = new Rectangle((int)(topCenter.X + up.X * ANIMATION_HANDLE_OFFSET) - halfHandle, (int)(topCenter.Y + up.Y * ANIMATION_HANDLE_OFFSET) - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
+
+            // The animation handle is now in the center of the bounding box.
+            _handleRects[DragHandle.Animation] = new Rectangle(centerOfBounds.X - halfHandle, centerOfBounds.Y - halfHandle, HANDLE_SIZE, HANDLE_SIZE);
 
             _hasValidStateForDrawing = true;
         }
@@ -186,15 +202,11 @@ namespace ProjectVagabond.Editor
                 }
             }
 
-            // Draw lines to top handles
-            var topCenter = (corners[0] + corners[1]) / 2f;
+            // Draw line to top rotation handle
             if (_handleRects.TryGetValue(DragHandle.TopRotation, out var topRotationRect))
             {
+                var topCenter = (corners[0] + corners[1]) / 2f;
                 spriteBatch.DrawLine(topCenter, topRotationRect.Center.ToVector2(), global.Palette_White, 1f);
-            }
-            if (_handleRects.TryGetValue(DragHandle.Animation, out var animRect))
-            {
-                spriteBatch.DrawLine(topRotationRect.Center.ToVector2(), animRect.Center.ToVector2(), global.Palette_Teal, 1f);
             }
         }
     }

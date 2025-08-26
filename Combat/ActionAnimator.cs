@@ -225,7 +225,24 @@ namespace ProjectVagabond.Combat
             float idleScale = 1f;
 
             // --- Calculate Final Values ---
-            Vector2 finalPos = CalculateInterpolatedValue(cache.MoveKeyframes, key => _context.AnimationAnchors.TryGetValue(key.Position, out var pos) ? pos : idlePos, idlePos, Vector2.Lerp);
+            Vector2 finalPos = CalculateInterpolatedValue(cache.MoveKeyframes,
+                key =>
+                {
+                    // Prioritize explicit target position from the keyframe itself.
+                    if (key.TargetX.HasValue && key.TargetY.HasValue)
+                    {
+                        return new Vector2(key.TargetX.Value, key.TargetY.Value);
+                    }
+                    // Fallback to named anchors for older/simpler animations.
+                    if (!string.IsNullOrEmpty(key.Position) && _context.AnimationAnchors.TryGetValue(key.Position, out var pos))
+                    {
+                        return pos;
+                    }
+                    return idlePos; // Default to idle if no position is specified.
+                },
+                idlePos,
+                Vector2.Lerp);
+
             float finalRot = CalculateInterpolatedValue(cache.RotateKeyframes, key => MathHelper.ToRadians(key.Rotation), idleRot, MathHelper.Lerp);
             float finalScale = CalculateInterpolatedValue(cache.ScaleKeyframes, key => key.Scale, idleScale, MathHelper.Lerp);
             string finalAnimation = GetCurrentAnimation(cache.AnimKeyframes);

@@ -80,6 +80,7 @@ namespace ProjectVagabond.Combat.UI
         public Vector2 CurrentPosition { get; private set; }
         public float CurrentRotation { get; private set; }
         public float CurrentScale { get; private set; }
+        public string CurrentAnimationName => _animator?.CurrentAnimationName;
 
         // Tweening State for Position
         private bool _isMoving;

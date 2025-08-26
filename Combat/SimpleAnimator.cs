@@ -74,6 +74,7 @@ namespace ProjectVagabond.Utils
 
         public bool IsAnimationFinished { get; private set; }
         public AnimationFrame CurrentFrame => _currentCycle?.Frames[_currentFrameIndex] ?? default;
+        public string CurrentAnimationName => _currentCycle?.Name;
 
 
         public SimpleAnimator(SimpleSpriteSheet spriteSheet)
