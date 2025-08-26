@@ -34,19 +34,13 @@ namespace ProjectVagabond.Scenes
         // Player Hands
         private HandRenderer _leftHandRenderer;
         private HandRenderer _rightHandRenderer;
+        public HandRenderer LeftHandRenderer => _leftHandRenderer;
+        public HandRenderer RightHandRenderer => _rightHandRenderer;
 
         // Animation Anchor Points
         public Dictionary<string, Vector2> AnimationAnchors { get; private set; }
 
         // --- TUNING CONSTANTS ---
-        // Hand Layout
-        private const float HAND_IDLE_Y_OFFSET = -100f; // How far from the bottom of the screen the hands are.
-        private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 116f; // How far from the center the hands are.
-        private static readonly Vector2 HAND_CAST_OFFSET = new Vector2(60, -30); // Offset from idle position for casting.
-        private static readonly Vector2 HAND_RECOIL_OFFSET = new Vector2(-10, 15); // Offset from cast position for recoil.
-        private const float HAND_THROW_Y_OFFSET = -20f; // How far UP the hands move for a "throw" motion.
-        private const float HAND_OFFSCREEN_Y_OFFSET = 250f;
-
         // Entity Sizing
         private static readonly Point ENEMY_BASE_SIZE = new Point(64, 96); // Base dimensions (Width, Height) for enemies.
 
@@ -180,57 +174,20 @@ namespace ProjectVagabond.Scenes
                 _playerEntity.SetLayout(new Vector2(playerX, playerY), Point.Zero);
             }
 
-            // Calculate dynamic anchor points for hands
-            CalculateHandAnchors(actualScreenVirtualBounds);
+            // Calculate dynamic anchor points for hands using the centralized calculator.
+            AnimationAnchors = AnimationAnchorCalculator.CalculateAnchors(isEditor: false, out _);
 
             // Now that anchors are calculated, tell the hands to enter the scene at their correct idle positions.
+            _leftHandRenderer.SetIdlePosition(AnimationAnchors["LeftHandIdle"]);
+            _rightHandRenderer.SetIdlePosition(AnimationAnchors["RightHandIdle"]);
+            _leftHandRenderer.SetOffscreenPosition(AnimationAnchors["LeftHandOffscreen"]);
+            _rightHandRenderer.SetOffscreenPosition(AnimationAnchors["RightHandOffscreen"]);
             _leftHandRenderer.EnterScene();
             _rightHandRenderer.EnterScene();
 
             // Calculate Enemy Layout
             LayoutEnemies();
         }
-
-        private void CalculateHandAnchors(Rectangle actualScreenVirtualBounds)
-        {
-            var core = ServiceLocator.Get<Core>();
-            float screenCenterX = actualScreenVirtualBounds.Center.X;
-
-            // ANCHOR FIX: Anchor Y position calculation to the physical window bottom, not the virtual bounds.
-            var windowBottomRight = new Point(core.GraphicsDevice.PresentationParameters.BackBufferWidth, core.GraphicsDevice.PresentationParameters.BackBufferHeight);
-            float screenBottomInVirtualCoords = Core.TransformMouse(windowBottomRight).Y;
-
-            var leftHandIdle = new Vector2(screenCenterX - HAND_IDLE_X_OFFSET_FROM_CENTER, screenBottomInVirtualCoords - HAND_IDLE_Y_OFFSET);
-            var rightHandIdle = new Vector2(screenCenterX + HAND_IDLE_X_OFFSET_FROM_CENTER, screenBottomInVirtualCoords - HAND_IDLE_Y_OFFSET);
-            var leftHandCast = leftHandIdle + new Vector2(HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
-            var rightHandCast = rightHandIdle + new Vector2(-HAND_CAST_OFFSET.X, HAND_CAST_OFFSET.Y);
-            var leftHandThrow = leftHandCast + new Vector2(0, HAND_THROW_Y_OFFSET);
-            var rightHandThrow = rightHandCast + new Vector2(0, HAND_THROW_Y_OFFSET);
-
-            var leftHandOffscreen = new Vector2(leftHandIdle.X, screenBottomInVirtualCoords + HAND_OFFSCREEN_Y_OFFSET);
-            var rightHandOffscreen = new Vector2(rightHandIdle.X, screenBottomInVirtualCoords + HAND_OFFSCREEN_Y_OFFSET);
-
-            AnimationAnchors = new Dictionary<string, Vector2>
-            {
-                { "LeftHandIdle", leftHandIdle },
-                { "RightHandIdle", rightHandIdle },
-                { "LeftHandCast", leftHandCast },
-                { "RightHandCast", rightHandCast },
-                { "LeftHandRecoil", leftHandCast + new Vector2(HAND_RECOIL_OFFSET.X, HAND_RECOIL_OFFSET.Y) },
-                { "RightHandRecoil", rightHandCast + new Vector2(-HAND_RECOIL_OFFSET.X, HAND_RECOIL_OFFSET.Y) },
-                { "LeftHandThrow", leftHandThrow },
-                { "RightHandThrow", rightHandThrow },
-                { "LeftHandOffscreen", leftHandOffscreen },
-                { "RightHandOffscreen", rightHandOffscreen }
-            };
-
-            // Update the renderers with their new initial positions
-            _leftHandRenderer.SetIdlePosition(leftHandIdle);
-            _rightHandRenderer.SetIdlePosition(rightHandIdle);
-            _leftHandRenderer.SetOffscreenPosition(leftHandOffscreen);
-            _rightHandRenderer.SetOffscreenPosition(rightHandOffscreen);
-        }
-
 
         private void LayoutEnemies()
         {

@@ -7,7 +7,8 @@
     {
       "type": "DealDamage",
       "amount": "8",
-      "damageType": "Fire"
+      "damageType": "Fire",
+      "statusEffectId": null
     }
   ],
   "timeline": {
@@ -17,54 +18,127 @@
         "target": "LeftHand",
         "keyframes": [
           {
-            "time": 0.0,
+            "time": 0,
+            "type": "MoveTo",
+            "position": null,
+            "targetX": 224.5,
+            "targetY": 643.5,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0,
+            "type": "RotateTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0,
+            "type": "ScaleTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0,
             "type": "PlayAnimation",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
             "animation": "hold"
           },
           {
-            "time": 0.0,
+            "time": 0.225,
             "type": "MoveTo",
-            "position": "LeftHandCast",
-            "easing": "EaseOutCubic"
-          },
-          {
-            "time": 0.0,
-            "type": "RotateTo",
-            "rotation": 10,
-            "easing": "EaseOutCubic"
-          },
-          {
-            "time": 0.5,
-            "type": "TriggerEffects"
-          },
-          {
-            "time": 0.5,
-            "type": "RotateTo",
+            "position": null,
+            "targetX": 220.5,
+            "targetY": 607,
             "rotation": 0,
-            "easing": "EaseOutQuad"
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.225,
+            "type": "RotateTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.225,
+            "type": "ScaleTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.225,
+            "type": "PlayAnimation",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": "hold"
+          },
+          {
+            "time": 0.34166664,
+            "type": "MoveTo",
+            "position": null,
+            "targetX": 224.5,
+            "targetY": 643.5,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.34166664,
+            "type": "RotateTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.34166664,
+            "type": "ScaleTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.34166664,
+            "type": "PlayAnimation",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": "hold"
           },
           {
             "time": 0.5,
-            "type": "MoveTo",
-            "position": "LeftHandThrow",
-            "easing": "EaseOutQuad"
-          },
-          {
-            "time": 0.6,
-            "type": "MoveTo",
-            "position": "LeftHandCast",
-            "easing": "EaseInQuad"
-          },
-          {
-            "time": 0.7,
-            "type": "MoveTo",
-            "position": "LeftHandIdle",
-            "easing": "EaseInOutCubic"
-          },
-          {
-            "time": 1.0,
-            "type": "PlayAnimation",
-            "animation": "idle_loop"
+            "type": "TriggerEffects",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
           }
         ]
       },
@@ -72,50 +146,118 @@
         "target": "RightHand",
         "keyframes": [
           {
-            "time": 0.0,
-            "type": "PlayAnimation",
-            "animation": "hold"
-          },
-          {
-            "time": 0.0,
+            "time": 0,
             "type": "MoveTo",
-            "position": "RightHandCast",
-            "easing": "EaseOutCubic"
-          },
-          {
-            "time": 0.0,
-            "type": "RotateTo",
-            "rotation": -10,
-            "easing": "EaseOutCubic"
-          },
-          {
-            "time": 0.5,
-            "type": "RotateTo",
+            "position": null,
+            "targetX": 440.5,
+            "targetY": 431,
             "rotation": 0,
-            "easing": "EaseOutQuad"
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
           },
           {
-            "time": 0.5,
-            "type": "MoveTo",
-            "position": "RightHandThrow",
-            "easing": "EaseOutQuad"
+            "time": 0,
+            "type": "RotateTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
           },
           {
-            "time": 0.6,
-            "type": "MoveTo",
-            "position": "RightHandCast",
-            "easing": "EaseInQuad"
+            "time": 0,
+            "type": "ScaleTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
           },
           {
-            "time": 0.7,
-            "type": "MoveTo",
-            "position": "RightHandIdle",
-            "easing": "EaseInOutCubic"
-          },
-          {
-            "time": 1.0,
+            "time": 0,
             "type": "PlayAnimation",
-            "animation": "idle_loop"
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": "idle_twitch_2"
+          },
+          {
+            "time": 0.225,
+            "type": "MoveTo",
+            "position": null,
+            "targetX": 444.5,
+            "targetY": 456.5,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.225,
+            "type": "RotateTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.225,
+            "type": "ScaleTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.225,
+            "type": "PlayAnimation",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": "idle_twitch_2"
+          },
+          {
+            "time": 0.34166664,
+            "type": "MoveTo",
+            "position": null,
+            "targetX": 440.5,
+            "targetY": 431,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.34166664,
+            "type": "RotateTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.34166664,
+            "type": "ScaleTo",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": null
+          },
+          {
+            "time": 0.34166664,
+            "type": "PlayAnimation",
+            "position": null,
+            "rotation": 0,
+            "scale": 1,
+            "easing": "EaseOutCubic",
+            "animation": "idle_twitch_2"
           }
         ]
       }

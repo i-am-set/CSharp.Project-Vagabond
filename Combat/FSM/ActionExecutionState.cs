@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -29,6 +29,21 @@ namespace ProjectVagabond.Combat.FSM
             _isDelaying = false;
             _failsafeTimer = 0f;
             _actionAnimator = combatManager.Scene.ActionAnimator;
+
+            // Explicitly force hands to their off-screen position at the start of the phase
+            // to ensure a consistent starting state, regardless of what happened before.
+            var scene = combatManager.Scene;
+            if (scene.AnimationAnchors != null) // Anchors might not exist in certain test contexts
+            {
+                if (scene.AnimationAnchors.TryGetValue("LeftHandOffscreen", out var leftPos))
+                {
+                    scene.LeftHandRenderer.ForcePositionAndRotation(leftPos, 0);
+                }
+                if (scene.AnimationAnchors.TryGetValue("RightHandOffscreen", out var rightPos))
+                {
+                    scene.RightHandRenderer.ForcePositionAndRotation(rightPos, 0);
+                }
+            }
 
             // The list of actions is now pre-rolled and pre-sorted. We just need to enqueue it.
             var resolvedOrder = combatManager.GetActionsForTurn();

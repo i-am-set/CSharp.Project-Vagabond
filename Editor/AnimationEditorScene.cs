@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
+using ProjectVagabond.Editor;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -23,10 +24,6 @@ namespace ProjectVagabond.Editor
         private const int FILE_BROWSER_WIDTH = 180;
         private const int TIMELINE_HEIGHT = 240;
         private const int PANEL_PADDING = 5;
-        private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 116f;
-        private const float HAND_IDLE_Y_OFFSET_EDITOR = -80f; // Adjusted for editor view
-        private const float HAND_CAST_Y_OFFSET = -30f;
-        private const float HAND_THROW_Y_OFFSET = -20f;
         private const float TIMELINE_KEY_SCRUB_AMOUNT = 0.01f;
 
         private enum EditorSubMode { Normal, AwaitingKeySelection }
@@ -50,6 +47,7 @@ namespace ProjectVagabond.Editor
         private bool _isEditMode = false;
         private EditorSubMode _subMode = EditorSubMode.Normal;
         private readonly HashSet<int> _selectedKeyTracks = new HashSet<int>();
+        private float _combatScreenBottomY;
 
         public Dictionary<string, Vector2> AnimationAnchors { get; private set; }
 
@@ -100,7 +98,9 @@ namespace ProjectVagabond.Editor
             _leftHand.MoveTo(AnimationAnchors["LeftHandIdle"], 0.5f, Easing.EaseOutCubic);
             _rightHand.MoveTo(AnimationAnchors["RightHandIdle"], 0.5f, Easing.EaseOutCubic);
 
-            _fileBrowser.Populate("Content/Actions");
+            // Use the resolver to get the correct source content path.
+            string sourceContentPath = ProjectDirectoryResolver.Resolve("Content/Actions");
+            _fileBrowser.Populate(sourceContentPath);
         }
 
         public override void Exit()
@@ -139,34 +139,8 @@ namespace ProjectVagabond.Editor
                 TIMELINE_HEIGHT
             );
 
-            // --- Anchor Calculation (mimicking CombatScene for consistency) ---
-            var core = ServiceLocator.Get<Core>();
-            var windowBottomRight = new Point(core.GraphicsDevice.PresentationParameters.BackBufferWidth, core.GraphicsDevice.PresentationParameters.BackBufferHeight);
-            float screenBottomInVirtualCoords = Core.TransformMouse(windowBottomRight).Y;
-            float screenCenterX = Global.VIRTUAL_WIDTH / 2f;
-
-            var leftHandIdle = new Vector2(screenCenterX - HAND_IDLE_X_OFFSET_FROM_CENTER, screenBottomInVirtualCoords + HAND_IDLE_Y_OFFSET_EDITOR);
-            var rightHandIdle = new Vector2(screenCenterX + HAND_IDLE_X_OFFSET_FROM_CENTER, screenBottomInVirtualCoords + HAND_IDLE_Y_OFFSET_EDITOR);
-
-            // Cast and Throw positions are relative to the Idle position's Y for consistency
-            var leftHandCast = new Vector2(leftHandIdle.X + 60, leftHandIdle.Y + HAND_CAST_Y_OFFSET);
-            var rightHandCast = new Vector2(rightHandIdle.X - 60, rightHandIdle.Y + HAND_CAST_Y_OFFSET);
-            var leftHandThrow = leftHandCast + new Vector2(0, HAND_THROW_Y_OFFSET);
-            var rightHandThrow = rightHandCast + new Vector2(0, HAND_THROW_Y_OFFSET);
-
-            AnimationAnchors = new Dictionary<string, Vector2>
-            {
-                { "LeftHandIdle", leftHandIdle },
-                { "RightHandIdle", rightHandIdle },
-                { "LeftHandCast", leftHandCast },
-                { "RightHandCast", rightHandCast },
-                { "LeftHandRecoil", leftHandCast + new Vector2(-5, 8) },
-                { "RightHandRecoil", rightHandCast + new Vector2(5, 8) },
-                { "LeftHandThrow", leftHandThrow },
-                { "RightHandThrow", rightHandThrow },
-                { "LeftHandOffscreen", new Vector2(leftHandIdle.X, screenBottomInVirtualCoords + 100) },
-                { "RightHandOffscreen", new Vector2(rightHandIdle.X, screenBottomInVirtualCoords + 100) }
-            };
+            // --- Anchor Calculation (using centralized calculator) ---
+            AnimationAnchors = AnimationAnchorCalculator.CalculateAnchors(isEditor: true, out _combatScreenBottomY);
 
             // Update the renderers with their new initial positions
             _leftHand.SetIdlePosition(AnimationAnchors["LeftHandIdle"]);
@@ -363,7 +337,11 @@ namespace ProjectVagabond.Editor
         {
             // The "world" content is the preview window background.
             var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.Draw(pixel, GetPreviewAreaBounds(), new Color(20, 20, 25));
+            var previewArea = GetPreviewAreaBounds();
+            spriteBatch.Draw(pixel, previewArea, new Color(20, 20, 25));
+
+            // Draw the green "combat floor" line.
+            spriteBatch.Draw(pixel, new Rectangle(previewArea.X, (int)_combatScreenBottomY, previewArea.Width, 1), Color.LimeGreen);
         }
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -663,10 +641,8 @@ namespace ProjectVagabond.Editor
             {
                 var newTrack = new AnimationTrack { Target = track.Target };
                 newTrack.Keyframes.AddRange(track.Keyframes.Where(k => k.State != KeyframeState.Deleted));
-                if (newTrack.Keyframes.Any())
-                {
-                    dataToSave.Timeline.Tracks.Add(newTrack);
-                }
+                // MODIFIED: Always add the track, even if it's empty, to ensure deletions are saved.
+                dataToSave.Timeline.Tracks.Add(newTrack);
             }
 
             try
@@ -678,11 +654,18 @@ namespace ProjectVagabond.Editor
                 };
                 string jsonString = JsonSerializer.Serialize(dataToSave, jsonOptions);
                 File.WriteAllText(_loadedActionPath, jsonString);
-                Debug.WriteLine($"[Editor] Saved changes to {_loadedActionPath}");
 
+                // Add a confirmation message to the debug output.
+                Debug.WriteLine($"[Editor] Saved changes to {_loadedActionPath}.");
+                Debug.WriteLine("[Editor] NOTE: If the file is open in your IDE, you may need to reload it to see the changes.");
+
+                // Post-save cleanup: reset the state of all keyframes in memory to 'Unmodified'.
+                // This correctly reflects that the in-memory state now matches the saved file.
                 foreach (var track in _loadedAction.Timeline.Tracks)
                 {
+                    // First, physically remove the keyframes marked for deletion from the in-memory list.
                     track.Keyframes.RemoveAll(k => k.State == KeyframeState.Deleted);
+                    // Then, reset the state of all remaining keyframes.
                     foreach (var keyframe in track.Keyframes)
                     {
                         keyframe.State = KeyframeState.Unmodified;
