@@ -12,7 +12,7 @@ namespace ProjectVagabond.Particles
         public bool IsActive { get; set; } = true;
 
         private readonly Particle[] _particles;
-        private int _nextParticleIndex = 0;
+        private int _activeParticleCount = 0;
         private float _emissionTimer = 0f;
         public float BurstTimer { get; set; } = 0f;
         private readonly Random _random;
@@ -21,10 +21,6 @@ namespace ProjectVagabond.Particles
         {
             Settings = settings;
             _particles = new Particle[settings.MaxParticles];
-            for (int i = 0; i < _particles.Length; i++)
-            {
-                _particles[i].Reset();
-            }
             _random = new Random();
         }
 
@@ -56,51 +52,50 @@ namespace ProjectVagabond.Particles
                 }
             }
 
-            // Update existing particles
-            for (int i = 0; i < _particles.Length; i++)
+            // Update existing particles using a swap-and-pop technique for efficiency.
+            for (int i = _activeParticleCount - 1; i >= 0; i--)
             {
-                if (!_particles[i].IsAlive) continue;
-
                 ref var p = ref _particles[i];
                 p.Age += deltaTime;
 
                 if (p.Age >= p.Lifetime)
                 {
-                    p.IsAlive = false;
-                    continue;
-                }
-
-                float lifeRatio = p.Age / p.Lifetime;
-
-                // Physics
-                p.Velocity += (p.Acceleration + Settings.Gravity) * deltaTime;
-
-                // Apply drag to slow the particle down
-                if (Settings.Drag > 0)
-                {
-                    p.Velocity *= Math.Max(0, 1.0f - Settings.Drag * deltaTime);
-                }
-
-                p.Position += p.Velocity * deltaTime;
-                p.Rotation += p.RotationSpeed * deltaTime;
-
-                // Over-lifetime changes
-                p.Color = Color.Lerp(Settings.StartColor, Settings.EndColor, lifeRatio);
-
-                if (Settings.InterpolateSize)
-                {
-                    p.Size = MathHelper.Lerp(p.StartSize, p.EndSize, lifeRatio);
-                }
-
-                if (Settings.AlphaFadeInAndOut)
-                {
-                    // Parabolic curve: y = 1 - (2x - 1)^2, peaks at 1 when x is 0.5
-                    float curve = 1.0f - MathF.Pow(2.0f * lifeRatio - 1.0f, 2.0f);
-                    p.Alpha = MathHelper.Lerp(0, Settings.StartAlpha, curve); // Use StartAlpha as the peak
+                    // Particle is dead, swap it with the last active particle and decrease the count.
+                    _activeParticleCount--;
+                    _particles[i] = _particles[_activeParticleCount];
                 }
                 else
                 {
-                    p.Alpha = MathHelper.Lerp(Settings.StartAlpha, Settings.EndAlpha, lifeRatio);
+                    float lifeRatio = p.Age / p.Lifetime;
+
+                    // Physics
+                    p.Velocity += (p.Acceleration + Settings.Gravity) * deltaTime;
+
+                    if (Settings.Drag > 0)
+                    {
+                        p.Velocity *= Math.Max(0, 1.0f - Settings.Drag * deltaTime);
+                    }
+
+                    p.Position += p.Velocity * deltaTime;
+                    p.Rotation += p.RotationSpeed * deltaTime;
+
+                    // Over-lifetime changes
+                    p.Color = Color.Lerp(Settings.StartColor, Settings.EndColor, lifeRatio);
+
+                    if (Settings.InterpolateSize)
+                    {
+                        p.Size = MathHelper.Lerp(p.StartSize, p.EndSize, lifeRatio);
+                    }
+
+                    if (Settings.AlphaFadeInAndOut)
+                    {
+                        float curve = 1.0f - MathF.Pow(2.0f * lifeRatio - 1.0f, 2.0f);
+                        p.Alpha = MathHelper.Lerp(0, Settings.StartAlpha, curve);
+                    }
+                    else
+                    {
+                        p.Alpha = MathHelper.Lerp(Settings.StartAlpha, Settings.EndAlpha, lifeRatio);
+                    }
                 }
             }
         }
@@ -119,22 +114,14 @@ namespace ProjectVagabond.Particles
         /// <returns>The index of the newly emitted particle, or -1 if the pool is full.</returns>
         public int EmitParticleAndGetIndex()
         {
-            int particleIndex = -1;
-            for (int i = 0; i < Settings.MaxParticles; i++)
+            if (_activeParticleCount >= Settings.MaxParticles)
             {
-                _nextParticleIndex = (_nextParticleIndex + 1) % Settings.MaxParticles;
-                if (!_particles[_nextParticleIndex].IsAlive)
-                {
-                    particleIndex = _nextParticleIndex;
-                    break;
-                }
+                return -1; // Pool is full
             }
 
-            if (particleIndex == -1) return -1;
-
+            int particleIndex = _activeParticleCount;
             ref var p = ref _particles[particleIndex];
 
-            p.IsAlive = true;
             p.Age = 0;
             p.Lifetime = Settings.Lifetime.GetValue(_random);
 
@@ -166,6 +153,7 @@ namespace ProjectVagabond.Particles
             p.Color = Settings.StartColor;
             p.Alpha = Settings.StartAlpha;
 
+            _activeParticleCount++;
             return particleIndex;
         }
 
@@ -181,10 +169,8 @@ namespace ProjectVagabond.Particles
         {
             if (Settings.Texture == null) return;
 
-            for (int i = 0; i < _particles.Length; i++)
+            for (int i = 0; i < _activeParticleCount; i++)
             {
-                if (!_particles[i].IsAlive) continue;
-
                 ref var p = ref _particles[i];
                 var color = p.Color * p.Alpha;
 
@@ -228,15 +214,7 @@ namespace ProjectVagabond.Particles
         /// </summary>
         public void Clear()
         {
-            for (int i = 0; i < _particles.Length; i++)
-            {
-                // By setting IsAlive to false, we ensure it's not drawn.
-                // By resetting position, we prevent a one-frame flicker at the old location
-                // if the emitter is re-activated and drawn before its particles are updated.
-                _particles[i].IsAlive = false;
-                _particles[i].Position = Vector2.Zero;
-            }
-            _emissionTimer = 0f;
+            _activeParticleCount = 0;
         }
     }
 }

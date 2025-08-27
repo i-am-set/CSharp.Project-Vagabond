@@ -4,7 +4,9 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Combat;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 
@@ -15,6 +17,7 @@ namespace ProjectVagabond.Scenes
         private readonly SceneManager _sceneManager;
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
+        private readonly ParticleSystemManager _particleSystemManager;
 
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = -1;
@@ -24,11 +27,15 @@ namespace ProjectVagabond.Scenes
 
         private ConfirmationDialog _confirmationDialog;
 
+        // --- DEBUG: Fireball Emitters ---
+        private readonly List<ParticleEmitter> _fireballEmitters = new List<ParticleEmitter>();
+
         public MainMenuScene()
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
+            _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -104,6 +111,16 @@ namespace ProjectVagabond.Scenes
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
 
+            // --- DEBUG: Create Fireball Effect ---
+            var fireballSettings = ParticleEffects.CreateFireball();
+            var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+            foreach (var setting in fireballSettings)
+            {
+                var emitter = _particleSystemManager.CreateEmitter(setting);
+                emitter.Position = screenCenter;
+                _fireballEmitters.Add(emitter);
+            }
+
             if (this.LastUsedInputForNav == InputDevice.Keyboard && !firstTimeOpened)
             {
                 _selectedButtonIndex = 0;
@@ -128,6 +145,17 @@ namespace ProjectVagabond.Scenes
             }
 
             firstTimeOpened = false;
+        }
+
+        public override void Exit()
+        {
+            base.Exit();
+            // --- DEBUG: Clean up Fireball Effect ---
+            foreach (var emitter in _fireballEmitters)
+            {
+                _particleSystemManager.DestroyEmitter(emitter);
+            }
+            _fireballEmitters.Clear();
         }
 
         protected override Rectangle? GetFirstSelectableElementBounds()
@@ -240,7 +268,7 @@ namespace ProjectVagabond.Scenes
             int screenWidth = Global.VIRTUAL_WIDTH;
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
-            spriteBatch.Draw(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 50), Color.White);
+            spriteBatch.DrawSnapped(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 50), Color.White);
 
             foreach (var button in _buttons)
             {
@@ -272,6 +300,12 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            // The manager draws all active emitters, which will include our fireball.
+            _particleSystemManager.Draw(spriteBatch, transform);
+        }
+
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (_confirmationDialog.IsActive)
@@ -282,10 +316,10 @@ namespace ProjectVagabond.Scenes
 
         private static void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
         {
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
         }
     }
 }

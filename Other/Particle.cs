@@ -4,8 +4,6 @@ namespace ProjectVagabond.Particles
 {
     public struct Particle
     {
-        public bool IsAlive;
-
         public Vector2 Position;
         public Vector2 Velocity;
         public Vector2 Acceleration;
@@ -28,7 +26,6 @@ namespace ProjectVagabond.Particles
         /// </summary>
         public void Reset()
         {
-            IsAlive = false;
             Age = 0f;
             Lifetime = 0f;
         }

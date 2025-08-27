@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Particles
 {
@@ -206,6 +207,79 @@ namespace ProjectVagabond.Particles
             settings.LayerDepth = 0.9f;
 
             return settings;
+        }
+
+        /// <summary>
+        /// Creates a composite fireball effect from three distinct particle emitters.
+        /// To use, create three emitters from the returned settings and update them from the same position.
+        /// </summary>
+        /// <returns>A list of three ParticleEmitterSettings objects for the fireball effect.</returns>
+        public static List<ParticleEmitterSettings> CreateFireball()
+        {
+            var global = ServiceLocator.Get<Global>();
+            var settingsList = new List<ParticleEmitterSettings>();
+
+            // 1. Red Outer Flames (large, slow, long-lived)
+            var redFlames = ParticleEmitterSettings.CreateDefault();
+            redFlames.Shape = EmitterShape.Circle;
+            redFlames.EmitFrom = EmissionSource.Volume;
+            redFlames.EmitterSize = new Vector2(50f, 50f);
+            redFlames.MaxParticles = 250;
+            redFlames.EmissionRate = 200;
+            redFlames.Lifetime = new FloatRange(1.2f, 1.8f);
+            redFlames.InitialVelocityX = new FloatRange(-20f, 20f);
+            redFlames.InitialVelocityY = new FloatRange(-40f, -20f);
+            redFlames.Gravity = new Vector2(0, -50f); // Negative Y for buoyancy
+            redFlames.Drag = 0.5f;
+            redFlames.InitialSize = new FloatRange(12f, 16f);
+            redFlames.EndSize = new FloatRange(0f);
+            redFlames.InterpolateSize = true;
+            redFlames.StartColor = global.Palette_Red;
+            redFlames.EndColor = new Color(150, 20, 20);
+            redFlames.BlendMode = BlendState.Additive;
+            settingsList.Add(redFlames);
+
+            // 2. Orange Middle Flames (medium, faster)
+            var orangeFlames = ParticleEmitterSettings.CreateDefault();
+            orangeFlames.Shape = EmitterShape.Circle;
+            orangeFlames.EmitFrom = EmissionSource.Volume;
+            orangeFlames.EmitterSize = new Vector2(40f, 40f);
+            orangeFlames.MaxParticles = 200;
+            orangeFlames.EmissionRate = 180;
+            orangeFlames.Lifetime = new FloatRange(1.0f, 1.5f);
+            orangeFlames.InitialVelocityX = new FloatRange(-15f, 15f);
+            orangeFlames.InitialVelocityY = new FloatRange(-60f, -40f);
+            orangeFlames.Gravity = new Vector2(0, -50f);
+            orangeFlames.Drag = 0.4f;
+            orangeFlames.InitialSize = new FloatRange(8f, 12f);
+            orangeFlames.EndSize = new FloatRange(0f);
+            orangeFlames.InterpolateSize = true;
+            orangeFlames.StartColor = global.Palette_Orange;
+            orangeFlames.EndColor = global.Palette_Red;
+            orangeFlames.BlendMode = BlendState.Additive;
+            settingsList.Add(orangeFlames);
+
+            // 3. Yellow Core Flames (small, fastest, short-lived)
+            var yellowFlames = ParticleEmitterSettings.CreateDefault();
+            yellowFlames.Shape = EmitterShape.Circle;
+            yellowFlames.EmitFrom = EmissionSource.Volume;
+            yellowFlames.EmitterSize = new Vector2(25f, 25f);
+            yellowFlames.MaxParticles = 150;
+            yellowFlames.EmissionRate = 160;
+            yellowFlames.Lifetime = new FloatRange(0.8f, 1.2f);
+            yellowFlames.InitialVelocityX = new FloatRange(-10f, 10f);
+            yellowFlames.InitialVelocityY = new FloatRange(-80f, -60f);
+            yellowFlames.Gravity = new Vector2(0, -50f);
+            yellowFlames.Drag = 0.3f;
+            yellowFlames.InitialSize = new FloatRange(4f, 7f);
+            yellowFlames.EndSize = new FloatRange(0f);
+            yellowFlames.InterpolateSize = true;
+            yellowFlames.StartColor = global.Palette_Yellow;
+            yellowFlames.EndColor = global.Palette_Orange;
+            yellowFlames.BlendMode = BlendState.Additive;
+            settingsList.Add(yellowFlames);
+
+            return settingsList;
         }
     }
 }
