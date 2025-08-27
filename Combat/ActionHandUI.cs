@@ -67,7 +67,8 @@ namespace ProjectVagabond.Combat.UI
         public static readonly Color CARD_IMAGE_AREA_COLOR = new Color(50, 50, 80);
         public static readonly Color CARD_TEXT_BG_COLOR = new Color(30, 30, 45);
         public static readonly Color TEXT_COLOR = Color.White;
-        public static readonly Color BORDER_COLOR = Color.White;
+        private static readonly Color BORDER_COLOR_INNER = new Color(23, 22, 28); // #17161c
+        private static readonly Color BORDER_COLOR_OUTER = new Color(116, 125, 136); // #747d88
 
         public IReadOnlyList<CombatCard> Cards => _cards;
 
@@ -469,31 +470,50 @@ namespace ProjectVagabond.Combat.UI
 
         private void DrawCardOverlays(SpriteBatch spriteBatch, BitmapFont font, CombatCard card, bool isHovered)
         {
-            var finalTint = card.CurrentTint;
             var finalAlpha = card.CurrentAlpha;
             if (card.IsTemporary)
             {
                 finalAlpha *= TEMPORARY_CARD_ALPHA_MULTIPLIER;
-                finalTint = Color.Lerp(finalTint, TEMPORARY_CARD_TINT, TEMPORARY_CARD_TINT_AMOUNT);
             }
 
             // Draw Border
-            float borderThickness = isHovered || card.IsBeingDragged ? 2f : 1f;
-            Color borderColor = BORDER_COLOR * finalAlpha;
             var halfSize = CARD_SIZE.ToVector2() / 2f;
-            var corners = new Vector2[4]
+            var transform = Matrix.CreateScale(card.CurrentScale)
+                          * Matrix.CreateRotationZ(card.CurrentRotation)
+                          * Matrix.CreateTranslation(card.CurrentBounds.Center.X, card.CurrentBounds.Center.Y, 0);
+
+            // Draw the 4-pixel border from outside to inside
+            for (int i = 0; i < 4; i++)
             {
-                new Vector2(-halfSize.X, -halfSize.Y), new Vector2(halfSize.X, -halfSize.Y),
-                new Vector2(halfSize.X, halfSize.Y), new Vector2(-halfSize.X, halfSize.Y)
-            };
-            var transform = Matrix.CreateScale(card.CurrentScale) * Matrix.CreateRotationZ(card.CurrentRotation) * Matrix.CreateTranslation(card.CurrentBounds.Center.X, card.CurrentBounds.Center.Y, 0);
-            for (int j = 0; j < corners.Length; j++) corners[j] = Vector2.Transform(corners[j], transform);
-            spriteBatch.DrawLineSnapped(corners[0], corners[1], borderColor, borderThickness);
-            spriteBatch.DrawLineSnapped(corners[1], corners[2], borderColor, borderThickness);
-            spriteBatch.DrawLineSnapped(corners[2], corners[3], borderColor, borderThickness);
-            spriteBatch.DrawLineSnapped(corners[3], corners[0], borderColor, borderThickness);
+                float inset = i;
+                // The outer 2 pixels are one color, the inner 2 are another.
+                Color borderColor = (i < 2) ? BORDER_COLOR_OUTER : BORDER_COLOR_INNER;
+
+                var currentHalfSize = halfSize - new Vector2(inset);
+                var corners = new Vector2[4]
+                {
+                    new Vector2(-currentHalfSize.X, -currentHalfSize.Y),
+                    new Vector2(currentHalfSize.X, -currentHalfSize.Y),
+                    new Vector2(currentHalfSize.X, currentHalfSize.Y),
+                    new Vector2(-currentHalfSize.X, currentHalfSize.Y)
+                };
+
+                // Transform corners for this layer
+                var transformedCorners = new Vector2[4];
+                Vector2.Transform(corners, ref transform, transformedCorners);
+
+                spriteBatch.DrawLineSnapped(transformedCorners[0], transformedCorners[1], borderColor * finalAlpha, 1f);
+                spriteBatch.DrawLineSnapped(transformedCorners[1], transformedCorners[2], borderColor * finalAlpha, 1f);
+                spriteBatch.DrawLineSnapped(transformedCorners[2], transformedCorners[3], borderColor * finalAlpha, 1f);
+                spriteBatch.DrawLineSnapped(transformedCorners[3], transformedCorners[0], borderColor * finalAlpha, 1f);
+            }
 
             // Draw action name
+            var finalTint = card.CurrentTint;
+            if (card.IsTemporary)
+            {
+                finalTint = Color.Lerp(finalTint, TEMPORARY_CARD_TINT, TEMPORARY_CARD_TINT_AMOUNT);
+            }
             var textColor = new Color(TEXT_COLOR.ToVector3() * finalTint.ToVector3()) * finalAlpha;
             Vector2 textSize = font.MeasureString(card.Action.Name);
             Vector2 textBgAreaOffset = new Vector2(0, CARD_SIZE.Y * (1 / 3f));
