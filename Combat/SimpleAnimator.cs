@@ -146,7 +146,16 @@ namespace ProjectVagabond.Utils
                 var frame = _currentCycle.Frames[_currentFrameIndex];
                 // The origin is now the bottom-center of the sprite, acting as a pivot for the wrist.
                 var origin = new Vector2(frame.SourceRectangle.Width / 2f, frame.SourceRectangle.Height);
-                spriteBatch.Draw(_spriteSheet.Texture, position, frame.SourceRectangle, color, rotation, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(
+                    _spriteSheet.Texture,
+                    position,
+                    frame.SourceRectangle,
+                    color,
+                    rotation,
+                    origin,
+                    scale,
+                    SpriteEffects.None,
+                    0f);
             }
         }
     }

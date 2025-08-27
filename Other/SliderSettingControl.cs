@@ -1,7 +1,8 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Utils;
 using System;
 
 namespace ProjectVagabond.UI
@@ -82,7 +83,7 @@ namespace ProjectVagabond.UI
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, Vector2 position, bool isSelected, GameTime gameTime)
         {
             Color labelColor = isSelected ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
-            spriteBatch.DrawString(font, Label, position, labelColor);
+            spriteBatch.DrawStringSnapped(font, Label, position, labelColor);
 
             // The slider draws itself, but we need to provide the correct value color.
             Color valueColor = IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite;

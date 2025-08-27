@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Utils;
 
 namespace ProjectVagabond
 {
@@ -22,7 +23,7 @@ namespace ProjectVagabond
             _global = ServiceLocator.Get<Global>();
         }
 
-         /// <summary>
+        /// <summary>
         /// Requests a tooltip to be shown for a specific UI element or game object.
         /// This should be called every frame that the object is being hovered.
         /// </summary>
@@ -97,13 +98,13 @@ namespace ProjectVagabond
             Rectangle tooltipBg = new Rectangle((int)finalTopLeftPosition.X, (int)finalTopLeftPosition.Y, tooltipWidth, tooltipHeight);
             Vector2 textPosition = new Vector2(finalTopLeftPosition.X + (paddingX / 2), finalTopLeftPosition.Y + (paddingY / 2));
 
-            spriteBatch.Draw(pixel, tooltipBg, _global.ToolTipBGColor * 0.9f);
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), _global.ToolTipBorderColor);
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), _global.ToolTipBorderColor);
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
-            spriteBatch.Draw(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
+            spriteBatch.DrawSnapped(pixel, tooltipBg, _global.ToolTipBGColor * 0.9f);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), _global.ToolTipBorderColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), _global.ToolTipBorderColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
 
-            spriteBatch.DrawString(font, _text, textPosition, _global.ToolTipTextColor);
+            spriteBatch.DrawStringSnapped(font, _text, textPosition, _global.ToolTipTextColor);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -8,6 +8,7 @@ using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.FSM;
 using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -434,7 +435,7 @@ namespace ProjectVagabond.Combat.UI
                 Vector2 layerSize = baseSize * layerScale;
                 float layerAlpha = baseAlpha / (float)Math.Pow(2, i);
                 Color layerColor = Color.Black * layerAlpha;
-                spriteBatch.Draw(pixel, baseShadowPosition, null, layerColor, card.CurrentRotation, new Vector2(0.5f), layerSize, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(pixel, baseShadowPosition, null, layerColor, card.CurrentRotation, new Vector2(0.5f), layerSize, SpriteEffects.None, 0f);
             }
         }
 
@@ -463,7 +464,7 @@ namespace ProjectVagabond.Combat.UI
 
             var textureOrigin = new Vector2(cardTexture.Width / 2f, cardTexture.Height / 2f);
             var finalColor = finalTint * finalAlpha;
-            spriteBatch.Draw(cardTexture, card.CurrentBounds.Center, null, finalColor, card.CurrentRotation, textureOrigin, card.CurrentScale, SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(cardTexture, card.CurrentBounds.Center, null, finalColor, card.CurrentRotation, textureOrigin, card.CurrentScale, SpriteEffects.None, 0f);
         }
 
         private void DrawCardOverlays(SpriteBatch spriteBatch, BitmapFont font, CombatCard card, bool isHovered)
@@ -487,10 +488,10 @@ namespace ProjectVagabond.Combat.UI
             };
             var transform = Matrix.CreateScale(card.CurrentScale) * Matrix.CreateRotationZ(card.CurrentRotation) * Matrix.CreateTranslation(card.CurrentBounds.Center.X, card.CurrentBounds.Center.Y, 0);
             for (int j = 0; j < corners.Length; j++) corners[j] = Vector2.Transform(corners[j], transform);
-            spriteBatch.DrawLine(corners[0], corners[1], borderColor, borderThickness);
-            spriteBatch.DrawLine(corners[1], corners[2], borderColor, borderThickness);
-            spriteBatch.DrawLine(corners[2], corners[3], borderColor, borderThickness);
-            spriteBatch.DrawLine(corners[3], corners[0], borderColor, borderThickness);
+            spriteBatch.DrawLineSnapped(corners[0], corners[1], borderColor, borderThickness);
+            spriteBatch.DrawLineSnapped(corners[1], corners[2], borderColor, borderThickness);
+            spriteBatch.DrawLineSnapped(corners[2], corners[3], borderColor, borderThickness);
+            spriteBatch.DrawLineSnapped(corners[3], corners[0], borderColor, borderThickness);
 
             // Draw action name
             var textColor = new Color(TEXT_COLOR.ToVector3() * finalTint.ToVector3()) * finalAlpha;
@@ -498,7 +499,7 @@ namespace ProjectVagabond.Combat.UI
             Vector2 textBgAreaOffset = new Vector2(0, CARD_SIZE.Y * (1 / 3f));
             Vector2 rotatedTextBgOffset = Vector2.Transform(textBgAreaOffset * card.CurrentScale, Matrix.CreateRotationZ(card.CurrentRotation));
             Vector2 textDrawPosition = card.CurrentBounds.Center + rotatedTextBgOffset;
-            spriteBatch.DrawString(font, card.Action.Name, textDrawPosition, textColor, card.CurrentRotation, textSize / 2f, card.CurrentScale, SpriteEffects.None, 0f);
+            spriteBatch.DrawStringSnapped(font, card.Action.Name, textDrawPosition, textColor, card.CurrentRotation, textSize / 2f, card.CurrentScale, SpriteEffects.None, 0f);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Utils;
 
 namespace ProjectVagabond.UI
 {
@@ -47,7 +48,7 @@ namespace ProjectVagabond.UI
                 Bounds.Y + (Bounds.Height - textSize.Y) / 2
             );
 
-            spriteBatch.DrawString(font, Text, textPosition, textColor);
+            spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor);
         }
     }
 }

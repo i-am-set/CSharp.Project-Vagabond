@@ -1,7 +1,8 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 
@@ -169,19 +170,19 @@ namespace ProjectVagabond.Combat
             // If the entity is defeated, it uses a special, static visual state.
             if (IsDefeated)
             {
-                spriteBatch.Draw(Texture, Bounds, DEFEATED_TINT);
+                spriteBatch.DrawSnapped(Texture, Bounds, DEFEATED_TINT);
                 return;
             }
 
             // Otherwise, use the dynamic visual state properties for drawing.
-            Rectangle destinationRect = new Rectangle(
+            var destinationRect = new Rectangle(
                 (int)(Bounds.X + VisualOffset.X + shakeOffset.X), // Apply shake
                 (int)(Bounds.Y + VisualOffset.Y + shakeOffset.Y), // Apply shake
                 (int)(Bounds.Width * VisualScale),
                 (int)(Bounds.Height * VisualScale)
             );
 
-            spriteBatch.Draw(Texture, destinationRect, null, finalTint, 0f, Vector2.Zero, SpriteEffects.None, 0f);
+            spriteBatch.DrawSnapped(Texture, destinationRect, null, finalTint);
         }
 
         public void SetActiveVisuals()

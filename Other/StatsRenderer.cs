@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 
 namespace ProjectVagabond
@@ -47,7 +48,7 @@ namespace ProjectVagabond
 
             currentY += 14;
             string secondaryStats = $"Spd:{stats.WalkSpeed:F1} Car:{stats.CarryCapacity} Men:{stats.MentalResistance} Soc:{stats.SocialInfluence}";
-            spriteBatch.DrawString(font, secondaryStats, new Vector2(position.X, currentY), _global.Palette_LightGray);
+            spriteBatch.DrawStringSnapped(font, secondaryStats, new Vector2(position.X, currentY), _global.Palette_LightGray);
         }
 
         private Rectangle DrawSimpleStatBar(SpriteBatch spriteBatch, BitmapFont font, string label, int current, int max, Vector2 position, Color fillColor, Color bgColor, int availableWidth)
@@ -63,7 +64,7 @@ namespace ProjectVagabond
             Vector2 textPosition = new Vector2(position.X, position.Y + textOffsetY);
 
             string labelText = $"{label}";
-            spriteBatch.DrawString(font, labelText, textPosition, _global.GameTextColor);
+            spriteBatch.DrawStringSnapped(font, labelText, textPosition, _global.GameTextColor);
 
             Vector2 textSize = font.MeasureString(labelText);
             int barX = (int)(position.X + textSize.X + 5);

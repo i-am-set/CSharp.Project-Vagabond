@@ -43,6 +43,7 @@ namespace ProjectVagabond.Particles
         public Texture2D Texture { get; set; }
         public BlendState BlendMode { get; set; }
         public float LayerDepth { get; set; }
+        public bool SnapToPixelGrid { get; set; }
 
         // Global Properties
         public float TimeScale { get; set; }
@@ -90,6 +91,7 @@ namespace ProjectVagabond.Particles
                 Texture = ServiceLocator.Get<Texture2D>(), // Default 1x1 white pixel
                 BlendMode = BlendState.AlphaBlend,
                 LayerDepth = 0.5f,
+                SnapToPixelGrid = true,
 
                 // Global
                 TimeScale = 1.0f,

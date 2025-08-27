@@ -3,8 +3,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace ProjectVagabond.UI
@@ -100,20 +100,21 @@ namespace ProjectVagabond.UI
             if (!IsActive) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.Draw(pixel, _dialogBounds, _global.Palette_DarkGray);
+            spriteBatch.DrawSnapped(pixel, _dialogBounds, _global.Palette_DarkGray);
             DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_LightGray);
 
             // Draw Prompt
             Vector2 promptSize = font.MeasureString(_prompt);
             Vector2 promptPosition = new Vector2(_dialogBounds.Center.X - promptSize.X / 2, _dialogBounds.Y + 20);
-            spriteBatch.DrawString(font, _prompt, promptPosition, _global.Palette_BrightWhite);
+            spriteBatch.DrawStringSnapped(font, _prompt, promptPosition, _global.Palette_BrightWhite);
 
             // Draw Countdown Timer
             _stringBuilder.Clear();
             _stringBuilder.Append("Reverting in ").Append((int)Math.Ceiling(_countdownTimer)).Append(" seconds...");
-            Vector2 timerSize = font.MeasureString(_stringBuilder);
+            string timerString = _stringBuilder.ToString();
+            Vector2 timerSize = font.MeasureString(timerString);
             Vector2 timerPosition = new Vector2(_dialogBounds.Center.X - timerSize.X / 2, promptPosition.Y + promptSize.Y + 15);
-            spriteBatch.DrawString(font, _stringBuilder, timerPosition, _global.Palette_Yellow);
+            spriteBatch.DrawStringSnapped(font, timerString, timerPosition, _global.Palette_Yellow);
 
             // Draw Buttons
             _confirmButton.Draw(spriteBatch, font, gameTime);

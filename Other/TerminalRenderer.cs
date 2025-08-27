@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -194,11 +195,11 @@ namespace ProjectVagabond
             int activeScrollOffset = isInCombat ? CombatScrollOffset : ScrollOffset;
 
             // Draw Frame
-            spriteBatch.Draw(pixel, new Rectangle(bounds.X - 5, bounds.Y - 5, bounds.Width + 10, bounds.Height + 10), _global.TerminalBg);
-            spriteBatch.Draw(pixel, new Rectangle(bounds.X - 5, bounds.Y - 5, bounds.Width + 10, 2), _global.Palette_White); // Top
-            spriteBatch.Draw(pixel, new Rectangle(bounds.X - 5, bounds.Y + bounds.Height + 3, bounds.Width + 10, 2), _global.Palette_White); // Bottom
-            spriteBatch.Draw(pixel, new Rectangle(bounds.X - 5, bounds.Y - 5, 2, bounds.Height + 10), _global.Palette_White); // Left
-            spriteBatch.Draw(pixel, new Rectangle(bounds.X + bounds.Width + 3, bounds.Y - 5, 2, bounds.Height + 10), _global.Palette_White); // Right
+            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, bounds.Y - 5, bounds.Width + 10, bounds.Height + 10), _global.TerminalBg);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, bounds.Y - 5, bounds.Width + 10, 2), _global.Palette_White); // Top
+            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, bounds.Y + bounds.Height + 3, bounds.Width + 10, 2), _global.Palette_White); // Bottom
+            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, bounds.Y - 5, 2, bounds.Height + 10), _global.Palette_White); // Left
+            spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X + bounds.Width + 3, bounds.Y - 5, 2, bounds.Height + 10), _global.Palette_White); // Right
 
             // Draw Scroll Indicator
             if (activeScrollOffset > 0)
@@ -207,7 +208,7 @@ namespace ProjectVagabond
                 _stringBuilder.Append("^ Scrolled up ").Append(activeScrollOffset).Append(" lines");
                 string scrollIndicator = _stringBuilder.ToString();
                 int scrollY = bounds.Y - 15;
-                spriteBatch.DrawString(font, scrollIndicator, new Vector2(bounds.X, scrollY), Color.Gold);
+                spriteBatch.DrawStringSnapped(font, scrollIndicator, new Vector2(bounds.X, scrollY), Color.Gold);
             }
 
             // --- REVISED LAYOUT LOGIC ---
@@ -243,7 +244,7 @@ namespace ProjectVagabond
 
                 foreach (var segment in line.Segments)
                 {
-                    spriteBatch.DrawString(font, segment.Text, new Vector2(x, y), segment.Color);
+                    spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(x, y), segment.Color);
                     x += font.MeasureString(segment.Text).Width;
                 }
             }
@@ -252,7 +253,7 @@ namespace ProjectVagabond
             if (!isInCombat && _inputHandler.IsTerminalInputActive)
             {
                 int separatorY = _inputLineY - 5;
-                spriteBatch.Draw(pixel, new Rectangle(bounds.X - 5, separatorY, bounds.Width + 10, 2), _global.Palette_White);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, separatorY, bounds.Width + 10, 2), _global.Palette_White);
 
                 _caratBlinkTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 string caratUnderscore = (_caratBlinkTimer % 1.0f > 0.5f) ? "" : "_";
@@ -261,7 +262,7 @@ namespace ProjectVagabond
                 _stringBuilder.Append("> ").Append(_inputHandler.CurrentInput).Append(caratUnderscore);
                 string inputCarat = _stringBuilder.ToString();
                 string wrappedInput = WrapText(inputCarat, GetTerminalContentWidthInPixels(), font);
-                spriteBatch.DrawString(font, wrappedInput, new Vector2(bounds.X, _inputLineY + 1), _global.InputCaratColor, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+                spriteBatch.DrawStringSnapped(font, wrappedInput, new Vector2(bounds.X, _inputLineY + 1), _global.InputCaratColor, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
             }
         }
 
@@ -285,16 +286,16 @@ namespace ProjectVagabond
             }
             int backgroundHeight = visibleSuggestions * Global.FONT_SIZE;
             int backgroundY = suggestionY - (visibleSuggestions - 1) * Global.FONT_SIZE;
-            spriteBatch.Draw(pixel, new Rectangle(_currentBounds.X, backgroundY, maxSuggestionWidth + 4, backgroundHeight), _global.Palette_Black);
-            spriteBatch.Draw(pixel, new Rectangle(_currentBounds.X, backgroundY, maxSuggestionWidth + 4, 1), _global.Palette_LightGray); // Top
-            spriteBatch.Draw(pixel, new Rectangle(_currentBounds.X, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), _global.Palette_LightGray); // Bottom
-            spriteBatch.Draw(pixel, new Rectangle(_currentBounds.X, backgroundY, 1, backgroundHeight), _global.Palette_LightGray); // Left
-            spriteBatch.Draw(pixel, new Rectangle(_currentBounds.X + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), _global.Palette_LightGray); // Right
+            spriteBatch.DrawSnapped(pixel, new Rectangle(_currentBounds.X, backgroundY, maxSuggestionWidth + 4, backgroundHeight), _global.Palette_Black);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(_currentBounds.X, backgroundY, maxSuggestionWidth + 4, 1), _global.Palette_LightGray); // Top
+            spriteBatch.DrawSnapped(pixel, new Rectangle(_currentBounds.X, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), _global.Palette_LightGray); // Bottom
+            spriteBatch.DrawSnapped(pixel, new Rectangle(_currentBounds.X, backgroundY, 1, backgroundHeight), _global.Palette_LightGray); // Left
+            spriteBatch.DrawSnapped(pixel, new Rectangle(_currentBounds.X + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), _global.Palette_LightGray); // Right
             for (int i = 0; i < visibleSuggestions; i++)
             {
                 Color suggestionColor = (i == _autoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? Color.Khaki : _global.Palette_LightGray;
                 string prefix = (i == _autoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? " >" : "  ";
-                spriteBatch.DrawString(font, prefix + _autoCompleteManager.AutoCompleteSuggestions[i],
+                spriteBatch.DrawStringSnapped(font, prefix + _autoCompleteManager.AutoCompleteSuggestions[i],
                     new Vector2(_currentBounds.X + 2, suggestionY - i * Global.FONT_SIZE), suggestionColor);
             }
         }

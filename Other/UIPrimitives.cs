@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond.Utils;
 using System;
 
 namespace ProjectVagabond.UI
@@ -39,7 +40,7 @@ namespace ProjectVagabond.UI
             int horizontalPadding)
         {
             // Draw background
-            spriteBatch.Draw(pixel, bounds, bgColor);
+            spriteBatch.DrawSnapped(pixel, bounds, bgColor);
 
             if (maxSegments <= 0) return;
 
@@ -66,7 +67,7 @@ namespace ProjectVagabond.UI
 
                 // A segment is filled if its index is less than the total number of filled segments.
                 Color segmentColor = (i < filledSegments) ? fillColor : emptyColor;
-                spriteBatch.Draw(pixel, segmentRect, segmentColor);
+                spriteBatch.DrawSnapped(pixel, segmentRect, segmentColor);
             }
         }
     }

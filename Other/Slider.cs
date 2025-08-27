@@ -1,7 +1,8 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Utils;
 using System;
 
 namespace ProjectVagabond.UI
@@ -110,17 +111,17 @@ namespace ProjectVagabond.UI
             Color handleColor = IsEnabled ? ElementColor : DisabledSliderColor;
             Color railColor = IsEnabled ? SubElementColor : DisabledSliderColor;
 
-            spriteBatch.DrawString(font, Label, new Vector2(Bounds.X, Bounds.Y - font.LineHeight - 2), labelColor);
+            spriteBatch.DrawStringSnapped(font, Label, new Vector2(Bounds.X, Bounds.Y - font.LineHeight - 2), labelColor);
 
             string valueString = CurrentValue.ToString("F2");
             Vector2 valueSize = font.MeasureString(valueString);
-            spriteBatch.DrawString(font, valueString, new Vector2(Bounds.Right - valueSize.X, Bounds.Y - font.LineHeight - 2), valueColor);
+            spriteBatch.DrawStringSnapped(font, valueString, new Vector2(Bounds.Right - valueSize.X, Bounds.Y - font.LineHeight - 2), valueColor);
 
             var railRect = new Rectangle(Bounds.X, Bounds.Y + (Bounds.Height / 2) - 1, Bounds.Width, 2);
-            spriteBatch.Draw(pixel, railRect, railColor);
+            spriteBatch.DrawSnapped(pixel, railRect, railColor);
 
             UpdateHandlePosition();
-            spriteBatch.Draw(pixel, _handleBounds, handleColor);
+            spriteBatch.DrawSnapped(pixel, _handleBounds, handleColor);
         }
     }
 }

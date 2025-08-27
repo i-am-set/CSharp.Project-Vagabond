@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Utils;
 using System;
 
 namespace ProjectVagabond.UI
@@ -103,7 +104,7 @@ namespace ProjectVagabond.UI
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
             Color labelColor = isSelected ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
-            spriteBatch.DrawString(font, Label, animatedPosition, labelColor);
+            spriteBatch.DrawStringSnapped(font, Label, animatedPosition, labelColor);
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
             Vector2 valueAreaPosition = new Vector2(animatedPosition.X + 340, animatedPosition.Y);
@@ -120,12 +121,12 @@ namespace ProjectVagabond.UI
             Vector2 valueTextSize = font.MeasureString(valueText);
             Vector2 rightArrowSize = font.MeasureString(rightArrowText);
 
-            spriteBatch.DrawString(font, leftArrowText, valueAreaPosition, leftArrowColor);
-            spriteBatch.DrawString(font, rightArrowText, new Vector2(valueAreaPosition.X + valueDisplayWidth - rightArrowSize.X, valueAreaPosition.Y), rightArrowColor);
+            spriteBatch.DrawStringSnapped(font, leftArrowText, valueAreaPosition, leftArrowColor);
+            spriteBatch.DrawStringSnapped(font, rightArrowText, new Vector2(valueAreaPosition.X + valueDisplayWidth - rightArrowSize.X, valueAreaPosition.Y), rightArrowColor);
 
             float spaceBetweenArrows = (valueAreaPosition.X + valueDisplayWidth - rightArrowSize.X) - (valueAreaPosition.X + leftArrowSize.X);
             float textX = valueAreaPosition.X + leftArrowSize.X + (spaceBetweenArrows - valueTextSize.X) * 0.5f;
-            spriteBatch.DrawString(font, valueText, new Vector2(textX, valueAreaPosition.Y), baseValueColor);
+            spriteBatch.DrawStringSnapped(font, valueText, new Vector2(textX, valueAreaPosition.Y), baseValueColor);
         }
     }
 }

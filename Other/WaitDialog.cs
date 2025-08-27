@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System;
 using System.Text;
 
@@ -130,13 +131,13 @@ namespace ProjectVagabond.UI
             if (!IsActive) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.Draw(pixel, _dialogBounds, _global.Palette_DarkGray);
+            spriteBatch.DrawSnapped(pixel, _dialogBounds, _global.Palette_DarkGray);
             DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_LightGray);
 
             string title = "How long would you like to wait?";
             Vector2 titleSize = font.MeasureString(title);
             Vector2 titlePosition = new Vector2(_dialogBounds.Center.X - titleSize.X / 2, _dialogBounds.Y + TitleTopMargin);
-            spriteBatch.DrawString(font, title, titlePosition, _global.Palette_BrightWhite);
+            spriteBatch.DrawStringSnapped(font, title, titlePosition, _global.Palette_BrightWhite);
 
             DrawSliderTickMarks(spriteBatch, pixel, _hourSlider, HourMajorTickInterval);
             _hourSlider.Draw(spriteBatch, font);
@@ -154,9 +155,10 @@ namespace ProjectVagabond.UI
 
             StringBuilder timeStringBuilder = new StringBuilder(100);
             timeStringBuilder.Append("Wait ").Append(_worldClockManager.GetCommaFormattedTimeFromSeconds(totalSeconds)).Append("?");
-            Vector2 timeStringSize = font.MeasureString(timeStringBuilder);
+            string timeString = timeStringBuilder.ToString();
+            Vector2 timeStringSize = font.MeasureString(timeString);
             Vector2 timeStringPosition = new Vector2(_dialogBounds.Center.X - timeStringSize.X / 2, _dialogBounds.Bottom - TimeStringBottomMargin);
-            if (totalSeconds > 0) spriteBatch.DrawString(font, timeStringBuilder, timeStringPosition, _global.Palette_Yellow);
+            if (totalSeconds > 0) spriteBatch.DrawStringSnapped(font, timeString, timeStringPosition, _global.Palette_Yellow);
 
             _confirmButton.Draw(spriteBatch, font, gameTime);
             _cancelButton.Draw(spriteBatch, font, gameTime);
@@ -177,7 +179,7 @@ namespace ProjectVagabond.UI
                 bool isMajorTick = (currentValue % majorTickInterval == 0);
                 int tickHeight = isMajorTick ? MajorTickMarkHeight : MinorTickMarkHeight;
                 int tickX = slider.Bounds.X + (int)Math.Round(i * pixelsPerUnit);
-                spriteBatch.Draw(pixel, new Rectangle(tickX, tickStartY, TickMarkWidth, tickHeight), tickColor);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(tickX, tickStartY, TickMarkWidth, tickHeight), tickColor);
             }
         }
 

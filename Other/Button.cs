@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 
 namespace ProjectVagabond.UI
@@ -174,8 +175,8 @@ namespace ProjectVagabond.UI
                     _scrollPosition -= scrollingTextSize.X;
                 }
                 Vector2 scrollTextPosition = new Vector2(Bounds.X - _scrollPosition, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
-                spriteBatch.DrawString(font, scrollingText, scrollTextPosition, textColor);
-                spriteBatch.DrawString(font, scrollingText, new Vector2(scrollTextPosition.X + scrollingTextSize.X, scrollTextPosition.Y), textColor);
+                spriteBatch.DrawStringSnapped(font, scrollingText, scrollTextPosition, textColor);
+                spriteBatch.DrawStringSnapped(font, scrollingText, new Vector2(scrollTextPosition.X + scrollingTextSize.X, scrollTextPosition.Y), textColor);
             }
             else
             {
@@ -188,7 +189,7 @@ namespace ProjectVagabond.UI
                 {
                     textPosition = new Vector2(Bounds.X + (Bounds.Width - textSize.X) / 2 + totalXOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2 + swayOffsetY);
                 }
-                spriteBatch.DrawString(font, Text, textPosition, textColor);
+                spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor);
 
                 // --- DIAGONAL STRIKETHROUGH LOGIC ---
                 if (Strikethrough == StrikethroughType.Exhausted)
@@ -201,7 +202,7 @@ namespace ProjectVagabond.UI
                     float angle = (float)Math.Atan2(textSize.Y, textSize.X);
 
                     // Draw the rotated line starting from the top-left of the text
-                    spriteBatch.Draw(
+                    spriteBatch.DrawSnapped(
                         texture: pixel,
                         position: textPosition,
                         sourceRectangle: null,

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond.Utils;
 using System;
 
 namespace ProjectVagabond.Particles
@@ -187,48 +188,37 @@ namespace ProjectVagabond.Particles
                 ref var p = ref _particles[i];
                 var color = p.Color * p.Alpha;
 
-                // --- MODIFIED: Trail Rendering Logic ---
                 if (p.Velocity.LengthSquared() > 1f && Settings.BlendMode == BlendState.Additive) // Only draw trails for sparks
                 {
                     float speed = p.Velocity.Length();
-                    // Trail length is based on speed, clamped to prevent extreme lengths
                     float trailLength = Math.Clamp(speed * 0.08f, p.Size, p.Size * 6);
                     float thickness = p.Size;
-
-                    // Assuming a 1x1 pixel texture, the scale vector directly controls width and height.
                     var scale = new Vector2(trailLength, thickness);
                     var rotation = (float)Math.Atan2(p.Velocity.Y, p.Velocity.X);
-                    // Rotate around the leading edge's vertical center to make it look like it's shooting forward.
                     var trailOrigin = new Vector2(0, 0.5f);
 
-                    spriteBatch.Draw(
-                        Settings.Texture,
-                        p.Position,
-                        null,
-                        color,
-                        rotation,
-                        trailOrigin,
-                        scale,
-                        SpriteEffects.None,
-                        Settings.LayerDepth
-                    );
+                    if (Settings.SnapToPixelGrid)
+                    {
+                        spriteBatch.DrawSnapped(Settings.Texture, p.Position, null, color, rotation, trailOrigin, scale, SpriteEffects.None, Settings.LayerDepth);
+                    }
+                    else
+                    {
+                        spriteBatch.Draw(Settings.Texture, p.Position, null, color, rotation, trailOrigin, scale, SpriteEffects.None, Settings.LayerDepth);
+                    }
                 }
                 else // Fallback for other particles to draw them as points/squares
                 {
                     var origin = new Vector2(0.5f, 0.5f); // Center of the 1x1 pixel
                     var scale = p.Size;
 
-                    spriteBatch.Draw(
-                        Settings.Texture,
-                        p.Position,
-                        null,
-                        color,
-                        p.Rotation,
-                        origin,
-                        scale,
-                        SpriteEffects.None,
-                        Settings.LayerDepth
-                    );
+                    if (Settings.SnapToPixelGrid)
+                    {
+                        spriteBatch.DrawSnapped(Settings.Texture, p.Position, null, color, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
+                    }
+                    else
+                    {
+                        spriteBatch.Draw(Settings.Texture, p.Position, null, color, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
+                    }
                 }
             }
         }
