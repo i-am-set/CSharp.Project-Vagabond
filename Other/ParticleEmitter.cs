@@ -34,7 +34,7 @@ namespace ProjectVagabond.Particles
             return ref _particles[index];
         }
 
-        public void Update(float deltaTime)
+        public void Update(float deltaTime, VectorField vectorField)
         {
             if (!IsActive) return;
 
@@ -67,6 +67,21 @@ namespace ProjectVagabond.Particles
                 else
                 {
                     float lifeRatio = p.Age / p.Lifetime;
+
+                    // Apply Vector Field influence first. This is for turbulence/flicker.
+                    if (vectorField != null && Settings.VectorFieldInfluence > 0)
+                    {
+                        Vector2 fieldForce = vectorField.GetForceAt(p.Position);
+                        p.Velocity += fieldForce * Settings.VectorFieldInfluence * deltaTime;
+                    }
+
+                    // Apply Attractor Force to pull particles towards a central line.
+                    if (Settings.AttractorXPosition.HasValue && Settings.AttractorStrength > 0)
+                    {
+                        float distanceX = Settings.AttractorXPosition.Value - p.Position.X;
+                        // The force is proportional to the distance, creating a spring-like pull to the center line.
+                        p.Velocity.X += distanceX * Settings.AttractorStrength * deltaTime;
+                    }
 
                     // Physics
                     p.Velocity += (p.Acceleration + Settings.Gravity) * deltaTime;
@@ -141,6 +156,14 @@ namespace ProjectVagabond.Particles
                         p.Position += new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle)) * distance;
                     }
                     break;
+                case EmitterShape.Rectangle:
+                    float halfWidth = Settings.EmitterSize.X / 2f;
+                    float halfHeight = Settings.EmitterSize.Y / 2f;
+                    p.Position += new Vector2(
+                        (float)(_random.NextDouble() * 2 - 1) * halfWidth,
+                        (float)(_random.NextDouble() * 2 - 1) * halfHeight
+                    );
+                    break;
             }
 
             p.Velocity = new Vector2(Settings.InitialVelocityX.GetValue(_random), Settings.InitialVelocityY.GetValue(_random));
@@ -173,38 +196,16 @@ namespace ProjectVagabond.Particles
             {
                 ref var p = ref _particles[i];
                 var color = p.Color * p.Alpha;
+                var origin = new Vector2(0.5f, 0.5f);
+                var scale = p.Size;
 
-                if (p.Velocity.LengthSquared() > 1f && Settings.BlendMode == BlendState.Additive) // Only draw trails for sparks
+                if (Settings.SnapToPixelGrid)
                 {
-                    float speed = p.Velocity.Length();
-                    float trailLength = Math.Clamp(speed * 0.08f, p.Size, p.Size * 6);
-                    float thickness = p.Size;
-                    var scale = new Vector2(trailLength, thickness);
-                    var rotation = (float)Math.Atan2(p.Velocity.Y, p.Velocity.X);
-                    var trailOrigin = new Vector2(0, 0.5f);
-
-                    if (Settings.SnapToPixelGrid)
-                    {
-                        spriteBatch.DrawSnapped(Settings.Texture, p.Position, null, color, rotation, trailOrigin, scale, SpriteEffects.None, Settings.LayerDepth);
-                    }
-                    else
-                    {
-                        spriteBatch.Draw(Settings.Texture, p.Position, null, color, rotation, trailOrigin, scale, SpriteEffects.None, Settings.LayerDepth);
-                    }
+                    spriteBatch.DrawSnapped(Settings.Texture, p.Position, null, color, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
                 }
-                else // Fallback for other particles to draw them as points/squares
+                else
                 {
-                    var origin = new Vector2(0.5f, 0.5f); // Center of the 1x1 pixel
-                    var scale = p.Size;
-
-                    if (Settings.SnapToPixelGrid)
-                    {
-                        spriteBatch.DrawSnapped(Settings.Texture, p.Position, null, color, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
-                    }
-                    else
-                    {
-                        spriteBatch.Draw(Settings.Texture, p.Position, null, color, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
-                    }
+                    spriteBatch.Draw(Settings.Texture, p.Position, null, color, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
                 }
             }
         }

@@ -39,6 +39,11 @@ namespace ProjectVagabond.Particles
         public float EndAlpha { get; set; }
         public bool AlphaFadeInAndOut { get; set; } = false;
 
+        // Physics Properties
+        public float VectorFieldInfluence { get; set; }
+        public float? AttractorXPosition { get; set; } = null;
+        public float AttractorStrength { get; set; } = 0f;
+
         // Rendering Properties
         public Texture2D Texture { get; set; }
         public BlendState BlendMode { get; set; }
@@ -86,6 +91,11 @@ namespace ProjectVagabond.Particles
                 StartAlpha = 1.0f,
                 EndAlpha = 0.0f,
                 AlphaFadeInAndOut = false,
+
+                // Physics
+                VectorFieldInfluence = 0f,
+                AttractorXPosition = null,
+                AttractorStrength = 0f,
 
                 // Rendering
                 Texture = ServiceLocator.Get<Texture2D>(), // Default 1x1 white pixel

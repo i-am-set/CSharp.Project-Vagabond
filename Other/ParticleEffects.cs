@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 
 namespace ProjectVagabond.Particles
@@ -216,67 +217,77 @@ namespace ProjectVagabond.Particles
         /// <returns>A list of three ParticleEmitterSettings objects for the fireball effect.</returns>
         public static List<ParticleEmitterSettings> CreateFireball()
         {
-            var global = ServiceLocator.Get<Global>();
             var settingsList = new List<ParticleEmitterSettings>();
 
-            // 1. Red Outer Flames (large, slow, long-lived)
+            // Defines common settings for all pixel-based fire layers.
+            Action<ParticleEmitterSettings> applyPixelFireSettings = settings =>
+            {
+                settings.InitialSize = new FloatRange(1f);
+                settings.EndSize = new FloatRange(1f);
+                settings.InterpolateSize = false;
+                settings.InitialRotation = new FloatRange(0f);
+                settings.InitialRotationSpeed = new FloatRange(0f);
+                settings.StartAlpha = 1.0f;
+                settings.EndAlpha = 1.0f; // Opaque particles
+                settings.AlphaFadeInAndOut = false;
+                settings.BlendMode = BlendState.AlphaBlend; // Use AlphaBlend to layer opaque pixels correctly
+                settings.Shape = EmitterShape.Circle;
+                settings.EmitFrom = EmissionSource.Volume;
+                settings.VectorFieldInfluence = 0.2f; // Reduced influence to let attractor and gravity dominate
+                settings.InitialAccelerationX = new FloatRange(0, 0); // Turbulence is now handled by the vector field
+                settings.InitialAccelerationY = new FloatRange(0, 0);
+                settings.AttractorXPosition = Global.VIRTUAL_WIDTH / 2f; // Attract to screen center
+            };
+
+            // Layer 1: Dark Red/Embers (Outer, slower, wider base)
             var redFlames = ParticleEmitterSettings.CreateDefault();
-            redFlames.Shape = EmitterShape.Circle;
-            redFlames.EmitFrom = EmissionSource.Volume;
-            redFlames.EmitterSize = new Vector2(50f, 50f);
-            redFlames.MaxParticles = 250;
-            redFlames.EmissionRate = 200;
-            redFlames.Lifetime = new FloatRange(1.2f, 1.8f);
-            redFlames.InitialVelocityX = new FloatRange(-20f, 20f);
-            redFlames.InitialVelocityY = new FloatRange(-40f, -20f);
-            redFlames.Gravity = new Vector2(0, -50f); // Negative Y for buoyancy
-            redFlames.Drag = 0.5f;
-            redFlames.InitialSize = new FloatRange(12f, 16f);
-            redFlames.EndSize = new FloatRange(0f);
-            redFlames.InterpolateSize = true;
-            redFlames.StartColor = global.Palette_Red;
-            redFlames.EndColor = new Color(150, 20, 20);
-            redFlames.BlendMode = BlendState.Additive;
+            applyPixelFireSettings(redFlames);
+            redFlames.EmitterSize = new Vector2(24f, 24f);
+            redFlames.MaxParticles = 1000;
+            redFlames.EmissionRate = 900;
+            redFlames.Lifetime = new FloatRange(0.6f, 1.0f); // Shorter lifetime
+            redFlames.InitialVelocityX = new FloatRange(-2f, 2f);
+            redFlames.InitialVelocityY = new FloatRange(-3f, 0f);
+            redFlames.Gravity = new Vector2(0, -30f); // More buoyancy
+            redFlames.Drag = 2.5f; // Increased drag
+            redFlames.AttractorStrength = 2.0f; // Stronger pull
+            redFlames.StartColor = Color.Red;
+            redFlames.EndColor = new Color(50, 0, 0);
+            redFlames.LayerDepth = 0.3f; // Draws behind others
             settingsList.Add(redFlames);
 
-            // 2. Orange Middle Flames (medium, faster)
+            // Layer 2: Orange (Main body, faster)
             var orangeFlames = ParticleEmitterSettings.CreateDefault();
-            orangeFlames.Shape = EmitterShape.Circle;
-            orangeFlames.EmitFrom = EmissionSource.Volume;
-            orangeFlames.EmitterSize = new Vector2(40f, 40f);
-            orangeFlames.MaxParticles = 200;
-            orangeFlames.EmissionRate = 180;
-            orangeFlames.Lifetime = new FloatRange(1.0f, 1.5f);
-            orangeFlames.InitialVelocityX = new FloatRange(-15f, 15f);
-            orangeFlames.InitialVelocityY = new FloatRange(-60f, -40f);
-            orangeFlames.Gravity = new Vector2(0, -50f);
-            orangeFlames.Drag = 0.4f;
-            orangeFlames.InitialSize = new FloatRange(8f, 12f);
-            orangeFlames.EndSize = new FloatRange(0f);
-            orangeFlames.InterpolateSize = true;
-            orangeFlames.StartColor = global.Palette_Orange;
-            orangeFlames.EndColor = global.Palette_Red;
-            orangeFlames.BlendMode = BlendState.Additive;
+            applyPixelFireSettings(orangeFlames);
+            orangeFlames.EmitterSize = new Vector2(18f, 18f);
+            orangeFlames.MaxParticles = 1200;
+            orangeFlames.EmissionRate = 1100;
+            orangeFlames.Lifetime = new FloatRange(0.5f, 0.9f); // Shorter lifetime
+            orangeFlames.InitialVelocityX = new FloatRange(-1f, 1f);
+            orangeFlames.InitialVelocityY = new FloatRange(-5f, -1f);
+            orangeFlames.Gravity = new Vector2(0, -40f); // More buoyancy
+            orangeFlames.Drag = 2.2f; // Increased drag
+            orangeFlames.AttractorStrength = 1.5f; // Stronger pull
+            orangeFlames.StartColor = Color.OrangeRed;
+            orangeFlames.EndColor = Color.Red;
+            orangeFlames.LayerDepth = 0.4f; // Draws in the middle
             settingsList.Add(orangeFlames);
 
-            // 3. Yellow Core Flames (small, fastest, short-lived)
+            // Layer 3: Yellow (Core, fastest, narrowest)
             var yellowFlames = ParticleEmitterSettings.CreateDefault();
-            yellowFlames.Shape = EmitterShape.Circle;
-            yellowFlames.EmitFrom = EmissionSource.Volume;
-            yellowFlames.EmitterSize = new Vector2(25f, 25f);
-            yellowFlames.MaxParticles = 150;
-            yellowFlames.EmissionRate = 160;
-            yellowFlames.Lifetime = new FloatRange(0.8f, 1.2f);
-            yellowFlames.InitialVelocityX = new FloatRange(-10f, 10f);
-            yellowFlames.InitialVelocityY = new FloatRange(-80f, -60f);
-            yellowFlames.Gravity = new Vector2(0, -50f);
-            yellowFlames.Drag = 0.3f;
-            yellowFlames.InitialSize = new FloatRange(4f, 7f);
-            yellowFlames.EndSize = new FloatRange(0f);
-            yellowFlames.InterpolateSize = true;
-            yellowFlames.StartColor = global.Palette_Yellow;
-            yellowFlames.EndColor = global.Palette_Orange;
-            yellowFlames.BlendMode = BlendState.Additive;
+            applyPixelFireSettings(yellowFlames);
+            yellowFlames.EmitterSize = new Vector2(12f, 12f);
+            yellowFlames.MaxParticles = 900;
+            yellowFlames.EmissionRate = 800;
+            yellowFlames.Lifetime = new FloatRange(0.4f, 0.7f); // Shorter lifetime
+            yellowFlames.InitialVelocityX = new FloatRange(0f, 0f);
+            yellowFlames.InitialVelocityY = new FloatRange(-8f, -3f);
+            yellowFlames.Gravity = new Vector2(0, -50f); // More buoyancy
+            yellowFlames.Drag = 1.8f; // Increased drag
+            yellowFlames.AttractorStrength = 1.0f; // Stronger pull
+            yellowFlames.StartColor = Color.Orange;
+            yellowFlames.EndColor = Color.OrangeRed;
+            yellowFlames.LayerDepth = 0.5f; // Draws on top
             settingsList.Add(yellowFlames);
 
             return settingsList;
