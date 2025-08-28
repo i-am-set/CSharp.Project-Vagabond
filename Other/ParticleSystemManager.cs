@@ -8,9 +8,8 @@ namespace ProjectVagabond.Particles
     public class ParticleSystemManager
     {
         private readonly List<ParticleEmitter> _emitters = new List<ParticleEmitter>();
-        private readonly Dictionary<BlendState, List<ParticleEmitter>> _renderBatches = new Dictionary<BlendState, List<ParticleEmitter>>();
+        private readonly Dictionary<(BlendState, Effect), List<ParticleEmitter>> _renderBatches = new Dictionary<(BlendState, Effect), List<ParticleEmitter>>();
         private readonly VectorField _vectorField;
-
         public ParticleSystemManager()
         {
             // Define the bounds and properties of the field.
@@ -55,22 +54,24 @@ namespace ProjectVagabond.Particles
 
         public void Draw(SpriteBatch spriteBatch, Matrix? transformMatrix = null)
         {
-            // Group emitters by blend state for efficient rendering
+            // Group emitters by a composite key of BlendState and Effect for efficient rendering.
             _renderBatches.Clear();
             foreach (var emitter in _emitters)
             {
-                if (!_renderBatches.ContainsKey(emitter.Settings.BlendMode))
+                var key = (emitter.Settings.BlendMode, emitter.Settings.ShaderEffect);
+                if (!_renderBatches.ContainsKey(key))
                 {
-                    _renderBatches[emitter.Settings.BlendMode] = new List<ParticleEmitter>();
+                    _renderBatches[key] = new List<ParticleEmitter>();
                 }
-                _renderBatches[emitter.Settings.BlendMode].Add(emitter);
+                _renderBatches[key].Add(emitter);
             }
 
             // Render each batch
             foreach (var batch in _renderBatches)
             {
+                var (blendState, effect) = batch.Key;
                 // Use BackToFront sorting to respect the LayerDepth of each particle effect.
-                spriteBatch.Begin(sortMode: SpriteSortMode.BackToFront, blendState: batch.Key, samplerState: SamplerState.PointClamp, transformMatrix: transformMatrix);
+                spriteBatch.Begin(sortMode: SpriteSortMode.BackToFront, blendState: blendState, samplerState: SamplerState.PointClamp, effect: effect, transformMatrix: transformMatrix);
                 foreach (var emitter in batch.Value)
                 {
                     emitter.Draw(spriteBatch);

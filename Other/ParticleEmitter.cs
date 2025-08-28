@@ -95,21 +95,38 @@ namespace ProjectVagabond.Particles
                     p.Rotation += p.RotationSpeed * deltaTime;
 
                     // Over-lifetime changes
-                    p.Color = Color.Lerp(Settings.StartColor, Settings.EndColor, lifeRatio);
+                    if (Settings.UsesCustomShaderData)
+                    {
+                        // Color is handled by the shader. We only need to calculate alpha here.
+                        if (Settings.AlphaFadeInAndOut)
+                        {
+                            float curve = 1.0f - MathF.Pow(2.0f * lifeRatio - 1.0f, 2.0f);
+                            p.Alpha = MathHelper.Lerp(0, Settings.StartAlpha, curve);
+                        }
+                        else
+                        {
+                            p.Alpha = MathHelper.Lerp(Settings.StartAlpha, Settings.EndAlpha, lifeRatio);
+                        }
+                    }
+                    else
+                    {
+                        // Standard CPU-based color and alpha interpolation.
+                        p.Color = Color.Lerp(Settings.StartColor, Settings.EndColor, lifeRatio);
+
+                        if (Settings.AlphaFadeInAndOut)
+                        {
+                            float curve = 1.0f - MathF.Pow(2.0f * lifeRatio - 1.0f, 2.0f);
+                            p.Alpha = MathHelper.Lerp(0, Settings.StartAlpha, curve);
+                        }
+                        else
+                        {
+                            p.Alpha = MathHelper.Lerp(Settings.StartAlpha, Settings.EndAlpha, lifeRatio);
+                        }
+                    }
 
                     if (Settings.InterpolateSize)
                     {
                         p.Size = MathHelper.Lerp(p.StartSize, p.EndSize, lifeRatio);
-                    }
-
-                    if (Settings.AlphaFadeInAndOut)
-                    {
-                        float curve = 1.0f - MathF.Pow(2.0f * lifeRatio - 1.0f, 2.0f);
-                        p.Alpha = MathHelper.Lerp(0, Settings.StartAlpha, curve);
-                    }
-                    else
-                    {
-                        p.Alpha = MathHelper.Lerp(Settings.StartAlpha, Settings.EndAlpha, lifeRatio);
                     }
                 }
             }
@@ -195,17 +212,30 @@ namespace ProjectVagabond.Particles
             for (int i = 0; i < _activeParticleCount; i++)
             {
                 ref var p = ref _particles[i];
-                var color = p.Color * p.Alpha;
+                Color drawColor;
+
+                if (Settings.UsesCustomShaderData)
+                {
+                    float lifeRatio = p.Age / p.Lifetime;
+                    // Pack lifeRatio into the Red channel and alpha into the Alpha channel.
+                    // The shader will use these values to compute the final color.
+                    drawColor = new Color(lifeRatio, 0f, 0f, p.Alpha);
+                }
+                else
+                {
+                    drawColor = p.Color * p.Alpha;
+                }
+
                 var origin = new Vector2(0.5f, 0.5f);
                 var scale = p.Size;
 
                 if (Settings.SnapToPixelGrid)
                 {
-                    spriteBatch.DrawSnapped(Settings.Texture, p.Position, null, color, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
+                    spriteBatch.DrawSnapped(Settings.Texture, p.Position, null, drawColor, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
                 }
                 else
                 {
-                    spriteBatch.Draw(Settings.Texture, p.Position, null, color, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
+                    spriteBatch.Draw(Settings.Texture, p.Position, null, drawColor, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
                 }
             }
         }

@@ -139,6 +139,12 @@
 /processorParam:DebugMode=Auto
 /build:Shaders/CRTShader.fx
 
+#begin Shaders/FireballParticleShader.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Shaders/FireballParticleShader.fx
+
 #begin Sprites/Cards/card_base.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -266,6 +272,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/mountain.png
+
+#begin Sprites/Particles/ember_particle.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Particles/ember_particle.png
 
 #begin Sprites/peak.png
 /importer:TextureImporter

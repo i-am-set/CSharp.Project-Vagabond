@@ -49,6 +49,9 @@ namespace ProjectVagabond.Particles
         public BlendState BlendMode { get; set; }
         public float LayerDepth { get; set; }
         public bool SnapToPixelGrid { get; set; }
+        public Effect ShaderEffect { get; set; }
+        public bool UsesCustomShaderData { get; set; } = false;
+
 
         // Global Properties
         public float TimeScale { get; set; }
@@ -102,6 +105,8 @@ namespace ProjectVagabond.Particles
                 BlendMode = BlendState.AlphaBlend,
                 LayerDepth = 0.5f,
                 SnapToPixelGrid = true,
+                ShaderEffect = null,
+                UsesCustomShaderData = false,
 
                 // Global
                 TimeScale = 1.0f,

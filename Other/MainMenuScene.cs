@@ -9,6 +9,7 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
@@ -111,15 +112,20 @@ namespace ProjectVagabond.Scenes
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
 
-            // --- DEBUG: Create Fireball Effect ---
-            var fireballSettings = ParticleEffects.CreateFireball();
-            var screenCenter = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-            foreach (var setting in fireballSettings)
+            // --- Create Fireball Effect ---
+            var fireballSettingsList = ParticleEffects.CreateFireball();
+            if (fireballSettingsList.Any())
             {
+                var setting = fireballSettingsList[0];
+                // The shader is loaded during the "Play" loading screen, so it might be null here.
+                // We will assign it if it exists, but the effect will gracefully handle a null shader.
+                setting.ShaderEffect = _spriteManager.FireballParticleShaderEffect;
+
                 var emitter = _particleSystemManager.CreateEmitter(setting);
-                emitter.Position = screenCenter;
+                emitter.Position = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
                 _fireballEmitters.Add(emitter);
             }
+
 
             if (this.LastUsedInputForNav == InputDevice.Keyboard && !firstTimeOpened)
             {
@@ -150,7 +156,7 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
-            // --- DEBUG: Clean up Fireball Effect ---
+            // --- Clean up Fireball Effect ---
             foreach (var emitter in _fireballEmitters)
             {
                 _particleSystemManager.DestroyEmitter(emitter);

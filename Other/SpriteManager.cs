@@ -31,7 +31,11 @@ namespace ProjectVagabond
         private Texture2D _handHoldSprite;
         private Texture2D _enemySprite;
         private Texture2D _cardBaseSprite;
+        private Texture2D _circleParticleSprite;
+        private Texture2D _emberParticleSprite;
         public Effect CardShaderEffect { get; private set; }
+        public Effect FireballParticleShaderEffect { get; private set; }
+
 
         public Texture2D LogoSprite => _logoSprite;
         public Texture2D WaterSprite => _waterSprite;
@@ -55,6 +59,9 @@ namespace ProjectVagabond
         public Texture2D HandHoldSprite => _handHoldSprite;
         public Texture2D EnemySprite => _enemySprite;
         public Texture2D CardBaseSprite => _cardBaseSprite;
+        public Texture2D CircleParticleSprite => _circleParticleSprite;
+        public Texture2D EmberParticleSprite => _emberParticleSprite;
+
 
         public SpriteManager()
         {
@@ -81,6 +88,16 @@ namespace ProjectVagabond
 
             try { _turnIndicatorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_turn_indicator"); }
             catch { _turnIndicatorSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
+
+            try { _circleParticleSprite = _textureFactory.CreateCircleParticleTexture(); }
+            catch { _circleParticleSprite = _textureFactory.CreateColoredTexture(4, 4, Color.Red); }
+
+            try { _emberParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/ember_particle"); }
+            catch { _emberParticleSprite = _textureFactory.CreateColoredTexture(9, 9, Color.Red); }
+
+            // Moved from LoadGameContent because it's used on the main menu
+            try { FireballParticleShaderEffect = _core.Content.Load<Effect>("Shaders/FireballParticleShader"); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ERROR] Could not load shader 'Shaders/FireballParticleShader'. Please ensure it's in the Content project. {ex.Message}"); }
         }
 
         /// <summary>

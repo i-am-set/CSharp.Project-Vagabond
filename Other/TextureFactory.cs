@@ -259,6 +259,36 @@ namespace ProjectVagabond
             return texture;
         }
 
+        public Texture2D CreateCircleParticleTexture()
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            const int size = 6;
+            var texture = new Texture2D(graphicsDevice, size, size);
+            var colorData = new Color[size * size];
+
+            // A 6x6 pixel circle pattern
+            bool[,] pattern = new bool[6, 6]
+            {
+                { false, false, true,  true,  false, false },
+                { false, true,  true,  true,  true,  false },
+                { true,  true,  true,  true,  true,  true  },
+                { true,  true,  true,  true,  true,  true  },
+                { false, true,  true,  true,  true,  false },
+                { false, false, true,  true,  false, false }
+            };
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    colorData[y * size + x] = pattern[y, x] ? Color.White : Color.Transparent;
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
+
         public Texture2D CreateEnemyPlaceholderTexture()
         {
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
