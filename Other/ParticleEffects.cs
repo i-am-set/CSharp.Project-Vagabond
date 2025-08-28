@@ -220,35 +220,35 @@ namespace ProjectVagabond.Particles
             var spriteManager = ServiceLocator.Get<SpriteManager>();
 
             // Emitter
-            settings.Shape = EmitterShape.Circle;
-            settings.EmitFrom = EmissionSource.Volume;
-            settings.EmitterSize = new Vector2(60f, 60f);
-            settings.MaxParticles = 2500;
-            settings.EmissionRate = 2300;
+            settings.Shape = EmitterShape.Point;
+            settings.EmitFrom = EmissionSource.Center;
+            settings.EmitterSize = new Vector2(5f, 5f);
+            settings.MaxParticles = 600;
+            settings.EmissionRate = 550;
 
             // Initial Particle
-            settings.Lifetime = new FloatRange(0.5f, 1.0f);
-            settings.InitialVelocityX = new FloatRange(-8f, 8f);
-            settings.InitialVelocityY = new FloatRange(-16f, -4f);
-            settings.InitialSize = new FloatRange(0.75f, 1.25f); // Start at a variable size around the 9x9 sprite
-            settings.EndSize = new FloatRange(0f);         // Shrink to nothing
-            settings.InterpolateSize = true;               // Enable size interpolation
+            settings.Lifetime = new FloatRange(0.4f, 0.8f);
+            settings.InitialVelocityX = new FloatRange(-10f, 10f);
+            settings.InitialVelocityY = new FloatRange(-20f, -10f);
+            settings.InitialSize = new FloatRange(1.0f, 1.5f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
             settings.InitialRotation = new FloatRange(0f);
             settings.InitialRotationSpeed = new FloatRange(0f);
 
             // Over Lifetime
-            settings.Gravity = new Vector2(0, -60f); // Buoyant flame
-            settings.Drag = 2.0f;
+            settings.Gravity = new Vector2(0, -60f); // Strong buoyant flame
+            settings.Drag = 2.5f;
             settings.StartAlpha = 1.0f;
             settings.AlphaFadeInAndOut = true; // Fade in and out smoothly
 
             // Physics
-            settings.VectorFieldInfluence = 0.2f;
-            settings.AttractorXPosition = Global.VIRTUAL_WIDTH / 2f; // Attract to screen center X
-            settings.AttractorStrength = 1.0f;
+            settings.VectorFieldInfluence = 0.8f;
+            settings.AttractorXPosition = null;
+            settings.AttractorStrength = 0f;
 
             // Rendering & Shader
-            settings.Texture = spriteManager.EmberParticleSprite; // Use the new 9x9 ember sprite
+            settings.Texture = spriteManager.SoftParticleSprite; // Use the soft circle texture
             settings.BlendMode = BlendState.Additive; // Additive for a bright, glowing effect
             settings.LayerDepth = 0.4f;
             settings.UsesCustomShaderData = true; // IMPORTANT: This flags the emitter to pack data for the shader.

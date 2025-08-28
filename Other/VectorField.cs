@@ -123,21 +123,23 @@ namespace ProjectVagabond.Particles
         public float NoiseScale { get; }
         public float ForceMagnitude { get; }
         public float TimeEvolutionSpeed { get; }
-        public float UpwardBias { get; }
+        public Vector2 BiasDirection { get; }
+        public float BiasStrength { get; }
 
         private readonly Vector2[,] _field;
         private float _time;
         private readonly float _cellWidth;
         private readonly float _cellHeight;
 
-        public VectorField(Rectangle bounds, Point gridSize, float noiseScale, float forceMagnitude, float timeEvolutionSpeed, float upwardBias)
+        public VectorField(Rectangle bounds, Point gridSize, float noiseScale, float forceMagnitude, float timeEvolutionSpeed, Vector2 biasDirection, float biasStrength)
         {
             Bounds = bounds;
             GridSize = gridSize;
             NoiseScale = noiseScale;
             ForceMagnitude = forceMagnitude;
             TimeEvolutionSpeed = timeEvolutionSpeed;
-            UpwardBias = Math.Clamp(upwardBias, 0f, 1f);
+            BiasDirection = biasDirection.LengthSquared() > 0 ? Vector2.Normalize(biasDirection) : Vector2.Zero;
+            BiasStrength = Math.Clamp(biasStrength, 0f, 1f);
             _field = new Vector2[gridSize.X, gridSize.Y];
             _cellWidth = (float)bounds.Width / (gridSize.X - 1);
             _cellHeight = (float)bounds.Height / (gridSize.Y - 1);
@@ -153,10 +155,9 @@ namespace ProjectVagabond.Particles
                 {
                     float angle = SimplexNoise.Noise(x * NoiseScale, y * NoiseScale, _time) * MathHelper.TwoPi;
                     var noiseVector = new Vector2((float)Math.Cos(angle), (float)Math.Sin(angle));
-                    var upwardVector = new Vector2(0, -1); // Negative Y is up in screen coordinates
 
-                    // Blend the noise with the upward bias. Normalizing ensures consistent magnitude.
-                    var finalVector = Vector2.Lerp(noiseVector, upwardVector, UpwardBias);
+                    // Blend the noise with the bias direction. Normalizing ensures consistent magnitude.
+                    var finalVector = Vector2.Lerp(noiseVector, BiasDirection, BiasStrength);
                     if (finalVector.LengthSquared() > 0)
                     {
                         _field[x, y] = Vector2.Normalize(finalVector);

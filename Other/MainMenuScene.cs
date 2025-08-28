@@ -122,7 +122,8 @@ namespace ProjectVagabond.Scenes
                 setting.ShaderEffect = _spriteManager.FireballParticleShaderEffect;
 
                 var emitter = _particleSystemManager.CreateEmitter(setting);
-                emitter.Position = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
+                // Position the emitter just above the "PLAY" button
+                emitter.Position = new Vector2(Global.VIRTUAL_WIDTH / 2f, 170f);
                 _fireballEmitters.Add(emitter);
             }
 

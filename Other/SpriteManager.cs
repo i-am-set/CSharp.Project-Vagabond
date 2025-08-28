@@ -33,6 +33,7 @@ namespace ProjectVagabond
         private Texture2D _cardBaseSprite;
         private Texture2D _circleParticleSprite;
         private Texture2D _emberParticleSprite;
+        private Texture2D _softParticleSprite;
         public Effect CardShaderEffect { get; private set; }
         public Effect FireballParticleShaderEffect { get; private set; }
 
@@ -61,6 +62,7 @@ namespace ProjectVagabond
         public Texture2D CardBaseSprite => _cardBaseSprite;
         public Texture2D CircleParticleSprite => _circleParticleSprite;
         public Texture2D EmberParticleSprite => _emberParticleSprite;
+        public Texture2D SoftParticleSprite => _softParticleSprite;
 
 
         public SpriteManager()
@@ -94,6 +96,9 @@ namespace ProjectVagabond
 
             try { _emberParticleSprite = _core.Content.Load<Texture2D>("Sprites/Particles/ember_particle"); }
             catch { _emberParticleSprite = _textureFactory.CreateColoredTexture(9, 9, Color.Red); }
+
+            try { _softParticleSprite = _textureFactory.CreateSoftCircleParticleTexture(); }
+            catch { _softParticleSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
 
             // Moved from LoadGameContent because it's used on the main menu
             try { FireballParticleShaderEffect = _core.Content.Load<Effect>("Shaders/FireballParticleShader"); }

@@ -289,6 +289,31 @@ namespace ProjectVagabond
             return texture;
         }
 
+        public Texture2D CreateSoftCircleParticleTexture()
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            const int size = 16;
+            var texture = new Texture2D(graphicsDevice, size, size);
+            var colorData = new Color[size * size];
+            float radius = size / 2f;
+            var center = new Vector2(radius - 0.5f, radius - 0.5f);
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float distance = Vector2.Distance(center, new Vector2(x, y));
+                    float progress = Math.Clamp(distance / radius, 0f, 1f);
+                    // Use an ease-in quadratic falloff for a smooth gradient
+                    float alpha = (1.0f - progress) * (1.0f - progress);
+                    colorData[y * size + x] = new Color(Color.White, alpha);
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
+
         public Texture2D CreateEnemyPlaceholderTexture()
         {
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();

@@ -10,6 +10,7 @@ namespace ProjectVagabond.Particles
         private readonly List<ParticleEmitter> _emitters = new List<ParticleEmitter>();
         private readonly Dictionary<(BlendState, Effect), List<ParticleEmitter>> _renderBatches = new Dictionary<(BlendState, Effect), List<ParticleEmitter>>();
         private readonly VectorField _vectorField;
+
         public ParticleSystemManager()
         {
             // Define the bounds and properties of the field.
@@ -17,10 +18,11 @@ namespace ProjectVagabond.Particles
             Rectangle fieldBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             Point gridSize = new Point(40, 23); // A 40x23 grid provides roughly 16x16 pixel cells in a 640x360 resolution.
             _vectorField = new VectorField(fieldBounds, gridSize,
-                noiseScale: 0.2f,
-                forceMagnitude: 60f,
-                timeEvolutionSpeed: 0.3f,
-                upwardBias: 0.85f);
+                noiseScale: 0.3f,
+                forceMagnitude: 80f,
+                timeEvolutionSpeed: 0.5f,
+                biasDirection: new Vector2(0f, -1f),
+                biasStrength: 0.3f);
         }
 
         public ParticleEmitter CreateEmitter(ParticleEmitterSettings settings)

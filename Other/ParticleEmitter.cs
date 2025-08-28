@@ -226,7 +226,7 @@ namespace ProjectVagabond.Particles
                     drawColor = p.Color * p.Alpha;
                 }
 
-                var origin = new Vector2(0.5f, 0.5f);
+                var origin = new Vector2(Settings.Texture.Width / 2f, Settings.Texture.Height / 2f);
                 var scale = p.Size;
 
                 if (Settings.SnapToPixelGrid)
