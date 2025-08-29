@@ -211,50 +211,100 @@ namespace ProjectVagabond.Particles
         }
 
         /// <summary>
-        /// Creates a composite fireball effect from a single particle emitter and a custom shader.
+        /// Creates a composite fireball effect from multiple layered particle emitters.
         /// </summary>
-        /// <returns>A list containing one ParticleEmitterSettings object for the fireball effect.</returns>
-        public static List<ParticleEmitterSettings> CreateFireball()
+        /// <returns>A list of ParticleEmitterSettings objects, one for each layer of the effect.</returns>
+        public static List<ParticleEmitterSettings> CreateLayeredFireball()
         {
-            var settings = ParticleEmitterSettings.CreateDefault();
             var spriteManager = ServiceLocator.Get<SpriteManager>();
+            var global = ServiceLocator.Get<Global>();
+            var layers = new List<ParticleEmitterSettings>();
 
-            // Emitter
-            settings.Shape = EmitterShape.Point;
-            settings.EmitFrom = EmissionSource.Center;
-            settings.EmitterSize = new Vector2(5f, 5f);
-            settings.MaxParticles = 600;
-            settings.EmissionRate = 550;
+            // --- Layer 1: Red Base (Back) ---
+            var redBase = ParticleEmitterSettings.CreateDefault();
+            redBase.Shape = EmitterShape.Circle;
+            redBase.EmitFrom = EmissionSource.Volume;
+            redBase.EmitterSize = new Vector2(15f, 15f);
+            redBase.MaxParticles = 2500;
+            redBase.EmissionRate = 2500;
+            redBase.Lifetime = new FloatRange(0.7f, 1.2f);
+            redBase.InitialVelocityX = new FloatRange(-25f, 25f);
+            redBase.InitialVelocityY = new FloatRange(-50f, -25f);
+            redBase.InitialSize = new FloatRange(1.5f, 2.2f);
+            redBase.EndSize = new FloatRange(0f);
+            redBase.InterpolateSize = true;
+            redBase.Gravity = new Vector2(0, -70f);
+            redBase.Drag = 2.5f;
+            redBase.StartAlpha = 0.7f;
+            redBase.AlphaFadeInAndOut = true;
+            redBase.VectorFieldInfluence = 0.8f;
+            redBase.Texture = spriteManager.EmberParticleSprite;
+            redBase.BlendMode = BlendState.Additive;
+            redBase.LayerDepth = 0.3f; // Furthest back
+            redBase.SpriteSheetColumns = 6;
+            redBase.SpriteSheetRows = 1;
+            redBase.SpriteSheetTotalFrames = 6;
+            redBase.StartColor = new Color(255, 50, 0); // Deep Red
+            redBase.EndColor = new Color(20, 0, 0, 100); // Fades to a dark, smoky color
+            layers.Add(redBase);
 
-            // Initial Particle
-            settings.Lifetime = new FloatRange(0.4f, 0.8f);
-            settings.InitialVelocityX = new FloatRange(-10f, 10f);
-            settings.InitialVelocityY = new FloatRange(-20f, -10f);
-            settings.InitialSize = new FloatRange(1.0f, 1.5f);
-            settings.EndSize = new FloatRange(0f);
-            settings.InterpolateSize = true;
-            settings.InitialRotation = new FloatRange(0f);
-            settings.InitialRotationSpeed = new FloatRange(0f);
+            // --- Layer 2: Orange Body (Middle) ---
+            var orangeBody = ParticleEmitterSettings.CreateDefault();
+            orangeBody.Shape = EmitterShape.Circle;
+            orangeBody.EmitFrom = EmissionSource.Volume;
+            orangeBody.EmitterSize = new Vector2(12f, 12f);
+            orangeBody.MaxParticles = 2000;
+            orangeBody.EmissionRate = 2000;
+            orangeBody.Lifetime = new FloatRange(0.6f, 1.0f);
+            orangeBody.InitialVelocityX = new FloatRange(-20f, 20f);
+            orangeBody.InitialVelocityY = new FloatRange(-45f, -20f);
+            orangeBody.InitialSize = new FloatRange(1.2f, 1.8f);
+            orangeBody.EndSize = new FloatRange(0f);
+            orangeBody.InterpolateSize = true;
+            orangeBody.Gravity = new Vector2(0, -60f);
+            orangeBody.Drag = 2.5f;
+            orangeBody.StartAlpha = 0.8f;
+            orangeBody.AlphaFadeInAndOut = true;
+            orangeBody.VectorFieldInfluence = 0.8f;
+            orangeBody.Texture = spriteManager.EmberParticleSprite;
+            orangeBody.BlendMode = BlendState.Additive;
+            orangeBody.LayerDepth = 0.4f; // In the middle
+            orangeBody.SpriteSheetColumns = 6;
+            orangeBody.SpriteSheetRows = 1;
+            orangeBody.SpriteSheetTotalFrames = 6;
+            orangeBody.StartColor = new Color(255, 120, 0); // Bright Orange
+            orangeBody.EndColor = new Color(200, 20, 0); // Fades to Red
+            layers.Add(orangeBody);
 
-            // Over Lifetime
-            settings.Gravity = new Vector2(0, -60f); // Strong buoyant flame
-            settings.Drag = 2.5f;
-            settings.StartAlpha = 1.0f;
-            settings.AlphaFadeInAndOut = true; // Fade in and out smoothly
+            // --- Layer 3: Yellow Core (Front) ---
+            var yellowCore = ParticleEmitterSettings.CreateDefault();
+            yellowCore.Shape = EmitterShape.Circle;
+            yellowCore.EmitFrom = EmissionSource.Volume;
+            yellowCore.EmitterSize = new Vector2(8f, 8f);
+            yellowCore.MaxParticles = 1500;
+            yellowCore.EmissionRate = 1500;
+            yellowCore.Lifetime = new FloatRange(0.5f, 0.8f);
+            yellowCore.InitialVelocityX = new FloatRange(-15f, 15f);
+            yellowCore.InitialVelocityY = new FloatRange(-40f, -15f);
+            yellowCore.InitialSize = new FloatRange(0.8f, 1.3f);
+            yellowCore.EndSize = new FloatRange(0f);
+            yellowCore.InterpolateSize = true;
+            yellowCore.Gravity = new Vector2(0, -50f);
+            yellowCore.Drag = 2.5f;
+            yellowCore.StartAlpha = 0.9f;
+            yellowCore.AlphaFadeInAndOut = true;
+            yellowCore.VectorFieldInfluence = 0.8f;
+            yellowCore.Texture = spriteManager.EmberParticleSprite;
+            yellowCore.BlendMode = BlendState.Additive;
+            yellowCore.LayerDepth = 0.5f; // Closest to camera
+            yellowCore.SpriteSheetColumns = 6;
+            yellowCore.SpriteSheetRows = 1;
+            yellowCore.SpriteSheetTotalFrames = 6;
+            yellowCore.StartColor = new Color(255, 255, 150); // White-Yellow
+            yellowCore.EndColor = new Color(255, 150, 0); // Fades to Orange
+            layers.Add(yellowCore);
 
-            // Physics
-            settings.VectorFieldInfluence = 0.8f;
-            settings.AttractorXPosition = null;
-            settings.AttractorStrength = 0f;
-
-            // Rendering & Shader
-            settings.Texture = spriteManager.SoftParticleSprite; // Use the soft circle texture
-            settings.BlendMode = BlendState.Additive; // Additive for a bright, glowing effect
-            settings.LayerDepth = 0.4f;
-            settings.UsesCustomShaderData = true; // IMPORTANT: This flags the emitter to pack data for the shader.
-            // The ShaderEffect itself is assigned in MainMenuScene after being loaded by SpriteManager.
-
-            return new List<ParticleEmitterSettings> { settings };
+            return layers;
         }
     }
 }

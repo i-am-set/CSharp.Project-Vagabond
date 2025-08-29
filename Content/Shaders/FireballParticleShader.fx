@@ -25,9 +25,9 @@ struct VertexShaderOutput
 
 // --- HEATMAP GRADIENT COLORS ---
 // These define the color progression from the hot center to the cool edge.
-static const float4 COLOR_WHITE = float4(1.0, 1.0, 1.0, 1.0);
-static const float4 COLOR_YELLOW = float4(1.0, 1.0, 0.0, 1.0);
-static const float4 COLOR_ORANGE = float4(1.0, 0.5, 0.0, 1.0);
+static const float4 COLOR_BLACK = float4(0.0, 0.0, 0.0, 0.5);
+static const float4 COLOR_YELLOW = float4(1.0, 0.8, 0.0, 1.0);
+static const float4 COLOR_ORANGE = float4(0.8, 0.2, 0.0, 1.0);
 static const float4 COLOR_RED = float4(1.0, 0.0, 0.0, 1.0);
 
 float4 MainPS(VertexShaderOutput input) : COLOR
@@ -48,18 +48,18 @@ float4 MainPS(VertexShaderOutput input) : COLOR
     // Calculate the heatmap color based on the particle's life ratio.
 	if (lifeRatio < 0.15)
 	{
-		// Stage 1: White to Yellow (0% to 15% of life)
-		heatmapColor = lerp(COLOR_WHITE, COLOR_YELLOW, lifeRatio / 0.15);
+		// Stage 1: White to Yellow
+		heatmapColor = lerp(COLOR_ORANGE, COLOR_ORANGE, lifeRatio / 0.1);
 	}
 	else if (lifeRatio < 0.4)
 	{
-		// Stage 2: Yellow to Orange (15% to 40% of life)
-		heatmapColor = lerp(COLOR_YELLOW, COLOR_ORANGE, (lifeRatio - 0.15) / 0.25);
+		// Stage 2: Yellow to Orange
+		heatmapColor = lerp(COLOR_ORANGE, COLOR_ORANGE, (lifeRatio - 0.5) / 0.4);
 	}
 	else
 	{
-		// Stage 3: Orange to Red (40% to 100% of life)
-		heatmapColor = lerp(COLOR_ORANGE, COLOR_RED, (lifeRatio - 0.4) / 0.6);
+		// Stage 3: Orange to Red
+		heatmapColor = lerp(COLOR_ORANGE, COLOR_ORANGE, (lifeRatio - 0.4) / 0.6);
 	}
 
     // The final color is the heatmap color, masked by the texture's color.

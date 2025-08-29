@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Combat;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -113,17 +114,10 @@ namespace ProjectVagabond.Scenes
             _previousKeyboardState = Keyboard.GetState();
 
             // --- Create Fireball Effect ---
-            var fireballSettingsList = ParticleEffects.CreateFireball();
-            if (fireballSettingsList.Any())
+            var fireballSettingsList = ParticleEffects.CreateLayeredFireball();
+            foreach (var setting in fireballSettingsList)
             {
-                var setting = fireballSettingsList[0];
-                // The shader is loaded during the "Play" loading screen, so it might be null here.
-                // We will assign it if it exists, but the effect will gracefully handle a null shader.
-                setting.ShaderEffect = _spriteManager.FireballParticleShaderEffect;
-
                 var emitter = _particleSystemManager.CreateEmitter(setting);
-                // Position the emitter just above the "PLAY" button
-                emitter.Position = new Vector2(Global.VIRTUAL_WIDTH / 2f, 170f);
                 _fireballEmitters.Add(emitter);
             }
 
@@ -178,6 +172,15 @@ namespace ProjectVagabond.Scenes
         {
             base.Update(gameTime);
 
+            var currentMouseState = Mouse.GetState();
+            var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+
+            // Update the fireball emitter to follow the mouse cursor
+            foreach (var emitter in _fireballEmitters)
+            {
+                emitter.Position = virtualMousePos;
+            }
+
             if (IsInputBlocked)
             {
                 return;
@@ -189,7 +192,6 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
 
             if (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)

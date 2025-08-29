@@ -51,6 +51,9 @@ namespace ProjectVagabond.Particles
         public bool SnapToPixelGrid { get; set; }
         public Effect ShaderEffect { get; set; }
         public bool UsesCustomShaderData { get; set; } = false;
+        public int SpriteSheetColumns { get; set; } = 1;
+        public int SpriteSheetRows { get; set; } = 1;
+        public int SpriteSheetTotalFrames { get; set; } = 1;
 
 
         // Global Properties
@@ -107,6 +110,9 @@ namespace ProjectVagabond.Particles
                 SnapToPixelGrid = true,
                 ShaderEffect = null,
                 UsesCustomShaderData = false,
+                SpriteSheetColumns = 1,
+                SpriteSheetRows = 1,
+                SpriteSheetTotalFrames = 1,
 
                 // Global
                 TimeScale = 1.0f,

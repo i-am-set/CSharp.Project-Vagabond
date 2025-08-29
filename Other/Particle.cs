@@ -21,6 +21,8 @@ namespace ProjectVagabond.Particles
         public float StartSize;
         public float EndSize;
 
+        public Rectangle SourceRectangle;
+
         /// <summary>
         /// Resets the particle to a default state, ready for emission.
         /// </summary>

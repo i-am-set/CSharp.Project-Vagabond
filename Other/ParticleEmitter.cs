@@ -193,6 +193,21 @@ namespace ProjectVagabond.Particles
             p.Color = Settings.StartColor;
             p.Alpha = Settings.StartAlpha;
 
+            // Handle spritesheet logic
+            if (Settings.SpriteSheetTotalFrames > 1 && Settings.Texture != null)
+            {
+                int frameWidth = Settings.Texture.Width / Settings.SpriteSheetColumns;
+                int frameHeight = Settings.Texture.Height / Settings.SpriteSheetRows;
+                int frameIndex = _random.Next(Settings.SpriteSheetTotalFrames);
+                int col = frameIndex % Settings.SpriteSheetColumns;
+                int row = frameIndex / Settings.SpriteSheetColumns;
+                p.SourceRectangle = new Rectangle(col * frameWidth, row * frameHeight, frameWidth, frameHeight);
+            }
+            else
+            {
+                p.SourceRectangle = Rectangle.Empty; // Signal to use the full texture
+            }
+
             _activeParticleCount++;
             return particleIndex;
         }
@@ -226,16 +241,20 @@ namespace ProjectVagabond.Particles
                     drawColor = p.Color * p.Alpha;
                 }
 
-                var origin = new Vector2(Settings.Texture.Width / 2f, Settings.Texture.Height / 2f);
+                Rectangle? sourceRect = p.SourceRectangle.IsEmpty ? null : p.SourceRectangle;
+                var origin = sourceRect.HasValue
+                    ? new Vector2(sourceRect.Value.Width / 2f, sourceRect.Value.Height / 2f)
+                    : new Vector2(Settings.Texture.Width / 2f, Settings.Texture.Height / 2f);
+
                 var scale = p.Size;
 
                 if (Settings.SnapToPixelGrid)
                 {
-                    spriteBatch.DrawSnapped(Settings.Texture, p.Position, null, drawColor, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
+                    spriteBatch.DrawSnapped(Settings.Texture, p.Position, sourceRect, drawColor, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
                 }
                 else
                 {
-                    spriteBatch.Draw(Settings.Texture, p.Position, null, drawColor, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
+                    spriteBatch.Draw(Settings.Texture, p.Position, sourceRect, drawColor, p.Rotation, origin, scale, SpriteEffects.None, Settings.LayerDepth);
                 }
             }
         }
