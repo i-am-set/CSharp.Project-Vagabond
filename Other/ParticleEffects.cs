@@ -224,16 +224,16 @@ namespace ProjectVagabond.Particles
             var redBase = ParticleEmitterSettings.CreateDefault();
             redBase.Shape = EmitterShape.Circle;
             redBase.EmitFrom = EmissionSource.Volume;
-            redBase.EmitterSize = new Vector2(15f, 15f);
-            redBase.MaxParticles = 2500;
-            redBase.EmissionRate = 2500;
-            redBase.Lifetime = new FloatRange(0.7f, 1.2f);
-            redBase.InitialVelocityX = new FloatRange(-25f, 25f);
-            redBase.InitialVelocityY = new FloatRange(-50f, -25f);
+            redBase.EmitterSize = new Vector2(35f, 35f);
+            redBase.MaxParticles = 4000;
+            redBase.EmissionRate = 4000;
+            redBase.Lifetime = new FloatRange(1.0f, 1.6f);
+            redBase.InitialVelocityX = new FloatRange(-40f, 40f);
+            redBase.InitialVelocityY = new FloatRange(-80f, -50f);
             redBase.InitialSize = new FloatRange(1.5f, 2.2f);
             redBase.EndSize = new FloatRange(0f);
             redBase.InterpolateSize = true;
-            redBase.Gravity = new Vector2(0, -70f);
+            redBase.Gravity = new Vector2(0, -90f);
             redBase.Drag = 2.5f;
             redBase.StartAlpha = 0.7f;
             redBase.AlphaFadeInAndOut = true;
@@ -252,16 +252,16 @@ namespace ProjectVagabond.Particles
             var orangeBody = ParticleEmitterSettings.CreateDefault();
             orangeBody.Shape = EmitterShape.Circle;
             orangeBody.EmitFrom = EmissionSource.Volume;
-            orangeBody.EmitterSize = new Vector2(12f, 12f);
-            orangeBody.MaxParticles = 2000;
-            orangeBody.EmissionRate = 2000;
-            orangeBody.Lifetime = new FloatRange(0.6f, 1.0f);
-            orangeBody.InitialVelocityX = new FloatRange(-20f, 20f);
-            orangeBody.InitialVelocityY = new FloatRange(-45f, -20f);
+            orangeBody.EmitterSize = new Vector2(30f, 30f);
+            orangeBody.MaxParticles = 3500;
+            orangeBody.EmissionRate = 3500;
+            orangeBody.Lifetime = new FloatRange(0.9f, 1.4f);
+            orangeBody.InitialVelocityX = new FloatRange(-35f, 35f);
+            orangeBody.InitialVelocityY = new FloatRange(-75f, -45f);
             orangeBody.InitialSize = new FloatRange(1.2f, 1.8f);
             orangeBody.EndSize = new FloatRange(0f);
             orangeBody.InterpolateSize = true;
-            orangeBody.Gravity = new Vector2(0, -60f);
+            orangeBody.Gravity = new Vector2(0, -80f);
             orangeBody.Drag = 2.5f;
             orangeBody.StartAlpha = 0.8f;
             orangeBody.AlphaFadeInAndOut = true;
@@ -280,16 +280,16 @@ namespace ProjectVagabond.Particles
             var yellowCore = ParticleEmitterSettings.CreateDefault();
             yellowCore.Shape = EmitterShape.Circle;
             yellowCore.EmitFrom = EmissionSource.Volume;
-            yellowCore.EmitterSize = new Vector2(8f, 8f);
-            yellowCore.MaxParticles = 1500;
-            yellowCore.EmissionRate = 1500;
-            yellowCore.Lifetime = new FloatRange(0.5f, 0.8f);
-            yellowCore.InitialVelocityX = new FloatRange(-15f, 15f);
-            yellowCore.InitialVelocityY = new FloatRange(-40f, -15f);
+            yellowCore.EmitterSize = new Vector2(20f, 20f);
+            yellowCore.MaxParticles = 2500;
+            yellowCore.EmissionRate = 2500;
+            yellowCore.Lifetime = new FloatRange(0.8f, 1.2f);
+            yellowCore.InitialVelocityX = new FloatRange(-30f, 30f);
+            yellowCore.InitialVelocityY = new FloatRange(-70f, -40f);
             yellowCore.InitialSize = new FloatRange(0.8f, 1.3f);
             yellowCore.EndSize = new FloatRange(0f);
             yellowCore.InterpolateSize = true;
-            yellowCore.Gravity = new Vector2(0, -50f);
+            yellowCore.Gravity = new Vector2(0, -70f);
             yellowCore.Drag = 2.5f;
             yellowCore.StartAlpha = 0.9f;
             yellowCore.AlphaFadeInAndOut = true;
@@ -303,6 +303,31 @@ namespace ProjectVagabond.Particles
             yellowCore.StartColor = new Color(255, 255, 150); // White-Yellow
             yellowCore.EndColor = new Color(255, 150, 0); // Fades to Orange
             layers.Add(yellowCore);
+
+            // --- Layer 4: Sparks (Top) ---
+            var sparks = ParticleEmitterSettings.CreateDefault();
+            sparks.Shape = EmitterShape.Point;
+            sparks.EmitFrom = EmissionSource.Center;
+            sparks.EmitterSize = new Vector2(5f, 5f);
+            sparks.MaxParticles = 400;
+            sparks.EmissionRate = 500;
+            sparks.Lifetime = new FloatRange(0.5f, 1.0f);
+            sparks.InitialVelocityX = new FloatRange(-200f, 200f);
+            sparks.InitialVelocityY = new FloatRange(-250f, -150f);
+            sparks.InitialSize = new FloatRange(2.0f, 3.0f);
+            sparks.Gravity = new Vector2(0, 80f); // Positive gravity pulls them down
+            sparks.Drag = 0.5f;
+            sparks.StartAlpha = 1.0f;
+            sparks.EndAlpha = 0.0f;
+            sparks.Texture = spriteManager.EmberParticleSprite;
+            sparks.BlendMode = BlendState.AlphaBlend; // MODIFIED: Use AlphaBlend to draw on top of the additive flame
+            sparks.LayerDepth = 0.6f; // On top of everything
+            sparks.StartColor = Color.White;
+            sparks.EndColor = global.Palette_LightBlue;
+            sparks.SpriteSheetColumns = 6;
+            sparks.SpriteSheetRows = 1;
+            sparks.SpriteSheetTotalFrames = 6;
+            layers.Add(sparks);
 
             return layers;
         }
