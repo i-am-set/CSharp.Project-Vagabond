@@ -139,12 +139,6 @@
 /processorParam:DebugMode=Auto
 /build:Shaders/CRTShader.fx
 
-#begin Shaders/FireballParticleShader.fx
-/importer:EffectImporter
-/processor:EffectProcessor
-/processorParam:DebugMode=Auto
-/build:Shaders/FireballParticleShader.fx
-
 #begin Sprites/Cards/card_base.png
 /importer:TextureImporter
 /processor:TextureProcessor
