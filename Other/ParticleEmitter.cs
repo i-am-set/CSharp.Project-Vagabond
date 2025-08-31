@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Utils;
 using System;
+using System.Diagnostics;
 
 namespace ProjectVagabond.Particles
 {
@@ -10,6 +11,7 @@ namespace ProjectVagabond.Particles
         public ParticleEmitterSettings Settings { get; }
         public Vector2 Position { get; set; }
         public bool IsActive { get; set; } = true;
+        public float EmissionStrength { get; set; } = 1f;
 
         private readonly Particle[] _particles;
         private int _activeParticleCount = 0;
@@ -44,11 +46,14 @@ namespace ProjectVagabond.Particles
             if (Settings.EmissionRate > 0)
             {
                 _emissionTimer += deltaTime;
-                float timePerParticle = 1.0f / Settings.EmissionRate;
-                while (_emissionTimer > timePerParticle)
+                float timePerParticle = 1.0f / (Settings.EmissionRate * EmissionStrength);
+                if (timePerParticle > 0) // Avoid division by zero if strength is 0
                 {
-                    EmitParticle();
-                    _emissionTimer -= timePerParticle;
+                    while (_emissionTimer > timePerParticle)
+                    {
+                        EmitParticle();
+                        _emissionTimer -= timePerParticle;
+                    }
                 }
             }
 
@@ -93,6 +98,15 @@ namespace ProjectVagabond.Particles
 
                     p.Position += p.Velocity * deltaTime;
                     p.Rotation += p.RotationSpeed * deltaTime;
+
+                    // If snapping is enabled, quantize the particle's position to the virtual pixel grid
+                    // at the end of the update step. This prevents sub-pixel movement from accumulating
+                    // across frames, which can cause shimmering.
+                    if (Settings.SnapToPixelGrid)
+                    {
+                        p.Position.X = MathF.Round(p.Position.X);
+                        p.Position.Y = MathF.Round(p.Position.Y);
+                    }
 
                     // Over-lifetime changes
                     if (Settings.UsesCustomShaderData)

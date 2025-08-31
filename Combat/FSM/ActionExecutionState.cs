@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -17,6 +18,7 @@ namespace ProjectVagabond.Combat.FSM
 
         // --- TUNING ---
         private const float POST_ACTION_DELAY = 0.5f;
+        private const float PRE_EFFECT_IDLE_DURATION = 0.4f;
         private float _postActionTimer;
         private bool _isDelaying;
 
@@ -29,21 +31,6 @@ namespace ProjectVagabond.Combat.FSM
             _isDelaying = false;
             _failsafeTimer = 0f;
             _actionAnimator = combatManager.Scene.ActionAnimator;
-
-            // Explicitly force hands to their off-screen position at the start of the phase
-            // to ensure a consistent starting state, regardless of what happened before.
-            var scene = combatManager.Scene;
-            if (scene.AnimationAnchors != null) // Anchors might not exist in certain test contexts
-            {
-                if (scene.AnimationAnchors.TryGetValue("LeftHandOffscreen", out var leftPos))
-                {
-                    scene.LeftHandRenderer.ForcePositionAndRotation(leftPos, 0);
-                }
-                if (scene.AnimationAnchors.TryGetValue("RightHandOffscreen", out var rightPos))
-                {
-                    scene.RightHandRenderer.ForcePositionAndRotation(rightPos, 0);
-                }
-            }
 
             // The list of actions is now pre-rolled and pre-sorted. We just need to enqueue it.
             var resolvedOrder = combatManager.GetActionsForTurn();
@@ -65,15 +52,11 @@ namespace ProjectVagabond.Combat.FSM
                 }
             }
 
-            EventBus.Subscribe<GameEvents.ActionAnimationComplete>(OnActionAnimationCompleted);
-
             ProcessNextAction(combatManager);
         }
 
         public void OnExit(CombatManager combatManager)
         {
-            EventBus.Unsubscribe<GameEvents.ActionAnimationComplete>(OnActionAnimationCompleted);
-
             // Ensure all entities are returned to their normal state when leaving this phase.
             foreach (var entity in combatManager.Scene.GetAllCombatEntities())
             {
@@ -90,7 +73,7 @@ namespace ProjectVagabond.Combat.FSM
                 if (_failsafeTimer >= FAILSAFE_DURATION)
                 {
                     Debug.WriteLine($"    [WARNING] Action animation timed out after {FAILSAFE_DURATION}s. Forcing next action.");
-                    OnActionAnimationCompleted(new GameEvents.ActionAnimationComplete());
+                    OnActionAnimationCompleted();
                 }
             }
             else if (_isDelaying)
@@ -111,25 +94,22 @@ namespace ProjectVagabond.Combat.FSM
                 var actionToExecute = _executionQueue.Dequeue();
                 string entityName = EntityNamer.GetName(actionToExecute.CasterEntityId);
 
-                // MODIFIED: Check if the combatant is dead BEFORE doing anything else.
                 var health = ServiceLocator.Get<ComponentStore>().GetComponent<HealthComponent>(actionToExecute.CasterEntityId);
                 if (health != null && health.CurrentHealth <= 0)
                 {
                     Debug.WriteLine($"  > {entityName}'s turn skipped (defeated).");
-                    ProcessNextAction(combatManager); // Immediately process the next in queue without any delay or animation.
+                    ProcessNextAction(combatManager);
                     return;
                 }
 
-                // If the combatant is alive, proceed with the turn.
                 combatManager.Scene.CurrentExecutingAction = actionToExecute;
 
-                // Set the visual state for all entities based on this action.
                 var allEntities = combatManager.Scene.GetAllCombatEntities();
                 var player = allEntities.FirstOrDefault(e => e.EntityId == ServiceLocator.Get<GameState>().PlayerEntityId);
 
                 foreach (var entity in allEntities)
                 {
-                    if (entity == player) continue; // Player sprite isn't shown, so skip.
+                    if (entity == player) continue;
 
                     bool isCaster = entity.EntityId == actionToExecute.CasterEntityId;
                     bool isTarget = actionToExecute.TargetEntityIds.Contains(entity.EntityId);
@@ -148,7 +128,25 @@ namespace ProjectVagabond.Combat.FSM
                 _isWaitingForAnimation = true;
                 _failsafeTimer = 0f;
 
-                _actionAnimator.Play(actionToExecute);
+                // If it's the player's action, animate hands back to idle BEFORE resolving effects.
+                if (actionToExecute.CasterEntityId == ServiceLocator.Get<GameState>().PlayerEntityId)
+                {
+                    _actionAnimator.ReturnToIdle(PRE_EFFECT_IDLE_DURATION, () =>
+                    {
+                        // When the return-to-idle animation is complete, resolve the action.
+                        var resolver = ServiceLocator.Get<ActionResolver>();
+                        resolver.Resolve(actionToExecute, combatManager.Scene.GetAllCombatEntities());
+
+                        // Now that effects are resolved, we can complete the action and start the post-action delay.
+                        OnActionAnimationCompleted();
+                    });
+                }
+                else // It's an AI action, no hand animation involved. Resolve immediately.
+                {
+                    var resolver = ServiceLocator.Get<ActionResolver>();
+                    resolver.Resolve(actionToExecute, combatManager.Scene.GetAllCombatEntities());
+                    OnActionAnimationCompleted();
+                }
             }
             else
             {
@@ -158,7 +156,7 @@ namespace ProjectVagabond.Combat.FSM
             }
         }
 
-        private void OnActionAnimationCompleted(GameEvents.ActionAnimationComplete e)
+        private void OnActionAnimationCompleted()
         {
             if (!_isWaitingForAnimation) return; // Prevent double execution
             _isWaitingForAnimation = false;

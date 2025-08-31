@@ -78,6 +78,7 @@ namespace ProjectVagabond
         private LoadingScreen _loadingScreen;
         private AnimationManager _animationManager;
         private DeckManager _deckManager;
+        private PoseManager _poseManager;
 
         // Input State
         private KeyboardState _previousKeyboardState;
@@ -155,6 +156,9 @@ namespace ProjectVagabond
 
             var actionManager = new ActionManager();
             ServiceLocator.Register<ActionManager>(actionManager);
+
+            _poseManager = new PoseManager();
+            ServiceLocator.Register<PoseManager>(_poseManager);
 
             var worldClockManager = new WorldClockManager();
             ServiceLocator.Register<WorldClockManager>(worldClockManager);
@@ -647,7 +651,7 @@ namespace ProjectVagabond
                 float padding = 5f;
                 var screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
                 var versionPosition = new Vector2(padding, screenHeight - _defaultFont.LineHeight - padding);
-                _spriteBatch.DrawString(_defaultFont, versionText, versionPosition, _global.Palette_DarkGray);
+                _spriteBatch.DrawStringSnapped(_defaultFont, versionText, versionPosition, _global.Palette_DarkGray);
             }
             _spriteBatch.End();
 

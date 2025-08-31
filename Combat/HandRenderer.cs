@@ -308,6 +308,29 @@ namespace ProjectVagabond.Combat.UI
 
         public Vector2 GetPivotPoint() => CurrentPosition;
 
+        /// <summary>
+        /// Calculates the world position of the hand's palm, accounting for scale and rotation.
+        /// This is used as an anchor point for particle effects.
+        /// </summary>
+        /// <returns>The world-space coordinates of the palm.</returns>
+        public Vector2 GetPalmPosition()
+        {
+            if (_animator == null) return CurrentPosition;
+
+            var frame = _animator.CurrentFrame;
+            float spriteHeight = frame.SourceRectangle.Height * CurrentScale;
+
+            // The palm is roughly 3/4 of the way up the sprite from the wrist pivot.
+            Vector2 palmOffset = new Vector2(0, -spriteHeight * 0.75f);
+
+            // Rotate this local offset vector by the hand's current world rotation.
+            var transform = Matrix.CreateRotationZ(CurrentRotation);
+            Vector2 rotatedOffset = Vector2.Transform(palmOffset, transform);
+
+            // Add the rotated offset to the hand's world position (the wrist pivot) to get the final palm position.
+            return CurrentPosition + rotatedOffset;
+        }
+
         public Vector2[] GetWorldCorners()
         {
             if (_animator == null) return new Vector2[4];

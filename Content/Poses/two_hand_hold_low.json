@@ -1,0 +1,25 @@
+{
+  "id": "two_hand_hold_low",
+  "leftHand": {
+    "position": {
+      "X": 273.5,
+      "Y": 623.5
+    },
+    "rotation": 15.518132,
+    "scale": 1,
+    "animation": "hold",
+    "renderLayer": "BehindParticles"
+  },
+  "rightHand": {
+    "position": {
+      "X": 430.5,
+      "Y": 615
+    },
+    "rotation": -13.435074,
+    "scale": 1,
+    "animation": "idle_loop",
+    "renderLayer": "InFrontOfParticles"
+  },
+  "particleEffectName": "CreateLayeredFireball",
+  "particleAnchor": "BetweenHands"
+}

@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -59,6 +59,9 @@ namespace ProjectVagabond.Combat.FSM
             // --- Step 2: Choose action based on Player or AI ---
             if (currentEntityId == gameState.PlayerEntityId)
             {
+                // At the start of the player's selection turn, return hands to idle from their previous hold pose.
+                combatManager.Scene.ActionAnimator.ReturnToIdle(0.4f);
+
                 // Player's turn to select
                 PopulatePlayerUI(combatManager, deckComp, temporaryWeaponAction);
                 _isWaitingForPlayerInput = true;
@@ -141,6 +144,15 @@ namespace ProjectVagabond.Combat.FSM
             var aiId = combatManager.CurrentTurnEntityId;
             var aiComp = componentStore.GetComponent<AIComponent>(aiId);
             var deckComp = componentStore.GetComponent<CombatDeckComponent>(aiId);
+
+            // --- ROBUSTNESS FIX ---
+            // If the AI has no cards in hand for any reason, it must pass its turn.
+            if (deckComp.Hand == null || !deckComp.Hand.Any())
+            {
+                Debug.WriteLine($"    ... AI has no actions in hand. Passing turn.");
+                return;
+            }
+
             string chosenActionId = null;
 
             Debug.WriteLine($"    ... AI is choosing from hand: [{string.Join(", ", deckComp.Hand)}]");

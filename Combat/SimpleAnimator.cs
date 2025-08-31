@@ -139,7 +139,7 @@ namespace ProjectVagabond.Utils
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, Vector2 position, Color color, float rotation = 0f, float scale = 1f)
+        public void Draw(SpriteBatch spriteBatch, Vector2 position, Color color, float rotation = 0f, float scale = 1f, float layerDepth = 0f)
         {
             if (_currentCycle != null)
             {
@@ -155,7 +155,7 @@ namespace ProjectVagabond.Utils
                     origin,
                     scale,
                     SpriteEffects.None,
-                    0f);
+                    layerDepth);
             }
         }
     }

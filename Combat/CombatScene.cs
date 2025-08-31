@@ -15,6 +15,7 @@ using System.Linq;
 using System;
 using ProjectVagabond.Combat.FSM;
 using ProjectVagabond.Editor;
+using ProjectVagabond.Particles;
 
 namespace ProjectVagabond.Scenes
 {
@@ -28,6 +29,7 @@ namespace ProjectVagabond.Scenes
         private ActionResolver _actionResolver;
         private ActionAnimator _actionAnimator;
         public ActionAnimator ActionAnimator => _actionAnimator;
+        private ParticleSystemManager _particleSystemManager;
 
         public CombatAction CurrentExecutingAction { get; set; }
 
@@ -91,10 +93,10 @@ namespace ProjectVagabond.Scenes
 
             _combatManager = new CombatManager();
             _actionHandUI = new ActionHandUI();
-            _inputHandler = new CombatInputHandler(_combatManager, _actionHandUI, this);
             _animationManager = ServiceLocator.Get<AnimationManager>();
             _gameState = ServiceLocator.Get<GameState>();
             _actionResolver = new ActionResolver();
+            _particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
             ServiceLocator.Register<ActionResolver>(_actionResolver);
 
             // Initialize player hands and their renderers with a temporary position.
@@ -103,7 +105,10 @@ namespace ProjectVagabond.Scenes
             _rightHandRenderer = new HandRenderer(HandType.Right, Vector2.Zero);
 
             // Create the ActionAnimator here, after its dependencies are ready.
-            _actionAnimator = new ActionAnimator(this, _actionResolver, _leftHandRenderer, _rightHandRenderer);
+            _actionAnimator = new ActionAnimator(_leftHandRenderer, _rightHandRenderer);
+
+            // Create the input handler now that all its dependencies are initialized.
+            _inputHandler = new CombatInputHandler(_combatManager, _actionHandUI, this);
 
             // Register UI components with the manager so states can access them.
             _combatManager.RegisterComponents(_actionHandUI, _inputHandler, this);
@@ -360,16 +365,52 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // --- Player Hands and UI (Drawn to full screen) ---
-            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
-            _leftHandRenderer.Draw(spriteBatch, font, gameTime);
-            _rightHandRenderer.Draw(spriteBatch, font, gameTime);
+            var currentPose = _actionAnimator.CurrentPose;
+
+            // --- Pass 1: Draw Hands Behind Particles ---
+            spriteBatch.Begin(sortMode: SpriteSortMode.Deferred, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            if (currentPose != null)
+            {
+                if (currentPose.LeftHand.RenderLayer == RenderLayer.BehindParticles)
+                {
+                    _leftHandRenderer.Draw(spriteBatch, font, gameTime);
+                }
+                if (currentPose.RightHand.RenderLayer == RenderLayer.BehindParticles)
+                {
+                    _rightHandRenderer.Draw(spriteBatch, font, gameTime);
+                }
+            }
             spriteBatch.End();
 
-            // --- Card UI (Manages its own batches for shaders) ---
+            // --- Pass 2: Draw Particle Effects ---
+            _particleSystemManager.Draw(spriteBatch, transform);
+
+            // --- Pass 3: Draw Hands In Front of Particles ---
+            spriteBatch.Begin(sortMode: SpriteSortMode.Deferred, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            if (currentPose != null)
+            {
+                if (currentPose.LeftHand.RenderLayer == RenderLayer.InFrontOfParticles)
+                {
+                    _leftHandRenderer.Draw(spriteBatch, font, gameTime);
+                }
+                if (currentPose.RightHand.RenderLayer == RenderLayer.InFrontOfParticles)
+                {
+                    _rightHandRenderer.Draw(spriteBatch, font, gameTime);
+                }
+            }
+            // If no pose is active, draw both hands by default (they will be idle)
+            else
+            {
+                _leftHandRenderer.Draw(spriteBatch, font, gameTime);
+                _rightHandRenderer.Draw(spriteBatch, font, gameTime);
+            }
+            spriteBatch.End();
+
+
+            // --- Pass 4: Draw Card UI (Manages its own batches) ---
             _actionHandUI.Draw(spriteBatch, font, gameTime, _inputHandler.DraggedCard, _playingCards, transform);
 
-            // --- Overlays (Drawn to full screen) ---
+            // --- Pass 5: Draw Overlays ---
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             DrawTargetingIndicators(spriteBatch);
             spriteBatch.End();

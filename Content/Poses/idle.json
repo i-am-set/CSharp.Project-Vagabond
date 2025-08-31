@@ -1,0 +1,23 @@
+{
+  "id": "idle",
+  "leftHand": {
+    "position": {
+      "X": 185,
+      "Y": 673.5
+    },
+    "rotation": 0,
+    "scale": 1,
+    "animation": "idle_loop",
+    "renderLayer": "InFrontOfParticles"
+  },
+  "rightHand": {
+    "position": {
+      "X": 455.5,
+      "Y": 666.5
+    },
+    "rotation": 0,
+    "scale": 1,
+    "animation": "idle_loop",
+    "renderLayer": "InFrontOfParticles"
+  }
+}

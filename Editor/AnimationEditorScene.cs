@@ -1,10 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
-using ProjectVagabond.Editor;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -22,31 +23,25 @@ namespace ProjectVagabond.Editor
     {
         // --- TUNING ---
         private const int FILE_BROWSER_WIDTH = 180;
-        private const int TIMELINE_HEIGHT = 240;
+        private const int CONTROL_PANEL_HEIGHT = 100;
         private const int PANEL_PADDING = 5;
-        private const float TIMELINE_KEY_SCRUB_AMOUNT = 0.01f;
-
-        private enum EditorSubMode { Normal, AwaitingKeySelection }
 
         private HandRenderer _leftHand;
         private HandRenderer _rightHand;
-        private ActionAnimator _actionAnimator;
         private FileBrowser _fileBrowser;
-        private TimelineUI _timelineUI;
         private TransformGizmo _transformGizmo;
         private ContextMenu _animationContextMenu;
+        private ContextMenu _particleAnchorContextMenu;
+        private ContextMenu _particleEffectContextMenu;
+        private List<Button> _controlButtons = new List<Button>();
 
-        private ActionData _loadedAction;
-        private string _loadedActionPath;
-        private CombatAction _dummyCombatAction;
-        private bool IsDirty => _loadedAction?.Timeline?.Tracks.Any(t => t.Keyframes.Any(k => k.State != KeyframeState.Unmodified)) ?? false;
-
+        private PoseData _loadedPose;
+        private string _loadedPosePath;
+        private bool _isDataDirty = false;
 
         // --- Interactive Editing State ---
         private HandRenderer _selectedHand;
-        private bool _isEditMode = false;
-        private EditorSubMode _subMode = EditorSubMode.Normal;
-        private readonly HashSet<int> _selectedKeyTracks = new HashSet<int>();
+        private bool _isEditMode = true; // Default to edit mode in the editor
         private float _combatScreenBottomY;
 
         public Dictionary<string, Vector2> AnimationAnchors { get; private set; }
@@ -60,27 +55,40 @@ namespace ProjectVagabond.Editor
             _leftHand = new HandRenderer(HandType.Left, Vector2.Zero);
             _rightHand = new HandRenderer(HandType.Right, Vector2.Zero);
 
-            // The editor doesn't resolve logical effects, so the ActionResolver is null.
-            _actionAnimator = new ActionAnimator(this, null, _leftHand, _rightHand);
-
             _fileBrowser = new FileBrowser();
-            _fileBrowser.OnFileSelected += new Action<string, ActionData>(OnActionFileSelected);
-
-            _timelineUI = new TimelineUI();
-            _timelineUI.OnPlay += OnPlaybackPlay;
-            _timelineUI.OnPause += OnPlaybackPause;
-            _timelineUI.OnStop += OnPlaybackStop;
-            _timelineUI.OnReset += OnPlaybackReset;
-            _timelineUI.OnScrub += OnPlaybackScrub;
-            _timelineUI.OnSetKeyframe += ToggleSetKeyMode; // Changed from OnSetKeyframe
-            _timelineUI.OnSave += OnSave;
-            _timelineUI.OnKeyframeClicked += OnKeyframeClicked;
-            _timelineUI.OnToggleEditMode += ToggleEditMode;
+            _fileBrowser.OnFileSelected += OnPoseFileSelected;
 
             _transformGizmo = new TransformGizmo();
             _transformGizmo.OnAnimationGizmoClicked += ShowAnimationMenu;
 
             _animationContextMenu = new ContextMenu();
+            _particleAnchorContextMenu = new ContextMenu();
+            _particleEffectContextMenu = new ContextMenu();
+
+            InitializeControlPanel();
+        }
+
+        private void InitializeControlPanel()
+        {
+            var saveButton = new Button(Rectangle.Empty, "Save (Ctrl+S)");
+            saveButton.OnClick += OnSave;
+            _controlButtons.Add(saveButton);
+
+            var particleAnchorButton = new Button(Rectangle.Empty, "Set Particle Anchor");
+            particleAnchorButton.OnClick += ShowParticleAnchorMenu;
+            _controlButtons.Add(particleAnchorButton);
+
+            var particleEffectButton = new Button(Rectangle.Empty, "Set Particle Effect");
+            particleEffectButton.OnClick += ShowParticleEffectMenu;
+            _controlButtons.Add(particleEffectButton);
+
+            var leftHandLayerButton = new Button(Rectangle.Empty, "L-Hand: Front");
+            leftHandLayerButton.OnClick += () => ToggleRenderLayer(_leftHand);
+            _controlButtons.Add(leftHandLayerButton);
+
+            var rightHandLayerButton = new Button(Rectangle.Empty, "R-Hand: Front");
+            rightHandLayerButton.OnClick += () => ToggleRenderLayer(_rightHand);
+            _controlButtons.Add(rightHandLayerButton);
         }
 
         public override void Enter()
@@ -98,8 +106,7 @@ namespace ProjectVagabond.Editor
             _leftHand.MoveTo(AnimationAnchors["LeftHandIdle"], 0.5f, Easing.EaseOutCubic);
             _rightHand.MoveTo(AnimationAnchors["RightHandIdle"], 0.5f, Easing.EaseOutCubic);
 
-            // Use the resolver to get the correct source content path.
-            string sourceContentPath = ProjectDirectoryResolver.Resolve("Content/Actions");
+            string sourceContentPath = ProjectDirectoryResolver.Resolve("Content/Poses");
             _fileBrowser.Populate(sourceContentPath);
         }
 
@@ -107,46 +114,60 @@ namespace ProjectVagabond.Editor
         {
             base.Exit();
             EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
-            _transformGizmo.OnAnimationGizmoClicked -= ShowAnimationMenu;
-            OnPlaybackStop(); // Ensure animator is stopped
         }
 
         private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)
         {
             CalculateLayouts();
-            // After a resize, smoothly move the hands to their new idle positions
-            _leftHand.MoveTo(AnimationAnchors["LeftHandIdle"], 0.3f, Easing.EaseOutCubic);
-            _rightHand.MoveTo(AnimationAnchors["RightHandIdle"], 0.3f, Easing.EaseOutCubic);
+            if (_loadedPose != null)
+            {
+                SnapHandsToPose(_loadedPose);
+            }
+            else
+            {
+                _leftHand.MoveTo(AnimationAnchors["LeftHandIdle"], 0.3f, Easing.EaseOutCubic);
+                _rightHand.MoveTo(AnimationAnchors["RightHandIdle"], 0.3f, Easing.EaseOutCubic);
+            }
         }
 
         private void CalculateLayouts()
         {
             var bounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
 
-            // File Browser on the left
             _fileBrowser.Bounds = new Rectangle(
                 bounds.X + PANEL_PADDING,
                 bounds.Y + PANEL_PADDING,
                 FILE_BROWSER_WIDTH,
-                bounds.Height - TIMELINE_HEIGHT - (PANEL_PADDING * 3)
+                bounds.Height - (PANEL_PADDING * 2)
             );
 
-            // Timeline on the bottom
-            _timelineUI.Bounds = new Rectangle(
-                bounds.X + PANEL_PADDING,
-                bounds.Bottom - TIMELINE_HEIGHT - PANEL_PADDING,
-                bounds.Width - (PANEL_PADDING * 2),
-                TIMELINE_HEIGHT
-            );
-
-            // --- Anchor Calculation (using centralized calculator) ---
             AnimationAnchors = AnimationAnchorCalculator.CalculateAnchors(isEditor: true, out _combatScreenBottomY);
 
-            // Update the renderers with their new initial positions
             _leftHand.SetIdlePosition(AnimationAnchors["LeftHandIdle"]);
             _rightHand.SetIdlePosition(AnimationAnchors["RightHandIdle"]);
             _leftHand.SetOffscreenPosition(AnimationAnchors["LeftHandOffscreen"]);
             _rightHand.SetOffscreenPosition(AnimationAnchors["RightHandOffscreen"]);
+
+            // Layout control panel buttons
+            var controlPanelBounds = GetControlPanelBounds();
+            int buttonWidth = 140;
+            int buttonHeight = 20;
+            int buttonSpacing = 10;
+            int currentX = controlPanelBounds.X + 10;
+            int buttonY = controlPanelBounds.Y + 10;
+
+            _controlButtons[0].Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight); // Save
+            currentX += buttonWidth + buttonSpacing;
+            _controlButtons[1].Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight); // Anchor
+            currentX += buttonWidth + buttonSpacing;
+            _controlButtons[2].Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight); // Effect
+
+            // Second row for layer buttons
+            currentX = controlPanelBounds.X + 10;
+            buttonY += buttonHeight + 5;
+            _controlButtons[3].Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight); // Left Layer
+            currentX += buttonWidth + buttonSpacing;
+            _controlButtons[4].Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight); // Right Layer
         }
 
         public override void Update(GameTime gameTime)
@@ -156,146 +177,48 @@ namespace ProjectVagabond.Editor
             var vms = Core.TransformMouse(ms.Position);
             var font = ServiceLocator.Get<BitmapFont>();
 
-            if (kbs.IsKeyDown(Keys.F12) && _previousKeyboardState.IsKeyUp(Keys.F12))
-            {
-                // TODO: Add "are you sure you want to exit" prompt
-                ServiceLocator.Get<SceneManager>().ChangeScene(GameSceneState.MainMenu);
-                return;
-            }
-
             bool isCtrlDown = kbs.IsKeyDown(Keys.LeftControl) || kbs.IsKeyDown(Keys.RightControl);
             if (isCtrlDown && kbs.IsKeyDown(Keys.S) && _previousKeyboardState.IsKeyUp(Keys.S))
             {
                 OnSave();
             }
 
-            if (kbs.IsKeyDown(Keys.Escape) && _previousKeyboardState.IsKeyUp(Keys.Escape))
-            {
-                if (_subMode == EditorSubMode.AwaitingKeySelection)
-                {
-                    _subMode = EditorSubMode.Normal; // Cancel key selection
-                }
-                else
-                {
-                    ToggleEditMode();
-                }
-            }
-
-            // Handle keyboard scrubbing in both modes
-            if (_loadedAction?.Timeline != null)
-            {
-                bool leftPressed = (kbs.IsKeyDown(Keys.Left) && _previousKeyboardState.IsKeyUp(Keys.Left)) || (kbs.IsKeyDown(Keys.A) && _previousKeyboardState.IsKeyUp(Keys.A));
-                bool rightPressed = (kbs.IsKeyDown(Keys.Right) && _previousKeyboardState.IsKeyUp(Keys.Right)) || (kbs.IsKeyDown(Keys.D) && _previousKeyboardState.IsKeyUp(Keys.D));
-
-                if (leftPressed || rightPressed)
-                {
-                    float increment = rightPressed ? TIMELINE_KEY_SCRUB_AMOUNT : -TIMELINE_KEY_SCRUB_AMOUNT;
-                    float newTime = _timelineUI.CurrentTime + increment;
-                    OnPlaybackScrub(newTime);
-                }
-            }
-
             _animationContextMenu.Update(ms, previousMouseState, vms, font);
+            _particleAnchorContextMenu.Update(ms, previousMouseState, vms, font);
+            _particleEffectContextMenu.Update(ms, previousMouseState, vms, font);
 
             if (_isEditMode)
             {
-                if (_subMode == EditorSubMode.Normal)
+                _transformGizmo.Update(ms, previousMouseState);
+                HandleHandSelection();
+                if (_transformGizmo.IsDragging)
                 {
-                    _transformGizmo.Update(ms, previousMouseState);
-                    HandleHandSelection();
-                }
-                else if (_subMode == EditorSubMode.AwaitingKeySelection)
-                {
-                    HandleKeySelectionInput(kbs);
-                }
-
-                if (kbs.IsKeyDown(Keys.Space) && _previousKeyboardState.IsKeyUp(Keys.Space))
-                {
-                    ToggleSetKeyMode();
-                }
-            }
-            else
-            {
-                // Ensure gizmo is not active when not in edit mode
-                if (_selectedHand != null)
-                {
-                    _selectedHand = null;
-                    _transformGizmo.Detach();
-                }
-
-                // Handle playback controls when not editing
-                if (kbs.IsKeyDown(Keys.Space) && _previousKeyboardState.IsKeyUp(Keys.Space))
-                {
-                    if (_actionAnimator.IsPlaying)
-                    {
-                        if (_actionAnimator.IsPaused) { OnPlaybackPlay(); }
-                        else { OnPlaybackPause(); }
-                    }
-                    else
-                    {
-                        OnPlaybackPlay();
-                    }
+                    UpdatePoseFromGizmo();
                 }
             }
 
             _fileBrowser.Update(gameTime, _isEditMode);
-            _timelineUI.Update(gameTime, previousMouseState, IsDirty, _isEditMode);
-
-            // Only update the animator if we are NOT in edit mode.
-            // This prevents it from overriding the user's manual transforms.
-            if (!_isEditMode)
+            foreach (var button in _controlButtons)
             {
-                _actionAnimator.Update(gameTime);
+                button.Update(ms);
             }
 
             _leftHand.Update(gameTime);
             _rightHand.Update(gameTime);
 
-            // Only sync the UI time from the animator when not in edit mode.
-            // In edit mode, the UI is the source of truth for the current time.
-            if (_actionAnimator.IsPlaying && !_isEditMode)
-            {
-                _timelineUI.CurrentTime = _actionAnimator.PlaybackTime;
-            }
-
-            // Base update must be last to correctly handle previous input states for the next frame.
             base.Update(gameTime);
-        }
-
-        private void ToggleEditMode()
-        {
-            _isEditMode = !_isEditMode;
-            if (!_isEditMode)
-            {
-                _selectedHand = null;
-                _transformGizmo.Detach();
-
-                // Stop the animator to clear its current state and force it to rebuild
-                // its keyframe cache from the (potentially modified) timeline data.
-                _actionAnimator.Stop();
-
-                // When exiting edit mode, snap the hands back to their correct timeline position.
-                // This will re-prime the animator with the updated timeline.
-                OnPlaybackScrub(_timelineUI.CurrentTime);
-            }
         }
 
         private void HandleHandSelection()
         {
             var mouseState = Mouse.GetState();
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
-
             bool leftClickPressed = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
 
-            // If the gizmo is active and being dragged, it handles all input.
-            // This prevents re-selection while manipulating a handle.
             if (_transformGizmo.IsDragging) return;
 
-            // When a click occurs, check for selection on a hand. If no hand is clicked,
-            // deselect the current one. This logic now correctly ignores UI panels in edit mode.
             if (leftClickPressed && UIInputManager.CanProcessMouseClick())
             {
-                // Prioritize left hand if overlapping
                 if (_leftHand.GetInteractionBounds().Contains(virtualMousePos))
                 {
                     _selectedHand = _leftHand;
@@ -321,47 +244,112 @@ namespace ProjectVagabond.Editor
             }
         }
 
+        private void UpdatePoseFromGizmo()
+        {
+            if (_loadedPose == null || _selectedHand == null) return;
+
+            _isDataDirty = true;
+            HandState stateToUpdate = (_selectedHand == _leftHand) ? _loadedPose.LeftHand : _loadedPose.RightHand;
+
+            stateToUpdate.Position = _selectedHand.CurrentPosition;
+            stateToUpdate.Rotation = MathHelper.ToDegrees(_selectedHand.CurrentRotation);
+            stateToUpdate.Scale = _selectedHand.CurrentScale;
+        }
+
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // Batch 1: Main scene content (background, hands, unclipped UI)
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             DrawSceneContent(spriteBatch, font, gameTime);
-            _timelineUI.Draw(spriteBatch, font, gameTime, _subMode == EditorSubMode.AwaitingKeySelection ? _selectedKeyTracks : null);
             spriteBatch.End();
 
-            // Batch 2: File browser with clipping
             _fileBrowser.Draw(spriteBatch, font, gameTime, transform);
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // The "world" content is the preview window background.
             var pixel = ServiceLocator.Get<Texture2D>();
+            var global = ServiceLocator.Get<Global>();
             var previewArea = GetPreviewAreaBounds();
             spriteBatch.Draw(pixel, previewArea, new Color(20, 20, 25));
-
-            // Draw the green "combat floor" line.
             spriteBatch.Draw(pixel, new Rectangle(previewArea.X, (int)_combatScreenBottomY, previewArea.Width, 1), Color.LimeGreen);
+
+            var controlPanelBounds = GetControlPanelBounds();
+            spriteBatch.Draw(pixel, controlPanelBounds, new Color(30, 30, 40));
+            spriteBatch.DrawRectangle(controlPanelBounds, Color.Gray, 1f);
+
+            // Update button text before drawing
+            if (_loadedPose != null)
+            {
+                _controlButtons[3].Text = $"L-Hand: {(_loadedPose.LeftHand.RenderLayer == RenderLayer.InFrontOfParticles ? "Front" : "Back")}";
+                _controlButtons[4].Text = $"R-Hand: {(_loadedPose.RightHand.RenderLayer == RenderLayer.InFrontOfParticles ? "Front" : "Back")}";
+            }
+
+            foreach (var button in _controlButtons)
+            {
+                button.Draw(spriteBatch, font, gameTime);
+            }
+
+            // Draw the "Currently Editing" text
+            string currentPoseText = _loadedPose != null ? $"Editing: {_loadedPose.Id}" : "*SELECT A POSE*";
+            Color currentPoseColor = _loadedPose != null ? (_isDataDirty ? global.Palette_Teal : global.Palette_BrightWhite) : global.Palette_Gray;
+            Vector2 textPosition = new Vector2(controlPanelBounds.X + 10, controlPanelBounds.Y + 70);
+            spriteBatch.DrawStringSnapped(font, currentPoseText, textPosition, currentPoseColor);
         }
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // --- Hands (drawn last, on top of UI panels and letterboxing) ---
-            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            // --- Pass 1: Draw Hands Behind Particles ---
+            spriteBatch.Begin(sortMode: SpriteSortMode.Deferred, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            if (_loadedPose != null)
+            {
+                if (_loadedPose.LeftHand.RenderLayer == RenderLayer.BehindParticles)
+                {
+                    _leftHand.Draw(spriteBatch, font, gameTime, Color.White);
+                }
+                if (_loadedPose.RightHand.RenderLayer == RenderLayer.BehindParticles)
+                {
+                    _rightHand.Draw(spriteBatch, font, gameTime, Color.White);
+                }
+            }
+            else // If no pose is loaded, draw them in a default state
+            {
+                _leftHand.Draw(spriteBatch, font, gameTime, Color.White);
+                _rightHand.Draw(spriteBatch, font, gameTime, Color.White);
+            }
+            spriteBatch.End();
 
-            Color handColor = _isEditMode ? Color.White * 0.8f : Color.White * 0.2f;
-            _leftHand.Draw(spriteBatch, font, gameTime, handColor);
-            _rightHand.Draw(spriteBatch, font, gameTime, handColor);
+            // --- Pass 2: Draw Particle Effects (if any) ---
+            // In the editor, we might not have a particle system, so this is a placeholder.
+            // For a full implementation, you would call the particle manager here.
+
+            // --- Pass 3: Draw Hands In Front of Particles ---
+            spriteBatch.Begin(sortMode: SpriteSortMode.Deferred, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            if (_loadedPose != null)
+            {
+                if (_loadedPose.LeftHand.RenderLayer == RenderLayer.InFrontOfParticles)
+                {
+                    _leftHand.Draw(spriteBatch, font, gameTime, Color.White);
+                }
+                if (_loadedPose.RightHand.RenderLayer == RenderLayer.InFrontOfParticles)
+                {
+                    _rightHand.Draw(spriteBatch, font, gameTime, Color.White);
+                }
+            }
 
             if (_isEditMode)
             {
                 _transformGizmo.Draw(spriteBatch);
             }
+            spriteBatch.End();
 
+            // --- Pass 4: Draw Context Menus on top of everything ---
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             _animationContextMenu.Draw(spriteBatch, font);
-
+            _particleAnchorContextMenu.Draw(spriteBatch, font);
+            _particleEffectContextMenu.Draw(spriteBatch, font);
             spriteBatch.End();
         }
+
 
         public override Rectangle GetAnimatedBounds()
         {
@@ -374,303 +362,67 @@ namespace ProjectVagabond.Editor
             int previewX = bounds.X + FILE_BROWSER_WIDTH + (PANEL_PADDING * 2);
             int previewY = bounds.Y + PANEL_PADDING;
             int previewWidth = bounds.Width - FILE_BROWSER_WIDTH - (PANEL_PADDING * 3);
-            int previewHeight = bounds.Height - TIMELINE_HEIGHT - (PANEL_PADDING * 3);
-
+            int previewHeight = bounds.Height - CONTROL_PANEL_HEIGHT - (PANEL_PADDING * 3);
             return new Rectangle(previewX, previewY, previewWidth, previewHeight);
         }
 
-        private void OnActionFileSelected(string path, ActionData actionData)
+        private Rectangle GetControlPanelBounds()
         {
-            System.Diagnostics.Debug.WriteLine($"[Editor] Loaded action: {actionData.Name} from {path}");
-            _loadedActionPath = path;
-            _loadedAction = actionData;
-
-            // Ensure all loaded keyframes are marked as Unmodified
-            foreach (var track in _loadedAction.Timeline.Tracks)
-            {
-                foreach (var keyframe in track.Keyframes)
-                {
-                    keyframe.State = KeyframeState.Unmodified;
-                }
-            }
-
-            _dummyCombatAction = new CombatAction(0, _loadedAction, new List<int>());
-            _timelineUI.SetTimeline(_loadedAction.Timeline);
-            OnPlaybackStop();
+            var previewArea = GetPreviewAreaBounds();
+            return new Rectangle(
+                previewArea.X,
+                previewArea.Bottom + PANEL_PADDING,
+                previewArea.Width,
+                CONTROL_PANEL_HEIGHT
+            );
         }
 
-        private void OnPlaybackPlay()
+        private void OnPoseFileSelected(string path, PoseData poseData)
         {
-            if (_loadedAction == null) return;
-
-            // If it's already playing but paused, just resume.
-            if (_actionAnimator.IsPlaying && _actionAnimator.IsPaused)
-            {
-                _actionAnimator.Resume();
-            }
-            else // If it's not playing at all (i.e., it was stopped), start from the beginning.
-            {
-                _leftHand.ForcePositionAndRotation(AnimationAnchors["LeftHandIdle"], 0);
-                _rightHand.ForcePositionAndRotation(AnimationAnchors["RightHandIdle"], 0);
-                _leftHand.ForceScale(1.0f);
-                _rightHand.ForceScale(1.0f);
-                _actionAnimator.Play(_dummyCombatAction);
-            }
+            Debug.WriteLine($"[Editor] Loaded pose: {poseData.Id} from {path}");
+            _loadedPosePath = path;
+            _loadedPose = poseData;
+            _isDataDirty = false;
+            _selectedHand = null;
+            _transformGizmo.Detach();
+            SnapHandsToPose(poseData);
         }
 
-        private void OnPlaybackPause()
+        private void SnapHandsToPose(PoseData pose)
         {
-            _actionAnimator.Pause();
+            SnapHandToState(_leftHand, pose.LeftHand);
+            SnapHandToState(_rightHand, pose.RightHand);
         }
 
-        private void OnPlaybackStop()
+        private void SnapHandToState(HandRenderer hand, HandState state)
         {
-            _actionAnimator.Stop();
-            _timelineUI.CurrentTime = 0;
-            // Reset hands to a visible starting position for the next playback
-            _leftHand.MoveTo(AnimationAnchors["LeftHandIdle"], 0.3f, Easing.EaseOutCubic);
-            _rightHand.MoveTo(AnimationAnchors["RightHandIdle"], 0.3f, Easing.EaseOutCubic);
-            _leftHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
-            _rightHand.RotateTo(0, 0.3f, Easing.EaseOutCubic);
-        }
-
-        private void OnPlaybackReset()
-        {
-            if (_loadedAction == null) return;
-            // Prime the animator if it's not already playing/paused
-            if (!_actionAnimator.IsPlaying)
+            hand.ForcePositionAndRotation(state.Position, MathHelper.ToRadians(state.Rotation));
+            hand.ForceScale(state.Scale);
+            if (!string.IsNullOrEmpty(state.AnimationName))
             {
-                _actionAnimator.Play(_dummyCombatAction);
-                _actionAnimator.Pause();
+                hand.PlayAnimation(state.AnimationName);
             }
-            _actionAnimator.Seek(0f);
-            _timelineUI.CurrentTime = 0f;
-        }
-
-        private void OnPlaybackScrub(float newTime)
-        {
-            if (_loadedAction == null) return;
-
-            // Clamp and snap the time to the nearest 0.01s increment.
-            float duration = _loadedAction.Timeline.Duration;
-            float snappedTime = MathF.Round(Math.Clamp(newTime, 0, duration) * 100f) / 100f;
-
-            // Always update the UI's time.
-            _timelineUI.CurrentTime = snappedTime;
-
-            // Only update the animation preview if not in edit mode.
-            if (!_isEditMode)
-            {
-                // Prime the animator if it's not already playing/paused
-                if (!_actionAnimator.IsPlaying)
-                {
-                    _actionAnimator.Play(_dummyCombatAction);
-                    _actionAnimator.Pause();
-                }
-                _actionAnimator.Seek(snappedTime);
-            }
-        }
-
-        private void ToggleSetKeyMode()
-        {
-            if (_subMode == EditorSubMode.Normal)
-            {
-                _subMode = EditorSubMode.AwaitingKeySelection;
-                _selectedKeyTracks.Clear();
-            }
-            else // Was AwaitingKeySelection
-            {
-                PlaceSelectedKeyframes();
-                _subMode = EditorSubMode.Normal;
-            }
-        }
-
-        private void PlaceSelectedKeyframes()
-        {
-            if (_loadedAction?.Timeline == null || !_selectedKeyTracks.Any()) return;
-
-            float time = _timelineUI.CurrentTime / _loadedAction.Timeline.Duration;
-
-            var trackMap = new Dictionary<int, (HandRenderer hand, string trackName, string property)>
-            {
-                { 1, (_leftHand, "LeftHand", "MoveTo") },
-                { 2, (_leftHand, "LeftHand", "RotateTo") },
-                { 3, (_leftHand, "LeftHand", "ScaleTo") },
-                { 4, (_leftHand, "LeftHand", "PlayAnimation") },
-                { 5, (_rightHand, "RightHand", "MoveTo") },
-                { 6, (_rightHand, "RightHand", "RotateTo") },
-                { 7, (_rightHand, "RightHand", "ScaleTo") },
-                { 8, (_rightHand, "RightHand", "PlayAnimation") }
-            };
-
-            foreach (int trackIndex in _selectedKeyTracks)
-            {
-                if (trackMap.TryGetValue(trackIndex, out var info))
-                {
-                    SetKeyframeForHandProperty(info.hand, info.trackName, time, info.property);
-                }
-            }
-
-            _timelineUI.SetTimeline(_loadedAction.Timeline); // Refresh UI
-        }
-
-        private void SetKeyframeForHandProperty(HandRenderer hand, string trackName, float time, string property)
-        {
-            var timeline = _loadedAction.Timeline;
-            var track = timeline.Tracks.FirstOrDefault(t => t.Target == trackName);
-            if (track == null)
-            {
-                track = new AnimationTrack { Target = trackName };
-                timeline.Tracks.Add(track);
-            }
-
-            Keyframe newKey = null;
-            switch (property)
-            {
-                case "MoveTo":
-                    newKey = new Keyframe
-                    {
-                        Time = time,
-                        Type = "MoveTo",
-                        TargetX = hand.CurrentPosition.X,
-                        TargetY = hand.CurrentPosition.Y,
-                        Easing = "EaseOutCubic"
-                    };
-                    break;
-                case "RotateTo":
-                    newKey = new Keyframe { Time = time, Type = "RotateTo", Rotation = MathHelper.ToDegrees(hand.CurrentRotation), Easing = "EaseOutCubic" };
-                    break;
-                case "ScaleTo":
-                    newKey = new Keyframe { Time = time, Type = "ScaleTo", Scale = hand.CurrentScale, Easing = "EaseOutCubic" };
-                    break;
-                case "PlayAnimation":
-                    string currentAnimation = hand.CurrentAnimationName;
-                    if (!string.IsNullOrEmpty(currentAnimation))
-                    {
-                        newKey = new Keyframe { Time = time, Type = "PlayAnimation", AnimationName = currentAnimation };
-                    }
-                    break;
-            }
-
-            if (newKey != null)
-            {
-                track.AddOrUpdateKeyframe(newKey);
-            }
-        }
-
-        private void HandleKeySelectionInput(KeyboardState kbs)
-        {
-            var keyMap = new Dictionary<Keys, int>
-            {
-                { Keys.D1, 1 }, { Keys.D2, 2 }, { Keys.D3, 3 }, { Keys.D4, 4 },
-                { Keys.D5, 5 }, { Keys.D6, 6 }, { Keys.D7, 7 }, { Keys.D8, 8 }
-            };
-
-            foreach (var pair in keyMap)
-            {
-                if (kbs.IsKeyDown(pair.Key) && _previousKeyboardState.IsKeyUp(pair.Key))
-                {
-                    if (_selectedKeyTracks.Contains(pair.Value))
-                    {
-                        _selectedKeyTracks.Remove(pair.Value);
-                    }
-                    else
-                    {
-                        _selectedKeyTracks.Add(pair.Value);
-                    }
-                }
-            }
-
-            if (kbs.IsKeyDown(Keys.Tab) && _previousKeyboardState.IsKeyUp(Keys.Tab))
-            {
-                // If not all tracks are selected, select all. Otherwise, clear selection.
-                if (_selectedKeyTracks.Count < 8)
-                {
-                    for (int i = 1; i <= 8; i++) _selectedKeyTracks.Add(i);
-                }
-                else
-                {
-                    _selectedKeyTracks.Clear();
-                }
-            }
-        }
-
-        private string FindClosestAnchor(Vector2 position)
-        {
-            if (AnimationAnchors == null || !AnimationAnchors.Any())
-            {
-                return "LeftHandIdle";
-            }
-
-            return AnimationAnchors.OrderBy(kvp => Vector2.DistanceSquared(kvp.Value, position)).First().Key;
-        }
-
-        private void OnKeyframeClicked(AnimationTrack track, Keyframe keyframe)
-        {
-            if (keyframe.State == KeyframeState.Added)
-            {
-                track.Keyframes.Remove(keyframe);
-            }
-            else if (keyframe.State == KeyframeState.Deleted)
-            {
-                keyframe.State = KeyframeState.Unmodified;
-            }
-            else
-            {
-                keyframe.State = KeyframeState.Deleted;
-            }
-            // Immediately update the preview to reflect the change
-            _actionAnimator.Seek(_timelineUI.CurrentTime);
         }
 
         private void OnSave()
         {
-            if (!IsDirty || string.IsNullOrEmpty(_loadedActionPath)) return;
-
-            var dataToSave = new ActionData
-            {
-                Id = _loadedAction.Id,
-                Name = _loadedAction.Name,
-                Priority = _loadedAction.Priority,
-                TargetType = _loadedAction.TargetType,
-                Effects = _loadedAction.Effects,
-                Timeline = new AnimationTimeline { Duration = _loadedAction.Timeline.Duration }
-            };
-
-            foreach (var track in _loadedAction.Timeline.Tracks)
-            {
-                var newTrack = new AnimationTrack { Target = track.Target };
-                newTrack.Keyframes.AddRange(track.Keyframes.Where(k => k.State != KeyframeState.Deleted));
-                // MODIFIED: Always add the track, even if it's empty, to ensure deletions are saved.
-                dataToSave.Timeline.Tracks.Add(newTrack);
-            }
+            if (!_isDataDirty || string.IsNullOrEmpty(_loadedPosePath) || _loadedPose == null) return;
 
             try
             {
                 var jsonOptions = new JsonSerializerOptions
                 {
                     WriteIndented = true,
-                    Converters = { new JsonStringEnumConverter() }
-                };
-                string jsonString = JsonSerializer.Serialize(dataToSave, jsonOptions);
-                File.WriteAllText(_loadedActionPath, jsonString);
-
-                // Add a confirmation message to the debug output.
-                Debug.WriteLine($"[Editor] Saved changes to {_loadedActionPath}.");
-                Debug.WriteLine("[Editor] NOTE: If the file is open in your IDE, you may need to reload it to see the changes.");
-
-                // Post-save cleanup: reset the state of all keyframes in memory to 'Unmodified'.
-                // This correctly reflects that the in-memory state now matches the saved file.
-                foreach (var track in _loadedAction.Timeline.Tracks)
-                {
-                    // First, physically remove the keyframes marked for deletion from the in-memory list.
-                    track.Keyframes.RemoveAll(k => k.State == KeyframeState.Deleted);
-                    // Then, reset the state of all remaining keyframes.
-                    foreach (var keyframe in track.Keyframes)
-                    {
-                        keyframe.State = KeyframeState.Unmodified;
+                    Converters = {
+                        new JsonStringEnumConverter(),
+                        new Vector2JsonConverter()
                     }
-                }
+                };
+                string jsonString = JsonSerializer.Serialize(_loadedPose, jsonOptions);
+                File.WriteAllText(_loadedPosePath, jsonString);
+
+                Debug.WriteLine($"[Editor] Saved changes to {_loadedPosePath}.");
+                _isDataDirty = false;
             }
             catch (Exception ex)
             {
@@ -680,6 +432,7 @@ namespace ProjectVagabond.Editor
 
         private void ShowAnimationMenu(HandRenderer hand)
         {
+            if (_loadedPose == null) return;
             var font = ServiceLocator.Get<BitmapFont>();
             var mousePos = Core.TransformMouse(Mouse.GetState().Position);
             var animNames = hand.GetAvailableAnimationNames();
@@ -687,16 +440,88 @@ namespace ProjectVagabond.Editor
             var menuItems = new List<ContextMenuItem>();
             foreach (var name in animNames.OrderBy(n => n))
             {
-                // Capture the loop variable for the lambda
                 var currentName = name;
                 menuItems.Add(new ContextMenuItem
                 {
                     Text = currentName,
-                    OnClick = () => hand.PlayAnimation(currentName)
+                    OnClick = () =>
+                    {
+                        hand.PlayAnimation(currentName);
+                        var stateToUpdate = (hand == _leftHand) ? _loadedPose.LeftHand : _loadedPose.RightHand;
+                        stateToUpdate.AnimationName = currentName;
+                        _isDataDirty = true;
+                    }
                 });
             }
-
             _animationContextMenu.Show(mousePos, menuItems, font);
+        }
+
+        private void ShowParticleAnchorMenu()
+        {
+            if (_loadedPose == null) return;
+            var font = ServiceLocator.Get<BitmapFont>();
+            var mousePos = Core.TransformMouse(Mouse.GetState().Position);
+            var anchorTypes = Enum.GetValues(typeof(ParticleAnchorType)).Cast<ParticleAnchorType>();
+
+            var menuItems = new List<ContextMenuItem>();
+            foreach (var type in anchorTypes)
+            {
+                menuItems.Add(new ContextMenuItem
+                {
+                    Text = type.ToString(),
+                    OnClick = () =>
+                    {
+                        _loadedPose.ParticleAnchor = type;
+                        _isDataDirty = true;
+                    }
+                });
+            }
+            _particleAnchorContextMenu.Show(mousePos, menuItems, font);
+        }
+
+        private void ShowParticleEffectMenu()
+        {
+            if (_loadedPose == null) return;
+            var font = ServiceLocator.Get<BitmapFont>();
+            var mousePos = Core.TransformMouse(Mouse.GetState().Position);
+            var effectNames = ParticleEffectRegistry.GetEffectNames();
+
+            var menuItems = new List<ContextMenuItem>();
+            menuItems.Add(new ContextMenuItem
+            {
+                Text = "None",
+                OnClick = () =>
+                {
+                    _loadedPose.ParticleEffectName = null;
+                    _isDataDirty = true;
+                }
+            });
+
+            foreach (var name in effectNames)
+            {
+                menuItems.Add(new ContextMenuItem
+                {
+                    Text = name,
+                    OnClick = () =>
+                    {
+                        _loadedPose.ParticleEffectName = name;
+                        _isDataDirty = true;
+                    }
+                });
+            }
+            _particleEffectContextMenu.Show(mousePos, menuItems, font);
+        }
+
+        private void ToggleRenderLayer(HandRenderer hand)
+        {
+            if (_loadedPose == null) return;
+
+            HandState stateToUpdate = (hand == _leftHand) ? _loadedPose.LeftHand : _loadedPose.RightHand;
+            stateToUpdate.RenderLayer = (stateToUpdate.RenderLayer == RenderLayer.BehindParticles)
+                ? RenderLayer.InFrontOfParticles
+                : RenderLayer.BehindParticles;
+
+            _isDataDirty = true;
         }
     }
 }

@@ -37,7 +37,7 @@ uniform float ImpactGlitchIntensity;
 // --- Effect Intensity Values ---
 static const float CURVATURE_AMOUNT = 0.15;
 static const float VIGNETTE_INTENSITY = 0.8;
-static const float SCANLINE_INTENSITY = 0.4;
+static const float SCANLINE_INTENSITY = 0.1;
 static const float SHADOW_MASK_INTENSITY = 0.15;
 static const float CHROMATIC_ABERRATION_AMOUNT = 2.0;
 static const float DITHER_THRESHOLD = 1.0 / 255.0;
@@ -46,7 +46,7 @@ static const float CONTRAST_AMOUNT = 1.2;
 static const float DITHER_JITTER_INTENSITY = 0.2; // How many pixels to jitter
 static const float DITHER_JITTER_SPEED = 7.0; // How fast to jitter
 // --- Film Grain Parameters ---
-static const float FILM_GRAIN_INTENSITY = 0.03;
+static const float FILM_GRAIN_INTENSITY = 0.0001;
 // --- Ambient Glitch Parameters ---
 static const float GLITCH_FREQUENCY = 10.0;
 static const float GLITCH_PROBABILITY = 0.4;

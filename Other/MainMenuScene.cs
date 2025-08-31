@@ -60,6 +60,7 @@ namespace ProjectVagabond.Scenes
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var itemManager = ServiceLocator.Get<ItemManager>();
                 var actionManager = ServiceLocator.Get<ActionManager>();
+                var poseManager = ServiceLocator.Get<PoseManager>();
                 var diceSystem = ServiceLocator.Get<DiceRollingSystem>();
                 var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
                 var encounterManager = ServiceLocator.Get<EncounterManager>();
@@ -70,6 +71,7 @@ namespace ProjectVagabond.Scenes
                     new GenericTask("Loading game sprites...", () => spriteManager.LoadGameContent()),
                     new GenericTask("Loading item data...", () => itemManager.LoadWeapons("Content/Weapons")),
                     new GenericTask("Loading action data...", () => actionManager.LoadActions("Content/Actions")),
+                    new GenericTask("Loading pose data...", () => poseManager.LoadPoses("Content/Poses")),
                     new GenericTask("Initializing dice system...", () => diceSystem.Initialize(core.GraphicsDevice, core.Content)),
                     new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Archetypes")),
                     new GenericTask("Loading encounters...", () => encounterManager.LoadEncounters("Content/Encounters")),

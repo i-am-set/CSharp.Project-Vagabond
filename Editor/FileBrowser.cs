@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Combat;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,12 +15,12 @@ using System.Text.Json.Serialization;
 namespace ProjectVagabond.Editor
 {
     /// <summary>
-    /// A UI component for browsing and selecting action animation files.
+    /// A UI component for browsing and selecting pose files.
     /// </summary>
     public class FileBrowser
     {
         public Rectangle Bounds { get; set; }
-        public event Action<string, ActionData> OnFileSelected;
+        public event Action<string, PoseData> OnFileSelected;
 
         private List<Button> _fileButtons = new List<Button>();
         private List<string> _filePaths = new List<string>();
@@ -38,7 +39,10 @@ namespace ProjectVagabond.Editor
             var jsonOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() }
+                Converters = {
+                    new JsonStringEnumConverter(),
+                    new Vector2JsonConverter()
+                }
             };
 
             var files = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories)
@@ -49,12 +53,12 @@ namespace ProjectVagabond.Editor
                 try
                 {
                     string jsonContent = File.ReadAllText(file);
-                    var actionData = JsonSerializer.Deserialize<ActionData>(jsonContent, jsonOptions);
-                    if (actionData != null && actionData.Timeline != null)
+                    var poseData = JsonSerializer.Deserialize<PoseData>(jsonContent, jsonOptions);
+                    if (poseData != null)
                     {
                         var localFile = file; // Capture the variable for the lambda
                         var button = new Button(Rectangle.Empty, Path.GetFileNameWithoutExtension(file), alignLeft: true, enableHoverSway: false);
-                        button.OnClick += () => OnFileSelected?.Invoke(localFile, actionData);
+                        button.OnClick += () => OnFileSelected?.Invoke(localFile, poseData);
                         _fileButtons.Add(button);
                         _filePaths.Add(file);
                     }
@@ -65,8 +69,6 @@ namespace ProjectVagabond.Editor
 
         public void Update(GameTime gameTime, bool isEditMode)
         {
-            if (isEditMode) return; // Ignore all input if in edit mode
-
             var mouseState = Mouse.GetState();
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
 

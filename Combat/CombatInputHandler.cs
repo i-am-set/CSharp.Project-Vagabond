@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
 using ProjectVagabond.Combat;
@@ -21,13 +21,16 @@ namespace ProjectVagabond.Combat
         private readonly ActionHandUI _actionHandUI;
         private readonly HapticsManager _hapticsManager;
         private readonly CombatScene _combatScene;
+        private readonly ActionAnimator _actionAnimator;
 
         // --- TUNING CONSTANTS ---
         /// <summary>
         /// The minimum distance the mouse must move (in virtual pixels) after clicking a card
         /// before a drag operation officially begins.
         /// </summary>
-        public const float DRAG_START_THRESHOLD = 8f;
+        public const float DRAG_START_THRESHOLD = 4f;
+        private const float HOLD_POSE_TRANSITION_DURATION = 0.6f;
+        private const float IDLE_POSE_TRANSITION_DURATION = 0.3f;
 
         // Input state
         private MouseState _previousMouseState;
@@ -49,6 +52,7 @@ namespace ProjectVagabond.Combat
             _actionHandUI = actionHandUI;
             _combatScene = combatScene;
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _actionAnimator = combatScene.ActionAnimator;
         }
 
         /// <summary>
@@ -116,6 +120,7 @@ namespace ProjectVagabond.Combat
                             HeldCard = null; // No longer just held
 
                             DraggedCard.BeginDrag();
+                            _actionAnimator.TransitionToPose(null, DraggedCard.Action.HoldPoseId, HOLD_POSE_TRANSITION_DURATION);
                         }
                     }
 
@@ -148,6 +153,7 @@ namespace ProjectVagabond.Combat
             {
                 DraggedCard.StopDragSway();
                 DraggedCard.IsBeingDragged = false;
+                _actionAnimator.ReturnToIdle(IDLE_POSE_TRANSITION_DURATION);
             }
 
             // Clear targeting visuals
@@ -244,10 +250,33 @@ namespace ProjectVagabond.Combat
                 if (actionPlayed)
                 {
                     _hapticsManager.TriggerShake(1.5f, 0.15f);
-                }
 
-                // Reset drag state regardless of success or cancellation.
-                CancelDrag();
+                    // --- SUCCESSFUL PLAY CLEANUP ---
+                    // The action was confirmed. We clean up the drag state but LEAVE the hands in the hold pose.
+                    // The ActionExecutionState will handle the next transition from hold -> cast.
+                    if (DraggedCard != null)
+                    {
+                        DraggedCard.StopDragSway();
+                        DraggedCard.IsBeingDragged = false;
+                    }
+                    // Clear targeting visuals
+                    if (PotentialTargetId.HasValue)
+                    {
+                        _combatScene.SetEntityTargeted(PotentialTargetId.Value, false);
+                    }
+                    _combatScene.SetAllEnemiesTargeted(false);
+
+                    DraggedCard = null;
+                    HeldCard = null;
+                    PotentialTargetId = null;
+                }
+                else
+                {
+                    // --- FAILED/CANCELED PLAY CLEANUP ---
+                    // The action was not played (e.g., dropped in cancel zone).
+                    // Reset drag state AND return hands to idle.
+                    CancelDrag();
+                }
             }
         }
 
