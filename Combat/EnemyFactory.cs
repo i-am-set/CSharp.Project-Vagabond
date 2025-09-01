@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace ProjectVagabond.Combat
 {
@@ -28,12 +30,17 @@ namespace ProjectVagabond.Combat
         {
             var createdEnemies = new List<CombatEntity>();
             var spriteManager = ServiceLocator.Get<SpriteManager>();
+            var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
 
             foreach (var enemyDef in encounterData.Enemies)
             {
                 // 1. Spawn the entity from its archetype
                 int entityId = Spawner.Spawn(enemyDef.ArchetypeId, enemyDef.Position.ToVector2());
                 if (entityId == -1) continue;
+
+                var archetype = archetypeManager.GetArchetypeTemplate(enemyDef.ArchetypeId);
+                Debug.WriteLine($"[EnemyFactory] Creating entity '{archetype.Name}' (ID: {entityId}) from archetype '{enemyDef.ArchetypeId}'.");
+
 
                 // 2. Apply stat randomization
                 var statsComp = _componentStore.GetComponent<StatsComponent>(entityId);
@@ -54,8 +61,28 @@ namespace ProjectVagabond.Combat
                     statsComp.Initialize(); // Re-clamp and recalculate derived stats
                 }
 
-                // 3. Create the visual CombatEntity object
-                var newEnemy = new CombatEntity(entityId, spriteManager.EnemySprite);
+                // 3. Determine the correct texture for the visual CombatEntity
+                var renderable = _componentStore.GetComponent<RenderableComponent>(entityId);
+                Texture2D textureToUse = null;
+                if (renderable != null && !string.IsNullOrEmpty(renderable.SpritePath))
+                {
+                    Debug.WriteLine($"[EnemyFactory] Requesting sprite for '{archetype.Name}' with path: '{renderable.SpritePath}'.");
+                    textureToUse = spriteManager.GetEnemySprite(renderable.SpritePath);
+                }
+
+                // If no specific sprite was found, use the 1x1 pixel as a fallback.
+                if (textureToUse == null)
+                {
+                    Debug.WriteLine($"[EnemyFactory] Sprite NOT found in manager for path '{renderable?.SpritePath ?? "NULL"}'. Using fallback pixel texture.");
+                    textureToUse = ServiceLocator.Get<Texture2D>();
+                }
+                else
+                {
+                    Debug.WriteLine($"[EnemyFactory] Sprite found in manager. Assigning texture '{textureToUse.Name}'.");
+                }
+
+                // 4. Create the visual CombatEntity object
+                var newEnemy = new CombatEntity(entityId, textureToUse);
                 createdEnemies.Add(newEnemy);
             }
 

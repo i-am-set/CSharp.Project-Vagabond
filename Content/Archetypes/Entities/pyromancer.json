@@ -3,10 +3,10 @@
   "Name": "Pyromancer",
   "Components": [
     {
-      "Type": "ProjectVagabond.PositionComponent, ProjectVagabond"
+      "Type": "PositionComponent"
     },
     {
-      "Type": "ProjectVagabond.StatsComponent, ProjectVagabond",
+      "Type": "StatsComponent",
       "Properties": {
         "Strength": 2,
         "Agility": 4,
@@ -16,20 +16,21 @@
       }
     },
     {
-      "Type": "ProjectVagabond.RenderableComponent, ProjectVagabond",
+      "Type": "RenderableComponent",
       "Properties": {
+        "SpritePath": "Sprites/Enemies/pyromancer",
         "Color": "Palette_Orange"
       }
     },
     {
-      "Type": "ProjectVagabond.HealthComponent, ProjectVagabond",
+      "Type": "HealthComponent",
       "Properties": {
         "MaxHealth": 30,
         "CurrentHealth": 30
       }
     },
     {
-      "Type": "ProjectVagabond.CombatantComponent, ProjectVagabond",
+      "Type": "CombatantComponent",
       "Properties": {
         "DefaultWeaponId": "weapon_unarmed_punch",
         "InnateActionIds": [ "spell_fireball" ],
@@ -43,16 +44,16 @@
       }
     },
     {
-      "Type": "ProjectVagabond.EquipmentComponent, ProjectVagabond"
+      "Type": "EquipmentComponent"
     },
     {
-      "Type": "ProjectVagabond.AIComponent, ProjectVagabond",
+      "Type": "AIComponent",
       "Properties": {
         "Intellect": "Optimal"
       }
     },
     {
-      "Type": "ProjectVagabond.CombatDeckComponent, ProjectVagabond"
+      "Type": "CombatDeckComponent"
     }
   ]
 }
