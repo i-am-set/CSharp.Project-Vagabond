@@ -3,9 +3,12 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.UI
 {
@@ -45,7 +48,7 @@ namespace ProjectVagabond.UI
             _core.IsMouseVisible = true;
 
             var font = ServiceLocator.Get<BitmapFont>();
-            float dialogWidth = 450;
+            float dialogWidth = 280;
             float currentHeight = 20;
 
             var wrappedPrompt = WrapText(font, _prompt, dialogWidth - 40);
@@ -76,8 +79,8 @@ namespace ProjectVagabond.UI
 
             if (_isHorizontalLayout)
             {
-                int textHorizontalPadding = 32;
-                int interButtonGap = 24;
+                int textHorizontalPadding = 16;
+                int interButtonGap = 12;
                 float buttonY = buttonAreaTopY + (buttonAreaHeight - buttonHeight) / 2f;
 
                 var (taggedText1, action1) = buttonActions[0];
@@ -102,7 +105,7 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                int buttonWidth = 180;
+                int buttonWidth = 90;
                 float currentButtonY = buttonAreaTopY;
                 foreach (var (taggedText, action) in buttonActions)
                 {

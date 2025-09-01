@@ -5,8 +5,11 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -69,21 +72,21 @@ namespace ProjectVagabond
         public const float FIXED_PHYSICS_TIMESTEP = 1f / PHYSICS_UPDATES_PER_SECOND;
 
         // Virtual resolution for fixed aspect ratio rendering
-        public const int VIRTUAL_WIDTH = 640;
-        public const int VIRTUAL_HEIGHT = 360;
+        public const int VIRTUAL_WIDTH = 320;
+        public const int VIRTUAL_HEIGHT = 180;
 
         // Map settings Global
         public const float MAP_AREA_WIDTH_PERCENT = 0.8f;
-        public const int MAP_TOP_PADDING = 20;
-        public const int TERMINAL_AREA_HEIGHT = 150;
-        public const int GRID_CELL_SIZE = 10;
+        public const int MAP_TOP_PADDING = 10;
+        public const int TERMINAL_AREA_HEIGHT = 75;
+        public const int GRID_CELL_SIZE = 5;
         public const int FONT_SIZE = 12;
         public const int TERMINAL_LINE_SPACING = 12;
         public const int PROMPT_LINE_SPACING = 16;
         public const float NOISE_SCALE = 0.2f;
-        public const int DEFAULT_TERMINAL_WIDTH = 540;
-        public const int DEFAULT_TERMINAL_HEIGHT = 338;
-        public const int COMBAT_TERMINAL_BUFFER = 130;
+        public const int DEFAULT_TERMINAL_WIDTH = 270;
+        public const int DEFAULT_TERMINAL_HEIGHT = 169;
+        public const int COMBAT_TERMINAL_BUFFER = 65;
 
         // Player stats Global
         public const int MAX_MAX_HEALTH_ENERGY = 48;
@@ -92,16 +95,16 @@ namespace ProjectVagabond
         // Input system Global
         public const int MAX_SINGLE_MOVE_LIMIT = 20;
         public const int MAX_HISTORY_LINES = 200;
-        public const int TERMINAL_HEIGHT = 600;
+        public const int TERMINAL_HEIGHT = 300;
         public const float MIN_BACKSPACE_DELAY = 0.02f;
         public const float BACKSPACE_ACCELERATION = 0.25f;
 
         // UI settings Global
         public const float DEFAULT_OVERFLOW_SCROLL_SPEED = 20.0f;
-        public const float VALUE_DISPLAY_WIDTH = 110f;
+        public const float VALUE_DISPLAY_WIDTH = 100f;
         public const int APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING = 5;
         public const float TOOLTIP_AVERAGE_POPUP_TIME = 0.5f;
-        public const int TERMINAL_Y = 50;
+        public const int TERMINAL_Y = 25;
 
         // Combat settings Global
         public const int COMBAT_TURN_DURATION_SECONDS = 5;

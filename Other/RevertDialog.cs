@@ -37,8 +37,8 @@ namespace ProjectVagabond.UI
             _core.IsMouseVisible = true;
 
             // Layout
-            int dialogWidth = 450;
-            int dialogHeight = 150;
+            int dialogWidth = 280;
+            int dialogHeight = 100;
             _dialogBounds = new Rectangle(
                 (Global.VIRTUAL_WIDTH - dialogWidth) / 2,
                 (Global.VIRTUAL_HEIGHT - dialogHeight) / 2,
@@ -46,10 +46,10 @@ namespace ProjectVagabond.UI
                 dialogHeight
             );
 
-            int buttonWidth = 120;
-            int buttonHeight = 25;
-            int buttonY = _dialogBounds.Bottom - buttonHeight - 20;
-            int buttonGap = 20;
+            int buttonWidth = 80;
+            int buttonHeight = 20;
+            int buttonY = _dialogBounds.Bottom - buttonHeight - 10;
+            int buttonGap = 10;
 
             _confirmButton = new Button(new Rectangle(_dialogBounds.Center.X - buttonWidth - buttonGap / 2, buttonY, buttonWidth, buttonHeight), "Confirm");
             _confirmButton.OnClick += () => {
@@ -105,7 +105,7 @@ namespace ProjectVagabond.UI
 
             // Draw Prompt
             Vector2 promptSize = font.MeasureString(_prompt);
-            Vector2 promptPosition = new Vector2(_dialogBounds.Center.X - promptSize.X / 2, _dialogBounds.Y + 20);
+            Vector2 promptPosition = new Vector2(_dialogBounds.Center.X - promptSize.X / 2, _dialogBounds.Y + 10);
             spriteBatch.DrawStringSnapped(font, _prompt, promptPosition, _global.Palette_BrightWhite);
 
             // Draw Countdown Timer
@@ -113,7 +113,7 @@ namespace ProjectVagabond.UI
             _stringBuilder.Append("Reverting in ").Append((int)Math.Ceiling(_countdownTimer)).Append(" seconds...");
             string timerString = _stringBuilder.ToString();
             Vector2 timerSize = font.MeasureString(timerString);
-            Vector2 timerPosition = new Vector2(_dialogBounds.Center.X - timerSize.X / 2, promptPosition.Y + promptSize.Y + 15);
+            Vector2 timerPosition = new Vector2(_dialogBounds.Center.X - timerSize.X / 2, promptPosition.Y + promptSize.Y + 8);
             spriteBatch.DrawStringSnapped(font, timerString, timerPosition, _global.Palette_Yellow);
 
             // Draw Buttons

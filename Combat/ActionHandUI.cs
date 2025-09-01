@@ -24,21 +24,21 @@ namespace ProjectVagabond.Combat.UI
         private List<CombatCard> _cards = new List<CombatCard>();
 
         // --- TUNING CONSTANTS ---
-        public static readonly Point CARD_SIZE = new Point(120, 168);
-        private const int MENU_BOTTOM_PADDING = 20; // Distance from the bottom of the visible screen.
-        private const int CARD_SPACING = -45; // Negative for overlap
-        private const float SPREAD_AMOUNT = 40f; // How far cards move apart when one is hovered
-        private const float HOVER_Y_OFFSET = -40f; // How far the card moves up when hovered
+        public static readonly Point CARD_SIZE = new Point(60, 84);
+        private const int MENU_BOTTOM_PADDING = 10; // Distance from the bottom of the visible screen.
+        private const int CARD_SPACING = -22; // Negative for overlap
+        private const float SPREAD_AMOUNT = 20f; // How far cards move apart when one is hovered
+        private const float HOVER_Y_OFFSET = -20f; // How far the card moves up when hovered
         private const float CARD_TILT_RADIANS = 0.1f; // Tilt angle for unselected cards
-        private const float CARD_ARCH_AMOUNT = 10f; // How much lower the outer cards are than the center card.
-        private const float HAND_Y_ANCHOR_OFFSET = -10f; // Vertical offset for the entire hand anchor. Negative moves it up.
+        private const float CARD_ARCH_AMOUNT = 5f; // How much lower the outer cards are than the center card.
+        private const float HAND_Y_ANCHOR_OFFSET = -5f; // Vertical offset for the entire hand anchor. Negative moves it up.
         private const float HAND_ANIMATION_DURATION = 0.2f;
-        private const float HOVER_BOUNDS_Y_EXTENSION = 50f; // How many extra pixels to add to the bottom of the hover hitbox.
-        private const float TRIGGER_ZONE_HEIGHT = 60f; // The height of the initial hover area at the bottom of the screen.
+        private const float HOVER_BOUNDS_Y_EXTENSION = 25f; // How many extra pixels to add to the bottom of the hover hitbox.
+        private const float TRIGGER_ZONE_HEIGHT = 30f; // The height of the initial hover area at the bottom of the screen.
 
         // State-based Y positions
-        private const float HIDDEN_Y_OFFSET = 250f;
-        private const float PEEKING_Y_OFFSET = 110f; // Raised slightly for better default visibility
+        private const float HIDDEN_Y_OFFSET = 125f;
+        private const float PEEKING_Y_OFFSET = 55f; // Raised slightly for better default visibility
         private const float ACTIVE_Y_OFFSET = 0f;
 
         // Appearance
@@ -56,7 +56,7 @@ namespace ProjectVagabond.Combat.UI
         private const float HOVERED_SHADOW_ALPHA = 0.2f; // Shadow opacity when hovered normally
         private const float HELD_SHADOW_ALPHA = 0.3f; // Shadow opacity when held (clicked but not yet dragged)
         private const float SHADOW_SCALE_MULTIPLIER = 1.05f; // How much larger the shadow is than the card.
-        private const float SHADOW_BASE_VERTICAL_OFFSET = 8f; // Base downward offset for the shadow.
+        private const float SHADOW_BASE_VERTICAL_OFFSET = 4f; // Base downward offset for the shadow.
         private const float SHADOW_HORIZONTAL_SHIFT_FACTOR = 0.05f; // How much the shadow shifts horizontally based on card position. 0 = no shift.
         private const float SHADOW_VERTICAL_SHIFT_FACTOR = 0.1f; // How much the shadow moves down as the card moves up.
         private const int SHADOW_BLUR_LAYERS = 5; // Number of layers for the blur effect.
@@ -483,11 +483,11 @@ namespace ProjectVagabond.Combat.UI
                           * Matrix.CreateTranslation(card.CurrentBounds.Center.X, card.CurrentBounds.Center.Y, 0);
 
             // Draw the 4-pixel border from outside to inside
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < 2; i++) // Halved border for smaller resolution
             {
                 float inset = i;
-                // The outer 2 pixels are one color, the inner 2 are another.
-                Color borderColor = (i < 2) ? BORDER_COLOR_OUTER : BORDER_COLOR_INNER;
+                // The outer 1 pixel is one color, the inner 1 are another.
+                Color borderColor = (i < 1) ? BORDER_COLOR_OUTER : BORDER_COLOR_INNER;
 
                 var currentHalfSize = halfSize - new Vector2(inset);
                 var corners = new Vector2[4]
@@ -519,7 +519,7 @@ namespace ProjectVagabond.Combat.UI
             Vector2 textBgAreaOffset = new Vector2(0, CARD_SIZE.Y * (1 / 3f));
             Vector2 rotatedTextBgOffset = Vector2.Transform(textBgAreaOffset * card.CurrentScale, Matrix.CreateRotationZ(card.CurrentRotation));
             Vector2 textDrawPosition = card.CurrentBounds.Center + rotatedTextBgOffset;
-            spriteBatch.DrawStringSnapped(font, card.Action.Name, textDrawPosition, textColor, card.CurrentRotation, textSize / 2f, card.CurrentScale, SpriteEffects.None, 0f);
+            spriteBatch.DrawStringSnapped(font, card.Action.Name, textDrawPosition, textColor, card.CurrentRotation, textSize / 2f, card.CurrentScale * 0.5f, SpriteEffects.None, 0f);
         }
     }
 }

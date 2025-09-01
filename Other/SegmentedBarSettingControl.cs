@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -153,9 +153,10 @@ namespace ProjectVagabond.UI
         private void CalculateBounds(Vector2 position, BitmapFont font)
         {
             int totalBarWidth = (_segmentCount * SEGMENT_WIDTH) + ((_segmentCount - 1) * SEGMENT_GAP);
+            const float valueAreaXOffset = 170f;
 
             // Center the bar within the standard value area used by other controls.
-            float valueAreaX = position.X + 340;
+            float valueAreaX = position.X + valueAreaXOffset;
             float valueAreaWidth = Global.VALUE_DISPLAY_WIDTH;
             float barStartX = valueAreaX + (valueAreaWidth - totalBarWidth) / 2;
 
@@ -211,7 +212,7 @@ namespace ProjectVagabond.UI
 
             // --- Numeric Value ---
             string valueString = GetCurrentValueAsString();
-            Vector2 valuePosition = new Vector2(position.X + 460, position.Y);
+            Vector2 valuePosition = new Vector2(position.X + 280, position.Y);
             spriteBatch.DrawString(font, valueString, valuePosition, _global.Palette_DarkGray);
         }
     }

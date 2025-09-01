@@ -11,13 +11,13 @@ namespace ProjectVagabond.Utils
     public static class AnimationAnchorCalculator
     {
         // Hand Layout Constants
-        private const float HAND_IDLE_Y_OFFSET_COMBAT = -100f;
-        private const float HAND_IDLE_Y_OFFSET_EDITOR = -80f;
-        private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 116f;
-        private static readonly Vector2 HAND_CAST_OFFSET = new Vector2(60, -30);
-        private static readonly Vector2 HAND_RECOIL_OFFSET = new Vector2(-10, 15);
-        private const float HAND_THROW_Y_OFFSET = -20f;
-        private const float HAND_OFFSCREEN_Y_OFFSET = 250f;
+        private const float HAND_IDLE_Y_OFFSET_COMBAT = -50f;
+        private const float HAND_IDLE_Y_OFFSET_EDITOR = -40f;
+        private const float HAND_IDLE_X_OFFSET_FROM_CENTER = 58f;
+        private static readonly Vector2 HAND_CAST_OFFSET = new Vector2(30, -15);
+        private static readonly Vector2 HAND_RECOIL_OFFSET = new Vector2(-5, 8);
+        private const float HAND_THROW_Y_OFFSET = -10f;
+        private const float HAND_OFFSCREEN_Y_OFFSET = 125f;
 
         /// <summary>
         /// Calculates all anchor points based on the current screen dimensions.

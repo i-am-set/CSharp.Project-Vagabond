@@ -14,7 +14,7 @@ namespace ProjectVagabond
         private readonly WorldClockManager _worldClockManager;
 
         public Vector2 ScrollDirection { get; set; } = new Vector2(0.1f, 0.1f);
-        public float ScrollSpeed { get; set; } = 10f;
+        public float ScrollSpeed { get; set; } = 15f;
 
         public BackgroundManager()
         {

@@ -56,8 +56,8 @@ namespace ProjectVagabond.Scenes
 
         public override Rectangle GetAnimatedBounds()
         {
-            int panelWidth = 560;
-            int panelHeight = 480;
+            int panelWidth = 280;
+            int panelHeight = 240;
             return new Rectangle((Global.VIRTUAL_WIDTH - panelWidth) / 2, (Global.VIRTUAL_HEIGHT - panelHeight) / 2, panelWidth, panelHeight);
         }
 
@@ -77,21 +77,21 @@ namespace ProjectVagabond.Scenes
             _panelBounds = GetAnimatedBounds();
 
             // Image is positioned first, near the top
-            float currentY = _panelBounds.Y + 20;
-            _imagePlaceholderBounds = new Rectangle(_panelBounds.Center.X - 256, (int)currentY, 512, 256);
+            float currentY = _panelBounds.Y + 10;
+            _imagePlaceholderBounds = new Rectangle(_panelBounds.Center.X - 128, (int)currentY, 256, 128);
 
             if (_currentEncounter != null && !string.IsNullOrEmpty(_currentEncounter.DescriptionText))
             {
-                _wrappedDescription = WrapText(font, _currentEncounter.DescriptionText, _panelBounds.Width - 40);
+                _wrappedDescription = WrapText(font, _currentEncounter.DescriptionText, _panelBounds.Width - 20);
             }
 
             if (_currentEncounter?.Choices != null)
             {
-                int buttonWidth = 400;
-                int buttonHeight = 20;
-                int buttonSpacing = 5;
+                int buttonWidth = 200;
+                int buttonHeight = 10;
+                int buttonSpacing = 3;
                 float totalButtonHeight = _currentEncounter.Choices.Count * (buttonHeight + buttonSpacing) - buttonSpacing;
-                float buttonStartY = _panelBounds.Bottom - totalButtonHeight - 20;
+                float buttonStartY = _panelBounds.Bottom - totalButtonHeight - 10;
 
                 foreach (var choice in _currentEncounter.Choices)
                 {
@@ -151,15 +151,15 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawString(font, placeholderText, new Vector2(_imagePlaceholderBounds.Center.X - placeholderTextSize.X / 2, _imagePlaceholderBounds.Center.Y - placeholderTextSize.Y / 2), _global.Palette_Gray);
 
                 // Draw Text Content
-                float currentY = _imagePlaceholderBounds.Bottom + 10;
+                float currentY = _imagePlaceholderBounds.Bottom + 5;
                 Vector2 titleSize = font.MeasureString(_currentEncounter.Title);
                 Vector2 titlePosition = new Vector2(_panelBounds.Center.X - titleSize.X / 2, currentY);
                 spriteBatch.DrawString(font, _currentEncounter.Title, titlePosition, _global.Palette_BrightWhite);
 
-                currentY += titleSize.Y + 15;
+                currentY += titleSize.Y + 8;
                 foreach (var line in _wrappedDescription)
                 {
-                    spriteBatch.DrawString(font, line, new Vector2(_panelBounds.X + 20, currentY), _global.Palette_White);
+                    spriteBatch.DrawString(font, line, new Vector2(_panelBounds.X + 10, currentY), _global.Palette_White);
                     currentY += font.LineHeight;
                 }
 
@@ -172,7 +172,7 @@ namespace ProjectVagabond.Scenes
                 {
                     string waitingText = "Rolling...";
                     Vector2 waitingTextSize = font.MeasureString(waitingText);
-                    spriteBatch.DrawString(font, waitingText, new Vector2(_panelBounds.Center.X - waitingTextSize.X / 2, _panelBounds.Bottom - 40), _global.Palette_Yellow);
+                    spriteBatch.DrawString(font, waitingText, new Vector2(_panelBounds.Center.X - waitingTextSize.X / 2, _panelBounds.Bottom - 20), _global.Palette_Yellow);
                 }
             }
         }

@@ -77,6 +77,7 @@ namespace ProjectVagabond.UI
         private void CalculateBounds(Vector2 position, BitmapFont font)
         {
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
+            const float valueAreaXOffset = 170f;
             string leftArrowText = "<";
             string rightArrowText = ">";
             Vector2 leftArrowSize = font.MeasureString(leftArrowText);
@@ -84,8 +85,8 @@ namespace ProjectVagabond.UI
             int padding = 5;
             float arrowVisualHeight = font.LineHeight;
 
-            _leftArrowRect = new Rectangle((int)(position.X + 340) - padding, (int)position.Y - padding, (int)leftArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
-            _rightArrowRect = new Rectangle((int)(position.X + 340 + valueDisplayWidth - rightArrowSize.X) - padding, (int)position.Y - padding, (int)rightArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
+            _leftArrowRect = new Rectangle((int)(position.X + valueAreaXOffset) - padding, (int)position.Y - padding, (int)leftArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
+            _rightArrowRect = new Rectangle((int)(position.X + valueAreaXOffset + valueDisplayWidth - rightArrowSize.X) - padding, (int)position.Y - padding, (int)rightArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
         }
 
         public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont font)
@@ -144,7 +145,8 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawStringSnapped(font, Label, animatedPosition, labelColor);
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
-            Vector2 valueAreaPosition = new Vector2(animatedPosition.X + 340, animatedPosition.Y);
+            const float valueAreaXOffset = 170f;
+            Vector2 valueAreaPosition = new Vector2(animatedPosition.X + valueAreaXOffset, animatedPosition.Y);
 
             string leftArrowText = "<";
             string valueText = _options[_currentIndex].Key;

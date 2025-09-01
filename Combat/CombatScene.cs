@@ -44,35 +44,35 @@ namespace ProjectVagabond.Scenes
 
         // --- TUNING CONSTANTS ---
         // Entity Sizing
-        private static readonly Point ENEMY_BASE_SIZE = new Point(64, 96); // Base dimensions (Width, Height) for enemies.
+        private static readonly Point ENEMY_BASE_SIZE = new Point(32, 48); // Base dimensions (Width, Height) for enemies.
 
         // Enemy Layout
-        private const float ENEMY_BASE_Y = 100f; // The Y position of the CLOSEST enemy.
-        private const float ENEMY_SPACING_X = 150f;
-        private const float ENEMY_STAGGER_Y = 20f; // How much further UP (back) each enemy in the V-shape is.
+        private const float ENEMY_BASE_Y = 50f; // The Y position of the CLOSEST enemy.
+        private const float ENEMY_SPACING_X = 75f;
+        private const float ENEMY_STAGGER_Y = 10f; // How much further UP (back) each enemy in the V-shape is.
 
         // Player UI
-        private static readonly Point PLAYER_HEALTH_BAR_SIZE = new Point(200, 12);
-        private const int PLAYER_HEALTH_BAR_Y_OFFSET = 80; // Distance from the bottom of the screen.
-        private const int PLAYER_HIT_MARKER_Y_OFFSET = 10; // Distance above the health bar.
+        private static readonly Point PLAYER_HEALTH_BAR_SIZE = new Point(100, 6);
+        private const int PLAYER_HEALTH_BAR_Y_OFFSET = 40; // Distance from the bottom of the screen.
+        private const int PLAYER_HIT_MARKER_Y_OFFSET = 5; // Distance above the health bar.
 
         // Play Area
-        private const float PLAY_AREA_INSET_HORIZONTAL = 50f;
-        private const float PLAY_AREA_INSET_VERTICAL_TOP = 20f;
+        private const float PLAY_AREA_INSET_HORIZONTAL = 25f;
+        private const float PLAY_AREA_INSET_VERTICAL_TOP = 10f;
         private const float PLAY_AREA_BOTTOM_EXCLUSION_PERCENT = 0.20f; // The bottom 20% of the screen is a cancel zone.
 
         // Targeting Indicator
-        private static readonly Point TARGET_INDICATOR_SIZE = new Point(32, 32);
+        private static readonly Point TARGET_INDICATOR_SIZE = new Point(16, 16);
         private static readonly Color TARGET_INDICATOR_COLOR = Color.Yellow;
-        private const float TARGET_INDICATOR_Y_OFFSET = 10f;
+        private const float TARGET_INDICATOR_Y_OFFSET = 5f;
         private const float TARGET_INDICATOR_BOB_DISTANCE = 1f;
         private const float TARGET_INDICATOR_BOB_DURATION = 0.5f;
 
         // Self-Cast Indicator
-        private const float SELF_CAST_INDICATOR_BUFFER = 5f;
+        private const float SELF_CAST_INDICATOR_BUFFER = 3f;
         private const float POINTER_ANTS_SPEED = 15f; // Dots per second
         private const int POINTER_ANTS_SPACING = 3; // Gap between dots (e.g., 1 dot drawn, 2 skipped)
-        private const float SELF_CAST_DOT_SIZE = 2f; // The size of each dot in the marching ants line.
+        private const float SELF_CAST_DOT_SIZE = 1f; // The size of each dot in the marching ants line.
 
         // A list to manage cards that are currently in their "play" animation.
         private readonly List<CombatCard> _playingCards = new List<CombatCard>();
@@ -297,7 +297,7 @@ namespace ProjectVagabond.Scenes
                 else
                 {
                     // Self-cast (no targets) - animate to a spot above the hand
-                    targetPos = new Vector2(actualScreenVirtualBounds.Center.X, actualScreenVirtualBounds.Bottom - 150);
+                    targetPos = new Vector2(actualScreenVirtualBounds.Center.X, actualScreenVirtualBounds.Bottom - 75);
                 }
 
                 cardToPlay.AnimatePlay(targetPos);
@@ -380,6 +380,11 @@ namespace ProjectVagabond.Scenes
                     _rightHandRenderer.Draw(spriteBatch, font, gameTime);
                 }
             }
+            else // If no pose is active, draw them in a default state
+            {
+                _leftHandRenderer.Draw(spriteBatch, font, gameTime);
+                _rightHandRenderer.Draw(spriteBatch, font, gameTime);
+            }
             spriteBatch.End();
 
             // --- Pass 2: Draw Particle Effects ---
@@ -397,12 +402,6 @@ namespace ProjectVagabond.Scenes
                 {
                     _rightHandRenderer.Draw(spriteBatch, font, gameTime);
                 }
-            }
-            // If no pose is active, draw both hands by default (they will be idle)
-            else
-            {
-                _leftHandRenderer.Draw(spriteBatch, font, gameTime);
-                _rightHandRenderer.Draw(spriteBatch, font, gameTime);
             }
             spriteBatch.End();
 

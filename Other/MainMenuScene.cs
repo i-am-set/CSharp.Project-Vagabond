@@ -50,10 +50,13 @@ namespace ProjectVagabond.Scenes
             _confirmationDialog = new ConfirmationDialog(this);
 
             int screenWidth = Global.VIRTUAL_WIDTH;
-            int buttonWidth = 200;
-            int buttonHeight = 20;
+            int buttonWidth = 100;
+            int buttonHeight = 10;
+            int buttonYStart = 90;
+            int buttonYSpacing = 12;
 
-            var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 180, buttonWidth, buttonHeight), "PLAY");
+
+            var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, buttonYStart, buttonWidth, buttonHeight), "PLAY");
             playButton.OnClick += () =>
             {
                 var core = ServiceLocator.Get<Core>();
@@ -87,10 +90,10 @@ namespace ProjectVagabond.Scenes
                 _sceneManager.ChangeScene(GameSceneState.TerminalMap, loadingTasks);
             };
 
-            var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 205, buttonWidth, buttonHeight), "SETTINGS");
+            var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, buttonYStart + buttonYSpacing, buttonWidth, buttonHeight), "SETTINGS");
             settingsButton.OnClick += () => _sceneManager.ChangeScene(GameSceneState.Settings);
 
-            var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, 230, buttonWidth, buttonHeight), "EXIT");
+            var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, buttonYStart + buttonYSpacing * 2, buttonWidth, buttonHeight), "EXIT");
             exitButton.OnClick += ConfirmExit;
 
             _buttons.Add(playButton);
@@ -280,7 +283,7 @@ namespace ProjectVagabond.Scenes
             int screenWidth = Global.VIRTUAL_WIDTH;
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
-            spriteBatch.DrawSnapped(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 50), Color.White);
+            spriteBatch.DrawSnapped(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 25), Color.White);
 
             foreach (var button in _buttons)
             {
@@ -294,8 +297,8 @@ namespace ProjectVagabond.Scenes
                 if (selectedButton.IsHovered || keyboardNavigatedLastFrame)
                 {
                     Vector2 textSize = font.MeasureString(selectedButton.Text);
-                    int horizontalPadding = 8;
-                    int verticalPadding = 4;
+                    int horizontalPadding = 4;
+                    int verticalPadding = 2;
                     Rectangle highlightRect = new Rectangle(
                         (int)(selectedButton.Bounds.X + (selectedButton.Bounds.Width - textSize.X) * 0.5f - horizontalPadding),
                         (int)(selectedButton.Bounds.Y + (selectedButton.Bounds.Height - textSize.Y) * 0.5f - verticalPadding),
