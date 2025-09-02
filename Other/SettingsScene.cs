@@ -2,14 +2,11 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Dice;
-using ProjectVagabond.Encounters;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace ProjectVagabond.Scenes
 {
@@ -22,10 +19,17 @@ namespace ProjectVagabond.Scenes
 
         private List<object> _uiElements = new();
         private int _selectedIndex = -1;
-        private int _hoveredIndex = -1;
         private string _confirmationMessage = "";
         private float _confirmationTimer = 0f;
-        private int _settingsStartY = 52;
+
+        // --- Layout Tuning ---
+        private const int SETTINGS_START_Y = 35;
+        private const int ITEM_VERTICAL_SPACING = 15;
+        private const int BUTTON_VERTICAL_SPACING = 14;
+        private const int BOTTOM_BUTTONS_TOP_MARGIN = 12;
+        private const int SETTINGS_PANEL_WIDTH = 280;
+        private const int SETTINGS_PANEL_X = (Global.VIRTUAL_WIDTH - SETTINGS_PANEL_WIDTH) / 2;
+
 
         private float _inputDelay = 0.1f;
         private float _currentInputDelay = 0f;
@@ -72,7 +76,6 @@ namespace ProjectVagabond.Scenes
             else
             {
                 _selectedIndex = -1;
-                _hoveredIndex = -1;
             }
 
             _previousKeyboardState = Keyboard.GetState();
@@ -107,20 +110,16 @@ namespace ProjectVagabond.Scenes
 
         protected override Rectangle? GetFirstSelectableElementBounds()
         {
-            Vector2 currentPos = new Vector2(0, _settingsStartY);
-            currentPos.X = (Global.VIRTUAL_WIDTH - 225) / 2;
+            Vector2 currentPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y);
 
             for (int i = 0; i < _uiElements.Count; i++)
             {
                 var item = _uiElements[i];
                 if (item is ISettingControl || item is Button)
                 {
-                    float itemHeight = (item is ISettingControl) ? 10 : 12;
-                    return new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 230, (int)itemHeight);
+                    return new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
                 }
-                if (item is ISettingControl) currentPos.Y += 10;
-                else if (item is Button) currentPos.Y += 12;
-                else if (item is string) currentPos.Y += 12;
+                currentPos.Y += ITEM_VERTICAL_SPACING;
             }
             return null;
         }
@@ -128,7 +127,6 @@ namespace ProjectVagabond.Scenes
         private void BuildInitialUI()
         {
             _uiElements.Clear();
-            _uiElements.Add("Graphics");
 
             var resolutions = SettingsManager.GetResolutions();
             var resolutionDisplayList = resolutions.Select(kvp =>
@@ -183,7 +181,10 @@ namespace ProjectVagabond.Scenes
             backButton.OnClick += AttemptToGoBack;
             _uiElements.Add(backButton);
 
-            var resetButton = new Button(new Rectangle(0, 0, 125, 10), "Reset to Default");
+            var resetButton = new Button(new Rectangle(0, 0, 125, 10), "Restore Defaults")
+            {
+                CustomDefaultTextColor = _global.Palette_LightYellow
+            };
             resetButton.OnClick += ConfirmResetSettings;
             _uiElements.Add(resetButton);
 
@@ -194,17 +195,27 @@ namespace ProjectVagabond.Scenes
 
         private void LayoutUI()
         {
-            Vector2 currentPos = new Vector2(0, _settingsStartY);
+            Vector2 currentPos = new Vector2(0, SETTINGS_START_Y);
             int screenWidth = Global.VIRTUAL_WIDTH;
+            bool bottomButtonsReached = false;
+
             foreach (var item in _uiElements)
             {
                 if (item is Button button)
                 {
+                    if (!bottomButtonsReached)
+                    {
+                        // This is the first of the bottom buttons
+                        currentPos.Y += BOTTOM_BUTTONS_TOP_MARGIN;
+                        bottomButtonsReached = true;
+                    }
                     button.Bounds = new Rectangle((screenWidth - button.Bounds.Width) / 2, (int)currentPos.Y, button.Bounds.Width, button.Bounds.Height);
+                    currentPos.Y += BUTTON_VERTICAL_SPACING;
                 }
-                if (item is ISettingControl) currentPos.Y += 10;
-                else if (item is Button) currentPos.Y += 12;
-                else if (item is string) currentPos.Y += 12;
+                else if (item is ISettingControl)
+                {
+                    currentPos.Y += ITEM_VERTICAL_SPACING;
+                }
             }
         }
 
@@ -284,7 +295,7 @@ namespace ProjectVagabond.Scenes
             _settings.SmallerUi = _tempSettings.SmallerUi;
             _settings.UseImperialUnits = _tempSettings.UseImperialUnits;
             _settings.Use24HourClock = _tempSettings.Use24HourClock;
-            _settings.DisplayIndex = _tempSettings.DisplayIndex;
+            _settings.DisplayIndex = _settings.DisplayIndex;
             _settings.Gamma = _tempSettings.Gamma;
 
             _settings.ApplyGraphicsSettings(_graphics, _core);
@@ -364,11 +375,11 @@ namespace ProjectVagabond.Scenes
         private void MoveMouseToSelected()
         {
             if (_selectedIndex < 0 || _selectedIndex >= _uiElements.Count) return;
-            Vector2 currentPos = new Vector2(0, _settingsStartY);
+            Vector2 currentPos = new Vector2(0, SETTINGS_START_Y);
             for (int i = 0; i <= _selectedIndex; i++)
             {
                 var item = _uiElements[i];
-                currentPos.X = (Global.VIRTUAL_WIDTH - 225) / 2;
+                currentPos.X = SETTINGS_PANEL_X;
                 if (i == _selectedIndex)
                 {
                     Point mousePos = (item is ISettingControl) ? new Point((int)currentPos.X + 115, (int)currentPos.Y + 5) : new Point(Global.VIRTUAL_WIDTH / 2, (int)currentPos.Y + 5);
@@ -376,9 +387,8 @@ namespace ProjectVagabond.Scenes
                     Mouse.SetPosition(screenPos.X, screenPos.Y);
                     break;
                 }
-                if (item is ISettingControl) currentPos.Y += 10;
-                else if (item is Button) currentPos.Y += 12;
-                else if (item is string) currentPos.Y += 12;
+                if (item is ISettingControl) currentPos.Y += ITEM_VERTICAL_SPACING;
+                else if (item is Button) currentPos.Y += BUTTON_VERTICAL_SPACING;
             }
         }
 
@@ -409,7 +419,6 @@ namespace ProjectVagabond.Scenes
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
             var font = ServiceLocator.Get<BitmapFont>();
-            _hoveredIndex = -1;
 
             if (currentMouseState.Position != previousMouseState.Position || (currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released))
             {
@@ -423,30 +432,30 @@ namespace ProjectVagabond.Scenes
 
             UpdateFramerateControl();
             Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-            Vector2 currentPos = new Vector2(0, _settingsStartY);
+            Vector2 currentPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y);
+            bool bottomButtonsReached = false;
 
             for (int i = 0; i < _uiElements.Count; i++)
             {
                 var item = _uiElements[i];
-                bool isSelected = (i == _selectedIndex);
-                currentPos.X = (Global.VIRTUAL_WIDTH - 225) / 2;
 
                 if (item is ISettingControl setting)
                 {
-                    var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 230, 10);
-                    if (hoverRect.Contains(virtualMousePos)) { _selectedIndex = i; _hoveredIndex = i; }
-                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 2), isSelected, currentMouseState, previousMouseState, virtualMousePos, font);
-                    currentPos.Y += 10;
+                    var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
+                    if (hoverRect.Contains(virtualMousePos)) { _selectedIndex = i; }
+                    if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 2), i == _selectedIndex, currentMouseState, previousMouseState, virtualMousePos, font);
+                    currentPos.Y += ITEM_VERTICAL_SPACING;
                 }
                 else if (item is Button button)
                 {
-                    if (button.Bounds.Contains(virtualMousePos)) { _selectedIndex = i; _hoveredIndex = i; }
+                    if (!bottomButtonsReached)
+                    {
+                        currentPos.Y += BOTTOM_BUTTONS_TOP_MARGIN;
+                        bottomButtonsReached = true;
+                    }
+                    if (button.Bounds.Contains(virtualMousePos)) { _selectedIndex = i; }
                     if (_currentInputDelay <= 0) button.Update(currentMouseState);
-                    currentPos.Y += 12;
-                }
-                else if (item is string)
-                {
-                    currentPos.Y += 12;
+                    currentPos.Y += BUTTON_VERTICAL_SPACING;
                 }
             }
 
@@ -507,30 +516,36 @@ namespace ProjectVagabond.Scenes
             string title = "Settings";
             Vector2 titleSize = font.MeasureString(title);
             float yOffset = (float)Math.Sin(_titleBobTimer * TitleBobSpeed) * TitleBobAmount;
-            Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, 38 + yOffset);
+            float titleBaseY = 15f;
+            Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, titleBaseY + yOffset);
             spriteBatch.DrawString(font, title, titlePosition, _global.Palette_BrightWhite, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+
+            // Draw divider line
+            int dividerY = (int)(titleBaseY + titleSize.Y + 5);
+            spriteBatch.Draw(pixel, new Rectangle(screenWidth / 2 - 90, dividerY, 180, 1), _global.Palette_Gray);
+
 
             if (_confirmationTimer > 0)
             {
                 Vector2 msgSize = font.MeasureString(_confirmationMessage);
-                Vector2 messagePosition = new Vector2(screenWidth / 2 - msgSize.X / 2, 25);
+                Vector2 messagePosition = new Vector2(screenWidth / 2 - msgSize.X / 2, 5);
                 spriteBatch.DrawString(font, _confirmationMessage, messagePosition, _global.Palette_Teal);
             }
 
-            Vector2 currentPos = new Vector2(0, _settingsStartY);
+            Vector2 currentPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y);
+            bool bottomButtonsReached = false;
             for (int i = 0; i < _uiElements.Count; i++)
             {
                 var item = _uiElements[i];
                 bool isSelected = (i == _selectedIndex);
-                currentPos.X = (screenWidth - 225) / 2;
 
                 if (isSelected)
                 {
-                    bool isHovered = (item is ISettingControl s && new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 230, 10).Contains(virtualMousePos)) || (item is Button b && b.IsHovered);
+                    bool isHovered = (item is ISettingControl s && new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING).Contains(virtualMousePos)) || (item is Button b && b.IsHovered);
                     if (isHovered || keyboardNavigatedLastFrame)
                     {
-                        float itemHeight = (item is ISettingControl) ? 10 : (item is Button) ? 10 : 0;
-                        if (itemHeight > 0) DrawRectangleBorder(spriteBatch, pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, 230, (int)itemHeight), 1, _global.ButtonHoverColor);
+                        float itemHeight = (item is ISettingControl) ? ITEM_VERTICAL_SPACING : (item is Button) ? BUTTON_VERTICAL_SPACING : 0;
+                        if (itemHeight > 0) DrawRectangleBorder(spriteBatch, pixel, new Rectangle((int)currentPos.X - 5, (int)currentPos.Y - 2, SETTINGS_PANEL_WIDTH + 10, (int)itemHeight), 1, _global.ButtonHoverColor);
                     }
                 }
 
@@ -558,22 +573,22 @@ namespace ProjectVagabond.Scenes
 
                         if (!string.IsNullOrEmpty(extraText))
                         {
-                            spriteBatch.DrawString(font, extraText, new Vector2(currentPos.X + 230, currentPos.Y + 2), _global.Palette_DarkGray);
+                            Vector2 labelSize = font.MeasureString(setting.Label);
+                            float hintTextX = currentPos.X + labelSize.X + 5;
+                            spriteBatch.DrawString(font, extraText, new Vector2(hintTextX, currentPos.Y + 2), _global.Palette_DarkGray);
                         }
                     }
-                    currentPos.Y += 10;
+                    currentPos.Y += ITEM_VERTICAL_SPACING;
                 }
                 else if (item is Button button)
                 {
+                    if (!bottomButtonsReached)
+                    {
+                        currentPos.Y += BOTTOM_BUTTONS_TOP_MARGIN;
+                        bottomButtonsReached = true;
+                    }
                     button.Draw(spriteBatch, font, gameTime, isSelected);
-                    currentPos.Y += 12;
-                }
-                else if (item is string header)
-                {
-                    currentPos.Y += 2;
-                    spriteBatch.DrawString(font, header, new Vector2(screenWidth / 2 - font.MeasureString(header).Width / 2, currentPos.Y), _global.Palette_LightGray);
-                    spriteBatch.Draw(pixel, new Rectangle(screenWidth / 2 - 90, (int)currentPos.Y + 5, 180, 1), _global.Palette_Gray);
-                    currentPos.Y += 10;
+                    currentPos.Y += BUTTON_VERTICAL_SPACING;
                 }
             }
 

@@ -24,6 +24,7 @@ namespace ProjectVagabond.UI
         private bool _isLeftArrowHovered;
         private bool _isRightArrowHovered;
         private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
+        public HoverAnimator HoverAnimator => _hoverAnimator;
 
         public BoolSettingControl(string label, Func<bool> getter, Action<bool> onApply)
         {
@@ -55,16 +56,25 @@ namespace ProjectVagabond.UI
         private void CalculateBounds(Vector2 position, BitmapFont font)
         {
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
-            const float valueAreaXOffset = 170f;
+            const float valueAreaXOffset = 175f;
             string leftArrowText = "<";
             string rightArrowText = ">";
             Vector2 leftArrowSize = font.MeasureString(leftArrowText);
             Vector2 rightArrowSize = font.MeasureString(rightArrowText);
-            int padding = 5;
+            int padding = 2; // Reduced padding for tighter hitboxes
             float arrowVisualHeight = font.LineHeight;
 
-            _leftArrowRect = new Rectangle((int)(position.X + valueAreaXOffset) - padding, (int)position.Y - padding, (int)leftArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
-            _rightArrowRect = new Rectangle((int)(position.X + valueAreaXOffset + valueDisplayWidth - rightArrowSize.X) - padding, (int)position.Y - padding, (int)rightArrowSize.X + (padding * 2), (int)arrowVisualHeight + (padding * 2));
+            _leftArrowRect = new Rectangle(
+                (int)(position.X + valueAreaXOffset - padding),
+                (int)(position.Y - padding),
+                (int)leftArrowSize.X + (padding * 2),
+                (int)arrowVisualHeight + (padding * 2));
+
+            _rightArrowRect = new Rectangle(
+                (int)(position.X + valueAreaXOffset + valueDisplayWidth - rightArrowSize.X - padding),
+                (int)position.Y - padding,
+                (int)rightArrowSize.X + (padding * 2),
+                (int)arrowVisualHeight + (padding * 2));
         }
 
         public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont font)
@@ -108,7 +118,7 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawStringSnapped(font, Label, animatedPosition, labelColor);
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
-            const float valueAreaXOffset = 170f;
+            const float valueAreaXOffset = 175f;
             Vector2 valueAreaPosition = new Vector2(animatedPosition.X + valueAreaXOffset, animatedPosition.Y);
 
             string leftArrowText = "<";

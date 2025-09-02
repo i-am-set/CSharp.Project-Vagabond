@@ -27,10 +27,11 @@ namespace ProjectVagabond.UI
         private bool _isDragging;
         private int _hoveredSegmentIndex = -1;
         private readonly HoverAnimator _hoverAnimator = new HoverAnimator();
+        public HoverAnimator HoverAnimator => _hoverAnimator;
 
         // --- Visual Tuning Constants ---
-        private const int SEGMENT_WIDTH = 8;
-        private const int SEGMENT_HEIGHT = 10;
+        private const int SEGMENT_WIDTH = 6;
+        private const int SEGMENT_HEIGHT = 8;
         private const int SEGMENT_GAP = 2;
 
         public SegmentedBarSettingControl(string label, float min, float max, int segments, Func<float> getter, Action<float> setter)
@@ -153,7 +154,7 @@ namespace ProjectVagabond.UI
         private void CalculateBounds(Vector2 position, BitmapFont font)
         {
             int totalBarWidth = (_segmentCount * SEGMENT_WIDTH) + ((_segmentCount - 1) * SEGMENT_GAP);
-            const float valueAreaXOffset = 170f;
+            const float valueAreaXOffset = 175f;
 
             // Center the bar within the standard value area used by other controls.
             float valueAreaX = position.X + valueAreaXOffset;
@@ -169,7 +170,7 @@ namespace ProjectVagabond.UI
             CalculateBounds(position, font);
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected);
+            float xOffset = HoverAnimator.UpdateAndGetOffset(gameTime, isSelected);
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
             Color labelColor = isSelected ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
@@ -212,7 +213,9 @@ namespace ProjectVagabond.UI
 
             // --- Numeric Value ---
             string valueString = GetCurrentValueAsString();
-            Vector2 valuePosition = new Vector2(position.X + 280, position.Y);
+            Vector2 valueSize = font.MeasureString(valueString);
+            // Position the text to the left of the bar, right-aligned.
+            Vector2 valuePosition = new Vector2(_barAreaRect.Left - valueSize.X - 5 + xOffset, animatedPosition.Y);
             spriteBatch.DrawString(font, valueString, valuePosition, _global.Palette_DarkGray);
         }
     }

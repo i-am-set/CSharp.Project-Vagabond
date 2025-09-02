@@ -16,6 +16,8 @@ namespace ProjectVagabond.UI
         private const float AnimationDuration = 0.15f; // How long the entire hop takes
         private const float HopDistance = 3f;         // The maximum distance it hops to the right
 
+        public float CurrentOffset { get; private set; }
+
         /// <summary>
         /// Updates the animation state and returns the current horizontal offset.
         /// </summary>
@@ -30,7 +32,7 @@ namespace ProjectVagabond.UI
                 _animationTimer = 0f;
             }
 
-            float currentOffset = 0f;
+            CurrentOffset = 0f;
 
             if (_isAnimating)
             {
@@ -39,21 +41,21 @@ namespace ProjectVagabond.UI
                 if (_animationTimer >= AnimationDuration)
                 {
                     _isAnimating = false;
-                    currentOffset = 0f;
+                    CurrentOffset = 0f;
                 }
                 else
                 {
                     float progress = _animationTimer / AnimationDuration;
                     float wave = (float)Math.Sin(progress * 2.0 * Math.PI);
                     float decay = 1.0f - progress;
-                    currentOffset = HopDistance * wave * decay;
+                    CurrentOffset = HopDistance * wave * decay;
                 }
             }
 
             // 3. Store the activation state for the next frame.
             _wasActivatedLastFrame = isActivated;
 
-            return currentOffset;
+            return CurrentOffset;
         }
     }
 }

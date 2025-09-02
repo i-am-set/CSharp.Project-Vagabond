@@ -143,7 +143,8 @@ namespace ProjectVagabond.UI
                 _swayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 // Use sine waves with different frequencies for a figure-eight motion
                 swayOffsetX = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT_X;
-                swayOffsetY = (float)Math.Sin(_swayTimer * SWAY_SPEED * 2) * SWAY_AMOUNT_Y;
+                // This formula transforms the sine output from [-1, 1] to [0, 1], creating a 1-pixel bob.
+                swayOffsetY = ((float)Math.Sin(_swayTimer * SWAY_SPEED * 2) + 1f) * 0.5f * SWAY_AMOUNT_Y;
             }
             else
             {
