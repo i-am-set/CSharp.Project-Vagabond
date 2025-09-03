@@ -2,8 +2,8 @@
   "id": "two_hand_hold_low",
   "leftHand": {
     "position": {
-      "X": 238.96936,
-      "Y": 616.8878
+      "X": 273.5,
+      "Y": 623.5
     },
     "rotation": 15.518132,
     "scale": 1,
@@ -12,8 +12,8 @@
   },
   "rightHand": {
     "position": {
-      "X": 392.29596,
-      "Y": 610.5918
+      "X": 430.5,
+      "Y": 615
     },
     "rotation": -13.435074,
     "scale": 1,

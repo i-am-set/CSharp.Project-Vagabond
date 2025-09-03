@@ -5,7 +5,6 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 
 namespace ProjectVagabond.Combat
 {
@@ -52,7 +51,6 @@ namespace ProjectVagabond.Combat
 
 
         private readonly HealthComponent _healthComponent;
-        private readonly RenderableComponent _renderableComponent;
 
         public CombatEntity(int entityId, Texture2D texture)
         {
@@ -63,17 +61,11 @@ namespace ProjectVagabond.Combat
             VisualOffset = Vector2.Zero;
             IsDefeated = false;
 
-            var componentStore = ServiceLocator.Get<ComponentStore>();
-            _healthComponent = componentStore.GetComponent<HealthComponent>(entityId);
-            _renderableComponent = componentStore.GetComponent<RenderableComponent>(entityId);
-
+            _healthComponent = ServiceLocator.Get<ComponentStore>().GetComponent<HealthComponent>(entityId);
             if (_healthComponent != null)
             {
                 _healthComponent.OnHealthChanged += HandleHealthChange;
             }
-
-            bool isFallback = texture?.Width == 1 && texture?.Height == 1;
-            Debug.WriteLine($"[CombatEntity] [DIAGNOSTIC] (ID: {entityId}): Initialized. Final texture is '{(texture?.Name ?? "null")}' [{texture?.Width ?? 0}x{texture?.Height ?? 0}]. Is fallback pixel: {isFallback}.");
         }
 
         /// <summary>
@@ -167,19 +159,8 @@ namespace ProjectVagabond.Combat
                 shakeOffset.X = (float)(_random.NextDouble() * 2 - 1) * currentMagnitude;
             }
 
-            // Determine base color from the RenderableComponent, or default to white.
-            Color baseColor = _renderableComponent?.Color ?? Color.White;
-
-            // Combine the base color with the animated visual tint.
-            Color combinedTint = new Color(
-                (byte)(baseColor.R * VisualTint.R / 255),
-                (byte)(baseColor.G * VisualTint.G / 255),
-                (byte)(baseColor.B * VisualTint.B / 255),
-                (byte)(baseColor.A * VisualTint.A / 255)
-            );
-
-            // Determine final tint (flash takes priority over everything)
-            Color finalTint = combinedTint;
+            // Determine final tint (flash takes priority)
+            Color finalTint = VisualTint;
             if (_flashFrames > 0)
             {
                 finalTint = HIT_FLASH_COLOR;
