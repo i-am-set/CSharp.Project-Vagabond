@@ -10,7 +10,7 @@ namespace ProjectVagabond
     public class RenderableComponent : IComponent, ICloneableComponent
     {
         /// <summary>
-        /// The texture to draw for the entity.
+        /// The texture to draw for the entity. This is populated at runtime.
         /// </summary>
         public Texture2D Texture { get; set; }
 
@@ -18,6 +18,12 @@ namespace ProjectVagabond
         /// The color to tint the texture with.
         /// </summary>
         public Color Color { get; set; }
+
+        /// <summary>
+        /// The content path for the entity's sprite, relative to the Content root.
+        /// e.g., "Sprites/Enemies/wanderer"
+        /// </summary>
+        public string SpritePath { get; set; }
 
         public RenderableComponent(Texture2D texture, Color color)
         {
@@ -32,7 +38,10 @@ namespace ProjectVagabond
 
         public IComponent Clone()
         {
-            return (IComponent)this.MemberwiseClone();
+            // Texture is a runtime property, so it's not part of the clone.
+            var clone = (RenderableComponent)this.MemberwiseClone();
+            clone.Texture = null;
+            return clone;
         }
     }
 }
