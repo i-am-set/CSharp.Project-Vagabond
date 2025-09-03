@@ -2,8 +2,8 @@
   "id": "idle",
   "leftHand": {
     "position": {
-      "X": 185,
-      "Y": 673.5
+      "X": 192.34695,
+      "Y": 672.7653
     },
     "rotation": 0,
     "scale": 1,
@@ -12,7 +12,7 @@
   },
   "rightHand": {
     "position": {
-      "X": 455.5,
+      "X": 426.84686,
       "Y": 666.5
     },
     "rotation": 0,

@@ -43,25 +43,6 @@ namespace ProjectVagabond
                     IComponent clonedComponent = ((ICloneableComponent)templateComponent).Clone();
                     Type componentType = clonedComponent.GetType();
 
-                    // Post-clone logic to handle components that need runtime data.
-                    if (clonedComponent is RenderableComponent renderable && renderable.Texture == null)
-                    {
-                        // If the archetype didn't specify a texture (which it can't directly),
-                        // assign a default one here to prevent null reference exceptions.
-                        var spriteManager = ServiceLocator.Get<SpriteManager>();
-                        if (template.TemplateComponents.Any(c => c is PlayerTagComponent))
-                        {
-                            renderable.Texture = spriteManager.PlayerSprite;
-                        }
-                        else
-                        {
-                            // Default for all other entities (NPCs, POIs, etc.) is a 1x1 pixel.
-                            // The component's Color property will give it its appearance.
-                            renderable.Texture = ServiceLocator.Get<Texture2D>();
-                        }
-                    }
-
-
                     // Add the fully populated component to the store
                     // We use reflection to call the generic AddComponent method, which is acceptable and necessary.
                     MethodInfo addComponentMethod = typeof(ComponentStore).GetMethod("AddComponent").MakeGenericMethod(componentType);
