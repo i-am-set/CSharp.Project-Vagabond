@@ -3,10 +3,10 @@
   "Name": "Bandit",
   "Components": [
     {
-      "Type": "PositionComponent"
+      "Type": "ProjectVagabond.PositionComponent, ProjectVagabond"
     },
     {
-      "Type": "StatsComponent",
+      "Type": "ProjectVagabond.StatsComponent, ProjectVagabond",
       "Properties": {
         "Strength": 3,
         "Agility": 4,
@@ -16,21 +16,20 @@
       }
     },
     {
-      "Type": "RenderableComponent",
+      "Type": "ProjectVagabond.RenderableComponent, ProjectVagabond",
       "Properties": {
-        "SpritePath": "Sprites/Enemies/bandit",
         "Color": "Palette_Red"
       }
     },
     {
-      "Type": "HealthComponent",
+      "Type": "ProjectVagabond.HealthComponent, ProjectVagabond",
       "Properties": {
         "MaxHealth": 50,
         "CurrentHealth": 50
       }
     },
     {
-      "Type": "CombatantComponent",
+      "Type": "ProjectVagabond.CombatantComponent, ProjectVagabond",
       "Properties": {
         "DefaultWeaponId": "weapon_unarmed_claw",
         "Weaknesses": [ "Fire", "Blunt" ],
@@ -38,16 +37,16 @@
       }
     },
     {
-      "Type": "EquipmentComponent"
+      "Type": "ProjectVagabond.EquipmentComponent, ProjectVagabond"
     },
     {
-      "Type": "AIComponent",
+      "Type": "ProjectVagabond.AIComponent, ProjectVagabond",
       "Properties": {
         "Intellect": "Normal"
       }
     },
     {
-      "Type": "CombatDeckComponent"
+      "Type": "ProjectVagabond.CombatDeckComponent, ProjectVagabond"
     }
   ]
 }

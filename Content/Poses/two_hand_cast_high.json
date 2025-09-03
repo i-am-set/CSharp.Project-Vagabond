@@ -2,13 +2,12 @@
   "id": "two_hand_cast_high",
   "leftHand": {
     "position": {
-      "X": 178.22449,
-      "Y": 478.8265
+      "X": 237,
+      "Y": 482.5
     },
     "rotation": 8.517711,
     "scale": 1,
-    "animation": "idle_loop",
-    "renderLayer": "InFrontOfParticles"
+    "animation": "idle_loop"
   },
   "rightHand": {
     "position": {
@@ -17,8 +16,7 @@
     },
     "rotation": -6.510933,
     "scale": 1,
-    "animation": "idle_loop",
-    "renderLayer": "InFrontOfParticles"
+    "animation": "idle_loop"
   },
   "particleEffectName": "CreateLayeredFireball",
   "particleAnchor": "BetweenHands"

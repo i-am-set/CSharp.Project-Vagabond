@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -60,7 +61,7 @@ namespace ProjectVagabond.Editor
             _hasValidStateForDrawing = false;
         }
 
-        public void Update(MouseState mouse, MouseState prevMouse, Vector2 transformedMousePos)
+        public void Update(MouseState mouse, MouseState prevMouse)
         {
             if (_attachedHand == null)
             {
@@ -70,6 +71,7 @@ namespace ProjectVagabond.Editor
 
             UpdateHandlePositions();
 
+            var virtualMousePos = Core.TransformMouse(mouse.Position);
             bool leftClickPressed = mouse.LeftButton == ButtonState.Pressed && prevMouse.LeftButton == ButtonState.Released;
             bool leftClickReleased = mouse.LeftButton == ButtonState.Released;
 
@@ -78,7 +80,7 @@ namespace ProjectVagabond.Editor
                 // Check handles in a specific priority order.
                 foreach (var handleType in HandleCheckOrder)
                 {
-                    if (_handleRects.TryGetValue(handleType, out var handleRect) && handleRect.Contains(transformedMousePos))
+                    if (_handleRects.TryGetValue(handleType, out var handleRect) && handleRect.Contains(virtualMousePos))
                     {
                         if (handleType == DragHandle.Animation)
                         {
@@ -89,12 +91,12 @@ namespace ProjectVagabond.Editor
 
                         // If it's any other handle, start a drag operation.
                         _activeHandle = handleType;
-                        _dragStartMousePos = transformedMousePos;
+                        _dragStartMousePos = virtualMousePos;
                         _dragStartPosition = _attachedHand.CurrentPosition;
                         _dragStartRotation = _attachedHand.CurrentRotation;
                         _dragStartScale = _attachedHand.CurrentScale;
                         _dragStartPivot = _attachedHand.GetPivotPoint();
-                        _dragStartDistance = Vector2.Distance(_dragStartPivot, transformedMousePos);
+                        _dragStartDistance = Vector2.Distance(_dragStartPivot, virtualMousePos);
                         UIInputManager.ConsumeMouseClick();
                         return; // Stop after finding the first handle
                     }
@@ -109,7 +111,7 @@ namespace ProjectVagabond.Editor
 
             if (_activeHandle != DragHandle.None)
             {
-                ProcessDrag(transformedMousePos);
+                ProcessDrag(virtualMousePos);
                 // After dragging, the positions have changed, so we need to update the handles for the next frame's draw call.
                 UpdateHandlePositions();
             }
