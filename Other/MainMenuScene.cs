@@ -71,12 +71,13 @@ namespace ProjectVagabond.Scenes
 
                 var loadingTasks = new List<LoadingTask>
                 {
+                    // CRITICAL FIX: Archetypes MUST be loaded before sprites that depend on them.
+                    new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Archetypes")),
                     new GenericTask("Loading game sprites...", () => spriteManager.LoadGameContent()),
                     new GenericTask("Loading item data...", () => itemManager.LoadWeapons("Content/Weapons")),
                     new GenericTask("Loading action data...", () => actionManager.LoadActions("Content/Actions")),
                     new GenericTask("Loading pose data...", () => poseManager.LoadPoses("Content/Poses")),
                     new GenericTask("Initializing dice system...", () => diceSystem.Initialize(core.GraphicsDevice, core.Content)),
-                    new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Archetypes")),
                     new GenericTask("Loading encounters...", () => encounterManager.LoadEncounters("Content/Encounters")),
                     new GenericTask("Loading combat blueprints...", () => encounterManager.LoadCombatEncounters("Content/Encounters/CombatEncounters")),
                     new GenericTask("Generating world...", () => {

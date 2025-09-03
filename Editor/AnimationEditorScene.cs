@@ -5,6 +5,7 @@ using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Combat;
 using ProjectVagabond.Combat.UI;
+using ProjectVagabond.Editor;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -43,6 +44,12 @@ namespace ProjectVagabond.Editor
         private HandRenderer _selectedHand;
         private bool _isEditMode = true; // Default to edit mode in the editor
         private float _combatScreenBottomY;
+
+        // --- Coordinate Transformation ---
+        private Matrix _previewTransformMatrix;
+        private Matrix _inversePreviewTransformMatrix;
+        private Rectangle _previewArea;
+
 
         public Dictionary<string, Vector2> AnimationAnchors { get; private set; }
 
@@ -141,6 +148,24 @@ namespace ProjectVagabond.Editor
                 bounds.Height - (PANEL_PADDING * 2)
             );
 
+            // Calculate the preview area bounds first
+            _previewArea = GetPreviewAreaBounds();
+
+            // Calculate the transformation matrix to map the full virtual screen into the preview area
+            float scaleX = (float)_previewArea.Width / Global.VIRTUAL_WIDTH;
+            float scaleY = (float)_previewArea.Height / Global.VIRTUAL_HEIGHT;
+            float scale = Math.Min(scaleX, scaleY); // Maintain aspect ratio
+
+            // Center the scaled content within the preview area
+            float scaledWidth = Global.VIRTUAL_WIDTH * scale;
+            float scaledHeight = Global.VIRTUAL_HEIGHT * scale;
+            float offsetX = _previewArea.X + (_previewArea.Width - scaledWidth) / 2f;
+            float offsetY = _previewArea.Y + (_previewArea.Height - scaledHeight) / 2f;
+
+            _previewTransformMatrix = Matrix.CreateScale(scale) * Matrix.CreateTranslation(offsetX, offsetY, 0);
+            _inversePreviewTransformMatrix = Matrix.Invert(_previewTransformMatrix);
+
+
             AnimationAnchors = AnimationAnchorCalculator.CalculateAnchors(isEditor: true, out _combatScreenBottomY);
 
             _leftHand.SetIdlePosition(AnimationAnchors["LeftHandIdle"]);
@@ -183,14 +208,17 @@ namespace ProjectVagabond.Editor
                 OnSave();
             }
 
+            // Transform mouse into the preview area's coordinate space for interaction checks
+            var transformedMousePos = Vector2.Transform(vms, _inversePreviewTransformMatrix);
+
             _animationContextMenu.Update(ms, previousMouseState, vms, font);
             _particleAnchorContextMenu.Update(ms, previousMouseState, vms, font);
             _particleEffectContextMenu.Update(ms, previousMouseState, vms, font);
 
             if (_isEditMode)
             {
-                _transformGizmo.Update(ms, previousMouseState);
-                HandleHandSelection();
+                _transformGizmo.Update(ms, previousMouseState, transformedMousePos);
+                HandleHandSelection(transformedMousePos);
                 if (_transformGizmo.IsDragging)
                 {
                     UpdatePoseFromGizmo();
@@ -209,21 +237,21 @@ namespace ProjectVagabond.Editor
             base.Update(gameTime);
         }
 
-        private void HandleHandSelection()
+        private void HandleHandSelection(Vector2 transformedMousePos)
         {
             var mouseState = Mouse.GetState();
-            var virtualMousePos = Core.TransformMouse(mouseState.Position);
             bool leftClickPressed = mouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
 
             if (_transformGizmo.IsDragging) return;
 
             if (leftClickPressed && UIInputManager.CanProcessMouseClick())
             {
-                if (_leftHand.GetInteractionBounds().Contains(virtualMousePos))
+                // Use the transformed mouse position for checking bounds in world space
+                if (_leftHand.GetInteractionBounds().Contains(transformedMousePos))
                 {
                     _selectedHand = _leftHand;
                 }
-                else if (_rightHand.GetInteractionBounds().Contains(virtualMousePos))
+                else if (_rightHand.GetInteractionBounds().Contains(transformedMousePos))
                 {
                     _selectedHand = _rightHand;
                 }
@@ -269,9 +297,21 @@ namespace ProjectVagabond.Editor
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             var global = ServiceLocator.Get<Global>();
-            var previewArea = GetPreviewAreaBounds();
-            spriteBatch.Draw(pixel, previewArea, new Color(20, 20, 25));
-            spriteBatch.Draw(pixel, new Rectangle(previewArea.X, (int)_combatScreenBottomY, previewArea.Width, 1), Color.LimeGreen);
+
+            spriteBatch.Draw(pixel, _previewArea, new Color(20, 20, 25));
+
+            // Draw faint compositional grid lines
+            var lineColor = Color.White * 0.1f;
+            float thirdWidth = _previewArea.Width / 3f;
+            float thirdHeight = _previewArea.Height / 3f;
+            spriteBatch.DrawLineSnapped(new Vector2(_previewArea.X + thirdWidth, _previewArea.Y), new Vector2(_previewArea.X + thirdWidth, _previewArea.Bottom), lineColor);
+            spriteBatch.DrawLineSnapped(new Vector2(_previewArea.X + thirdWidth * 2, _previewArea.Y), new Vector2(_previewArea.X + thirdWidth * 2, _previewArea.Bottom), lineColor);
+            spriteBatch.DrawLineSnapped(new Vector2(_previewArea.X, _previewArea.Y + thirdHeight), new Vector2(_previewArea.Right, _previewArea.Y + thirdHeight), lineColor);
+            spriteBatch.DrawLineSnapped(new Vector2(_previewArea.X, _previewArea.Y + thirdHeight * 2), new Vector2(_previewArea.Right, _previewArea.Y + thirdHeight * 2), lineColor);
+
+            // Transform the combat floor line into the preview space
+            var transformedCombatFloorY = Vector2.Transform(new Vector2(0, _combatScreenBottomY), _previewTransformMatrix).Y;
+            spriteBatch.Draw(pixel, new Rectangle(_previewArea.X, (int)transformedCombatFloorY, _previewArea.Width, 1), Color.LimeGreen);
 
             var controlPanelBounds = GetControlPanelBounds();
             spriteBatch.Draw(pixel, controlPanelBounds, new Color(30, 30, 40));
@@ -298,8 +338,11 @@ namespace ProjectVagabond.Editor
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            // Combine the main letterboxing transform with our local preview area transform
+            Matrix finalTransform = _previewTransformMatrix * transform;
+
             // --- Pass 1: Draw Hands Behind Particles ---
-            spriteBatch.Begin(sortMode: SpriteSortMode.Deferred, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            spriteBatch.Begin(sortMode: SpriteSortMode.Deferred, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
             if (_loadedPose != null)
             {
                 if (_loadedPose.LeftHand.RenderLayer == RenderLayer.BehindParticles)
@@ -323,7 +366,7 @@ namespace ProjectVagabond.Editor
             // For a full implementation, you would call the particle manager here.
 
             // --- Pass 3: Draw Hands In Front of Particles ---
-            spriteBatch.Begin(sortMode: SpriteSortMode.Deferred, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            spriteBatch.Begin(sortMode: SpriteSortMode.Deferred, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
             if (_loadedPose != null)
             {
                 if (_loadedPose.LeftHand.RenderLayer == RenderLayer.InFrontOfParticles)
@@ -342,7 +385,7 @@ namespace ProjectVagabond.Editor
             }
             spriteBatch.End();
 
-            // --- Pass 4: Draw Context Menus on top of everything ---
+            // --- Pass 4: Draw Context Menus on top of everything (using the main screen transform) ---
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             _animationContextMenu.Draw(spriteBatch, font);
             _particleAnchorContextMenu.Draw(spriteBatch, font);
