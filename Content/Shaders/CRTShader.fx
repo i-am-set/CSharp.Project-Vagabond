@@ -16,15 +16,24 @@ uniform float FlashIntensity;
 uniform float ImpactGlitchIntensity;
 
 // --- Effect Toggles ---
-#define ENABLE_VIGNETTE
+// #define ENABLE_VIGNETTE // Disabled as requested
 #define ENABLE_CHROMATIC_ABERRATION
 #define ENABLE_CONTRAST
 #define ENABLE_IMPACT_GLITCH
+#define ENABLE_SCANLINES
+#define ENABLE_WOBBLE
 
 // --- Effect Intensity Values ---
-static const float VIGNETTE_INTENSITY = 0.8;
+// static const float VIGNETTE_INTENSITY = 0.8; // Vignette is disabled
 static const float CHROMATIC_ABERRATION_AMOUNT = 2.0;
 static const float CONTRAST_AMOUNT = 1.2;
+// --- Scanline Parameters ---
+static const float SCANLINE_INTENSITY = 0.45;
+static const float SCANLINE_FREQUENCY = 1.0f; // Set to 1.0f for 1:1 pixel scanlines
+// --- Wobble Parameters ---
+static const float WOBBLE_AMOUNT = 0.5;
+static const float WOBBLE_FREQUENCY = 15.0;
+static const float WOBBLE_VERTICAL_FREQUENCY = 250.0;
 // --- Impact Glitch Parameters ---
 static const float IMPACT_GLITCH_BLOCK_HEIGHT = 0.002;
 static const float IMPACT_GLITCH_INTENSITY = 0.02;
@@ -52,6 +61,11 @@ float4 MainPS(PixelShaderInput input) : COLOR
 {
     float2 uv = input.TexCoord - 0.5; 
     float2 sampleCoords = input.TexCoord;
+
+#ifdef ENABLE_WOBBLE
+    float wobble_offset = sin(Time * WOBBLE_FREQUENCY + sampleCoords.y * WOBBLE_VERTICAL_FREQUENCY) * (WOBBLE_AMOUNT / ScreenResolution.x);
+    sampleCoords.x += wobble_offset;
+#endif
 
 #ifdef ENABLE_IMPACT_GLITCH
     if (ImpactGlitchIntensity > 0.0)
@@ -83,6 +97,16 @@ float4 MainPS(PixelShaderInput input) : COLOR
 
 #ifdef ENABLE_CONTRAST
     color.rgb = lerp(0.5, color.rgb, CONTRAST_AMOUNT);
+#endif
+
+#ifdef ENABLE_SCANLINES
+    float scanline_phase = input.TexCoord.y * ScreenResolution.y * SCANLINE_FREQUENCY;
+    // Use fmod to create sharp, alternating lines instead of a soft sine wave.
+    // This creates a 1-pixel on, 1-pixel off pattern for a classic sharp scanline look.
+    if (fmod(scanline_phase, 2.0) > 1.0)
+    {
+        color.rgb *= (1.0 - SCANLINE_INTENSITY);
+    }
 #endif
 
     color.rgb = max(color.rgb, 0.0);

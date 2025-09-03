@@ -24,7 +24,7 @@ namespace ProjectVagabond
         private static readonly Global _instance = new Global();
         private Global()
         {
-            WaterColor = Palette_DarkBlue;
+            WaterColor = Palette_LightBlue;
             FlatlandColor = Palette_Gray;
             HillColor = Palette_Gray;
             MountainColor = Palette_Gray;
@@ -63,7 +63,7 @@ namespace ProjectVagabond
 
         // World constants
         public const float GAME_SECONDS_PER_REAL_SECOND = 8f;
-        public const float FEET_PER_WORLD_TILE = 200f; // The physical distance of a single world tile
+        public const float FEET_PER_WORLD_TILE = 200f; // The physical distance of a single world tile  
         public const float FEET_PER_SECOND_PER_SPEED_UNIT = 4.0f; // A character with speed 1.0 moves at X ft/s.
         public const float ACTION_TICK_DURATION_SECONDS = 1.0f; // Real-world duration of a single move/action tick at 1x speed.
 
@@ -139,8 +139,8 @@ namespace ProjectVagabond
         public float MountainsLevel { get; set; } = 0.8f;
 
         // Static Color Palette
-        public Color Palette_Black { get; set; } = new Color(23, 22, 28);
-        public Color Palette_DarkGray { get; set; } = new Color(46, 44, 59); // #2E2C3B
+        public Color Palette_Black { get; set; } = new Color(13, 12, 18);
+        public Color Palette_DarkGray { get; set; } = new Color(42, 40, 57); // #2E2C3B
         public Color Palette_Gray { get; set; } = new Color(62, 65, 95); // #3E415F
         public Color Palette_LightGray { get; set; } = new Color(85, 96, 125); // #55607D
         public Color Palette_White { get; set; } = new Color(116, 125, 136); // #747D88

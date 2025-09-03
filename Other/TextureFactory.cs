@@ -51,7 +51,7 @@ namespace ProjectVagabond
         public Texture2D CreatePlayerTexture()
         {
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            int size = 10;
+            int size = 5;
             var texture = new Texture2D(graphicsDevice, size, size);
             var colorData = new Color[size * size];
 
@@ -59,8 +59,10 @@ namespace ProjectVagabond
             {
                 for (int x = 0; x < size; x++)
                 {
-                    int distance = Math.Abs(x - size / 2) + Math.Abs(y - size / 2);
-                    if (distance <= 4)
+                    int centerX = size / 2;
+                    int centerY = size / 2;
+                    int distance = Math.Abs(x - centerX) + Math.Abs(y - centerY);
+                    if (distance <= 2)
                     {
                         colorData[y * size + x] = Color.White;
                     }
@@ -154,8 +156,8 @@ namespace ProjectVagabond
         public Texture2D CreateSmallXTexture()
         {
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            const int size = 10;
-            const int margin = 3;
+            const int size = 5;
+            const int margin = 1;
             var texture = new Texture2D(graphicsDevice, size, size);
             var colorData = new Color[size * size];
 
@@ -188,8 +190,8 @@ namespace ProjectVagabond
         public Texture2D CreateSelectionSquareTexture()
         {
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
-            const int size = 10;
-            const int centerGap = 4;
+            const int size = 5;
+            const int centerGap = 3;
             int start = (size - centerGap) / 2;
             int end = start + centerGap;
 

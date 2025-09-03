@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace ProjectVagabond
 {
@@ -18,35 +17,8 @@ namespace ProjectVagabond
     public class ArchetypeManager
     {
         private readonly Dictionary<string, ArchetypeTemplate> _archetypes = new Dictionary<string, ArchetypeTemplate>();
-        private static readonly Dictionary<string, Type> _componentNameMap = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
 
-        public ArchetypeManager()
-        {
-            // This static constructor will only run once to build the component type map.
-            if (_componentNameMap.Count == 0)
-            {
-                BuildComponentTypeMap();
-            }
-        }
-
-        private static void BuildComponentTypeMap()
-        {
-            Debug.WriteLine("[ArchetypeManager] Building component type map...");
-            var componentType = typeof(IComponent);
-            var types = AppDomain.CurrentDomain.GetAssemblies()
-                .SelectMany(s => s.GetTypes())
-                .Where(p => componentType.IsAssignableFrom(p) && !p.IsInterface);
-
-            foreach (var type in types)
-            {
-                if (!_componentNameMap.TryAdd(type.Name, type))
-                {
-                    Debug.WriteLine($"[ArchetypeManager] [WARNING] Duplicate component name found: {type.Name}. Only the first one was registered.");
-                }
-            }
-            Debug.WriteLine($"[ArchetypeManager] Found and mapped {_componentNameMap.Count} component types.");
-        }
-
+        public ArchetypeManager() { }
 
         /// <summary>
         /// Creates a default, failsafe player archetype if the JSON file fails to load.
@@ -85,7 +57,6 @@ namespace ProjectVagabond
                 var jsonOptions = new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true,
-                    Converters = { new JsonStringEnumConverter() }
                 };
 
                 string[] archetypeFiles = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories);
@@ -101,16 +72,14 @@ namespace ProjectVagabond
                         {
                             var templateComponents = new List<IComponent>();
 
+                            // Add the ArchetypeIdComponent to the template so it gets cloned with the rest.
                             templateComponents.Add(new ArchetypeIdComponent { ArchetypeId = archetypeDto.Id });
 
+                            // Process components from the JSON file using reflection.
                             foreach (var componentDef in archetypeDto.Components)
                             {
                                 string typeName = componentDef["Type"].ToString();
-                                if (!_componentNameMap.TryGetValue(typeName, out Type componentType))
-                                {
-                                    throw new TypeLoadException($"Component type '{typeName}' in archetype '{archetypeDto.Id}' could not be found. Make sure it exists and implements IComponent.");
-                                }
-
+                                Type componentType = Type.GetType(typeName, throwOnError: true);
                                 object componentInstance = Activator.CreateInstance(componentType);
 
                                 if (componentDef.TryGetValue("Properties", out object props) && props is JsonElement propertiesElement)
@@ -133,6 +102,7 @@ namespace ProjectVagabond
                                 }
                             }
 
+                            // Create and store the final baked template.
                             var template = new ArchetypeTemplate(archetypeDto.Id, archetypeDto.Name, templateComponents);
                             _archetypes[template.Id] = template;
                         }
@@ -148,6 +118,8 @@ namespace ProjectVagabond
                 }
             }
 
+            // --- FAILSAFE ---
+            // The player archetype is essential for the game to run. If it's not loaded, create a default one.
             if (!_archetypes.ContainsKey("player"))
             {
                 Debug.WriteLine("[ArchetypeManager] [CRITICAL FAILURE] 'player.json' not found or failed to load. Creating a failsafe player archetype. Please ensure the file exists and its 'Copy to Output Directory' property is set to 'Copy if newer'.");
@@ -155,17 +127,20 @@ namespace ProjectVagabond
             }
         }
 
+        /// <summary>
+        /// Retrieves a loaded and baked archetype template by its unique ID.
+        /// </summary>
+        /// <param name="id">The ID of the archetype template to retrieve.</param>
+        /// <returns>The ArchetypeTemplate object, or null if not found.</returns>
         public ArchetypeTemplate GetArchetypeTemplate(string id)
         {
             _archetypes.TryGetValue(id, out var archetype);
             return archetype;
         }
 
-        public IEnumerable<ArchetypeTemplate> GetAllArchetypeTemplates()
-        {
-            return _archetypes.Values;
-        }
-
+        /// <summary>
+        /// Uses reflection to set properties on a component instance from JSON data.
+        /// </summary>
         private static void PopulateComponentProperties(object component, JsonElement properties)
         {
             foreach (JsonProperty property in properties.EnumerateObject())
@@ -191,31 +166,58 @@ namespace ProjectVagabond
             }
         }
 
+        /// <summary>
+        /// Converts a JsonElement to the target C# type.
+        /// </summary>
         private static object ConvertJsonElement(JsonElement element, Type targetType)
         {
-            var options = new JsonSerializerOptions
+            switch (element.ValueKind)
             {
-                PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() }
-            };
+                case JsonValueKind.String:
+                    string stringValue = element.GetString();
+                    if (targetType.IsEnum)
+                    {
+                        return Enum.Parse(targetType, stringValue, true);
+                    }
+                    // Handle special string-to-color conversion for RenderableComponent
+                    if (targetType == typeof(Color))
+                    {
+                        var globalInstance = ServiceLocator.Get<Global>();
+                        var colorProp = typeof(Global).GetProperty(stringValue, BindingFlags.Public | BindingFlags.Instance);
+                        if (colorProp != null && colorProp.PropertyType == typeof(Color))
+                        {
+                            return colorProp.GetValue(globalInstance);
+                        }
+                        // Fallback to standard MonoGame colors
+                        var mgColorProp = typeof(Color).GetProperty(stringValue, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+                        if (mgColorProp != null)
+                        {
+                            return mgColorProp.GetValue(null);
+                        }
+                    }
+                    return stringValue;
 
-            if (targetType == typeof(Color) && element.ValueKind == JsonValueKind.String)
-            {
-                string stringValue = element.GetString();
-                var globalInstance = ServiceLocator.Get<Global>();
-                var colorProp = typeof(Global).GetProperty(stringValue, BindingFlags.Public | BindingFlags.Instance);
-                if (colorProp != null && colorProp.PropertyType == typeof(Color))
-                {
-                    return colorProp.GetValue(globalInstance);
-                }
-                var mgColorProp = typeof(Color).GetProperty(stringValue, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
-                if (mgColorProp != null)
-                {
-                    return mgColorProp.GetValue(null);
-                }
+                case JsonValueKind.Number:
+                    if (targetType == typeof(int)) return element.GetInt32();
+                    if (targetType == typeof(float)) return element.GetSingle();
+                    if (targetType == typeof(double)) return element.GetDouble();
+                    if (targetType == typeof(decimal)) return element.GetDecimal();
+                    break;
+
+                case JsonValueKind.True:
+                    return true;
+
+                case JsonValueKind.False:
+                    return false;
+
+                case JsonValueKind.Object:
+                case JsonValueKind.Array:
+                    // Use the built-in deserializer to handle complex objects and arrays.
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                    return JsonSerializer.Deserialize(element.GetRawText(), targetType, options);
             }
 
-            return JsonSerializer.Deserialize(element.GetRawText(), targetType, options);
+            return Convert.ChangeType(element.ToString(), targetType);
         }
     }
 }

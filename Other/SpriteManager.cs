@@ -1,10 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -12,8 +8,6 @@ namespace ProjectVagabond
     {
         private readonly Core _core;
         private readonly TextureFactory _textureFactory;
-
-        private readonly Dictionary<string, Texture2D> _enemySprites = new(StringComparer.OrdinalIgnoreCase);
 
         private Texture2D _logoSprite;
         private Texture2D _waterSprite;
@@ -29,7 +23,7 @@ namespace ProjectVagabond
         private Texture2D _longRestSprite;
         private Texture2D _emptySprite;
         private Texture2D _speedMarkSprite;
-        private Texture2D _worldMapHoverSelectorSprite;
+        private Texture2D _mapMarkerSprite;
         private Texture2D _circleTextureSprite;
         private Texture2D _settingsIconSprite;
         private Texture2D _turnIndicatorSprite;
@@ -58,7 +52,7 @@ namespace ProjectVagabond
         public Texture2D LongRestSprite => _longRestSprite;
         public Texture2D EmptySprite => _emptySprite;
         public Texture2D SpeedMarkSprite => _speedMarkSprite;
-        public Texture2D WorldMapHoverSelectorSprite => _worldMapHoverSelectorSprite;
+        public Texture2D MapMarkerSprite => _mapMarkerSprite;
         public Texture2D CircleTextureSprite => _circleTextureSprite;
         public Texture2D SettingsIconSprite => _settingsIconSprite;
         public Texture2D TurnIndicatorSprite => _turnIndicatorSprite;
@@ -85,8 +79,8 @@ namespace ProjectVagabond
             try { _logoSprite = _core.Content.Load<Texture2D>("Sprites/logo"); }
             catch { _logoSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-            try { _worldMapHoverSelectorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_world_map_selector"); }
-            catch { _worldMapHoverSelectorSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
+            try { _mapMarkerSprite = _core.Content.Load<Texture2D>("Sprites/map_marker"); }
+            catch { _mapMarkerSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Magenta); }
 
             try { _circleTextureSprite = _textureFactory.CreateCircleTexture(); }
             catch { _circleTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
@@ -170,95 +164,13 @@ namespace ProjectVagabond
 
             try { CardShaderEffect = _core.Content.Load<Effect>("Shaders/CardShader"); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ERROR] Could not load shader 'Shaders/CardShader'. Please ensure it's in the Content project. {ex.Message}"); }
-
-            LoadAllArchetypeSprites();
         }
 
-        /// <summary>
-        /// Iterates through all loaded archetypes and pre-loads any sprites specified in their RenderableComponents.
-        /// </summary>
-        public void LoadAllArchetypeSprites()
+        [Obsolete("LoadSpriteContent is deprecated, please use LoadEssentialContent and LoadGameContent instead.")]
+        public void LoadSpriteContent()
         {
-            Debug.WriteLine("[SpriteManager] --- Loading Archetype Sprites ---");
-            Debug.WriteLine($"[SpriteManager] [DIAGNOSTIC] Content.RootDirectory is: '{_core.Content.RootDirectory}'");
-            var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
-            var allArchetypes = archetypeManager.GetAllArchetypeTemplates();
-
-            foreach (var archetype in allArchetypes)
-            {
-                bool isCombatant = archetype.TemplateComponents.Any(c => c is CombatantComponent);
-                bool isPlayer = archetype.TemplateComponents.Any(c => c is PlayerTagComponent);
-
-                // This validation applies to all non-player entities that can participate in combat.
-                if (isCombatant && !isPlayer)
-                {
-                    var renderable = archetype.TemplateComponents.Find(c => c is RenderableComponent) as RenderableComponent;
-
-                    if (renderable == null)
-                    {
-#if DEBUG
-                        throw new Exception($"[SpriteManager] [CRITICAL CONTENT ERROR] Archetype '{archetype.Id}' is a combatant but is missing a RenderableComponent. All non-player combatants must have a RenderableComponent in their JSON file.");
-#else
-                        Debug.WriteLine($"[SpriteManager] [WARNING] Archetype '{archetype.Id}' is a combatant but is missing a RenderableComponent. It will not be visible.");
-                        continue;
-#endif
-                    }
-
-                    if (string.IsNullOrEmpty(renderable.SpritePath))
-                    {
-#if DEBUG
-                        throw new Exception($"[SpriteManager] [CRITICAL CONTENT ERROR] Archetype '{archetype.Id}' has a RenderableComponent but is missing a 'SpritePath'. Please define a valid sprite path in the archetype's JSON file.");
-#else
-                        Debug.WriteLine($"[SpriteManager] [WARNING] Archetype '{archetype.Id}' is missing a 'SpritePath'. The game will use a fallback placeholder.");
-                        continue;
-#endif
-                    }
-
-                    Debug.WriteLine($"[SpriteManager] [DIAGNOSTIC] Processing archetype '{archetype.Id}'. Found SpritePath: '{renderable.SpritePath}'.");
-                    try
-                    {
-                        Debug.WriteLine($"[SpriteManager] [DIAGNOSTIC] Calling Content.Load<Texture2D>(\"{renderable.SpritePath}\")");
-                        var texture = _core.Content.Load<Texture2D>(renderable.SpritePath);
-                        _enemySprites[renderable.SpritePath] = texture;
-                        Debug.WriteLine($"[SpriteManager] [DIAGNOSTIC] SUCCESS: Loaded and cached '{renderable.SpritePath}'.");
-                    }
-                    catch (ContentLoadException ex)
-                    {
-                        Debug.WriteLine($"[SpriteManager] [DIAGNOSTIC] FAILURE: Content.Load threw an exception for '{renderable.SpritePath}'.");
-#if DEBUG
-                        throw new Exception($"[SpriteManager] [CRITICAL FAILURE] Failed to load sprite '{renderable.SpritePath}' for archetype '{archetype.Id}'. Ensure the file exists and its 'Build Action' is 'Content' and 'Copy to Output Directory' is 'Copy if newer'.", ex);
-#else
-                        Debug.WriteLine($"[SpriteManager] [WARNING] Failed to load sprite '{renderable.SpritePath}' for archetype '{archetype.Id}'. The game will use a fallback placeholder. Error: {ex.Message}");
-#endif
-                    }
-                }
-            }
-            Debug.WriteLine($"[SpriteManager] --- Finished loading archetype sprites. Total loaded: {_enemySprites.Count} ---");
-        }
-
-
-        /// <summary>
-        /// Retrieves a pre-loaded enemy sprite from the manager.
-        /// </summary>
-        /// <param name="spritePath">The content path of the sprite to retrieve.</param>
-        /// <returns>The Texture2D if found; otherwise, null.</returns>
-        public Texture2D GetEnemySprite(string spritePath)
-        {
-            if (string.IsNullOrEmpty(spritePath))
-            {
-                return null;
-            }
-            Debug.WriteLine($"[SpriteManager] [DIAGNOSTIC] GetEnemySprite requested for path: '{spritePath}'.");
-            if (_enemySprites.TryGetValue(spritePath, out var texture))
-            {
-                Debug.WriteLine($"[SpriteManager] [DIAGNOSTIC] Found texture in cache.");
-                return texture;
-            }
-            else
-            {
-                Debug.WriteLine($"[SpriteManager] [DIAGNOSTIC] Texture NOT FOUND in cache.");
-                return null;
-            }
+            LoadEssentialContent();
+            LoadGameContent();
         }
     }
 }

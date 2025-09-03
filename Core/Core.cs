@@ -543,7 +543,6 @@ namespace ProjectVagabond
             _tooltipManager.Update(scaledGameTime); // Tooltips should always update.
             _particleSystemManager.Update(scaledGameTime);
             _diceRollingSystem.Update(scaledGameTime); // Update dice visuals and game logic every frame.
-            _backgroundManager.Update(scaledGameTime);
             _animationManager.Update(scaledGameTime);
 
             // These systems handle game logic and should be paused.
@@ -576,14 +575,7 @@ namespace ProjectVagabond
 
             // --- Phase 2: Composite everything onto the full-screen render target ---
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
-            GraphicsDevice.Clear(Color.Black);
-
-            _spriteBatch.Begin(samplerState: SamplerState.LinearClamp);
-            if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack && !(_sceneManager.CurrentActiveScene is AnimationEditorScene))
-            {
-                _backgroundManager.Draw(_spriteBatch, _finalCompositeTarget.Bounds, _finalScale);
-            }
-            _spriteBatch.End();
+            GraphicsDevice.Clear(_global.Palette_Black);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
@@ -597,7 +589,7 @@ namespace ProjectVagabond
 
             // --- Phase 3: Render the final composite to the screen with the CRT shader ---
             GraphicsDevice.SetRenderTarget(null);
-            GraphicsDevice.Clear(Color.Black);
+            GraphicsDevice.Clear(_global.Palette_Black);
 
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
             _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp, null, null, null, shakeMatrix);

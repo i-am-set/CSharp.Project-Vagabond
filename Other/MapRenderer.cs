@@ -38,6 +38,10 @@ namespace ProjectVagabond
         public int GridSizeY { get; private set; }
         public int CellSize { get; private set; }
 
+        // --- TUNING ---
+        private const int MAP_GRID_WIDTH_CELLS = 28;
+        private const int MAP_GRID_HEIGHT_CELLS = 28;
+
         // Animation state for path nodes
         private readonly Dictionary<Vector2, float> _pathNodeAnimationOffsets = new Dictionary<Vector2, float>();
         private readonly Random _pathAnimRandom = new Random();
@@ -104,26 +108,19 @@ namespace ProjectVagabond
             }
             else
             {
-                const int worldCellSize = Global.GRID_CELL_SIZE;
-                const int verticalPadding = 25;
-
                 // --- SIZE CALCULATION ---
-                // The map is square, constrained by the available vertical space to meet padding requirements.
-                int availableHeight = Global.VIRTUAL_HEIGHT - (verticalPadding * 2);
-
-                // The final map size must be a multiple of the cell size to ensure perfect grid alignment.
-                int finalMapSize = (availableHeight / worldCellSize) * worldCellSize;
+                // The map size is now fixed based on the desired number of cells.
+                CellSize = Global.GRID_CELL_SIZE;
+                int finalMapWidth = MAP_GRID_WIDTH_CELLS * CellSize;
+                int finalMapHeight = MAP_GRID_HEIGHT_CELLS * CellSize;
 
                 // --- CENTERING CALCULATION ---
-                // Center the map vertically within the screen.
-                int mapY = (Global.VIRTUAL_HEIGHT - finalMapSize) / 2;
-                // Center the map horizontally, which leaves space on the left for the stats panel.
-                int mapX = (Global.VIRTUAL_WIDTH - finalMapSize) / 2;
-                MapScreenBounds = new Rectangle(mapX, mapY, finalMapSize, finalMapSize);
+                int mapX = (Global.VIRTUAL_WIDTH - finalMapWidth) / 2;
+                int mapY = (Global.VIRTUAL_HEIGHT - finalMapHeight) / 2 - 7; // Shift map up by 7 pixels
+                MapScreenBounds = new Rectangle(mapX, mapY, finalMapWidth, finalMapHeight);
             }
 
             // --- GRID SETUP ---
-            CellSize = Global.GRID_CELL_SIZE;
             _mapGridBounds = MapScreenBounds;
 
             GridSizeX = MapScreenBounds.Width / CellSize;
@@ -214,12 +211,14 @@ namespace ProjectVagabond
                 Vector2? screenPos = MapCoordsToScreen(_hoveredGridPos.Value);
                 if (screenPos.HasValue)
                 {
-                    Rectangle indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, CellSize, CellSize);
-                    spriteBatch.Draw(_spriteManager.WorldMapHoverSelectorSprite, indicatorRect, Color.Lime * 0.5f);
+                    var markerTexture = _spriteManager.MapMarkerSprite;
+                    if (markerTexture != null)
+                    {
+                        var indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, CellSize, CellSize);
+                        spriteBatch.DrawSnapped(markerTexture, indicatorRect, _global.Palette_Orange);
+                    }
                 }
             }
-
-            if (_gameState.IsPaused) DrawPauseIcon(spriteBatch, font);
         }
 
         private void DrawMapFrame(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -241,19 +240,19 @@ namespace ProjectVagabond
             // Only draw if it's not fully hidden
             if (_footerYOffset > FOOTER_HIDDEN_Y_OFFSET + 1)
             {
-                int footerWidth = swayedMapScreenBounds.Width + 2;
-                int footerX = swayedMapScreenBounds.X - 1;
-                int footerY = (int)(swayedMapScreenBounds.Bottom + 5 + _footerYOffset);
+                int footerWidth = swayedMapScreenBounds.Width;
+                int footerX = swayedMapScreenBounds.X;
+                int footerY = (int)(swayedMapScreenBounds.Bottom + 4 + _footerYOffset);
 
-                Rectangle footerBounds = new Rectangle(footerX, footerY, footerWidth, 20);
+                Rectangle footerBounds = new Rectangle(footerX, footerY, footerWidth, 16);
 
                 // Draw footer background
                 spriteBatch.Draw(pixel, footerBounds, _global.TerminalBg);
 
-                // Draw footer frame lines
-                spriteBatch.Draw(pixel, new Rectangle(footerBounds.X, footerBounds.Bottom - 2, footerBounds.Width, 2), _global.Palette_White); // Bottom
-                spriteBatch.Draw(pixel, new Rectangle(footerBounds.X, footerBounds.Y, 2, footerBounds.Height), _global.Palette_White); // Left
-                spriteBatch.Draw(pixel, new Rectangle(footerBounds.Right - 2, footerBounds.Y, 2, footerBounds.Height), _global.Palette_White); // Right
+                // Draw footer frame lines (1px thick)
+                spriteBatch.Draw(pixel, new Rectangle(footerBounds.X, footerBounds.Bottom - 1, footerBounds.Width, 1), _global.Palette_White); // Bottom
+                spriteBatch.Draw(pixel, new Rectangle(footerBounds.X, footerBounds.Y, 1, footerBounds.Height), _global.Palette_White); // Left
+                spriteBatch.Draw(pixel, new Rectangle(footerBounds.Right - 1, footerBounds.Y, 1, footerBounds.Height), _global.Palette_White); // Right
 
                 LayoutAndPositionButtons(footerBounds);
                 foreach (var b in _headerButtons)
@@ -263,22 +262,22 @@ namespace ProjectVagabond
             }
 
             // --- 2. Draw the main map frame and background on top of the footer ---
-            int mainFrameHeight = swayedMapScreenBounds.Height + 10;
+            int framePadding = 4;
             Rectangle fullFrameArea = new Rectangle(
-                swayedMapScreenBounds.X - 5,
-                swayedMapScreenBounds.Y - 5,
-                swayedMapScreenBounds.Width + 10,
-                mainFrameHeight
+                swayedMapScreenBounds.X - framePadding,
+                swayedMapScreenBounds.Y - framePadding,
+                swayedMapScreenBounds.Width + (framePadding * 2),
+                swayedMapScreenBounds.Height + (framePadding * 2)
             );
 
-            // Draw the background for the entire framed area. This will paint over the footer.
+            // Draw the background for the entire framed area.
             spriteBatch.Draw(pixel, fullFrameArea, _global.TerminalBg);
 
-            // Draw main frame lines on top of the background
-            spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.X - 5, swayedMapScreenBounds.Y - 5, swayedMapScreenBounds.Width + 10, 2), _global.Palette_White); // Top border
-            spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.X - 5, swayedMapScreenBounds.Bottom + 3, swayedMapScreenBounds.Width + 10, 2), _global.Palette_White); // Bottom border
-            spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.X - 5, swayedMapScreenBounds.Y - 5, 2, mainFrameHeight), _global.Palette_White); // Left border
-            spriteBatch.Draw(pixel, new Rectangle(swayedMapScreenBounds.Right + 3, swayedMapScreenBounds.Y - 5, 2, mainFrameHeight), _global.Palette_White); // Right border
+            // Draw main frame lines (1px thick)
+            spriteBatch.Draw(pixel, new Rectangle(fullFrameArea.X, fullFrameArea.Y, fullFrameArea.Width, 1), _global.Palette_White); // Top border
+            spriteBatch.Draw(pixel, new Rectangle(fullFrameArea.X, fullFrameArea.Bottom - 1, fullFrameArea.Width, 1), _global.Palette_White); // Bottom border
+            spriteBatch.Draw(pixel, new Rectangle(fullFrameArea.X, fullFrameArea.Y, 1, fullFrameArea.Height), _global.Palette_White); // Left border
+            spriteBatch.Draw(pixel, new Rectangle(fullFrameArea.Right - 1, fullFrameArea.Y, 1, fullFrameArea.Height), _global.Palette_White); // Right border
         }
 
         public void LayoutAndPositionButtons(Rectangle footerBounds)
@@ -309,15 +308,6 @@ namespace ProjectVagabond
             {
                 stopButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
             }
-        }
-
-        private void DrawPauseIcon(SpriteBatch spriteBatch, BitmapFont font)
-        {
-            string pauseText = "▐▐";
-            Vector2 scale = new Vector2(5, 5);
-            Vector2 textSize = font.MeasureString(pauseText) * scale;
-            Vector2 textPosition = new Vector2(_mapGridBounds.Center.X - textSize.X / 2, _mapGridBounds.Center.Y - textSize.Y / 2);
-            spriteBatch.DrawString(font, pauseText, textPosition, Color.White * 0.7f, 0f, Vector2.Zero, scale, SpriteEffects.None, 0f);
         }
 
         private List<GridElement> GenerateWorldMapGridElements()
@@ -461,21 +451,35 @@ namespace ProjectVagabond
         {
             Vector2 finalPosition = element.ScreenPosition;
 
-            // Only apply the sway animation to path-related textures that are in the animation dictionary.
+            // Apply a subtle flicker/jitter animation to path nodes.
             if (_pathNodeAnimationOffsets.ContainsKey(element.WorldPosition) && IsPathPipTexture(element.Texture))
             {
-                float offset = _pathNodeAnimationOffsets[element.WorldPosition];
-                const float SWAY_SPEED = 1f;
-                const float SWAY_AMOUNT_X = 1f;
-                const float SWAY_AMOUNT_Y = 1f;
-                float swayTimer = (float)gameTime.TotalGameTime.TotalSeconds + offset;
-                float swayOffsetX = (float)Math.Sin(swayTimer * SWAY_SPEED) * SWAY_AMOUNT_X;
-                float swayOffsetY = (float)Math.Sin(swayTimer * SWAY_SPEED * 2) * SWAY_AMOUNT_Y * 0.5f;
-                finalPosition += new Vector2(swayOffsetX, swayOffsetY);
+                float timeOffset = _pathNodeAnimationOffsets[element.WorldPosition];
+                float totalTime = (float)gameTime.TotalGameTime.TotalSeconds + timeOffset;
+                float cycleDuration = 0.8f; // Duration of one flicker cycle (offset + return to center)
+                float progressInCycle = (totalTime % cycleDuration) / cycleDuration;
+
+                Vector2 offset = Vector2.Zero;
+                if (progressInCycle < 0.5f) // First half of the cycle: apply offset
+                {
+                    // Use the cycle number to get a stable random direction for the duration of the offset.
+                    int cycleNumber = (int)(totalTime / cycleDuration);
+                    var rand = new Random(element.WorldPosition.GetHashCode() ^ cycleNumber);
+                    int direction = rand.Next(4);
+                    switch (direction)
+                    {
+                        case 0: offset = new Vector2(0, -1); break; // Up
+                        case 1: offset = new Vector2(0, 1); break;  // Down
+                        case 2: offset = new Vector2(-1, 0); break; // Left
+                        case 3: offset = new Vector2(1, 0); break;  // Right
+                    }
+                }
+                // Second half of the cycle: offset remains Zero (return to center).
+                finalPosition += offset;
             }
 
             Rectangle destRect = new Rectangle((int)finalPosition.X, (int)finalPosition.Y, cellSize, cellSize);
-            spriteBatch.Draw(element.Texture, destRect, element.Color);
+            spriteBatch.DrawSnapped(element.Texture, destRect, element.Color);
         }
 
         public Vector2? MapCoordsToScreen(Vector2 mapPos)
@@ -534,15 +538,6 @@ namespace ProjectVagabond
             if (noise < _global.HillsLevel) return _global.HillColor;
             if (noise < _global.MountainsLevel) return _global.MountainColor;
             return _global.MountainColor;
-        }
-
-        private void DrawHollowRectangle(SpriteBatch spriteBatch, Rectangle rect, Color color, int thickness)
-        {
-            Texture2D pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
         }
     }
 }
