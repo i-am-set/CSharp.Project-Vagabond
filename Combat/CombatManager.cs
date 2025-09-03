@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Combat;
@@ -73,6 +73,10 @@ namespace ProjectVagabond.Combat
         {
             Combatants.Clear();
             Combatants.AddRange(combatants);
+
+            int enemyCount = Combatants.Count(id => id != _gameState.PlayerEntityId);
+            Debug.WriteLine($"[CombatManager] Combat started with {enemyCount} enemy combatant(s).");
+
             ClearActionsForTurn();
             _currentTurnIndex = 0;
             _fsm.ChangeState(new CombatStartState(), this);

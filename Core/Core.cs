@@ -353,6 +353,14 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Sets the flag indicating whether the main game assets have been loaded.
+        /// </summary>
+        public void SetGameLoaded(bool isLoaded)
+        {
+            _isGameLoaded = isLoaded;
+        }
+
+        /// <summary>
         /// Triggers a full-screen color flash that fades out over the specified duration.
         /// </summary>
         public void TriggerFullscreenFlash(Color color, float duration)
@@ -424,20 +432,67 @@ namespace ProjectVagabond
             }
             if (currentKeyboardState.IsKeyDown(Keys.F5) && _previousKeyboardState.IsKeyUp(Keys.F5))
             {
-                var encounterManager = ServiceLocator.Get<EncounterManager>();
-                var encounterData = encounterManager.GetRandomCombatEncounter();
-                if (encounterData != null)
+                // This is the action that will run AFTER the scene transition and loading are complete.
+                Action startDebugCombat = () =>
                 {
-                    var enemyFactory = new EnemyFactory();
-                    var enemies = enemyFactory.CreateEnemies(encounterData);
-                    var combatScene = _sceneManager.GetScene(GameSceneState.Combat) as CombatScene;
+                    var debugEncounterData = new CombatEncounterData
+                    {
+                        Id = "debug_f5_encounter",
+                        Enemies = new List<EnemySpawnDefinition>
+                        {
+                            new EnemySpawnDefinition { ArchetypeId = "basic_enemy", Position = Point.Zero },
+                            new EnemySpawnDefinition { ArchetypeId = "pyromancer", Position = Point.Zero },
+                            new EnemySpawnDefinition { ArchetypeId = "basic_enemy", Position = Point.Zero }
+                        }
+                    };
 
-                    var tasks = new List<LoadingTask> { new DelayTask(0.15f) };
-                    _sceneManager.ChangeScene(GameSceneState.Combat, tasks, () => combatScene?.StartCombat(enemies));
+                    var enemyFactory = new EnemyFactory();
+                    var enemies = enemyFactory.CreateEnemies(debugEncounterData);
+                    var combatScene = _sceneManager.GetScene(GameSceneState.Combat) as CombatScene;
+                    combatScene?.StartCombat(enemies);
+                };
+
+                if (_isGameLoaded)
+                {
+                    // If game is already loaded, just switch scene and start combat.
+                    _sceneManager.ChangeScene(GameSceneState.Combat, null, startDebugCombat);
                 }
                 else
                 {
-                    Debug.WriteLine("[ERROR] F5 pressed, but no combat encounters are loaded.");
+                    // If game is not loaded, we need to run all the loading tasks first.
+                    var spriteManager = ServiceLocator.Get<SpriteManager>();
+                    var itemManager = ServiceLocator.Get<ItemManager>();
+                    var actionManager = ServiceLocator.Get<ActionManager>();
+                    var poseManager = ServiceLocator.Get<PoseManager>();
+                    var diceSystem = ServiceLocator.Get<DiceRollingSystem>();
+                    var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
+                    var encounterManager = ServiceLocator.Get<EncounterManager>();
+                    var gameState = ServiceLocator.Get<GameState>();
+
+                    var loadingTasks = new List<LoadingTask>
+                    {
+                        new GenericTask("Loading game sprites...", () => spriteManager.LoadGameContent()),
+                        new GenericTask("Loading item data...", () => itemManager.LoadWeapons("Content/Weapons")),
+                        new GenericTask("Loading action data...", () => actionManager.LoadActions("Content/Actions")),
+                        new GenericTask("Loading pose data...", () => poseManager.LoadPoses("Content/Poses")),
+                        new GenericTask("Initializing dice system...", () => diceSystem.Initialize(this.GraphicsDevice, this.Content)),
+                        new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Archetypes")),
+                        new GenericTask("Loading encounters...", () => encounterManager.LoadEncounters("Content/Encounters")),
+                        new GenericTask("Loading combat blueprints...", () => encounterManager.LoadCombatEncounters("Content/Encounters/CombatEncounters")),
+                        new GenericTask("Generating world...", () => {
+                            gameState.InitializeWorld();
+                            gameState.InitializeRenderableEntities();
+                        }),
+                        new DiceWarmupTask()
+                    };
+
+                    // Chain the actions: after loading is done, set the flag and then start combat.
+                    Action onLoadingComplete = () => {
+                        SetGameLoaded(true);
+                        startDebugCombat();
+                    };
+
+                    _sceneManager.ChangeScene(GameSceneState.Combat, loadingTasks, onLoadingComplete);
                 }
             }
             if (currentKeyboardState.IsKeyDown(Keys.F12) && _previousKeyboardState.IsKeyUp(Keys.F12))

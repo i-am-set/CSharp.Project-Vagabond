@@ -101,6 +101,17 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Retrieves a specific combat encounter blueprint by its ID.
+        /// </summary>
+        /// <param name="id">The ID of the combat encounter to retrieve.</param>
+        /// <returns>A CombatEncounterData object, or null if not found.</returns>
+        public CombatEncounterData GetCombatEncounter(string id)
+        {
+            _combatEncounters.TryGetValue(id, out var data);
+            return data;
+        }
+
+        /// <summary>
         /// Retrieves a random combat encounter blueprint.
         /// </summary>
         /// <returns>A CombatEncounterData object, or null if none are loaded.</returns>

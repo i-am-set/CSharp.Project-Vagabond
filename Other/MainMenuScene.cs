@@ -86,7 +86,11 @@ namespace ProjectVagabond.Scenes
                     new DiceWarmupTask()
                 };
 
-                _sceneManager.ChangeScene(GameSceneState.TerminalMap, loadingTasks);
+                Action onLoadingComplete = () => {
+                    core.SetGameLoaded(true);
+                };
+
+                _sceneManager.ChangeScene(GameSceneState.TerminalMap, loadingTasks, onLoadingComplete);
             };
 
             var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, buttonYStart + buttonYSpacing, buttonWidth, buttonHeight), "SETTINGS");

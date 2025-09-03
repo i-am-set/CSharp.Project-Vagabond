@@ -365,6 +365,27 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            // --- Pass 0: Draw Enemies and World Elements ---
+            // This content was moved from DrawSceneContent. As this scene does not use letterboxing,
+            // all rendering must happen in DrawFullscreenUI, which operates on the final composite target.
+            spriteBatch.Begin(sortMode: SpriteSortMode.Deferred, blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+
+            // The _enemies list is pre-sorted by Y-position in LayoutEnemies to ensure correct draw order (back to front).
+            foreach (var enemy in _enemies)
+            {
+                enemy.Draw(spriteBatch);
+            }
+
+            // --- DEBUG: Draw the play area boundary ---
+            var global = ServiceLocator.Get<Global>();
+            if (global.ShowDebugOverlays)
+            {
+                spriteBatch.DrawRectangle(PlayArea, Color.Lime, 1f);
+            }
+
+            spriteBatch.End();
+
+
             var currentPose = _actionAnimator.CurrentPose;
 
             // --- Pass 1: Draw Hands Behind Particles ---
@@ -417,18 +438,9 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // This method now only draws the in-world elements that should be letterboxed.
-            foreach (var enemy in _enemies)
-            {
-                enemy.Draw(spriteBatch);
-            }
-
-            // --- DEBUG: Draw the play area boundary ---
-            var global = ServiceLocator.Get<Global>();
-            if (global.ShowDebugOverlays)
-            {
-                spriteBatch.DrawRectangle(PlayArea, Color.Lime, 1f);
-            }
+            // This method is now intentionally empty.
+            // The enemy rendering has been moved to DrawFullscreenUI to accommodate this
+            // scene's non-letterboxed rendering approach, ensuring correct layering.
         }
 
         private void DrawTargetingIndicators(SpriteBatch spriteBatch)
