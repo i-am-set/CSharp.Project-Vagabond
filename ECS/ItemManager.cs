@@ -1,9 +1,11 @@
-﻿using ProjectVagabond.Combat;
-using ProjectVagabond.Combat.Effects;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
+using ProjectVagabond;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -76,12 +78,6 @@ namespace ProjectVagabond
                 {
                     Id = "weapon_unarmed_punch",
                     Name = "Unarmed Strike",
-                    PrimaryAttack = new ActionData
-                    {
-                        Name = "Punch",
-                        TargetType = TargetType.SingleEnemy,
-                        Effects = new List<EffectDefinition> { new EffectDefinition { Type = "DealDamage", Amount = "3", DamageType = DamageType.Blunt } }
-                    }
                 };
             }
             if (!_weapons.ContainsKey("weapon_unarmed_claw"))
@@ -91,12 +87,6 @@ namespace ProjectVagabond
                 {
                     Id = "weapon_unarmed_claw",
                     Name = "Unarmed Strike",
-                    PrimaryAttack = new ActionData
-                    {
-                        Name = "Claw",
-                        TargetType = TargetType.SingleEnemy,
-                        Effects = new List<EffectDefinition> { new EffectDefinition { Type = "DealDamage", Amount = "3", DamageType = DamageType.Slashing } }
-                    }
                 };
             }
         }

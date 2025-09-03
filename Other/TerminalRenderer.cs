@@ -57,27 +57,11 @@ namespace ProjectVagabond
 
             // Subscribe to events for decoupled communication
             EventBus.Subscribe<GameEvents.TerminalMessagePublished>(OnTerminalMessagePublished);
-            EventBus.Subscribe<GameEvents.CombatLogMessagePublished>(OnCombatLogMessagePublished);
-            EventBus.Subscribe<GameEvents.CombatStateChanged>(OnCombatStateChanged);
         }
 
         private void OnTerminalMessagePublished(GameEvents.TerminalMessagePublished e)
         {
             AddToHistory(e.Message, e.BaseColor);
-        }
-
-        private void OnCombatLogMessagePublished(GameEvents.CombatLogMessagePublished e)
-        {
-            AddToCombatHistory(e.Message, _global.OutputTextColor);
-        }
-
-        private void OnCombatStateChanged(GameEvents.CombatStateChanged e)
-        {
-            // Clear the combat log when combat starts to provide a clean slate.
-            if (e.IsInCombat)
-            {
-                ClearCombatHistory();
-            }
         }
 
         public void ResetCaratBlink()
@@ -187,7 +171,7 @@ namespace ProjectVagabond
                 ReWrapCombatHistory(font);
             }
 
-            bool isInCombat = _gameState.IsInCombat;
+            bool isInCombat = true;
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
             // Determine which history and scroll offset to use
@@ -568,16 +552,9 @@ namespace ProjectVagabond
             if (_currentBounds.Height <= 0) return 0;
 
             int outputAreaBottom;
-            if (_gameState.IsInCombat)
-            {
-                outputAreaBottom = _currentBounds.Bottom;
-            }
-            else
-            {
-                int inputLineY = _currentBounds.Bottom - Global.TERMINAL_LINE_SPACING - 5;
-                int separatorY = inputLineY - 5;
-                outputAreaBottom = separatorY; // Simplified for now
-            }
+            int inputLineY = _currentBounds.Bottom - Global.TERMINAL_LINE_SPACING - 5;
+            int separatorY = inputLineY - 5;
+            outputAreaBottom = separatorY; // Simplified for now
 
             int outputAreaHeight = outputAreaBottom - _currentBounds.Y;
             return (outputAreaHeight - 5) / Global.TERMINAL_LINE_SPACING;

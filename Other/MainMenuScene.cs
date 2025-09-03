@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Combat;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -62,23 +61,16 @@ namespace ProjectVagabond.Scenes
                 var core = ServiceLocator.Get<Core>();
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var itemManager = ServiceLocator.Get<ItemManager>();
-                var actionManager = ServiceLocator.Get<ActionManager>();
-                var poseManager = ServiceLocator.Get<PoseManager>();
                 var diceSystem = ServiceLocator.Get<DiceRollingSystem>();
                 var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
-                var encounterManager = ServiceLocator.Get<EncounterManager>();
                 var gameState = ServiceLocator.Get<GameState>();
 
                 var loadingTasks = new List<LoadingTask>
                 {
                     new GenericTask("Loading game sprites...", () => spriteManager.LoadGameContent()),
                     new GenericTask("Loading item data...", () => itemManager.LoadWeapons("Content/Weapons")),
-                    new GenericTask("Loading action data...", () => actionManager.LoadActions("Content/Actions")),
-                    new GenericTask("Loading pose data...", () => poseManager.LoadPoses("Content/Poses")),
                     new GenericTask("Initializing dice system...", () => diceSystem.Initialize(core.GraphicsDevice, core.Content)),
                     new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Archetypes")),
-                    new GenericTask("Loading encounters...", () => encounterManager.LoadEncounters("Content/Encounters")),
-                    new GenericTask("Loading combat blueprints...", () => encounterManager.LoadCombatEncounters("Content/Encounters/CombatEncounters")),
                     new GenericTask("Generating world...", () => {
                         gameState.InitializeWorld();
                         gameState.InitializeRenderableEntities();

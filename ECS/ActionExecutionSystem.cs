@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xna.Framework;
-using ProjectVagabond.Encounters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -59,7 +58,7 @@ namespace ProjectVagabond
             _gameState ??= ServiceLocator.Get<GameState>();
             _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
-            if (_gameState.IsPaused || _gameState.IsInCombat || !_gameState.IsExecutingActions)
+            if (_gameState.IsPaused || !_gameState.IsExecutingActions)
             {
                 return;
             }
@@ -161,7 +160,6 @@ namespace ProjectVagabond
             _chunkManager.UpdateEntityChunk(entityId, oldWorldPos, action.Destination);
             EventBus.Publish(new GameEvents.PlayerMoved { NewPosition = action.Destination });
 
-            CheckForPOITrigger(gameState, entityId, action.Destination);
         }
 
         private void ApplyRestActionEffects(GameState gameState, int entityId, RestAction action)
@@ -172,39 +170,6 @@ namespace ProjectVagabond
             stats.Rest(action.RestType);
             string restType = action.RestType.ToString().Replace("Rest", "");
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[rest]Completed {restType.ToLower()} rest. Energy is now {stats.CurrentEnergyPoints}/{stats.MaxEnergyPoints}." });
-        }
-
-        private void CheckForPOITrigger(GameState gameState, int movingEntityId, Vector2 newPosition)
-        {
-            if (movingEntityId != gameState.PlayerEntityId) return;
-
-            var encounterManager = ServiceLocator.Get<EncounterManager>();
-            var entityManager = ServiceLocator.Get<EntityManager>();
-            var componentStore = ServiceLocator.Get<ComponentStore>();
-            var chunkManager = ServiceLocator.Get<ChunkManager>();
-            var poiManager = ServiceLocator.Get<POIManagerSystem>();
-
-            var entitiesOnTile = gameState.GetEntitiesAtGridPos(newPosition).ToList();
-
-            foreach (var otherEntityId in entitiesOnTile)
-            {
-                if (otherEntityId == movingEntityId) continue;
-
-                var poiComp = componentStore.GetComponent<POIComponent>(otherEntityId);
-                if (poiComp != null)
-                {
-                    encounterManager.TriggerEncounter(poiComp.EncounterId);
-
-                    if (!poiComp.IsPersistent)
-                    {
-                        poiManager.TrackDestroyedPOI(otherEntityId, newPosition);
-                        chunkManager.UnregisterEntity(otherEntityId, newPosition);
-                        componentStore.EntityDestroyed(otherEntityId);
-                        entityManager.DestroyEntity(otherEntityId);
-                    }
-                    break;
-                }
-            }
         }
     }
 }

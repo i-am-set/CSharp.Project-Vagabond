@@ -1,4 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond;
+using System;
 
 namespace ProjectVagabond
 {
@@ -22,11 +24,6 @@ namespace ProjectVagabond
         /// This is granted when the player performs an action.
         /// </summary>
         public float ActionTimeBudget { get; set; } = 0;
-
-        /// <summary>
-        /// The intelligence level of the AI, determining how it chooses actions in combat.
-        /// </summary>
-        public AIIntellect Intellect { get; set; } = AIIntellect.Normal;
 
         public IComponent Clone()
         {

@@ -19,7 +19,6 @@ namespace ProjectVagabond
         private AutoCompleteManager _autoCompleteManager; // Lazy loaded
         private CommandProcessor _commandProcessor; // Lazy loaded
         private TerminalRenderer _terminalRenderer; // Lazy loaded
-        private PreEncounterAnimationSystem _preEncounterAnimationSystem; // Lazy loaded
 
         // Input State
         private string _currentInput = "";
@@ -60,18 +59,9 @@ namespace ProjectVagabond
             _autoCompleteManager ??= ServiceLocator.Get<AutoCompleteManager>();
             _commandProcessor ??= ServiceLocator.Get<CommandProcessor>();
             _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
-            _preEncounterAnimationSystem ??= ServiceLocator.Get<PreEncounterAnimationSystem>();
 
             KeyboardState currentKeyboardState = Keyboard.GetState();
             MouseState currentMouseState = Mouse.GetState();
-
-            // If a pre-encounter animation is playing, block all input.
-            if (_preEncounterAnimationSystem.IsAnimating)
-            {
-                _previousKeyboardState = currentKeyboardState;
-                _previousMouseState = currentMouseState;
-                return;
-            }
 
             // If the game is awaiting a time pass animation to finish, block all input.
             if (_gameState.IsAwaitingTimePass)

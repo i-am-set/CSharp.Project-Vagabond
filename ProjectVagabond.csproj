@@ -29,11 +29,8 @@
 		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
 	</ItemGroup>
 	<ItemGroup>
-		<Folder Include="Content\Actions\Spells\" />
-		<Folder Include="Content\Encounters\CombatEncounters\" />
 		<Folder Include="Content\Items\" />
 		<Folder Include="Content\Models\" />
-		<Folder Include="Content\Poses\" />
 		<Folder Include="Content\Sprites\UI\KeyPrompts\" />
 		<Folder Include="Content\Sprites\UI\Backgrounds\" />
 	</ItemGroup>

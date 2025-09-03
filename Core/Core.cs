@@ -4,11 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
 using ProjectVagabond;
-using ProjectVagabond.Combat;
-using ProjectVagabond.Combat.UI;
 using ProjectVagabond.Dice;
-using ProjectVagabond.Editor;
-using ProjectVagabond.Encounters;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -74,11 +70,8 @@ namespace ProjectVagabond
         private SpriteManager _spriteManager;
         private DiceRollingSystem _diceRollingSystem;
         private BackgroundManager _backgroundManager;
-        private PreEncounterAnimationSystem _preEncounterAnimationSystem;
         private LoadingScreen _loadingScreen;
         private AnimationManager _animationManager;
-        private DeckManager _deckManager;
-        private PoseManager _poseManager;
 
         // Input State
         private KeyboardState _previousKeyboardState;
@@ -154,12 +147,6 @@ namespace ProjectVagabond
             var itemManager = new ItemManager();
             ServiceLocator.Register<ItemManager>(itemManager);
 
-            var actionManager = new ActionManager();
-            ServiceLocator.Register<ActionManager>(actionManager);
-
-            _poseManager = new PoseManager();
-            ServiceLocator.Register<PoseManager>(_poseManager);
-
             var worldClockManager = new WorldClockManager();
             ServiceLocator.Register<WorldClockManager>(worldClockManager);
 
@@ -201,28 +188,9 @@ namespace ProjectVagabond
             _backgroundManager = new BackgroundManager();
             ServiceLocator.Register<BackgroundManager>(_backgroundManager);
 
-            // Encounter System Initialization
-            EncounterActionRegistry.RegisterActions();
-            var encounterManager = new EncounterManager();
-            ServiceLocator.Register<EncounterManager>(encounterManager);
-
-            var poiManagerSystem = new POIManagerSystem();
-            ServiceLocator.Register<POIManagerSystem>(poiManagerSystem);
-
             // GameState must be registered before systems that depend on it in their constructor.
             _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
-
-            // DeckManager depends on GameState and ComponentStore, so it's registered after them.
-            _deckManager = new DeckManager();
-            ServiceLocator.Register<DeckManager>(_deckManager);
-
-            // These systems depend on GameState being available in the ServiceLocator.
-            var possibleEncounterListBuilder = new PossibleEncounterListBuilder();
-            ServiceLocator.Register<PossibleEncounterListBuilder>(possibleEncounterListBuilder);
-
-            var encounterTriggerSystem = new EncounterTriggerSystem();
-            ServiceLocator.Register<EncounterTriggerSystem>(encounterTriggerSystem);
 
             var playerInputSystem = new PlayerInputSystem();
             ServiceLocator.Register<PlayerInputSystem>(playerInputSystem);
@@ -245,10 +213,6 @@ namespace ProjectVagabond
 
             var mapRenderer = new MapRenderer();
             ServiceLocator.Register<MapRenderer>(mapRenderer);
-
-            // PreEncounterAnimationSystem depends on MapRenderer, so it must be registered after.
-            _preEncounterAnimationSystem = new PreEncounterAnimationSystem();
-            ServiceLocator.Register<PreEncounterAnimationSystem>(_preEncounterAnimationSystem);
 
             var mapInputHandler = new MapInputHandler(mapRenderer.MapContextMenu, mapRenderer);
             ServiceLocator.Register<MapInputHandler>(mapInputHandler);
@@ -289,17 +253,11 @@ namespace ProjectVagabond
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
             _systemManager.RegisterSystem(_aiSystem, 0f);
             _systemManager.RegisterSystem(energySystem, 0f);
-            _systemManager.RegisterSystem(poiManagerSystem, 0f);
-            _systemManager.RegisterSystem(encounterTriggerSystem, 0f);
-            _systemManager.RegisterSystem(_preEncounterAnimationSystem, 0f);
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene()); // Changed to GameMapScene
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
-            _sceneManager.AddScene(GameSceneState.Encounter, new EncounterScene());
-            _sceneManager.AddScene(GameSceneState.Combat, new CombatScene());
-            _sceneManager.AddScene(GameSceneState.AnimationEditor, new AnimationEditorScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
@@ -432,79 +390,12 @@ namespace ProjectVagabond
             }
             if (currentKeyboardState.IsKeyDown(Keys.F5) && _previousKeyboardState.IsKeyUp(Keys.F5))
             {
-                // This is the action that will run AFTER the scene transition and loading are complete.
-                Action startDebugCombat = () =>
-                {
-                    var debugEncounterData = new CombatEncounterData
-                    {
-                        Id = "debug_f5_encounter",
-                        Enemies = new List<EnemySpawnDefinition>
-                        {
-                            new EnemySpawnDefinition { ArchetypeId = "basic_enemy", Position = Point.Zero },
-                            new EnemySpawnDefinition { ArchetypeId = "pyromancer", Position = Point.Zero },
-                            new EnemySpawnDefinition { ArchetypeId = "basic_enemy", Position = Point.Zero }
-                        }
-                    };
-
-                    var enemyFactory = new EnemyFactory();
-                    var enemies = enemyFactory.CreateEnemies(debugEncounterData);
-                    var combatScene = _sceneManager.GetScene(GameSceneState.Combat) as CombatScene;
-                    combatScene?.StartCombat(enemies);
-                };
-
-                if (_isGameLoaded)
-                {
-                    // If game is already loaded, just switch scene and start combat.
-                    _sceneManager.ChangeScene(GameSceneState.Combat, null, startDebugCombat);
-                }
-                else
-                {
-                    // If game is not loaded, we need to run all the loading tasks first.
-                    var spriteManager = ServiceLocator.Get<SpriteManager>();
-                    var itemManager = ServiceLocator.Get<ItemManager>();
-                    var actionManager = ServiceLocator.Get<ActionManager>();
-                    var poseManager = ServiceLocator.Get<PoseManager>();
-                    var diceSystem = ServiceLocator.Get<DiceRollingSystem>();
-                    var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
-                    var encounterManager = ServiceLocator.Get<EncounterManager>();
-                    var gameState = ServiceLocator.Get<GameState>();
-
-                    var loadingTasks = new List<LoadingTask>
-                    {
-                        new GenericTask("Loading game sprites...", () => spriteManager.LoadGameContent()),
-                        new GenericTask("Loading item data...", () => itemManager.LoadWeapons("Content/Weapons")),
-                        new GenericTask("Loading action data...", () => actionManager.LoadActions("Content/Actions")),
-                        new GenericTask("Loading pose data...", () => poseManager.LoadPoses("Content/Poses")),
-                        new GenericTask("Initializing dice system...", () => diceSystem.Initialize(this.GraphicsDevice, this.Content)),
-                        new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Archetypes")),
-                        new GenericTask("Loading encounters...", () => encounterManager.LoadEncounters("Content/Encounters")),
-                        new GenericTask("Loading combat blueprints...", () => encounterManager.LoadCombatEncounters("Content/Encounters/CombatEncounters")),
-                        new GenericTask("Generating world...", () => {
-                            gameState.InitializeWorld();
-                            gameState.InitializeRenderableEntities();
-                        }),
-                        new DiceWarmupTask()
-                    };
-
-                    // Chain the actions: after loading is done, set the flag and then start combat.
-                    Action onLoadingComplete = () => {
-                        SetGameLoaded(true);
-                        startDebugCombat();
-                    };
-
-                    _sceneManager.ChangeScene(GameSceneState.Combat, loadingTasks, onLoadingComplete);
-                }
+                // F5 is now a general debug key, its combat functionality is removed.
+                Debug.WriteLine("[DEBUG] F5 Pressed.");
             }
             if (currentKeyboardState.IsKeyDown(Keys.F12) && _previousKeyboardState.IsKeyUp(Keys.F12))
             {
-                if (_sceneManager.CurrentActiveScene is AnimationEditorScene)
-                {
-                    _sceneManager.ChangeScene(GameSceneState.MainMenu);
-                }
-                else
-                {
-                    _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
-                }
+                _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
             }
 
             // Use F2 to trigger a sample grouped dice roll for demonstration.
@@ -649,7 +540,7 @@ namespace ProjectVagabond
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
             _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp, null, null, null, shakeMatrix);
 
-            bool applyCrtEffect = _crtEffect != null && !(_sceneManager.CurrentActiveScene is AnimationEditorScene);
+            bool applyCrtEffect = _crtEffect != null;
 
             if (applyCrtEffect)
             {

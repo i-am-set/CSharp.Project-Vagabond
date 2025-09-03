@@ -1,5 +1,4 @@
-﻿using ProjectVagabond.Combat;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace ProjectVagabond
@@ -21,17 +20,5 @@ namespace ProjectVagabond
         /// </summary>
         [JsonPropertyName("name")]
         public string Name { get; set; }
-
-        /// <summary>
-        /// The complete data definition for the weapon's primary attack.
-        /// </summary>
-        [JsonPropertyName("primaryAttack")]
-        public ActionData PrimaryAttack { get; set; }
-
-        /// <summary>
-        /// A list of ActionData IDs for special moves that are shuffled into the wielder's deck.
-        /// </summary>
-        [JsonPropertyName("grantedActionIds")]
-        public List<string> GrantedActionIds { get; set; } = new List<string>();
     }
 }

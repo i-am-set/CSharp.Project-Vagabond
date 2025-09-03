@@ -1,6 +1,6 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using ProjectVagabond.Encounters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -359,6 +359,9 @@ namespace ProjectVagabond
 
         private void CheckForPOITrigger(GameState gameState, int movingEntityId, Vector2 newPosition)
         {
+            // This functionality is currently disabled as the encounter system has been removed.
+            // It can be re-enabled and adapted for a new system in the future.
+            /*
             if (movingEntityId != gameState.PlayerEntityId) return;
 
             var encounterManager = ServiceLocator.Get<EncounterManager>();
@@ -388,6 +391,7 @@ namespace ProjectVagabond
                     break;
                 }
             }
+            */
         }
     }
 }

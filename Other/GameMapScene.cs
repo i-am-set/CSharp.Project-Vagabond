@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Dice;
-using ProjectVagabond.Encounters;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -23,7 +22,6 @@ namespace ProjectVagabond.Scenes
         private readonly StatsRenderer _statsRenderer;
         private readonly HapticsManager _hapticsManager;
         private readonly DiceRollingSystem _diceRollingSystem;
-        private readonly PreEncounterAnimationSystem _preEncounterAnimationSystem;
         private readonly PlayerInputSystem _playerInputSystem;
         private readonly AnimationManager _animationManager;
         private WaitDialog _waitDialog;
@@ -39,7 +37,6 @@ namespace ProjectVagabond.Scenes
             _statsRenderer = ServiceLocator.Get<StatsRenderer>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
-            _preEncounterAnimationSystem = ServiceLocator.Get<PreEncounterAnimationSystem>();
             _playerInputSystem = ServiceLocator.Get<PlayerInputSystem>();
             _animationManager = ServiceLocator.Get<AnimationManager>();
         }
@@ -119,7 +116,7 @@ namespace ProjectVagabond.Scenes
             _waitDialog.Update(gameTime);
             _settingsButton?.Update(currentMouseState);
 
-            if (_waitDialog.IsActive || _preEncounterAnimationSystem.IsAnimating || IsInputBlocked)
+            if (_waitDialog.IsActive || IsInputBlocked)
             {
                 base.Update(gameTime);
                 return;
@@ -177,7 +174,6 @@ namespace ProjectVagabond.Scenes
             else
             {
                 _mapRenderer.DrawMap(spriteBatch, font, gameTime);
-                _preEncounterAnimationSystem.Draw(spriteBatch, font);
 
                 var mapBounds = _mapRenderer.MapScreenBounds;
                 int leftColumnWidth = mapBounds.X;

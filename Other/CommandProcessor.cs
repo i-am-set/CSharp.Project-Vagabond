@@ -289,17 +289,6 @@ namespace ProjectVagabond
                 _sceneManager.ChangeScene(GameSceneState.Dialogue);
             }, "debugdialogue_test - Shows the placeholder dialogue screen.");
 
-            _commands["debugencounter"] = new Command("debugencounter", (args) =>
-            {
-                if (args.Length < 2)
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: debugencounter <encounter_id>" });
-                    return;
-                }
-                var encounterManager = ServiceLocator.Get<EncounterManager>();
-                encounterManager.TriggerEncounter(args[1]);
-            }, "debugencounter <id> - Triggers a game encounter by ID.");
-
             _commands["debugsetresolution"] = new Command("setresolution", (args) =>
             {
                 _core ??= ServiceLocator.Get<Core>();

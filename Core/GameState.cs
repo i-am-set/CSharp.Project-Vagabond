@@ -1,6 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using ProjectVagabond.Encounters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,7 +25,6 @@ namespace ProjectVagabond
 
         // Lazyloaded System Dependencies
         private ActionExecutionSystem _actionExecutionSystem;
-        private POIManagerSystem _poiManagerSystem;
 
         private bool _isExecutingActions = false;
         private bool _isPaused = false;
@@ -66,12 +64,7 @@ namespace ProjectVagabond
         public int InitialActionCount { get; private set; }
         public bool IsActionQueueDirty { get; set; } = true;
 
-        // Player Progression State
-        public List<string> PlayerActionCollection { get; set; } = new List<string>();
-
-        // Combat State
         public bool IsInCombat { get; private set; } = false;
-
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, WorldClockManager worldClockManager, ChunkManager chunkManager, Global global, SpriteManager spriteManager)
@@ -84,22 +77,11 @@ namespace ProjectVagabond
             _spriteManager = spriteManager;
 
             EventBus.Subscribe<GameEvents.ActionQueueChanged>(e => IsActionQueueDirty = true); // Subscribe to the event to mark the queue as dirty whenever it's changed.
-            EventBus.Subscribe<GameEvents.CombatStateChanged>(e => IsInCombat = e.IsInCombat);
         }
 
         public void InitializeWorld()
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0));
-
-            // Initialize the player's master action collection from their archetype's innate skills.
-            var playerCombatantComp = _componentStore.GetComponent<CombatantComponent>(PlayerEntityId);
-            if (playerCombatantComp != null)
-            {
-                PlayerActionCollection.AddRange(playerCombatantComp.InnateActionIds);
-            }
-
-            _poiManagerSystem ??= ServiceLocator.Get<POIManagerSystem>();
-            _poiManagerSystem.GeneratePOIs();
         }
 
         public void InitializeRenderableEntities()

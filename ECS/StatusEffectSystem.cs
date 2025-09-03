@@ -82,7 +82,6 @@ namespace ProjectVagabond
                 existingEffect.Duration += durationInRounds;
                 existingEffect.Amount += amount;
                 var targetName = EntityNamer.GetName(targetId);
-                EventBus.Publish(new GameEvents.CombatLogMessagePublished { Message = $"{targetName}'s {effect.Name} has been intensified and extended." });
             }
             else
             {

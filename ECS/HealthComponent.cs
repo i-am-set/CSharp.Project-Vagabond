@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
-using ProjectVagabond.Combat;
 using System;
 using System.Collections.Generic;
 

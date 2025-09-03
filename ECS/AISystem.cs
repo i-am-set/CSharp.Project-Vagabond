@@ -28,7 +28,6 @@ namespace ProjectVagabond
         private void HandleTimePassed(float secondsPassed, ActivityType activity)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
-            if (_gameState.IsInCombat) return;
 
             foreach (var entityId in _gameState.ActiveEntities)
             {

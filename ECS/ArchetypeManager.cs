@@ -35,11 +35,9 @@ namespace ProjectVagabond
                 new HighImportanceComponent(),
                 new RenderableComponent { Color = ServiceLocator.Get<Global>().PlayerColor },
                 new HealthComponent { MaxHealth = 100, CurrentHealth = 100 },
-                new CombatantComponent { DefaultWeaponId = "weapon_unarmed_punch", InnateActionIds = new List<string> { "spell_fireball", "spell_ice_shard", "spell_wind_gust", "spell_heal" } },
                 new EquipmentComponent(),
                 new ActiveStatusEffectComponent(),
                 new EnergyRegenComponent(),
-                new CombatDeckComponent()
             };
             _archetypes["player"] = new ArchetypeTemplate("player", "Player", playerComponents);
         }

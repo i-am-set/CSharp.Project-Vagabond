@@ -27,14 +27,9 @@ namespace ProjectVagabond
         private Texture2D _circleTextureSprite;
         private Texture2D _settingsIconSprite;
         private Texture2D _turnIndicatorSprite;
-        private Texture2D _handIdleSprite;
-        private Texture2D _handHoldSprite;
-        private Texture2D _enemySprite;
-        private Texture2D _cardBaseSprite;
         private Texture2D _circleParticleSprite;
         private Texture2D _emberParticleSprite;
         private Texture2D _softParticleSprite;
-        public Effect CardShaderEffect { get; private set; }
         public Effect FireballParticleShaderEffect { get; private set; }
 
 
@@ -56,10 +51,6 @@ namespace ProjectVagabond
         public Texture2D CircleTextureSprite => _circleTextureSprite;
         public Texture2D SettingsIconSprite => _settingsIconSprite;
         public Texture2D TurnIndicatorSprite => _turnIndicatorSprite;
-        public Texture2D HandIdleSprite => _handIdleSprite;
-        public Texture2D HandHoldSprite => _handHoldSprite;
-        public Texture2D EnemySprite => _enemySprite;
-        public Texture2D CardBaseSprite => _cardBaseSprite;
         public Texture2D CircleParticleSprite => _circleParticleSprite;
         public Texture2D EmberParticleSprite => _emberParticleSprite;
         public Texture2D SoftParticleSprite => _softParticleSprite;
@@ -148,22 +139,6 @@ namespace ProjectVagabond
 
             try { _speedMarkSprite = _core.Content.Load<Texture2D>("Sprites/speedMark"); }
             catch { _speedMarkSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
-
-            // Load placeholder combat hand sprites
-            try { _handIdleSprite = _core.Content.Load<Texture2D>("Sprites/Combat/hand_idle"); }
-            catch { _handIdleSprite = _textureFactory.CreateColoredTexture(128, 256, Color.DarkGray); }
-
-            try { _handHoldSprite = _core.Content.Load<Texture2D>("Sprites/Combat/hand_hold"); }
-            catch { _handHoldSprite = _textureFactory.CreateColoredTexture(128, 256, Color.CornflowerBlue); }
-
-            try { _enemySprite = _core.Content.Load<Texture2D>("Sprites/Combat/enemy_placeholder"); }
-            catch { _enemySprite = _textureFactory.CreateEnemyPlaceholderTexture(); }
-
-            try { _cardBaseSprite = _core.Content.Load<Texture2D>("Sprites/Cards/card_base"); }
-            catch { _cardBaseSprite = _textureFactory.CreateColoredTexture(120, 168, Color.Magenta); }
-
-            try { CardShaderEffect = _core.Content.Load<Effect>("Shaders/CardShader"); }
-            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ERROR] Could not load shader 'Shaders/CardShader'. Please ensure it's in the Content project. {ex.Message}"); }
         }
 
         [Obsolete("LoadSpriteContent is deprecated, please use LoadEssentialContent and LoadGameContent instead.")]
