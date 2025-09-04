@@ -222,6 +222,7 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene()); // Changed to GameMapScene
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
+            _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
@@ -356,8 +357,10 @@ namespace ProjectVagabond
             }
             if (currentKeyboardState.IsKeyDown(Keys.F5) && _previousKeyboardState.IsKeyUp(Keys.F5))
             {
-                // F5 is now a general debug key, its combat functionality is removed.
-                Debug.WriteLine("[DEBUG] F5 Pressed.");
+                if (_sceneManager.CurrentActiveScene?.GetType() != typeof(BattleScene))
+                {
+                    _sceneManager.ChangeScene(GameSceneState.Battle);
+                }
             }
             if (currentKeyboardState.IsKeyDown(Keys.F12) && _previousKeyboardState.IsKeyUp(Keys.F12))
             {

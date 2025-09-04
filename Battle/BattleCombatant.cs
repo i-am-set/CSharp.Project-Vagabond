@@ -9,6 +9,11 @@ namespace ProjectVagabond.Battle
     public class BattleCombatant
     {
         /// <summary>
+        /// The original Entity ID from the overworld ECS. Used for retrieving visual information.
+        /// </summary>
+        public int EntityId { get; set; }
+
+        /// <summary>
         /// A unique identifier for this instance of a combatant in the battle.
         /// </summary>
         public string CombatantID { get; set; }

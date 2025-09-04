@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Utils;
 using System;
 
 namespace ProjectVagabond.UI
@@ -23,12 +24,15 @@ namespace ProjectVagabond.UI
         private float _swayTimer = 0f;
         private bool _wasHoveredLastFrame = false;
 
+        // Animation state for the squash effect
+        private float _squashAnimationTimer = 0f;
+        private const float SQUASH_ANIMATION_DURATION = 0.03f;
+
         private const float SWAY_SPEED = 3f;
         private const float SWAY_AMOUNT_X = 2f;
-        private const float SWAY_AMOUNT_Y = 1f;
 
-        public ImageButton(Rectangle bounds, Texture2D defaultTexture = null, Texture2D hoverTexture = null, Texture2D clickedTexture = null, Texture2D disabledTexture = null, bool enableHoverSway = true, bool zoomHapticOnClick = true)
-            : base(bounds, "", enableHoverSway: enableHoverSway)
+        public ImageButton(Rectangle bounds, Texture2D defaultTexture = null, Texture2D hoverTexture = null, Texture2D clickedTexture = null, Texture2D disabledTexture = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false)
+            : base(bounds, "", enableHoverSway: enableHoverSway, clickOnPress: clickOnPress)
         {
             _defaultTexture = defaultTexture;
             _hoverTexture = hoverTexture;
@@ -49,7 +53,8 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                _isHeldDown = IsHovered && currentMouseState.LeftButton == ButtonState.Pressed;
+                // _isPressed is managed by the base class for click-on-release logic
+                _isHeldDown = _isPressed;
             }
         }
 
@@ -71,18 +76,25 @@ namespace ProjectVagabond.UI
                 textureToDraw = _hoverTexture;
             }
 
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_isPressed && !ClickOnPress)
+            {
+                _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
+            }
+            else
+            {
+                _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
+            }
+
             float swayOffsetX = 0f;
-            float swayOffsetY = 0f;
             if (isActivated && EnableHoverSway)
             {
                 if (!_wasHoveredLastFrame)
                 {
                     _swayTimer = 0f; // Reset timer on new hover.
                 }
-                _swayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _swayTimer += deltaTime;
                 swayOffsetX = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT_X;
-                // This formula transforms the sine output from [-1, 1] to [0, 1], creating a 1-pixel bob.
-                swayOffsetY = ((float)Math.Sin(_swayTimer * SWAY_SPEED * 2) + 1f) * 0.5f * SWAY_AMOUNT_Y;
             }
             else
             {
@@ -90,16 +102,26 @@ namespace ProjectVagabond.UI
             }
             _wasHoveredLastFrame = isActivated;
 
-            var swayedBounds = new Rectangle(Bounds.X + (int)swayOffsetX, Bounds.Y + (int)swayOffsetY, Bounds.Width, Bounds.Height);
+            Vector2 scale = Vector2.One;
+            if (_squashAnimationTimer > 0 && textureToDraw != null)
+            {
+                float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
+                float targetScaleY = 1.0f / textureToDraw.Height; // Target a 1-pixel height
+                scale.Y = MathHelper.Lerp(1.0f, targetScaleY, progress);
+            }
+
+            var position = new Vector2(Bounds.Center.X + swayOffsetX, Bounds.Center.Y);
 
             if (textureToDraw != null)
             {
-                spriteBatch.Draw(textureToDraw, swayedBounds, Color.White);
+                var origin = textureToDraw.Bounds.Center.ToVector2();
+                spriteBatch.DrawSnapped(textureToDraw, position, null, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
             }
 
             if (isActivated && _hoverTexture == null)
             {
-                DrawCornerBrackets(spriteBatch, ServiceLocator.Get<Texture2D>(), swayedBounds, BorderThickness, HoverBorderColor);
+                var rectWithOffset = new Rectangle(Bounds.X + (int)swayOffsetX, Bounds.Y, Bounds.Width, Bounds.Height);
+                DrawCornerBrackets(spriteBatch, ServiceLocator.Get<Texture2D>(), rectWithOffset, BorderThickness, HoverBorderColor);
             }
         }
 

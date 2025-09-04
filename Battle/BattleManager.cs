@@ -27,6 +27,10 @@ namespace ProjectVagabond.Battle
         private List<QueuedAction> _actionQueue;
         private BattlePhase _currentPhase;
         private int _turnNumber;
+        private bool _playerActionSubmitted;
+
+        public BattlePhase CurrentPhase => _currentPhase;
+        public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
 
         /// <summary>
         /// Initializes a new instance of the BattleManager class and starts the battle.
@@ -44,6 +48,17 @@ namespace ProjectVagabond.Battle
             _actionQueue = new List<QueuedAction>();
             _turnNumber = 1;
             _currentPhase = BattlePhase.StartOfTurn;
+        }
+
+        /// <summary>
+        /// Sets the player's chosen action for the current turn.
+        /// </summary>
+        public void SetPlayerAction(QueuedAction action)
+        {
+            if (_currentPhase != BattlePhase.ActionSelection || _playerActionSubmitted) return;
+
+            _actionQueue.Add(action);
+            _playerActionSubmitted = true;
         }
 
         /// <summary>
@@ -78,7 +93,7 @@ namespace ProjectVagabond.Battle
         /// </summary>
         private void HandleStartOfTurn()
         {
-            Debug.WriteLine($"--- Turn {_turnNumber} Start ---");
+            EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = $"--- Turn {_turnNumber} Start ---" });
 
             // 1. Environment Resolution (Placeholder)
 
@@ -101,6 +116,7 @@ namespace ProjectVagabond.Battle
             }
 
             _currentPhase = BattlePhase.ActionSelection;
+            _playerActionSubmitted = false; // Ready to receive player input
         }
 
         /// <summary>
@@ -108,31 +124,15 @@ namespace ProjectVagabond.Battle
         /// </summary>
         private void HandleActionSelection()
         {
-            _actionQueue.Clear();
-
-            // For testing, we hard-code actions. In a real game, this would wait for player/AI input.
-            var activePlayers = _playerCombatants.Where(c => !c.IsDefeated).ToList();
-            var activeEnemies = _enemyCombatants.Where(c => !c.IsDefeated).ToList();
-
-            // Player Actions
-            foreach (var player in activePlayers)
+            // Wait for the player's action to be submitted by the BattleScene.
+            if (!_playerActionSubmitted)
             {
-                var target = activeEnemies.FirstOrDefault();
-                if (target != null && player.AvailableMoves.Any())
-                {
-                    var move = player.AvailableMoves.First();
-                    _actionQueue.Add(new QueuedAction
-                    {
-                        Actor = player,
-                        Target = target,
-                        ChosenMove = move,
-                        Priority = move.Priority,
-                        ActorAgility = player.Stats.Agility
-                    });
-                }
+                return;
             }
 
-            // Enemy Actions
+            // AI Actions
+            var activePlayers = _playerCombatants.Where(c => !c.IsDefeated).ToList();
+            var activeEnemies = _enemyCombatants.Where(c => !c.IsDefeated).ToList();
             foreach (var enemy in activeEnemies)
             {
                 var target = activePlayers.FirstOrDefault();
@@ -176,7 +176,7 @@ namespace ProjectVagabond.Battle
             // Pre-computation (Attacker)
             if (action.Actor.HasStatusEffect(StatusEffectType.Stun))
             {
-                Debug.WriteLine($"{action.Actor.Name} is stunned and cannot move!");
+                EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = $"{action.Actor.Name} is stunned and cannot move!" });
                 action.Actor.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Stun);
                 _actionQueue.RemoveAt(0);
                 return; // End this step of resolution
@@ -187,12 +187,12 @@ namespace ProjectVagabond.Battle
             var result = DamageCalculator.CalculateDamage(action.Actor, action.Target, action.ChosenMove);
             action.Target.ApplyDamage(result.DamageAmount);
 
-            // Logging
+            // Logging via EventBus
             string logMessage = $"{action.Actor.Name} uses {action.ChosenMove.MoveName} on {action.Target.Name} for {result.DamageAmount} damage.";
             if (result.WasGraze) logMessage += " (Graze)";
             if (result.WasCritical) logMessage += " (Critical Hit!)";
-            Debug.WriteLine(logMessage);
-            Debug.WriteLine($"{action.Target.Name} HP: {action.Target.Stats.CurrentHP}/{action.Target.Stats.MaxHP}");
+            EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = logMessage });
+            EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = $"{action.Target.Name} HP: {action.Target.Stats.CurrentHP}/{action.Target.Stats.MaxHP}" });
 
 
             _actionQueue.RemoveAt(0);
@@ -203,19 +203,19 @@ namespace ProjectVagabond.Battle
         /// </summary>
         private void HandleEndOfTurn()
         {
-            Debug.WriteLine($"--- Turn {_turnNumber} End ---");
+            EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = $"--- Turn {_turnNumber} End ---" });
 
             // Victory/Defeat Check
             if (_enemyCombatants.All(c => c.IsDefeated))
             {
-                Debug.WriteLine("Player Wins!");
+                EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = "Player Wins!" });
                 _currentPhase = BattlePhase.BattleOver;
                 return;
             }
 
             if (_playerCombatants.All(c => c.IsDefeated))
             {
-                Debug.WriteLine("Player Loses!");
+                EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = "Player Loses!" });
                 _currentPhase = BattlePhase.BattleOver;
                 return;
             }

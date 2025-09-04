@@ -1,0 +1,20 @@
+[
+  {
+    "MoveID": "Tackle",
+    "MoveName": "Tackle",
+    "Power": 40,
+    "DamageType": "Physical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": []
+  },
+  {
+    "MoveID": "Zap",
+    "MoveName": "Zap",
+    "Power": 40,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 2 ]
+  }
+]

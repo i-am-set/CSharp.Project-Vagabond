@@ -37,6 +37,7 @@ namespace ProjectVagabond.UI
         public float OverflowScrollSpeed { get; set; } = 0f;
         public StrikethroughType Strikethrough { get; set; } = StrikethroughType.None;
         public bool EnableHoverSway { get; set; } = true;
+        public bool ClickOnPress { get; set; } = false;
 
         public event Action OnClick;
 
@@ -45,15 +46,19 @@ namespace ProjectVagabond.UI
         private float _scrollPosition = 0f;
         private float _swayTimer = 0f;
         private bool _wasHoveredLastFrame = false;
+        protected bool _isPressed = false; // State to track if the button was pressed down
+
+        // Animation state for the squash effect
+        private float _squashAnimationTimer = 0f;
+        private const float SQUASH_ANIMATION_DURATION = 0.03f;
 
         private const float SWAY_SPEED = 3f;
         private const float SWAY_AMOUNT_X = 1f;
-        private const float SWAY_AMOUNT_Y = 1f;
 
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
 #nullable enable
-        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true)
+        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, bool clickOnPress = false)
         {
             _global = ServiceLocator.Get<Global>();
 
@@ -71,6 +76,7 @@ namespace ProjectVagabond.UI
             AlignLeft = alignLeft;
             OverflowScrollSpeed = overflowScrollSpeed;
             EnableHoverSway = enableHoverSway;
+            ClickOnPress = clickOnPress;
         }
 #nullable restore
 
@@ -82,11 +88,42 @@ namespace ProjectVagabond.UI
 
             UpdateHoverState(virtualMousePos);
 
-            if (UIInputManager.CanProcessMouseClick() && IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+            if (ClickOnPress)
             {
-                TriggerClick();
-                UIInputManager.ConsumeMouseClick();
+                // Old logic for immediate click on press
+                if (UIInputManager.CanProcessMouseClick() && IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+                {
+                    TriggerClick();
+                    UIInputManager.ConsumeMouseClick();
+                }
             }
+            else
+            {
+                // New logic for click on release
+                bool mousePressedOverButton = IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
+                bool mouseReleasedOverButton = IsHovered && currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
+
+                if (mousePressedOverButton)
+                {
+                    _isPressed = true;
+                }
+
+                if (mouseReleasedOverButton && _isPressed)
+                {
+                    if (UIInputManager.CanProcessMouseClick())
+                    {
+                        TriggerClick();
+                        UIInputManager.ConsumeMouseClick();
+                    }
+                }
+
+                // Reset pressed state if the mouse button is released anywhere
+                if (currentMouseState.LeftButton == ButtonState.Released)
+                {
+                    _isPressed = false;
+                }
+            }
+
 
             _previousMouseState = currentMouseState;
         }
@@ -130,9 +167,18 @@ namespace ProjectVagabond.UI
                     : (CustomDefaultTextColor ?? _global.Palette_BrightWhite);
             }
 
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_isPressed && !ClickOnPress)
+            {
+                _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
+            }
+            else
+            {
+                _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
+            }
+
             float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             float swayOffsetX = 0f;
-            float swayOffsetY = 0f;
 
             if (isActivated && EnableHoverSway)
             {
@@ -140,11 +186,8 @@ namespace ProjectVagabond.UI
                 {
                     _swayTimer = 0f; // Reset timer on new hover to start animation from the beginning.
                 }
-                _swayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                // Use sine waves with different frequencies for a figure-eight motion
+                _swayTimer += deltaTime;
                 swayOffsetX = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT_X;
-                // This formula transforms the sine output from [-1, 1] to [0, 1], creating a 1-pixel bob.
-                swayOffsetY = ((float)Math.Sin(_swayTimer * SWAY_SPEED * 2) + 1f) * 0.5f * SWAY_AMOUNT_Y;
             }
             else
             {
@@ -153,8 +196,16 @@ namespace ProjectVagabond.UI
             _wasHoveredLastFrame = isActivated;
 
             float totalXOffset = hopOffset + swayOffsetX;
-
             Vector2 textSize = font.MeasureString(Text);
+
+            // Calculate squash scale based on animation timer
+            Vector2 scale = Vector2.One;
+            if (_squashAnimationTimer > 0)
+            {
+                float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
+                float targetScaleY = 1.0f / textSize.Y; // Target a 1-pixel height
+                scale.Y = MathHelper.Lerp(1.0f, targetScaleY, progress);
+            }
 
             var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
             var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
@@ -168,7 +219,7 @@ namespace ProjectVagabond.UI
             bool shouldScroll = OverflowScrollSpeed > 0 && textSize.X > Bounds.Width;
             if (shouldScroll)
             {
-                _scrollPosition += (float)gameTime.ElapsedGameTime.TotalSeconds * OverflowScrollSpeed;
+                _scrollPosition += deltaTime * OverflowScrollSpeed;
                 string scrollingText = Text + "  ";
                 Vector2 scrollingTextSize = font.MeasureString(scrollingText);
                 if (_scrollPosition > scrollingTextSize.X)
@@ -181,16 +232,20 @@ namespace ProjectVagabond.UI
             }
             else
             {
+                Vector2 textOrigin = textSize / 2f;
                 Vector2 textPosition;
                 if (AlignLeft)
                 {
-                    textPosition = new Vector2(Bounds.X + totalXOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2 + swayOffsetY);
+                    // For left-align, origin needs to be adjusted to just the vertical center
+                    textOrigin.X = 0;
+                    textPosition = new Vector2(Bounds.Left + totalXOffset, Bounds.Center.Y);
                 }
                 else
                 {
-                    textPosition = new Vector2(Bounds.X + (Bounds.Width - textSize.X) / 2 + totalXOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2 + swayOffsetY);
+                    textPosition = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y);
                 }
-                spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor);
+
+                spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, scale, SpriteEffects.None, 0f);
 
                 // --- DIAGONAL STRIKETHROUGH LOGIC ---
                 if (Strikethrough == StrikethroughType.Exhausted)
@@ -198,14 +253,20 @@ namespace ProjectVagabond.UI
                     Color strikethroughColor = _global.Palette_Red;
                     var pixel = ServiceLocator.Get<Texture2D>();
 
-                    // Calculate diagonal properties
+                    // Calculate diagonal properties based on the unscaled text size
                     float length = (float)Math.Sqrt(textSize.X * textSize.X + textSize.Y * textSize.Y);
                     float angle = (float)Math.Atan2(textSize.Y, textSize.X);
 
-                    // Draw the rotated line starting from the top-left of the text
+                    // Adjust position for non-centered origin if left-aligned
+                    Vector2 strikethroughPos = textPosition;
+                    if (AlignLeft)
+                    {
+                        strikethroughPos.Y -= textSize.Y / 2f;
+                    }
+
                     spriteBatch.DrawSnapped(
                         texture: pixel,
-                        position: textPosition,
+                        position: strikethroughPos,
                         sourceRectangle: null,
                         color: strikethroughColor,
                         rotation: angle,

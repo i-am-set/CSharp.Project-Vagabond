@@ -31,6 +31,11 @@ namespace ProjectVagabond.Utils
             spriteBatch.DrawString(font, text, RoundVector(position), color, rotation, origin, scale, effects, layerDepth);
         }
 
+        public static void DrawStringSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
+        {
+            spriteBatch.DrawString(font, text, RoundVector(position), color, rotation, origin, scale, effects, layerDepth);
+        }
+
         // --- DrawSnapped ---
 
         public static void DrawSnapped(this SpriteBatch spriteBatch, Texture2D texture, Vector2 position, Color color)

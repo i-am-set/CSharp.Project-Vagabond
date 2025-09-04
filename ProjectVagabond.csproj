@@ -29,8 +29,8 @@
 		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
 	</ItemGroup>
 	<ItemGroup>
+		<Folder Include="Content\Data\Archetypes\" />
 		<Folder Include="Content\Models\" />
-		<Folder Include="Content\Data\" />
 		<Folder Include="Content\Sprites\UI\KeyPrompts\" />
 		<Folder Include="Content\Sprites\UI\Backgrounds\" />
 	</ItemGroup>

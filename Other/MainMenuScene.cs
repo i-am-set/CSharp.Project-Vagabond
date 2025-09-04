@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -66,7 +67,7 @@ namespace ProjectVagabond.Scenes
                 var loadingTasks = new List<LoadingTask>
                 {
                     new GenericTask("Loading game sprites...", () => spriteManager.LoadGameContent()),
-                    new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Archetypes")),
+                    new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Data/Archetypes")),
                     new GenericTask("Generating world...", () => {
                         gameState.InitializeWorld();
                         gameState.InitializeRenderableEntities();

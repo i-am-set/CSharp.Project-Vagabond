@@ -1,7 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using System;
 
 namespace ProjectVagabond.UI
 {
@@ -11,8 +13,8 @@ namespace ProjectVagabond.UI
         public Color? CustomToggledTextColor { get; set; }
 
 #nullable enable
-        public ToggleButton(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, Color? customToggledTextColor = null, bool zoomHapticOnClick = true)
-            : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor)
+        public ToggleButton(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, Color? customToggledTextColor = null, bool zoomHapticOnClick = true, bool clickOnPress = false)
+            : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor, clickOnPress: clickOnPress)
         {
             CustomToggledTextColor = customToggledTextColor;
         }
@@ -20,6 +22,8 @@ namespace ProjectVagabond.UI
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover = false)
         {
+            // This method now just determines the color and then calls the base Draw method.
+            // The base Draw method handles all animation and rendering logic.
             Color textColor;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
@@ -40,15 +44,14 @@ namespace ProjectVagabond.UI
                 textColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
             }
 
-            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated || IsSelected);
+            // Temporarily set the custom color for the base Draw method to use
+            var originalColor = this.CustomDefaultTextColor;
+            this.CustomDefaultTextColor = textColor;
 
-            Vector2 textSize = font.MeasureString(Text);
-            Vector2 textPosition = new Vector2(
-                Bounds.X + (Bounds.Width - textSize.X) / 2 + xOffset,
-                Bounds.Y + (Bounds.Height - textSize.Y) / 2
-            );
+            base.Draw(spriteBatch, font, gameTime, forceHover);
 
-            spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor);
+            // Restore the original custom color
+            this.CustomDefaultTextColor = originalColor;
         }
     }
 }

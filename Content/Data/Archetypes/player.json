@@ -1,0 +1,37 @@
+{
+  "Id": "player",
+  "Name": "Player",
+  "Components": [
+    {
+      "Type": "ProjectVagabond.PlayerTagComponent"
+    },
+    {
+      "Type": "ProjectVagabond.PositionComponent"
+    },
+    {
+      "Type": "ProjectVagabond.ActionQueueComponent"
+    },
+    {
+      "Type": "ProjectVagabond.HighImportanceComponent"
+    },
+    {
+      "Type": "ProjectVagabond.RenderableComponent",
+      "Properties": {
+        "Color": "Palette_Red"
+      }
+    },
+    {
+      "Type": "ProjectVagabond.Battle.CombatantStatsComponent",
+      "Properties": {
+        "Level": 5,
+        "MaxHP": 25,
+        "Strength": 12,
+        "Intelligence": 8,
+        "Tenacity": 10,
+        "Agility": 11,
+        "DefensiveElementIDs": [ 101 ],
+        "AvailableMoveIDs": [ "Tackle" ]
+      }
+    }
+  ]
+}

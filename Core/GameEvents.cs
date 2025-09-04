@@ -72,5 +72,13 @@ namespace ProjectVagabond
         {
             public IAction Action { get; set; }
         }
+
+        /// <summary>
+        /// Published when a message should be added to the battle log UI.
+        /// </summary>
+        public struct BattleLogMessagePublished
+        {
+            public string Message { get; set; }
+        }
     }
 }

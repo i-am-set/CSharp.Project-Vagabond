@@ -15,7 +15,8 @@ namespace ProjectVagabond.Scenes
         TerminalMap,
         Settings,
         Transition,
-        AnimationEditor
+        AnimationEditor,
+        Battle
     }
 
     /// <summary>

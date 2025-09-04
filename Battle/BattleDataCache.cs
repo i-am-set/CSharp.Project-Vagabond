@@ -26,6 +26,11 @@ namespace ProjectVagabond.Battle
         public static List<ElementalInteraction> Interactions { get; private set; }
 
         /// <summary>
+        /// A dictionary mapping Move IDs to their definitions.
+        /// </summary>
+        public static Dictionary<string, MoveData> Moves { get; private set; }
+
+        /// <summary>
         /// Loads all battle data from JSON files into memory.
         /// </summary>
         /// <param name="content">The game's ContentManager.</param>
@@ -62,6 +67,20 @@ namespace ProjectVagabond.Battle
             {
                 Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load ElementalInteractionMatrix.json: {ex.Message}");
                 Interactions = new List<ElementalInteraction>();
+            }
+
+            try
+            {
+                string movesPath = Path.Combine(content.RootDirectory, "Data", "Moves.json");
+                string movesJson = File.ReadAllText(movesPath);
+                var moveList = JsonSerializer.Deserialize<List<MoveData>>(movesJson, jsonOptions);
+                Moves = moveList.ToDictionary(m => m.MoveID, m => m);
+                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Moves.Count} move definitions.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load Moves.json: {ex.Message}");
+                Moves = new Dictionary<string, MoveData>();
             }
         }
     }
