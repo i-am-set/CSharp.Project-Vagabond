@@ -60,14 +60,12 @@ namespace ProjectVagabond.Scenes
             {
                 var core = ServiceLocator.Get<Core>();
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
-                var diceSystem = ServiceLocator.Get<DiceRollingSystem>();
                 var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
                 var gameState = ServiceLocator.Get<GameState>();
 
                 var loadingTasks = new List<LoadingTask>
                 {
                     new GenericTask("Loading game sprites...", () => spriteManager.LoadGameContent()),
-                    new GenericTask("Initializing dice system...", () => diceSystem.Initialize(core.GraphicsDevice, core.Content)),
                     new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Archetypes")),
                     new GenericTask("Generating world...", () => {
                         gameState.InitializeWorld();

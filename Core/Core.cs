@@ -267,6 +267,9 @@ namespace ProjectVagabond
             _spriteManager.LoadEssentialContent();
             _backgroundManager.LoadContent();
 
+            // Initialize core systems that require content but should always be available.
+            _diceRollingSystem.Initialize(GraphicsDevice, Content);
+
             // The rest of the loading is deferred until the player clicks "Play".
 
             // Set the initial scene to the main menu.
@@ -472,6 +475,9 @@ namespace ProjectVagabond
                 _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, virtualSpaceTransform);
             }
 
+            // --- Phase 1.5: Render the dice system to its own render target. This is done *before* compositing. ---
+            var diceRenderTarget = _diceRollingSystem.Draw(_defaultFont);
+
             // --- Phase 2: Composite everything onto the full-screen render target ---
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
             GraphicsDevice.Clear(_global.GameBg);
@@ -479,7 +485,16 @@ namespace ProjectVagabond
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
             {
+                // Draw the main game scene first
                 _spriteBatch.Draw(_sceneRenderTarget, _finalRenderRectangle, Color.White);
+
+                // Draw the dice system on top of the game scene if it's active
+                if (diceRenderTarget != null)
+                {
+                    // The dice are rendered to a full virtual-size texture, so we draw it
+                    // into the same letterboxed rectangle as the main scene.
+                    _spriteBatch.Draw(diceRenderTarget, _finalRenderRectangle, Color.White);
+                }
             }
             _spriteBatch.End();
 
