@@ -6,9 +6,9 @@ namespace ProjectVagabond
     {
         // Main stats (1-10) - now with public setters for the Spawner
         public int Strength { get; set; }
-        public int Agility { get; set; }
-        public int Tenacity { get; set; }
         public int Intelligence { get; set; }
+        public int Tenacity { get; set; }
+        public int Agility { get; set; }
         public int Charm { get; set; }
 
         // Secondary stats (calculated from main stats)

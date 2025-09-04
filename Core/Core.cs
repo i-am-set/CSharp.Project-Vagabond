@@ -201,9 +201,6 @@ namespace ProjectVagabond
             var mapInputHandler = new MapInputHandler(mapRenderer.MapContextMenu, mapRenderer);
             ServiceLocator.Register<MapInputHandler>(mapInputHandler);
 
-            var promptRenderer = new PromptRenderer();
-            ServiceLocator.Register<PromptRenderer>(promptRenderer);
-
             var autoCompleteManager = new AutoCompleteManager();
             ServiceLocator.Register<AutoCompleteManager>(autoCompleteManager);
 

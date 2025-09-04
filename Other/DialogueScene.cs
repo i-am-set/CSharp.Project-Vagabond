@@ -9,14 +9,12 @@ namespace ProjectVagabond.Scenes
     {
         private readonly SceneManager _sceneManager;
         private readonly MapRenderer _mapRenderer;
-        private readonly StatsRenderer _statsRenderer;
         private readonly Global _global;
 
         public DialogueScene()
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _mapRenderer = ServiceLocator.Get<MapRenderer>();
-            _statsRenderer = ServiceLocator.Get<StatsRenderer>();
             _global = ServiceLocator.Get<Global>();
         }
 
@@ -45,10 +43,6 @@ namespace ProjectVagabond.Scenes
             // Use the map's calculated bounds to position the stats correctly
             var mapBounds = _mapRenderer.MapScreenBounds;
             int leftColumnWidth = mapBounds.X;
-            if (leftColumnWidth > 20)
-            {
-                _statsRenderer.DrawStats(spriteBatch, font, new Vector2(10, Global.MAP_TOP_PADDING), leftColumnWidth - 20);
-            }
 
             Rectangle dialogueBox = GetAnimatedBounds();
             spriteBatch.Draw(pixel, dialogueBox, _global.Palette_Black * 0.8f);
