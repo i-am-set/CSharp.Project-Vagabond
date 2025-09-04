@@ -1,5 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,9 +35,8 @@ namespace ProjectVagabond
                 CancelPendingActions(gameState);
             }
 
-            var playerStats = _componentStore.GetComponent<StatsComponent>(gameState.PlayerEntityId);
             var playerPosComp = _componentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId);
-            if (playerStats == null || playerPosComp == null) return;
+            if (playerPosComp == null) return;
 
             var keyboardState = Keyboard.GetState();
             var mode = MovementMode.Jog;
@@ -40,17 +46,9 @@ namespace ProjectVagabond
             if (gameState.IsPositionPassable(nextPos, MapView.World, out var mapData))
             {
                 var moveAction = new MoveAction(gameState.PlayerEntityId, nextPos, mode);
-                int energyCost = gameState.GetMovementEnergyCost(moveAction);
-
-                if (playerStats.CanExertEnergy(energyCost))
-                {
-                    playerPosComp.WorldPosition = nextPos;
-                    playerStats.ExertEnergy(energyCost);
-                    EventBus.Publish(new GameEvents.PlayerMoved { NewPosition = nextPos });
-                    EventBus.Publish(new GameEvents.PlayerActionExecuted { Action = moveAction });
-
-                    CheckForPOITrigger(gameState, gameState.PlayerEntityId, nextPos);
-                }
+                playerPosComp.WorldPosition = nextPos;
+                EventBus.Publish(new GameEvents.PlayerMoved { NewPosition = nextPos });
+                EventBus.Publish(new GameEvents.PlayerActionExecuted { Action = moveAction });
             }
         }
 
@@ -69,50 +67,11 @@ namespace ProjectVagabond
             if (actionQueueComp == null) return;
             var actionQueue = actionQueueComp.ActionQueue;
 
-            var playerWorldPosComp = _componentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId);
-            if (playerWorldPosComp == null) return;
-            var playerWorldPos = playerWorldPosComp.WorldPosition;
-
             var playerEntityId = gameState.PlayerEntityId;
 
-            if (mode != MovementMode.Run)
+            foreach (var pos in path)
             {
-                foreach (var pos in path)
-                {
-                    actionQueue.Enqueue(new MoveAction(playerEntityId, pos, mode));
-                }
-                EventBus.Publish(new GameEvents.ActionQueueChanged());
-                return;
-            }
-
-            foreach (var nextPos in path)
-            {
-                var nextAction = new MoveAction(playerEntityId, nextPos, mode);
-                var tempQueue = new List<IAction>(actionQueue) { nextAction };
-                var simulationResult = gameState.SimulateActionQueue(tempQueue);
-
-                if (!simulationResult.possible)
-                {
-                    Vector2 restPosition = actionQueue.Any() ? ((actionQueue.Last() as MoveAction)?.Destination ?? playerWorldPos) : playerWorldPos;
-                    var restAction = new RestAction(playerEntityId, RestType.ShortRest, restPosition);
-                    var tempQueueWithRest = new List<IAction>(actionQueue) { restAction, nextAction };
-
-                    if (gameState.SimulateActionQueue(tempQueueWithRest).possible)
-                    {
-                        actionQueue.Enqueue(restAction);
-                        actionQueue.Enqueue(nextAction);
-                    }
-                    else
-                    {
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Cannot queue path. Not enough energy even after a short rest." });
-                        EventBus.Publish(new GameEvents.ActionQueueChanged());
-                        return;
-                    }
-                }
-                else
-                {
-                    actionQueue.Enqueue(nextAction);
-                }
+                actionQueue.Enqueue(new MoveAction(playerEntityId, pos, mode));
             }
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
@@ -164,48 +123,6 @@ namespace ProjectVagabond
             EventBus.Publish(new GameEvents.ActionQueueChanged());
         }
 
-        public void QueueRest(GameState gameState, string[] args)
-        {
-            if (gameState.IsExecutingActions)
-            {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Cannot queue actions while executing a path." });
-                return;
-            }
-
-            var actionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(gameState.PlayerEntityId);
-            if (actionQueueComp == null) return;
-            var actionQueue = actionQueueComp.ActionQueue;
-
-            var playerWorldPosComp = _componentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId);
-            if (playerWorldPosComp == null) return;
-
-            var playerWorldPos = playerWorldPosComp.WorldPosition;
-            var playerEntityId = gameState.PlayerEntityId;
-
-            RestType restType = RestType.ShortRest;
-            if (args.Length > 1)
-            {
-                if (args[1].ToLower() == "short") restType = RestType.ShortRest;
-                else if (args[1].ToLower() == "long") restType = RestType.LongRest;
-                else if (args[1].ToLower() == "full") restType = RestType.FullRest;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Queued a {args[1].ToLower()} rest." });
-            }
-            else
-            {
-                restType = RestType.ShortRest;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Queued a short rest." });
-            }
-
-            Vector2 restPosition;
-            var lastAction = actionQueue.LastOrDefault();
-            if (lastAction is MoveAction lastMove) restPosition = lastMove.Destination;
-            else if (lastAction is RestAction lastRest) restPosition = lastRest.Position;
-            else restPosition = playerWorldPos;
-
-            actionQueue.Enqueue(new RestAction(playerEntityId, restType, restPosition));
-            EventBus.Publish(new GameEvents.ActionQueueChanged());
-        }
-
         private void QueueMovementInternal(GameState gameState, Vector2 direction, string[] args, MovementMode mode)
         {
             if (gameState.IsExecutingActions)
@@ -218,9 +135,8 @@ namespace ProjectVagabond
             if (actionQueueComp == null) return;
             var actionQueue = actionQueueComp.ActionQueue;
 
-            var playerStats = _componentStore.GetComponent<StatsComponent>(gameState.PlayerEntityId);
             var playerWorldPosComp = _componentStore.GetComponent<PositionComponent>(gameState.PlayerEntityId);
-            if (playerStats == null || playerWorldPosComp == null) return;
+            if (playerWorldPosComp == null) return;
 
             var playerWorldPos = playerWorldPosComp.WorldPosition;
             var playerEntityId = gameState.PlayerEntityId;
@@ -245,7 +161,7 @@ namespace ProjectVagabond
                 if (lastMoveIndex > 0)
                 {
                     var prevAction = actionList[lastMoveIndex - 1];
-                    prevPos = (prevAction is MoveAction prevMove) ? prevMove.Destination : (prevAction as RestAction)?.Position ?? playerWorldPos;
+                    prevPos = (prevAction is MoveAction prevMove) ? prevMove.Destination : playerWorldPos;
                 }
                 else
                 {
@@ -272,7 +188,6 @@ namespace ProjectVagabond
                 Vector2 currentPos;
                 var lastAction = actionQueue.LastOrDefault();
                 if (lastAction is MoveAction lastMove) currentPos = lastMove.Destination;
-                else if (lastAction is RestAction lastRest) currentPos = lastRest.Position;
                 else currentPos = playerWorldPos;
 
                 int validSteps = 0;
@@ -286,26 +201,6 @@ namespace ProjectVagabond
                     }
 
                     var nextAction = new MoveAction(playerEntityId, nextPos, mode);
-                    var tempQueue = new List<IAction>(actionQueue) { nextAction };
-                    var simulationResult = gameState.SimulateActionQueue(tempQueue);
-
-                    if (!simulationResult.possible)
-                    {
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[warning]Not enough energy. Auto-queuing a short rest." });
-                        Vector2 restPosition = actionQueue.Any() ? ((actionQueue.Last() as MoveAction)?.Destination ?? playerWorldPos) : playerWorldPos;
-                        var tempQueueWithRest = new List<IAction>(actionQueue);
-                        tempQueueWithRest.Add(new RestAction(playerEntityId, RestType.ShortRest, restPosition));
-                        tempQueueWithRest.Add(nextAction);
-                        if (gameState.SimulateActionQueue(tempQueueWithRest).possible)
-                        {
-                            actionQueue.Enqueue(new RestAction(playerEntityId, RestType.ShortRest, restPosition));
-                        }
-                        else
-                        {
-                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Cannot move here... Not enough energy even after a rest!" });
-                            break;
-                        }
-                    }
                     currentPos = nextPos;
                     actionQueue.Enqueue(nextAction);
                     validSteps++;
@@ -342,43 +237,6 @@ namespace ProjectVagabond
         public void QueueWalkMovement(GameState gameState, Vector2 direction, string[] args)
         {
             QueueMovementInternal(gameState, direction, args, MovementMode.Walk);
-        }
-
-        private void CheckForPOITrigger(GameState gameState, int movingEntityId, Vector2 newPosition)
-        {
-            // This functionality is currently disabled as the encounter system has been removed.
-            // It can be re-enabled and adapted for a new system in the future.
-            /*
-            if (movingEntityId != gameState.PlayerEntityId) return;
-
-            var encounterManager = ServiceLocator.Get<EncounterManager>();
-            var entityManager = ServiceLocator.Get<EntityManager>();
-            var componentStore = ServiceLocator.Get<ComponentStore>();
-            var chunkManager = ServiceLocator.Get<ChunkManager>();
-            var poiManager = ServiceLocator.Get<POIManagerSystem>();
-
-            var entitiesOnTile = gameState.GetEntitiesAtGridPos(newPosition).ToList();
-
-            foreach (var otherEntityId in entitiesOnTile)
-            {
-                if (otherEntityId == movingEntityId) continue;
-
-                var poiComp = componentStore.GetComponent<POIComponent>(otherEntityId);
-                if (poiComp != null)
-                {
-                    encounterManager.TriggerEncounter(poiComp.EncounterId);
-
-                    if (!poiComp.IsPersistent)
-                    {
-                        poiManager.TrackDestroyedPOI(otherEntityId, newPosition);
-                        chunkManager.UnregisterEntity(otherEntityId, newPosition);
-                        componentStore.EntityDestroyed(otherEntityId);
-                        entityManager.DestroyEntity(otherEntityId);
-                    }
-                    break;
-                }
-            }
-            */
         }
     }
 }

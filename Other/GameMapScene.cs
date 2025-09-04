@@ -158,15 +158,8 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            if (_gameState.IsInCombat)
-            {
-                // Combat logic would go here
-            }
-            else
-            {
-                _mapInputHandler.Update(gameTime);
-                _mapRenderer.Update(gameTime, font);
-            }
+            _mapInputHandler.Update(gameTime);
+            _mapRenderer.Update(gameTime, font);
 
             _hapticsManager.Update(gameTime);
 
@@ -176,14 +169,7 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            if (_gameState.IsInCombat)
-            {
-                // Combat drawing logic
-            }
-            else
-            {
-                _mapRenderer.DrawMap(spriteBatch, font, gameTime);
-            }
+            _mapRenderer.DrawMap(spriteBatch, font, gameTime);
 
             // Draw the settings button. Its position is now static and set in Enter().
             _settingsButton?.Draw(spriteBatch, font, gameTime);

@@ -27,15 +27,6 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published when an entity's health is reduced.
-        /// </summary>
-        public struct EntityTookDamage
-        {
-            public int EntityId { get; set; }
-            public int DamageAmount { get; set; }
-        }
-
-        /// <summary>
         /// Published when the player entity completes a move to a new tile.
         /// </summary>
         public struct PlayerMoved

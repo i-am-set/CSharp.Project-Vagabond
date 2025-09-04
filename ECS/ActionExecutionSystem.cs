@@ -45,7 +45,6 @@ namespace ProjectVagabond
 
             int playerEntityId = _gameState.PlayerEntityId;
             _componentStore.RemoveComponent<MoveAction>(playerEntityId);
-            _componentStore.RemoveComponent<RestAction>(playerEntityId);
         }
 
         /// <summary>
@@ -92,10 +91,6 @@ namespace ProjectVagabond
                 {
                     ApplyMoveActionEffects(_gameState, playerEntityId, ma);
                 }
-                else if (nextAction is RestAction ra)
-                {
-                    ApplyRestActionEffects(_gameState, playerEntityId, ra);
-                }
 
                 // Signal that the player has completed an action, allowing other systems (like AI) to take a turn.
                 EventBus.Publish(new GameEvents.PlayerActionExecuted { Action = nextAction });
@@ -109,10 +104,6 @@ namespace ProjectVagabond
 
         private void ApplyMoveActionEffects(GameState gameState, int entityId, MoveAction action)
         {
-            var stats = _componentStore.GetComponent<StatsComponent>(entityId);
-            int energyCost = gameState.GetMovementEnergyCost(action);
-            stats?.ExertEnergy(energyCost);
-
             var posComp = _componentStore.GetComponent<PositionComponent>(entityId);
             Vector2 oldWorldPos = posComp.WorldPosition;
             posComp.WorldPosition = action.Destination;
@@ -120,16 +111,6 @@ namespace ProjectVagabond
             _chunkManager.UpdateEntityChunk(entityId, oldWorldPos, action.Destination);
             EventBus.Publish(new GameEvents.PlayerMoved { NewPosition = action.Destination });
 
-        }
-
-        private void ApplyRestActionEffects(GameState gameState, int entityId, RestAction action)
-        {
-            var stats = _componentStore.GetComponent<StatsComponent>(entityId);
-            if (stats == null) return;
-
-            stats.Rest(action.RestType);
-            string restType = action.RestType.ToString().Replace("Rest", "");
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[rest]Completed {restType.ToLower()} rest. Energy is now {stats.CurrentEnergyPoints}/{stats.MaxEnergyPoints}." });
         }
     }
 }

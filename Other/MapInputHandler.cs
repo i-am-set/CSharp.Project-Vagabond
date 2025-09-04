@@ -166,7 +166,7 @@ namespace ProjectVagabond
             bool leftClickReleased = _currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
             bool rightClickPressed = _currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
 
-            if (_gameState.IsExecutingActions || _gameState.IsInCombat) return;
+            if (_gameState.IsExecutingActions) return;
 
             Vector2? hoveredGridPos = _mapRenderer.HoveredGridPos;
 

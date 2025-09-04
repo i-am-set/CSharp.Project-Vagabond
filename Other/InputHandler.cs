@@ -74,48 +74,40 @@ namespace ProjectVagabond
             }
 
             // --- Handle Terminal Activation/Deactivation ---
-            if (!_gameState.IsInCombat)
+            // Toggle with '~' key
+            if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && !_previousKeyboardState.IsKeyDown(Keys.OemTilde))
             {
-                // Toggle with '~' key
-                if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && !_previousKeyboardState.IsKeyDown(Keys.OemTilde))
+                IsTerminalInputActive = !IsTerminalInputActive;
+                if (!IsTerminalInputActive)
                 {
-                    IsTerminalInputActive = !IsTerminalInputActive;
-                    if (!IsTerminalInputActive)
-                    {
-                        _currentInput = "";
-                        _autoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
-                    }
-                    else
-                    {
-                        _terminalRenderer.ResetCaratBlink();
-                    }
+                    _currentInput = "";
+                    _autoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
                 }
-
-                if (IsTerminalInputActive)
+                else
                 {
-                    // Deactivate with Escape key
-                    if (currentKeyboardState.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape))
+                    _terminalRenderer.ResetCaratBlink();
+                }
+            }
+
+            if (IsTerminalInputActive)
+            {
+                // Deactivate with Escape key
+                if (currentKeyboardState.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape))
+                {
+                    IsTerminalInputActive = false;
+                    _currentInput = "";
+                    _autoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
+                }
+                // Deactivate by clicking outside the terminal
+                else if (currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+                {
+                    if (!terminalBounds.Contains(virtualMousePos))
                     {
                         IsTerminalInputActive = false;
                         _currentInput = "";
                         _autoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
                     }
-                    // Deactivate by clicking outside the terminal
-                    else if (currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
-                    {
-                        if (!terminalBounds.Contains(virtualMousePos))
-                        {
-                            IsTerminalInputActive = false;
-                            _currentInput = "";
-                            _autoCompleteManager.ToggleShowingAutoCompleteSuggestions(false);
-                        }
-                    }
                 }
-            }
-            else
-            {
-                // Force terminal to be inactive during combat
-                IsTerminalInputActive = false;
             }
 
 
@@ -156,31 +148,15 @@ namespace ProjectVagabond
                 int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
                 int scrollLines = scrollDelta > 0 ? 3 : -3;
 
-                if (_gameState.IsInCombat)
+                int currentOffset = _terminalRenderer.ScrollOffset;
+                int maxOffset = Math.Max(0, _terminalRenderer.WrappedHistory.Count - _terminalRenderer.GetMaxVisibleLines());
+                if (scrollDelta > 0) // scrolling up
                 {
-                    int currentOffset = _terminalRenderer.CombatScrollOffset;
-                    int maxOffset = Math.Max(0, _terminalRenderer.WrappedHistory.Count - _terminalRenderer.GetMaxVisibleLines());
-                    if (scrollDelta > 0) // scrolling up
-                    {
-                        _terminalRenderer.CombatScrollOffset = Math.Min(currentOffset + Math.Abs(scrollLines), maxOffset);
-                    }
-                    else // scrolling down
-                    {
-                        _terminalRenderer.CombatScrollOffset = Math.Max(currentOffset - Math.Abs(scrollLines), 0);
-                    }
+                    _terminalRenderer.ScrollOffset = Math.Min(currentOffset + Math.Abs(scrollLines), maxOffset);
                 }
-                else
+                else // scrolling down
                 {
-                    int currentOffset = _terminalRenderer.ScrollOffset;
-                    int maxOffset = Math.Max(0, _terminalRenderer.WrappedHistory.Count - _terminalRenderer.GetMaxVisibleLines());
-                    if (scrollDelta > 0) // scrolling up
-                    {
-                        _terminalRenderer.ScrollOffset = Math.Min(currentOffset + Math.Abs(scrollLines), maxOffset);
-                    }
-                    else // scrolling down
-                    {
-                        _terminalRenderer.ScrollOffset = Math.Max(currentOffset - Math.Abs(scrollLines), 0);
-                    }
+                    _terminalRenderer.ScrollOffset = Math.Max(currentOffset - Math.Abs(scrollLines), 0);
                 }
             }
         }

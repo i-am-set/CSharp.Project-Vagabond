@@ -1,10 +1,19 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 
 namespace ProjectVagabond
@@ -29,7 +38,6 @@ namespace ProjectVagabond
             {
                 new ArchetypeIdComponent { ArchetypeId = "player" },
                 new PositionComponent(),
-                new StatsComponent { Strength = 5, Agility = 5, Tenacity = 5, Intelligence = 5, Charm = 5 },
                 new ActionQueueComponent(),
                 new PlayerTagComponent(),
                 new HighImportanceComponent(),

@@ -442,45 +442,28 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Generates the visual path for the player's action queue, simulating energy cost to show where they will become exhausted.
+        /// Generates the visual path for the player's action queue.
         /// </summary>
         private List<GridElement> GeneratePlayerPathGridElements(IEnumerable<IAction> actions)
         {
             var elements = new List<GridElement>();
-            var playerStats = _gameState.PlayerStats;
-            if (playerStats == null || !actions.Any()) return elements;
-
-            int simulatedEnergy = playerStats.CurrentEnergyPoints;
+            if (!actions.Any()) return elements;
 
             foreach (var action in actions)
             {
-                Vector2 actionPos = Vector2.Zero;
-                Texture2D actionTexture = null;
-                Color actionColor = Color.Transparent;
-
                 if (action is MoveAction moveAction)
                 {
-                    actionPos = moveAction.Destination;
+                    Vector2 actionPos = moveAction.Destination;
                     bool isRunning = moveAction.Mode == MovementMode.Run;
-                    bool canRun = isRunning && simulatedEnergy >= _gameState.GetMovementEnergyCost(moveAction);
 
-                    actionTexture = canRun ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
-                    actionColor = canRun ? _global.RunPathColor : _global.PathColor;
+                    Texture2D actionTexture = isRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
+                    Color actionColor = isRunning ? _global.RunPathColor : _global.PathColor;
 
-                    if (isRunning)
+                    Vector2? screenPos = MapCoordsToScreen(actionPos);
+                    if (screenPos.HasValue)
                     {
-                        simulatedEnergy -= _gameState.GetMovementEnergyCost(moveAction);
+                        elements.Add(new GridElement(actionTexture, actionColor, screenPos.Value, actionPos));
                     }
-                }
-                else
-                {
-                    continue;
-                }
-
-                Vector2? screenPos = MapCoordsToScreen(actionPos);
-                if (screenPos.HasValue)
-                {
-                    elements.Add(new GridElement(actionTexture, actionColor, screenPos.Value, actionPos));
                 }
             }
             return elements;

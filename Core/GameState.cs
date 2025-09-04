@@ -52,13 +52,10 @@ namespace ProjectVagabond
         public bool IsExecutingActions => _isExecutingActions;
         public bool IsPaused => _isPaused;
         public NoiseMapManager NoiseManager => _noiseManager;
-        public StatsComponent PlayerStats => _componentStore.GetComponent<StatsComponent>(PlayerEntityId);
-        public (int finalEnergy, bool possible, int ticksPassed) PendingQueueSimulationResult => SimulateActionQueue();
         public List<int> ActiveEntities { get; private set; } = new List<int>();
         public int InitialActionCount { get; private set; }
         public bool IsActionQueueDirty { get; set; } = true;
 
-        public bool IsInCombat { get; private set; } = false;
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, ChunkManager chunkManager, Global global, SpriteManager spriteManager)
@@ -194,24 +191,13 @@ namespace ProjectVagabond
                 {
                     // An entity is on this tile. Check if it's a blocking entity.
                     // Blocking entities are mobile characters (Player or NPCs). POIs without these tags are passable.
-                    if (_componentStore.HasComponent<PlayerTagComponent>(entityId) || _componentStore.HasComponent<NPCTagComponent>(entityId))
+                    if (_componentStore.HasComponent<PlayerTagComponent>(entityId))
                     {
                         return true; // It's a character, so the tile is occupied.
                     }
                 }
             }
             return false; // No blocking entities found.
-        }
-
-        public int GetMovementEnergyCost(MoveAction action)
-        {
-            if (action.Mode != MovementMode.Run)
-            {
-                return 0; // Walking and Jogging are free.
-            }
-
-            var mapData = GetMapDataAt((int)action.Destination.X, (int)action.Destination.Y);
-            return GetTerrainEnergyCost(mapData.TerrainHeight); // Running cost is based on terrain.
         }
 
         public int GetMovementTickCost(MovementMode mode, MapData mapData)
@@ -234,65 +220,6 @@ namespace ProjectVagabond
             };
 
             return ticks;
-        }
-
-        public (int finalEnergy, bool possible, int ticksPassed) SimulateActionQueue(IEnumerable<IAction> customQueue = null)
-        {
-            var playerStats = PlayerStats;
-            if (playerStats == null) return (0, true, 0); // Prevent crash if stats aren't loaded yet
-
-            var queueToSimulate = customQueue ?? PendingActions;
-            if (!queueToSimulate.Any()) return (playerStats.CurrentEnergyPoints, true, 0);
-
-            int finalEnergy = playerStats.CurrentEnergyPoints;
-            int maxEnergy = playerStats.MaxEnergyPoints;
-            int ticksPassed = 0;
-
-            foreach (var action in queueToSimulate)
-            {
-                if (action is MoveAction moveAction)
-                {
-                    MovementMode actualMode = moveAction.Mode;
-                    int energyCost = GetMovementEnergyCost(moveAction);
-                    if (moveAction.Mode == MovementMode.Run && finalEnergy < energyCost)
-                    {
-                        actualMode = MovementMode.Jog;
-                    }
-
-                    if (finalEnergy < energyCost)
-                    {
-                        return (finalEnergy, false, ticksPassed);
-                    }
-
-                    MapData mapData = GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
-                    int moveDuration = GetMovementTickCost(actualMode, mapData);
-
-                    ticksPassed += moveDuration;
-
-                    int actualEnergyCost = GetMovementEnergyCost(new MoveAction(moveAction.ActorId, moveAction.Destination, actualMode));
-                    finalEnergy -= actualEnergyCost;
-                }
-                else if (action is RestAction restAction)
-                {
-                    switch (restAction.RestType)
-                    {
-                        case RestType.ShortRest:
-                            finalEnergy += playerStats.ShortRestEnergyRestored;
-                            ticksPassed += 1;
-                            break;
-                        case RestType.LongRest:
-                            finalEnergy += playerStats.LongRestEnergyRestored;
-                            ticksPassed += 5;
-                            break;
-                        case RestType.FullRest:
-                            finalEnergy += playerStats.FullRestEnergyRestored;
-                            ticksPassed += 10;
-                            break;
-                    }
-                    finalEnergy = Math.Min(finalEnergy, maxEnergy);
-                }
-            }
-            return (finalEnergy, true, ticksPassed);
         }
 
         public void ExecuteActions()
@@ -346,15 +273,6 @@ namespace ProjectVagabond
         }
 
         public Texture2D GetTerrainTexture(int x, int y) => GetTerrainTexture(GetNoiseAt(x, y));
-
-        private int GetTerrainEnergyCost(float height)
-        {
-            if (height < _global.WaterLevel) return 3;
-            if (height < _global.FlatlandsLevel) return 1;
-            if (height < _global.HillsLevel) return 2;
-            if (height < _global.MountainsLevel) return 4;
-            return 5;
-        }
 
         public List<int> GetEntitiesAtGridPos(Vector2 gridPos)
         {

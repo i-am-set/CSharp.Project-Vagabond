@@ -14,8 +14,6 @@ namespace ProjectVagabond.Scenes
         MainMenu,
         TerminalMap,
         Settings,
-        Encounter,
-        Combat,
         Transition,
         AnimationEditor
     }
