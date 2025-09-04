@@ -1,0 +1,85 @@
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace ProjectVagabond.Battle
+{
+    /// <summary>
+    /// Represents a single participant in a battle, holding all their current stats and state.
+    /// </summary>
+    public class BattleCombatant
+    {
+        /// <summary>
+        /// A unique identifier for this instance of a combatant in the battle.
+        /// </summary>
+        public string CombatantID { get; set; }
+
+        /// <summary>
+        /// The display name of the combatant.
+        /// </summary>
+        public string Name { get; set; }
+
+        /// <summary>
+        /// An instance of the CombatantStats class holding all core attributes.
+        /// </summary>
+        public CombatantStats Stats { get; set; }
+
+        /// <summary>
+        /// A list of moves this combatant can use.
+        /// </summary>
+        public List<MoveData> AvailableMoves { get; set; } = new List<MoveData>();
+
+        /// <summary>
+        /// A list of currently active status effects.
+        /// </summary>
+        public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
+
+        /// <summary>
+        /// A list of element IDs associated with this combatant's defensive type.
+        /// </summary>
+        public List<int> DefensiveElementIDs { get; set; } = new List<int>();
+
+        /// <summary>
+        /// True if this combatant is controlled by the player.
+        /// </summary>
+        public bool IsPlayerControlled { get; set; }
+
+        /// <summary>
+        /// Gets a value indicating whether the combatant is defeated (CurrentHP is 0 or less).
+        /// </summary>
+        public bool IsDefeated => Stats.CurrentHP <= 0;
+
+        /// <summary>
+        /// Applies a specified amount of damage to the combatant's CurrentHP.
+        /// </summary>
+        /// <param name="damageAmount">The amount of damage to apply.</param>
+        public void ApplyDamage(int damageAmount)
+        {
+            Stats.CurrentHP -= damageAmount;
+            if (Stats.CurrentHP < 0)
+            {
+                Stats.CurrentHP = 0;
+            }
+        }
+
+        /// <summary>
+        /// Checks if the combatant currently has a specific status effect.
+        /// </summary>
+        /// <param name="effectType">The status effect to check for.</param>
+        /// <returns>True if the effect is active, otherwise false.</returns>
+        public bool HasStatusEffect(StatusEffectType effectType)
+        {
+            return ActiveStatusEffects.Any(e => e.EffectType == effectType);
+        }
+
+        /// <summary>
+        /// Adds a new status effect to the combatant, resetting the duration if it already exists.
+        /// </summary>
+        /// <param name="newEffect">The new status effect instance to add.</param>
+        public void AddStatusEffect(StatusEffectInstance newEffect)
+        {
+            // Remove any existing effect of the same type to reset its duration, as per the design document.
+            ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
+            ActiveStatusEffects.Add(newEffect);
+        }
+    }
+}

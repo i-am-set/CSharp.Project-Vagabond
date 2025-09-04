@@ -1,0 +1,26 @@
+[
+  {
+    "InteractionID": 1,
+    "AttackingElementID": 1,
+    "DefendingElementID": 101,
+    "Multiplier": 1.5
+  },
+  {
+    "InteractionID": 2,
+    "AttackingElementID": 1,
+    "DefendingElementID": 102,
+    "Multiplier": 0.5
+  },
+  {
+    "InteractionID": 3,
+    "AttackingElementID": 2,
+    "DefendingElementID": 101,
+    "Multiplier": 2.0
+  },
+  {
+    "InteractionID": 4,
+    "AttackingElementID": 2,
+    "DefendingElementID": 102,
+    "Multiplier": 0.5
+  }
+]

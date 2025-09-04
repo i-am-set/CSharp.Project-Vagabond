@@ -1,0 +1,22 @@
+[
+  {
+    "ElementID": 1,
+    "ElementName": "Fire",
+    "Type": "Offensive"
+  },
+  {
+    "ElementID": 2,
+    "ElementName": "Metal",
+    "Type": "Offensive"
+  },
+  {
+    "ElementID": 101,
+    "ElementName": "Creature",
+    "Type": "Defensive"
+  },
+  {
+    "ElementID": 102,
+    "ElementName": "Stone",
+    "Type": "Defensive"
+  }
+]

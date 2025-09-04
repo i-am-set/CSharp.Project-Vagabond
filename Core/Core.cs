@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
 using ProjectVagabond;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -266,6 +267,9 @@ namespace ProjectVagabond
             // Load only essential assets needed for the main menu and global UI.
             _spriteManager.LoadEssentialContent();
             _backgroundManager.LoadContent();
+
+            // Load data for battle system
+            BattleDataCache.LoadData(Content);
 
             // Initialize core systems that require content but should always be available.
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
