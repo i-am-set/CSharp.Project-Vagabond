@@ -27,7 +27,8 @@ namespace ProjectVagabond
             WaterColor = Palette_DarkBlue;
             FlatlandColor = Palette_DarkGray;
             HillColor = Palette_DarkGray;
-            MountainColor = Palette_DarkGray;
+            MountainColor = Palette_Gray;
+            PeakColor = Palette_LightGray;
             PlayerColor = Palette_Red;
             PathColor = Palette_Yellow;
             RunPathColor = Palette_Orange;
@@ -150,6 +151,7 @@ namespace ProjectVagabond
         public Color FlatlandColor { get; private set; }
         public Color HillColor { get; private set; }
         public Color MountainColor { get; private set; }
+        public Color PeakColor { get; private set; }
         public Color PlayerColor { get; private set; }
         public Color PathColor { get; private set; }
         public Color RunPathColor { get; private set; }

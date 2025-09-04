@@ -630,7 +630,7 @@ namespace ProjectVagabond
             if (noise < _global.FlatlandsLevel) return _global.FlatlandColor;
             if (noise < _global.HillsLevel) return _global.HillColor;
             if (noise < _global.MountainsLevel) return _global.MountainColor;
-            return _global.MountainColor;
+            return _global.PeakColor;
         }
     }
 }
