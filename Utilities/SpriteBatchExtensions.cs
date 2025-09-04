@@ -23,16 +23,22 @@ namespace ProjectVagabond.Utils
 
         public static void DrawStringSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color)
         {
+            var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
+            spriteBatch.DrawString(font, text, RoundVector(position) + new Vector2(1, 0), shadowColor);
             spriteBatch.DrawString(font, text, RoundVector(position), color);
         }
 
         public static void DrawStringSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float rotation, Vector2 origin, float scale, SpriteEffects effects, float layerDepth)
         {
+            var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
+            spriteBatch.DrawString(font, text, RoundVector(position) + new Vector2(1, 0), shadowColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, RoundVector(position), color, rotation, origin, scale, effects, layerDepth);
         }
 
         public static void DrawStringSnapped(this SpriteBatch spriteBatch, BitmapFont font, string text, Vector2 position, Color color, float rotation, Vector2 origin, Vector2 scale, SpriteEffects effects, float layerDepth)
         {
+            var shadowColor = new Color(color.R / 4, color.G / 4, color.B / 4, color.A);
+            spriteBatch.DrawString(font, text, RoundVector(position) + new Vector2(1, 0), shadowColor, rotation, origin, scale, effects, layerDepth);
             spriteBatch.DrawString(font, text, RoundVector(position), color, rotation, origin, scale, effects, layerDepth);
         }
 

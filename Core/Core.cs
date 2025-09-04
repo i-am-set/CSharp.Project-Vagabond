@@ -1,6 +1,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
 using ProjectVagabond;
@@ -35,6 +36,7 @@ namespace ProjectVagabond
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private BitmapFont _defaultFont;
+        private BitmapFont _secondaryFont;
         private Texture2D _pixel;
         private Rectangle _finalRenderRectangle;
         private Matrix _mouseTransformMatrix;
@@ -53,6 +55,7 @@ namespace ProjectVagabond
 
 
         public Matrix MouseTransformMatrix => _mouseTransformMatrix;
+        public BitmapFont SecondaryFont => _secondaryFont;
 
         // Managers & Systems
         private Global _global;
@@ -263,6 +266,20 @@ namespace ProjectVagabond
             catch
             {
                 throw new Exception("Please add a BitmapFont to your 'Content/Fonts' folder");
+            }
+
+            try
+            {
+                _secondaryFont = Content.Load<BitmapFont>("Fonts/5x5_pixel");
+                // Not registering with ServiceLocator to avoid type collision.
+                // Access via ServiceLocator.Get<Core>().SecondaryFont
+            }
+            catch
+            {
+                // If the secondary font fails, we can fall back to the default font.
+                // This prevents a crash if the asset is missing.
+                Debug.WriteLine("[WARNING] Could not load secondary font 'Fonts/5x5_pixel'. Using default font as fallback.");
+                _secondaryFont = _defaultFont;
             }
 
             // Load only essential assets needed for the main menu and global UI.
