@@ -6,7 +6,6 @@ namespace ProjectVagabond
     public class StatusEffectSystem
     {
         private readonly ComponentStore _componentStore;
-        private GameState _gameState;
 
         public StatusEffectSystem()
         {

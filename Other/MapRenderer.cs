@@ -37,9 +37,14 @@ namespace ProjectVagabond
         public int GridSizeY { get; private set; }
         public int CellSize { get; private set; }
 
+        // Camera Panning
+        public Vector2 CameraOffset { get; private set; } = Vector2.Zero;
+        public bool IsCameraDetached => CameraOffset != Vector2.Zero;
+
+
         // --- TUNING ---
-        private const int MAP_GRID_WIDTH_CELLS = 28;
-        private const int MAP_GRID_HEIGHT_CELLS = 28;
+        private const int MAP_GRID_WIDTH_CELLS = 29;
+        private const int MAP_GRID_HEIGHT_CELLS = 29;
 
         // Animation state for path nodes
         private readonly Dictionary<Vector2, float> _pathNodeAnimationOffsets = new Dictionary<Vector2, float>();
@@ -76,6 +81,16 @@ namespace ProjectVagabond
             SwayAnimation = new OrganicSwayAnimation(SWAY_SPEED_X, SWAY_SPEED_Y, SWAY_AMOUNT, SWAY_AMOUNT);
 
             ResetHeaderState();
+        }
+
+        public void SetCameraOffset(Vector2 newOffset)
+        {
+            CameraOffset = newOffset;
+        }
+
+        public void ResetCamera()
+        {
+            CameraOffset = Vector2.Zero;
         }
 
         public void ResetHeaderState()
@@ -137,8 +152,9 @@ namespace ProjectVagabond
 
                 if (gridX >= 0 && gridX < GridSizeX && gridY >= 0 && gridY < GridSizeY)
                 {
-                    int startX = (int)_gameState.PlayerWorldPos.X - GridSizeX / 2;
-                    int startY = (int)_gameState.PlayerWorldPos.Y - GridSizeY / 2;
+                    Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
+                    int startX = (int)viewCenter.X - GridSizeX / 2;
+                    int startY = (int)viewCenter.Y - GridSizeY / 2;
                     currentHoveredGridPos = new Vector2(startX + gridX, startY + gridY);
                 }
             }
@@ -175,10 +191,6 @@ namespace ProjectVagabond
                     if (action is MoveAction moveAction)
                     {
                         actionPos = moveAction.Destination;
-                    }
-                    else if (action is RestAction restAction)
-                    {
-                        actionPos = restAction.Position;
                     }
 
                     if (actionPos != Vector2.Zero)
@@ -217,6 +229,8 @@ namespace ProjectVagabond
                     }
                 }
             }
+
+            DrawPlayerOffscreenIndicator(spriteBatch);
         }
 
         private void DrawMapFrame(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -311,8 +325,9 @@ namespace ProjectVagabond
         private List<GridElement> GenerateWorldMapGridElements()
         {
             var elements = new List<GridElement>();
-            int startX = (int)_gameState.PlayerWorldPos.X - GridSizeX / 2;
-            int startY = (int)_gameState.PlayerWorldPos.Y - GridSizeY / 2;
+            Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
+            int startX = (int)viewCenter.X - GridSizeX / 2;
+            int startY = (int)viewCenter.Y - GridSizeY / 2;
 
             // 1. Draw Terrain
             for (int y = 0; y < GridSizeY; y++)
@@ -332,7 +347,7 @@ namespace ProjectVagabond
 
             // 2. Draw Player Path
             var allPlayerActions = new List<IAction>(_gameState.PendingActions);
-            var activePlayerAction = _componentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId) ?? (IAction)_componentStore.GetComponent<RestAction>(_gameState.PlayerEntityId);
+            var activePlayerAction = (IAction)_componentStore.GetComponent<MoveAction>(_gameState.PlayerEntityId);
             if (activePlayerAction != null)
             {
                 allPlayerActions.Add(activePlayerAction);
@@ -408,21 +423,6 @@ namespace ProjectVagabond
                         simulatedEnergy -= _gameState.GetMovementEnergyCost(moveAction);
                     }
                 }
-                else if (action is RestAction restAction)
-                {
-                    actionPos = restAction.Position;
-                    actionTexture = restAction.RestType == RestType.ShortRest ? _spriteManager.ShortRestSprite : _spriteManager.LongRestSprite;
-                    actionColor = _global.ShortRestColor;
-
-                    // Simulate energy gain from the rest
-                    switch (restAction.RestType)
-                    {
-                        case RestType.ShortRest: simulatedEnergy += playerStats.ShortRestEnergyRestored; break;
-                        case RestType.LongRest: simulatedEnergy += playerStats.LongRestEnergyRestored; break;
-                        case RestType.FullRest: simulatedEnergy += playerStats.FullRestEnergyRestored; break;
-                    }
-                    simulatedEnergy = System.Math.Min(simulatedEnergy, playerStats.MaxEnergyPoints);
-                }
                 else
                 {
                     continue;
@@ -440,9 +440,7 @@ namespace ProjectVagabond
         private bool IsPathPipTexture(Texture2D texture)
         {
             return texture == _spriteManager.PathSprite ||
-                   texture == _spriteManager.RunPathSprite ||
-                   texture == _spriteManager.ShortRestSprite ||
-                   texture == _spriteManager.LongRestSprite;
+                   texture == _spriteManager.RunPathSprite;
         }
 
         private void DrawGridElement(SpriteBatch spriteBatch, GridElement element, int cellSize, GameTime gameTime)
@@ -480,12 +478,59 @@ namespace ProjectVagabond
             spriteBatch.DrawSnapped(element.Texture, destRect, element.Color);
         }
 
+        private void DrawPlayerOffscreenIndicator(SpriteBatch spriteBatch)
+        {
+            Vector2 playerPos = _gameState.PlayerWorldPos;
+            Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
+
+            // Check if player is on-screen. If so, do nothing.
+            if (MapCoordsToScreen(playerPos).HasValue)
+            {
+                return;
+            }
+
+            // 1. Calculate direction from view center to player
+            Vector2 directionToPlayer = playerPos - viewCenter;
+            if (directionToPlayer == Vector2.Zero) return; // Should not happen if off-screen, but a good safeguard.
+
+            // 2. Convert direction to an angle and then to a sprite index (0-7)
+            float angle = MathF.Atan2(directionToPlayer.Y, directionToPlayer.X);
+            int index = (int)Math.Round((angle + MathHelper.Pi) / MathHelper.TwoPi * 8) % 8;
+
+            // 3. Calculate the arrow's position, clamped to the map border
+            Rectangle arrowSourceRect = _spriteManager.ArrowIconSourceRects[index];
+            Vector2 halfSize = new Vector2((MapScreenBounds.Width - arrowSourceRect.Width) / 2f, (MapScreenBounds.Height - arrowSourceRect.Height) / 2f);
+            Vector2 playerOffsetFromCenter = directionToPlayer * CellSize;
+
+            float scaleX = (playerOffsetFromCenter.X != 0) ? halfSize.X / Math.Abs(playerOffsetFromCenter.X) : float.MaxValue;
+            float scaleY = (playerOffsetFromCenter.Y != 0) ? halfSize.Y / Math.Abs(playerOffsetFromCenter.Y) : float.MaxValue;
+            float scale = Math.Min(scaleX, scaleY);
+
+            Vector2 edgePosition = MapScreenBounds.Center.ToVector2() + playerOffsetFromCenter * scale;
+
+            // 4. Draw the arrow
+            var destRect = new Rectangle(
+                (int)(edgePosition.X - arrowSourceRect.Width / 2f),
+                (int)(edgePosition.Y - arrowSourceRect.Height / 2f),
+                arrowSourceRect.Width,
+                arrowSourceRect.Height
+            );
+
+            spriteBatch.DrawSnapped(
+                _spriteManager.ArrowIconSpriteSheet,
+                destRect,
+                arrowSourceRect,
+                _global.Palette_Red
+            );
+        }
+
         public Vector2? MapCoordsToScreen(Vector2 mapPos)
         {
             if (_mapGridBounds.IsEmpty) return null;
 
-            int startX = (int)_gameState.PlayerWorldPos.X - GridSizeX / 2;
-            int startY = (int)_gameState.PlayerWorldPos.Y - GridSizeY / 2;
+            Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
+            int startX = (int)viewCenter.X - GridSizeX / 2;
+            int startY = (int)viewCenter.Y - GridSizeY / 2;
             int gridX = (int)mapPos.X - startX;
             int gridY = (int)mapPos.Y - startY;
 
@@ -506,8 +551,9 @@ namespace ProjectVagabond
             int gridX = (screenPosition.X - _mapGridBounds.X) / CellSize;
             int gridY = (screenPosition.Y - _mapGridBounds.Y) / CellSize;
 
-            int startX = (int)_gameState.PlayerWorldPos.X - GridSizeX / 2;
-            int startY = (int)_gameState.PlayerWorldPos.Y - GridSizeY / 2;
+            Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
+            int startX = (int)viewCenter.X - GridSizeX / 2;
+            int startY = (int)viewCenter.Y - GridSizeY / 2;
             return new Vector2(startX + gridX, startY + gridY);
         }
 

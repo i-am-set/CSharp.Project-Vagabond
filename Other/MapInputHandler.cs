@@ -31,6 +31,11 @@ namespace ProjectVagabond
         private const float PATH_PREVIEW_UPDATE_DELAY = 0.01f;
         private Vector2? _lastPathTargetPosition = null;
 
+        // Camera Panning State
+        private bool _isPanning = false;
+        private Point _panStartMousePosition;
+        private Vector2 _panStartCameraOffset;
+
         public MapInputHandler(ContextMenu contextMenu, MapRenderer mapRenderer)
         {
             _contextMenu = contextMenu;
@@ -101,7 +106,14 @@ namespace ProjectVagabond
             }
             if (menuWasOpen) return;
 
-            HandleMapInteraction(virtualMousePos, keyboardState);
+            HandleCameraPan();
+
+            // Don't handle other map interactions if we are currently panning the camera.
+            if (!_isPanning)
+            {
+                HandleMapInteraction(virtualMousePos, keyboardState);
+            }
+
             _previousKeyboardState = keyboardState;
         }
 
@@ -113,6 +125,38 @@ namespace ProjectVagabond
         private void HandleStopClick()
         {
             _gameState.CancelExecutingActions();
+        }
+
+        private void HandleCameraPan()
+        {
+            bool middleClickPressed = _currentMouseState.MiddleButton == ButtonState.Pressed && _previousMouseState.MiddleButton == ButtonState.Released;
+            bool middleClickHeld = _currentMouseState.MiddleButton == ButtonState.Pressed;
+            bool middleClickReleased = _currentMouseState.MiddleButton == ButtonState.Released && _previousMouseState.MiddleButton == ButtonState.Pressed;
+
+            if (middleClickPressed)
+            {
+                _isPanning = true;
+                _panStartMousePosition = _currentMouseState.Position;
+                _panStartCameraOffset = _mapRenderer.CameraOffset;
+            }
+
+            if (middleClickReleased)
+            {
+                _isPanning = false;
+            }
+
+            if (_isPanning && middleClickHeld)
+            {
+                Vector2 virtualPanStart = Core.TransformMouse(_panStartMousePosition);
+                Vector2 virtualCurrentPos = Core.TransformMouse(_currentMouseState.Position);
+                Vector2 virtualDelta = virtualCurrentPos - virtualPanStart;
+
+                // Convert the virtual pixel delta to a world grid delta.
+                // The delta is negative because dragging the screen right should move the world left.
+                Vector2 worldDelta = -virtualDelta / _mapRenderer.CellSize;
+
+                _mapRenderer.SetCameraOffset(_panStartCameraOffset + worldDelta);
+            }
         }
 
         private void HandleMapInteraction(Vector2 virtualMousePos, KeyboardState keyboardState)

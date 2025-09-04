@@ -13,7 +13,6 @@ namespace ProjectVagabond.Scenes
     {
         MainMenu,
         TerminalMap,
-        Dialogue,
         Settings,
         Encounter,
         Combat,

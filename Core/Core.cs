@@ -20,12 +20,9 @@ using System.Text;
 // TODO: make the map generation more complex, e.g. add rivers, lakes, etc.
 // TODO: player customization; backgrounds, stats, bodyfat, muscle (both of which effect stat spread as well as gives buffs and needs at their extremes)
 // TODO: Ctrl-Z undo previous path queued
-// TODO: Make resting take random time (full rest between 6 and 11 hours)
-// TODO: Wait command: (wait 3 hours 2 minutes)
 // TODO: Brainstorm a way to add POIs (think rust, darkwood, the long dark, tarkov)
 // TODO: Add a way to save and load the game state
 // TODO: Finish entity implimentation
-// TODO: Make "activeStatusEffectcomponent" a component that can be added to any entity, not just the player
 // TODO: Add a 1d8, 1d10, 1d12, and 1d20 to the dice rolling system; one at a time since its complex to impliment
 // TODO: Make hit marker number that appears on map entity
 
@@ -195,12 +192,6 @@ namespace ProjectVagabond
             _aiSystem = new AISystem();
             ServiceLocator.Register<AISystem>(_aiSystem);
 
-            var statusEffectSystem = new StatusEffectSystem();
-            ServiceLocator.Register<StatusEffectSystem>(statusEffectSystem);
-
-            var energySystem = new EnergySystem();
-            ServiceLocator.Register<EnergySystem>(energySystem);
-
             var terminalRenderer = new TerminalRenderer();
             ServiceLocator.Register<TerminalRenderer>(terminalRenderer);
 
@@ -240,12 +231,10 @@ namespace ProjectVagabond
 
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
             _systemManager.RegisterSystem(_aiSystem, 0f);
-            _systemManager.RegisterSystem(energySystem, 0f);
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene()); // Changed to GameMapScene
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
-            _sceneManager.AddScene(GameSceneState.Dialogue, new DialogueScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);

@@ -19,8 +19,6 @@ namespace ProjectVagabond
         private Texture2D _pathSprite;
         private Texture2D _runPathSprite;
         private Texture2D _pathEndSprite;
-        private Texture2D _shortRestSprite;
-        private Texture2D _longRestSprite;
         private Texture2D _emptySprite;
         private Texture2D _speedMarkSprite;
         private Texture2D _mapMarkerSprite;
@@ -31,6 +29,8 @@ namespace ProjectVagabond
         private Texture2D _emberParticleSprite;
         private Texture2D _softParticleSprite;
         public Effect FireballParticleShaderEffect { get; private set; }
+        public Texture2D ArrowIconSpriteSheet { get; private set; }
+        public Rectangle[] ArrowIconSourceRects { get; private set; }
 
 
         public Texture2D LogoSprite => _logoSprite;
@@ -43,8 +43,6 @@ namespace ProjectVagabond
         public Texture2D PathSprite => _pathSprite;
         public Texture2D RunPathSprite => _runPathSprite;
         public Texture2D PathEndSprite => _pathEndSprite;
-        public Texture2D ShortRestSprite => _shortRestSprite;
-        public Texture2D LongRestSprite => _longRestSprite;
         public Texture2D EmptySprite => _emptySprite;
         public Texture2D SpeedMarkSprite => _speedMarkSprite;
         public Texture2D MapMarkerSprite => _mapMarkerSprite;
@@ -91,9 +89,45 @@ namespace ProjectVagabond
             try { _softParticleSprite = _textureFactory.CreateSoftCircleParticleTexture(); }
             catch { _softParticleSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
 
+            try { ArrowIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/MapIcons/ArrowIconSpriteSheet"); }
+            catch { ArrowIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
+
             // Moved from LoadGameContent because it's used on the main menu
             try { FireballParticleShaderEffect = _core.Content.Load<Effect>("Shaders/FireballParticleShader"); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ERROR] Could not load shader 'Shaders/FireballParticleShader'. Please ensure it's in the Content project. {ex.Message}"); }
+
+            InitializeArrowSourceRects();
+        }
+
+        private void InitializeArrowSourceRects()
+        {
+            // This maps the calculated directional index (0=Left, 1=Up-Left, etc. counter-clockwise)
+            // to the correct grid coordinates on the 3x3 sprite sheet.
+            var spriteSheetCoords = new Point[8]
+            {
+                new Point(0, 1), // 0: Left
+                new Point(0, 0), // 1: Up-Left
+                new Point(1, 0), // 2: Up
+                new Point(2, 0), // 3: Up-Right
+                new Point(2, 1), // 4: Right
+                new Point(2, 2), // 5: Down-Right
+                new Point(1, 2), // 6: Down
+                new Point(0, 2)  // 7: Down-Left
+            };
+
+            ArrowIconSourceRects = new Rectangle[8];
+            int spriteWidth = ArrowIconSpriteSheet.Width / 3;
+            int spriteHeight = ArrowIconSpriteSheet.Height / 3;
+
+            for (int i = 0; i < 8; i++)
+            {
+                ArrowIconSourceRects[i] = new Rectangle(
+                    spriteSheetCoords[i].X * spriteWidth,
+                    spriteSheetCoords[i].Y * spriteHeight,
+                    spriteWidth,
+                    spriteHeight
+                );
+            }
         }
 
         /// <summary>
@@ -127,12 +161,6 @@ namespace ProjectVagabond
 
             try { _pathEndSprite = _core.Content.Load<Texture2D>("Sprites/pathEnd"); }
             catch { _pathEndSprite = _textureFactory.CreatePathEndTexture(); }
-
-            try { _shortRestSprite = _core.Content.Load<Texture2D>("Sprites/shortRest"); }
-            catch { _shortRestSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
-
-            try { _longRestSprite = _core.Content.Load<Texture2D>("Sprites/longRest"); }
-            catch { _longRestSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
             try { _emptySprite = _textureFactory.CreateEmptyTexture(); }
             catch { _emptySprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }

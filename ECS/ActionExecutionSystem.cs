@@ -15,6 +15,10 @@ namespace ProjectVagabond
         private readonly ComponentStore _componentStore;
         private readonly ChunkManager _chunkManager;
 
+        // Timer for the new tick-based movement system
+        private float _moveTickTimer = 0f;
+        private bool _isFirstActionInQueue = true;
+
         public ActionExecutionSystem()
         {
             _componentStore = ServiceLocator.Get<ComponentStore>();
@@ -23,11 +27,13 @@ namespace ProjectVagabond
 
         public void StartExecution()
         {
+            _isFirstActionInQueue = true;
         }
 
 
         public void StopExecution()
         {
+            _isFirstActionInQueue = true;
         }
 
         /// <summary>
@@ -54,14 +60,22 @@ namespace ProjectVagabond
                 return;
             }
 
-            if (_gameState.PendingActions.Any())
+            // If this is the first action in the queue, execute it immediately without a timer.
+            if (_isFirstActionInQueue && _gameState.PendingActions.Any())
             {
                 ProcessNextActionInQueue();
+                _isFirstActionInQueue = false;
+                _moveTickTimer = 0f; // Reset the timer so the *next* action has the full delay.
+                return;
             }
-            else if (_gameState.IsExecutingActions) // Queue is empty, stop executing
+
+            // For all subsequent actions, wait for the tick timer.
+            _moveTickTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (_moveTickTimer >= Global.ACTION_TICK_DURATION_SECONDS)
             {
-                _gameState.ToggleExecutingActions(false);
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Action queue completed." });
+                _moveTickTimer -= Global.ACTION_TICK_DURATION_SECONDS; // Decrement, keeping any leftover time for the next frame.
+                ProcessNextActionInQueue();
             }
         }
 
@@ -85,6 +99,11 @@ namespace ProjectVagabond
 
                 // Signal that the player has completed an action, allowing other systems (like AI) to take a turn.
                 EventBus.Publish(new GameEvents.PlayerActionExecuted { Action = nextAction });
+            }
+            else if (_gameState.IsExecutingActions) // Queue is empty, stop executing
+            {
+                _gameState.ToggleExecutingActions(false);
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Action queue completed." });
             }
         }
 

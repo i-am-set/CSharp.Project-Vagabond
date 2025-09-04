@@ -25,6 +25,7 @@ namespace ProjectVagabond.Scenes
         private readonly PlayerInputSystem _playerInputSystem;
         private readonly AnimationManager _animationManager;
         private ImageButton _settingsButton;
+        private readonly Global _global;
 
         public GameMapScene()
         {
@@ -38,6 +39,7 @@ namespace ProjectVagabond.Scenes
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _playerInputSystem = ServiceLocator.Get<PlayerInputSystem>();
             _animationManager = ServiceLocator.Get<AnimationManager>();
+            _global = ServiceLocator.Get<Global>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -130,6 +132,11 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
+            if (KeyPressed(Keys.Space, currentKeyboardState, _previousKeyboardState))
+            {
+                _mapRenderer.ResetCamera();
+            }
+
             if (_gameState.IsPaused)
             {
                 base.Update(gameTime);
@@ -172,6 +179,18 @@ namespace ProjectVagabond.Scenes
 
             // Draw the settings button. Its position is now static and set in Enter().
             _settingsButton?.Draw(spriteBatch, font, gameTime);
+
+            // Draw camera recenter prompt if needed
+            if (_mapRenderer.IsCameraDetached)
+            {
+                string text = "Press [SPACE] to recenter";
+                Vector2 textSize = font.MeasureString(text);
+                Vector2 textPos = new Vector2(
+                    (Global.VIRTUAL_WIDTH - textSize.X) / 2,
+                    Global.VIRTUAL_HEIGHT - textSize.Y - 20
+                );
+                spriteBatch.DrawStringSnapped(font, text, textPos, _global.Palette_Yellow);
+            }
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

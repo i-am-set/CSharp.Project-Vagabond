@@ -32,8 +32,6 @@ namespace ProjectVagabond
             PathColor = Palette_Yellow;
             RunPathColor = Palette_Orange;
             PathEndColor = Palette_Red;
-            ShortRestColor = Palette_LightPurple;
-            LongRestColor = Palette_LightPurple;
             GameBg = Palette_Black;
             TerminalBg = Palette_Black;
             MapBg = Palette_Black;
@@ -47,9 +45,6 @@ namespace ProjectVagabond
             ToolTipBorderColor = Palette_BrightWhite;
             TerminalDarkGray = Palette_DarkGray;
             InputCaratColor = Color.Khaki;
-            CombatSelectorColor = Palette_Yellow;
-            CombatSelectableColor = Palette_Red;
-            CombatInstructionColor = Palette_Yellow;
         }
 
         public static Global Instance => _instance;
@@ -64,6 +59,7 @@ namespace ProjectVagabond
         // World constants
         public const float FEET_PER_WORLD_TILE = 200f; // The physical distance of a single world tile  
         public const float FEET_PER_SECOND_PER_SPEED_UNIT = 4.0f; // A character with speed 1.0 moves at X ft/s.
+        public const float ACTION_TICK_DURATION_SECONDS = 0.3f; // Real-world duration of a single move/action tick at 1x speed.
 
         // Physics constants
         public const float PHYSICS_UPDATES_PER_SECOND = 60f;
@@ -158,8 +154,6 @@ namespace ProjectVagabond
         public Color PathColor { get; private set; }
         public Color RunPathColor { get; private set; }
         public Color PathEndColor { get; private set; }
-        public Color ShortRestColor { get; private set; }
-        public Color LongRestColor { get; private set; }
         public Color GameBg { get; private set; }
         public Color TerminalBg { get; private set; }
         public Color MapBg { get; private set; }
@@ -173,9 +167,6 @@ namespace ProjectVagabond
         public Color ToolTipBorderColor { get; private set; }
         public Color TerminalDarkGray { get; set; }
         public Color InputCaratColor { get; set; }
-        public Color CombatSelectorColor { get; set; }
-        public Color CombatSelectableColor { get; set; }
-        public Color CombatInstructionColor { get; set; }
 
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

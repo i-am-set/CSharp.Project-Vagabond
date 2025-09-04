@@ -201,18 +201,6 @@ namespace ProjectVagabond
                 DebugAllColors();
             }, "debugallcolors - Shows all XNA colors.");
 
-            _commands["rest"] = new Command("rest", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                _playerInputSystem.QueueRest(_gameState, args);
-            },
-            "rest <short|long|full> [gray]- Queue a rest action.",
-            (args) =>
-            {
-                if (args.Length == 0) return new List<string> { "short", "long", "full" };
-                return new List<string>();
-            });
-
             _commands["setbgscroll"] = new Command("setbgscroll", (args) =>
             {
                 _backgroundManager ??= ServiceLocator.Get<BackgroundManager>();
@@ -282,12 +270,6 @@ namespace ProjectVagabond
                 _sceneManager ??= ServiceLocator.Get<SceneManager>();
                 _sceneManager.ChangeScene(GameSceneState.Settings);
             }, "debugsettings [gray]- Open the settings menu.");
-
-            _commands["debugdialogue_test"] = new Command("dialogue_test", (args) =>
-            {
-                _sceneManager ??= ServiceLocator.Get<SceneManager>();
-                _sceneManager.ChangeScene(GameSceneState.Dialogue);
-            }, "debugdialogue_test - Shows the placeholder dialogue screen.");
 
             _commands["debugsetresolution"] = new Command("setresolution", (args) =>
             {

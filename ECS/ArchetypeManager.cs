@@ -36,8 +36,6 @@ namespace ProjectVagabond
                 new RenderableComponent { Color = ServiceLocator.Get<Global>().PlayerColor },
                 new HealthComponent { MaxHealth = 100, CurrentHealth = 100 },
                 new EquipmentComponent(),
-                new ActiveStatusEffectComponent(),
-                new EnergyRegenComponent(),
             };
             _archetypes["player"] = new ArchetypeTemplate("player", "Player", playerComponents);
         }
