@@ -35,7 +35,7 @@ namespace ProjectVagabond
         public Rectangle MapScreenBounds { get; private set; }
         public int GridSizeX { get; private set; }
         public int GridSizeY { get; private set; }
-        public int CellSize { get; private set; }
+        public int CellSize => _cellSize;
 
         // Camera Panning
         public Vector2 CameraOffset { get; private set; } = Vector2.Zero;
@@ -43,8 +43,12 @@ namespace ProjectVagabond
 
 
         // --- TUNING ---
-        private const int MAP_GRID_WIDTH_CELLS = 29;
-        private const int MAP_GRID_HEIGHT_CELLS = 29;
+        private const int DEFAULT_MAP_GRID_CELLS = 29;
+        private const int DEFAULT_CELL_SIZE = 5;
+        private const int MAP_GRID_PIXEL_WIDTH = DEFAULT_MAP_GRID_CELLS * DEFAULT_CELL_SIZE;
+        private const int MAP_GRID_PIXEL_HEIGHT = DEFAULT_MAP_GRID_CELLS * DEFAULT_CELL_SIZE;
+        private int _cellSize = DEFAULT_CELL_SIZE;
+
 
         // Animation state for path nodes
         private readonly Dictionary<Vector2, float> _pathNodeAnimationOffsets = new Dictionary<Vector2, float>();
@@ -81,6 +85,36 @@ namespace ProjectVagabond
             SwayAnimation = new OrganicSwayAnimation(SWAY_SPEED_X, SWAY_SPEED_Y, SWAY_AMOUNT, SWAY_AMOUNT);
 
             ResetHeaderState();
+        }
+
+        public void ZoomIn()
+        {
+            switch (_cellSize)
+            {
+                case 1:
+                case 2:
+                    _cellSize = 3;
+                    break;
+                case 3:
+                case 4:
+                    _cellSize = 5;
+                    break;
+            }
+        }
+
+        public void ZoomOut()
+        {
+            switch (_cellSize)
+            {
+                case 5:
+                case 4:
+                    _cellSize = 3;
+                    break;
+                case 3:
+                case 2:
+                    _cellSize = 1;
+                    break;
+            }
         }
 
         public void SetCameraOffset(Vector2 newOffset)
@@ -121,11 +155,12 @@ namespace ProjectVagabond
             }
             else
             {
-                // --- SIZE CALCULATION ---
-                // The map size is now fixed based on the desired number of cells.
-                CellSize = Global.GRID_CELL_SIZE;
-                int finalMapWidth = MAP_GRID_WIDTH_CELLS * CellSize;
-                int finalMapHeight = MAP_GRID_HEIGHT_CELLS * CellSize;
+                // --- DYNAMIC GRID & SIZE CALCULATION ---
+                GridSizeX = MAP_GRID_PIXEL_WIDTH / _cellSize;
+                GridSizeY = MAP_GRID_PIXEL_HEIGHT / _cellSize;
+
+                int finalMapWidth = GridSizeX * _cellSize;
+                int finalMapHeight = GridSizeY * _cellSize;
 
                 // --- CENTERING CALCULATION ---
                 int mapX = (Global.VIRTUAL_WIDTH - finalMapWidth) / 2;
@@ -135,9 +170,6 @@ namespace ProjectVagabond
 
             // --- GRID SETUP ---
             _mapGridBounds = MapScreenBounds;
-
-            GridSizeX = MapScreenBounds.Width / CellSize;
-            GridSizeY = MapScreenBounds.Height / CellSize;
         }
 
         private void UpdateHover(Vector2 virtualMousePos)
@@ -147,8 +179,8 @@ namespace ProjectVagabond
 
             if (_mapGridBounds.Contains(virtualMousePos))
             {
-                int gridX = (int)((virtualMousePos.X - _mapGridBounds.X) / CellSize);
-                int gridY = (int)((virtualMousePos.Y - _mapGridBounds.Y) / CellSize);
+                int gridX = (int)((virtualMousePos.X - _mapGridBounds.X) / _cellSize);
+                int gridY = (int)((virtualMousePos.Y - _mapGridBounds.Y) / _cellSize);
 
                 if (gridX >= 0 && gridX < GridSizeX && gridY >= 0 && gridY < GridSizeY)
                 {
@@ -213,7 +245,7 @@ namespace ProjectVagabond
             var gridElements = GenerateWorldMapGridElements();
             foreach (var element in gridElements)
             {
-                DrawGridElement(spriteBatch, element, CellSize, gameTime);
+                DrawGridElement(spriteBatch, element, _cellSize, gameTime);
             }
 
             if (_hoveredGridPos.HasValue)
@@ -224,7 +256,7 @@ namespace ProjectVagabond
                     var markerTexture = _spriteManager.MapMarkerSprite;
                     if (markerTexture != null)
                     {
-                        var indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, CellSize, CellSize);
+                        var indicatorRect = new Rectangle((int)screenPos.Value.X, (int)screenPos.Value.Y, _cellSize, _cellSize);
                         spriteBatch.DrawSnapped(markerTexture, indicatorRect, _global.Palette_Orange);
                     }
                 }
@@ -290,6 +322,23 @@ namespace ProjectVagabond
             spriteBatch.Draw(pixel, new Rectangle(fullFrameArea.X, fullFrameArea.Bottom - 1, fullFrameArea.Width, 1), _global.Palette_White); // Bottom border
             spriteBatch.Draw(pixel, new Rectangle(fullFrameArea.X, fullFrameArea.Y, 1, fullFrameArea.Height), _global.Palette_White); // Left border
             spriteBatch.Draw(pixel, new Rectangle(fullFrameArea.Right - 1, fullFrameArea.Y, 1, fullFrameArea.Height), _global.Palette_White); // Right border
+
+            // --- 3. Draw the recenter prompt if needed ---
+            if (IsCameraDetached)
+            {
+                string part1 = "[SPACE]";
+                string part2 = " Recenter";
+                Vector2 part1Size = font.MeasureString(part1);
+                Vector2 totalSize = font.MeasureString(part1 + part2);
+
+                Vector2 startPos = new Vector2(
+                    swayedMapScreenBounds.Center.X - totalSize.X / 2,
+                    swayedMapScreenBounds.Bottom - totalSize.Y - 4 // 4 pixels padding from the bottom
+                );
+
+                spriteBatch.DrawStringSnapped(font, part1, startPos, _global.Palette_Orange);
+                spriteBatch.DrawStringSnapped(font, part2, new Vector2(startPos.X + part1Size.X, startPos.Y), _global.Palette_Yellow);
+            }
         }
 
         public void LayoutAndPositionButtons(Rectangle footerBounds)
@@ -447,8 +496,8 @@ namespace ProjectVagabond
         {
             Vector2 finalPosition = element.ScreenPosition;
 
-            // Apply a subtle flicker/jitter animation to path nodes.
-            if (_pathNodeAnimationOffsets.ContainsKey(element.WorldPosition) && IsPathPipTexture(element.Texture))
+            // Apply a subtle flicker/jitter animation to path nodes, but only when zoomed in.
+            if (_cellSize > 1 && _pathNodeAnimationOffsets.ContainsKey(element.WorldPosition) && IsPathPipTexture(element.Texture))
             {
                 float timeOffset = _pathNodeAnimationOffsets[element.WorldPosition];
                 float totalTime = (float)gameTime.TotalGameTime.TotalSeconds + timeOffset;
@@ -500,7 +549,7 @@ namespace ProjectVagabond
             // 3. Calculate the arrow's position, clamped to the map border
             Rectangle arrowSourceRect = _spriteManager.ArrowIconSourceRects[index];
             Vector2 halfSize = new Vector2((MapScreenBounds.Width - arrowSourceRect.Width) / 2f, (MapScreenBounds.Height - arrowSourceRect.Height) / 2f);
-            Vector2 playerOffsetFromCenter = directionToPlayer * CellSize;
+            Vector2 playerOffsetFromCenter = directionToPlayer * _cellSize;
 
             float scaleX = (playerOffsetFromCenter.X != 0) ? halfSize.X / Math.Abs(playerOffsetFromCenter.X) : float.MaxValue;
             float scaleY = (playerOffsetFromCenter.Y != 0) ? halfSize.Y / Math.Abs(playerOffsetFromCenter.Y) : float.MaxValue;
@@ -536,7 +585,7 @@ namespace ProjectVagabond
 
             if (gridX >= 0 && gridX < GridSizeX && gridY >= 0 && gridY < GridSizeY)
             {
-                return new Vector2(_mapGridBounds.X + gridX * CellSize, _mapGridBounds.Y + gridY * CellSize);
+                return new Vector2(_mapGridBounds.X + gridX * _cellSize, _mapGridBounds.Y + gridY * _cellSize);
             }
             return null;
         }
@@ -548,8 +597,8 @@ namespace ProjectVagabond
                 return new Vector2(-1, -1);
             }
 
-            int gridX = (screenPosition.X - _mapGridBounds.X) / CellSize;
-            int gridY = (screenPosition.Y - _mapGridBounds.Y) / CellSize;
+            int gridX = (screenPosition.X - _mapGridBounds.X) / _cellSize;
+            int gridY = (screenPosition.Y - _mapGridBounds.Y) / _cellSize;
 
             Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
             int startX = (int)viewCenter.X - GridSizeX / 2;

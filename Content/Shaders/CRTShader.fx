@@ -31,9 +31,9 @@ static const float CONTRAST_AMOUNT = 1.2;
 static const float SCANLINE_INTENSITY = 0.45;
 static const float SCANLINE_FREQUENCY = 1.0f; // Set to 1.0f for 1:1 pixel scanlines
 // --- Wobble Parameters ---
-static const float WOBBLE_AMOUNT = 0.5;
-static const float WOBBLE_FREQUENCY = 15.0;
-static const float WOBBLE_VERTICAL_FREQUENCY = 250.0;
+static const float WOBBLE_AMOUNT = 0.505;
+static const float WOBBLE_FREQUENCY = -2.0;
+static const float WOBBLE_VERTICAL_FREQUENCY = 150.0;
 // --- Impact Glitch Parameters ---
 static const float IMPACT_GLITCH_BLOCK_HEIGHT = 0.002;
 static const float IMPACT_GLITCH_INTENSITY = 0.02;

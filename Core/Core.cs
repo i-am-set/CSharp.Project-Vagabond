@@ -210,9 +210,6 @@ namespace ProjectVagabond
             var commandProcessor = new CommandProcessor(playerInputSystem);
             ServiceLocator.Register<CommandProcessor>(commandProcessor);
 
-            var statsRenderer = new StatsRenderer();
-            ServiceLocator.Register<StatsRenderer>(statsRenderer);
-
             var inputHandler = new InputHandler();
             ServiceLocator.Register<InputHandler>(inputHandler);
 
@@ -488,7 +485,7 @@ namespace ProjectVagabond
 
             // --- Phase 2: Composite everything onto the full-screen render target ---
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
-            GraphicsDevice.Clear(_global.Palette_Black);
+            GraphicsDevice.Clear(_global.GameBg);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
@@ -502,7 +499,7 @@ namespace ProjectVagabond
 
             // --- Phase 3: Render the final composite to the screen with the CRT shader ---
             GraphicsDevice.SetRenderTarget(null);
-            GraphicsDevice.Clear(_global.Palette_Black);
+            GraphicsDevice.Clear(_global.GameBg);
 
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
             _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp, null, null, null, shakeMatrix);

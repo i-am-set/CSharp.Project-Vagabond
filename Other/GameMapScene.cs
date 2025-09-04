@@ -19,13 +19,14 @@ namespace ProjectVagabond.Scenes
         private readonly SpriteManager _spriteManager;
         private readonly MapInputHandler _mapInputHandler;
         private readonly MapRenderer _mapRenderer;
-        private readonly StatsRenderer _statsRenderer;
         private readonly HapticsManager _hapticsManager;
         private readonly DiceRollingSystem _diceRollingSystem;
         private readonly PlayerInputSystem _playerInputSystem;
         private readonly AnimationManager _animationManager;
         private ImageButton _settingsButton;
         private readonly Global _global;
+
+        private MouseState _previousMouseState;
 
         public GameMapScene()
         {
@@ -34,7 +35,6 @@ namespace ProjectVagabond.Scenes
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _mapInputHandler = ServiceLocator.Get<MapInputHandler>();
             _mapRenderer = ServiceLocator.Get<MapRenderer>();
-            _statsRenderer = ServiceLocator.Get<StatsRenderer>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _playerInputSystem = ServiceLocator.Get<PlayerInputSystem>();
@@ -77,6 +77,7 @@ namespace ProjectVagabond.Scenes
             _settingsButton.Bounds = new Rectangle(buttonX, buttonY, _settingsButton.Bounds.Width, _settingsButton.Bounds.Height);
 
             _previousKeyboardState = Keyboard.GetState();
+            _previousMouseState = Mouse.GetState();
 
             _animationManager.Register("MapBorderSway", _mapRenderer.SwayAnimation);
         }
@@ -101,6 +102,7 @@ namespace ProjectVagabond.Scenes
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
             var font = ServiceLocator.Get<BitmapFont>();
+            var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             _diceRollingSystem.Update(gameTime);
             _settingsButton?.Update(currentMouseState);
@@ -137,6 +139,19 @@ namespace ProjectVagabond.Scenes
                 _mapRenderer.ResetCamera();
             }
 
+            // --- Handle Map Zoom ---
+            if (currentMouseState.ScrollWheelValue != _previousMouseState.ScrollWheelValue && _mapRenderer.MapScreenBounds.Contains(virtualMousePos))
+            {
+                if (currentMouseState.ScrollWheelValue > _previousMouseState.ScrollWheelValue)
+                {
+                    _mapRenderer.ZoomIn();
+                }
+                else
+                {
+                    _mapRenderer.ZoomOut();
+                }
+            }
+
             if (_gameState.IsPaused)
             {
                 base.Update(gameTime);
@@ -151,11 +166,11 @@ namespace ProjectVagabond.Scenes
             {
                 _mapInputHandler.Update(gameTime);
                 _mapRenderer.Update(gameTime, font);
-                _statsRenderer.Update(gameTime);
             }
 
             _hapticsManager.Update(gameTime);
 
+            _previousMouseState = currentMouseState;
             base.Update(gameTime); // This now updates the intro animator and previous input states
         }
 
@@ -168,29 +183,10 @@ namespace ProjectVagabond.Scenes
             else
             {
                 _mapRenderer.DrawMap(spriteBatch, font, gameTime);
-
-                var mapBounds = _mapRenderer.MapScreenBounds;
-                int leftColumnWidth = mapBounds.X;
-                if (leftColumnWidth > 20)
-                {
-                    _statsRenderer.DrawStats(spriteBatch, font, new Vector2(10, mapBounds.Y), leftColumnWidth - 20);
-                }
             }
 
             // Draw the settings button. Its position is now static and set in Enter().
             _settingsButton?.Draw(spriteBatch, font, gameTime);
-
-            // Draw camera recenter prompt if needed
-            if (_mapRenderer.IsCameraDetached)
-            {
-                string text = "Press [SPACE] to recenter";
-                Vector2 textSize = font.MeasureString(text);
-                Vector2 textPos = new Vector2(
-                    (Global.VIRTUAL_WIDTH - textSize.X) / 2,
-                    Global.VIRTUAL_HEIGHT - textSize.Y - 20
-                );
-                spriteBatch.DrawStringSnapped(font, text, textPos, _global.Palette_Yellow);
-            }
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

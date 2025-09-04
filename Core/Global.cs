@@ -24,10 +24,10 @@ namespace ProjectVagabond
         private static readonly Global _instance = new Global();
         private Global()
         {
-            WaterColor = Palette_LightBlue;
-            FlatlandColor = Palette_Gray;
-            HillColor = Palette_Gray;
-            MountainColor = Palette_Gray;
+            WaterColor = Palette_DarkBlue;
+            FlatlandColor = Palette_DarkGray;
+            HillColor = Palette_DarkGray;
+            MountainColor = Palette_DarkGray;
             PlayerColor = Palette_Red;
             PathColor = Palette_Yellow;
             RunPathColor = Palette_Orange;
@@ -126,7 +126,7 @@ namespace ProjectVagabond
         public float MountainsLevel { get; set; } = 0.8f;
 
         // Static Color Palette
-        public Color Palette_Black { get; set; } = new Color(13, 12, 18);
+        public Color Palette_Black { get; set; } = new Color(14, 13, 19); // #2a2839
         public Color Palette_DarkGray { get; set; } = new Color(42, 40, 57); // #2E2C3B
         public Color Palette_Gray { get; set; } = new Color(62, 65, 95); // #3E415F
         public Color Palette_LightGray { get; set; } = new Color(85, 96, 125); // #55607D

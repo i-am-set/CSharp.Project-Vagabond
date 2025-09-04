@@ -106,7 +106,7 @@ namespace ProjectVagabond
             }
             if (menuWasOpen) return;
 
-            HandleCameraPan();
+            HandleCameraPan(virtualMousePos);
 
             // Don't handle other map interactions if we are currently panning the camera.
             if (!_isPanning)
@@ -127,13 +127,13 @@ namespace ProjectVagabond
             _gameState.CancelExecutingActions();
         }
 
-        private void HandleCameraPan()
+        private void HandleCameraPan(Vector2 virtualMousePos)
         {
             bool middleClickPressed = _currentMouseState.MiddleButton == ButtonState.Pressed && _previousMouseState.MiddleButton == ButtonState.Released;
             bool middleClickHeld = _currentMouseState.MiddleButton == ButtonState.Pressed;
             bool middleClickReleased = _currentMouseState.MiddleButton == ButtonState.Released && _previousMouseState.MiddleButton == ButtonState.Pressed;
 
-            if (middleClickPressed)
+            if (middleClickPressed && _mapRenderer.MapScreenBounds.Contains(virtualMousePos))
             {
                 _isPanning = true;
                 _panStartMousePosition = _currentMouseState.Position;
