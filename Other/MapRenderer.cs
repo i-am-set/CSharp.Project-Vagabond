@@ -18,7 +18,6 @@ namespace ProjectVagabond
         private readonly SpriteManager _spriteManager;
         private readonly TooltipManager _tooltipManager;
         private readonly ArchetypeManager _archetypeManager;
-        private readonly WorldClockManager _worldClockManager;
         private readonly Global _global;
 
         private Vector2? _hoveredGridPos;
@@ -65,7 +64,6 @@ namespace ProjectVagabond
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
             _archetypeManager = ServiceLocator.Get<ArchetypeManager>();
-            _worldClockManager = ServiceLocator.Get<WorldClockManager>();
             _global = ServiceLocator.Get<Global>();
             _contextMenu = new ContextMenu();
 

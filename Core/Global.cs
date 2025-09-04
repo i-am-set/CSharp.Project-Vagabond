@@ -62,10 +62,8 @@ namespace ProjectVagabond
         public const string GAME_VERSION = "0.1.0";
 
         // World constants
-        public const float GAME_SECONDS_PER_REAL_SECOND = 8f;
         public const float FEET_PER_WORLD_TILE = 200f; // The physical distance of a single world tile  
         public const float FEET_PER_SECOND_PER_SPEED_UNIT = 4.0f; // A character with speed 1.0 moves at X ft/s.
-        public const float ACTION_TICK_DURATION_SECONDS = 1.0f; // Real-world duration of a single move/action tick at 1x speed.
 
         // Physics constants
         public const float PHYSICS_UPDATES_PER_SECOND = 60f;
@@ -116,18 +114,11 @@ namespace ProjectVagabond
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         // Debugging variables
-        public bool EnableMasterTimeScaleOnStart { get; set; } = false;
-        public float MasterTimeScale { get; set; } = 0.1f; // 1.0f = normal speed
         public bool ShowDebugOverlays { get; set; } = false;
 
         // Settings variables
         public bool UseImperialUnits { get; set; } = false;
         public bool Use24HourClock { get; set; } = false;
-
-        // Time scale multipliers
-        public float TimeScaleMultiplier1 { get; set; } = 1.0f;
-        public float TimeScaleMultiplier2 { get; set; } = 2.0f;
-        public float TimeScaleMultiplier3 { get; set; } = 5.0f;
 
         // Input variables
         public int previousScrollValue = Mouse.GetState().ScrollWheelValue;

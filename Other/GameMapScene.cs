@@ -24,7 +24,6 @@ namespace ProjectVagabond.Scenes
         private readonly DiceRollingSystem _diceRollingSystem;
         private readonly PlayerInputSystem _playerInputSystem;
         private readonly AnimationManager _animationManager;
-        private WaitDialog _waitDialog;
         private ImageButton _settingsButton;
 
         public GameMapScene()
@@ -54,7 +53,6 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             _core.IsMouseVisible = true;
-            _waitDialog = new WaitDialog(this);
             _mapRenderer.ResetHeaderState();
 
             if (_settingsButton == null)
@@ -98,25 +96,14 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
-            if (_gameState.IsAwaitingTimePass)
-            {
-                var worldClock = ServiceLocator.Get<WorldClockManager>();
-                _gameState.TimePassFailsafeTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (!worldClock.IsInterpolatingTime || _gameState.TimePassFailsafeTimer <= 0)
-                {
-                    _gameState.IsAwaitingTimePass = false;
-                }
-            }
-
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
             var font = ServiceLocator.Get<BitmapFont>();
 
             _diceRollingSystem.Update(gameTime);
-            _waitDialog.Update(gameTime);
             _settingsButton?.Update(currentMouseState);
 
-            if (_waitDialog.IsActive || IsInputBlocked)
+            if (IsInputBlocked)
             {
                 base.Update(gameTime);
                 return;
@@ -185,19 +172,10 @@ namespace ProjectVagabond.Scenes
 
             // Draw the settings button. Its position is now static and set in Enter().
             _settingsButton?.Draw(spriteBatch, font, gameTime);
-
-            if (_waitDialog.IsActive)
-            {
-                _waitDialog.DrawContent(spriteBatch, font, gameTime);
-            }
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            if (_waitDialog.IsActive)
-            {
-                _waitDialog.DrawOverlay(spriteBatch);
-            }
         }
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

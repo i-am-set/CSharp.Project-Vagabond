@@ -12,14 +12,12 @@ namespace ProjectVagabond.UI
     public class PromptRenderer
     {
         private readonly GameState _gameState;
-        private readonly WorldClockManager _worldClockManager;
         private readonly Global _global;
         private readonly StringBuilder _stringBuilder = new StringBuilder();
 
         public PromptRenderer()
         {
             _gameState = ServiceLocator.Get<GameState>();
-            _worldClockManager = ServiceLocator.Get<WorldClockManager>();
             _global = ServiceLocator.Get<Global>();
         }
 
@@ -90,15 +88,11 @@ namespace ProjectVagabond.UI
                 lines.Add($"[gold]Pending[orange] {string.Join(", ", details)}");
 
                 var simResult = _gameState.PendingQueueSimulationResult;
-                float secondsPassed = simResult.secondsPassed;
+                int ticksPassed = simResult.ticksPassed;
 
-                if (secondsPassed > 0.01f)
+                if (ticksPassed > 0)
                 {
-                    string finalETA = _worldClockManager.GetCalculatedNewTime(_worldClockManager.CurrentTime, (int)secondsPassed);
-                    finalETA = _global.Use24HourClock ? finalETA : _worldClockManager.GetConverted24hToAmPm(finalETA);
-                    string formattedDuration = _worldClockManager.GetFormattedTimeFromSecondsShortHand(secondsPassed);
-                    lines.Add($"[gold]Arrival Time:[orange] ~{finalETA}");
-                    lines.Add($"[Palette_Gray](about {formattedDuration})");
+                    lines.Add($"[gold]Action Cost:[orange] ~{ticksPassed} Ticks");
                 }
             }
             return lines;

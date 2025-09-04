@@ -13,12 +13,7 @@ namespace ProjectVagabond
     {
         private GameState _gameState;
         private readonly ComponentStore _componentStore;
-        private WorldClockManager _worldClockManager;
         private readonly ChunkManager _chunkManager;
-
-        // Timer for the new tick-based movement system
-        private float _moveTickTimer = 0f;
-        private bool _isFirstActionInQueue = true;
 
         public ActionExecutionSystem()
         {
@@ -28,13 +23,11 @@ namespace ProjectVagabond
 
         public void StartExecution()
         {
-            _isFirstActionInQueue = true;
         }
 
 
         public void StopExecution()
         {
-            _isFirstActionInQueue = true;
         }
 
         /// <summary>
@@ -43,7 +36,6 @@ namespace ProjectVagabond
         public void HandleInterruption()
         {
             _gameState ??= ServiceLocator.Get<GameState>();
-            _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
             int playerEntityId = _gameState.PlayerEntityId;
             _componentStore.RemoveComponent<MoveAction>(playerEntityId);
@@ -51,41 +43,29 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Updates the action system, processing actions for the player out of combat.
+        /// Updates the action system, processing one action per frame from the player's queue.
         /// </summary>
         public void Update(GameTime gameTime)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
-            _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
             if (_gameState.IsPaused || !_gameState.IsExecutingActions)
             {
                 return;
             }
 
-            // Calculate the duration of the current tick based on the time scale.
-            float currentTickDuration = Global.ACTION_TICK_DURATION_SECONDS / _worldClockManager.TimeScale;
-
-            // If this is the first action in the queue, execute it immediately without a timer.
-            if (_isFirstActionInQueue && _gameState.PendingActions.Any())
+            if (_gameState.PendingActions.Any())
             {
-                ProcessNextActionInQueue(currentTickDuration);
-                _isFirstActionInQueue = false;
-                _moveTickTimer = 0f; // Reset the timer so the *next* action has the full delay.
-                return;
+                ProcessNextActionInQueue();
             }
-
-            // For all subsequent actions, wait for the tick timer.
-            _moveTickTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            if (_moveTickTimer >= currentTickDuration)
+            else if (_gameState.IsExecutingActions) // Queue is empty, stop executing
             {
-                _moveTickTimer -= currentTickDuration; // Decrement, keeping any leftover time for the next frame.
-                ProcessNextActionInQueue(currentTickDuration);
+                _gameState.ToggleExecutingActions(false);
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Action queue completed." });
             }
         }
 
-        private void ProcessNextActionInQueue(float tickDuration)
+        private void ProcessNextActionInQueue()
         {
             int playerEntityId = _gameState.PlayerEntityId;
             var playerActionQueueComp = _componentStore.GetComponent<ActionQueueComponent>(playerEntityId);
@@ -93,58 +73,19 @@ namespace ProjectVagabond
             if (playerActionQueueComp != null && playerActionQueueComp.ActionQueue.Count > 0)
             {
                 IAction nextAction = playerActionQueueComp.ActionQueue.Dequeue();
-                float actionCostInGameSeconds = CalculateSecondsForAction(_gameState, nextAction);
 
-                ActivityType activity = ActivityType.Waiting;
                 if (nextAction is MoveAction ma)
                 {
-                    activity = ma.Mode switch
-                    {
-                        MovementMode.Walk => ActivityType.Walking,
-                        MovementMode.Jog => ActivityType.Jogging,
-                        MovementMode.Run => ActivityType.Running,
-                        _ => ActivityType.Waiting
-                    };
                     ApplyMoveActionEffects(_gameState, playerEntityId, ma);
                 }
                 else if (nextAction is RestAction ra)
                 {
-                    activity = ActivityType.Waiting;
                     ApplyRestActionEffects(_gameState, playerEntityId, ra);
                 }
 
-                // The clock's visual animation will last for the duration of this tick.
-                _worldClockManager.PassTime(actionCostInGameSeconds, tickDuration, activity);
+                // Signal that the player has completed an action, allowing other systems (like AI) to take a turn.
+                EventBus.Publish(new GameEvents.PlayerActionExecuted { Action = nextAction });
             }
-            else if (_gameState.IsExecutingActions)
-            {
-                _gameState.ToggleExecutingActions(false);
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Action queue completed." });
-            }
-        }
-
-        private float CalculateSecondsForAction(GameState gameState, IAction action)
-        {
-            if (action is MoveAction moveAction)
-            {
-                var previousPosition = gameState.PlayerWorldPos;
-                var mapData = gameState.GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
-                Vector2 moveDirection = moveAction.Destination - previousPosition;
-                var playerStats = gameState.PlayerStats;
-                if (playerStats == null) return 0;
-
-                return gameState.GetSecondsPassedDuringMovement(playerStats, moveAction.Mode, mapData, moveDirection);
-            }
-            else if (action is RestAction restAction)
-            {
-                switch (restAction.RestType)
-                {
-                    case RestType.ShortRest: return gameState.PlayerStats.ShortRestDuration * 60;
-                    case RestType.LongRest: return gameState.PlayerStats.LongRestDuration * 60;
-                    case RestType.FullRest: return gameState.PlayerStats.FullRestDuration * 60;
-                }
-            }
-            return 0;
         }
 
         private void ApplyMoveActionEffects(GameState gameState, int entityId, MoveAction action)

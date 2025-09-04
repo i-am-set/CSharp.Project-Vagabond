@@ -13,28 +13,28 @@ namespace ProjectVagabond
         private GameState _gameState;
         private readonly ComponentStore _componentStore;
         private readonly ChunkManager _chunkManager;
-        private readonly WorldClockManager _worldClockManager;
         private readonly Random _random = new();
 
         public AISystem()
         {
             _componentStore = ServiceLocator.Get<ComponentStore>();
             _chunkManager = ServiceLocator.Get<ChunkManager>();
-            _worldClockManager = ServiceLocator.Get<WorldClockManager>();
-            _worldClockManager.OnTimePassed += HandleTimePassed;
             EventBus.Subscribe<GameEvents.PlayerMoved>(HandlePlayerMoved);
+            EventBus.Subscribe<GameEvents.PlayerActionExecuted>(HandlePlayerActionExecuted);
         }
 
-        private void HandleTimePassed(float secondsPassed, ActivityType activity)
+        private void HandlePlayerActionExecuted(GameEvents.PlayerActionExecuted e)
         {
+            // This is the new entry point for AI to take their turn.
+            // For each player action, every active AI gets a chance to act.
             _gameState ??= ServiceLocator.Get<GameState>();
 
             foreach (var entityId in _gameState.ActiveEntities)
             {
-                var aiComp = _componentStore.GetComponent<AIComponent>(entityId);
-                if (aiComp != null && _componentStore.HasComponent<NPCTagComponent>(entityId))
+                if (_componentStore.HasComponent<AIComponent>(entityId))
                 {
-                    aiComp.ActionTimeBudget += secondsPassed;
+                    // TODO: Implement AI turn logic here.
+                    // For example, grant the AI one "action point" to spend.
                 }
             }
         }

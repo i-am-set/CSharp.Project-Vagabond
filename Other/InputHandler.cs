@@ -13,9 +13,7 @@ namespace ProjectVagabond
         // Injected Dependencies
         private readonly GameState _gameState;
         private readonly PlayerInputSystem _playerInputSystem;
-        private readonly ClockRenderer _clockRenderer;
         private readonly Global _global;
-        private WorldClockManager _worldClockManager; // Lazy loaded
         private AutoCompleteManager _autoCompleteManager; // Lazy loaded
         private CommandProcessor _commandProcessor; // Lazy loaded
         private TerminalRenderer _terminalRenderer; // Lazy loaded
@@ -42,7 +40,6 @@ namespace ProjectVagabond
         {
             _gameState = ServiceLocator.Get<GameState>();
             _playerInputSystem = ServiceLocator.Get<PlayerInputSystem>();
-            _clockRenderer = ServiceLocator.Get<ClockRenderer>();
             _global = ServiceLocator.Get<Global>();
         }
 
@@ -58,18 +55,9 @@ namespace ProjectVagabond
             _terminalRenderer ??= ServiceLocator.Get<TerminalRenderer>();
             _autoCompleteManager ??= ServiceLocator.Get<AutoCompleteManager>();
             _commandProcessor ??= ServiceLocator.Get<CommandProcessor>();
-            _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
 
             KeyboardState currentKeyboardState = Keyboard.GetState();
             MouseState currentMouseState = Mouse.GetState();
-
-            // If the game is awaiting a time pass animation to finish, block all input.
-            if (_gameState.IsAwaitingTimePass)
-            {
-                _previousKeyboardState = currentKeyboardState;
-                _previousMouseState = currentMouseState;
-                return;
-            }
 
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
@@ -228,8 +216,8 @@ namespace ProjectVagabond
 
         private void HandleRealTimeMovement(KeyboardState currentKeyboardState)
         {
-            // Block new movement if an action queue is running or if the clock is currently animating.
-            if (_gameState.IsExecutingActions || _worldClockManager.IsInterpolatingTime)
+            // Block new movement if an action queue is running.
+            if (_gameState.IsExecutingActions)
             {
                 return;
             }

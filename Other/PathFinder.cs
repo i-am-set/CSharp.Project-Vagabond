@@ -64,13 +64,10 @@ namespace ProjectVagabond
                     {
                         moveCost = isDiagonal ? 1.414f : 1f;
                     }
-                    else
+                    else // PathfindingMode.Time is now interpreted as PathfindingMode.Ticks
                     {
-                        Vector2 moveDir = _neighborOffsets[i];
-                        // We use player stats here because pathfinder doesn't know which entity is pathing.
-                        // The cost is relative, so this is acceptable for finding the "fastest" path.
-                        // The actual time cost is calculated later when truncating the path.
-                        moveCost = gameState.GetSecondsPassedDuringMovement(gameState.PlayerStats, mode, mapData, moveDir);
+                        // The cost is the number of ticks the move will take.
+                        moveCost = gameState.GetMovementTickCost(mode, mapData);
                     }
 
                     float tentative_gScore = current_gScore + moveCost;

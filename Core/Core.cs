@@ -78,8 +78,6 @@ namespace ProjectVagabond
 
         // Physics Timestep
         private float _physicsTimeAccumulator = 0f;
-        private TimeSpan _scaledTotalGameTime = TimeSpan.Zero;
-        private bool _isTimeSlowed = false;
 
         // Loading State
         private bool _isGameLoaded = false;
@@ -113,7 +111,6 @@ namespace ProjectVagabond
             ServiceLocator.Register<GameSettings>(_settings);
 
             _global = ServiceLocator.Get<Global>();
-            _isTimeSlowed = _global.EnableMasterTimeScaleOnStart;
 
             // Phase 2: GraphicsDevice Registration
             ServiceLocator.Register<GraphicsDevice>(GraphicsDevice);
@@ -146,9 +143,6 @@ namespace ProjectVagabond
 
             var itemManager = new ItemManager();
             ServiceLocator.Register<ItemManager>(itemManager);
-
-            var worldClockManager = new WorldClockManager();
-            ServiceLocator.Register<WorldClockManager>(worldClockManager);
 
             _loadingScreen = new LoadingScreen();
             ServiceLocator.Register<LoadingScreen>(_loadingScreen);
@@ -189,7 +183,7 @@ namespace ProjectVagabond
             ServiceLocator.Register<BackgroundManager>(_backgroundManager);
 
             // GameState must be registered before systems that depend on it in their constructor.
-            _gameState = new GameState(noiseManager, componentStore, worldClockManager, chunkManager, _global, _spriteManager);
+            _gameState = new GameState(noiseManager, componentStore, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
 
             var playerInputSystem = new PlayerInputSystem();
@@ -203,7 +197,6 @@ namespace ProjectVagabond
 
             var statusEffectSystem = new StatusEffectSystem();
             ServiceLocator.Register<StatusEffectSystem>(statusEffectSystem);
-            worldClockManager.OnTimePassed += statusEffectSystem.ProcessTimePassed;
 
             var energySystem = new EnergySystem();
             ServiceLocator.Register<EnergySystem>(energySystem);
@@ -228,11 +221,6 @@ namespace ProjectVagabond
 
             var statsRenderer = new StatsRenderer();
             ServiceLocator.Register<StatsRenderer>(statsRenderer);
-
-            var clockRenderer = new ClockRenderer();
-            ServiceLocator.Register<ClockRenderer>(clockRenderer);
-
-
 
             var inputHandler = new InputHandler();
             ServiceLocator.Register<InputHandler>(inputHandler);
@@ -384,10 +372,6 @@ namespace ProjectVagabond
                 _global.ShowDebugOverlays = !_global.ShowDebugOverlays;
                 _diceRollingSystem.DebugShowColliders = _global.ShowDebugOverlays;
             }
-            if (currentKeyboardState.IsKeyDown(Keys.F4) && _previousKeyboardState.IsKeyUp(Keys.F4))
-            {
-                _isTimeSlowed = !_isTimeSlowed;
-            }
             if (currentKeyboardState.IsKeyDown(Keys.F5) && _previousKeyboardState.IsKeyUp(Keys.F5))
             {
                 // F5 is now a general debug key, its combat functionality is removed.
@@ -452,28 +436,22 @@ namespace ProjectVagabond
                 }
             }
 
-            // Create a scaled GameTime object for slow-motion debugging.
-            float currentTimeScale = _isTimeSlowed ? _global.MasterTimeScale : 1.0f;
-            var scaledElapsedTime = TimeSpan.FromTicks((long)(gameTime.ElapsedGameTime.Ticks * currentTimeScale));
-            _scaledTotalGameTime += scaledElapsedTime;
-            var scaledGameTime = new GameTime(_scaledTotalGameTime, scaledElapsedTime);
-
             // The loading screen now acts as a modal state that can be triggered at any time.
             if (_loadingScreen.IsActive)
             {
-                _loadingScreen.Update(scaledGameTime);
-                _sceneManager.Update(scaledGameTime); // Allow scene manager to update its transition state
+                _loadingScreen.Update(gameTime);
+                _sceneManager.Update(gameTime); // Allow scene manager to update its transition state
                 // The dice system might be warming up, so it needs updates.
                 if (!_isGameLoaded)
                 {
-                    _diceRollingSystem.Update(scaledGameTime);
+                    _diceRollingSystem.Update(gameTime);
                 }
                 return; // Block all other game updates
             }
 
             // This ensures physics calculations are stable and not dependent on the frame rate.
             // We multiply by the simulation speed to "fast forward" the physics time.
-            float elapsedSeconds = (float)scaledGameTime.ElapsedGameTime.TotalSeconds;
+            float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
             _physicsTimeAccumulator += elapsedSeconds * _global.DiceSimulationSpeedMultiplier;
 
             while (_physicsTimeAccumulator >= Global.FIXED_PHYSICS_TIMESTEP)
@@ -485,11 +463,11 @@ namespace ProjectVagabond
             }
 
             // --- Frame-Rate Dependent Updates ---
-            _sceneManager.Update(scaledGameTime);
-            _tooltipManager.Update(scaledGameTime); // Tooltips should always update.
-            _particleSystemManager.Update(scaledGameTime);
-            _diceRollingSystem.Update(scaledGameTime); // Update dice visuals and game logic every frame.
-            _animationManager.Update(scaledGameTime);
+            _sceneManager.Update(gameTime);
+            _tooltipManager.Update(gameTime); // Tooltips should always update.
+            _particleSystemManager.Update(gameTime);
+            _diceRollingSystem.Update(gameTime); // Update dice visuals and game logic every frame.
+            _animationManager.Update(gameTime);
 
             // These systems handle game logic and should be paused.
             if (!_gameState.IsPaused)
@@ -497,13 +475,13 @@ namespace ProjectVagabond
                 if (_sceneManager.CurrentActiveScene is GameMapScene)
                 {
                     _gameState.UpdateActiveEntities();
-                    _systemManager.Update(scaledGameTime);
+                    _systemManager.Update(gameTime);
                 }
             }
 
             _hapticsManager.Update(gameTime);
 
-            base.Update(gameTime); // Base.Update uses the unscaled gameTime for window events.
+            base.Update(gameTime);
         }
 
         protected override void Draw(GameTime gameTime)

@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.Collections.Generic;
@@ -14,7 +13,6 @@ namespace ProjectVagabond
     public class PlayerInputSystem : ISystem
     {
         private readonly ComponentStore _componentStore;
-        private WorldClockManager _worldClockManager; // Lazy loaded
 
         public PlayerInputSystem()
         {
@@ -25,8 +23,6 @@ namespace ProjectVagabond
 
         public void ExecuteSingleStepMove(GameState gameState, Vector2 direction)
         {
-            _worldClockManager ??= ServiceLocator.Get<WorldClockManager>();
-
             if (gameState.PendingActions.Any())
             {
                 CancelPendingActions(gameState);
@@ -44,23 +40,14 @@ namespace ProjectVagabond
             if (gameState.IsPositionPassable(nextPos, MapView.World, out var mapData))
             {
                 var moveAction = new MoveAction(gameState.PlayerEntityId, nextPos, mode);
-                float timeCost = gameState.GetSecondsPassedDuringMovement(playerStats, mode, mapData, direction);
                 int energyCost = gameState.GetMovementEnergyCost(moveAction);
 
                 if (playerStats.CanExertEnergy(energyCost))
                 {
-                    float tickDuration = Global.ACTION_TICK_DURATION_SECONDS / _worldClockManager.TimeScale;
-                    ActivityType activity = mode switch
-                    {
-                        MovementMode.Run => ActivityType.Running,
-                        MovementMode.Jog => ActivityType.Jogging,
-                        _ => ActivityType.Walking
-                    };
-
-                    _worldClockManager.PassTime(timeCost, tickDuration, activity);
                     playerPosComp.WorldPosition = nextPos;
                     playerStats.ExertEnergy(energyCost);
                     EventBus.Publish(new GameEvents.PlayerMoved { NewPosition = nextPos });
+                    EventBus.Publish(new GameEvents.PlayerActionExecuted { Action = moveAction });
 
                     CheckForPOITrigger(gameState, gameState.PlayerEntityId, nextPos);
                 }
@@ -102,7 +89,7 @@ namespace ProjectVagabond
             {
                 var nextAction = new MoveAction(playerEntityId, nextPos, mode);
                 var tempQueue = new List<IAction>(actionQueue) { nextAction };
-                var simulationResult = gameState.SimulateActionQueueEnergy(tempQueue);
+                var simulationResult = gameState.SimulateActionQueue(tempQueue);
 
                 if (!simulationResult.possible)
                 {
@@ -110,7 +97,7 @@ namespace ProjectVagabond
                     var restAction = new RestAction(playerEntityId, RestType.ShortRest, restPosition);
                     var tempQueueWithRest = new List<IAction>(actionQueue) { restAction, nextAction };
 
-                    if (gameState.SimulateActionQueueEnergy(tempQueueWithRest).possible)
+                    if (gameState.SimulateActionQueue(tempQueueWithRest).possible)
                     {
                         actionQueue.Enqueue(restAction);
                         actionQueue.Enqueue(nextAction);
@@ -300,7 +287,7 @@ namespace ProjectVagabond
 
                     var nextAction = new MoveAction(playerEntityId, nextPos, mode);
                     var tempQueue = new List<IAction>(actionQueue) { nextAction };
-                    var simulationResult = gameState.SimulateActionQueueEnergy(tempQueue);
+                    var simulationResult = gameState.SimulateActionQueue(tempQueue);
 
                     if (!simulationResult.possible)
                     {
@@ -309,7 +296,7 @@ namespace ProjectVagabond
                         var tempQueueWithRest = new List<IAction>(actionQueue);
                         tempQueueWithRest.Add(new RestAction(playerEntityId, RestType.ShortRest, restPosition));
                         tempQueueWithRest.Add(nextAction);
-                        if (gameState.SimulateActionQueueEnergy(tempQueueWithRest).possible)
+                        if (gameState.SimulateActionQueue(tempQueueWithRest).possible)
                         {
                             actionQueue.Enqueue(new RestAction(playerEntityId, RestType.ShortRest, restPosition));
                         }

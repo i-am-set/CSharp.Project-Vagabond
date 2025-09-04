@@ -72,5 +72,14 @@ namespace ProjectVagabond
         public struct UIThemeOrResolutionChanged
         {
         }
+
+        /// <summary>
+        /// Published when the player entity completes a single action from its queue.
+        /// This signals to other systems, like AI, that they can take their turn.
+        /// </summary>
+        public struct PlayerActionExecuted
+        {
+            public IAction Action { get; set; }
+        }
     }
 }

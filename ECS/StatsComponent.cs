@@ -20,9 +20,6 @@ namespace ProjectVagabond
         private int _carryCapacity;
         private int _mentalResistance;
         private int _socialInfluence;
-        private int _shortRestDuration = 10; // minutes
-        private int _longRestDuration = 60;
-        private int _fullRestDuration = 60 * 8;
 
         // Current values
         private int _currentHealthPoints;
@@ -44,7 +41,6 @@ namespace ProjectVagabond
 
         // New Time Variance Property
         public float TimeVariance { get; set; } = 0.2f;
-        public float SecondsPerEnergyPoint { get; set; }
 
         // Secondary stats (read-only)
         public int MaxHealthPoints => _maxHealthPoints;
@@ -55,9 +51,6 @@ namespace ProjectVagabond
         public int CarryCapacity => _carryCapacity;
         public int MentalResistance => _mentalResistance;
         public int SocialInfluence => _socialInfluence;
-        public int ShortRestDuration => _shortRestDuration; // in minutes
-        public int LongRestDuration => _longRestDuration; // in minutes
-        public int FullRestDuration => _fullRestDuration; // in minutes
         public int ShortRestEnergyRestored => (int)Math.Floor((double)_maxEnergyPoints * 0.8f);
         public int LongRestEnergyRestored => _maxEnergyPoints;
         public int FullRestEnergyRestored => _maxEnergyPoints;
@@ -90,7 +83,6 @@ namespace ProjectVagabond
             _weight = 70f; // kg
             _age = 25;
             _background = "Wanderer";
-            SecondsPerEnergyPoint = 10f; // Default value
         }
 
         /// <summary>

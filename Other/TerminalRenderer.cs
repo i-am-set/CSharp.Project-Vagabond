@@ -18,7 +18,6 @@ namespace ProjectVagabond
     {
         // Injected Dependencies
         private readonly GameState _gameState;
-        private readonly WorldClockManager _worldClockManager;
         private readonly HapticsManager _hapticsManager;
         private readonly Global _global;
         private AutoCompleteManager _autoCompleteManager; // Lazy loaded
@@ -51,7 +50,6 @@ namespace ProjectVagabond
         {
             // Acquire dependencies from the ServiceLocator
             _gameState = ServiceLocator.Get<GameState>();
-            _worldClockManager = ServiceLocator.Get<WorldClockManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _global = ServiceLocator.Get<Global>();
 

@@ -18,7 +18,6 @@ namespace ProjectVagabond
         // Injected Dependencies
         private readonly NoiseMapManager _noiseManager;
         private readonly ComponentStore _componentStore;
-        private readonly WorldClockManager _worldClockManager;
         private readonly ChunkManager _chunkManager;
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
@@ -30,11 +29,6 @@ namespace ProjectVagabond
         private bool _isPaused = false;
         private readonly Random _random = new Random();
         private static readonly Queue<IAction> _emptyActionQueue = new Queue<IAction>();
-
-        // State Flags
-        public bool IsAwaitingTimePass { get; set; } = false;
-        public float TimePassFailsafeTimer { get; set; } = 0f;
-
 
         public MapView PathExecutionMapView { get; private set; }
 
@@ -59,7 +53,7 @@ namespace ProjectVagabond
         public bool IsPaused => _isPaused;
         public NoiseMapManager NoiseManager => _noiseManager;
         public StatsComponent PlayerStats => _componentStore.GetComponent<StatsComponent>(PlayerEntityId);
-        public (int finalEnergy, bool possible, float secondsPassed) PendingQueueSimulationResult => SimulateActionQueueEnergy();
+        public (int finalEnergy, bool possible, int ticksPassed) PendingQueueSimulationResult => SimulateActionQueue();
         public List<int> ActiveEntities { get; private set; } = new List<int>();
         public int InitialActionCount { get; private set; }
         public bool IsActionQueueDirty { get; set; } = true;
@@ -67,11 +61,10 @@ namespace ProjectVagabond
         public bool IsInCombat { get; private set; } = false;
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, WorldClockManager worldClockManager, ChunkManager chunkManager, Global global, SpriteManager spriteManager)
+        public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, ChunkManager chunkManager, Global global, SpriteManager spriteManager)
         {
             _noiseManager = noiseManager;
             _componentStore = componentStore;
-            _worldClockManager = worldClockManager;
             _chunkManager = chunkManager;
             _global = global;
             _spriteManager = spriteManager;
@@ -221,52 +214,39 @@ namespace ProjectVagabond
             return GetTerrainEnergyCost(mapData.TerrainHeight); // Running cost is based on terrain.
         }
 
-        public float GetSecondsPassedDuringMovement(StatsComponent stats, MovementMode mode, MapData mapData, Vector2 moveDirection)
+        public int GetMovementTickCost(MovementMode mode, MapData mapData)
         {
-            float distanceInFeet = Global.FEET_PER_WORLD_TILE;
-            float baseSpeedStat = mode switch
+            int ticks = mode switch
             {
-                MovementMode.Walk => stats.WalkSpeed,
-                MovementMode.Jog => stats.JogSpeed,
-                MovementMode.Run => stats.RunSpeed,
-                _ => stats.WalkSpeed
+                MovementMode.Walk => 2,
+                MovementMode.Jog => 1,
+                MovementMode.Run => 1,
+                _ => 2
             };
-            float speedInFtPerSec = baseSpeedStat * Global.FEET_PER_SECOND_PER_SPEED_UNIT;
-
-            if (speedInFtPerSec <= 0) return float.MaxValue;
-
-            float secondsPassed = distanceInFeet / speedInFtPerSec;
-
-            // Apply diagonal movement penalty
-            if (moveDirection.X != 0 && moveDirection.Y != 0)
-            {
-                secondsPassed *= 1.414f; // Approx. sqrt(2)
-            }
 
             // Apply world map terrain penalties
-            secondsPassed += mapData.TerrainHeight switch
+            ticks += mapData.TerrainHeight switch
             {
-                var height when height < _global.FlatlandsLevel => 0,
-                var height when height < _global.HillsLevel => secondsPassed * 0.5f,
-                var height when height < _global.MountainsLevel => secondsPassed + 300,
-                _ => 0
+                var height when height < _global.FlatlandsLevel => 0, // Flatlands are the baseline
+                var height when height < _global.HillsLevel => 1,     // Hills cost 1 extra tick
+                var height when height < _global.MountainsLevel => 2, // Mountains cost 2 extra ticks
+                _ => 99 // Impassable, but should be caught earlier
             };
 
-            return secondsPassed;
+            return ticks;
         }
 
-        public (int finalEnergy, bool possible, float secondsPassed) SimulateActionQueueEnergy(IEnumerable<IAction> customQueue = null)
+        public (int finalEnergy, bool possible, int ticksPassed) SimulateActionQueue(IEnumerable<IAction> customQueue = null)
         {
             var playerStats = PlayerStats;
-            if (playerStats == null) return (0, true, 0f); // Prevent crash if stats aren't loaded yet
+            if (playerStats == null) return (0, true, 0); // Prevent crash if stats aren't loaded yet
 
             var queueToSimulate = customQueue ?? PendingActions;
-            if (!queueToSimulate.Any()) return (playerStats.CurrentEnergyPoints, true, 0f);
+            if (!queueToSimulate.Any()) return (playerStats.CurrentEnergyPoints, true, 0);
 
             int finalEnergy = playerStats.CurrentEnergyPoints;
             int maxEnergy = playerStats.MaxEnergyPoints;
-            float secondsPassed = 0f;
-            Vector2 lastPosition = PlayerWorldPos;
+            int ticksPassed = 0;
 
             foreach (var action in queueToSimulate)
             {
@@ -281,19 +261,16 @@ namespace ProjectVagabond
 
                     if (finalEnergy < energyCost)
                     {
-                        return (finalEnergy, false, secondsPassed);
+                        return (finalEnergy, false, ticksPassed);
                     }
 
-                    Vector2 moveDirection = moveAction.Destination - lastPosition;
                     MapData mapData = GetMapDataAt((int)moveAction.Destination.X, (int)moveAction.Destination.Y);
-                    float moveDuration = GetSecondsPassedDuringMovement(playerStats, actualMode, mapData, moveDirection);
+                    int moveDuration = GetMovementTickCost(actualMode, mapData);
 
-                    secondsPassed += moveDuration;
+                    ticksPassed += moveDuration;
 
                     int actualEnergyCost = GetMovementEnergyCost(new MoveAction(moveAction.ActorId, moveAction.Destination, actualMode));
                     finalEnergy -= actualEnergyCost;
-
-                    lastPosition = moveAction.Destination;
                 }
                 else if (action is RestAction restAction)
                 {
@@ -301,22 +278,21 @@ namespace ProjectVagabond
                     {
                         case RestType.ShortRest:
                             finalEnergy += playerStats.ShortRestEnergyRestored;
-                            secondsPassed += playerStats.ShortRestDuration * 60;
+                            ticksPassed += 1;
                             break;
                         case RestType.LongRest:
                             finalEnergy += playerStats.LongRestEnergyRestored;
-                            secondsPassed += playerStats.LongRestDuration * 60;
+                            ticksPassed += 5;
                             break;
                         case RestType.FullRest:
                             finalEnergy += playerStats.FullRestEnergyRestored;
-                            secondsPassed += playerStats.FullRestDuration * 60;
+                            ticksPassed += 10;
                             break;
                     }
                     finalEnergy = Math.Min(finalEnergy, maxEnergy);
-                    lastPosition = restAction.Position;
                 }
             }
-            return (finalEnergy, true, secondsPassed);
+            return (finalEnergy, true, ticksPassed);
         }
 
         public void ExecuteActions()
@@ -338,13 +314,6 @@ namespace ProjectVagabond
                 ToggleExecutingActions(false);
                 _isPaused = false;
                 PendingActions.Clear();
-
-                // If the clock is currently animating, let it finish but block input.
-                if (_worldClockManager.IsInterpolatingTime)
-                {
-                    IsAwaitingTimePass = true;
-                    TimePassFailsafeTimer = 10f; // Set a 10-second failsafe
-                }
 
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = interrupted ? "[cancel]Action queue interrupted." : "[cancel]Action queue cancelled." });
                 return true;

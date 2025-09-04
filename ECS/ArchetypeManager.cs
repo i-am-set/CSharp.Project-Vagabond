@@ -29,7 +29,7 @@ namespace ProjectVagabond
             {
                 new ArchetypeIdComponent { ArchetypeId = "player" },
                 new PositionComponent(),
-                new StatsComponent { Strength = 5, Agility = 5, Tenacity = 5, Intelligence = 5, Charm = 5, SecondsPerEnergyPoint = 5.0f },
+                new StatsComponent { Strength = 5, Agility = 5, Tenacity = 5, Intelligence = 5, Charm = 5 },
                 new ActionQueueComponent(),
                 new PlayerTagComponent(),
                 new HighImportanceComponent(),
