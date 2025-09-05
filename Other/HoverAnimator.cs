@@ -19,6 +19,17 @@ namespace ProjectVagabond.UI
         public float CurrentOffset { get; private set; }
 
         /// <summary>
+        /// Resets the animator to its default, non-animating state.
+        /// </summary>
+        public void Reset()
+        {
+            _isAnimating = false;
+            _animationTimer = 0f;
+            _wasActivatedLastFrame = false;
+            CurrentOffset = 0f;
+        }
+
+        /// <summary>
         /// Updates the animation state and returns the current horizontal offset.
         /// </summary>
         /// <param name="gameTime">The current game time.</param>

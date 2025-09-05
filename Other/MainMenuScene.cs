@@ -110,6 +110,12 @@ namespace ProjectVagabond.Scenes
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
 
+            // Reset animation states of all buttons
+            foreach (var button in _buttons)
+            {
+                button.ResetAnimationState();
+            }
+
             // --- Create Fireball Effect ---
             var fireballSettingsList = ParticleEffects.CreateLayeredFireball();
             foreach (var setting in fireballSettingsList)

@@ -13,6 +13,7 @@ namespace ProjectVagabond.UI
 
         public string Label { get; }
         public bool IsDirty => _currentValue != _savedValue;
+        public bool IsEnabled { get; set; } = true;
 
         private bool _currentValue;
         private bool _savedValue;
@@ -47,6 +48,7 @@ namespace ProjectVagabond.UI
 
         public void HandleInput(Keys key)
         {
+            if (!IsEnabled) return;
             if (key == Keys.Left || key == Keys.Right)
             {
                 ToggleValue();
@@ -79,6 +81,13 @@ namespace ProjectVagabond.UI
 
         public void Update(Vector2 position, bool isSelected, MouseState currentMouseState, MouseState previousMouseState, Vector2 virtualMousePos, BitmapFont font)
         {
+            if (!IsEnabled)
+            {
+                _isLeftArrowHovered = false;
+                _isRightArrowHovered = false;
+                return;
+            }
+
             CalculateBounds(position, font);
 
             _isLeftArrowHovered = _leftArrowRect.Contains(virtualMousePos);
@@ -109,12 +118,19 @@ namespace ProjectVagabond.UI
             _currentValue = _getter();
         }
 
+        public void ResetAnimationState()
+        {
+            HoverAnimator.Reset();
+            _isLeftArrowHovered = false;
+            _isRightArrowHovered = false;
+        }
+
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, Vector2 position, bool isSelected, GameTime gameTime)
         {
-            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected);
+            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
-            Color labelColor = isSelected ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
+            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BrightWhite : _global.ButtonDisableColor);
             spriteBatch.DrawStringSnapped(font, Label, animatedPosition, labelColor);
 
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
@@ -125,9 +141,9 @@ namespace ProjectVagabond.UI
             string valueText = _currentValue ? "ON" : "OFF";
             string rightArrowText = ">";
 
-            Color baseValueColor = IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite;
-            Color leftArrowColor = _isLeftArrowHovered ? _global.ButtonHoverColor : baseValueColor;
-            Color rightArrowColor = _isRightArrowHovered ? _global.ButtonHoverColor : baseValueColor;
+            Color baseValueColor = IsEnabled ? (IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite) : _global.ButtonDisableColor;
+            Color leftArrowColor = IsEnabled ? (_isLeftArrowHovered ? _global.ButtonHoverColor : baseValueColor) : _global.ButtonDisableColor;
+            Color rightArrowColor = IsEnabled ? (_isRightArrowHovered ? _global.ButtonHoverColor : baseValueColor) : _global.ButtonDisableColor;
 
             Vector2 leftArrowSize = font.MeasureString(leftArrowText);
             Vector2 valueTextSize = font.MeasureString(valueText);

@@ -429,12 +429,18 @@ namespace ProjectVagabond
 
             // 5. Draw the player last (on top)
             var playerRenderComp = _componentStore.GetComponent<RenderableComponent>(_gameState.PlayerEntityId);
-            if (playerRenderComp != null)
+            var logicalPosComp = _componentStore.GetComponent<PositionComponent>(_gameState.PlayerEntityId);
+            if (playerRenderComp != null && logicalPosComp != null)
             {
-                Vector2? screenPos = MapCoordsToScreen(_gameState.PlayerWorldPos);
+                // Prioritize RenderPositionComponent for smooth animation
+                var renderPosComp = _componentStore.GetComponent<RenderPositionComponent>(_gameState.PlayerEntityId);
+                Vector2 playerDrawPos = renderPosComp != null ? renderPosComp.WorldPosition : logicalPosComp.WorldPosition;
+
+                Vector2? screenPos = MapCoordsToScreen(playerDrawPos);
                 if (screenPos.HasValue)
                 {
-                    elements.Add(new GridElement(playerRenderComp.Texture, playerRenderComp.Color, screenPos.Value, _gameState.PlayerWorldPos));
+                    // The GridElement's WorldPosition should be the logical one for tooltip/interaction purposes.
+                    elements.Add(new GridElement(playerRenderComp.Texture, playerRenderComp.Color, screenPos.Value, logicalPosComp.WorldPosition));
                 }
             }
 
@@ -561,12 +567,13 @@ namespace ProjectVagabond
             if (_mapGridBounds.IsEmpty) return null;
 
             Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
-            int startX = (int)viewCenter.X - GridSizeX / 2;
-            int startY = (int)viewCenter.Y - GridSizeY / 2;
-            int gridX = (int)mapPos.X - startX;
-            int gridY = (int)mapPos.Y - startY;
+            float startX = viewCenter.X - GridSizeX / 2f;
+            float startY = viewCenter.Y - GridSizeY / 2f;
+            float gridX = mapPos.X - startX;
+            float gridY = mapPos.Y - startY;
 
-            if (gridX >= 0 && gridX < GridSizeX && gridY >= 0 && gridY < GridSizeY)
+            // Check if the logical center of the sprite is within the grid bounds, with a small margin.
+            if (gridX >= -0.5f && gridX < GridSizeX + 0.5f && gridY >= -0.5f && gridY < GridSizeY + 0.5f)
             {
                 return new Vector2(_mapGridBounds.X + gridX * _cellSize, _mapGridBounds.Y + gridY * _cellSize);
             }

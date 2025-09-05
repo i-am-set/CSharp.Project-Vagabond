@@ -19,6 +19,7 @@ namespace ProjectVagabond.UI
 
         public string Label => _slider.Label;
         public bool IsDirty => Math.Abs(_currentValue - _savedValue) > 0.01f;
+        public bool IsEnabled { get; set; } = true;
         public HoverAnimator HoverAnimator { get; } = new HoverAnimator();
 
         public SliderSettingControl(string label, float min, float max, float step, Func<float> getter, Action<float> setter)
@@ -42,6 +43,7 @@ namespace ProjectVagabond.UI
 
         public void HandleInput(Keys key)
         {
+            if (!IsEnabled) return;
             if (key == Keys.Left)
             {
                 _slider.SetValue(_slider.CurrentValue - _slider.Step);
@@ -57,6 +59,7 @@ namespace ProjectVagabond.UI
             // Dynamically update the slider's position and bounds.
             var sliderBounds = new Rectangle((int)(position.X + 175f), (int)position.Y, (int)Global.VALUE_DISPLAY_WIDTH, 15);
             _slider.Bounds = sliderBounds;
+            _slider.IsEnabled = this.IsEnabled;
 
             if (UIInputManager.CanProcessMouseClick())
             {
@@ -81,16 +84,22 @@ namespace ProjectVagabond.UI
             _slider.SetValue(_currentValue);
         }
 
+        public void ResetAnimationState()
+        {
+            HoverAnimator.Reset();
+            _slider.ResetAnimationState();
+        }
+
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, Vector2 position, bool isSelected, GameTime gameTime)
         {
-            float xOffset = HoverAnimator.UpdateAndGetOffset(gameTime, isSelected);
+            float xOffset = HoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
-            Color labelColor = isSelected ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
+            Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BrightWhite : _global.ButtonDisableColor);
             spriteBatch.DrawStringSnapped(font, Label, animatedPosition, labelColor);
 
             // The slider draws itself, but we need to provide the correct value color.
-            Color valueColor = IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite;
+            Color valueColor = IsEnabled ? (IsDirty ? _global.Palette_Teal : _global.Palette_BrightWhite) : _global.ButtonDisableColor;
             _slider.CustomValueColor = valueColor;
 
             _slider.Draw(spriteBatch, font);

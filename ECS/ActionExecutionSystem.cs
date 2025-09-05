@@ -15,9 +15,16 @@ namespace ProjectVagabond
         private readonly ComponentStore _componentStore;
         private readonly ChunkManager _chunkManager;
 
-        // Timer for the new tick-based movement system
+        // Timer for the gameplay tick-based action processing
         private float _moveTickTimer = 0f;
         private bool _isFirstActionInQueue = true;
+
+        // State for visual movement animation
+        private bool _isAnimatingMove = false;
+        private float _animationTimer = 0f;
+        private const float ANIMATION_DURATION = 0.025f;
+        private Vector2 _animationStartPosition;
+        private Vector2 _animationEndPosition;
 
         public ActionExecutionSystem()
         {
@@ -45,6 +52,14 @@ namespace ProjectVagabond
 
             int playerEntityId = _gameState.PlayerEntityId;
             _componentStore.RemoveComponent<MoveAction>(playerEntityId);
+            _isAnimatingMove = false; // Stop any ongoing animation
+            var renderPosComp = _componentStore.GetComponent<RenderPositionComponent>(playerEntityId);
+            var posComp = _componentStore.GetComponent<PositionComponent>(playerEntityId);
+            if (renderPosComp != null && posComp != null)
+            {
+                // Snap visual position to logical position on interruption
+                renderPosComp.WorldPosition = posComp.WorldPosition;
+            }
         }
 
         /// <summary>
@@ -53,6 +68,29 @@ namespace ProjectVagabond
         public void Update(GameTime gameTime)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
+
+            // Handle visual animation interpolation
+            if (_isAnimatingMove)
+            {
+                _animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                float progress = Math.Clamp(_animationTimer / ANIMATION_DURATION, 0f, 1f);
+                float easedProgress = Easing.EaseOutCubic(progress);
+
+                var renderPosComp = _componentStore.GetComponent<RenderPositionComponent>(_gameState.PlayerEntityId);
+                if (renderPosComp != null)
+                {
+                    renderPosComp.WorldPosition = Vector2.Lerp(_animationStartPosition, _animationEndPosition, easedProgress);
+                }
+
+                if (progress >= 1.0f)
+                {
+                    _isAnimatingMove = false;
+                    if (renderPosComp != null)
+                    {
+                        renderPosComp.WorldPosition = _animationEndPosition; // Snap to final position
+                    }
+                }
+            }
 
             if (_gameState.IsPaused || !_gameState.IsExecutingActions)
             {
@@ -89,6 +127,17 @@ namespace ProjectVagabond
 
                 if (nextAction is MoveAction ma)
                 {
+                    var renderPosComp = _componentStore.GetComponent<RenderPositionComponent>(playerEntityId);
+                    if (renderPosComp != null)
+                    {
+                        // Set up animation state
+                        _animationStartPosition = renderPosComp.WorldPosition;
+                        _animationEndPosition = ma.Destination;
+                        _animationTimer = 0f;
+                        _isAnimatingMove = true;
+                    }
+
+                    // The logical move still happens instantly
                     ApplyMoveActionEffects(_gameState, playerEntityId, ma);
                 }
 

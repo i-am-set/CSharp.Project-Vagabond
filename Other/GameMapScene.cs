@@ -70,6 +70,13 @@ namespace ProjectVagabond.Scenes
             // The event is unsubscribed in Exit(), so it must be re-subscribed every time the scene is entered.
             _settingsButton.OnClick += OpenSettings;
 
+            // Reset animation states
+            _settingsButton.ResetAnimationState();
+            foreach (var button in _mapRenderer.HeaderButtons)
+            {
+                button.ResetAnimationState();
+            }
+
             // Set the button's position once, as it's static.
             const int padding = 5;
             int buttonX = Global.VIRTUAL_WIDTH - _settingsButton.Bounds.Width - padding;

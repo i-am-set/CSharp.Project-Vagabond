@@ -57,6 +57,11 @@ namespace ProjectVagabond.UI
             }
         }
 
+        public void ResetAnimationState()
+        {
+            _isDragging = false;
+        }
+
         public void Update(MouseState currentMouseState, MouseState previousMouseState)
         {
             if (!IsEnabled)

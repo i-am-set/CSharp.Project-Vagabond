@@ -18,6 +18,7 @@ namespace ProjectVagabond.Scenes
         private readonly Global _global;
 
         private List<object> _uiElements = new();
+        private List<Vector2> _uiElementPositions = new(); // To store calculated positions
         private int _selectedIndex = -1;
         private string _confirmationMessage = "";
         private float _confirmationTimer = 0f;
@@ -26,7 +27,6 @@ namespace ProjectVagabond.Scenes
         private const int SETTINGS_START_Y = 35;
         private const int ITEM_VERTICAL_SPACING = 15;
         private const int BUTTON_VERTICAL_SPACING = 14;
-        private const int BOTTOM_BUTTONS_TOP_MARGIN = 12;
         private const int SETTINGS_PANEL_WIDTH = 280;
         private const int SETTINGS_PANEL_X = (Global.VIRTUAL_WIDTH - SETTINGS_PANEL_WIDTH) / 2;
 
@@ -67,6 +67,19 @@ namespace ProjectVagabond.Scenes
             _revertDialog = new RevertDialog(this);
 
             RefreshUIFromSettings();
+
+            // Reset animation states after they are built
+            foreach (var item in _uiElements)
+            {
+                if (item is ISettingControl setting)
+                {
+                    setting.ResetAnimationState();
+                }
+                else if (item is Button button)
+                {
+                    button.ResetAnimationState();
+                }
+            }
 
             if (this.LastUsedInputForNav == InputDevice.Keyboard)
             {
@@ -110,16 +123,10 @@ namespace ProjectVagabond.Scenes
 
         protected override Rectangle? GetFirstSelectableElementBounds()
         {
-            Vector2 currentPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y);
-
-            for (int i = 0; i < _uiElements.Count; i++)
+            if (_uiElements.Count > 0 && _uiElementPositions.Count > 0)
             {
-                var item = _uiElements[i];
-                if (item is ISettingControl || item is Button)
-                {
-                    return new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
-                }
-                currentPos.Y += ITEM_VERTICAL_SPACING;
+                var firstPos = _uiElementPositions[0];
+                return new Rectangle((int)firstPos.X - 5, (int)firstPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
             }
             return null;
         }
@@ -173,6 +180,9 @@ namespace ProjectVagabond.Scenes
             _uiElements.Add(new BoolSettingControl("VSync", () => _tempSettings.IsVsync, v => _tempSettings.IsVsync = v));
             _uiElements.Add(new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v));
 
+            var framerates = new List<KeyValuePair<string, int>> { new("30 FPS", 30), new("60 FPS", 60), new("75 FPS", 75), new("120 FPS", 120), new("144 FPS", 144), new("240 FPS", 240) };
+            _uiElements.Add(new OptionSettingControl<int>("Target Framerate", framerates, () => _tempSettings.TargetFramerate, v => _tempSettings.TargetFramerate = v));
+
             var applyButton = new Button(new Rectangle(0, 0, 125, 10), "Apply");
             applyButton.OnClick += ApplySettings;
             _uiElements.Add(applyButton);
@@ -188,28 +198,22 @@ namespace ProjectVagabond.Scenes
             resetButton.OnClick += ConfirmResetSettings;
             _uiElements.Add(resetButton);
 
-            UpdateFramerateControl();
-            LayoutUI();
+            CalculateLayoutPositions(); // Ensure positions are calculated after building the list.
             applyButton.IsEnabled = IsDirty();
         }
 
-        private void LayoutUI()
+        private void CalculateLayoutPositions()
         {
-            Vector2 currentPos = new Vector2(0, SETTINGS_START_Y);
-            int screenWidth = Global.VIRTUAL_WIDTH;
-            bool bottomButtonsReached = false;
+            _uiElementPositions.Clear();
+            Vector2 currentPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y);
 
             foreach (var item in _uiElements)
             {
+                _uiElementPositions.Add(currentPos);
+
                 if (item is Button button)
                 {
-                    if (!bottomButtonsReached)
-                    {
-                        // This is the first of the bottom buttons
-                        currentPos.Y += BOTTOM_BUTTONS_TOP_MARGIN;
-                        bottomButtonsReached = true;
-                    }
-                    button.Bounds = new Rectangle((screenWidth - button.Bounds.Width) / 2, (int)currentPos.Y, button.Bounds.Width, button.Bounds.Height);
+                    button.Bounds = new Rectangle((Global.VIRTUAL_WIDTH - button.Bounds.Width) / 2, (int)currentPos.Y, button.Bounds.Width, button.Bounds.Height);
                     currentPos.Y += BUTTON_VERTICAL_SPACING;
                 }
                 else if (item is ISettingControl)
@@ -225,27 +229,6 @@ namespace ProjectVagabond.Scenes
             var nativePoint = new Point(nativeResolution.Width, nativeResolution.Height);
             _tempSettings.Resolution = SettingsManager.FindClosestResolution(nativePoint);
             _uiElements.OfType<ISettingControl>().FirstOrDefault(c => c.Label == "Resolution")?.RefreshValue();
-        }
-
-        private void UpdateFramerateControl()
-        {
-            var framerateControl = _uiElements.OfType<ISettingControl>().FirstOrDefault(c => c.Label == "Target Framerate");
-            int limiterIndex = _uiElements.FindIndex(item => item is ISettingControl s && s.Label == "Frame Limiter");
-            bool changed = false;
-
-            if (_tempSettings.IsFrameLimiterEnabled && framerateControl == null && limiterIndex != -1)
-            {
-                var framerates = new List<KeyValuePair<string, int>> { new("30 FPS", 30), new("60 FPS", 60), new("75 FPS", 75), new("120 FPS", 120), new("144 FPS", 144), new("240 FPS", 240) };
-                var newControl = new OptionSettingControl<int>("Target Framerate", framerates, () => _tempSettings.TargetFramerate, v => _tempSettings.TargetFramerate = v);
-                _uiElements.Insert(limiterIndex + 1, newControl);
-                changed = true;
-            }
-            else if (!_tempSettings.IsFrameLimiterEnabled && framerateControl != null)
-            {
-                _uiElements.Remove(framerateControl);
-                changed = true;
-            }
-            if (changed) LayoutUI();
         }
 
         private void ApplySettings()
@@ -322,7 +305,6 @@ namespace ProjectVagabond.Scenes
             _tempSettings.DisplayIndex = _settings.DisplayIndex;
             _tempSettings.Gamma = _settings.Gamma;
             foreach (var item in _uiElements.OfType<ISettingControl>()) item.RefreshValue();
-            UpdateFramerateControl();
             _isApplyingSettings = false; // Unset flag
         }
 
@@ -350,7 +332,6 @@ namespace ProjectVagabond.Scenes
                 item.RefreshValue();
             }
 
-            UpdateFramerateControl();
             ApplySettings(); // This will apply and save the new settings
 
             _confirmationMessage = "Settings Reset to Default!";
@@ -375,20 +356,14 @@ namespace ProjectVagabond.Scenes
         private void MoveMouseToSelected()
         {
             if (_selectedIndex < 0 || _selectedIndex >= _uiElements.Count) return;
-            Vector2 currentPos = new Vector2(0, SETTINGS_START_Y);
-            for (int i = 0; i <= _selectedIndex; i++)
+
+            if (_uiElementPositions.Count > _selectedIndex)
             {
-                var item = _uiElements[i];
-                currentPos.X = SETTINGS_PANEL_X;
-                if (i == _selectedIndex)
-                {
-                    Point mousePos = (item is ISettingControl) ? new Point((int)currentPos.X + 115, (int)currentPos.Y + 5) : new Point(Global.VIRTUAL_WIDTH / 2, (int)currentPos.Y + 5);
-                    Point screenPos = Core.TransformVirtualToScreen(mousePos);
-                    Mouse.SetPosition(screenPos.X, screenPos.Y);
-                    break;
-                }
-                if (item is ISettingControl) currentPos.Y += ITEM_VERTICAL_SPACING;
-                else if (item is Button) currentPos.Y += BUTTON_VERTICAL_SPACING;
+                var item = _uiElements[_selectedIndex];
+                var itemPos = _uiElementPositions[_selectedIndex];
+                Point mousePos = (item is ISettingControl) ? new Point((int)itemPos.X + 115, (int)itemPos.Y + 5) : new Point(Global.VIRTUAL_WIDTH / 2, (int)itemPos.Y + 5);
+                Point screenPos = Core.TransformVirtualToScreen(mousePos);
+                Mouse.SetPosition(screenPos.X, screenPos.Y);
             }
         }
 
@@ -430,32 +405,32 @@ namespace ProjectVagabond.Scenes
             if (_currentInputDelay > 0) _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_confirmationTimer > 0) _confirmationTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            UpdateFramerateControl();
+            // Update control enabled states based on dependencies
+            var framerateControl = _uiElements.OfType<ISettingControl>().FirstOrDefault(c => c.Label == "Target Framerate");
+            if (framerateControl != null)
+            {
+                framerateControl.IsEnabled = _tempSettings.IsFrameLimiterEnabled;
+            }
+
+            CalculateLayoutPositions(); // Recalculate positions every frame
+
             Vector2 virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-            Vector2 currentPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y);
-            bool bottomButtonsReached = false;
 
             for (int i = 0; i < _uiElements.Count; i++)
             {
                 var item = _uiElements[i];
+                var currentPos = _uiElementPositions[i];
 
                 if (item is ISettingControl setting)
                 {
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
                     if (hoverRect.Contains(virtualMousePos)) { _selectedIndex = i; }
                     if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 2), i == _selectedIndex, currentMouseState, previousMouseState, virtualMousePos, font);
-                    currentPos.Y += ITEM_VERTICAL_SPACING;
                 }
                 else if (item is Button button)
                 {
-                    if (!bottomButtonsReached)
-                    {
-                        currentPos.Y += BOTTOM_BUTTONS_TOP_MARGIN;
-                        bottomButtonsReached = true;
-                    }
                     if (button.Bounds.Contains(virtualMousePos)) { _selectedIndex = i; }
                     if (_currentInputDelay <= 0) button.Update(currentMouseState);
-                    currentPos.Y += BUTTON_VERTICAL_SPACING;
                 }
             }
 
@@ -502,7 +477,8 @@ namespace ProjectVagabond.Scenes
             {
                 searchIndex = (searchIndex + direction + _uiElements.Count) % _uiElements.Count;
                 var item = _uiElements[searchIndex];
-                if (item is ISettingControl || (item is Button button && button.IsEnabled)) return searchIndex;
+                if (item is ISettingControl setting && setting.IsEnabled) return searchIndex;
+                if (item is Button button && button.IsEnabled) return searchIndex;
             }
             return currentIndex;
         }
@@ -532,11 +508,10 @@ namespace ProjectVagabond.Scenes
                 spriteBatch.DrawString(font, _confirmationMessage, messagePosition, _global.Palette_Teal);
             }
 
-            Vector2 currentPos = new Vector2(SETTINGS_PANEL_X, SETTINGS_START_Y);
-            bool bottomButtonsReached = false;
             for (int i = 0; i < _uiElements.Count; i++)
             {
                 var item = _uiElements[i];
+                var currentPos = _uiElementPositions[i];
                 bool isSelected = (i == _selectedIndex);
 
                 if (isSelected)
@@ -578,17 +553,10 @@ namespace ProjectVagabond.Scenes
                             spriteBatch.DrawString(font, extraText, new Vector2(hintTextX, currentPos.Y + 2), _global.Palette_DarkGray);
                         }
                     }
-                    currentPos.Y += ITEM_VERTICAL_SPACING;
                 }
                 else if (item is Button button)
                 {
-                    if (!bottomButtonsReached)
-                    {
-                        currentPos.Y += BOTTOM_BUTTONS_TOP_MARGIN;
-                        bottomButtonsReached = true;
-                    }
                     button.Draw(spriteBatch, font, gameTime, transform, isSelected);
-                    currentPos.Y += BUTTON_VERTICAL_SPACING;
                 }
             }
 

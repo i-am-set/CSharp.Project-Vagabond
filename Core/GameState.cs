@@ -72,6 +72,12 @@ namespace ProjectVagabond
         public void InitializeWorld()
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0));
+            // Initialize the render position to match the logical position
+            var posComp = _componentStore.GetComponent<PositionComponent>(PlayerEntityId);
+            if (posComp != null)
+            {
+                _componentStore.AddComponent(PlayerEntityId, new RenderPositionComponent { WorldPosition = posComp.WorldPosition });
+            }
         }
 
         public void InitializeRenderableEntities()

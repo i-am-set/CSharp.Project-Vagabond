@@ -146,6 +146,16 @@ namespace ProjectVagabond.UI
             }
         }
 
+        public virtual void ResetAnimationState()
+        {
+            _hoverAnimator.Reset();
+            _isPressed = false;
+            _squashAnimationTimer = 0f;
+            _swayTimer = 0f;
+            _wasHoveredLastFrame = false;
+            IsHovered = false;
+        }
+
         public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
             Color textColor;

@@ -12,6 +12,7 @@ namespace ProjectVagabond.UI
     {
         string Label { get; }
         bool IsDirty { get; }
+        bool IsEnabled { get; set; }
         HoverAnimator HoverAnimator { get; }
         string GetCurrentValueAsString();
         string GetSavedValueAsString();
@@ -21,5 +22,6 @@ namespace ProjectVagabond.UI
         void Apply();
         void Revert();
         void RefreshValue();
+        void ResetAnimationState();
     }
 }

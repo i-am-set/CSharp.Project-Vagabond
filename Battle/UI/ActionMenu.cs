@@ -41,6 +41,23 @@ namespace ProjectVagabond.Battle.UI
             };
         }
 
+        public void ResetAnimationState()
+        {
+            foreach (var button in _actionButtons)
+            {
+                button.ResetAnimationState();
+            }
+            foreach (var button in _moveButtons)
+            {
+                button.ResetAnimationState();
+            }
+            foreach (var button in _targetButtons)
+            {
+                button.ResetAnimationState();
+            }
+            _backButton.ResetAnimationState();
+        }
+
         public void Show(BattleCombatant player, List<BattleCombatant> allCombatants)
         {
             _isVisible = true;

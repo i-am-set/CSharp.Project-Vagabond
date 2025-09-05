@@ -59,6 +59,8 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
 
+            _actionMenu.ResetAnimationState();
+
             _isBattleOver = false;
             _endOfBattleTimer = 0f;
 
