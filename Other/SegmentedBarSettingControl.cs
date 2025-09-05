@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 
@@ -231,6 +230,15 @@ namespace ProjectVagabond.UI
             Vector2 valueSize = font.MeasureString(valueString);
             Vector2 valuePosition = new Vector2(_barAreaRect.Left - valueSize.X - 5 + xOffset, animatedPosition.Y);
             spriteBatch.DrawString(font, valueString, valuePosition, IsEnabled ? _global.Palette_DarkGray : _global.ButtonDisableColor);
+
+            // --- Strikethrough ---
+            if (!IsEnabled)
+            {
+                float startX = animatedPosition.X;
+                float endX = _barAreaRect.Right + xOffset;
+                float lineY = animatedPosition.Y + font.LineHeight / 2f;
+                spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor);
+            }
         }
     }
 }

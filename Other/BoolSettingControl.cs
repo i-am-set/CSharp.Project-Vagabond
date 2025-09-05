@@ -155,6 +155,14 @@ namespace ProjectVagabond.UI
             float spaceBetweenArrows = (valueAreaPosition.X + valueDisplayWidth - rightArrowSize.X) - (valueAreaPosition.X + leftArrowSize.X);
             float textX = valueAreaPosition.X + leftArrowSize.X + (spaceBetweenArrows - valueTextSize.X) * 0.5f;
             spriteBatch.DrawStringSnapped(font, valueText, new Vector2(textX, valueAreaPosition.Y), baseValueColor);
+
+            if (!IsEnabled)
+            {
+                float startX = animatedPosition.X;
+                float endX = position.X + valueAreaXOffset + valueDisplayWidth;
+                float lineY = animatedPosition.Y + font.LineHeight / 2f;
+                spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor);
+            }
         }
     }
 }

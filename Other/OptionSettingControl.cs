@@ -34,6 +34,7 @@ namespace ProjectVagabond.UI
 
         public Func<T, Color?> GetValueColor { get; set; }
         public Func<T, bool> IsOptionNotRecommended { get; set; }
+        public Func<string> ExtraInfoTextGetter { get; set; }
 
         public OptionSettingControl(string label, List<KeyValuePair<string, T>> options, Func<T> getter, Action<T> setter)
         {
@@ -167,9 +168,18 @@ namespace ProjectVagabond.UI
             float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
             Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
 
+            // --- Label and Extra Info ---
+            string labelText = Label;
+            string extraInfoText = ExtraInfoTextGetter?.Invoke();
+            Vector2 labelSize = font.MeasureString(labelText);
             Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BrightWhite : _global.ButtonDisableColor);
-            spriteBatch.DrawStringSnapped(font, Label, animatedPosition, labelColor);
+            spriteBatch.DrawStringSnapped(font, labelText, animatedPosition, labelColor);
+            if (!string.IsNullOrEmpty(extraInfoText))
+            {
+                spriteBatch.DrawStringSnapped(font, extraInfoText, animatedPosition + new Vector2(labelSize.X + 2, 0), _global.Palette_DarkGray);
+            }
 
+            // --- Value and Arrows ---
             const float valueDisplayWidth = Global.VALUE_DISPLAY_WIDTH;
             const float valueAreaXOffset = 175f;
             Vector2 valueAreaPosition = new Vector2(animatedPosition.X + valueAreaXOffset, animatedPosition.Y);
@@ -214,6 +224,15 @@ namespace ProjectVagabond.UI
             float spaceBetweenArrows = (valueAreaPosition.X + valueDisplayWidth - rightArrowSize.X) - (valueAreaPosition.X + leftArrowSize.X);
             float textX = valueAreaPosition.X + leftArrowSize.X + (spaceBetweenArrows - valueTextSize.X) * 0.5f;
             spriteBatch.DrawStringSnapped(font, valueText, new Vector2(textX, valueAreaPosition.Y), baseValueColor);
+
+            // --- Strikethrough ---
+            if (!IsEnabled)
+            {
+                float startX = animatedPosition.X;
+                float endX = position.X + valueAreaXOffset + valueDisplayWidth;
+                float lineY = animatedPosition.Y + font.LineHeight / 2f;
+                spriteBatch.DrawLineSnapped(new Vector2(startX, lineY), new Vector2(endX, lineY), _global.ButtonDisableColor);
+            }
         }
     }
 }

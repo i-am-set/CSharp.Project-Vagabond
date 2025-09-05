@@ -167,6 +167,22 @@ namespace ProjectVagabond.Scenes
                 bool isStandard = SettingsManager.GetResolutions().Any(r => r.Value == pointValue);
                 return isStandard ? (Color?)null : _global.Palette_LightYellow;
             };
+            resolutionControl.ExtraInfoTextGetter = () =>
+            {
+                var currentResPoint = _tempSettings.Resolution;
+                var standardEntry = SettingsManager.GetResolutions().FirstOrDefault(r => r.Value == currentResPoint);
+
+                if (standardEntry.Key != null) // It's a standard resolution
+                {
+                    int aspectIndex = standardEntry.Key.IndexOf(" (");
+                    if (aspectIndex != -1)
+                    {
+                        return standardEntry.Key.Substring(aspectIndex).Trim();
+                    }
+                }
+                // It's a custom resolution
+                return $"({currentResPoint.X}x{currentResPoint.Y})";
+            };
             _uiElements.Add(resolutionControl);
 
             var windowModeControl = new OptionSettingControl<WindowMode>("Window Mode", windowModes, () => _tempSettings.Mode, v => {
@@ -527,32 +543,6 @@ namespace ProjectVagabond.Scenes
                 if (item is ISettingControl setting)
                 {
                     setting.Draw(spriteBatch, font, new Vector2(currentPos.X, currentPos.Y + 2), isSelected, gameTime);
-                    if (setting.Label == "Resolution")
-                    {
-                        string extraText = "";
-                        var currentResPoint = _tempSettings.Resolution;
-                        var standardEntry = SettingsManager.GetResolutions().FirstOrDefault(r => r.Value == currentResPoint);
-
-                        if (standardEntry.Key != null) // It's a standard resolution
-                        {
-                            int aspectIndex = standardEntry.Key.IndexOf(" (");
-                            if (aspectIndex != -1)
-                            {
-                                extraText = standardEntry.Key.Substring(aspectIndex).Trim();
-                            }
-                        }
-                        else // It's a custom resolution
-                        {
-                            extraText = $"({currentResPoint.X}x{currentResPoint.Y})";
-                        }
-
-                        if (!string.IsNullOrEmpty(extraText))
-                        {
-                            Vector2 labelSize = font.MeasureString(setting.Label);
-                            float hintTextX = currentPos.X + labelSize.X + 5;
-                            spriteBatch.DrawString(font, extraText, new Vector2(hintTextX, currentPos.Y + 2), _global.Palette_DarkGray);
-                        }
-                    }
                 }
                 else if (item is Button button)
                 {
