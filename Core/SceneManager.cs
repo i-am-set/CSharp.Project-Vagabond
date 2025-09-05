@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Scenes;
 using System.Collections.Generic;
@@ -104,16 +104,9 @@ namespace ProjectVagabond
             _loadIsPending = _pendingLoadingTasks != null && _pendingLoadingTasks.Any();
             _introAnimator = null; // Clear any existing intro animator
 
-            var gd = ServiceLocator.Get<GraphicsDevice>();
-            // MODIFIED: Use the physical window dimensions for the screen wipe.
-            var screenBounds = new Rectangle(0, 0, gd.PresentationParameters.BackBufferWidth, gd.PresentationParameters.BackBufferHeight);
-
             _outroAnimator = new SceneOutroAnimator();
             _outroAnimator.OnComplete += HandleOutroComplete;
-            _outroAnimator.Start(screenBounds);
-
-            // MODIFIED: Immediately switch to the TransitionScene to handle the black screen and loading.
-            SwitchToSceneInternal(GameSceneState.Transition);
+            _outroAnimator.Start();
         }
 
 
@@ -122,8 +115,11 @@ namespace ProjectVagabond
             if (_outroAnimator != null)
             {
                 _outroAnimator.OnComplete -= HandleOutroComplete;
-                _outroAnimator = null;
             }
+
+            // Now that the old scene has faded out, switch to the TransitionScene
+            // to handle the black screen and loading process.
+            SwitchToSceneInternal(GameSceneState.Transition);
 
             if (_loadIsPending)
             {
@@ -177,10 +173,7 @@ namespace ProjectVagabond
                 if (state != GameSceneState.Transition)
                 {
                     _introAnimator = new SceneIntroAnimator();
-                    var contentBounds = _currentScene.GetAnimatedBounds();
-                    var gd = ServiceLocator.Get<GraphicsDevice>();
-                    var animationBounds = new Rectangle(0, 0, gd.PresentationParameters.BackBufferWidth, gd.PresentationParameters.BackBufferHeight);
-                    _introAnimator.Start(animationBounds, contentBounds);
+                    _introAnimator.Start();
                 }
             }
         }
@@ -189,47 +182,67 @@ namespace ProjectVagabond
         {
             UIInputManager.ResetFrameState();
 
-            if (_isTransitioning)
+            // Handle outro animation first, as it blocks the scene switch.
+            if (_outroAnimator != null && !_outroAnimator.IsComplete)
             {
-                _outroAnimator?.Update(gameTime);
-
-                // If loading is pending, the SceneManager's state machine is effectively paused.
-                // The Core loop is updating the LoadingScreen.
-                // The callback from the loading screen will set _loadIsPending to false, allowing the transition to continue.
-                if (_loadIsPending)
-                {
-                    // MODIFIED: Update the TransitionScene while loading.
-                    _currentScene?.Update(gameTime);
-                    return; // Do nothing until loading is complete.
-                }
-
-                if (_isHoldingBlack)
-                {
-                    _holdTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    if (_holdTimer >= HOLD_DURATION)
-                    {
-                        _isHoldingBlack = false;
-                        _isTransitioning = false;
-                        // MODIFIED: Switch to the final target scene.
-                        SwitchToSceneInternal(_nextSceneState);
-                    }
-                }
+                _outroAnimator.Update(gameTime);
+                _currentScene?.Update(gameTime); // Continue updating the old scene during its outro.
+                return;
             }
-            else
+
+            // Handle intro animation if not transitioning.
+            if (!_isTransitioning)
             {
                 _introAnimator?.Update(gameTime);
                 _currentScene?.Update(gameTime);
+                return;
+            }
+
+            // --- At this point, outro is complete, and we are in the 'black' part of the transition ---
+
+            // If loading is pending, the SceneManager's state machine is effectively paused.
+            // The Core loop is updating the LoadingScreen.
+            // The callback from the loading screen will set _loadIsPending to false, allowing the transition to continue.
+            if (_loadIsPending)
+            {
+                // Update the TransitionScene while loading.
+                _currentScene?.Update(gameTime);
+                return; // Do nothing until loading is complete.
+            }
+
+            if (_isHoldingBlack)
+            {
+                _holdTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_holdTimer >= HOLD_DURATION)
+                {
+                    _isHoldingBlack = false;
+                    _isTransitioning = false; // Transition is now over, we are entering the new scene.
+                    _outroAnimator = null; // Clean up the completed outro animator.
+                    // Switch to the final target scene.
+                    SwitchToSceneInternal(_nextSceneState);
+                }
             }
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // MODIFIED: Only draw the current scene if it's NOT the TransitionScene.
+            // Only draw the current scene if it's NOT the TransitionScene.
             // The TransitionScene is handled by DrawOverlay.
             if (_currentScene != null && _currentScene.GetType() != typeof(TransitionScene))
             {
                 Matrix baseTransform = transform;
-                Matrix contentTransform = _introAnimator?.GetContentTransform() ?? Matrix.Identity;
+                Matrix contentTransform = Matrix.Identity;
+
+                // Prioritize outro transform, then intro transform. They won't be active at the same time
+                // under the new Update logic.
+                if (_outroAnimator != null && !_outroAnimator.IsComplete)
+                {
+                    contentTransform = _outroAnimator.GetContentTransform();
+                }
+                else if (_introAnimator != null && !_introAnimator.IsComplete)
+                {
+                    contentTransform = _introAnimator.GetContentTransform();
+                }
 
                 // The animation should happen in virtual space, then the whole thing is transformed to screen space.
                 Matrix finalTransform = contentTransform * baseTransform;
@@ -240,7 +253,7 @@ namespace ProjectVagabond
 
         public void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // MODIFIED: Only draw underlay if it's NOT the TransitionScene.
+            // Only draw underlay if it's NOT the TransitionScene.
             if (_currentScene != null && _currentScene.GetType() != typeof(TransitionScene))
             {
                 _currentScene?.DrawUnderlay(spriteBatch, font, gameTime);
@@ -249,16 +262,8 @@ namespace ProjectVagabond
 
         public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // MODIFIED: This method now handles drawing the transition animations and the loading screen.
-            // It assumes a SpriteBatch.Begin() has already been called by Core.
-
-            // Draw the intro/outro animators if active.
-            _introAnimator?.Draw(spriteBatch, font, gameTime, null);
-
-            if (_isTransitioning && _outroAnimator != null)
-            {
-                _outroAnimator.Draw(spriteBatch, font, gameTime, null);
-            }
+            // The animators no longer draw anything themselves.
+            // This method is now only for the loading screen.
 
             // Draw the loading screen if active.
             if (ServiceLocator.Get<LoadingScreen>().IsActive)

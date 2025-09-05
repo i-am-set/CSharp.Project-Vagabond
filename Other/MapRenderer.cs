@@ -212,7 +212,7 @@ namespace ProjectVagabond
             _tooltipManager.RequestTooltip(currentHoveredGridPos.Value, stringBuilder.ToString(), virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
         }
 
-        public void DrawMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Rectangle? overrideBounds = null)
+        public void DrawMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Rectangle? overrideBounds = null)
         {
             if (_gameState.IsActionQueueDirty)
             {
@@ -233,14 +233,14 @@ namespace ProjectVagabond
                 _gameState.IsActionQueueDirty = false;
             }
 
-            DrawWorldMap(spriteBatch, font, gameTime, overrideBounds);
+            DrawWorldMap(spriteBatch, font, gameTime, transform, overrideBounds);
             _contextMenu.Draw(spriteBatch, font);
         }
 
-        private void DrawWorldMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Rectangle? overrideBounds)
+        private void DrawWorldMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Rectangle? overrideBounds)
         {
             CalculateMapLayout(overrideBounds);
-            DrawMapFrame(spriteBatch, font, gameTime);
+            DrawMapFrame(spriteBatch, font, gameTime, transform);
 
             var gridElements = GenerateWorldMapGridElements();
             foreach (var element in gridElements)
@@ -265,7 +265,7 @@ namespace ProjectVagabond
             DrawPlayerOffscreenIndicator(spriteBatch);
         }
 
-        private void DrawMapFrame(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        private void DrawMapFrame(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
@@ -301,7 +301,7 @@ namespace ProjectVagabond
                 LayoutAndPositionButtons(footerBounds);
                 foreach (var b in _headerButtons)
                 {
-                    b.Draw(spriteBatch, font, gameTime);
+                    b.Draw(spriteBatch, font, gameTime, transform);
                 }
             }
 

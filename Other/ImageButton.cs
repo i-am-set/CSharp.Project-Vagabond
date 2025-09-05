@@ -58,7 +58,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover = false)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
             Texture2D textureToDraw = _defaultTexture;
             bool isActivated = IsEnabled && (IsHovered || forceHover);

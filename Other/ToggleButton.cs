@@ -20,7 +20,7 @@ namespace ProjectVagabond.UI
         }
 #nullable restore
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover = false)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
             // This method now just determines the color and then calls the base Draw method.
             // The base Draw method handles all animation and rendering logic.
@@ -48,7 +48,7 @@ namespace ProjectVagabond.UI
             var originalColor = this.CustomDefaultTextColor;
             this.CustomDefaultTextColor = textColor;
 
-            base.Draw(spriteBatch, font, gameTime, forceHover);
+            base.Draw(spriteBatch, font, gameTime, transform, forceHover);
 
             // Restore the original custom color
             this.CustomDefaultTextColor = originalColor;

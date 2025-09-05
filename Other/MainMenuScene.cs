@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -270,7 +269,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             int screenWidth = Global.VIRTUAL_WIDTH;
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
@@ -279,7 +278,7 @@ namespace ProjectVagabond.Scenes
 
             foreach (var button in _buttons)
             {
-                button.Draw(spriteBatch, font, gameTime);
+                button.Draw(spriteBatch, font, gameTime, transform);
             }
 
             if (_selectedButtonIndex >= 0 && _selectedButtonIndex < _buttons.Count)
@@ -303,7 +302,7 @@ namespace ProjectVagabond.Scenes
 
             if (_confirmationDialog.IsActive)
             {
-                _confirmationDialog.DrawContent(spriteBatch, font, gameTime);
+                _confirmationDialog.DrawContent(spriteBatch, font, gameTime, transform);
             }
         }
 

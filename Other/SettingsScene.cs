@@ -295,7 +295,7 @@ namespace ProjectVagabond.Scenes
             _settings.SmallerUi = _tempSettings.SmallerUi;
             _settings.UseImperialUnits = _tempSettings.UseImperialUnits;
             _settings.Use24HourClock = _tempSettings.Use24HourClock;
-            _settings.DisplayIndex = _settings.DisplayIndex;
+            _settings.DisplayIndex = _tempSettings.DisplayIndex;
             _settings.Gamma = _tempSettings.Gamma;
 
             _settings.ApplyGraphicsSettings(_graphics, _core);
@@ -507,7 +507,7 @@ namespace ProjectVagabond.Scenes
             return currentIndex;
         }
 
-        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             int screenWidth = Global.VIRTUAL_WIDTH;
             var virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
@@ -587,19 +587,19 @@ namespace ProjectVagabond.Scenes
                         currentPos.Y += BOTTOM_BUTTONS_TOP_MARGIN;
                         bottomButtonsReached = true;
                     }
-                    button.Draw(spriteBatch, font, gameTime, isSelected);
+                    button.Draw(spriteBatch, font, gameTime, transform, isSelected);
                     currentPos.Y += BUTTON_VERTICAL_SPACING;
                 }
             }
 
             if (_confirmationDialog.IsActive)
             {
-                _confirmationDialog.DrawContent(spriteBatch, font, gameTime);
+                _confirmationDialog.DrawContent(spriteBatch, font, gameTime, transform);
             }
 
             if (_revertDialog.IsActive)
             {
-                _revertDialog.DrawContent(spriteBatch, font, gameTime);
+                _revertDialog.DrawContent(spriteBatch, font, gameTime, transform);
             }
         }
 

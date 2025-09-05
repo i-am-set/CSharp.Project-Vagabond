@@ -199,7 +199,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (_battleManager == null)
             {
@@ -229,7 +229,7 @@ namespace ProjectVagabond.Scenes
 
             // --- Draw UI Panels ---
             _battleLog.Draw(spriteBatch, font);
-            _actionMenu.Draw(spriteBatch, font, gameTime);
+            _actionMenu.Draw(spriteBatch, font, gameTime, transform);
         }
 
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont font, BattleCombatant combatant, Vector2 position)

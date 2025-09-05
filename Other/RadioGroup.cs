@@ -74,11 +74,11 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             foreach (var button in Buttons)
             {
-                button.Draw(spriteBatch, font, gameTime);
+                button.Draw(spriteBatch, font, gameTime, transform);
             }
         }
     }

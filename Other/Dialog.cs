@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -45,7 +45,7 @@ namespace ProjectVagabond.UI
             spriteBatch.End();
         }
 
-        public abstract void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime);
+        public abstract void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform);
 
         protected bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
 

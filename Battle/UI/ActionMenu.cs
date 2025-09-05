@@ -109,7 +109,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (!_isVisible) return;
 
@@ -131,7 +131,7 @@ namespace ProjectVagabond.Battle.UI
                     foreach (var button in _actionButtons)
                     {
                         button.Bounds = new Rectangle(currentX, startY, buttonWidth, buttonHeight);
-                        button.Draw(spriteBatch, font, gameTime);
+                        button.Draw(spriteBatch, font, gameTime, transform);
                         currentX += buttonWidth + buttonSpacing;
                     }
                     break;
@@ -140,22 +140,22 @@ namespace ProjectVagabond.Battle.UI
                     foreach (var button in _moveButtons)
                     {
                         button.Bounds = new Rectangle(currentX, startY, buttonWidth, buttonHeight);
-                        button.Draw(spriteBatch, font, gameTime);
+                        button.Draw(spriteBatch, font, gameTime, transform);
                         currentX += buttonWidth + buttonSpacing;
                     }
                     _backButton.Bounds = new Rectangle(currentX, startY, buttonWidth, buttonHeight);
-                    _backButton.Draw(spriteBatch, font, gameTime);
+                    _backButton.Draw(spriteBatch, font, gameTime, transform);
                     break;
                 case MenuState.Targeting:
                     currentX = startX;
                     foreach (var button in _targetButtons)
                     {
                         button.Bounds = new Rectangle(currentX, startY, buttonWidth, buttonHeight);
-                        button.Draw(spriteBatch, font, gameTime);
+                        button.Draw(spriteBatch, font, gameTime, transform);
                         currentX += buttonWidth + buttonSpacing;
                     }
                     _backButton.Bounds = new Rectangle(currentX, startY, buttonWidth, buttonHeight);
-                    _backButton.Draw(spriteBatch, font, gameTime);
+                    _backButton.Draw(spriteBatch, font, gameTime, transform);
                     break;
             }
         }

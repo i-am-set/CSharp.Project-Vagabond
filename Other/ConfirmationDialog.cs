@@ -198,7 +198,7 @@ namespace ProjectVagabond.UI
             _previousKeyboardState = currentKeyboardState;
         }
 
-        public override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (!IsActive) return;
 
@@ -236,7 +236,7 @@ namespace ProjectVagabond.UI
 
             foreach (var button in _buttons)
             {
-                button.Draw(spriteBatch, font, gameTime);
+                button.Draw(spriteBatch, font, gameTime, transform);
             }
 
             if (_buttons.Any())

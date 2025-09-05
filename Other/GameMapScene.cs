@@ -167,12 +167,12 @@ namespace ProjectVagabond.Scenes
             base.Update(gameTime); // This now updates the intro animator and previous input states
         }
 
-        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            _mapRenderer.DrawMap(spriteBatch, font, gameTime);
+            _mapRenderer.DrawMap(spriteBatch, font, gameTime, transform);
 
             // Draw the settings button. Its position is now static and set in Enter().
-            _settingsButton?.Draw(spriteBatch, font, gameTime);
+            _settingsButton?.Draw(spriteBatch, font, gameTime, transform);
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

@@ -146,12 +146,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
-        {
-            Draw(spriteBatch, font, gameTime, false);
-        }
-
-        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, bool forceHover)
+        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
             Color textColor;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
@@ -207,13 +202,19 @@ namespace ProjectVagabond.UI
                 scale.Y = MathHelper.Lerp(1.0f, targetScaleY, progress);
             }
 
+            // To correctly handle clipping while respecting the scene's transform,
+            // we must restart the SpriteBatch, passing the transform matrix along.
             var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
             var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
-            var clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
+            // The scene's SpriteBatch.Begin uses BlendState.AlphaBlend and SamplerState.PointClamp.
+            // We must preserve these when restarting the batch.
             spriteBatch.End();
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp, rasterizerState: _clipRasterizerState);
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, rasterizerState: _clipRasterizerState, transformMatrix: transform);
 
+            // The ScissorRectangle is applied in the coordinate space of the render target,
+            // which is what the transform matrix maps our virtual coordinates to.
+            // Therefore, we can use the virtual-space `Bounds` directly.
             spriteBatch.GraphicsDevice.ScissorRectangle = Bounds;
 
             bool shouldScroll = OverflowScrollSpeed > 0 && textSize.X > Bounds.Width;
@@ -278,9 +279,10 @@ namespace ProjectVagabond.UI
                 }
             }
 
+            // End our custom batch and restore the original state for the rest of the scene.
             spriteBatch.End();
             spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp, rasterizerState: originalRasterizerState);
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, rasterizerState: originalRasterizerState, transformMatrix: transform);
         }
     }
 }

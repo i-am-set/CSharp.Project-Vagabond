@@ -95,7 +95,7 @@ namespace ProjectVagabond.UI
             _previousKeyboardState = currentKeyboardState;
         }
 
-        public override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        public override void DrawContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (!IsActive) return;
 
@@ -117,8 +117,8 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawStringSnapped(font, timerString, timerPosition, _global.Palette_Yellow);
 
             // Draw Buttons
-            _confirmButton.Draw(spriteBatch, font, gameTime);
-            _revertButton.Draw(spriteBatch, font, gameTime);
+            _confirmButton.Draw(spriteBatch, font, gameTime, transform);
+            _revertButton.Draw(spriteBatch, font, gameTime, transform);
         }
     }
 }

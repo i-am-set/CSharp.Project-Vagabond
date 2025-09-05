@@ -135,7 +135,7 @@ namespace ProjectVagabond.Scenes
         public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
-            DrawSceneContent(spriteBatch, font, gameTime);
+            DrawSceneContent(spriteBatch, font, gameTime, transform);
             spriteBatch.End();
         }
 
@@ -143,7 +143,7 @@ namespace ProjectVagabond.Scenes
         /// When implemented in a derived class, draws the primary content of the scene.
         /// This is called by the base Draw method, potentially within an animation context.
         /// </summary>
-        protected abstract void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime);
+        protected abstract void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform);
 
 
         /// <summary>

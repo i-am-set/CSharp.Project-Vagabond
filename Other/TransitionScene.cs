@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 
@@ -36,7 +36,7 @@ namespace ProjectVagabond.Scenes
             // The SceneManager's Update loop will handle updating its animators.
         }
 
-        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             // This scene intentionally draws nothing here.
             // It relies on the Core.Draw method to clear the screen to black
