@@ -179,16 +179,9 @@ namespace ProjectVagabond
 
             if (_mapGridBounds.Contains(virtualMousePos))
             {
-                int gridX = (int)((virtualMousePos.X - _mapGridBounds.X) / _cellSize);
-                int gridY = (int)((virtualMousePos.Y - _mapGridBounds.Y) / _cellSize);
-
-                if (gridX >= 0 && gridX < GridSizeX && gridY >= 0 && gridY < GridSizeY)
-                {
-                    Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
-                    int startX = (int)viewCenter.X - GridSizeX / 2;
-                    int startY = (int)viewCenter.Y - GridSizeY / 2;
-                    currentHoveredGridPos = new Vector2(startX + gridX, startY + gridY);
-                }
+                // Use the robust ScreenToWorldGrid conversion to find the hovered cell.
+                // This ensures the calculation uses the same reference point (the render position) as the drawing code.
+                currentHoveredGridPos = ScreenToWorldGrid(virtualMousePos);
             }
 
             if (!currentHoveredGridPos.HasValue) return;
@@ -374,7 +367,7 @@ namespace ProjectVagabond
         private List<GridElement> GenerateWorldMapGridElements()
         {
             var elements = new List<GridElement>();
-            Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
+            Vector2 viewCenter = GetPlayerRenderPosition() + CameraOffset;
             int startX = (int)viewCenter.X - GridSizeX / 2;
             int startY = (int)viewCenter.Y - GridSizeY / 2;
 
@@ -432,10 +425,7 @@ namespace ProjectVagabond
             var logicalPosComp = _componentStore.GetComponent<PositionComponent>(_gameState.PlayerEntityId);
             if (playerRenderComp != null && logicalPosComp != null)
             {
-                // Prioritize RenderPositionComponent for smooth animation
-                var renderPosComp = _componentStore.GetComponent<RenderPositionComponent>(_gameState.PlayerEntityId);
-                Vector2 playerDrawPos = renderPosComp != null ? renderPosComp.WorldPosition : logicalPosComp.WorldPosition;
-
+                Vector2 playerDrawPos = GetPlayerRenderPosition();
                 Vector2? screenPos = MapCoordsToScreen(playerDrawPos);
                 if (screenPos.HasValue)
                 {
@@ -519,7 +509,7 @@ namespace ProjectVagabond
         private void DrawPlayerOffscreenIndicator(SpriteBatch spriteBatch)
         {
             Vector2 playerPos = _gameState.PlayerWorldPos;
-            Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
+            Vector2 viewCenter = GetPlayerRenderPosition() + CameraOffset;
 
             // Check if player is on-screen. If so, do nothing.
             if (MapCoordsToScreen(playerPos).HasValue)
@@ -566,9 +556,10 @@ namespace ProjectVagabond
         {
             if (_mapGridBounds.IsEmpty) return null;
 
-            Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
+            Vector2 viewCenter = GetPlayerRenderPosition() + CameraOffset;
             float startX = viewCenter.X - GridSizeX / 2f;
             float startY = viewCenter.Y - GridSizeY / 2f;
+
             float gridX = mapPos.X - startX;
             float gridY = mapPos.Y - startY;
 
@@ -580,20 +571,27 @@ namespace ProjectVagabond
             return null;
         }
 
-        public Vector2 ScreenToWorldGrid(Point screenPosition)
+        public Vector2 ScreenToWorldGrid(Vector2 virtualMousePos)
         {
-            if (!_mapGridBounds.Contains(screenPosition))
-            {
-                return new Vector2(-1, -1);
-            }
+            var viewCenter = GetPlayerRenderPosition() + CameraOffset;
 
-            int gridX = (screenPosition.X - _mapGridBounds.X) / _cellSize;
-            int gridY = (screenPosition.Y - _mapGridBounds.Y) / _cellSize;
+            float cameraWorldX = viewCenter.X - GridSizeX / 2f;
+            float cameraWorldY = viewCenter.Y - GridSizeY / 2f;
 
-            Vector2 viewCenter = _gameState.PlayerWorldPos + CameraOffset;
-            int startX = (int)viewCenter.X - GridSizeX / 2;
-            int startY = (int)viewCenter.Y - GridSizeY / 2;
-            return new Vector2(startX + gridX, startY + gridY);
+            // Apply the requested 1-pixel offset to the mouse position before calculation.
+            float adjustedMouseX = virtualMousePos.X + 0.5f;
+            float adjustedMouseY = virtualMousePos.Y + 0.5f;
+
+            float mouseWorldX = cameraWorldX + (adjustedMouseX - _mapGridBounds.X) / _cellSize;
+            float mouseWorldY = cameraWorldY + (adjustedMouseY - _mapGridBounds.Y) / _cellSize;
+
+            return new Vector2((int)Math.Floor(mouseWorldX), (int)Math.Floor(mouseWorldY));
+        }
+
+        private Vector2 GetPlayerRenderPosition()
+        {
+            var renderPosComp = _componentStore.GetComponent<RenderPositionComponent>(_gameState.PlayerEntityId);
+            return renderPosComp != null ? renderPosComp.WorldPosition : _gameState.PlayerWorldPos;
         }
 
         private string GetTerrainName(float noise)
