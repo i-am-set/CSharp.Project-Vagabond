@@ -182,46 +182,58 @@ namespace ProjectVagabond
         {
             UIInputManager.ResetFrameState();
 
-            // Handle outro animation first, as it blocks the scene switch.
-            if (_outroAnimator != null && !_outroAnimator.IsComplete)
+            // Phase 1: Outro Animation. This is the highest priority.
+            if (_outroAnimator != null)
             {
                 _outroAnimator.Update(gameTime);
-                _currentScene?.Update(gameTime); // Continue updating the old scene during its outro.
-                return;
-            }
+                _currentScene?.Update(gameTime); // Update the old scene while it animates out.
 
-            // Handle intro animation if not transitioning.
-            if (!_isTransitioning)
-            {
-                _introAnimator?.Update(gameTime);
-                _currentScene?.Update(gameTime);
-                return;
-            }
-
-            // --- At this point, outro is complete, and we are in the 'black' part of the transition ---
-
-            // If loading is pending, the SceneManager's state machine is effectively paused.
-            // The Core loop is updating the LoadingScreen.
-            // The callback from the loading screen will set _loadIsPending to false, allowing the transition to continue.
-            if (_loadIsPending)
-            {
-                // Update the TransitionScene while loading.
-                _currentScene?.Update(gameTime);
-                return; // Do nothing until loading is complete.
-            }
-
-            if (_isHoldingBlack)
-            {
-                _holdTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (_holdTimer >= HOLD_DURATION)
+                // If the animator just finished, null it out. The event handler has already
+                // switched the scene and started the next phase.
+                if (_outroAnimator.IsComplete)
                 {
-                    _isHoldingBlack = false;
-                    _isTransitioning = false; // Transition is now over, we are entering the new scene.
-                    _outroAnimator = null; // Clean up the completed outro animator.
-                    // Switch to the final target scene.
-                    SwitchToSceneInternal(_nextSceneState);
+                    _outroAnimator = null;
                 }
+                return; // Nothing else happens this frame.
             }
+
+            // Phase 2: Intro Animation. This runs after the "in-between" phase.
+            if (_introAnimator != null)
+            {
+                _introAnimator.Update(gameTime);
+                _currentScene?.Update(gameTime); // Update the new scene while it animates in.
+
+                if (_introAnimator.IsComplete)
+                {
+                    _isTransitioning = false; // The entire transition process is now finished.
+                    _introAnimator = null;
+                }
+                return; // Nothing else happens this frame.
+            }
+
+            // Phase 3: "In-between" logic (loading, holding black). This only runs if no animators are active.
+            if (_isTransitioning)
+            {
+                if (_loadIsPending)
+                {
+                    // The LoadingScreen is updated by Core, but we need to update the TransitionScene.
+                    _currentScene?.Update(gameTime);
+                }
+                else if (_isHoldingBlack)
+                {
+                    _holdTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    if (_holdTimer >= HOLD_DURATION)
+                    {
+                        _isHoldingBlack = false;
+                        // The "in-between" phase is over. Switch to the new scene, which will create the intro animator for the next phase.
+                        SwitchToSceneInternal(_nextSceneState);
+                    }
+                }
+                return; // Nothing else happens this frame.
+            }
+
+            // Phase 4: No transition is active, just a normal scene update.
+            _currentScene?.Update(gameTime);
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)

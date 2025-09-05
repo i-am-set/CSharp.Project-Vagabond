@@ -570,11 +570,6 @@ namespace ProjectVagabond
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
 
-            if (_loadingScreen.IsActive)
-            {
-                _loadingScreen.Draw(_spriteBatch, _defaultFont, GraphicsDevice.PresentationParameters.Bounds);
-            }
-
             if (_defaultFont != null)
             {
                 string versionText = $"v{Global.GAME_VERSION}";
