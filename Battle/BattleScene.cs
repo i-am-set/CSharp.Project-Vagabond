@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -229,7 +230,7 @@ namespace ProjectVagabond.Scenes
 
             // --- Draw UI Divider ---
             var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.Draw(pixel, new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, 1), Color.White);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, 1), Color.White);
 
 
             // --- Draw UI Panels ---
@@ -237,15 +238,15 @@ namespace ProjectVagabond.Scenes
             _actionMenu.Draw(spriteBatch, font, gameTime, transform);
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont defaultFont, BitmapFont secondaryFont, BattleCombatant combatant, Vector2 position)
+        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 position)
         {
             if (combatant.IsDefeated) return;
 
             // Draw HUD
             string name = combatant.Name;
             string hp = $"HP: {combatant.Stats.CurrentHP} / {combatant.Stats.MaxHP}";
-            spriteBatch.DrawStringSnapped(defaultFont, name, position + new Vector2(0, -20), Color.White);
-            spriteBatch.DrawStringSnapped(secondaryFont, hp, position + new Vector2(0, -10), Color.White);
+            spriteBatch.DrawStringSnapped(nameFont, name, position + new Vector2(0, -20), Color.White);
+            spriteBatch.DrawStringSnapped(statsFont, hp, position + new Vector2(0, -10), Color.White);
         }
     }
 }

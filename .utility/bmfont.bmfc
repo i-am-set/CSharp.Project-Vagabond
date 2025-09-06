@@ -2,7 +2,7 @@
 fileVersion=1
 
 # font settings
-fontName=5x5 Pixel
+fontName=5x5 Astro
 fontFile=../Content/Fonts/5x5_pixel.ttf
 charSet=0
 fontSize=5
@@ -54,6 +54,6 @@ invB=0
 outlineThickness=0
 
 # selected chars
-chars=0-0,13,32,48-57,65-90,97-122
+chars=32-126
 
 # imported icon images
