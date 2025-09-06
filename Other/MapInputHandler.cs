@@ -175,6 +175,16 @@ namespace ProjectVagabond
                 var targetPos = hoveredGridPos.Value;
                 if (leftClickPressed)
                 {
+                    if (_mapRenderer.IsCameraDetached || _mapRenderer.IsZoomedOut)
+                    {
+                        _mapRenderer.ResetCamera();
+                        _mapRenderer.ResetZoom();
+
+                        // Recalculate the target position AFTER resetting the view
+                        Vector2 currentVirtualMousePos = Core.TransformMouse(_currentMouseState.Position);
+                        targetPos = _mapRenderer.ScreenToWorldGrid(currentVirtualMousePos);
+                    }
+
                     _isDraggingPath = true;
                     _isAppendModeDrag = keyboardState.IsKeyDown(Keys.LeftControl) || keyboardState.IsKeyDown(Keys.RightControl);
                     _originalPendingActionCount = _gameState.PendingActions.Count;

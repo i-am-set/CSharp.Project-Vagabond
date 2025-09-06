@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Utils;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -207,9 +208,11 @@ namespace ProjectVagabond.Scenes
             {
                 string errorText = "Battle failed to initialize.";
                 Vector2 textSize = font.MeasureString(errorText);
-                spriteBatch.DrawString(font, errorText, new Vector2((Global.VIRTUAL_WIDTH - textSize.X) / 2, (Global.VIRTUAL_HEIGHT - textSize.Y) / 2), Color.Red);
+                spriteBatch.DrawStringSnapped(font, errorText, new Vector2((Global.VIRTUAL_WIDTH - textSize.X) / 2, (Global.VIRTUAL_HEIGHT - textSize.Y) / 2), Color.Red);
                 return;
             }
+
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             // --- Draw Combatant HUDs ---
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
@@ -217,11 +220,11 @@ namespace ProjectVagabond.Scenes
 
             if (player != null)
             {
-                DrawCombatantHud(spriteBatch, font, player, new Vector2(50, 80));
+                DrawCombatantHud(spriteBatch, font, secondaryFont, player, new Vector2(50, 80));
             }
             if (enemy != null)
             {
-                DrawCombatantHud(spriteBatch, font, enemy, new Vector2(Global.VIRTUAL_WIDTH - 100, 80));
+                DrawCombatantHud(spriteBatch, font, secondaryFont, enemy, new Vector2(Global.VIRTUAL_WIDTH - 100, 80));
             }
 
             // --- Draw UI Divider ---
@@ -230,19 +233,19 @@ namespace ProjectVagabond.Scenes
 
 
             // --- Draw UI Panels ---
-            _battleLog.Draw(spriteBatch, font);
+            _battleLog.Draw(spriteBatch, secondaryFont);
             _actionMenu.Draw(spriteBatch, font, gameTime, transform);
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont font, BattleCombatant combatant, Vector2 position)
+        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont defaultFont, BitmapFont secondaryFont, BattleCombatant combatant, Vector2 position)
         {
             if (combatant.IsDefeated) return;
 
             // Draw HUD
             string name = combatant.Name;
             string hp = $"HP: {combatant.Stats.CurrentHP} / {combatant.Stats.MaxHP}";
-            spriteBatch.DrawString(font, name, position + new Vector2(0, -20), Color.White);
-            spriteBatch.DrawString(font, hp, position + new Vector2(0, -10), Color.White);
+            spriteBatch.DrawStringSnapped(defaultFont, name, position + new Vector2(0, -20), Color.White);
+            spriteBatch.DrawStringSnapped(secondaryFont, hp, position + new Vector2(0, -10), Color.White);
         }
     }
 }

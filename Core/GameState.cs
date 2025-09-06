@@ -56,6 +56,11 @@ namespace ProjectVagabond
         public int InitialActionCount { get; private set; }
         public bool IsActionQueueDirty { get; set; } = true;
 
+        // Fog of War
+        public HashSet<Point> ExploredCells { get; private set; } = new HashSet<Point>();
+        private const int FOG_OF_WAR_RADIUS = 20;
+
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, ChunkManager chunkManager, Global global, SpriteManager spriteManager)
@@ -66,7 +71,13 @@ namespace ProjectVagabond
             _global = global;
             _spriteManager = spriteManager;
 
-            EventBus.Subscribe<GameEvents.ActionQueueChanged>(e => IsActionQueueDirty = true); // Subscribe to the event to mark the queue as dirty whenever it's changed.
+            EventBus.Subscribe<GameEvents.ActionQueueChanged>(e => IsActionQueueDirty = true);
+            EventBus.Subscribe<GameEvents.PlayerMoved>(OnPlayerMoved);
+        }
+
+        private void OnPlayerMoved(GameEvents.PlayerMoved e)
+        {
+            UpdateExploration(e.NewPosition);
         }
 
         public void InitializeWorld()
@@ -77,6 +88,34 @@ namespace ProjectVagabond
             if (posComp != null)
             {
                 _componentStore.AddComponent(PlayerEntityId, new RenderPositionComponent { WorldPosition = posComp.WorldPosition });
+            }
+
+            // Initial map reveal
+            UpdateExploration(PlayerWorldPos);
+        }
+
+        /// <summary>
+        /// Updates the set of explored cells based on the player's current position.
+        /// </summary>
+        /// <param name="centerPosition">The player's current world position.</param>
+        public void UpdateExploration(Vector2 centerPosition)
+        {
+            int radius = FOG_OF_WAR_RADIUS;
+            float radiusSquared = radius * radius;
+            int centerX = (int)centerPosition.X;
+            int centerY = (int)centerPosition.Y;
+
+            for (int y = centerY - radius; y <= centerY + radius; y++)
+            {
+                for (int x = centerX - radius; x <= centerX + radius; x++)
+                {
+                    var cellPoint = new Point(x, y);
+                    var cellCenter = new Vector2(x, y);
+                    if (Vector2.DistanceSquared(centerPosition, cellCenter) <= radiusSquared)
+                    {
+                        ExploredCells.Add(cellPoint);
+                    }
+                }
             }
         }
 

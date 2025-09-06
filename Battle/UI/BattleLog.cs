@@ -5,6 +5,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -64,7 +65,7 @@ namespace ProjectVagabond.Battle.UI
 
                 foreach (var segment in line.Segments)
                 {
-                    spriteBatch.DrawString(font, segment.Text, new Vector2(x, y), segment.Color);
+                    spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(x, y), segment.Color);
                     x += font.MeasureString(segment.Text).Width;
                 }
             }

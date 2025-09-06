@@ -40,6 +40,7 @@ namespace ProjectVagabond
         // Camera Panning
         public Vector2 CameraOffset { get; private set; } = Vector2.Zero;
         public bool IsCameraDetached => CameraOffset != Vector2.Zero;
+        public bool IsZoomedOut => _cellSize < DEFAULT_CELL_SIZE;
 
 
         // --- TUNING ---
@@ -115,6 +116,11 @@ namespace ProjectVagabond
                     _cellSize = 1;
                     break;
             }
+        }
+
+        public void ResetZoom()
+        {
+            _cellSize = DEFAULT_CELL_SIZE;
         }
 
         public void SetCameraOffset(Vector2 newOffset)
@@ -197,6 +203,12 @@ namespace ProjectVagabond
             int posX = (int)currentHoveredGridPos.Value.X;
             int posY = (int)currentHoveredGridPos.Value.Y;
 
+            if (!_gameState.ExploredCells.Contains(new Point(posX, posY)))
+            {
+                _tooltipManager.RequestTooltip(currentHoveredGridPos.Value, "Unexplored", virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
+                return;
+            }
+
             float noise = _gameState.GetNoiseAt(posX, posY);
             string terrainName = GetTerrainName(noise);
             stringBuilder.Append($"Pos: ({posX}, {posY})\n");
@@ -241,7 +253,7 @@ namespace ProjectVagabond
                 DrawGridElement(spriteBatch, element, _cellSize, gameTime);
             }
 
-            if (_hoveredGridPos.HasValue)
+            if (_hoveredGridPos.HasValue && _gameState.ExploredCells.Contains(new Point((int)_hoveredGridPos.Value.X, (int)_hoveredGridPos.Value.Y)))
             {
                 Vector2? screenPos = MapCoordsToScreen(_hoveredGridPos.Value);
                 if (screenPos.HasValue)
@@ -378,6 +390,12 @@ namespace ProjectVagabond
                 {
                     int worldX = startX + x;
                     int worldY = startY + y;
+
+                    if (!_gameState.ExploredCells.Contains(new Point(worldX, worldY)))
+                    {
+                        continue;
+                    }
+
                     float noise = _gameState.GetNoiseAt(worldX, worldY);
                     Vector2? screenPos = MapCoordsToScreen(new Vector2(worldX, worldY));
                     if (screenPos.HasValue)
@@ -400,9 +418,11 @@ namespace ProjectVagabond
             var entitiesToDraw = new List<int>();
             foreach (var entityId in _gameState.ActiveEntities)
             {
+                var posComp = _componentStore.GetComponent<PositionComponent>(entityId);
                 if (entityId != _gameState.PlayerEntityId &&
-                    _componentStore.HasComponent<PositionComponent>(entityId) &&
-                    _componentStore.HasComponent<RenderableComponent>(entityId))
+                    posComp != null &&
+                    _componentStore.HasComponent<RenderableComponent>(entityId) &&
+                    _gameState.ExploredCells.Contains(new Point((int)posComp.WorldPosition.X, (int)posComp.WorldPosition.Y)))
                 {
                     entitiesToDraw.Add(entityId);
                 }
@@ -450,6 +470,11 @@ namespace ProjectVagabond
                 if (action is MoveAction moveAction)
                 {
                     Vector2 actionPos = moveAction.Destination;
+                    if (!_gameState.ExploredCells.Contains(new Point((int)actionPos.X, (int)actionPos.Y)))
+                    {
+                        continue;
+                    }
+
                     bool isRunning = moveAction.Mode == MovementMode.Run;
 
                     Texture2D actionTexture = isRunning ? _spriteManager.RunPathSprite : _spriteManager.PathSprite;
