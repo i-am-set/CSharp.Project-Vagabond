@@ -274,7 +274,7 @@ namespace ProjectVagabond
                 // Not registering with ServiceLocator to avoid type collision.
                 // Access via ServiceLocator.Get<Core>().SecondaryFont
             }
-            catch
+            catch (Exception ex)
             {
                 // If the secondary font fails, we can fall back to the default font.
                 // This prevents a crash if the asset is missing.

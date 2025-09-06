@@ -11,6 +11,10 @@
 		<ApplicationIcon>Icon.ico</ApplicationIcon>
 	</PropertyGroup>
 	<ItemGroup>
+		<None Remove="Content\Fonts\5x5_pixel.fnt" />
+		<None Remove="Content\Fonts\5x5_pixel_0.png" />
+		<None Remove="Content\Fonts\Px437_IBM_BIOS.fnt" />
+		<None Remove="Content\Fonts\Px437_IBM_BIOS_0.png" />
 		<None Remove="Icon.ico" />
 		<None Remove="Icon.bmp" />
 	</ItemGroup>
@@ -38,6 +42,20 @@
 		<Content Include="Content\**\*.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</Content>
+	</ItemGroup>
+	<ItemGroup>
+	  <Content Include="Content\Fonts\5x5_pixel.fnt">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Content\Fonts\5x5_pixel_0.png">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Content\Fonts\Px437_IBM_BIOS.fnt">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
+	  <Content Include="Content\Fonts\Px437_IBM_BIOS_0.png">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Content>
 	</ItemGroup>
 
 	<Target Name="RestoreDotnetTools" BeforeTargets="CollectPackageReferences">

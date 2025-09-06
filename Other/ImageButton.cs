@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -15,10 +16,10 @@ namespace ProjectVagabond.UI
         public int MinCornerArmLength { get; set; } = 3;
         public int MaxCornerArmLength { get; set; } = 20;
 
-        private readonly Texture2D _defaultTexture;
-        private readonly Texture2D _hoverTexture;
-        private readonly Texture2D _clickedTexture;
-        private readonly Texture2D _disabledTexture;
+        private readonly Texture2D? _defaultTexture;
+        private readonly Texture2D? _hoverTexture;
+        private readonly Texture2D? _clickedTexture;
+        private readonly Texture2D? _disabledTexture;
 
         private bool _isHeldDown;
         private float _swayTimer = 0f;
@@ -31,8 +32,8 @@ namespace ProjectVagabond.UI
         private const float SWAY_SPEED = 3f;
         private const float SWAY_AMOUNT_X = 2f;
 
-        public ImageButton(Rectangle bounds, Texture2D defaultTexture = null, Texture2D hoverTexture = null, Texture2D clickedTexture = null, Texture2D disabledTexture = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false)
-            : base(bounds, "", enableHoverSway: enableHoverSway, clickOnPress: clickOnPress)
+        public ImageButton(Rectangle bounds, Texture2D? defaultTexture = null, Texture2D? hoverTexture = null, Texture2D? clickedTexture = null, Texture2D? disabledTexture = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, BitmapFont? font = null)
+            : base(bounds, "", enableHoverSway: enableHoverSway, clickOnPress: clickOnPress, font: font)
         {
             _defaultTexture = defaultTexture;
             _hoverTexture = hoverTexture;
@@ -58,9 +59,9 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, bool forceHover = false)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
-            Texture2D textureToDraw = _defaultTexture;
+            Texture2D? textureToDraw = _defaultTexture;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             if (!IsEnabled && _disabledTexture != null)
@@ -145,3 +146,4 @@ namespace ProjectVagabond.UI
         }
     }
 }
+#nullable restore

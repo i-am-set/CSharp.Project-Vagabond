@@ -9,6 +9,7 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Scenes
@@ -27,6 +28,7 @@ namespace ProjectVagabond.Scenes
         private float _currentInputDelay = 0f;
 
         private ConfirmationDialog _confirmationDialog;
+        private bool _uiInitialized = false;
 
         // --- DEBUG: Fireball Emitters ---
         private readonly List<ParticleEmitter> _fireballEmitters = new List<ParticleEmitter>();
@@ -47,15 +49,31 @@ namespace ProjectVagabond.Scenes
         public override void Initialize()
         {
             _confirmationDialog = new ConfirmationDialog(this);
+        }
 
-            int screenWidth = Global.VIRTUAL_WIDTH;
-            int buttonWidth = 100;
-            int buttonHeight = 10;
-            int buttonYStart = 90;
-            int buttonYSpacing = 12;
+        private void InitializeUI()
+        {
+            if (_uiInitialized) return;
 
+            _buttons.Clear();
 
-            var playButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, buttonYStart, buttonWidth, buttonHeight), "PLAY");
+            var defaultFont = ServiceLocator.Get<BitmapFont>();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+
+            const int horizontalPadding = 4;
+            const int verticalPadding = 2;
+            const int buttonYSpacing = 2; // Vertical gap between buttons
+            float currentY = 90f;
+
+            // --- PLAY Button ---
+            string playText = "PLAY";
+            Vector2 playTextSize = defaultFont.MeasureString(playText);
+            int playWidth = (int)playTextSize.X + horizontalPadding * 2;
+            int playHeight = (int)playTextSize.Y + verticalPadding * 2;
+            var playButton = new Button(
+                new Rectangle((Global.VIRTUAL_WIDTH - playWidth) / 2, (int)currentY, playWidth, playHeight),
+                playText
+            );
             playButton.OnClick += () =>
             {
                 var core = ServiceLocator.Get<Core>();
@@ -80,16 +98,37 @@ namespace ProjectVagabond.Scenes
 
                 _sceneManager.ChangeScene(GameSceneState.TerminalMap, loadingTasks, onLoadingComplete);
             };
-
-            var settingsButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, buttonYStart + buttonYSpacing, buttonWidth, buttonHeight), "SETTINGS");
-            settingsButton.OnClick += () => _sceneManager.ChangeScene(GameSceneState.Settings);
-
-            var exitButton = new Button(new Rectangle(screenWidth / 2 - buttonWidth / 2, buttonYStart + buttonYSpacing * 2, buttonWidth, buttonHeight), "EXIT");
-            exitButton.OnClick += ConfirmExit;
-
             _buttons.Add(playButton);
+            currentY += playHeight + buttonYSpacing;
+
+            // --- SETTINGS Button ---
+            string settingsText = "SETTINGS";
+            Vector2 settingsTextSize = secondaryFont.MeasureString(settingsText);
+            int settingsWidth = (int)settingsTextSize.X + horizontalPadding * 2;
+            int settingsHeight = (int)settingsTextSize.Y + verticalPadding * 2;
+            var settingsButton = new Button(
+                new Rectangle((Global.VIRTUAL_WIDTH - settingsWidth) / 2, (int)currentY, settingsWidth, settingsHeight),
+                settingsText,
+                font: secondaryFont
+            );
+            settingsButton.OnClick += () => _sceneManager.ChangeScene(GameSceneState.Settings);
             _buttons.Add(settingsButton);
+            currentY += settingsHeight + buttonYSpacing;
+
+            // --- EXIT Button ---
+            string exitText = "EXIT";
+            Vector2 exitTextSize = secondaryFont.MeasureString(exitText);
+            int exitWidth = (int)exitTextSize.X + horizontalPadding * 2;
+            int exitHeight = (int)exitTextSize.Y + verticalPadding * 2;
+            var exitButton = new Button(
+                new Rectangle((Global.VIRTUAL_WIDTH - exitWidth) / 2, (int)currentY, exitWidth, exitHeight),
+                exitText,
+                font: secondaryFont
+            );
+            exitButton.OnClick += ConfirmExit;
             _buttons.Add(exitButton);
+
+            _uiInitialized = true;
         }
 
         private void ConfirmExit()
@@ -107,6 +146,8 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
+            InitializeUI(); // This will now run safely after fonts are loaded.
+
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
 
@@ -293,16 +334,8 @@ namespace ProjectVagabond.Scenes
 
                 if (selectedButton.IsHovered || keyboardNavigatedLastFrame)
                 {
-                    Vector2 textSize = font.MeasureString(selectedButton.Text);
-                    int horizontalPadding = 4;
-                    int verticalPadding = 2;
-                    Rectangle highlightRect = new Rectangle(
-                        (int)(selectedButton.Bounds.X + (selectedButton.Bounds.Width - textSize.X) * 0.5f - horizontalPadding),
-                        (int)(selectedButton.Bounds.Y + (selectedButton.Bounds.Height - textSize.Y) * 0.5f - verticalPadding),
-                        (int)(textSize.X + horizontalPadding * 2),
-                        (int)(textSize.Y + verticalPadding * 2)
-                    );
-                    DrawRectangleBorder(spriteBatch, pixel, highlightRect, 1, _global.ButtonHoverColor);
+                    // The highlight rectangle is now simply the button's bounds.
+                    DrawRectangleBorder(spriteBatch, pixel, selectedButton.Bounds, 1, _global.ButtonHoverColor);
                 }
             }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
@@ -12,15 +13,13 @@ namespace ProjectVagabond.UI
         public bool IsSelected { get; set; }
         public Color? CustomToggledTextColor { get; set; }
 
-#nullable enable
-        public ToggleButton(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, Color? customToggledTextColor = null, bool zoomHapticOnClick = true, bool clickOnPress = false)
-            : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor, clickOnPress: clickOnPress)
+        public ToggleButton(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, Color? customToggledTextColor = null, bool zoomHapticOnClick = true, bool clickOnPress = false, BitmapFont? font = null)
+            : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor, clickOnPress: clickOnPress, font: font)
         {
             CustomToggledTextColor = customToggledTextColor;
         }
-#nullable restore
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, bool forceHover = false)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
             // This method now just determines the color and then calls the base Draw method.
             // The base Draw method handles all animation and rendering logic.
@@ -48,10 +47,11 @@ namespace ProjectVagabond.UI
             var originalColor = this.CustomDefaultTextColor;
             this.CustomDefaultTextColor = textColor;
 
-            base.Draw(spriteBatch, font, gameTime, transform, forceHover);
+            base.Draw(spriteBatch, defaultFont, gameTime, transform, forceHover);
 
             // Restore the original custom color
             this.CustomDefaultTextColor = originalColor;
         }
     }
 }
+#nullable restore

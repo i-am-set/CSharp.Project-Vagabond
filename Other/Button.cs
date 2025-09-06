@@ -1,10 +1,12 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Diagnostics;
 
 namespace ProjectVagabond.UI
 {
@@ -38,8 +40,9 @@ namespace ProjectVagabond.UI
         public StrikethroughType Strikethrough { get; set; } = StrikethroughType.None;
         public bool EnableHoverSway { get; set; } = true;
         public bool ClickOnPress { get; set; } = false;
+        public BitmapFont? Font { get; set; }
 
-        public event Action OnClick;
+        public event Action? OnClick;
 
         protected MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
@@ -57,8 +60,7 @@ namespace ProjectVagabond.UI
 
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
-#nullable enable
-        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, bool clickOnPress = false)
+        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, bool clickOnPress = false, BitmapFont? font = null)
         {
             _global = ServiceLocator.Get<Global>();
 
@@ -77,8 +79,8 @@ namespace ProjectVagabond.UI
             OverflowScrollSpeed = overflowScrollSpeed;
             EnableHoverSway = enableHoverSway;
             ClickOnPress = clickOnPress;
+            Font = font;
         }
-#nullable restore
 
         public virtual void Update(MouseState currentMouseState)
         {
@@ -156,8 +158,10 @@ namespace ProjectVagabond.UI
             IsHovered = false;
         }
 
-        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, bool forceHover = false)
+        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
+            BitmapFont font = this.Font ?? defaultFont; // Use the button's specific font, or fall back to the scene's default.
+
             Color textColor;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
@@ -227,6 +231,14 @@ namespace ProjectVagabond.UI
             // Therefore, we can use the virtual-space `Bounds` directly.
             spriteBatch.GraphicsDevice.ScissorRectangle = Bounds;
 
+            // Add a horizontal offset for specific fonts that have different alignment metrics.
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            float xOffset = 0;
+            if (object.ReferenceEquals(font, secondaryFont))
+            {
+                xOffset = 1; // Move right by 1 pixel
+            }
+
             bool shouldScroll = OverflowScrollSpeed > 0 && textSize.X > Bounds.Width;
             if (shouldScroll)
             {
@@ -237,23 +249,25 @@ namespace ProjectVagabond.UI
                 {
                     _scrollPosition -= scrollingTextSize.X;
                 }
-                Vector2 scrollTextPosition = new Vector2(Bounds.X - _scrollPosition, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
+                Vector2 scrollTextPosition = new Vector2(Bounds.X - _scrollPosition + xOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
                 spriteBatch.DrawStringSnapped(font, scrollingText, scrollTextPosition, textColor);
                 spriteBatch.DrawStringSnapped(font, scrollingText, new Vector2(scrollTextPosition.X + scrollingTextSize.X, scrollTextPosition.Y), textColor);
             }
             else
             {
-                Vector2 textOrigin = textSize / 2f;
+                // CRITICAL FIX: Round the origin to prevent sub-pixel rendering artifacts.
+                Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
                 Vector2 textPosition;
+
                 if (AlignLeft)
                 {
                     // For left-align, origin needs to be adjusted to just the vertical center
                     textOrigin.X = 0;
-                    textPosition = new Vector2(Bounds.Left + totalXOffset, Bounds.Center.Y);
+                    textPosition = new Vector2(Bounds.Left + totalXOffset + xOffset, Bounds.Center.Y);
                 }
                 else
                 {
-                    textPosition = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y);
+                    textPosition = new Vector2(Bounds.Center.X + totalXOffset + xOffset, Bounds.Center.Y);
                 }
 
                 spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, scale, SpriteEffects.None, 0f);
@@ -296,3 +310,4 @@ namespace ProjectVagabond.UI
         }
     }
 }
+#nullable restore
