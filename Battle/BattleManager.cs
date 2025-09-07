@@ -31,6 +31,7 @@ namespace ProjectVagabond.Battle
 
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
+        public bool CanAdvance { get; set; } = true;
 
         /// <summary>
         /// Initializes a new instance of the BattleManager class and starts the battle.
@@ -71,6 +72,11 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
+            if (!CanAdvance)
+            {
+                return;
+            }
+
             switch (_currentPhase)
             {
                 case BattlePhase.StartOfTurn:
@@ -93,8 +99,6 @@ namespace ProjectVagabond.Battle
         /// </summary>
         private void HandleStartOfTurn()
         {
-            EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = $"--- Turn {_turnNumber} Start ---" });
-
             // 1. Environment Resolution (Placeholder)
 
             // 2. Duration Countdown
@@ -172,13 +176,14 @@ namespace ProjectVagabond.Battle
             }
 
             var action = _actionQueue[0];
+            _actionQueue.RemoveAt(0);
 
             // Pre-computation (Attacker)
             if (action.Actor.HasStatusEffect(StatusEffectType.Stun))
             {
-                EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = $"{action.Actor.Name} is stunned and cannot move!" });
+                EventBus.Publish(new GameEvents.BattleActionResolved { NarrationMessage = $"{action.Actor.Name} is stunned and cannot move!" });
                 action.Actor.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Stun);
-                _actionQueue.RemoveAt(0);
+                CanAdvance = false;
                 return; // End this step of resolution
             }
             // DoT/HoT effects would be resolved here.
@@ -187,15 +192,13 @@ namespace ProjectVagabond.Battle
             var result = DamageCalculator.CalculateDamage(action.Actor, action.Target, action.ChosenMove);
             action.Target.ApplyDamage(result.DamageAmount);
 
-            // Logging via EventBus
-            string logMessage = $"{action.Actor.Name} uses {action.ChosenMove.MoveName} on {action.Target.Name} for {result.DamageAmount} damage.";
-            if (result.WasGraze) logMessage += " (Graze)";
-            if (result.WasCritical) logMessage += " (Critical Hit!)";
-            EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = logMessage });
-            EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = $"{action.Target.Name} HP: {action.Target.Stats.CurrentHP}/{action.Target.Stats.MaxHP}" });
+            // Build narration message
+            string narration = $"{action.Actor.Name} uses {action.ChosenMove.MoveName} on {action.Target.Name} for {result.DamageAmount} damage.";
+            if (result.WasGraze) narration += " (Graze)";
+            if (result.WasCritical) narration += " (Critical Hit!)";
+            EventBus.Publish(new GameEvents.BattleActionResolved { NarrationMessage = narration });
 
-
-            _actionQueue.RemoveAt(0);
+            CanAdvance = false; // Pause the manager until the scene says it's okay.
         }
 
         /// <summary>
@@ -203,19 +206,17 @@ namespace ProjectVagabond.Battle
         /// </summary>
         private void HandleEndOfTurn()
         {
-            EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = $"--- Turn {_turnNumber} End ---" });
-
             // Victory/Defeat Check
             if (_enemyCombatants.All(c => c.IsDefeated))
             {
-                EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = "Player Wins!" });
+                EventBus.Publish(new GameEvents.BattleActionResolved { NarrationMessage = "Player Wins!" });
                 _currentPhase = BattlePhase.BattleOver;
                 return;
             }
 
             if (_playerCombatants.All(c => c.IsDefeated))
             {
-                EventBus.Publish(new GameEvents.BattleLogMessagePublished { Message = "Player Loses!" });
+                EventBus.Publish(new GameEvents.BattleActionResolved { NarrationMessage = "Player Loses!" });
                 _currentPhase = BattlePhase.BattleOver;
                 return;
             }

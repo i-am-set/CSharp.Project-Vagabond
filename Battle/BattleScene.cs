@@ -4,7 +4,6 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -21,7 +20,7 @@ namespace ProjectVagabond.Scenes
         private int _enemyEntityId = -1;
 
         // UI Components
-        private BattleLog _battleLog;
+        private BattleNarrator _battleNarrator;
         private ActionMenu _actionMenu;
 
         private ComponentStore _componentStore;
@@ -35,7 +34,6 @@ namespace ProjectVagabond.Scenes
 
         // Layout Constants
         private const int DIVIDER_Y = 120;
-        private const int LOG_AREA_WIDTH = 180;
 
         public BattleScene()
         {
@@ -52,8 +50,8 @@ namespace ProjectVagabond.Scenes
         public override void Initialize()
         {
             base.Initialize();
-            var logBounds = new Rectangle(10, DIVIDER_Y + 5, LOG_AREA_WIDTH, Global.VIRTUAL_HEIGHT - DIVIDER_Y - 10);
-            _battleLog = new BattleLog(logBounds);
+            var narratorBounds = new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - DIVIDER_Y);
+            _battleNarrator = new BattleNarrator(narratorBounds);
             _actionMenu = new ActionMenu();
         }
 
@@ -66,7 +64,7 @@ namespace ProjectVagabond.Scenes
             _isBattleOver = false;
             _endOfBattleTimer = 0f;
 
-            EventBus.Subscribe<GameEvents.BattleLogMessagePublished>(OnBattleLogMessage);
+            EventBus.Subscribe<GameEvents.BattleActionResolved>(OnBattleActionResolved);
             _actionMenu.OnMoveSelected += OnPlayerMoveSelected;
 
             // For this debug implementation, we create combatants when the scene starts.
@@ -105,7 +103,7 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
-            EventBus.Unsubscribe<GameEvents.BattleLogMessagePublished>(OnBattleLogMessage);
+            EventBus.Unsubscribe<GameEvents.BattleActionResolved>(OnBattleActionResolved);
             _actionMenu.OnMoveSelected -= OnPlayerMoveSelected;
 
             // Clean up the temporary enemy entity when leaving the battle scene
@@ -119,9 +117,10 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void OnBattleLogMessage(GameEvents.BattleLogMessagePublished e)
+        private void OnBattleActionResolved(GameEvents.BattleActionResolved e)
         {
-            _battleLog.AddMessage(e.Message);
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            _battleNarrator.Show(e.NarrationMessage, secondaryFont);
         }
 
         private void OnPlayerMoveSelected(MoveData move, BattleCombatant target)
@@ -143,9 +142,11 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime);
-
-            if (_battleManager == null) return;
+            if (_battleManager == null)
+            {
+                base.Update(gameTime);
+                return;
+            }
 
             // If the battle is over, handle the delay and transition back to the map.
             if (_isBattleOver)
@@ -155,11 +156,27 @@ namespace ProjectVagabond.Scenes
                 {
                     _sceneManager.ChangeScene(GameSceneState.TerminalMap);
                 }
+                base.Update(gameTime);
                 return; // Stop further updates once the battle is won/lost
             }
 
-            // The BattleManager drives the state of the battle.
+            var currentKeyboardState = Keyboard.GetState();
+
+            // Update UI elements that should always be active
+            _battleNarrator.Update(gameTime);
+            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
+            {
+                _actionMenu.Update(Mouse.GetState());
+                if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+                {
+                    _actionMenu.GoBack();
+                }
+            }
+
+            // The BattleScene controls the flow of the BattleManager based on the narrator's state.
+            _battleManager.CanAdvance = !_battleNarrator.IsBusy;
             _battleManager.Update();
+
 
             // Check for phase transitions to manage UI state.
             var currentPhase = _battleManager.CurrentPhase;
@@ -182,25 +199,15 @@ namespace ProjectVagabond.Scenes
                 _previousBattlePhase = currentPhase;
             }
 
-            // Update the action menu if it's supposed to be visible.
-            if (currentPhase == BattleManager.BattlePhase.ActionSelection)
-            {
-                _actionMenu.Update(Mouse.GetState());
-            }
-
             // Check if the battle just ended in this frame.
-            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver)
+            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver && !_isBattleOver)
             {
                 _isBattleOver = true;
                 _actionMenu.Hide();
-                return;
             }
 
-            // Placeholder for triggering animations during ActionResolution
-            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionResolution)
-            {
-                // Future: Check the action being resolved and trigger corresponding visual effects.
-            }
+            // CRITICAL: Call base.Update() at the end to update previous input states for the next frame.
+            base.Update(gameTime);
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -234,19 +241,44 @@ namespace ProjectVagabond.Scenes
 
 
             // --- Draw UI Panels ---
-            _battleLog.Draw(spriteBatch, secondaryFont);
             _actionMenu.Draw(spriteBatch, font, gameTime, transform);
+            _battleNarrator.Draw(spriteBatch, secondaryFont);
         }
 
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 position)
         {
             if (combatant.IsDefeated) return;
 
-            // Draw HUD
-            string name = combatant.Name;
-            string hp = $"HP: {combatant.Stats.CurrentHP} / {combatant.Stats.MaxHP}";
-            spriteBatch.DrawStringSnapped(nameFont, name, position + new Vector2(0, -20), Color.White);
-            spriteBatch.DrawStringSnapped(statsFont, hp, position + new Vector2(0, -10), Color.White);
+            // Draw Name
+            spriteBatch.DrawStringSnapped(nameFont, combatant.Name, position + new Vector2(0, -20), Color.White);
+
+            // Draw HP line with mixed colors
+            var global = ServiceLocator.Get<Global>();
+            Color labelColor = global.Palette_LightGray;
+            Color numberColor = Color.White;
+            Vector2 hpPosition = position + new Vector2(0, -10);
+
+            string hpLabel = "HP: ";
+            string currentHp = combatant.Stats.CurrentHP.ToString();
+            string separator = "/";
+            string maxHp = combatant.Stats.MaxHP.ToString();
+
+            // Draw "HP: "
+            spriteBatch.DrawStringSnapped(statsFont, hpLabel, hpPosition, labelColor);
+            float currentX = hpPosition.X + statsFont.MeasureString(hpLabel).Width;
+
+            // Draw Current HP
+            spriteBatch.DrawStringSnapped(statsFont, currentHp, new Vector2(currentX, hpPosition.Y), numberColor);
+            currentX += statsFont.MeasureString(currentHp).Width;
+
+            // Draw "/"
+            spriteBatch.DrawStringSnapped(statsFont, separator, new Vector2(currentX, hpPosition.Y), labelColor);
+            currentX += statsFont.MeasureString(separator).Width;
+
+            // Draw Max HP
+            spriteBatch.DrawStringSnapped(statsFont, maxHp, new Vector2(currentX, hpPosition.Y), numberColor);
         }
+
+        private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
     }
 }

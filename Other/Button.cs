@@ -41,6 +41,7 @@ namespace ProjectVagabond.UI
         public bool EnableHoverSway { get; set; } = true;
         public bool ClickOnPress { get; set; } = false;
         public BitmapFont? Font { get; set; }
+        public Vector2 TextRenderOffset { get; set; } = Vector2.Zero;
 
         public event Action? OnClick;
 
@@ -57,6 +58,7 @@ namespace ProjectVagabond.UI
 
         private const float SWAY_SPEED = 3f;
         private const float SWAY_AMOUNT_X = 1f;
+        private const int LEFT_ALIGN_PADDING = 4;
 
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
@@ -231,14 +233,6 @@ namespace ProjectVagabond.UI
             // Therefore, we can use the virtual-space `Bounds` directly.
             spriteBatch.GraphicsDevice.ScissorRectangle = Bounds;
 
-            // Add a horizontal offset for specific fonts that have different alignment metrics.
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            float xOffset = 0;
-            if (object.ReferenceEquals(font, secondaryFont))
-            {
-                xOffset = 1; // Move right by 1 pixel
-            }
-
             bool shouldScroll = OverflowScrollSpeed > 0 && textSize.X > Bounds.Width;
             if (shouldScroll)
             {
@@ -249,7 +243,7 @@ namespace ProjectVagabond.UI
                 {
                     _scrollPosition -= scrollingTextSize.X;
                 }
-                Vector2 scrollTextPosition = new Vector2(Bounds.X - _scrollPosition + xOffset, Bounds.Y + (Bounds.Height - textSize.Y) / 2);
+                Vector2 scrollTextPosition = new Vector2(Bounds.X - _scrollPosition, Bounds.Y + (Bounds.Height - textSize.Y) / 2) + TextRenderOffset;
                 spriteBatch.DrawStringSnapped(font, scrollingText, scrollTextPosition, textColor);
                 spriteBatch.DrawStringSnapped(font, scrollingText, new Vector2(scrollTextPosition.X + scrollingTextSize.X, scrollTextPosition.Y), textColor);
             }
@@ -263,12 +257,14 @@ namespace ProjectVagabond.UI
                 {
                     // For left-align, origin needs to be adjusted to just the vertical center
                     textOrigin.X = 0;
-                    textPosition = new Vector2(Bounds.Left + totalXOffset + xOffset, Bounds.Center.Y);
+                    textPosition = new Vector2(Bounds.Left + totalXOffset + LEFT_ALIGN_PADDING, Bounds.Center.Y);
                 }
                 else
                 {
-                    textPosition = new Vector2(Bounds.Center.X + totalXOffset + xOffset, Bounds.Center.Y);
+                    textPosition = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y);
                 }
+
+                textPosition += TextRenderOffset; // Apply the custom render offset
 
                 spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, scale, SpriteEffects.None, 0f);
 

@@ -74,11 +74,11 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published when a message should be added to the battle log UI.
+        /// Published when a single action in a battle is resolved, providing text for narration.
         /// </summary>
-        public struct BattleLogMessagePublished
+        public struct BattleActionResolved
         {
-            public string Message { get; set; }
+            public string NarrationMessage { get; set; }
         }
     }
 }

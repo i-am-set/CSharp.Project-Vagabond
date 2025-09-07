@@ -107,10 +107,11 @@ namespace ProjectVagabond.Scenes
             int settingsWidth = (int)settingsTextSize.X + horizontalPadding * 2;
             int settingsHeight = (int)settingsTextSize.Y + verticalPadding * 2;
             var settingsButton = new Button(
-                new Rectangle((Global.VIRTUAL_WIDTH - settingsWidth) / 2, (int)currentY, settingsWidth, settingsHeight),
+                new Rectangle(((Global.VIRTUAL_WIDTH - settingsWidth) / 2) + 2, (int)currentY, settingsWidth, settingsHeight),
                 settingsText,
                 font: secondaryFont
-            );
+            )
+            { TextRenderOffset = new Vector2(0, -1) };
             settingsButton.OnClick += () => _sceneManager.ChangeScene(GameSceneState.Settings);
             _buttons.Add(settingsButton);
             currentY += settingsHeight + buttonYSpacing;
@@ -121,10 +122,11 @@ namespace ProjectVagabond.Scenes
             int exitWidth = (int)exitTextSize.X + horizontalPadding * 2;
             int exitHeight = (int)exitTextSize.Y + verticalPadding * 2;
             var exitButton = new Button(
-                new Rectangle((Global.VIRTUAL_WIDTH - exitWidth) / 2, (int)currentY, exitWidth, exitHeight),
+                new Rectangle(((Global.VIRTUAL_WIDTH - exitWidth) / 2) + 2, (int)currentY, exitWidth, exitHeight),
                 exitText,
                 font: secondaryFont
-            );
+            )
+            { TextRenderOffset = new Vector2(0, -1) };
             exitButton.OnClick += ConfirmExit;
             _buttons.Add(exitButton);
 

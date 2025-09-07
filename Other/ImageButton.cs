@@ -15,6 +15,7 @@ namespace ProjectVagabond.UI
         public float CornerLengthRatio { get; set; } = 0.25f;
         public int MinCornerArmLength { get; set; } = 3;
         public int MaxCornerArmLength { get; set; } = 20;
+        public Color? DebugColor { get; set; }
 
         private readonly Texture2D? _defaultTexture;
         private readonly Texture2D? _hoverTexture;
@@ -32,14 +33,15 @@ namespace ProjectVagabond.UI
         private const float SWAY_SPEED = 3f;
         private const float SWAY_AMOUNT_X = 2f;
 
-        public ImageButton(Rectangle bounds, Texture2D? defaultTexture = null, Texture2D? hoverTexture = null, Texture2D? clickedTexture = null, Texture2D? disabledTexture = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, BitmapFont? font = null)
-            : base(bounds, "", enableHoverSway: enableHoverSway, clickOnPress: clickOnPress, font: font)
+        public ImageButton(Rectangle bounds, Texture2D? defaultTexture = null, Texture2D? hoverTexture = null, Texture2D? clickedTexture = null, Texture2D? disabledTexture = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, BitmapFont? font = null, Color? debugColor = null)
+            : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, clickOnPress, font)
         {
             _defaultTexture = defaultTexture;
             _hoverTexture = hoverTexture;
             _clickedTexture = clickedTexture;
             _disabledTexture = disabledTexture;
             HoverBorderColor = _global.ButtonHoverColor;
+            DebugColor = debugColor;
         }
 
         public override void Update(MouseState currentMouseState)
@@ -117,6 +119,10 @@ namespace ProjectVagabond.UI
             {
                 var origin = textureToDraw.Bounds.Center.ToVector2();
                 spriteBatch.DrawSnapped(textureToDraw, position, null, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+            }
+            else if (DebugColor.HasValue)
+            {
+                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), Bounds, DebugColor.Value);
             }
 
             if (isActivated && _hoverTexture == null)
