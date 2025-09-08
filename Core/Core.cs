@@ -1,4 +1,4 @@
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -6,6 +6,7 @@ using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -376,6 +377,7 @@ namespace ProjectVagabond
             {
                 if (_sceneManager.CurrentActiveScene?.GetType() != typeof(BattleScene))
                 {
+                    BattleSetup.EnemyArchetypes = new List<string> { "wanderer", "wanderer", "wanderer" };
                     _sceneManager.ChangeScene(GameSceneState.Battle);
                 }
             }
@@ -700,3 +702,4 @@ namespace ProjectVagabond
         public void ExitApplication() => Exit();
     }
 }
+﻿

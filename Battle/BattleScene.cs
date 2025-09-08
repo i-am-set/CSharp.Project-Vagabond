@@ -18,7 +18,7 @@ namespace ProjectVagabond.Scenes
     public class BattleScene : GameScene
     {
         private BattleManager _battleManager;
-        private int _enemyEntityId = -1;
+        private List<int> _enemyEntityIds = new List<int>();
 
         // UI Components
         private BattleNarrator _battleNarrator;
@@ -70,6 +70,7 @@ namespace ProjectVagabond.Scenes
 
             _actionMenu.ResetAnimationState();
             _uiState = BattleUIState.Default;
+            _enemyEntityIds.Clear();
 
             _isBattleOver = false;
             _endOfBattleTimer = 0f;
@@ -79,35 +80,54 @@ namespace ProjectVagabond.Scenes
             _actionMenu.OnTargetingInitiated += OnTargetingInitiated;
             _actionMenu.OnTargetingCancelled += OnTargetingCancelled;
 
-            // For this debug implementation, we create combatants when the scene starts.
             var gameState = ServiceLocator.Get<GameState>();
             int playerEntityId = gameState.PlayerEntityId;
-
-            // Spawn a temporary enemy for the battle
-            _enemyEntityId = Spawner.Spawn("wanderer", new Vector2(-1, -1)); // Position doesn't matter
-
-            if (_enemyEntityId == -1)
-            {
-                Debug.WriteLine("[BattleScene] [FATAL] Failed to spawn enemy for battle. Aborting.");
-                _battleManager = null;
-                return;
-            }
-
-            // Create the BattleCombatant objects from the entity IDs
             var playerCombatant = BattleCombatantFactory.CreateFromEntity(playerEntityId, "player_1");
-            var enemyCombatant = BattleCombatantFactory.CreateFromEntity(_enemyEntityId, "enemy_1");
+            var playerParty = new List<BattleCombatant> { playerCombatant };
 
-            if (playerCombatant == null || enemyCombatant == null)
+            var enemyParty = new List<BattleCombatant>();
+            var enemyArchetypesToSpawn = BattleSetup.EnemyArchetypes;
+
+            if (enemyArchetypesToSpawn != null && enemyArchetypesToSpawn.Any())
             {
-                Debug.WriteLine("[BattleScene] [FATAL] Failed to create one or more combatants from entities. Aborting.");
+                for (int i = 0; i < enemyArchetypesToSpawn.Count; i++)
+                {
+                    string archetypeId = enemyArchetypesToSpawn[i];
+                    int newEnemyId = Spawner.Spawn(archetypeId, new Vector2(-1, -1));
+                    if (newEnemyId != -1)
+                    {
+                        var enemyCombatant = BattleCombatantFactory.CreateFromEntity(newEnemyId, $"enemy_{i + 1}");
+                        if (enemyCombatant != null)
+                        {
+                            enemyParty.Add(enemyCombatant);
+                            _enemyEntityIds.Add(newEnemyId);
+                        }
+                    }
+                }
+                BattleSetup.EnemyArchetypes = null; // Clear after use
+            }
+            else
+            {
+                // Fallback to a single default enemy if none are specified
+                int defaultEnemyId = Spawner.Spawn("wanderer", new Vector2(-1, -1));
+                if (defaultEnemyId != -1)
+                {
+                    var enemyCombatant = BattleCombatantFactory.CreateFromEntity(defaultEnemyId, "enemy_1");
+                    if (enemyCombatant != null)
+                    {
+                        enemyParty.Add(enemyCombatant);
+                        _enemyEntityIds.Add(defaultEnemyId);
+                    }
+                }
+            }
+
+            if (playerCombatant == null || !enemyParty.Any())
+            {
+                Debug.WriteLine("[BattleScene] [FATAL] Failed to create one or more combatants. Aborting.");
                 _battleManager = null;
                 return;
             }
 
-            var playerParty = new List<BattleCombatant> { playerCombatant };
-            var enemyParty = new List<BattleCombatant> { enemyCombatant };
-
-            // Initialize the BattleManager with the created combatants
             _battleManager = new BattleManager(playerParty, enemyParty);
             _previousBattlePhase = _battleManager.CurrentPhase;
         }
@@ -120,14 +140,16 @@ namespace ProjectVagabond.Scenes
             _actionMenu.OnTargetingInitiated -= OnTargetingInitiated;
             _actionMenu.OnTargetingCancelled -= OnTargetingCancelled;
 
-            // Clean up the temporary enemy entity when leaving the battle scene
-            if (_enemyEntityId != -1)
+            if (_enemyEntityIds.Any())
             {
                 var entityManager = ServiceLocator.Get<EntityManager>();
                 var componentStore = ServiceLocator.Get<ComponentStore>();
-                componentStore.EntityDestroyed(_enemyEntityId);
-                entityManager.DestroyEntity(_enemyEntityId);
-                _enemyEntityId = -1;
+                foreach (var id in _enemyEntityIds)
+                {
+                    componentStore.EntityDestroyed(id);
+                    entityManager.DestroyEntity(id);
+                }
+                _enemyEntityIds.Clear();
             }
         }
 
@@ -173,7 +195,6 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // If the battle is over, handle the delay and transition back to the map.
             if (_isBattleOver)
             {
                 _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -182,14 +203,13 @@ namespace ProjectVagabond.Scenes
                     _sceneManager.ChangeScene(GameSceneState.TerminalMap);
                 }
                 base.Update(gameTime);
-                return; // Stop further updates once the battle is won/lost
+                return;
             }
 
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
-            // Update UI elements that should always be active
             _battleNarrator.Update(gameTime);
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
             {
@@ -224,16 +244,12 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // The BattleScene controls the flow of the BattleManager based on the narrator's state.
             _battleManager.CanAdvance = !_battleNarrator.IsBusy;
             _battleManager.Update();
 
-
-            // Check for phase transitions to manage UI state.
             var currentPhase = _battleManager.CurrentPhase;
             if (currentPhase != _previousBattlePhase)
             {
-                // If we just entered the ActionSelection phase, show the menu.
                 if (currentPhase == BattleManager.BattlePhase.ActionSelection)
                 {
                     var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
@@ -244,20 +260,17 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    // If we left the ActionSelection phase, hide the menu.
                     _actionMenu.Hide();
                 }
                 _previousBattlePhase = currentPhase;
             }
 
-            // Check if the battle just ended in this frame.
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver && !_isBattleOver)
             {
                 _isBattleOver = true;
                 _actionMenu.Hide();
             }
 
-            // CRITICAL: Call base.Update() at the end to update previous input states for the next frame.
             base.Update(gameTime);
         }
 
@@ -274,7 +287,6 @@ namespace ProjectVagabond.Scenes
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            // --- Draw Combatant HUDs ---
             _currentTargets.Clear();
             var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
@@ -283,18 +295,27 @@ namespace ProjectVagabond.Scenes
             {
                 DrawCombatantHud(spriteBatch, font, secondaryFont, player, new Vector2(50, 80));
             }
+
             if (enemies.Any())
             {
-                // This is a simple layout for now. A more robust system would handle more enemies.
-                DrawCombatantHud(spriteBatch, font, secondaryFont, enemies[0], new Vector2(Global.VIRTUAL_WIDTH - 100, 80));
-                _currentTargets.Add(new TargetInfo
+                const int hudWidth = 70;
+                const int hudSpacing = 10;
+                int totalEnemiesWidth = enemies.Count * hudWidth + (enemies.Count - 1) * hudSpacing;
+                int startX = Global.VIRTUAL_WIDTH - 10 - totalEnemiesWidth;
+
+                for (int i = 0; i < enemies.Count; i++)
                 {
-                    Combatant = enemies[0],
-                    Bounds = GetCombatantNameBounds(enemies[0], new Vector2(Global.VIRTUAL_WIDTH - 100, 80), font)
-                });
+                    var enemy = enemies[i];
+                    var position = new Vector2(startX + i * (hudWidth + hudSpacing), 80);
+                    DrawCombatantHud(spriteBatch, font, secondaryFont, enemy, position);
+                    _currentTargets.Add(new TargetInfo
+                    {
+                        Combatant = enemy,
+                        Bounds = GetCombatantNameBounds(enemy, position, font)
+                    });
+                }
             }
 
-            // --- Draw Targeting UI ---
             if (_uiState == BattleUIState.Targeting)
             {
                 for (int i = 0; i < _currentTargets.Count; i++)
@@ -308,11 +329,8 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // --- Draw UI Divider ---
             spriteBatch.DrawSnapped(pixel, new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, 1), Color.White);
 
-
-            // --- Draw UI Panels ---
             _actionMenu.Draw(spriteBatch, font, gameTime, transform);
             _battleNarrator.Draw(spriteBatch, secondaryFont);
         }
@@ -328,10 +346,8 @@ namespace ProjectVagabond.Scenes
         {
             if (combatant.IsDefeated) return;
 
-            // Draw Name
             spriteBatch.DrawStringSnapped(nameFont, combatant.Name, position + new Vector2(0, -20), Color.White);
 
-            // Draw HP line with mixed colors
             var global = ServiceLocator.Get<Global>();
             Color labelColor = global.Palette_LightGray;
             Color numberColor = Color.White;
@@ -342,19 +358,15 @@ namespace ProjectVagabond.Scenes
             string separator = "/";
             string maxHp = combatant.Stats.MaxHP.ToString();
 
-            // Draw "HP: "
             spriteBatch.DrawStringSnapped(statsFont, hpLabel, hpPosition, labelColor);
             float currentX = hpPosition.X + statsFont.MeasureString(hpLabel).Width;
 
-            // Draw Current HP
             spriteBatch.DrawStringSnapped(statsFont, currentHp, new Vector2(currentX, hpPosition.Y), numberColor);
             currentX += statsFont.MeasureString(currentHp).Width;
 
-            // Draw "/"
             spriteBatch.DrawStringSnapped(statsFont, separator, new Vector2(currentX, hpPosition.Y), labelColor);
             currentX += statsFont.MeasureString(separator).Width;
 
-            // Draw Max HP
             spriteBatch.DrawStringSnapped(statsFont, maxHp, new Vector2(currentX, hpPosition.Y), numberColor);
         }
 
