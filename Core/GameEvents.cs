@@ -79,6 +79,9 @@ namespace ProjectVagabond
         public struct BattleActionResolved
         {
             public string NarrationMessage { get; set; }
+            public string TargetCombatantID { get; set; }
+            public int HpBeforeDamage { get; set; }
+            public int HpAfterDamage { get; set; }
         }
     }
 }

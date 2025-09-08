@@ -190,13 +190,22 @@ namespace ProjectVagabond.Battle
 
             // Execute Action
             var result = DamageCalculator.CalculateDamage(action.Actor, action.Target, action.ChosenMove);
+            int hpBefore = action.Target.Stats.CurrentHP;
             action.Target.ApplyDamage(result.DamageAmount);
+            int hpAfter = action.Target.Stats.CurrentHP;
 
             // Build narration message
             string narration = $"{action.Actor.Name} uses {action.ChosenMove.MoveName} on {action.Target.Name} for {result.DamageAmount} damage.";
             if (result.WasGraze) narration += " (Graze)";
             if (result.WasCritical) narration += " (Critical Hit!)";
-            EventBus.Publish(new GameEvents.BattleActionResolved { NarrationMessage = narration });
+
+            EventBus.Publish(new GameEvents.BattleActionResolved
+            {
+                NarrationMessage = narration,
+                TargetCombatantID = action.Target.CombatantID,
+                HpBeforeDamage = hpBefore,
+                HpAfterDamage = hpAfter
+            });
 
             CanAdvance = false; // Pause the manager until the scene says it's okay.
         }

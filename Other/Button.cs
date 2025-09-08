@@ -3,9 +3,11 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace ProjectVagabond.UI
@@ -59,7 +61,9 @@ namespace ProjectVagabond.UI
         private const float SWAY_SPEED = 3f;
         private const float SWAY_AMOUNT_X = 1f;
         private const int LEFT_ALIGN_PADDING = 4;
+        private const float SHAKE_AMOUNT = 1f;
 
+        private static readonly Random _random = new Random();
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
         public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, bool clickOnPress = false, BitmapFont? font = null)
@@ -211,11 +215,16 @@ namespace ProjectVagabond.UI
 
             // Calculate squash scale based on animation timer
             Vector2 scale = Vector2.One;
+            Vector2 shakeOffset = Vector2.Zero;
             if (_squashAnimationTimer > 0)
             {
                 float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
-                float targetScaleY = 1.0f / textSize.Y; // Target a 1-pixel height
+                // Target a scale that results in a 1.5 pixel height to avoid rounding down to 0.
+                float targetScaleY = 1.5f / textSize.Y;
                 scale.Y = MathHelper.Lerp(1.0f, targetScaleY, progress);
+
+                // Add shake effect while squashed
+                shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_AMOUNT);
             }
 
             // To correctly handle clipping while respecting the scene's transform,
@@ -264,7 +273,7 @@ namespace ProjectVagabond.UI
                     textPosition = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y);
                 }
 
-                textPosition += TextRenderOffset; // Apply the custom render offset
+                textPosition += TextRenderOffset + shakeOffset; // Apply the custom render offset and shake
 
                 spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, scale, SpriteEffects.None, 0f);
 

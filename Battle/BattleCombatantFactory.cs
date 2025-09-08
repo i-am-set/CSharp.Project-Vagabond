@@ -55,6 +55,9 @@ namespace ProjectVagabond.Battle
                 DefensiveElementIDs = new List<int>(statsComponent.DefensiveElementIDs)
             };
 
+            // Initialize visual HP to be the same as logical HP at the start of battle.
+            combatant.VisualHP = combatant.Stats.CurrentHP;
+
             // Populate the combatant's available moves by looking them up in the cache.
             foreach (var moveId in statsComponent.AvailableMoveIDs)
             {

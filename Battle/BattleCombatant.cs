@@ -29,6 +29,11 @@ namespace ProjectVagabond.Battle
         public CombatantStats Stats { get; set; }
 
         /// <summary>
+        /// The health value displayed on screen, which animates towards the logical CurrentHP.
+        /// </summary>
+        public float VisualHP { get; set; }
+
+        /// <summary>
         /// A list of moves this combatant can use.
         /// </summary>
         public List<MoveData> AvailableMoves { get; set; } = new List<MoveData>();

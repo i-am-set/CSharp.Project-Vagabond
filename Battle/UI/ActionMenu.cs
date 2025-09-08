@@ -26,6 +26,7 @@ namespace ProjectVagabond.Battle.UI
         private enum MenuState { Main, Moves, Targeting }
         private MenuState _currentState;
         private MoveData _selectedMove;
+        private float _targetingTextAnimTimer = 0f;
 
         public ActionMenu()
         {
@@ -110,9 +111,13 @@ namespace ProjectVagabond.Battle.UI
                     _moveButtons.Add(moveButton);
                 }
             }
+            else if (newState == MenuState.Targeting)
+            {
+                _targetingTextAnimTimer = 0f;
+            }
         }
 
-        public void Update(MouseState currentMouseState)
+        public void Update(MouseState currentMouseState, GameTime gameTime)
         {
             if (!_isVisible) return;
 
@@ -126,6 +131,7 @@ namespace ProjectVagabond.Battle.UI
                     _backButton.Update(currentMouseState);
                     break;
                 case MenuState.Targeting:
+                    _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                     _backButton.Update(currentMouseState);
                     break;
             }
@@ -134,6 +140,12 @@ namespace ProjectVagabond.Battle.UI
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (!_isVisible) return;
+
+            // Lazy-load the font reference the first time Draw is called to avoid initialization order issues.
+            if (_backButton.Font == null)
+            {
+                _backButton.Font = ServiceLocator.Get<Core>().SecondaryFont;
+            }
 
             switch (_currentState)
             {
@@ -208,7 +220,7 @@ namespace ProjectVagabond.Battle.UI
                             }
                         }
 
-                        int backButtonWidth = (int)font.MeasureString(_backButton.Text).Width + backButtonPadding * 2;
+                        int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
                             gridStartX + (availableWidth - backButtonWidth) / 2,
                             gridStartY + gridAreaHeight + backButtonTopMargin,
@@ -233,13 +245,19 @@ namespace ProjectVagabond.Battle.UI
 
                         string text = "CHOOSE A TARGET";
                         Vector2 textSize = font.MeasureString(text);
+
+                        // Figure 8 animation
+                        float animX = MathF.Sin(_targetingTextAnimTimer * 4f) * 1f;
+                        float animY = MathF.Sin(_targetingTextAnimTimer * 8f) * 1f;
+                        Vector2 animOffset = new Vector2(animX, animY);
+
                         Vector2 textPos = new Vector2(
                             horizontalPadding + (availableWidth - textSize.X) / 2,
                             gridStartY + (gridAreaHeight - textSize.Y) / 2
-                        );
+                        ) + animOffset;
                         spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
 
-                        int backButtonWidth = (int)font.MeasureString(_backButton.Text).Width + backButtonPadding * 2;
+                        int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
                             horizontalPadding + (availableWidth - backButtonWidth) / 2,
                             gridStartY + gridAreaHeight + backButtonTopMargin,

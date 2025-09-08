@@ -42,9 +42,21 @@ namespace ProjectVagabond.Scenes
         private int _hoveredTargetIndex = -1;
         private struct TargetInfo { public BattleCombatant Combatant; public Rectangle Bounds; }
 
+        // Health Animation
+        private class HealthAnimationState
+        {
+            public string CombatantID;
+            public float StartHP;
+            public float TargetHP;
+            public float Timer;
+            public const float Duration = 1.0f;
+        }
+        private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
+
         // Layout Constants
         private const int DIVIDER_Y = 120;
         private const int MAX_ENEMIES = 5;
+        private const float PLAYER_INDICATOR_BOB_SPEED = 1.5f;
 
         public BattleScene()
         {
@@ -73,6 +85,7 @@ namespace ProjectVagabond.Scenes
             _actionMenu.ResetAnimationState();
             _uiState = BattleUIState.Default;
             _enemyEntityIds.Clear();
+            _activeHealthAnimations.Clear();
 
             _isBattleOver = false;
             _endOfBattleTimer = 0f;
@@ -160,6 +173,17 @@ namespace ProjectVagabond.Scenes
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             _battleNarrator.Show(e.NarrationMessage, secondaryFont);
+
+            if (e.TargetCombatantID != null)
+            {
+                _activeHealthAnimations.Add(new HealthAnimationState
+                {
+                    CombatantID = e.TargetCombatantID,
+                    StartHP = e.HpBeforeDamage,
+                    TargetHP = e.HpAfterDamage,
+                    Timer = 0f
+                });
+            }
         }
 
         private void OnTargetingInitiated(MoveData move)
@@ -214,9 +238,11 @@ namespace ProjectVagabond.Scenes
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             _battleNarrator.Update(gameTime);
+            UpdateHealthAnimations(gameTime);
+
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
             {
-                _actionMenu.Update(currentMouseState);
+                _actionMenu.Update(currentMouseState, gameTime);
                 if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState) ||
                     (currentMouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released))
                 {
@@ -248,7 +274,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            _battleManager.CanAdvance = !_battleNarrator.IsBusy;
+            _battleManager.CanAdvance = !_battleNarrator.IsBusy && !_activeHealthAnimations.Any();
             _battleManager.Update();
 
             var currentPhase = _battleManager.CurrentPhase;
@@ -278,6 +304,32 @@ namespace ProjectVagabond.Scenes
             base.Update(gameTime);
         }
 
+        private void UpdateHealthAnimations(GameTime gameTime)
+        {
+            for (int i = _activeHealthAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeHealthAnimations[i];
+                var combatant = _battleManager.AllCombatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant == null)
+                {
+                    _activeHealthAnimations.RemoveAt(i);
+                    continue;
+                }
+
+                anim.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (anim.Timer >= HealthAnimationState.Duration)
+                {
+                    combatant.VisualHP = anim.TargetHP;
+                    _activeHealthAnimations.RemoveAt(i);
+                }
+                else
+                {
+                    float progress = anim.Timer / HealthAnimationState.Duration;
+                    combatant.VisualHP = MathHelper.Lerp(anim.StartHP, anim.TargetHP, Easing.EaseOutQuart(progress));
+                }
+            }
+        }
+
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (_battleManager == null)
@@ -290,6 +342,7 @@ namespace ProjectVagabond.Scenes
 
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
+            var global = ServiceLocator.Get<Global>();
 
             _currentTargets.Clear();
             var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
@@ -299,18 +352,19 @@ namespace ProjectVagabond.Scenes
             if (enemies.Any())
             {
                 const int enemyAreaPadding = 20;
+                const int enemyHudY = 86;
                 int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                 int slotWidth = availableWidth / enemies.Count;
 
                 for (int i = 0; i < enemies.Count; i++)
                 {
                     var enemy = enemies[i];
-                    var centerPosition = new Vector2(enemyAreaPadding + (i * slotWidth) + (slotWidth / 2), 80);
+                    var centerPosition = new Vector2(enemyAreaPadding + (i * slotWidth) + (slotWidth / 2), enemyHudY);
                     DrawCombatantHud(spriteBatch, font, secondaryFont, enemy, centerPosition);
                     _currentTargets.Add(new TargetInfo
                     {
                         Combatant = enemy,
-                        Bounds = GetCombatantNameBounds(enemy, centerPosition, font)
+                        Bounds = GetCombatantInteractionBounds(enemy, centerPosition, font, secondaryFont)
                     });
                 }
             }
@@ -320,20 +374,26 @@ namespace ProjectVagabond.Scenes
             {
                 const int playerHudY = DIVIDER_Y - 10;
                 const int playerHudPaddingX = 10;
+                float yOffset = 0;
+
+                if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
+                {
+                    yOffset = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * PLAYER_INDICATOR_BOB_SPEED * MathF.PI) > 0) ? -1f : 0f;
+                }
 
                 // Player Name on the left
-                spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7), Color.White);
+                spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7 + yOffset), Color.White);
 
                 // Player HP on the right
                 string hpLabel = "HP: ";
-                string currentHp = player.Stats.CurrentHP.ToString();
+                string currentHp = ((int)Math.Round(player.VisualHP)).ToString();
                 string separator = "/";
                 string maxHp = player.Stats.MaxHP.ToString();
                 string fullHpText = hpLabel + currentHp + separator + maxHp;
                 Vector2 hpTextSize = secondaryFont.MeasureString(fullHpText);
 
                 float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
-                DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY));
+                DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY + yOffset));
             }
 
             // --- Draw Targeting UI ---
@@ -356,28 +416,69 @@ namespace ProjectVagabond.Scenes
             _battleNarrator.Draw(spriteBatch, secondaryFont);
         }
 
-        private Rectangle GetCombatantNameBounds(BattleCombatant combatant, Vector2 centerPosition, BitmapFont nameFont)
+        private Rectangle GetCombatantInteractionBounds(BattleCombatant combatant, Vector2 centerPosition, BitmapFont nameFont, BitmapFont statsFont)
         {
+            const int spriteSize = 64;
+            float spriteTop = centerPosition.Y - spriteSize - 10;
+
             Vector2 nameSize = nameFont.MeasureString(combatant.Name);
-            Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 20);
-            return new Rectangle((int)namePos.X - 2, (int)namePos.Y - 2, (int)nameSize.X + 4, (int)nameSize.Y + 4);
+            float nameY = centerPosition.Y - 3;
+
+            string hpLabel = "HP: ";
+            string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
+            string separator = "/";
+            string maxHp = combatant.Stats.MaxHP.ToString();
+            string fullHpText = hpLabel + currentHp + separator + maxHp;
+            Vector2 hpSize = statsFont.MeasureString(fullHpText);
+            float hpY = centerPosition.Y + 7;
+            float hpBottom = hpY + statsFont.LineHeight;
+
+            float top = spriteTop;
+            float bottom = hpBottom;
+            float maxWidth = Math.Max(spriteSize, Math.Max(nameSize.X, hpSize.X));
+
+            float left = centerPosition.X - maxWidth / 2;
+            float width = maxWidth;
+            float height = bottom - top;
+
+            const int padding = 2;
+            return new Rectangle(
+                (int)left - padding,
+                (int)top - padding,
+                (int)width + padding * 2,
+                (int)height + padding * 2
+            );
         }
 
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 centerPosition)
         {
             if (combatant.IsDefeated) return;
 
+            var global = ServiceLocator.Get<Global>();
+            var pixel = ServiceLocator.Get<Texture2D>();
+            const int spriteSize = 64;
+            var spriteRect = new Rectangle(
+                (int)(centerPosition.X - spriteSize / 2),
+                (int)(centerPosition.Y - spriteSize - 10),
+                spriteSize,
+                spriteSize
+            );
+
+            // For now, we draw a placeholder if no texture is found.
+            // In the future, this would pull from an Archetype's sprite property.
+            spriteBatch.DrawSnapped(pixel, spriteRect, global.Palette_Pink);
+
             Vector2 nameSize = nameFont.MeasureString(combatant.Name);
-            Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 20);
+            Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 3);
             spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, Color.White);
 
             string hpLabel = "HP: ";
-            string currentHp = combatant.Stats.CurrentHP.ToString();
+            string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
             string separator = "/";
             string maxHp = combatant.Stats.MaxHP.ToString();
             string fullHpText = hpLabel + currentHp + separator + maxHp;
             Vector2 hpSize = statsFont.MeasureString(fullHpText);
-            Vector2 hpPos = new Vector2(centerPosition.X - hpSize.X / 2, centerPosition.Y - 10);
+            Vector2 hpPos = new Vector2(centerPosition.X - hpSize.X / 2, centerPosition.Y + 7);
             DrawHpLine(spriteBatch, statsFont, combatant, hpPos);
         }
 
@@ -388,7 +489,7 @@ namespace ProjectVagabond.Scenes
             Color numberColor = Color.White;
 
             string hpLabel = "HP: ";
-            string currentHp = combatant.Stats.CurrentHP.ToString();
+            string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
             string separator = "/";
             string maxHp = combatant.Stats.MaxHP.ToString();
 

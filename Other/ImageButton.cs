@@ -3,8 +3,11 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.UI
 {
@@ -32,6 +35,8 @@ namespace ProjectVagabond.UI
 
         private const float SWAY_SPEED = 3f;
         private const float SWAY_AMOUNT_X = 2f;
+        private const float SHAKE_AMOUNT = 1f;
+        private static readonly Random _random = new Random();
 
         public ImageButton(Rectangle bounds, Texture2D? defaultTexture = null, Texture2D? hoverTexture = null, Texture2D? clickedTexture = null, Texture2D? disabledTexture = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, BitmapFont? font = null, Color? debugColor = null)
             : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, clickOnPress, font)
@@ -106,14 +111,19 @@ namespace ProjectVagabond.UI
             _wasHoveredLastFrame = isActivated;
 
             Vector2 scale = Vector2.One;
-            if (_squashAnimationTimer > 0 && textureToDraw != null)
+            Vector2 shakeOffset = Vector2.Zero;
+            if (_squashAnimationTimer > 0)
             {
-                float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
-                float targetScaleY = 1.0f / textureToDraw.Height; // Target a 1-pixel height
-                scale.Y = MathHelper.Lerp(1.0f, targetScaleY, progress);
+                if (textureToDraw != null)
+                {
+                    float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
+                    float targetScaleY = 1.5f / textureToDraw.Height;
+                    scale.Y = MathHelper.Lerp(1.0f, targetScaleY, progress);
+                }
+                shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_AMOUNT);
             }
 
-            var position = new Vector2(Bounds.Center.X + swayOffsetX, Bounds.Center.Y);
+            var position = new Vector2(Bounds.Center.X + swayOffsetX, Bounds.Center.Y) + shakeOffset;
 
             if (textureToDraw != null)
             {
@@ -122,7 +132,8 @@ namespace ProjectVagabond.UI
             }
             else if (DebugColor.HasValue)
             {
-                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), Bounds, DebugColor.Value);
+                var debugRect = new Rectangle((int)position.X - Bounds.Width / 2, (int)position.Y - Bounds.Height / 2, Bounds.Width, Bounds.Height);
+                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), debugRect, DebugColor.Value);
             }
 
             if (isActivated && _hoverTexture == null)
