@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -31,6 +32,14 @@ namespace ProjectVagabond.Scenes
         private bool _isBattleOver;
         private float _endOfBattleTimer;
         private const float END_OF_BATTLE_DELAY = 2.0f; // Seconds to wait before exiting
+
+        // UI State
+        private enum BattleUIState { Default, Targeting }
+        private BattleUIState _uiState = BattleUIState.Default;
+        private MoveData _moveForTargeting;
+        private List<TargetInfo> _currentTargets = new List<TargetInfo>();
+        private int _hoveredTargetIndex = -1;
+        private struct TargetInfo { public BattleCombatant Combatant; public Rectangle Bounds; }
 
         // Layout Constants
         private const int DIVIDER_Y = 120;
@@ -60,12 +69,15 @@ namespace ProjectVagabond.Scenes
             base.Enter();
 
             _actionMenu.ResetAnimationState();
+            _uiState = BattleUIState.Default;
 
             _isBattleOver = false;
             _endOfBattleTimer = 0f;
 
             EventBus.Subscribe<GameEvents.BattleActionResolved>(OnBattleActionResolved);
             _actionMenu.OnMoveSelected += OnPlayerMoveSelected;
+            _actionMenu.OnTargetingInitiated += OnTargetingInitiated;
+            _actionMenu.OnTargetingCancelled += OnTargetingCancelled;
 
             // For this debug implementation, we create combatants when the scene starts.
             var gameState = ServiceLocator.Get<GameState>();
@@ -105,6 +117,8 @@ namespace ProjectVagabond.Scenes
             base.Exit();
             EventBus.Unsubscribe<GameEvents.BattleActionResolved>(OnBattleActionResolved);
             _actionMenu.OnMoveSelected -= OnPlayerMoveSelected;
+            _actionMenu.OnTargetingInitiated -= OnTargetingInitiated;
+            _actionMenu.OnTargetingCancelled -= OnTargetingCancelled;
 
             // Clean up the temporary enemy entity when leaving the battle scene
             if (_enemyEntityId != -1)
@@ -121,6 +135,17 @@ namespace ProjectVagabond.Scenes
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             _battleNarrator.Show(e.NarrationMessage, secondaryFont);
+        }
+
+        private void OnTargetingInitiated(MoveData move)
+        {
+            _uiState = BattleUIState.Targeting;
+            _moveForTargeting = move;
+        }
+
+        private void OnTargetingCancelled()
+        {
+            _uiState = BattleUIState.Default;
         }
 
         private void OnPlayerMoveSelected(MoveData move, BattleCombatant target)
@@ -161,15 +186,41 @@ namespace ProjectVagabond.Scenes
             }
 
             var currentKeyboardState = Keyboard.GetState();
+            var currentMouseState = Mouse.GetState();
+            var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             // Update UI elements that should always be active
             _battleNarrator.Update(gameTime);
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
             {
-                _actionMenu.Update(Mouse.GetState());
+                _actionMenu.Update(currentMouseState);
                 if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
                 {
                     _actionMenu.GoBack();
+                }
+            }
+
+            if (_uiState == BattleUIState.Targeting)
+            {
+                _hoveredTargetIndex = -1;
+                for (int i = 0; i < _currentTargets.Count; i++)
+                {
+                    if (_currentTargets[i].Bounds.Contains(virtualMousePos))
+                    {
+                        _hoveredTargetIndex = i;
+                        break;
+                    }
+                }
+
+                if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
+                {
+                    if (_hoveredTargetIndex != -1)
+                    {
+                        var selectedTarget = _currentTargets[_hoveredTargetIndex].Combatant;
+                        OnPlayerMoveSelected(_moveForTargeting, selectedTarget);
+                        _uiState = BattleUIState.Default;
+                        UIInputManager.ConsumeMouseClick();
+                    }
                 }
             }
 
@@ -221,28 +272,56 @@ namespace ProjectVagabond.Scenes
             }
 
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var pixel = ServiceLocator.Get<Texture2D>();
 
             // --- Draw Combatant HUDs ---
+            _currentTargets.Clear();
+            var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            var enemy = _battleManager.AllCombatants.FirstOrDefault(c => !c.IsPlayerControlled);
 
             if (player != null)
             {
                 DrawCombatantHud(spriteBatch, font, secondaryFont, player, new Vector2(50, 80));
             }
-            if (enemy != null)
+            if (enemies.Any())
             {
-                DrawCombatantHud(spriteBatch, font, secondaryFont, enemy, new Vector2(Global.VIRTUAL_WIDTH - 100, 80));
+                // This is a simple layout for now. A more robust system would handle more enemies.
+                DrawCombatantHud(spriteBatch, font, secondaryFont, enemies[0], new Vector2(Global.VIRTUAL_WIDTH - 100, 80));
+                _currentTargets.Add(new TargetInfo
+                {
+                    Combatant = enemies[0],
+                    Bounds = GetCombatantNameBounds(enemies[0], new Vector2(Global.VIRTUAL_WIDTH - 100, 80), font)
+                });
+            }
+
+            // --- Draw Targeting UI ---
+            if (_uiState == BattleUIState.Targeting)
+            {
+                for (int i = 0; i < _currentTargets.Count; i++)
+                {
+                    Color boxColor = i == _hoveredTargetIndex ? Color.Red : Color.Yellow;
+                    var bounds = _currentTargets[i].Bounds;
+                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Top), new Vector2(bounds.Right, bounds.Top), boxColor);
+                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Bottom), new Vector2(bounds.Right, bounds.Bottom), boxColor);
+                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Top), new Vector2(bounds.Left, bounds.Bottom), boxColor);
+                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Right, bounds.Top), new Vector2(bounds.Right, bounds.Bottom), boxColor);
+                }
             }
 
             // --- Draw UI Divider ---
-            var pixel = ServiceLocator.Get<Texture2D>();
             spriteBatch.DrawSnapped(pixel, new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, 1), Color.White);
 
 
             // --- Draw UI Panels ---
             _actionMenu.Draw(spriteBatch, font, gameTime, transform);
             _battleNarrator.Draw(spriteBatch, secondaryFont);
+        }
+
+        private Rectangle GetCombatantNameBounds(BattleCombatant combatant, Vector2 position, BitmapFont nameFont)
+        {
+            Vector2 nameSize = nameFont.MeasureString(combatant.Name);
+            Vector2 namePos = position + new Vector2(0, -20);
+            return new Rectangle((int)namePos.X - 2, (int)namePos.Y - 2, (int)nameSize.X + 4, (int)nameSize.Y + 4);
         }
 
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 position)

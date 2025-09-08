@@ -13,13 +13,14 @@ namespace ProjectVagabond.Battle.UI
     public class ActionMenu
     {
         public event Action<MoveData, BattleCombatant> OnMoveSelected;
+        public event Action<MoveData> OnTargetingInitiated;
+        public event Action OnTargetingCancelled;
 
         private bool _isVisible;
         private BattleCombatant _player;
         private List<BattleCombatant> _allTargets;
         private List<Button> _actionButtons = new List<Button>();
         private List<Button> _moveButtons = new List<Button>();
-        private List<Button> _targetButtons = new List<Button>();
         private Button _backButton;
 
         private enum MenuState { Main, Moves, Targeting }
@@ -37,8 +38,15 @@ namespace ProjectVagabond.Battle.UI
 
             _backButton = new Button(Rectangle.Empty, "BACK");
             _backButton.OnClick += () => {
-                if (_currentState == MenuState.Targeting) SetState(MenuState.Moves);
-                else if (_currentState == MenuState.Moves) SetState(MenuState.Main);
+                if (_currentState == MenuState.Targeting)
+                {
+                    OnTargetingCancelled?.Invoke();
+                    SetState(MenuState.Moves);
+                }
+                else if (_currentState == MenuState.Moves)
+                {
+                    SetState(MenuState.Main);
+                }
             };
         }
 
@@ -60,10 +68,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 button.ResetAnimationState();
             }
-            foreach (var button in _targetButtons)
-            {
-                button.ResetAnimationState();
-            }
             _backButton.ResetAnimationState();
         }
 
@@ -71,7 +75,7 @@ namespace ProjectVagabond.Battle.UI
         {
             _isVisible = true;
             _player = player;
-            _allTargets = allCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList(); // Simple targeting for now
+            _allTargets = allCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
             SetState(MenuState.Main);
         }
 
@@ -84,34 +88,27 @@ namespace ProjectVagabond.Battle.UI
         {
             _currentState = newState;
 
-            // Populate button lists based on the new state. This is now the only place buttons are created.
-            switch (_currentState)
+            if (_currentState == MenuState.Moves)
             {
-                case MenuState.Moves:
-                    _moveButtons.Clear();
-                    foreach (var move in _player.AvailableMoves)
-                    {
-                        var moveButton = new Button(Rectangle.Empty, move.MoveName.ToUpper());
-                        moveButton.OnClick += () => {
-                            _selectedMove = move;
-                            SetState(MenuState.Targeting);
-                        };
-                        _moveButtons.Add(moveButton);
-                    }
-                    break;
-
-                case MenuState.Targeting:
-                    _targetButtons.Clear();
-                    foreach (var target in _allTargets)
-                    {
-                        var targetButton = new Button(Rectangle.Empty, target.Name.ToUpper());
-                        targetButton.OnClick += () => {
-                            OnMoveSelected?.Invoke(_selectedMove, target);
+                _moveButtons.Clear();
+                foreach (var move in _player.AvailableMoves)
+                {
+                    var moveButton = new Button(Rectangle.Empty, move.MoveName.ToUpper());
+                    moveButton.OnClick += () => {
+                        _selectedMove = move;
+                        if (_allTargets.Count == 1)
+                        {
+                            OnMoveSelected?.Invoke(_selectedMove, _allTargets[0]);
                             Hide();
-                        };
-                        _targetButtons.Add(targetButton);
-                    }
-                    break;
+                        }
+                        else
+                        {
+                            OnTargetingInitiated?.Invoke(_selectedMove);
+                            SetState(MenuState.Targeting);
+                        }
+                    };
+                    _moveButtons.Add(moveButton);
+                }
             }
         }
 
@@ -129,7 +126,6 @@ namespace ProjectVagabond.Battle.UI
                     _backButton.Update(currentMouseState);
                     break;
                 case MenuState.Targeting:
-                    foreach (var button in _targetButtons) button.Update(currentMouseState);
                     _backButton.Update(currentMouseState);
                     break;
             }
@@ -167,10 +163,7 @@ namespace ProjectVagabond.Battle.UI
                         break;
                     }
                 case MenuState.Moves:
-                case MenuState.Targeting:
                     {
-                        var buttonsToDraw = _currentState == MenuState.Moves ? _moveButtons : _targetButtons;
-
                         const int horizontalPadding = 10;
                         const int verticalPadding = 5;
                         const int gridSpacing = 5;
@@ -203,9 +196,9 @@ namespace ProjectVagabond.Battle.UI
                                 slotHeight
                             );
 
-                            if (i < buttonsToDraw.Count)
+                            if (i < _moveButtons.Count)
                             {
-                                var button = buttonsToDraw[i];
+                                var button = _moveButtons[i];
                                 button.Bounds = slotRect;
                                 button.Draw(spriteBatch, font, gameTime, transform);
                             }
@@ -218,6 +211,37 @@ namespace ProjectVagabond.Battle.UI
                         int backButtonWidth = (int)font.MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
                             gridStartX + (availableWidth - backButtonWidth) / 2,
+                            gridStartY + gridAreaHeight + backButtonTopMargin,
+                            backButtonWidth,
+                            backButtonHeight
+                        );
+                        _backButton.Draw(spriteBatch, font, gameTime, transform);
+                        break;
+                    }
+                case MenuState.Targeting:
+                    {
+                        const int backButtonPadding = 8;
+                        const int backButtonHeight = 15;
+                        const int backButtonTopMargin = 5;
+                        const int dividerY = 120;
+                        const int horizontalPadding = 10;
+                        const int verticalPadding = 5;
+                        int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
+                        int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
+                        int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
+                        int gridStartY = dividerY + verticalPadding;
+
+                        string text = "CHOOSE A TARGET";
+                        Vector2 textSize = font.MeasureString(text);
+                        Vector2 textPos = new Vector2(
+                            horizontalPadding + (availableWidth - textSize.X) / 2,
+                            gridStartY + (gridAreaHeight - textSize.Y) / 2
+                        );
+                        spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
+
+                        int backButtonWidth = (int)font.MeasureString(_backButton.Text).Width + backButtonPadding * 2;
+                        _backButton.Bounds = new Rectangle(
+                            horizontalPadding + (availableWidth - backButtonWidth) / 2,
                             gridStartY + gridAreaHeight + backButtonTopMargin,
                             backButtonWidth,
                             backButtonHeight
