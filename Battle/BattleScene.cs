@@ -6,6 +6,7 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -43,6 +44,7 @@ namespace ProjectVagabond.Scenes
 
         // Layout Constants
         private const int DIVIDER_Y = 120;
+        private const int MAX_ENEMIES = 5;
 
         public BattleScene()
         {
@@ -90,7 +92,8 @@ namespace ProjectVagabond.Scenes
 
             if (enemyArchetypesToSpawn != null && enemyArchetypesToSpawn.Any())
             {
-                for (int i = 0; i < enemyArchetypesToSpawn.Count; i++)
+                int enemyCount = Math.Min(enemyArchetypesToSpawn.Count, MAX_ENEMIES);
+                for (int i = 0; i < enemyCount; i++)
                 {
                     string archetypeId = enemyArchetypesToSpawn[i];
                     int newEnemyId = Spawner.Spawn(archetypeId, new Vector2(-1, -1));
@@ -214,7 +217,8 @@ namespace ProjectVagabond.Scenes
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
             {
                 _actionMenu.Update(currentMouseState);
-                if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+                if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState) ||
+                    (currentMouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released))
                 {
                     _actionMenu.GoBack();
                 }
@@ -291,31 +295,48 @@ namespace ProjectVagabond.Scenes
             var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
 
-            if (player != null)
-            {
-                DrawCombatantHud(spriteBatch, font, secondaryFont, player, new Vector2(50, 80));
-            }
-
+            // --- Draw Enemy HUDs ---
             if (enemies.Any())
             {
-                const int hudWidth = 70;
-                const int hudSpacing = 10;
-                int totalEnemiesWidth = enemies.Count * hudWidth + (enemies.Count - 1) * hudSpacing;
-                int startX = Global.VIRTUAL_WIDTH - 10 - totalEnemiesWidth;
+                const int enemyAreaPadding = 20;
+                int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
+                int slotWidth = availableWidth / enemies.Count;
 
                 for (int i = 0; i < enemies.Count; i++)
                 {
                     var enemy = enemies[i];
-                    var position = new Vector2(startX + i * (hudWidth + hudSpacing), 80);
-                    DrawCombatantHud(spriteBatch, font, secondaryFont, enemy, position);
+                    var centerPosition = new Vector2(enemyAreaPadding + (i * slotWidth) + (slotWidth / 2), 80);
+                    DrawCombatantHud(spriteBatch, font, secondaryFont, enemy, centerPosition);
                     _currentTargets.Add(new TargetInfo
                     {
                         Combatant = enemy,
-                        Bounds = GetCombatantNameBounds(enemy, position, font)
+                        Bounds = GetCombatantNameBounds(enemy, centerPosition, font)
                     });
                 }
             }
 
+            // --- Draw Player HUD ---
+            if (player != null)
+            {
+                const int playerHudY = DIVIDER_Y - 10;
+                const int playerHudPaddingX = 10;
+
+                // Player Name on the left
+                spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 8), Color.White);
+
+                // Player HP on the right
+                string hpLabel = "HP: ";
+                string currentHp = player.Stats.CurrentHP.ToString();
+                string separator = "/";
+                string maxHp = player.Stats.MaxHP.ToString();
+                string fullHpText = hpLabel + currentHp + separator + maxHp;
+                Vector2 hpTextSize = secondaryFont.MeasureString(fullHpText);
+
+                float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
+                DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY));
+            }
+
+            // --- Draw Targeting UI ---
             if (_uiState == BattleUIState.Targeting)
             {
                 for (int i = 0; i < _currentTargets.Count; i++)
@@ -335,39 +356,52 @@ namespace ProjectVagabond.Scenes
             _battleNarrator.Draw(spriteBatch, secondaryFont);
         }
 
-        private Rectangle GetCombatantNameBounds(BattleCombatant combatant, Vector2 position, BitmapFont nameFont)
+        private Rectangle GetCombatantNameBounds(BattleCombatant combatant, Vector2 centerPosition, BitmapFont nameFont)
         {
             Vector2 nameSize = nameFont.MeasureString(combatant.Name);
-            Vector2 namePos = position + new Vector2(0, -20);
+            Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 20);
             return new Rectangle((int)namePos.X - 2, (int)namePos.Y - 2, (int)nameSize.X + 4, (int)nameSize.Y + 4);
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 position)
+        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 centerPosition)
         {
             if (combatant.IsDefeated) return;
 
-            spriteBatch.DrawStringSnapped(nameFont, combatant.Name, position + new Vector2(0, -20), Color.White);
+            Vector2 nameSize = nameFont.MeasureString(combatant.Name);
+            Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 20);
+            spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, Color.White);
 
+            string hpLabel = "HP: ";
+            string currentHp = combatant.Stats.CurrentHP.ToString();
+            string separator = "/";
+            string maxHp = combatant.Stats.MaxHP.ToString();
+            string fullHpText = hpLabel + currentHp + separator + maxHp;
+            Vector2 hpSize = statsFont.MeasureString(fullHpText);
+            Vector2 hpPos = new Vector2(centerPosition.X - hpSize.X / 2, centerPosition.Y - 10);
+            DrawHpLine(spriteBatch, statsFont, combatant, hpPos);
+        }
+
+        private void DrawHpLine(SpriteBatch spriteBatch, BitmapFont statsFont, BattleCombatant combatant, Vector2 position)
+        {
             var global = ServiceLocator.Get<Global>();
             Color labelColor = global.Palette_LightGray;
             Color numberColor = Color.White;
-            Vector2 hpPosition = position + new Vector2(0, -10);
 
             string hpLabel = "HP: ";
             string currentHp = combatant.Stats.CurrentHP.ToString();
             string separator = "/";
             string maxHp = combatant.Stats.MaxHP.ToString();
 
-            spriteBatch.DrawStringSnapped(statsFont, hpLabel, hpPosition, labelColor);
-            float currentX = hpPosition.X + statsFont.MeasureString(hpLabel).Width;
+            spriteBatch.DrawStringSnapped(statsFont, hpLabel, position, labelColor);
+            float currentX = position.X + statsFont.MeasureString(hpLabel).Width;
 
-            spriteBatch.DrawStringSnapped(statsFont, currentHp, new Vector2(currentX, hpPosition.Y), numberColor);
+            spriteBatch.DrawStringSnapped(statsFont, currentHp, new Vector2(currentX, position.Y), numberColor);
             currentX += statsFont.MeasureString(currentHp).Width;
 
-            spriteBatch.DrawStringSnapped(statsFont, separator, new Vector2(currentX, hpPosition.Y), labelColor);
+            spriteBatch.DrawStringSnapped(statsFont, separator, new Vector2(currentX, position.Y), labelColor);
             currentX += statsFont.MeasureString(separator).Width;
 
-            spriteBatch.DrawStringSnapped(statsFont, maxHp, new Vector2(currentX, hpPosition.Y), numberColor);
+            spriteBatch.DrawStringSnapped(statsFont, maxHp, new Vector2(currentX, position.Y), numberColor);
         }
 
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
