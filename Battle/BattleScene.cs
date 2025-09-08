@@ -322,7 +322,7 @@ namespace ProjectVagabond.Scenes
                 const int playerHudPaddingX = 10;
 
                 // Player Name on the left
-                spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 8), Color.White);
+                spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7), Color.White);
 
                 // Player HP on the right
                 string hpLabel = "HP: ";
