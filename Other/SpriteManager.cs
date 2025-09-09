@@ -13,6 +13,7 @@ namespace ProjectVagabond
 
         // UI Sprite Sheets
         public Texture2D ActionButtonsSpriteSheet { get; private set; }
+        public Texture2D AttackButtonTemplateSprite { get; private set; }
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; } // 0-2: Act, 3-5: Item, 6-8: Flee (Normal, Hover, Clicked)
@@ -109,6 +110,9 @@ namespace ProjectVagabond
 
             try { ActionButtonsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_buttons_icon_spritesheet"); }
             catch { ActionButtonsSpriteSheet = _textureFactory.CreateColoredTexture(288, 150, Color.Magenta); }
+
+            try { AttackButtonTemplateSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_atack_button_template_spritesheet"); }
+            catch { AttackButtonTemplateSprite = _textureFactory.CreateColoredTexture(144, 18, Color.Magenta); }
 
             InitializeArrowSourceRects();
             InitializeActionButtonsSourceRects();

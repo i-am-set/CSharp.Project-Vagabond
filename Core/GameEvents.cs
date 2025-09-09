@@ -1,4 +1,4 @@
-﻿using ProjectVagabond;
+﻿using ProjectVagabond.Battle;
 using System.Collections.Generic;
 
 namespace ProjectVagabond
@@ -74,14 +74,14 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published when a single action in a battle is resolved, providing text for narration.
+        /// Published when a single action in a battle is resolved, providing detailed results for narration and animation.
         /// </summary>
-        public struct BattleActionResolved
+        public struct BattleActionExecuted
         {
-            public string NarrationMessage { get; set; }
-            public string TargetCombatantID { get; set; }
-            public int HpBeforeDamage { get; set; }
-            public int HpAfterDamage { get; set; }
+            public BattleCombatant Actor { get; set; }
+            public BattleCombatant Target { get; set; }
+            public MoveData ChosenMove { get; set; }
+            public DamageCalculator.DamageResult DamageResult { get; set; }
         }
     }
 }

@@ -3,11 +3,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace ProjectVagabond.UI
@@ -92,7 +90,7 @@ namespace ProjectVagabond.UI
         }
 
         // Sprite-based constructor
-        public Button(Rectangle bounds, Texture2D? spriteSheet, Rectangle? defaultSourceRect, Rectangle? hoverSourceRect, Rectangle? clickedSourceRect, string? function = null, bool enableHoverSway = true, bool clickOnPress = false, Color? debugColor = null)
+        public Button(Rectangle bounds, Texture2D? spriteSheet, Rectangle? defaultSourceRect, Rectangle? hoverSourceRect, Rectangle? clickedSourceRect, Rectangle? disabledSourceRect, string? function = null, bool enableHoverSway = true, bool clickOnPress = false, Color? debugColor = null)
         {
             _global = ServiceLocator.Get<Global>();
             Bounds = bounds;
@@ -104,6 +102,7 @@ namespace ProjectVagabond.UI
             _defaultSourceRect = defaultSourceRect;
             _hoverSourceRect = hoverSourceRect;
             _clickedSourceRect = clickedSourceRect;
+            _disabledSourceRect = disabledSourceRect;
             DebugColor = debugColor;
         }
 

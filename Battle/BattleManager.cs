@@ -181,7 +181,10 @@ namespace ProjectVagabond.Battle
             // Pre-computation (Attacker)
             if (action.Actor.HasStatusEffect(StatusEffectType.Stun))
             {
-                EventBus.Publish(new GameEvents.BattleActionResolved { NarrationMessage = $"{action.Actor.Name} is stunned and cannot move!" });
+                EventBus.Publish(new GameEvents.BattleActionExecuted
+                {
+                    Actor = action.Actor
+                });
                 action.Actor.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Stun);
                 CanAdvance = false;
                 return; // End this step of resolution
@@ -190,21 +193,14 @@ namespace ProjectVagabond.Battle
 
             // Execute Action
             var result = DamageCalculator.CalculateDamage(action.Actor, action.Target, action.ChosenMove);
-            int hpBefore = action.Target.Stats.CurrentHP;
             action.Target.ApplyDamage(result.DamageAmount);
-            int hpAfter = action.Target.Stats.CurrentHP;
 
-            // Build narration message
-            string narration = $"{action.Actor.Name} uses {action.ChosenMove.MoveName} on {action.Target.Name} for {result.DamageAmount} damage.";
-            if (result.WasGraze) narration += " (Graze)";
-            if (result.WasCritical) narration += " (Critical Hit!)";
-
-            EventBus.Publish(new GameEvents.BattleActionResolved
+            EventBus.Publish(new GameEvents.BattleActionExecuted
             {
-                NarrationMessage = narration,
-                TargetCombatantID = action.Target.CombatantID,
-                HpBeforeDamage = hpBefore,
-                HpAfterDamage = hpAfter
+                Actor = action.Actor,
+                Target = action.Target,
+                ChosenMove = action.ChosenMove,
+                DamageResult = result
             });
 
             CanAdvance = false; // Pause the manager until the scene says it's okay.
@@ -216,16 +212,8 @@ namespace ProjectVagabond.Battle
         private void HandleEndOfTurn()
         {
             // Victory/Defeat Check
-            if (_enemyCombatants.All(c => c.IsDefeated))
+            if (_enemyCombatants.All(c => c.IsDefeated) || _playerCombatants.All(c => c.IsDefeated))
             {
-                EventBus.Publish(new GameEvents.BattleActionResolved { NarrationMessage = "Player Wins!" });
-                _currentPhase = BattlePhase.BattleOver;
-                return;
-            }
-
-            if (_playerCombatants.All(c => c.IsDefeated))
-            {
-                EventBus.Publish(new GameEvents.BattleActionResolved { NarrationMessage = "Player Loses!" });
                 _currentPhase = BattlePhase.BattleOver;
                 return;
             }

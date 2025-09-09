@@ -4,7 +4,6 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -54,6 +53,7 @@ namespace ProjectVagabond.Scenes
             public const float Duration = 1.0f;
         }
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
+        private readonly Queue<Action> _narrationQueue = new Queue<Action>();
 
         // Layout Constants
         private const int DIVIDER_Y = 120;
@@ -89,11 +89,12 @@ namespace ProjectVagabond.Scenes
             _uiState = BattleUIState.Default;
             _enemyEntityIds.Clear();
             _activeHealthAnimations.Clear();
+            _narrationQueue.Clear();
 
             _isBattleOver = false;
             _endOfBattleTimer = 0f;
 
-            EventBus.Subscribe<GameEvents.BattleActionResolved>(OnBattleActionResolved);
+            EventBus.Subscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
             _actionMenu.OnMoveSelected += OnPlayerMoveSelected;
             _actionMenu.OnTargetingInitiated += OnTargetingInitiated;
             _actionMenu.OnTargetingCancelled += OnTargetingCancelled;
@@ -154,7 +155,7 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
-            EventBus.Unsubscribe<GameEvents.BattleActionResolved>(OnBattleActionResolved);
+            EventBus.Unsubscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
             _actionMenu.OnMoveSelected -= OnPlayerMoveSelected;
             _actionMenu.OnTargetingInitiated -= OnTargetingInitiated;
             _actionMenu.OnTargetingCancelled -= OnTargetingCancelled;
@@ -172,21 +173,40 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void OnBattleActionResolved(GameEvents.BattleActionResolved e)
+        private void OnBattleActionExecuted(GameEvents.BattleActionExecuted e)
         {
+            _narrationQueue.Clear();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            _battleNarrator.Show(e.NarrationMessage, secondaryFont);
 
-            if (e.TargetCombatantID != null)
+            if (e.Actor.HasStatusEffect(StatusEffectType.Stun))
             {
-                _activeHealthAnimations.Add(new HealthAnimationState
-                {
-                    CombatantID = e.TargetCombatantID,
-                    StartHP = e.HpBeforeDamage,
-                    TargetHP = e.HpAfterDamage,
-                    Timer = 0f
-                });
+                _narrationQueue.Enqueue(() => _battleNarrator.Show($"{e.Actor.Name} is stunned and cannot move!", secondaryFont));
+                return;
             }
+
+            string attackNarration = $"{e.Actor.Name} uses {e.ChosenMove.MoveName} on {e.Target.Name}.";
+            _narrationQueue.Enqueue(() => _battleNarrator.Show(attackNarration, secondaryFont));
+
+            if (e.DamageResult.WasCritical)
+            {
+                _narrationQueue.Enqueue(() => _battleNarrator.Show("A Critical Hit!", secondaryFont));
+            }
+
+            if (e.DamageResult.DamageAmount > 0)
+            {
+                _narrationQueue.Enqueue(() => StartHealthAnimation(e.Target.CombatantID, (int)e.Target.VisualHP, e.Target.Stats.CurrentHP));
+            }
+        }
+
+        private void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)
+        {
+            _activeHealthAnimations.Add(new HealthAnimationState
+            {
+                CombatantID = combatantId,
+                StartHP = hpBefore,
+                TargetHP = hpAfter,
+                Timer = 0f
+            });
         }
 
         private void OnTargetingInitiated(MoveData move)
@@ -221,17 +241,6 @@ namespace ProjectVagabond.Scenes
         {
             if (_battleManager == null)
             {
-                base.Update(gameTime);
-                return;
-            }
-
-            if (_isBattleOver)
-            {
-                _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
-                {
-                    _sceneManager.ChangeScene(GameSceneState.TerminalMap);
-                }
                 base.Update(gameTime);
                 return;
             }
@@ -277,7 +286,25 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            _battleManager.CanAdvance = !_battleNarrator.IsBusy && !_activeHealthAnimations.Any();
+            bool canProceed = !_battleNarrator.IsBusy && !_activeHealthAnimations.Any();
+
+            if (canProceed)
+            {
+                if (_narrationQueue.Any())
+                {
+                    var nextStep = _narrationQueue.Dequeue();
+                    nextStep.Invoke();
+                }
+                else if (!_isBattleOver)
+                {
+                    _battleManager.CanAdvance = true;
+                }
+            }
+            else
+            {
+                _battleManager.CanAdvance = false;
+            }
+
             _battleManager.Update();
 
             var currentPhase = _battleManager.CurrentPhase;
@@ -302,6 +329,26 @@ namespace ProjectVagabond.Scenes
             {
                 _isBattleOver = true;
                 _actionMenu.Hide();
+
+                var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+                var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+                if (player != null && player.IsDefeated)
+                {
+                    _narrationQueue.Enqueue(() => _battleNarrator.Show("Player Loses!", secondaryFont));
+                }
+                else
+                {
+                    _narrationQueue.Enqueue(() => _battleNarrator.Show("Player Wins!", secondaryFont));
+                }
+            }
+
+            if (_isBattleOver && canProceed && !_narrationQueue.Any())
+            {
+                _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
+                {
+                    _sceneManager.ChangeScene(GameSceneState.TerminalMap);
+                }
             }
 
             base.Update(gameTime);

@@ -398,6 +398,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/ButtonIcons/ui_action_buttons_icon_spritesheet.png;Sprites/UI/ButtonIcons/ui_action_buttons_icon_spritesheet
 
+#begin Sprites/UI/ButtonIcons/ui_atack_button_template_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/ButtonIcons/ui_atack_button_template_spritesheet.png;Sprites/UI/ButtonIcons/ui_atack_button_template_spritesheet
+
 #begin Sprites/UI/ButtonIcons/ui_settings_icon.png
 /importer:TextureImporter
 /processor:TextureProcessor

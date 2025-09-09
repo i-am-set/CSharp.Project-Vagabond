@@ -21,6 +21,7 @@ namespace ProjectVagabond.Battle.UI
         private List<BattleCombatant> _allTargets;
         private List<Button> _actionButtons = new List<Button>();
         private List<Button> _moveButtons = new List<Button>();
+        private List<Button> _targetButtons = new List<Button>();
         private Button _backButton;
 
         private enum MenuState { Main, Moves, Targeting }
@@ -54,9 +55,9 @@ namespace ProjectVagabond.Battle.UI
             var actionSheet = spriteManager.ActionButtonsSpriteSheet;
             var rects = spriteManager.ActionButtonSourceRects;
 
-            _actionButtons.Add(new Button(Rectangle.Empty, actionSheet, rects[0], rects[1], rects[2], function: "Act", debugColor: new Color(100, 0, 0, 150)));
-            _actionButtons.Add(new Button(Rectangle.Empty, actionSheet, rects[3], rects[4], rects[5], function: "Item", debugColor: new Color(0, 100, 0, 150)) { IsEnabled = false });
-            _actionButtons.Add(new Button(Rectangle.Empty, actionSheet, rects[6], rects[7], rects[8], function: "Flee", debugColor: new Color(0, 0, 100, 150)) { IsEnabled = false });
+            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[0], rects[1], rects[2], function: "Act", debugColor: new Color(100, 0, 0, 150)));
+            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[3], rects[4], rects[5], function: "Item", debugColor: new Color(0, 100, 0, 150)) { IsEnabled = false });
+            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[6], rects[7], rects[8], function: "Flee", debugColor: new Color(0, 0, 100, 150)) { IsEnabled = false });
 
             _actionButtons[0].OnClick += () => SetState(MenuState.Moves);
 
@@ -83,6 +84,10 @@ namespace ProjectVagabond.Battle.UI
             {
                 button.ResetAnimationState();
             }
+            foreach (var button in _targetButtons)
+            {
+                button.ResetAnimationState();
+            }
             _backButton.ResetAnimationState();
         }
 
@@ -102,13 +107,14 @@ namespace ProjectVagabond.Battle.UI
         private void SetState(MenuState newState)
         {
             _currentState = newState;
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
 
             if (_currentState == MenuState.Moves)
             {
                 _moveButtons.Clear();
                 foreach (var move in _player.AvailableMoves)
                 {
-                    var moveButton = new Button(Rectangle.Empty, move.MoveName.ToUpper());
+                    var moveButton = new TextOverImageButton(Rectangle.Empty, move.MoveName.ToUpper(), spriteManager.AttackButtonTemplateSprite);
                     moveButton.OnClick += () => {
                         _selectedMove = move;
                         if (_allTargets.Count == 1)
@@ -128,6 +134,16 @@ namespace ProjectVagabond.Battle.UI
             else if (newState == MenuState.Targeting)
             {
                 _targetingTextAnimTimer = 0f;
+                _targetButtons.Clear();
+                foreach (var target in _allTargets)
+                {
+                    var targetButton = new TextOverImageButton(Rectangle.Empty, target.Name.ToUpper(), spriteManager.AttackButtonTemplateSprite);
+                    targetButton.OnClick += () => {
+                        OnMoveSelected?.Invoke(_selectedMove, target);
+                        Hide();
+                    };
+                    _targetButtons.Add(targetButton);
+                }
             }
         }
 
@@ -187,23 +203,20 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.Moves:
                     {
                         const int horizontalPadding = 10;
-                        const int verticalPadding = 5;
-                        const int gridSpacing = 5;
-                        const int backButtonTopMargin = 5;
-                        const int backButtonHeight = 15;
+                        const int verticalPadding = 2;
+                        const int gridSpacing = 1;
+                        const int backButtonTopMargin = 1;
+                        const int backButtonHeight = 13;
                         const int backButtonPadding = 8;
                         const int dividerY = 120;
 
+                        const int slotWidth = 144;
+                        const int slotHeight = 18;
+
                         int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
-                        int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
-
-                        int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
-
-                        int slotWidth = (availableWidth - gridSpacing) / 2;
-                        int slotHeight = (gridAreaHeight - gridSpacing) / 2;
-
-                        int gridStartX = horizontalPadding;
-                        int gridStartY = dividerY + verticalPadding;
+                        int totalGridWidth = (slotWidth * 2) + gridSpacing;
+                        int gridStartX = horizontalPadding + (availableWidth - totalGridWidth) / 2;
+                        int gridStartY = dividerY + verticalPadding + 4;
 
                         var pixel = ServiceLocator.Get<Texture2D>();
 
@@ -230,10 +243,11 @@ namespace ProjectVagabond.Battle.UI
                             }
                         }
 
+                        int gridHeight = (slotHeight * 2) + gridSpacing;
                         int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
-                            gridStartX + (availableWidth - backButtonWidth) / 2,
-                            gridStartY + gridAreaHeight + backButtonTopMargin,
+                            gridStartX + (totalGridWidth - backButtonWidth) / 2,
+                            gridStartY + gridHeight + backButtonTopMargin,
                             backButtonWidth,
                             backButtonHeight
                         );
@@ -243,15 +257,15 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.Targeting:
                     {
                         const int backButtonPadding = 8;
-                        const int backButtonHeight = 15;
-                        const int backButtonTopMargin = 5;
+                        const int backButtonHeight = 13;
+                        const int backButtonTopMargin = 1;
                         const int dividerY = 120;
                         const int horizontalPadding = 10;
-                        const int verticalPadding = 5;
+                        const int verticalPadding = 2;
                         int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
                         int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
                         int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
-                        int gridStartY = dividerY + verticalPadding;
+                        int gridStartY = dividerY + verticalPadding + 4;
 
                         string text = "CHOOSE A TARGET";
                         Vector2 textSize = font.MeasureString(text);
