@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;

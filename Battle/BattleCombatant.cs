@@ -14,6 +14,11 @@ namespace ProjectVagabond.Battle
         public int EntityId { get; set; }
 
         /// <summary>
+        /// The archetype ID (e.g., "wanderer") used to create this combatant.
+        /// </summary>
+        public string ArchetypeId { get; set; }
+
+        /// <summary>
         /// A unique identifier for this instance of a combatant in the battle.
         /// </summary>
         public string CombatantID { get; set; }

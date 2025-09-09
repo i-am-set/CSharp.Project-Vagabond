@@ -1,6 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace ProjectVagabond
 {
@@ -8,6 +10,16 @@ namespace ProjectVagabond
     {
         private readonly Core _core;
         private readonly TextureFactory _textureFactory;
+
+        // UI Sprite Sheets
+        public Texture2D ActionButtonsSpriteSheet { get; private set; }
+
+        // Source Rectangles for UI elements
+        public Rectangle[] ActionButtonSourceRects { get; private set; } // 0-2: Act, 3-5: Item, 6-8: Flee (Normal, Hover, Clicked)
+
+        // Enemy Sprite Cache
+        private readonly Dictionary<string, Texture2D> _enemySprites = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
+
 
         private Texture2D _logoSprite;
         private Texture2D _waterSprite;
@@ -92,27 +104,22 @@ namespace ProjectVagabond
             try { ArrowIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/MapIcons/ArrowIconSpriteSheet"); }
             catch { ArrowIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
 
-            // Moved from LoadGameContent because it's used on the main menu
             try { FireballParticleShaderEffect = _core.Content.Load<Effect>("Shaders/FireballParticleShader"); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ERROR] Could not load shader 'Shaders/FireballParticleShader'. Please ensure it's in the Content project. {ex.Message}"); }
 
+            try { ActionButtonsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_buttons_icon_spritesheet"); }
+            catch { ActionButtonsSpriteSheet = _textureFactory.CreateColoredTexture(288, 150, Color.Magenta); }
+
             InitializeArrowSourceRects();
+            InitializeActionButtonsSourceRects();
         }
 
         private void InitializeArrowSourceRects()
         {
-            // This maps the calculated directional index (0=Left, 1=Up-Left, etc. counter-clockwise)
-            // to the correct grid coordinates on the 3x3 sprite sheet.
             var spriteSheetCoords = new Point[8]
             {
-                new Point(0, 1), // 0: Left
-                new Point(0, 0), // 1: Up-Left
-                new Point(1, 0), // 2: Up
-                new Point(2, 0), // 3: Up-Right
-                new Point(2, 1), // 4: Right
-                new Point(2, 2), // 5: Down-Right
-                new Point(1, 2), // 6: Down
-                new Point(0, 2)  // 7: Down-Left
+                new Point(0, 1), new Point(0, 0), new Point(1, 0), new Point(2, 0),
+                new Point(2, 1), new Point(2, 2), new Point(1, 2), new Point(0, 2)
             };
 
             ArrowIconSourceRects = new Rectangle[8];
@@ -127,6 +134,41 @@ namespace ProjectVagabond
                     spriteWidth,
                     spriteHeight
                 );
+            }
+        }
+
+        private void InitializeActionButtonsSourceRects()
+        {
+            ActionButtonSourceRects = new Rectangle[9];
+            int spriteWidth = ActionButtonsSpriteSheet.Width / 3;
+            int spriteHeight = ActionButtonsSpriteSheet.Height / 3;
+            for (int i = 0; i < 9; i++)
+            {
+                int row = i / 3;
+                int col = i % 3;
+                ActionButtonSourceRects[i] = new Rectangle(col * spriteWidth, row * spriteHeight, spriteWidth, spriteHeight);
+            }
+        }
+
+        public Texture2D GetEnemySprite(string archetypeId)
+        {
+            if (string.IsNullOrEmpty(archetypeId)) return null;
+
+            if (_enemySprites.TryGetValue(archetypeId, out var cachedSprite))
+            {
+                return cachedSprite;
+            }
+
+            try
+            {
+                var sprite = _core.Content.Load<Texture2D>($"Sprites/Enemies/{archetypeId.ToLower()}");
+                _enemySprites[archetypeId] = sprite;
+                return sprite;
+            }
+            catch
+            {
+                _enemySprites[archetypeId] = null;
+                return null;
             }
         }
 

@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -27,6 +28,7 @@ namespace ProjectVagabond.Scenes
 
         private ComponentStore _componentStore;
         private SceneManager _sceneManager;
+        private SpriteManager _spriteManager;
 
         // State Tracking
         private BattleManager.BattlePhase _previousBattlePhase;
@@ -62,6 +64,7 @@ namespace ProjectVagabond.Scenes
         {
             _componentStore = ServiceLocator.Get<ComponentStore>();
             _sceneManager = ServiceLocator.Get<SceneManager>();
+            _spriteManager = ServiceLocator.Get<SpriteManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -413,7 +416,7 @@ namespace ProjectVagabond.Scenes
             spriteBatch.DrawSnapped(pixel, new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, 1), Color.White);
 
             _actionMenu.Draw(spriteBatch, font, gameTime, transform);
-            _battleNarrator.Draw(spriteBatch, secondaryFont);
+            _battleNarrator.Draw(spriteBatch, secondaryFont, gameTime);
         }
 
         private Rectangle GetCombatantInteractionBounds(BattleCombatant combatant, Vector2 centerPosition, BitmapFont nameFont, BitmapFont statsFont)
@@ -422,7 +425,7 @@ namespace ProjectVagabond.Scenes
             float spriteTop = centerPosition.Y - spriteSize - 10;
 
             Vector2 nameSize = nameFont.MeasureString(combatant.Name);
-            float nameY = centerPosition.Y - 3;
+            float nameY = centerPosition.Y - 8;
 
             string hpLabel = "HP: ";
             string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
@@ -430,7 +433,7 @@ namespace ProjectVagabond.Scenes
             string maxHp = combatant.Stats.MaxHP.ToString();
             string fullHpText = hpLabel + currentHp + separator + maxHp;
             Vector2 hpSize = statsFont.MeasureString(fullHpText);
-            float hpY = centerPosition.Y + 7;
+            float hpY = centerPosition.Y + 2;
             float hpBottom = hpY + statsFont.LineHeight;
 
             float top = spriteTop;
@@ -464,12 +467,18 @@ namespace ProjectVagabond.Scenes
                 spriteSize
             );
 
-            // For now, we draw a placeholder if no texture is found.
-            // In the future, this would pull from an Archetype's sprite property.
-            spriteBatch.DrawSnapped(pixel, spriteRect, global.Palette_Pink);
+            Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
+            if (enemySprite != null)
+            {
+                spriteBatch.DrawSnapped(enemySprite, spriteRect, Color.White);
+            }
+            else
+            {
+                spriteBatch.DrawSnapped(pixel, spriteRect, global.Palette_Pink);
+            }
 
             Vector2 nameSize = nameFont.MeasureString(combatant.Name);
-            Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 3);
+            Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 8);
             spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, Color.White);
 
             string hpLabel = "HP: ";
@@ -478,7 +487,7 @@ namespace ProjectVagabond.Scenes
             string maxHp = combatant.Stats.MaxHP.ToString();
             string fullHpText = hpLabel + currentHp + separator + maxHp;
             Vector2 hpSize = statsFont.MeasureString(fullHpText);
-            Vector2 hpPos = new Vector2(centerPosition.X - hpSize.X / 2, centerPosition.Y + 7);
+            Vector2 hpPos = new Vector2(centerPosition.X - hpSize.X / 2, centerPosition.Y + 2);
             DrawHpLine(spriteBatch, statsFont, combatant, hpPos);
         }
 

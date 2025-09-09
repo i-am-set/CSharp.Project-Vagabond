@@ -3,11 +3,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections.Generic;
 
 namespace ProjectVagabond.UI
 {
@@ -20,10 +17,11 @@ namespace ProjectVagabond.UI
         public int MaxCornerArmLength { get; set; } = 20;
         public Color? DebugColor { get; set; }
 
-        private readonly Texture2D? _defaultTexture;
-        private readonly Texture2D? _hoverTexture;
-        private readonly Texture2D? _clickedTexture;
-        private readonly Texture2D? _disabledTexture;
+        private readonly Texture2D? _spriteSheet;
+        private readonly Rectangle? _defaultSourceRect;
+        private readonly Rectangle? _hoverSourceRect;
+        private readonly Rectangle? _clickedSourceRect;
+        private readonly Rectangle? _disabledSourceRect;
 
         private bool _isHeldDown;
         private float _swayTimer = 0f;
@@ -38,50 +36,47 @@ namespace ProjectVagabond.UI
         private const float SHAKE_AMOUNT = 1f;
         private static readonly Random _random = new Random();
 
-        public ImageButton(Rectangle bounds, Texture2D? defaultTexture = null, Texture2D? hoverTexture = null, Texture2D? clickedTexture = null, Texture2D? disabledTexture = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, BitmapFont? font = null, Color? debugColor = null)
+        public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, BitmapFont? font = null, Color? debugColor = null)
             : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, clickOnPress, font)
         {
-            _defaultTexture = defaultTexture;
-            _hoverTexture = hoverTexture;
-            _clickedTexture = clickedTexture;
-            _disabledTexture = disabledTexture;
+            _spriteSheet = spriteSheet;
+            _defaultSourceRect = defaultSourceRect;
+            _hoverSourceRect = hoverSourceRect;
+            _clickedSourceRect = clickedSourceRect;
+            _disabledSourceRect = disabledSourceRect;
             HoverBorderColor = _global.ButtonHoverColor;
             DebugColor = debugColor;
         }
 
         public override void Update(MouseState currentMouseState)
         {
-            // Let the base class handle hover, click, and previous state management.
             base.Update(currentMouseState);
-
-            // Add the specific logic for ImageButton.
             if (!IsEnabled)
             {
                 _isHeldDown = false;
             }
             else
             {
-                // _isPressed is managed by the base class for click-on-release logic
                 _isHeldDown = _isPressed;
             }
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
-            Texture2D? textureToDraw = _defaultTexture;
+            Rectangle? sourceRectToDraw = _defaultSourceRect;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
-            if (!IsEnabled && _disabledTexture != null)
+            if (!IsEnabled && _disabledSourceRect.HasValue)
             {
-                textureToDraw = _disabledTexture;
+                sourceRectToDraw = _disabledSourceRect;
             }
-            else if (_isHeldDown && _clickedTexture != null)
+            else if (_isHeldDown && _clickedSourceRect.HasValue)
             {
-                textureToDraw = _clickedTexture;
+                sourceRectToDraw = _clickedSourceRect;
             }
-            else if (isActivated && _hoverTexture != null)
+            else if (isActivated && _hoverSourceRect.HasValue)
             {
-                textureToDraw = _hoverTexture;
+                sourceRectToDraw = _hoverSourceRect;
             }
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -99,14 +94,14 @@ namespace ProjectVagabond.UI
             {
                 if (!_wasHoveredLastFrame)
                 {
-                    _swayTimer = 0f; // Reset timer on new hover.
+                    _swayTimer = 0f;
                 }
                 _swayTimer += deltaTime;
                 swayOffsetX = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT_X;
             }
             else
             {
-                _swayTimer = 0f; // Reset if not hovered.
+                _swayTimer = 0f;
             }
             _wasHoveredLastFrame = isActivated;
 
@@ -114,10 +109,10 @@ namespace ProjectVagabond.UI
             Vector2 shakeOffset = Vector2.Zero;
             if (_squashAnimationTimer > 0)
             {
-                if (textureToDraw != null)
+                if (_spriteSheet != null)
                 {
                     float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
-                    float targetScaleY = 1.5f / textureToDraw.Height;
+                    float targetScaleY = 1.5f / Bounds.Height;
                     scale.Y = MathHelper.Lerp(1.0f, targetScaleY, progress);
                 }
                 shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_AMOUNT);
@@ -125,10 +120,10 @@ namespace ProjectVagabond.UI
 
             var position = new Vector2(Bounds.Center.X + swayOffsetX, Bounds.Center.Y) + shakeOffset;
 
-            if (textureToDraw != null)
+            if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
-                var origin = textureToDraw.Bounds.Center.ToVector2();
-                spriteBatch.DrawSnapped(textureToDraw, position, null, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+                var origin = sourceRectToDraw.Value.Size.ToVector2() / 2f;
+                spriteBatch.DrawSnapped(_spriteSheet, position, sourceRectToDraw, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
             }
             else if (DebugColor.HasValue)
             {
@@ -136,7 +131,7 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), debugRect, DebugColor.Value);
             }
 
-            if (isActivated && _hoverTexture == null)
+            if (isActivated && !_hoverSourceRect.HasValue)
             {
                 var rectWithOffset = new Rectangle(Bounds.X + (int)swayOffsetX, Bounds.Y, Bounds.Width, Bounds.Height);
                 DrawCornerBrackets(spriteBatch, ServiceLocator.Get<Texture2D>(), rectWithOffset, BorderThickness, HoverBorderColor);

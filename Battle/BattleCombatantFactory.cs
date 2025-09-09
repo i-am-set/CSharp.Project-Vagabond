@@ -39,6 +39,7 @@ namespace ProjectVagabond.Battle
             var combatant = new BattleCombatant
             {
                 EntityId = entityId,
+                ArchetypeId = archetype.Id,
                 CombatantID = combatantId,
                 Name = archetype.Name,
                 IsPlayerControlled = componentStore.HasComponent<PlayerTagComponent>(entityId),

@@ -34,10 +34,11 @@ namespace ProjectVagabond.Battle.UI
         // Input state
         private MouseState _previousMouseState;
         private KeyboardState _previousKeyboardState;
+        private Rectangle _ellipsisHoverBounds;
 
         // Tuning constants
         private const float TYPEWRITER_SPEED = 0.04f; // Seconds per character
-        private const float AUTO_ADVANCE_SECONDS = 3.0f; // Seconds to wait for input
+        private const float AUTO_ADVANCE_SECONDS = 5.0f; // Seconds to wait for input
 
         public bool IsBusy => _messageQueue.Count > 0 || !string.IsNullOrEmpty(_currentSegment);
 
@@ -212,7 +213,32 @@ namespace ProjectVagabond.Battle.UI
             _previousKeyboardState = keyboardState;
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font)
+        private void CalculateIndicatorLayout()
+        {
+            const int padding = 5;
+            var panelBounds = new Rectangle(
+                _bounds.X + padding,
+                _bounds.Y + padding,
+                _bounds.Width - padding * 2,
+                _bounds.Height - padding * 2
+            );
+
+            const string arrow = "v";
+            const string gap = " ";
+            const string widestEllipsis = "...";
+
+            Vector2 widestEllipsisSize = _font.MeasureString(widestEllipsis);
+            Vector2 arrowSize = _font.MeasureString(arrow);
+            Vector2 gapSize = _font.MeasureString(gap);
+            float totalIndicatorWidth = widestEllipsisSize.X + gapSize.X + arrowSize.X;
+
+            float startX = panelBounds.Right - 2 - totalIndicatorWidth;
+            float yPos = panelBounds.Bottom - 10;
+
+            _ellipsisHoverBounds = new Rectangle((int)startX, (int)yPos, (int)widestEllipsisSize.X, _font.LineHeight);
+        }
+
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (!IsBusy) return;
 
@@ -245,32 +271,28 @@ namespace ProjectVagabond.Battle.UI
             // Draw "next" indicator
             if (_isWaitingForInput)
             {
-                // Ellipsis countdown logic
                 string ellipsisToShow;
-                if (_timeoutTimer > 2.0f) ellipsisToShow = "...";
-                else if (_timeoutTimer > 1.0f) ellipsisToShow = "..";
+                if (_timeoutTimer > (AUTO_ADVANCE_SECONDS * 2 / 3f)) ellipsisToShow = "...";
+                else if (_timeoutTimer > (AUTO_ADVANCE_SECONDS / 3f)) ellipsisToShow = "..";
                 else ellipsisToShow = ".";
 
-                // Measure all components to calculate total width for right-alignment
                 const string arrow = "v";
                 const string gap = " ";
                 const string widestEllipsis = "...";
+
                 Vector2 widestEllipsisSize = font.MeasureString(widestEllipsis);
                 Vector2 arrowSize = font.MeasureString(arrow);
                 Vector2 gapSize = font.MeasureString(gap);
                 float totalIndicatorWidth = widestEllipsisSize.X + gapSize.X + arrowSize.X;
 
-                // Calculate the starting X position for the entire indicator group
-                float startX = panelBounds.Right - 10 - totalIndicatorWidth;
+                float startX = panelBounds.Right - 3 - totalIndicatorWidth;
                 float yPos = panelBounds.Bottom - 10;
 
-                // Calculate the position for the current ellipsis to keep it right-aligned within its allotted space
                 Vector2 currentEllipsisSize = font.MeasureString(ellipsisToShow);
                 float ellipsisX = startX + (widestEllipsisSize.X - currentEllipsisSize.X);
                 var ellipsisPosition = new Vector2(ellipsisX, yPos);
                 spriteBatch.DrawStringSnapped(font, ellipsisToShow, ellipsisPosition, _global.Palette_Yellow);
 
-                // Bobbing 'v' indicator with a 1-second cycle (0.5s up, 0.5s down)
                 float yOffset = ((_timeoutTimer - MathF.Floor(_timeoutTimer)) > 0.5f) ? -1f : 0f;
                 var indicatorPosition = new Vector2(startX + widestEllipsisSize.X + gapSize.X, yPos + yOffset);
                 spriteBatch.DrawStringSnapped(font, arrow, indicatorPosition, _global.Palette_Yellow);

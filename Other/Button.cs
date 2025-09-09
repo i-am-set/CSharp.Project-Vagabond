@@ -44,6 +44,7 @@ namespace ProjectVagabond.UI
         public bool ClickOnPress { get; set; } = false;
         public BitmapFont? Font { get; set; }
         public Vector2 TextRenderOffset { get; set; } = Vector2.Zero;
+        public Color? DebugColor { get; set; }
 
         public event Action? OnClick;
 
@@ -52,28 +53,30 @@ namespace ProjectVagabond.UI
         private float _scrollPosition = 0f;
         private float _swayTimer = 0f;
         private bool _wasHoveredLastFrame = false;
-        protected bool _isPressed = false; // State to track if the button was pressed down
+        protected bool _isPressed = false;
 
-        // Animation state for the squash effect
+        // Sprite-based properties
+        private readonly Texture2D? _spriteSheet;
+        private readonly Rectangle? _defaultSourceRect;
+        private readonly Rectangle? _hoverSourceRect;
+        private readonly Rectangle? _clickedSourceRect;
+        private readonly Rectangle? _disabledSourceRect;
+
+        // Animation state
         private float _squashAnimationTimer = 0f;
         private const float SQUASH_ANIMATION_DURATION = 0.03f;
-
         private const float SWAY_SPEED = 3f;
         private const float SWAY_AMOUNT_X = 1f;
         private const int LEFT_ALIGN_PADDING = 4;
         private const float SHAKE_AMOUNT = 1f;
-
         private static readonly Random _random = new Random();
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
+        // Text-based constructor
         public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, bool clickOnPress = false, BitmapFont? font = null)
         {
             _global = ServiceLocator.Get<Global>();
-
-            if (function == null)
-            {
-                function = text;
-            }
+            if (function == null) function = text;
 
             Bounds = bounds;
             Text = text;
@@ -88,6 +91,22 @@ namespace ProjectVagabond.UI
             Font = font;
         }
 
+        // Sprite-based constructor
+        public Button(Rectangle bounds, Texture2D? spriteSheet, Rectangle? defaultSourceRect, Rectangle? hoverSourceRect, Rectangle? clickedSourceRect, string? function = null, bool enableHoverSway = true, bool clickOnPress = false, Color? debugColor = null)
+        {
+            _global = ServiceLocator.Get<Global>();
+            Bounds = bounds;
+            Text = "";
+            Function = function ?? "";
+            EnableHoverSway = enableHoverSway;
+            ClickOnPress = clickOnPress;
+            _spriteSheet = spriteSheet;
+            _defaultSourceRect = defaultSourceRect;
+            _hoverSourceRect = hoverSourceRect;
+            _clickedSourceRect = clickedSourceRect;
+            DebugColor = debugColor;
+        }
+
         public virtual void Update(MouseState currentMouseState)
         {
             Vector2 virtualMousePos = UseScreenCoordinates
@@ -98,7 +117,6 @@ namespace ProjectVagabond.UI
 
             if (ClickOnPress)
             {
-                // Old logic for immediate click on press
                 if (UIInputManager.CanProcessMouseClick() && IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
                 {
                     TriggerClick();
@@ -107,7 +125,6 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                // New logic for click on release
                 bool mousePressedOverButton = IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
                 bool mouseReleasedOverButton = IsHovered && currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
 
@@ -125,13 +142,11 @@ namespace ProjectVagabond.UI
                     }
                 }
 
-                // Reset pressed state if the mouse button is released anywhere
                 if (currentMouseState.LeftButton == ButtonState.Released)
                 {
                     _isPressed = false;
                 }
             }
-
 
             _previousMouseState = currentMouseState;
         }
@@ -166,149 +181,116 @@ namespace ProjectVagabond.UI
 
         public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
-            BitmapFont font = this.Font ?? defaultFont; // Use the button's specific font, or fall back to the scene's default.
+            if (_spriteSheet != null)
+            {
+                DrawSprite(spriteBatch, gameTime, transform, forceHover);
+            }
+            else
+            {
+                DrawText(spriteBatch, defaultFont, gameTime, transform, forceHover);
+            }
+        }
 
+        private void DrawSprite(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform, bool forceHover)
+        {
+            Rectangle? sourceRectToDraw = _defaultSourceRect;
+            bool isActivated = IsEnabled && (IsHovered || forceHover);
+
+            if (!IsEnabled && _disabledSourceRect.HasValue) sourceRectToDraw = _disabledSourceRect;
+            else if (_isPressed && _clickedSourceRect.HasValue) sourceRectToDraw = _clickedSourceRect;
+            else if (isActivated && _hoverSourceRect.HasValue) sourceRectToDraw = _hoverSourceRect;
+
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_isPressed && !ClickOnPress) _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
+            else _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
+
+            Vector2 scale = Vector2.One;
+            Vector2 shakeOffset = Vector2.Zero;
+            if (_squashAnimationTimer > 0)
+            {
+                float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
+                scale.Y = MathHelper.Lerp(1.0f, 1.5f / Bounds.Height, progress);
+                shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_AMOUNT);
+            }
+
+            var position = new Vector2(Bounds.Center.X, Bounds.Center.Y) + shakeOffset;
+
+            if (_spriteSheet != null && sourceRectToDraw.HasValue)
+            {
+                var origin = sourceRectToDraw.Value.Size.ToVector2() / 2f;
+                spriteBatch.DrawSnapped(_spriteSheet, position, sourceRectToDraw, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+            }
+            else if (DebugColor.HasValue)
+            {
+                var debugRect = new Rectangle((int)position.X - Bounds.Width / 2, (int)position.Y - Bounds.Height / 2, Bounds.Width, Bounds.Height);
+                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), debugRect, DebugColor.Value);
+            }
+        }
+
+        private void DrawText(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover)
+        {
+            BitmapFont font = this.Font ?? defaultFont;
             Color textColor;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
-            if (!IsEnabled)
-            {
-                textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
-            }
-            else
-            {
-                textColor = isActivated
-                    ? (CustomHoverTextColor ?? _global.ButtonHoverColor)
-                    : (CustomDefaultTextColor ?? _global.Palette_BrightWhite);
-            }
+            if (!IsEnabled) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
+            else textColor = isActivated ? (CustomHoverTextColor ?? _global.ButtonHoverColor) : (CustomDefaultTextColor ?? _global.Palette_BrightWhite);
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_isPressed && !ClickOnPress)
-            {
-                _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
-            }
-            else
-            {
-                _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
-            }
+            if (_isPressed && !ClickOnPress) _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
+            else _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
 
             float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             float swayOffsetX = 0f;
 
             if (isActivated && EnableHoverSway)
             {
-                if (!_wasHoveredLastFrame)
-                {
-                    _swayTimer = 0f; // Reset timer on new hover to start animation from the beginning.
-                }
+                if (!_wasHoveredLastFrame) _swayTimer = 0f;
                 _swayTimer += deltaTime;
                 swayOffsetX = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT_X;
             }
             else
             {
-                _swayTimer = 0f; // Reset if not hovered.
+                _swayTimer = 0f;
             }
             _wasHoveredLastFrame = isActivated;
 
             float totalXOffset = hopOffset + swayOffsetX;
             Vector2 textSize = font.MeasureString(Text);
 
-            // Calculate squash scale based on animation timer
             Vector2 scale = Vector2.One;
             Vector2 shakeOffset = Vector2.Zero;
             if (_squashAnimationTimer > 0)
             {
                 float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
-                // Target a scale that results in a 1.5 pixel height to avoid rounding down to 0.
                 float targetScaleY = 1.5f / textSize.Y;
                 scale.Y = MathHelper.Lerp(1.0f, targetScaleY, progress);
-
-                // Add shake effect while squashed
                 shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_AMOUNT);
             }
 
-            // To correctly handle clipping while respecting the scene's transform,
-            // we must restart the SpriteBatch, passing the transform matrix along.
             var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
             var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
-
-            // The scene's SpriteBatch.Begin uses BlendState.AlphaBlend and SamplerState.PointClamp.
-            // We must preserve these when restarting the batch.
             spriteBatch.End();
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, rasterizerState: _clipRasterizerState, transformMatrix: transform);
-
-            // The ScissorRectangle is applied in the coordinate space of the render target,
-            // which is what the transform matrix maps our virtual coordinates to.
-            // Therefore, we can use the virtual-space `Bounds` directly.
             spriteBatch.GraphicsDevice.ScissorRectangle = Bounds;
 
-            bool shouldScroll = OverflowScrollSpeed > 0 && textSize.X > Bounds.Width;
-            if (shouldScroll)
+            Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
+            Vector2 textPosition;
+
+            if (AlignLeft)
             {
-                _scrollPosition += deltaTime * OverflowScrollSpeed;
-                string scrollingText = Text + "  ";
-                Vector2 scrollingTextSize = font.MeasureString(scrollingText);
-                if (_scrollPosition > scrollingTextSize.X)
-                {
-                    _scrollPosition -= scrollingTextSize.X;
-                }
-                Vector2 scrollTextPosition = new Vector2(Bounds.X - _scrollPosition, Bounds.Y + (Bounds.Height - textSize.Y) / 2) + TextRenderOffset;
-                spriteBatch.DrawStringSnapped(font, scrollingText, scrollTextPosition, textColor);
-                spriteBatch.DrawStringSnapped(font, scrollingText, new Vector2(scrollTextPosition.X + scrollingTextSize.X, scrollTextPosition.Y), textColor);
+                textOrigin.X = 0;
+                textPosition = new Vector2(Bounds.Left + totalXOffset + LEFT_ALIGN_PADDING, Bounds.Center.Y);
             }
             else
             {
-                // CRITICAL FIX: Round the origin to prevent sub-pixel rendering artifacts.
-                Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
-                Vector2 textPosition;
-
-                if (AlignLeft)
-                {
-                    // For left-align, origin needs to be adjusted to just the vertical center
-                    textOrigin.X = 0;
-                    textPosition = new Vector2(Bounds.Left + totalXOffset + LEFT_ALIGN_PADDING, Bounds.Center.Y);
-                }
-                else
-                {
-                    textPosition = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y);
-                }
-
-                textPosition += TextRenderOffset + shakeOffset; // Apply the custom render offset and shake
-
-                spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, scale, SpriteEffects.None, 0f);
-
-                // --- DIAGONAL STRIKETHROUGH LOGIC ---
-                if (Strikethrough == StrikethroughType.Exhausted)
-                {
-                    Color strikethroughColor = _global.Palette_Red;
-                    var pixel = ServiceLocator.Get<Texture2D>();
-
-                    // Calculate diagonal properties based on the unscaled text size
-                    float length = (float)Math.Sqrt(textSize.X * textSize.X + textSize.Y * textSize.Y);
-                    float angle = (float)Math.Atan2(textSize.Y, textSize.X);
-
-                    // Adjust position for non-centered origin if left-aligned
-                    Vector2 strikethroughPos = textPosition;
-                    if (AlignLeft)
-                    {
-                        strikethroughPos.Y -= textSize.Y / 2f;
-                    }
-
-                    spriteBatch.DrawSnapped(
-                        texture: pixel,
-                        position: strikethroughPos,
-                        sourceRectangle: null,
-                        color: strikethroughColor,
-                        rotation: angle,
-                        origin: new Vector2(0, 0.5f), // Center the line vertically on the start point
-                        scale: new Vector2(length, 1), // Scale the 1x1 pixel to the correct length and 1px thickness
-                        effects: SpriteEffects.None,
-                        layerDepth: 0
-                    );
-                }
+                textPosition = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y);
             }
 
-            // End our custom batch and restore the original state for the rest of the scene.
+            textPosition += TextRenderOffset + shakeOffset;
+
+            spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, scale, SpriteEffects.None, 0f);
+
             spriteBatch.End();
             spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, rasterizerState: originalRasterizerState, transformMatrix: transform);

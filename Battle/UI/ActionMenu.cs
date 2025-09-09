@@ -27,16 +27,11 @@ namespace ProjectVagabond.Battle.UI
         private MenuState _currentState;
         private MoveData _selectedMove;
         private float _targetingTextAnimTimer = 0f;
+        private bool _buttonsInitialized = false;
 
         public ActionMenu()
         {
-            // Initialize main action buttons as ImageButtons without textures
-            _actionButtons.Add(new ImageButton(Rectangle.Empty, function: "Act", debugColor: new Color(100, 0, 0, 150)));
-            _actionButtons.Add(new ImageButton(Rectangle.Empty, function: "Item", debugColor: new Color(0, 100, 0, 150)) { IsEnabled = false }); // Disabled for now
-            _actionButtons.Add(new ImageButton(Rectangle.Empty, function: "Flee", debugColor: new Color(0, 0, 100, 150)) { IsEnabled = false }); // Disabled for now
-
-            _actionButtons[0].OnClick += () => SetState(MenuState.Moves);
-
+            // Defer button creation until content is loaded.
             _backButton = new Button(Rectangle.Empty, "BACK");
             _backButton.OnClick += () => {
                 if (_currentState == MenuState.Targeting)
@@ -49,6 +44,25 @@ namespace ProjectVagabond.Battle.UI
                     SetState(MenuState.Main);
                 }
             };
+        }
+
+        private void InitializeButtons()
+        {
+            if (_buttonsInitialized) return;
+
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+            var actionSheet = spriteManager.ActionButtonsSpriteSheet;
+            var rects = spriteManager.ActionButtonSourceRects;
+
+            _actionButtons.Add(new Button(Rectangle.Empty, actionSheet, rects[0], rects[1], rects[2], function: "Act", debugColor: new Color(100, 0, 0, 150)));
+            _actionButtons.Add(new Button(Rectangle.Empty, actionSheet, rects[3], rects[4], rects[5], function: "Item", debugColor: new Color(0, 100, 0, 150)) { IsEnabled = false });
+            _actionButtons.Add(new Button(Rectangle.Empty, actionSheet, rects[6], rects[7], rects[8], function: "Flee", debugColor: new Color(0, 0, 100, 150)) { IsEnabled = false });
+
+            _actionButtons[0].OnClick += () => SetState(MenuState.Moves);
+
+            _backButton.Font = ServiceLocator.Get<Core>().SecondaryFont;
+
+            _buttonsInitialized = true;
         }
 
         public void GoBack()
@@ -119,6 +133,7 @@ namespace ProjectVagabond.Battle.UI
 
         public void Update(MouseState currentMouseState, GameTime gameTime)
         {
+            InitializeButtons();
             if (!_isVisible) return;
 
             switch (_currentState)
@@ -139,13 +154,8 @@ namespace ProjectVagabond.Battle.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            InitializeButtons();
             if (!_isVisible) return;
-
-            // Lazy-load the font reference the first time Draw is called to avoid initialization order issues.
-            if (_backButton.Font == null)
-            {
-                _backButton.Font = ServiceLocator.Get<Core>().SecondaryFont;
-            }
 
             switch (_currentState)
             {
