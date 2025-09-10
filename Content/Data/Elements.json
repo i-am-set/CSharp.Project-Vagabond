@@ -51,6 +51,11 @@
   },
   {
     "ElementID": 11,
+    "ElementName": "Electric", /// Lightning, Thunder, etc.
+    "Type": "Offensive"
+  },
+  {
+    "ElementID": 11,
     "ElementName": "Ice", /// Cold, Frost, Snow, etc. Not resisted by much, just hard things like stone and metal.
     "Type": "Offensive"
   },
@@ -102,6 +107,11 @@
   {
     "ElementID": 110,
     "ElementName": "Ice", /// Mostly ice elementals would use this defensively, but some creatures adapted to cold climates might have this too.
+    "Type": "Defensive"
+  },
+  {
+    "ElementID": 111,
+    "ElementName": "Electric", /// Mostly electric elementals would use this defensively. Not many creatures would have this defensively, but some mechanical constructs might have this too.
     "Type": "Defensive"
   }
 ]
