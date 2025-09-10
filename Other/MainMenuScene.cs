@@ -57,7 +57,6 @@ namespace ProjectVagabond.Scenes
 
             _buttons.Clear();
 
-            var defaultFont = ServiceLocator.Get<BitmapFont>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             const int horizontalPadding = 4;
@@ -67,13 +66,15 @@ namespace ProjectVagabond.Scenes
 
             // --- PLAY Button ---
             string playText = "PLAY";
-            Vector2 playTextSize = defaultFont.MeasureString(playText);
+            Vector2 playTextSize = secondaryFont.MeasureString(playText);
             int playWidth = (int)playTextSize.X + horizontalPadding * 2;
             int playHeight = (int)playTextSize.Y + verticalPadding * 2;
             var playButton = new Button(
-                new Rectangle((Global.VIRTUAL_WIDTH - playWidth) / 2, (int)currentY, playWidth, playHeight),
-                playText
-            );
+                new Rectangle(((Global.VIRTUAL_WIDTH - playWidth) / 2) - 3, (int)currentY, playWidth, playHeight),
+                playText,
+                font: secondaryFont
+            )
+            { TextRenderOffset = new Vector2(0, -1) };
             playButton.OnClick += () =>
             {
                 var core = ServiceLocator.Get<Core>();
@@ -107,9 +108,10 @@ namespace ProjectVagabond.Scenes
             int settingsWidth = (int)settingsTextSize.X + horizontalPadding * 2;
             int settingsHeight = (int)settingsTextSize.Y + verticalPadding * 2;
             var settingsButton = new Button(
-                new Rectangle(((Global.VIRTUAL_WIDTH - settingsWidth) / 2) + 2, (int)currentY, settingsWidth, settingsHeight),
+                new Rectangle(((Global.VIRTUAL_WIDTH - settingsWidth) / 2) - 3, (int)currentY, settingsWidth, settingsHeight),
                 settingsText,
-                font: secondaryFont
+                font: secondaryFont,
+                customDefaultTextColor: _global.Palette_LightGray
             )
             { TextRenderOffset = new Vector2(0, -1) };
             settingsButton.OnClick += () => _sceneManager.ChangeScene(GameSceneState.Settings);
@@ -122,9 +124,10 @@ namespace ProjectVagabond.Scenes
             int exitWidth = (int)exitTextSize.X + horizontalPadding * 2;
             int exitHeight = (int)exitTextSize.Y + verticalPadding * 2;
             var exitButton = new Button(
-                new Rectangle(((Global.VIRTUAL_WIDTH - exitWidth) / 2) + 2, (int)currentY, exitWidth, exitHeight),
+                new Rectangle(((Global.VIRTUAL_WIDTH - exitWidth) / 2) - 3, (int)currentY, exitWidth, exitHeight),
                 exitText,
-                font: secondaryFont
+                font: secondaryFont,
+                customDefaultTextColor: _global.Palette_LightGray
             )
             { TextRenderOffset = new Vector2(0, -1) };
             exitButton.OnClick += ConfirmExit;
