@@ -55,7 +55,7 @@
     "Type": "Offensive"
   },
   {
-    "ElementID": 11,
+    "ElementID": 12,
     "ElementName": "Ice", /// Cold, Frost, Snow, etc. Not resisted by much, just hard things like stone and metal.
     "Type": "Offensive"
   },
