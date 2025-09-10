@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -28,6 +29,8 @@ namespace ProjectVagabond.Scenes
         private ComponentStore _componentStore;
         private SceneManager _sceneManager;
         private SpriteManager _spriteManager;
+        private Global _global;
+        private HapticsManager _hapticsManager;
 
         // State Tracking
         private BattleManager.BattlePhase _previousBattlePhase;
@@ -65,6 +68,8 @@ namespace ProjectVagabond.Scenes
             _componentStore = ServiceLocator.Get<ComponentStore>();
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
+            _global = ServiceLocator.Get<Global>();
+            _hapticsManager = ServiceLocator.Get<HapticsManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -194,6 +199,12 @@ namespace ProjectVagabond.Scenes
 
             if (e.DamageResult.DamageAmount > 0)
             {
+                if (e.Target.IsPlayerControlled)
+                {
+                    _narrationQueue.Enqueue(() => _core.TriggerFullscreenFlash(_global.Palette_Red, 0.15f));
+                    _narrationQueue.Enqueue(() => _core.TriggerFullscreenGlitch(duration: 0.2f));
+                    _narrationQueue.Enqueue(() => _hapticsManager.TriggerShake(magnitude: 2.0f, duration: 0.3f));
+                }
                 _narrationQueue.Enqueue(() => StartHealthAnimation(e.Target.CombatantID, (int)e.Target.VisualHP, e.Target.Stats.CurrentHP));
             }
         }
@@ -245,6 +256,17 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
+            if (_isBattleOver)
+            {
+                _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
+                {
+                    _sceneManager.ChangeScene(GameSceneState.TerminalMap);
+                }
+                base.Update(gameTime);
+                return;
+            }
+
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
@@ -274,7 +296,7 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released)
+                if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed)
                 {
                     if (_hoveredTargetIndex != -1)
                     {

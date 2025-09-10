@@ -34,7 +34,6 @@ namespace ProjectVagabond.Battle.UI
         // Input state
         private MouseState _previousMouseState;
         private KeyboardState _previousKeyboardState;
-        private Rectangle _ellipsisHoverBounds;
 
         // Tuning constants
         private const float TYPEWRITER_SPEED = 0.04f; // Seconds per character
@@ -100,22 +99,21 @@ namespace ProjectVagabond.Battle.UI
 
         private void FinishCurrentSegmentInstantly()
         {
-            // Instantly builds the final wrapped text for the current segment
-            while (_wordIndex < _words.Count)
-            {
-                var word = _words[_wordIndex];
-                var currentLine = _displayLines.Last();
+            _displayLines.Clear();
+            var currentLine = new StringBuilder();
+            _displayLines.Add(currentLine);
 
-                // Check if the word needs to wrap
+            foreach (var word in _words)
+            {
                 var potentialText = (currentLine.Length > 0 ? currentLine.ToString() + " " : "") + word;
                 if (_font.MeasureString(potentialText).Width > _wrapWidth)
                 {
-                    _displayLines.Add(new StringBuilder());
+                    currentLine = new StringBuilder();
+                    _displayLines.Add(currentLine);
                     if (_displayLines.Count > _maxVisibleLines)
                     {
                         _displayLines.RemoveAt(0);
                     }
-                    currentLine = _displayLines.Last();
                 }
 
                 if (currentLine.Length > 0)
@@ -123,7 +121,6 @@ namespace ProjectVagabond.Battle.UI
                     currentLine.Append(" ");
                 }
                 currentLine.Append(word);
-                _wordIndex++;
             }
 
             _isWaitingForInput = true;
@@ -137,21 +134,21 @@ namespace ProjectVagabond.Battle.UI
             var mouseState = Mouse.GetState();
             var keyboardState = Keyboard.GetState();
 
-            bool mouseJustClicked = UIInputManager.CanProcessMouseClick() &&
-                                    mouseState.LeftButton == ButtonState.Pressed &&
-                                    _previousMouseState.LeftButton == ButtonState.Released;
+            bool mouseJustReleased = UIInputManager.CanProcessMouseClick() &&
+                                     mouseState.LeftButton == ButtonState.Released &&
+                                     _previousMouseState.LeftButton == ButtonState.Pressed;
 
             bool keyJustPressed = (keyboardState.IsKeyDown(Keys.Enter) && _previousKeyboardState.IsKeyUp(Keys.Enter)) ||
                                   (keyboardState.IsKeyDown(Keys.Space) && _previousKeyboardState.IsKeyUp(Keys.Space));
 
-            bool advance = mouseJustClicked || keyJustPressed;
+            bool advance = mouseJustReleased || keyJustPressed;
 
             if (_isWaitingForInput)
             {
                 _timeoutTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
                 if (advance || _timeoutTimer <= 0)
                 {
-                    if (mouseJustClicked) UIInputManager.ConsumeMouseClick();
+                    if (mouseJustReleased) UIInputManager.ConsumeMouseClick();
                     ProcessNextSegment();
                 }
             }
@@ -161,7 +158,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     // Finish the current segment instantly
                     FinishCurrentSegmentInstantly();
-                    if (mouseJustClicked) UIInputManager.ConsumeMouseClick();
+                    if (mouseJustReleased) UIInputManager.ConsumeMouseClick();
                 }
                 else
                 {
@@ -211,31 +208,6 @@ namespace ProjectVagabond.Battle.UI
 
             _previousMouseState = mouseState;
             _previousKeyboardState = keyboardState;
-        }
-
-        private void CalculateIndicatorLayout()
-        {
-            const int padding = 5;
-            var panelBounds = new Rectangle(
-                _bounds.X + padding,
-                _bounds.Y + padding,
-                _bounds.Width - padding * 2,
-                _bounds.Height - padding * 2
-            );
-
-            const string arrow = "v";
-            const string gap = " ";
-            const string widestEllipsis = "...";
-
-            Vector2 widestEllipsisSize = _font.MeasureString(widestEllipsis);
-            Vector2 arrowSize = _font.MeasureString(arrow);
-            Vector2 gapSize = _font.MeasureString(gap);
-            float totalIndicatorWidth = widestEllipsisSize.X + gapSize.X + arrowSize.X;
-
-            float startX = panelBounds.Right - 2 - totalIndicatorWidth;
-            float yPos = panelBounds.Bottom - 10;
-
-            _ellipsisHoverBounds = new Rectangle((int)startX, (int)yPos, (int)widestEllipsisSize.X, _font.LineHeight);
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
