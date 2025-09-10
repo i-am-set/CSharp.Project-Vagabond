@@ -45,12 +45,12 @@
     "Type": "Offensive"
   },
   {
-    "ElementID": 9,
+    "ElementID": 10,
     "ElementName": "Light", /// Healing, Holy, Literal light, etc.
     "Type": "Offensive"
   },
   {
-    "ElementID": 10,
+    "ElementID": 11,
     "ElementName": "Ice", /// Cold, Frost, Snow, etc. Not resisted by much, just hard things like stone and metal.
     "Type": "Offensive"
   },
