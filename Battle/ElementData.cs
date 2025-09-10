@@ -29,30 +29,4 @@
         /// </summary>
         public ElementType Type { get; set; }
     }
-
-    /// <summary>
-    /// Represents a single rule for how two elements interact, loaded from a data file.
-    /// </summary>
-    public class ElementalInteraction
-    {
-        /// <summary>
-        /// The unique integer key for the interaction rule.
-        /// </summary>
-        public int InteractionID { get; set; }
-
-        /// <summary>
-        /// The foreign key to the attacking element's ElementID.
-        /// </summary>
-        public int AttackingElementID { get; set; }
-
-        /// <summary>
-        /// The foreign key to the defending element's ElementID.
-        /// </summary>
-        public int DefendingElementID { get; set; }
-
-        /// <summary>
-        /// The damage multiplier to apply for this interaction.
-        /// </summary>
-        public float Multiplier { get; set; }
-    }
 }

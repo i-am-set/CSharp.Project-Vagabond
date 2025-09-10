@@ -128,16 +128,16 @@ namespace ProjectVagabond.Battle
 
             foreach (int offensiveId in move.OffensiveElementIDs)
             {
-                foreach (int defensiveId in target.DefensiveElementIDs)
+                // Check if the attacking element exists in our matrix
+                if (BattleDataCache.InteractionMatrix.TryGetValue(offensiveId, out var attackRow))
                 {
-                    // Find the interaction rule for this specific pair.
-                    var interaction = BattleDataCache.Interactions.FirstOrDefault(i =>
-                        i.AttackingElementID == offensiveId && i.DefendingElementID == defensiveId);
-
-                    // If a rule is found, apply its multiplier. If not found, it's neutral (1.0x).
-                    if (interaction != null)
+                    foreach (int defensiveId in target.DefensiveElementIDs)
                     {
-                        finalMultiplier *= interaction.Multiplier;
+                        // Check if the defending element has a rule in this row and apply it
+                        if (attackRow.TryGetValue(defensiveId, out float multiplier))
+                        {
+                            finalMultiplier *= multiplier;
+                        }
                     }
                 }
             }

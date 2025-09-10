@@ -60,13 +60,18 @@
     "Type": "Offensive"
   },
   {
+    "ElementID": 13,
+    "ElementName": "Nature", /// Plants, Trees, Fungi, etc. Mostly used by plant based magic, but can be used by physical attacks like thorn whips, etc.
+    "Type": "Offensive"
+  },
+  {
     "ElementID": 101,
     "ElementName": "Creature", /// Humans, Animals, etc.
     "Type": "Defensive"
   },
   {
     "ElementID": 102,
-    "ElementName": "Stone", /// Rock, Earth, Sand, etc. Commonly used on structures, but there can be stone elementals and golems that use it too.
+    "ElementName": "Earth", /// Rock, Earth, Sand, etc. Commonly used on structures, but there can be stone elementals and golems that use it too.
     "Type": "Defensive"
   },
   {

@@ -1,7 +1,9 @@
 ﻿using Microsoft.Xna.Framework.Content;
+using ProjectVagabond.Battle;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -10,7 +12,7 @@ using System.Text.Json.Serialization;
 namespace ProjectVagabond.Battle
 {
     /// <summary>
-    /// A static class to load and store all battle-related data from JSON files at runtime.
+    /// A static class to load and store all battle-related data from JSON and CSV files at runtime.
     /// This creates a central, read-only repository for data that drives the battle system.
     /// </summary>
     public static class BattleDataCache
@@ -21,9 +23,10 @@ namespace ProjectVagabond.Battle
         public static Dictionary<int, ElementDefinition> Elements { get; private set; }
 
         /// <summary>
-        /// A list of all elemental interaction rules.
+        /// A matrix storing all elemental interaction multipliers for fast lookups.
+        /// Outer Key: AttackingElementID, Inner Key: DefendingElementID, Value: Multiplier.
         /// </summary>
-        public static List<ElementalInteraction> Interactions { get; private set; }
+        public static Dictionary<int, Dictionary<int, float>> InteractionMatrix { get; private set; }
 
         /// <summary>
         /// A dictionary mapping Move IDs to their definitions.
@@ -56,18 +59,7 @@ namespace ProjectVagabond.Battle
                 Elements = new Dictionary<int, ElementDefinition>();
             }
 
-            try
-            {
-                string interactionsPath = Path.Combine(content.RootDirectory, "Data", "ElementalInteractionMatrix.json");
-                string interactionsJson = File.ReadAllText(interactionsPath);
-                Interactions = JsonSerializer.Deserialize<List<ElementalInteraction>>(interactionsJson, jsonOptions);
-                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Interactions.Count} elemental interactions.");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load ElementalInteractionMatrix.json: {ex.Message}");
-                Interactions = new List<ElementalInteraction>();
-            }
+            LoadInteractionMatrix(content);
 
             try
             {
@@ -81,6 +73,68 @@ namespace ProjectVagabond.Battle
             {
                 Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load Moves.json: {ex.Message}");
                 Moves = new Dictionary<string, MoveData>();
+            }
+        }
+
+        private static void LoadInteractionMatrix(ContentManager content)
+        {
+            InteractionMatrix = new Dictionary<int, Dictionary<int, float>>();
+            try
+            {
+                string matrixPath = Path.Combine(content.RootDirectory, "Data", "ElementalInteractionMatrix.csv");
+                var lines = File.ReadAllLines(matrixPath);
+
+                if (lines.Length < 3) // Need at least 2 header rows and 1 data row
+                {
+                    Debug.WriteLine("[BattleDataCache] [ERROR] ElementalInteractionMatrix.csv is malformed. It must have at least 3 rows.");
+                    return;
+                }
+
+                // The second row contains the defending element IDs.
+                var header = lines[1].Split(',');
+                var defendingElementIds = new List<int>();
+                for (int i = 2; i < header.Length; i++) // Skip the first two columns ("Attacking", "")
+                {
+                    if (int.TryParse(header[i], out int id))
+                    {
+                        defendingElementIds.Add(id);
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[BattleDataCache] [WARNING] Could not parse defending element ID '{header[i]}' in CSV header.");
+                    }
+                }
+
+                // Parse each data row, starting from the third line
+                for (int i = 2; i < lines.Length; i++)
+                {
+                    var values = lines[i].Split(',');
+                    if (values.Length < 3) continue; // Skip empty or malformed lines
+
+                    // The attacking ID is in the second column
+                    if (int.TryParse(values[1], out int attackingId))
+                    {
+                        var rowMatrix = new Dictionary<int, float>();
+                        for (int j = 2; j < values.Length; j++) // Data starts from the third column
+                        {
+                            if (j - 2 < defendingElementIds.Count)
+                            {
+                                int defendingId = defendingElementIds[j - 2];
+                                if (float.TryParse(values[j], CultureInfo.InvariantCulture, out float multiplier))
+                                {
+                                    rowMatrix[defendingId] = multiplier;
+                                }
+                            }
+                        }
+                        InteractionMatrix[attackingId] = rowMatrix;
+                    }
+                }
+                Debug.WriteLine($"[BattleDataCache] Successfully loaded elemental interaction matrix with {InteractionMatrix.Count} attacking types.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load ElementalInteractionMatrix.csv: {ex.Message}");
+                InteractionMatrix = new Dictionary<int, Dictionary<int, float>>();
             }
         }
     }
