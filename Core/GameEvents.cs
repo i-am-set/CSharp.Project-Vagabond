@@ -83,5 +83,23 @@ namespace ProjectVagabond
             public MoveData ChosenMove { get; set; }
             public DamageCalculator.DamageResult DamageResult { get; set; }
         }
+
+        /// <summary>
+        /// Defines the type of change for a player's move set.
+        /// </summary>
+        public enum MoveSetChangeType
+        {
+            Learn,
+            Forget
+        }
+
+        /// <summary>
+        /// Published to request a change to the player's set of available combat moves.
+        /// </summary>
+        public struct PlayerMoveSetChanged
+        {
+            public string MoveID { get; set; }
+            public MoveSetChangeType ChangeType { get; set; }
+        }
     }
 }

@@ -67,6 +67,7 @@ namespace ProjectVagabond
         private ParticleSystemManager _particleSystemManager;
         private GameState _gameState;
         private ActionExecutionSystem _actionExecutionSystem;
+        private MoveLearningSystem _moveLearningSystem;
         private SpriteManager _spriteManager;
         private DiceRollingSystem _diceRollingSystem;
         private BackgroundManager _backgroundManager;
@@ -189,6 +190,9 @@ namespace ProjectVagabond
             _actionExecutionSystem = new ActionExecutionSystem();
             ServiceLocator.Register<ActionExecutionSystem>(_actionExecutionSystem);
 
+            _moveLearningSystem = new MoveLearningSystem();
+            ServiceLocator.Register<MoveLearningSystem>(_moveLearningSystem);
+
             var terminalRenderer = new TerminalRenderer();
             ServiceLocator.Register<TerminalRenderer>(terminalRenderer);
 
@@ -221,6 +225,7 @@ namespace ProjectVagabond
             ServiceLocator.Register<Texture2D>(_pixel);
 
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
+            _systemManager.RegisterSystem(_moveLearningSystem, 0f);
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene()); // Changed to GameMapScene
@@ -705,3 +710,4 @@ namespace ProjectVagabond
         public void ExitApplication() => Exit();
     }
 }
+﻿

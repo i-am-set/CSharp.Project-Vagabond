@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
@@ -196,6 +197,40 @@ namespace ProjectVagabond
                 }
             }, "pos [gray]- Show current position and queue status.");
 
+            _commands["learn"] = new Command("learn", (args) =>
+            {
+                if (args.Length < 2)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: learn <MoveID>" });
+                    return;
+                }
+                EventBus.Publish(new GameEvents.PlayerMoveSetChanged { MoveID = args[1], ChangeType = GameEvents.MoveSetChangeType.Learn });
+            },
+            "learn <MoveID> [gray]- Teach the player a new move.",
+            (args) =>
+            {
+                if (args.Length == 0) return BattleDataCache.Moves.Keys.ToList();
+                return new List<string>();
+            });
+
+            _commands["forget"] = new Command("forget", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (args.Length < 2)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: forget <MoveID>" });
+                    return;
+                }
+                EventBus.Publish(new GameEvents.PlayerMoveSetChanged { MoveID = args[1], ChangeType = GameEvents.MoveSetChangeType.Forget });
+            },
+            "forget <MoveID> [gray]- Make the player forget a move.",
+            (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (args.Length == 0) return _gameState.PlayerState?.CurrentActionMoveIDs ?? new List<string>();
+                return new List<string>();
+            });
+
             _commands["debugallcolors"] = new Command("debugallcolors", (args) =>
             {
                 DebugAllColors();
@@ -327,7 +362,7 @@ namespace ProjectVagabond
 
             var colorProperties = typeof(Color).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
                 .Where(p => p.PropertyType == typeof(Color))
-                .OrderBy(p => p.Name);
+                .OrderBy(c => c.Name);
 
             foreach (var property in colorProperties)
             {

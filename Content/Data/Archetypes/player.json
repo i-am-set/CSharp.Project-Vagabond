@@ -31,6 +31,8 @@
         "Agility": 11,
         "DefensiveElementIDs": [ 101 ],
         "AvailableMoveIDs": [
+          "ShoulderBash",
+          "ClawRake"
         ]
       }
     }
