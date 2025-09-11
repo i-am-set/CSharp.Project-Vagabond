@@ -140,13 +140,27 @@ namespace ProjectVagabond.Battle
             foreach (var enemy in activeEnemies)
             {
                 var target = activePlayers.FirstOrDefault();
-                if (target != null && enemy.AvailableMoves.Any())
+                if (target != null)
                 {
-                    var move = enemy.AvailableMoves.First();
+                    MoveData move;
+                    if (enemy.AvailableMoves.Any())
+                    {
+                        move = enemy.AvailableMoves.First();
+                    }
+                    else
+                    {
+                        // Fallback to Stall if no moves are available
+                        if (!BattleDataCache.Moves.TryGetValue("Stall", out move))
+                        {
+                            Debug.WriteLine($"[BattleManager] [FATAL] Could not find 'Stall' move in BattleDataCache.");
+                            continue; // Skip this enemy's turn if Stall is missing
+                        }
+                    }
+
                     _actionQueue.Add(new QueuedAction
                     {
                         Actor = enemy,
-                        Target = target,
+                        Target = target, // Stall still needs a target for the queue, even if it does nothing to it
                         ChosenMove = move,
                         Priority = move.Priority,
                         ActorAgility = enemy.Stats.Agility

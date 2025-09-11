@@ -110,8 +110,7 @@ namespace ProjectVagabond.Scenes
             var settingsButton = new Button(
                 new Rectangle(((Global.VIRTUAL_WIDTH - settingsWidth) / 2) - 3, (int)currentY, settingsWidth, settingsHeight),
                 settingsText,
-                font: secondaryFont,
-                customDefaultTextColor: _global.Palette_LightGray
+                font: secondaryFont
             )
             { TextRenderOffset = new Vector2(0, -1) };
             settingsButton.OnClick += () => _sceneManager.ChangeScene(GameSceneState.Settings);
@@ -126,8 +125,7 @@ namespace ProjectVagabond.Scenes
             var exitButton = new Button(
                 new Rectangle(((Global.VIRTUAL_WIDTH - exitWidth) / 2) - 3, (int)currentY, exitWidth, exitHeight),
                 exitText,
-                font: secondaryFont,
-                customDefaultTextColor: _global.Palette_LightGray
+                font: secondaryFont
             )
             { TextRenderOffset = new Vector2(0, -1) };
             exitButton.OnClick += ConfirmExit;
@@ -339,8 +337,9 @@ namespace ProjectVagabond.Scenes
 
                 if (selectedButton.IsHovered || keyboardNavigatedLastFrame)
                 {
-                    // The highlight rectangle is now simply the button's bounds.
-                    DrawRectangleBorder(spriteBatch, pixel, selectedButton.Bounds, 1, _global.ButtonHoverColor);
+                    var highlightBounds = selectedButton.Bounds;
+                    highlightBounds.X -= 1; // Shift 1 pixel to the left as requested.
+                    DrawRectangleBorder(spriteBatch, pixel, highlightBounds, 1, _global.ButtonHoverColor);
                 }
             }
 

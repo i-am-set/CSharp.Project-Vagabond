@@ -226,7 +226,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private void DrawText(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover)
+        private void DrawText(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
             BitmapFont font = this.Font ?? defaultFont;
             Color textColor;
@@ -240,21 +240,8 @@ namespace ProjectVagabond.UI
             else _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
 
             float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
-            float swayOffsetX = 0f;
+            float totalXOffset = hopOffset;
 
-            if (isActivated && EnableHoverSway)
-            {
-                if (!_wasHoveredLastFrame) _swayTimer = 0f;
-                _swayTimer += deltaTime;
-                swayOffsetX = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT_X;
-            }
-            else
-            {
-                _swayTimer = 0f;
-            }
-            _wasHoveredLastFrame = isActivated;
-
-            float totalXOffset = hopOffset + swayOffsetX;
             Vector2 textSize = font.MeasureString(Text);
 
             Vector2 scale = Vector2.One;

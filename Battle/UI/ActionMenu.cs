@@ -6,6 +6,7 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
@@ -111,6 +112,33 @@ namespace ProjectVagabond.Battle.UI
 
             if (_currentState == MenuState.Moves)
             {
+                // If the player has no moves, they automatically Stall.
+                if (!_player.AvailableMoves.Any())
+                {
+                    if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
+                    {
+                        // Auto-select the first available target for the stall move.
+                        var target = _allTargets.FirstOrDefault();
+                        if (target != null)
+                        {
+                            OnMoveSelected?.Invoke(stallMove, target);
+                            Hide();
+                        }
+                        else
+                        {
+                            // This case should be rare (no enemies left), but handle it.
+                            Debug.WriteLine($"[ActionMenu] Cannot Stall: No valid targets available.");
+                            SetState(MenuState.Main); // Go back to main menu
+                        }
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[ActionMenu] [FATAL] Could not find 'Stall' move in BattleDataCache.");
+                        SetState(MenuState.Main); // Go back to main menu
+                    }
+                    return; // Exit to prevent drawing the move selection screen.
+                }
+
                 _moveButtons.Clear();
                 foreach (var move in _player.AvailableMoves)
                 {

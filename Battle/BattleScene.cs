@@ -189,6 +189,14 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
+            // Handle the "Stall" move as a special narration case.
+            if (e.ChosenMove.MoveID == "Stall")
+            {
+                _narrationQueue.Enqueue(() => _battleNarrator.Show($"{e.Actor.Name} is stalling for time!", secondaryFont));
+                // Stall does no damage and has no effects, so we can end the narration here.
+                return;
+            }
+
             string attackNarration = $"{e.Actor.Name} uses {e.ChosenMove.MoveName} on {e.Target.Name}.";
             _narrationQueue.Enqueue(() => _battleNarrator.Show(attackNarration, secondaryFont));
 

@@ -21,7 +21,10 @@
         "Tenacity": 8,
         "Agility": 9,
         "DefensiveElementIDs": [ 102 ],
-        "AvailableMoveIDs": [ "Zap" ]
+        "AvailableMoveIDs": [
+          "ShoulderBash",
+          "ClawRake"
+        ]
       }
     }
   ]

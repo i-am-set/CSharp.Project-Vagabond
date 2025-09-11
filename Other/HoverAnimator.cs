@@ -13,7 +13,7 @@ namespace ProjectVagabond.UI
         private float _animationTimer = 0f;
         private bool _wasActivatedLastFrame = false;
 
-        private const float AnimationDuration = 0.15f; // How long the entire hop takes
+        private const float AnimationDuration = 0.08f; // How long the entire hop takes
         private const float HopDistance = 3f;         // The maximum distance it hops to the right
 
         public float CurrentOffset { get; private set; }
@@ -57,7 +57,8 @@ namespace ProjectVagabond.UI
                 else
                 {
                     float progress = _animationTimer / AnimationDuration;
-                    float wave = (float)Math.Sin(progress * 2.0 * Math.PI);
+                    // Use Math.Sin(progress * PI) to create a single hump (0 -> 1 -> 0), ensuring no negative (leftward) movement.
+                    float wave = (float)Math.Sin(progress * Math.PI);
                     float decay = 1.0f - progress;
                     CurrentOffset = HopDistance * wave * decay;
                 }

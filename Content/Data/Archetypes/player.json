@@ -30,7 +30,10 @@
         "Tenacity": 10,
         "Agility": 11,
         "DefensiveElementIDs": [ 101 ],
-        "AvailableMoveIDs": [ "Tackle" ]
+        "AvailableMoveIDs": [
+          "ShoulderBash",
+          "ClawRake"
+        ]
       }
     }
   ]

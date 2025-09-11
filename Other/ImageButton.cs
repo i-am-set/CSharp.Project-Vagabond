@@ -32,7 +32,7 @@ namespace ProjectVagabond.UI
         private const float SQUASH_ANIMATION_DURATION = 0.03f;
 
         private const float SWAY_SPEED = 3f;
-        private const float SWAY_AMOUNT_X = 2f;
+        private const float SWAY_AMOUNT_X = 1f;
         private const float SHAKE_AMOUNT = 1f;
         private static readonly Random _random = new Random();
 
@@ -97,7 +97,8 @@ namespace ProjectVagabond.UI
                     _swayTimer = 0f;
                 }
                 _swayTimer += deltaTime;
-                swayOffsetX = (float)Math.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMOUNT_X;
+                // This formula creates a pulse from 0 to 1 and back to 0, ensuring only rightward movement.
+                swayOffsetX = ((-(float)Math.Cos(_swayTimer * SWAY_SPEED) + 1f) / 2f) * SWAY_AMOUNT_X;
             }
             else
             {

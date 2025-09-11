@@ -1,4 +1,5 @@
 [
+  // --- Neutral ---
   {
     "MoveID": "ShoulderBash",
     "MoveName": "Shoulder Bash",
@@ -35,6 +36,7 @@
     "Priority": 1,
     "OffensiveElementIDs": [ 1 ]
   },
+  // --- Fire ---
   {
     "MoveID": "CinderSpark",
     "MoveName": "Cinder Spark",
@@ -71,6 +73,7 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 2 ]
   },
+  // --- Water ---
   {
     "MoveID": "AbyssalWave",
     "MoveName": "Abyssal Wave",
@@ -98,6 +101,7 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 3 ]
   },
+  // --- Arcane ---
   {
     "MoveID": "EtherDart",
     "MoveName": "Ether Dart",
@@ -125,6 +129,7 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 4 ]
   },
+  // --- Earth ---
   {
     "MoveID": "StoneHurl",
     "MoveName": "Stone Hurl",
@@ -152,6 +157,7 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 5 ]
   },
+  // --- Metal ---
   {
     "MoveID": "IronfangSlash",
     "MoveName": "Ironfang Slash",
@@ -179,6 +185,7 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ]
   },
+  // --- Toxic ---
   {
     "MoveID": "VenomJab",
     "MoveName": "Venom Jab",
@@ -197,6 +204,7 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 7 ]
   },
+  // --- Wind ---
   {
     "MoveID": "ZephyrTwist",
     "MoveName": "Zephyr Twist",
@@ -215,6 +223,7 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 8 ]
   },
+  // --- Decay ---
   {
     "MoveID": "Bloodleech",
     "MoveName": "Bloodleech",
@@ -233,6 +242,7 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 9 ]
   },
+  // --- Light ---
   {
     "MoveID": "RadiantJudgment",
     "MoveName": "Radiant Judgment",
@@ -251,6 +261,7 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 10 ]
   },
+  // --- Electric ---
   {
     "MoveID": "SparkJolt",
     "MoveName": "Spark Jolt",
@@ -278,6 +289,7 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 11 ]
   },
+  // --- Ice ---
   {
     "MoveID": "Shiverfang",
     "MoveName": "Shiverfang",
@@ -305,6 +317,7 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 12 ]
   },
+  // --- Nature ---
   {
     "MoveID": "BriarLash",
     "MoveName": "Briar Lash",
@@ -331,5 +344,15 @@
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 13 ]
+  },
+  // --- Special ---
+  {
+    "MoveID": "Stall",
+    "MoveName": "Stall",
+    "Power": 0,
+    "DamageType": "Physical",
+    "Accuracy": -1,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 1 ]
   }
 ]
