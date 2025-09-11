@@ -1,20 +1,335 @@
 [
   {
-    "MoveID": "Tackle",
-    "MoveName": "Tackle",
+    "MoveID": "ShoulderBash",
+    "MoveName": "Shoulder Bash",
     "Power": 40,
     "DamageType": "Physical",
     "Accuracy": 100,
     "Priority": 0,
-    "OffensiveElementIDs": []
+    "OffensiveElementIDs": [ 1 ]
   },
   {
-    "MoveID": "Zap",
-    "MoveName": "Zap",
+    "MoveID": "ClawRake",
+    "MoveName": "Claw Rake",
+    "Power": 40,
+    "DamageType": "Physical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 1 ]
+  },
+  {
+    "MoveID": "Bonecrusher",
+    "MoveName": "Bonecrusher",
+    "Power": 80,
+    "DamageType": "Physical",
+    "Accuracy": 90,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 1 ]
+  },
+  {
+    "MoveID": "SwiftStrike",
+    "MoveName": "Swift Strike",
+    "Power": 40,
+    "DamageType": "Physical",
+    "Accuracy": 100,
+    "Priority": 1,
+    "OffensiveElementIDs": [ 1 ]
+  },
+  {
+    "MoveID": "CinderSpark",
+    "MoveName": "Cinder Spark",
     "Power": 40,
     "DamageType": "Magical",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 2 ]
+  },
+  {
+    "MoveID": "Pyrosphere",
+    "MoveName": "Pyrosphere",
+    "Power": 80,
+    "DamageType": "Magical",
+    "Accuracy": 95,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 2 ]
+  },
+  {
+    "MoveID": "InfernoSurge",
+    "MoveName": "Inferno Surge",
+    "Power": 110,
+    "DamageType": "Magical",
+    "Accuracy": 85,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 2 ]
+  },
+  {
+    "MoveID": "Scorchbrand",
+    "MoveName": "Scorchbrand",
+    "Power": 70,
+    "DamageType": "Physical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 2 ]
+  },
+  {
+    "MoveID": "AbyssalWave",
+    "MoveName": "Abyssal Wave",
+    "Power": 60,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 3 ]
+  },
+  {
+    "MoveID": "TorrentDash",
+    "MoveName": "Torrent Dash",
+    "Power": 40,
+    "DamageType": "Physical",
+    "Accuracy": 100,
+    "Priority": 1,
+    "OffensiveElementIDs": [ 3 ]
+  },
+  {
+    "MoveID": "Maelstrom",
+    "MoveName": "Maelstrom",
+    "Power": 90,
+    "DamageType": "Magical",
+    "Accuracy": 95,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 3 ]
+  },
+  {
+    "MoveID": "EtherDart",
+    "MoveName": "Ether Dart",
+    "Power": 60,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 4 ]
+  },
+  {
+    "MoveID": "Riftburst",
+    "MoveName": "Riftburst",
+    "Power": 90,
+    "DamageType": "Magical",
+    "Accuracy": 95,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 4 ]
+  },
+  {
+    "MoveID": "Nullwave",
+    "MoveName": "Nullwave",
+    "Power": 50,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 4 ]
+  },
+  {
+    "MoveID": "StoneHurl",
+    "MoveName": "Stone Hurl",
+    "Power": 50,
+    "DamageType": "Physical",
+    "Accuracy": 90,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 5 ]
+  },
+  {
+    "MoveID": "Faultbreak",
+    "MoveName": "Faultbreak",
+    "Power": 100,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 5 ]
+  },
+  {
+    "MoveID": "MireSplash",
+    "MoveName": "Mire Splash",
+    "Power": 20,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 5 ]
+  },
+  {
+    "MoveID": "IronfangSlash",
+    "MoveName": "Ironfang Slash",
+    "Power": 70,
+    "DamageType": "Physical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 6 ]
+  },
+  {
+    "MoveID": "TitanSlam",
+    "MoveName": "Titan Slam",
+    "Power": 95,
+    "DamageType": "Physical",
+    "Accuracy": 90,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 6 ]
+  },
+  {
+    "MoveID": "MoonforgedEdge",
+    "MoveName": "Moonforged Edge",
+    "Power": 65,
+    "DamageType": "Physical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 6 ]
+  },
+  {
+    "MoveID": "VenomJab",
+    "MoveName": "Venom Jab",
+    "Power": 30,
+    "DamageType": "Physical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 7 ]
+  },
+  {
+    "MoveID": "CorrosiveSpittle",
+    "MoveName": "Corrosive Spittle",
+    "Power": 50,
+    "DamageType": "Magical",
+    "Accuracy": 95,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 7 ]
+  },
+  {
+    "MoveID": "ZephyrTwist",
+    "MoveName": "Zephyr Twist",
+    "Power": 40,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 8 ]
+  },
+  {
+    "MoveID": "CycloneSpiral",
+    "MoveName": "Cyclone Spiral",
+    "Power": 85,
+    "DamageType": "Magical",
+    "Accuracy": 90,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 8 ]
+  },
+  {
+    "MoveID": "Bloodleech",
+    "MoveName": "Bloodleech",
+    "Power": 60,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 9 ]
+  },
+  {
+    "MoveID": "SoulRot",
+    "MoveName": "Soul Rot",
+    "Power": 70,
+    "DamageType": "Magical",
+    "Accuracy": 95,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 9 ]
+  },
+  {
+    "MoveID": "RadiantJudgment",
+    "MoveName": "Radiant Judgment",
+    "Power": 75,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 10 ]
+  },
+  {
+    "MoveID": "LuminousSpark",
+    "MoveName": "Luminous Spark",
+    "Power": 40,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 10 ]
+  },
+  {
+    "MoveID": "SparkJolt",
+    "MoveName": "Spark Jolt",
+    "Power": 40,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 11 ]
+  },
+  {
+    "MoveID": "VoltLash",
+    "MoveName": "Volt Lash",
+    "Power": 40,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 11 ]
+  },
+  {
+    "MoveID": "Stormspear",
+    "MoveName": "Stormspear",
+    "Power": 90,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 11 ]
+  },
+  {
+    "MoveID": "Shiverfang",
+    "MoveName": "Shiverfang",
+    "Power": 40,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 1,
+    "OffensiveElementIDs": [ 12 ]
+  },
+  {
+    "MoveID": "WintersGrasp",
+    "MoveName": "Winter’s Grasp",
+    "Power": 65,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 12 ]
+  },
+  {
+    "MoveID": "WhiteoutTempest",
+    "MoveName": "Whiteout Tempest",
+    "Power": 110,
+    "DamageType": "Magical",
+    "Accuracy": 70,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 12 ]
+  },
+  {
+    "MoveID": "BriarLash",
+    "MoveName": "Briar Lash",
+    "Power": 45,
+    "DamageType": "Physical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 13 ]
+  },
+  {
+    "MoveID": "Needlestorm",
+    "MoveName": "Needlestorm",
+    "Power": 25,
+    "DamageType": "Physical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 13 ]
+  },
+  {
+    "MoveID": "Sunlance",
+    "MoveName": "Sunlance",
+    "Power": 120,
+    "DamageType": "Magical",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 13 ]
   }
 ]

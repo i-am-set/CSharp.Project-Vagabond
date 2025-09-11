@@ -6,7 +6,6 @@ using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -381,6 +380,10 @@ namespace ProjectVagabond
                     _sceneManager.ChangeScene(GameSceneState.Battle);
                 }
             }
+            if (currentKeyboardState.IsKeyDown(Keys.F9) && _previousKeyboardState.IsKeyUp(Keys.F9))
+            {
+                BattleDebugHelper.RunDamageCalculationTestSuite();
+            }
             if (currentKeyboardState.IsKeyDown(Keys.F12) && _previousKeyboardState.IsKeyUp(Keys.F12))
             {
                 _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
@@ -702,4 +705,3 @@ namespace ProjectVagabond
         public void ExitApplication() => Exit();
     }
 }
-﻿

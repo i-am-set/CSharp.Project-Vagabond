@@ -1,122 +1,122 @@
 [
   {
     "ElementID": 1,
-    "ElementName": "---", /// Neutral / No Element. Stuff like clubs and fists that don't have a specific element, not even metal.
+    "ElementName": "---", // Neutral / No Element. Stuff like clubs and fists that don't have a specific element, not even metal.
     "Type": "Offensive"
   },
   {
     "ElementID": 2,
-    "ElementName": "Fire", /// Fire, Lava, Heat, etc. Mostly a magic element, but can be used for physical attacks too like torches, etc.
+    "ElementName": "Fire", // Fire, Lava, Heat, etc. Mostly a magic element, but can be used for physical attacks too like torches, etc.
     "Type": "Offensive"
   },
   {
     "ElementID": 3,
-    "ElementName": "Water", /// Just water/steam effects; will have magic attacks, but mostly used for buffs/debuffs like cleanse or types of healing, etc.
+    "ElementName": "Water", // Just water/steam effects; will have magic attacks, but mostly used for buffs/debuffs like cleanse or types of healing, etc.
     "Type": "Offensive"
   },
   {
     "ElementID": 4,
-    "ElementName": "Arcane", /// Raw magic, Mana, etc.
+    "ElementName": "Arcane", // Raw magic, Mana, etc.
     "Type": "Offensive"
   },
   {
     "ElementID": 5,
-    "ElementName": "Earth", /// Rock, Sand, Mud, etc. Mostly a magic element, but can be used for physical attacks too like literal boulders used by big creatures, etc.
+    "ElementName": "Earth", // Rock, Sand, Mud, etc. Mostly a magic element, but can be used for physical attacks too like literal boulders used by big creatures, etc.
     "Type": "Offensive"
   },
   {
     "ElementID": 6,
-    "ElementName": "Metal", /// Iron, Steel, Silver, etc. There can be magic that uses this element offensively, but mostly used for physical weapon attacks
+    "ElementName": "Metal", // Iron, Steel, Silver, etc. There can be magic that uses this element offensively, but mostly used for physical weapon attacks
     "Type": "Offensive"
   },
   {
     "ElementID": 7,
-    "ElementName": "Toxic", /// Poison, Acid, Venom, etc.
+    "ElementName": "Toxic", // Poison, Acid, Venom, etc.
     "Type": "Offensive"
   },
   {
     "ElementID": 8,
-    "ElementName": "Wind", /// Just wind/air effects; will have magic attacks, but mostly used for buffs/debuffs like haste, slow, etc.
+    "ElementName": "Wind", // Just wind/air effects; will have magic attacks, but mostly used for buffs/debuffs like haste, slow, etc.
     "Type": "Offensive"
   },
   {
     "ElementID": 9,
-    "ElementName": "Decay", /// Rot, Corruption, Vampire effect, etc.
+    "ElementName": "Decay", // Rot, Corruption, Vampire effect, etc.
     "Type": "Offensive"
   },
   {
     "ElementID": 10,
-    "ElementName": "Light", /// Healing, Holy, Literal light, etc.
+    "ElementName": "Light", // Healing, Holy, Literal light, etc.
     "Type": "Offensive"
   },
   {
     "ElementID": 11,
-    "ElementName": "Electric", /// Lightning, Thunder, etc.
+    "ElementName": "Electric", // Lightning, Thunder, etc.
     "Type": "Offensive"
   },
   {
     "ElementID": 12,
-    "ElementName": "Ice", /// Cold, Frost, Snow, etc. Not resisted by much, just hard things like stone and metal.
+    "ElementName": "Ice", // Cold, Frost, Snow, etc. Not resisted by much, just hard things like stone and metal.
     "Type": "Offensive"
   },
   {
     "ElementID": 13,
-    "ElementName": "Nature", /// Plants, Trees, Fungi, etc. Mostly used by plant based magic, but can be used by physical attacks like thorn whips, etc.
+    "ElementName": "Nature", // Plants, Trees, Fungi, etc. Mostly used by plant based magic, but can be used by physical attacks like thorn whips, etc.
     "Type": "Offensive"
   },
   {
     "ElementID": 101,
-    "ElementName": "Creature", /// Humans, Animals, etc.
+    "ElementName": "Creature", // Humans, Animals, etc.
     "Type": "Defensive"
   },
   {
     "ElementID": 102,
-    "ElementName": "Earth", /// Rock, Earth, Sand, etc. Commonly used on structures, but there can be stone elementals and golems that use it too.
+    "ElementName": "Earth", // Stone, Dirt, Sand, etc. Commonly used on structures, but there can be stone elementals and golems that use it too.
     "Type": "Defensive"
   },
   {
     "ElementID": 103,
-    "ElementName": "Arcane", /// Raw magic, Mana, etc. Mostly gained as a defensive type after using magical barriers and shields, but there can be be arcane elementals AND constructs that are held together by arcane energy like a stone golem would be Stone/Arcane.
+    "ElementName": "Arcane", // Raw magic, Mana, etc. Mostly gained as a defensive type after using magical barriers and shields, but there can be be arcane elementals AND constructs that are held together by arcane energy like a stone golem would be Stone/Arcane.
     "Type": "Defensive"
   },
   {
     "ElementID": 104,
-    "ElementName": "Metal", /// Iron, Steel, Silver, etc. Commonly used on solid structures and when wearing armor, but there can be metal elementals and constructs that use it too.
+    "ElementName": "Metal", // Iron, Steel, Silver, etc. Commonly used on solid structures and when wearing armor, but there can be metal elementals and constructs that use it too.
     "Type": "Defensive"
   },
   {
     "ElementID": 105,
-    "ElementName": "Fire", /// Mostly fire elementals would use this defensively, but there can be fire based structures too like a campfire if that needs to be attacked.
+    "ElementName": "Fire", // Mostly fire elementals would use this defensively, but there can be fire based structures too like a campfire if that needs to be attacked.
     "Type": "Defensive"
   },
   {
     "ElementID": 106,
-    "ElementName": "Water", /// Mostly water elementals would use this defensively, but some creatures like fish and amphibian creatures might have this too.
+    "ElementName": "Water", // Mostly water elementals would use this defensively, but some creatures like fish and amphibian creatures might have this too.
     "Type": "Defensive"
   },
   {
     "ElementID": 107,
-    "ElementName": "Wind", /// Mostly wind elementals would use this defensively, but some flying creatures might have this too.
+    "ElementName": "Wind", // Mostly wind elementals would use this defensively, but some flying creatures might have this too.
     "Type": "Defensive"
   },
   {
     "ElementID": 108,
-    "ElementName": "Undead", /// Zombies, Skeletons, Ghosts, etc. Almost exclusively the inverse to the creature element.
+    "ElementName": "Undead", // Zombies, Skeletons, Ghosts, etc. Almost exclusively the inverse to the creature element.
     "Type": "Defensive"
   },
   {
     "ElementID": 109,
-    "ElementName": "Nature", /// Plants, Trees, Fungi, etc. Mostly used by plant based creatures and dryads, but can be used on nature based structures too like wooden buildings, etc. "Nature" is used broadly for any organic/planty things like forest elementals or just a simple wooden structure.
+    "ElementName": "Nature", // Plants, Trees, Fungi, etc. Mostly used by plant based creatures and dryads, but can be used on nature based structures too like wooden buildings, etc. "Nature" is used broadly for any organic/planty things like forest elementals or just a simple wooden structure.
     "Type": "Defensive"
   },
   {
     "ElementID": 110,
-    "ElementName": "Ice", /// Mostly ice elementals would use this defensively, but some creatures adapted to cold climates might have this too.
+    "ElementName": "Ice", // Mostly ice elementals would use this defensively, but some creatures adapted to cold climates might have this too.
     "Type": "Defensive"
   },
   {
     "ElementID": 111,
-    "ElementName": "Electric", /// Mostly electric elementals would use this defensively. Not many creatures would have this defensively, but some mechanical constructs might have this too.
+    "ElementName": "Electric", // Mostly electric elementals would use this defensively. Not many creatures would have this defensively, but some mechanical constructs might have this too.
     "Type": "Defensive"
   }
 ]

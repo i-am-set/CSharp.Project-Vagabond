@@ -1,5 +1,8 @@
-﻿using System;
+﻿using ProjectVagabond.Battle;
+using ProjectVagabond.Utils;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle
@@ -116,7 +119,7 @@ namespace ProjectVagabond.Battle
         /// <summary>
         /// Calculates the final elemental multiplier based on the move's offensive elements and the target's defensive elements.
         /// </summary>
-        private static float GetElementalMultiplier(MoveData move, BattleCombatant target)
+        public static float GetElementalMultiplier(MoveData move, BattleCombatant target)
         {
             if (move.OffensiveElementIDs == null || !move.OffensiveElementIDs.Any() ||
                 target.DefensiveElementIDs == null || !target.DefensiveElementIDs.Any())

@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xna.Framework.Content;
-using ProjectVagabond.Battle;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -42,6 +41,7 @@ namespace ProjectVagabond.Battle
             var jsonOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
+                ReadCommentHandling = JsonCommentHandling.Skip, // Allow comments in JSON files
                 Converters = { new JsonStringEnumConverter() }
             };
 
@@ -82,51 +82,104 @@ namespace ProjectVagabond.Battle
             try
             {
                 string matrixPath = Path.Combine(content.RootDirectory, "Data", "ElementalInteractionMatrix.csv");
+
+                if (!File.Exists(matrixPath))
+                {
+                    Debug.WriteLine($"[BattleDataCache] WARNING: CSV file not found at standard runtime path '{matrixPath}'. This means its 'Copy to Output Directory' property is likely not set to 'Copy if newer'.");
+                    string fallbackPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Content", "Data", "ElementalInteractionMatrix.csv"));
+                    Debug.WriteLine($"[BattleDataCache] Attempting to load from source path as a fallback: {fallbackPath}");
+
+                    if (File.Exists(fallbackPath))
+                    {
+                        matrixPath = fallbackPath;
+                        Debug.WriteLine("[BattleDataCache] SUCCESS: Found CSV at source path. The data will be loaded, but the project's 'Copy to Output Directory' setting MUST be fixed for release builds.");
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[BattleDataCache] FATAL: Could not find CSV at source path either. The file may be missing or the path is incorrect. Aborting matrix load.");
+                        return;
+                    }
+                }
+
                 var lines = File.ReadAllLines(matrixPath);
 
-                if (lines.Length < 3) // Need at least 2 header rows and 1 data row
+                if (lines.Length < 2) // Need at least a header and one data row
                 {
-                    Debug.WriteLine("[BattleDataCache] [ERROR] ElementalInteractionMatrix.csv is malformed. It must have at least 3 rows.");
+                    Debug.WriteLine("[BattleDataCache] [ERROR] ElementalInteractionMatrix.csv is malformed. It must have at least 2 rows (header + data).");
                     return;
                 }
 
-                // The second row contains the defending element IDs.
-                var header = lines[1].Split(',');
-                var defendingElementIds = new List<int>();
-                for (int i = 2; i < header.Length; i++) // Skip the first two columns ("Attacking", "")
+                // Find the header row which contains "Attacking" and the defending IDs
+                int headerRowIndex = -1;
+                for (int i = 0; i < lines.Length; i++)
                 {
-                    if (int.TryParse(header[i], out int id))
+                    var parts = lines[i].Split(',');
+                    if (parts.Length > 0 && parts[0].Trim().Equals("Attacking", StringComparison.OrdinalIgnoreCase))
+                    {
+                        headerRowIndex = i;
+                        break;
+                    }
+                }
+
+                if (headerRowIndex == -1)
+                {
+                    Debug.WriteLine("[BattleDataCache] [ERROR] Could not find the header row (the one starting with 'Attacking').");
+                    return;
+                }
+
+                var header = lines[headerRowIndex].Split(',');
+                var defendingElementIds = new List<int>();
+                // Defending IDs start from the 3rd column (index 2)
+                for (int i = 2; i < header.Length; i++)
+                {
+                    if (int.TryParse(header[i].Trim(), out int id))
                     {
                         defendingElementIds.Add(id);
                     }
                     else
                     {
-                        Debug.WriteLine($"[BattleDataCache] [WARNING] Could not parse defending element ID '{header[i]}' in CSV header.");
+                        Debug.WriteLine($"[BattleDataCache] [WARNING] Could not parse defending element ID from header: '{header[i]}'");
                     }
                 }
 
-                // Parse each data row, starting from the third line
-                for (int i = 2; i < lines.Length; i++)
+                if (!defendingElementIds.Any())
+                {
+                    Debug.WriteLine("[BattleDataCache] [ERROR] No defending element IDs could be parsed from the header row.");
+                    return;
+                }
+
+                // Data rows start from the line after the header
+                for (int i = headerRowIndex + 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
-                    if (values.Length < 3) continue; // Skip empty or malformed lines
+                    if (values.Length < 3) continue; // Need at least Name, ID, and one value
 
-                    // The attacking ID is in the second column
-                    if (int.TryParse(values[1], out int attackingId))
+                    // Attacking ID is in the 2nd column (index 1)
+                    if (int.TryParse(values[1].Trim(), out int attackingId))
                     {
                         var rowMatrix = new Dictionary<int, float>();
-                        for (int j = 2; j < values.Length; j++) // Data starts from the third column
+                        // Multiplier values start from the 3rd column (index 2)
+                        for (int j = 2; j < values.Length; j++)
                         {
-                            if (j - 2 < defendingElementIds.Count)
+                            int defendingIdIndex = j - 2;
+                            if (defendingIdIndex < defendingElementIds.Count)
                             {
-                                int defendingId = defendingElementIds[j - 2];
-                                if (float.TryParse(values[j], CultureInfo.InvariantCulture, out float multiplier))
+                                int defendingId = defendingElementIds[defendingIdIndex];
+                                if (float.TryParse(values[j].Trim(), CultureInfo.InvariantCulture, out float multiplier))
                                 {
                                     rowMatrix[defendingId] = multiplier;
+                                }
+                                else
+                                {
+                                    Debug.WriteLine($"[BattleDataCache] [WARNING] Could not parse multiplier for AttackingID {attackingId} vs DefendingID {defendingId}. Value: '{values[j]}'");
                                 }
                             }
                         }
                         InteractionMatrix[attackingId] = rowMatrix;
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[BattleDataCache] [WARNING] Could not parse attacking element ID from row: '{lines[i]}'");
                     }
                 }
                 Debug.WriteLine($"[BattleDataCache] Successfully loaded elemental interaction matrix with {InteractionMatrix.Count} attacking types.");
