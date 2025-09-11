@@ -60,15 +60,36 @@ namespace ProjectVagabond.Battle
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
             // Populate the combatant's available moves by looking them up in the cache.
-            foreach (var moveId in statsComponent.AvailableMoveIDs)
+            // This now branches based on whether the combatant is the player or an enemy.
+            if (combatant.IsPlayerControlled)
             {
-                if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
+                // For the player, get moves from the dynamic PlayerState.
+                var gameState = ServiceLocator.Get<GameState>();
+                foreach (var moveId in gameState.PlayerState.CurrentActionMoveIDs)
                 {
-                    combatant.AvailableMoves.Add(moveData);
+                    if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
+                    {
+                        combatant.AvailableMoves.Add(moveData);
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[BattleCombatantFactory] [WARNING] Player MoveID '{moveId}' not found in cache.");
+                    }
                 }
-                else
+            }
+            else
+            {
+                // For enemies, get moves from their static archetype definition.
+                foreach (var moveId in statsComponent.AvailableMoveIDs)
                 {
-                    Debug.WriteLine($"[BattleCombatantFactory] [WARNING] MoveID '{moveId}' not found in cache for combatant '{combatant.Name}'.");
+                    if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
+                    {
+                        combatant.AvailableMoves.Add(moveData);
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[BattleCombatantFactory] [WARNING] MoveID '{moveId}' not found in cache for combatant '{combatant.Name}'.");
+                    }
                 }
             }
 

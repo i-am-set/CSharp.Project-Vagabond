@@ -33,6 +33,7 @@ namespace ProjectVagabond
         public MapView PathExecutionMapView { get; private set; }
 
         public int PlayerEntityId { get; private set; }
+        public PlayerState PlayerState { get; private set; }
         public Vector2 PlayerWorldPos
         {
             get
@@ -88,6 +89,14 @@ namespace ProjectVagabond
             if (posComp != null)
             {
                 _componentStore.AddComponent(PlayerEntityId, new RenderPositionComponent { WorldPosition = posComp.WorldPosition });
+            }
+
+            // Initialize the PlayerState with the default moves from the archetype.
+            PlayerState = new PlayerState();
+            var statsComp = _componentStore.GetComponent<Battle.CombatantStatsComponent>(PlayerEntityId);
+            if (statsComp != null)
+            {
+                PlayerState.CurrentActionMoveIDs.AddRange(statsComp.AvailableMoveIDs);
             }
 
             // Initial map reveal
