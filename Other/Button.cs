@@ -48,9 +48,6 @@ namespace ProjectVagabond.UI
 
         protected MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
-        private float _scrollPosition = 0f;
-        private float _swayTimer = 0f;
-        private bool _wasHoveredLastFrame = false;
         protected bool _isPressed = false;
 
         // Sprite-based properties
@@ -63,8 +60,6 @@ namespace ProjectVagabond.UI
         // Animation state
         private float _squashAnimationTimer = 0f;
         private const float SQUASH_ANIMATION_DURATION = 0.03f;
-        private const float SWAY_SPEED = 3f;
-        private const float SWAY_AMOUNT_X = 1f;
         private const int LEFT_ALIGN_PADDING = 4;
         private const float SHAKE_AMOUNT = 1f;
         private static readonly Random _random = new Random();
@@ -173,8 +168,6 @@ namespace ProjectVagabond.UI
             _hoverAnimator.Reset();
             _isPressed = false;
             _squashAnimationTimer = 0f;
-            _swayTimer = 0f;
-            _wasHoveredLastFrame = false;
             IsHovered = false;
         }
 

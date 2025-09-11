@@ -14,6 +14,7 @@ namespace ProjectVagabond
         // UI Sprite Sheets
         public Texture2D ActionButtonsSpriteSheet { get; private set; }
         public Texture2D AttackButtonTemplateSprite { get; private set; }
+        public Texture2D ActionMovesBackgroundSprite { get; private set; }
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; } // 0-2: Act, 3-5: Item, 6-8: Flee (Normal, Hover, Clicked)
@@ -113,6 +114,21 @@ namespace ProjectVagabond
 
             try { AttackButtonTemplateSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_atack_button_template_spritesheet"); }
             catch { AttackButtonTemplateSprite = _textureFactory.CreateColoredTexture(144, 18, Color.Magenta); }
+
+            try
+            {
+                ActionMovesBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_moves_button_area_background");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[SpriteManager] [ERROR] Failed to load 'ui_action_moves_button_area_background'. This is a critical UI asset.");
+                Debug.WriteLine("[SpriteManager] [ACTION REQUIRED] Please ensure the following:");
+                Debug.WriteLine("1. The file exists at 'Content/Sprites/UI/ButtonIcons/ui_action_moves_button_area_background.png'");
+                Debug.WriteLine("2. The file has been added to your 'Content.mgcb' file.");
+                Debug.WriteLine("3. The file's 'Build Action' in the content pipeline is set to 'Build'.");
+                Debug.WriteLine($"4. Detailed error: {ex.Message}");
+                ActionMovesBackgroundSprite = _textureFactory.CreateColoredTexture(294, 47, Color.Magenta);
+            }
 
             InitializeArrowSourceRects();
             InitializeActionButtonsSourceRects();

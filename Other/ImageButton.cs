@@ -15,7 +15,6 @@ namespace ProjectVagabond.UI
         public float CornerLengthRatio { get; set; } = 0.25f;
         public int MinCornerArmLength { get; set; } = 3;
         public int MaxCornerArmLength { get; set; } = 20;
-        public Color? DebugColor { get; set; }
 
         private readonly Texture2D? _spriteSheet;
         private readonly Rectangle? _defaultSourceRect;
@@ -24,15 +23,11 @@ namespace ProjectVagabond.UI
         private readonly Rectangle? _disabledSourceRect;
 
         private bool _isHeldDown;
-        private float _swayTimer = 0f;
-        private bool _wasHoveredLastFrame = false;
 
         // Animation state for the squash effect
         private float _squashAnimationTimer = 0f;
         private const float SQUASH_ANIMATION_DURATION = 0.03f;
 
-        private const float SWAY_SPEED = 3f;
-        private const float SWAY_AMOUNT_X = 1f;
         private const float SHAKE_AMOUNT = 1f;
         private static readonly Random _random = new Random();
 
@@ -89,22 +84,7 @@ namespace ProjectVagabond.UI
                 _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
             }
 
-            float swayOffsetX = 0f;
-            if (isActivated && EnableHoverSway)
-            {
-                if (!_wasHoveredLastFrame)
-                {
-                    _swayTimer = 0f;
-                }
-                _swayTimer += deltaTime;
-                // This formula creates a pulse from 0 to 1 and back to 0, ensuring only rightward movement.
-                swayOffsetX = ((-(float)Math.Cos(_swayTimer * SWAY_SPEED) + 1f) / 2f) * SWAY_AMOUNT_X;
-            }
-            else
-            {
-                _swayTimer = 0f;
-            }
-            _wasHoveredLastFrame = isActivated;
+            float swayOffsetX = 0f; // Sway has been removed
 
             Vector2 scale = Vector2.One;
             Vector2 shakeOffset = Vector2.Zero;

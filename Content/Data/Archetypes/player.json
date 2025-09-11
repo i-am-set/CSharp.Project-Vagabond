@@ -32,7 +32,13 @@
         "DefensiveElementIDs": [ 101 ],
         "AvailableMoveIDs": [
           "ShoulderBash",
-          "ClawRake"
+          "ClawRake",
+          "WintersGrasp",
+          "WhiteoutTempest",
+          "BriarLash",
+          "Needlestorm",
+          "Sunlance",
+          "SparkJolt"
         ]
       }
     }

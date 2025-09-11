@@ -21,9 +21,10 @@ namespace ProjectVagabond.Battle.UI
         private BattleCombatant _player;
         private List<BattleCombatant> _allTargets;
         private List<Button> _actionButtons = new List<Button>();
-        private List<Button> _moveButtons = new List<Button>();
-        private List<Button> _targetButtons = new List<Button>();
+        private List<MoveButton> _moveButtons = new List<MoveButton>();
         private Button _backButton;
+        private Button _filterButton;
+        private readonly Global _global;
 
         private enum MenuState { Main, Moves, Targeting }
         private MenuState _currentState;
@@ -31,9 +32,16 @@ namespace ProjectVagabond.Battle.UI
         private float _targetingTextAnimTimer = 0f;
         private bool _buttonsInitialized = false;
 
+        // New fields for scrolling and layout
+        private int _scrollIndex = 0; // The index of the top-most visible row
+        private int _totalRows = 0;
+        private int _maxVisibleRows = 0;
+        private Rectangle _moveListBounds;
+        private MouseState _previousMouseState;
+
         public ActionMenu()
         {
-            // Defer button creation until content is loaded.
+            _global = ServiceLocator.Get<Global>();
             _backButton = new Button(Rectangle.Empty, "BACK");
             _backButton.OnClick += () => {
                 if (_currentState == MenuState.Targeting)
@@ -46,6 +54,10 @@ namespace ProjectVagabond.Battle.UI
                     SetState(MenuState.Main);
                 }
             };
+
+            _filterButton = new Button(Rectangle.Empty, "FILTER") { IsEnabled = false };
+
+            _previousMouseState = Mouse.GetState();
         }
 
         private void InitializeButtons()
@@ -55,6 +67,7 @@ namespace ProjectVagabond.Battle.UI
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var actionSheet = spriteManager.ActionButtonsSpriteSheet;
             var rects = spriteManager.ActionButtonSourceRects;
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[0], rects[1], rects[2], function: "Act", debugColor: new Color(100, 0, 0, 150)));
             _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[3], rects[4], rects[5], function: "Item", debugColor: new Color(0, 100, 0, 150)) { IsEnabled = false });
@@ -62,7 +75,8 @@ namespace ProjectVagabond.Battle.UI
 
             _actionButtons[0].OnClick += () => SetState(MenuState.Moves);
 
-            _backButton.Font = ServiceLocator.Get<Core>().SecondaryFont;
+            _backButton.Font = secondaryFont;
+            _filterButton.Font = secondaryFont;
 
             _buttonsInitialized = true;
         }
@@ -85,11 +99,8 @@ namespace ProjectVagabond.Battle.UI
             {
                 button.ResetAnimationState();
             }
-            foreach (var button in _targetButtons)
-            {
-                button.ResetAnimationState();
-            }
             _backButton.ResetAnimationState();
+            _filterButton.ResetAnimationState();
         }
 
         public void Show(BattleCombatant player, List<BattleCombatant> allCombatants)
@@ -108,41 +119,28 @@ namespace ProjectVagabond.Battle.UI
         private void SetState(MenuState newState)
         {
             _currentState = newState;
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             if (_currentState == MenuState.Moves)
             {
-                // If the player has no moves, they automatically Stall.
-                if (!_player.AvailableMoves.Any())
+                _moveButtons.Clear();
+                // This list can be sorted later by the filter button
+                var movesToDisplay = new List<MoveData>(_player.AvailableMoves);
+
+                // Always add Stall as an available option in the list
+                if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
                 {
-                    if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
-                    {
-                        // Auto-select the first available target for the stall move.
-                        var target = _allTargets.FirstOrDefault();
-                        if (target != null)
-                        {
-                            OnMoveSelected?.Invoke(stallMove, target);
-                            Hide();
-                        }
-                        else
-                        {
-                            // This case should be rare (no enemies left), but handle it.
-                            Debug.WriteLine($"[ActionMenu] Cannot Stall: No valid targets available.");
-                            SetState(MenuState.Main); // Go back to main menu
-                        }
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"[ActionMenu] [FATAL] Could not find 'Stall' move in BattleDataCache.");
-                        SetState(MenuState.Main); // Go back to main menu
-                    }
-                    return; // Exit to prevent drawing the move selection screen.
+                    movesToDisplay.Add(stallMove);
+                }
+                else
+                {
+                    Debug.WriteLine("[ActionMenu] [FATAL] Could not find 'Stall' move in BattleDataCache.");
                 }
 
-                _moveButtons.Clear();
-                foreach (var move in _player.AvailableMoves)
+
+                foreach (var move in movesToDisplay)
                 {
-                    var moveButton = new TextOverImageButton(Rectangle.Empty, move.MoveName.ToUpper(), spriteManager.AttackButtonTemplateSprite);
+                    var moveButton = new MoveButton(move, secondaryFont);
                     moveButton.OnClick += () => {
                         _selectedMove = move;
                         if (_allTargets.Count == 1)
@@ -158,20 +156,11 @@ namespace ProjectVagabond.Battle.UI
                     };
                     _moveButtons.Add(moveButton);
                 }
+                _scrollIndex = 0;
             }
             else if (newState == MenuState.Targeting)
             {
                 _targetingTextAnimTimer = 0f;
-                _targetButtons.Clear();
-                foreach (var target in _allTargets)
-                {
-                    var targetButton = new TextOverImageButton(Rectangle.Empty, target.Name.ToUpper(), spriteManager.AttackButtonTemplateSprite);
-                    targetButton.OnClick += () => {
-                        OnMoveSelected?.Invoke(_selectedMove, target);
-                        Hide();
-                    };
-                    _targetButtons.Add(targetButton);
-                }
             }
         }
 
@@ -186,14 +175,43 @@ namespace ProjectVagabond.Battle.UI
                     foreach (var button in _actionButtons) button.Update(currentMouseState);
                     break;
                 case MenuState.Moves:
-                    foreach (var button in _moveButtons) button.Update(currentMouseState);
+                    var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+                    if (_moveListBounds.Contains(virtualMousePos))
+                    {
+                        int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
+                        if (scrollDelta != 0)
+                        {
+                            _scrollIndex -= Math.Sign(scrollDelta);
+                        }
+                    }
+
+                    int maxScrollIndex = Math.Max(0, _totalRows - _maxVisibleRows);
+                    _scrollIndex = Math.Clamp(_scrollIndex, 0, maxScrollIndex);
+
+                    int startIndex = _scrollIndex * 2;
+                    int endIndex = Math.Min(_moveButtons.Count, startIndex + _maxVisibleRows * 2);
+                    for (int i = 0; i < _moveButtons.Count; i++)
+                    {
+                        var button = _moveButtons[i];
+                        if (i >= startIndex && i < endIndex)
+                        {
+                            button.Update(currentMouseState);
+                        }
+                        else
+                        {
+                            button.IsHovered = false;
+                        }
+                    }
+
                     _backButton.Update(currentMouseState);
+                    _filterButton.Update(currentMouseState);
                     break;
                 case MenuState.Targeting:
                     _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                     _backButton.Update(currentMouseState);
                     break;
             }
+            _previousMouseState = currentMouseState;
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -201,23 +219,25 @@ namespace ProjectVagabond.Battle.UI
             InitializeButtons();
             if (!_isVisible) return;
 
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+
             switch (_currentState)
             {
                 case MenuState.Main:
                     {
                         const int horizontalPadding = 10;
-                        const int verticalPadding = 5;
                         const int buttonSpacing = 5;
                         const int dividerY = 120;
 
                         int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
-                        int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
+                        int availableHeight = Global.VIRTUAL_HEIGHT - dividerY;
 
                         int buttonWidth = (availableWidth - (buttonSpacing * (_actionButtons.Count - 1))) / _actionButtons.Count;
                         int buttonHeight = availableHeight;
 
                         int startX = horizontalPadding;
-                        int startY = dividerY + verticalPadding;
+                        int startY = dividerY - 5;
 
                         int currentX = startX;
                         foreach (var button in _actionButtons)
@@ -230,56 +250,113 @@ namespace ProjectVagabond.Battle.UI
                     }
                 case MenuState.Moves:
                     {
+                        // --- Layout Constants ---
                         const int horizontalPadding = 10;
-                        const int verticalPadding = 2;
-                        const int gridSpacing = 1;
-                        const int backButtonTopMargin = 1;
-                        const int backButtonHeight = 13;
-                        const int backButtonPadding = 8;
-                        const int dividerY = 120;
+                        const int dividerY = 114;
+                        const int menuVerticalOffset = 4;
 
-                        const int slotWidth = 144;
-                        const int slotHeight = 18;
+                        const int moveListHeight = 45;
+                        const int bottomBarTopPadding = 3;
+                        const int bottomBarHeight = 13;
 
-                        int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
-                        int totalGridWidth = (slotWidth * 2) + gridSpacing;
-                        int gridStartX = horizontalPadding + (availableWidth - totalGridWidth) / 2;
-                        int gridStartY = dividerY + verticalPadding + 4;
+                        const int moveButtonWidth = 145;
+                        const int moveButtonHeight = 9;
+                        const int columnSpacing = 2;
+                        const int rowSpacing = 0;
+                        const int columns = 2;
 
-                        var pixel = ServiceLocator.Get<Texture2D>();
+                        int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
+                        int gridStartX = horizontalPadding + (Global.VIRTUAL_WIDTH - (horizontalPadding * 2) - totalGridWidth) / 2;
 
-                        for (int i = 0; i < 4; i++)
+                        // --- Background Sprite ---
+                        var bgSprite = spriteManager.ActionMovesBackgroundSprite;
+                        var bgRect = new Rectangle(gridStartX - 1, dividerY + menuVerticalOffset - 1, 294, 47);
+                        spriteBatch.DrawSnapped(bgSprite, bgRect, Color.White);
+
+                        // --- Move List Area ---
+                        int gridStartY = dividerY + menuVerticalOffset;
+                        _moveListBounds = new Rectangle(gridStartX, gridStartY, totalGridWidth, moveListHeight);
+                        _maxVisibleRows = moveListHeight / moveButtonHeight;
+
+                        int startIndex = _scrollIndex * columns;
+                        int visibleButtonCount = Math.Min(_moveButtons.Count - startIndex, _maxVisibleRows * columns);
+
+                        for (int i = 0; i < visibleButtonCount; i++)
                         {
-                            int row = i / 2;
-                            int col = i % 2;
-                            var slotRect = new Rectangle(
-                                gridStartX + col * (slotWidth + gridSpacing),
-                                gridStartY + row * (slotHeight + gridSpacing),
-                                slotWidth,
-                                slotHeight
-                            );
+                            int moveIndex = startIndex + i;
+                            var button = _moveButtons[moveIndex];
 
-                            if (i < _moveButtons.Count)
-                            {
-                                var button = _moveButtons[i];
-                                button.Bounds = slotRect;
-                                button.Draw(spriteBatch, font, gameTime, transform);
-                            }
-                            else
-                            {
-                                spriteBatch.DrawSnapped(pixel, slotRect, new Color(40, 40, 40, 150));
-                            }
+                            int row = i / columns;
+                            int col = i % columns;
+
+                            button.Bounds = new Rectangle(
+                                gridStartX + col * (moveButtonWidth + columnSpacing),
+                                gridStartY + row * (moveButtonHeight + rowSpacing),
+                                moveButtonWidth,
+                                moveButtonHeight
+                            );
+                            button.Draw(spriteBatch, secondaryFont, gameTime, transform);
                         }
 
-                        int gridHeight = (slotHeight * 2) + gridSpacing;
-                        int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
+                        _totalRows = (int)Math.Ceiling(_moveButtons.Count / (double)columns);
+                        if (_totalRows > _maxVisibleRows)
+                        {
+                            var pixel = ServiceLocator.Get<Texture2D>();
+                            int scrollbarX = _moveListBounds.Right + 2;
+                            var scrollbarBgRect = new Rectangle(scrollbarX, _moveListBounds.Y, 1, _moveListBounds.Height);
+                            spriteBatch.DrawSnapped(pixel, scrollbarBgRect, _global.Palette_DarkGray);
+
+                            float handleHeight = Math.Max(5, (float)_maxVisibleRows / _totalRows * _moveListBounds.Height);
+                            float handleY = _moveListBounds.Y;
+                            if (_totalRows - _maxVisibleRows > 0)
+                            {
+                                handleY += ((float)_scrollIndex / (_totalRows - _maxVisibleRows) * (_moveListBounds.Height - handleHeight));
+                            }
+
+                            var scrollbarHandleRect = new Rectangle(scrollbarX, (int)handleY, 1, (int)handleHeight);
+                            spriteBatch.DrawSnapped(pixel, scrollbarHandleRect, _global.Palette_White);
+                        }
+
+                        // --- Bottom Bar (Filter & Back) ---
+                        int bottomBarY = _moveListBounds.Bottom + bottomBarTopPadding;
+
+                        var backSize = secondaryFont.MeasureString(_backButton.Text);
+                        const int backButtonPadding = 8;
+                        int backWidth = (int)backSize.Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
-                            gridStartX + (totalGridWidth - backButtonWidth) / 2,
-                            gridStartY + gridHeight + backButtonTopMargin,
-                            backButtonWidth,
-                            backButtonHeight
+                            _moveListBounds.Center.X - backWidth / 2,
+                            bottomBarY,
+                            backWidth,
+                            bottomBarHeight
                         );
+
+                        var filterSize = secondaryFont.MeasureString(_filterButton.Text);
+                        const int filterButtonPadding = 4;
+                        int filterWidth = (int)filterSize.Width + filterButtonPadding;
+                        _filterButton.Bounds = new Rectangle(
+                            _moveListBounds.Right - filterWidth,
+                            bottomBarY,
+                            filterWidth,
+                            bottomBarHeight
+                        );
+
+                        // --- Draw All ---
+                        _filterButton.Draw(spriteBatch, font, gameTime, transform);
                         _backButton.Draw(spriteBatch, font, gameTime, transform);
+
+                        // --- DEBUG DRAWING ---
+                        if (_global.ShowDebugOverlays)
+                        {
+                            var pixel = ServiceLocator.Get<Texture2D>();
+                            spriteBatch.DrawSnapped(pixel, bgRect, new Color(255, 165, 0, 100)); // Orange for background
+                            spriteBatch.DrawSnapped(pixel, _moveListBounds, new Color(0, 0, 255, 100)); // Blue for scroll area
+                            for (int i = 0; i < visibleButtonCount; i++)
+                            {
+                                int moveIndex = startIndex + i;
+                                var button = _moveButtons[moveIndex];
+                                spriteBatch.DrawSnapped(pixel, button.Bounds, new Color(255, 0, 0, 100)); // Red for buttons
+                            }
+                        }
                         break;
                     }
                 case MenuState.Targeting:
