@@ -49,7 +49,7 @@ namespace ProjectVagabond.Scenes
         private int _hoveredTargetIndex = -1;
         private struct TargetInfo { public BattleCombatant Combatant; public Rectangle Bounds; }
 
-        // Health Animation
+        // Health & Alpha Animation
         private class HealthAnimationState
         {
             public string CombatantID;
@@ -58,7 +58,16 @@ namespace ProjectVagabond.Scenes
             public float Timer;
             public const float Duration = 1.0f;
         }
+        private class AlphaAnimationState
+        {
+            public string CombatantID;
+            public float StartAlpha;
+            public float TargetAlpha;
+            public float Timer;
+            public const float Duration = 0.5f;
+        }
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
+        private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
 
         // Layout Constants
@@ -99,6 +108,7 @@ namespace ProjectVagabond.Scenes
             _subMenuState = BattleSubMenuState.None;
             _enemyEntityIds.Clear();
             _activeHealthAnimations.Clear();
+            _activeAlphaAnimations.Clear();
             _narrationQueue.Clear();
 
             _isBattleOver = false;
@@ -250,6 +260,7 @@ namespace ProjectVagabond.Scenes
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             _narrationQueue.Enqueue(() => _battleNarrator.Show($"{e.DefeatedCombatant.Name} was defeated!", secondaryFont));
+            StartAlphaAnimation(e.DefeatedCombatant.CombatantID, e.DefeatedCombatant.VisualAlpha, 0.1f);
         }
 
         private void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)
@@ -259,6 +270,17 @@ namespace ProjectVagabond.Scenes
                 CombatantID = combatantId,
                 StartHP = hpBefore,
                 TargetHP = hpAfter,
+                Timer = 0f
+            });
+        }
+
+        private void StartAlphaAnimation(string combatantId, float alphaBefore, float alphaAfter)
+        {
+            _activeAlphaAnimations.Add(new AlphaAnimationState
+            {
+                CombatantID = combatantId,
+                StartAlpha = alphaBefore,
+                TargetAlpha = alphaAfter,
                 Timer = 0f
             });
         }
@@ -305,6 +327,7 @@ namespace ProjectVagabond.Scenes
 
             _battleNarrator.Update(gameTime);
             UpdateHealthAnimations(gameTime);
+            UpdateAlphaAnimations(gameTime);
 
             // Synchronize BattleScene's UI state with the ActionMenu's state
             if (_actionMenu.CurrentMenuState == ActionMenu.MenuState.Targeting)
@@ -367,7 +390,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            bool canProceed = !_battleNarrator.IsBusy && !_activeHealthAnimations.Any();
+            bool canProceed = !_battleNarrator.IsBusy && !_activeHealthAnimations.Any() && !_activeAlphaAnimations.Any();
 
             if (canProceed)
             {
@@ -404,6 +427,7 @@ namespace ProjectVagabond.Scenes
                 {
                     _subMenuState = BattleSubMenuState.None;
                     _actionMenu.Hide();
+                    _actionMenu.SetState(ActionMenu.MenuState.Main);
                     _itemMenu.Hide();
                 }
                 _previousBattlePhase = currentPhase;
@@ -465,6 +489,32 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        private void UpdateAlphaAnimations(GameTime gameTime)
+        {
+            for (int i = _activeAlphaAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeAlphaAnimations[i];
+                var combatant = _battleManager.AllCombatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant == null)
+                {
+                    _activeAlphaAnimations.RemoveAt(i);
+                    continue;
+                }
+
+                anim.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (anim.Timer >= AlphaAnimationState.Duration)
+                {
+                    combatant.VisualAlpha = anim.TargetAlpha;
+                    _activeAlphaAnimations.RemoveAt(i);
+                }
+                else
+                {
+                    float progress = anim.Timer / AlphaAnimationState.Duration;
+                    combatant.VisualAlpha = MathHelper.Lerp(anim.StartAlpha, anim.TargetAlpha, Easing.EaseOutQuad(progress));
+                }
+            }
+        }
+
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (_battleManager == null)
@@ -480,7 +530,7 @@ namespace ProjectVagabond.Scenes
             var global = ServiceLocator.Get<Global>();
 
             _currentTargets.Clear();
-            var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && (!c.IsDefeated || c.IsDying)).ToList();
+            var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled).ToList();
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
 
             // --- Draw Enemy HUDs ---
@@ -668,8 +718,6 @@ namespace ProjectVagabond.Scenes
 
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 centerPosition)
         {
-            if (combatant.IsDefeated && !combatant.IsDying) return;
-
             var global = ServiceLocator.Get<Global>();
             var pixel = ServiceLocator.Get<Texture2D>();
             const int spriteSize = 64;
@@ -680,19 +728,21 @@ namespace ProjectVagabond.Scenes
                 spriteSize
             );
 
+            Color tintColor = Color.White * combatant.VisualAlpha;
+
             Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
             if (enemySprite != null)
             {
-                spriteBatch.DrawSnapped(enemySprite, spriteRect, Color.White);
+                spriteBatch.DrawSnapped(enemySprite, spriteRect, tintColor);
             }
             else
             {
-                spriteBatch.DrawSnapped(pixel, spriteRect, global.Palette_Pink);
+                spriteBatch.DrawSnapped(pixel, spriteRect, global.Palette_Pink * combatant.VisualAlpha);
             }
 
             Vector2 nameSize = nameFont.MeasureString(combatant.Name);
             Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 8);
-            spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, Color.White);
+            spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, tintColor);
 
             string hpLabel = "HP: ";
             string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
@@ -701,14 +751,14 @@ namespace ProjectVagabond.Scenes
             string fullHpText = hpLabel + currentHp + separator + maxHp;
             Vector2 hpSize = statsFont.MeasureString(fullHpText);
             Vector2 hpPos = new Vector2(centerPosition.X - hpSize.X / 2, centerPosition.Y + 2);
-            DrawHpLine(spriteBatch, statsFont, combatant, hpPos);
+            DrawHpLine(spriteBatch, statsFont, combatant, hpPos, combatant.VisualAlpha);
         }
 
-        private void DrawHpLine(SpriteBatch spriteBatch, BitmapFont statsFont, BattleCombatant combatant, Vector2 position)
+        private void DrawHpLine(SpriteBatch spriteBatch, BitmapFont statsFont, BattleCombatant combatant, Vector2 position, float alpha = 1.0f)
         {
             var global = ServiceLocator.Get<Global>();
-            Color labelColor = global.Palette_LightGray;
-            Color numberColor = Color.White;
+            Color labelColor = global.Palette_LightGray * alpha;
+            Color numberColor = Color.White * alpha;
 
             string hpLabel = "HP: ";
             string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();

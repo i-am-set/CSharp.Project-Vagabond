@@ -113,7 +113,7 @@ namespace ProjectVagabond.Battle.UI
             _isVisible = false;
         }
 
-        private void SetState(MenuState newState)
+        public void SetState(MenuState newState)
         {
             _currentState = newState;
 

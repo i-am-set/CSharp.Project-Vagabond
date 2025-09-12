@@ -255,16 +255,19 @@ namespace ProjectVagabond.Battle
         private void HandleCheckForDefeat()
         {
             // First, check if we are waiting on a combatant's death sequence to finish.
+            // CanAdvance being true means the scene is done with the animation/narration.
             var dyingCombatant = _allCombatants.FirstOrDefault(c => c.IsDying);
             if (dyingCombatant != null)
             {
                 // The scene has signaled that the animation/narration is complete.
-                // Finalize the defeat. The combatant will now disappear.
+                // Finalize the defeat. The combatant will now be hidden on the next draw.
                 dyingCombatant.IsDying = false;
+                dyingCombatant.IsRemovalProcessed = true;
             }
 
             // Now, check for any newly defeated combatants that haven't been processed yet.
-            var newlyDefeated = _allCombatants.FirstOrDefault(c => c.IsDefeated && !c.IsDying);
+            // A combatant is newly defeated if their HP is <= 0 but they haven't started their death sequence.
+            var newlyDefeated = _allCombatants.FirstOrDefault(c => c.IsDefeated && !c.IsDying && !c.IsRemovalProcessed);
             if (newlyDefeated != null)
             {
                 newlyDefeated.IsDying = true;

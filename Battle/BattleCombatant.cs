@@ -39,6 +39,11 @@ namespace ProjectVagabond.Battle
         public float VisualHP { get; set; }
 
         /// <summary>
+        /// The alpha value displayed on screen, which animates for effects like fading on death.
+        /// </summary>
+        public float VisualAlpha { get; set; } = 1.0f;
+
+        /// <summary>
         /// For the player, this manages their deck, hand, and discard pile. Null for enemies.
         /// </summary>
         public CombatDeckManager DeckManager { get; set; }
@@ -83,9 +88,13 @@ namespace ProjectVagabond.Battle
 
         /// <summary>
         /// A flag indicating that this combatant has just been defeated and is playing its death animation/narration.
-        /// It will be drawn while this is true, but not after.
         /// </summary>
         public bool IsDying { get; set; } = false;
+
+        /// <summary>
+        /// A flag indicating that the combatant's death sequence is complete and it should be removed from rendering.
+        /// </summary>
+        public bool IsRemovalProcessed { get; set; } = false;
 
         /// <summary>
         /// Applies a specified amount of damage to the combatant's CurrentHP.
