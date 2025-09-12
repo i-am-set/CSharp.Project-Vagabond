@@ -386,6 +386,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Backgrounds/tiled_background_1.png
 
+#begin Sprites/UI/ButtonIcons/ui_action_button_template.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/ButtonIcons/ui_action_button_template.png;Sprites/UI/ButtonIcons/ui_action_button_template
+
 #begin Sprites/UI/ButtonIcons/ui_action_buttons_icon_spritesheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -397,18 +409,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/ButtonIcons/ui_action_buttons_icon_spritesheet.png;Sprites/UI/ButtonIcons/ui_action_buttons_icon_spritesheet
-
-#begin Sprites/UI/ButtonIcons/ui_action_moves_button_area_background.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/ButtonIcons/ui_action_moves_button_area_background.png;Sprites/UI/ui_action_moves_button_area_background
 
 #begin Sprites/UI/ButtonIcons/ui_action_moves_button_area_background.png
 /importer:TextureImporter
