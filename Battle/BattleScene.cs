@@ -329,6 +329,20 @@ namespace ProjectVagabond.Scenes
             UpdateHealthAnimations(gameTime);
             UpdateAlphaAnimations(gameTime);
 
+            // --- Animation Skip Logic ---
+            bool skipRequested = (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed) ||
+                                 (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState)) ||
+                                 (KeyPressed(Keys.Space, currentKeyboardState, _previousKeyboardState));
+
+            if (_activeHealthAnimations.Any() && skipRequested)
+            {
+                SkipAllHealthAnimations();
+                if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed)
+                {
+                    UIInputManager.ConsumeMouseClick();
+                }
+            }
+
             // Synchronize BattleScene's UI state with the ActionMenu's state
             if (_actionMenu.CurrentMenuState == ActionMenu.MenuState.Targeting)
             {
@@ -461,6 +475,19 @@ namespace ProjectVagabond.Scenes
             }
 
             base.Update(gameTime);
+        }
+
+        private void SkipAllHealthAnimations()
+        {
+            foreach (var anim in _activeHealthAnimations)
+            {
+                var combatant = _battleManager.AllCombatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant != null)
+                {
+                    combatant.VisualHP = anim.TargetHP;
+                }
+            }
+            _activeHealthAnimations.Clear();
         }
 
         private void UpdateHealthAnimations(GameTime gameTime)

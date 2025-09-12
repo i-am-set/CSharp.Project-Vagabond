@@ -260,13 +260,19 @@ namespace ProjectVagabond.Battle
             if (dyingCombatant != null)
             {
                 // The scene has signaled that the animation/narration is complete.
-                // Finalize the defeat. The combatant will now be hidden on the next draw.
+                // Finalize the defeat.
                 dyingCombatant.IsDying = false;
                 dyingCombatant.IsRemovalProcessed = true;
+
+                // After a death sequence completes, immediately check for game-over conditions.
+                if (_playerCombatants.All(c => c.IsDefeated))
+                {
+                    _currentPhase = BattlePhase.BattleOver;
+                    return; // End the turn immediately.
+                }
             }
 
             // Now, check for any newly defeated combatants that haven't been processed yet.
-            // A combatant is newly defeated if their HP is <= 0 but they haven't started their death sequence.
             var newlyDefeated = _allCombatants.FirstOrDefault(c => c.IsDefeated && !c.IsDying && !c.IsRemovalProcessed);
             if (newlyDefeated != null)
             {
