@@ -17,6 +17,8 @@ namespace ProjectVagabond.Battle
         private List<MoveData> _discardPile = new List<MoveData>();
 
         public MoveData[] Hand { get; private set; } = new MoveData[HAND_SIZE];
+        public IEnumerable<MoveData> DrawPile => _drawPile;
+        public IEnumerable<MoveData> DiscardPile => _discardPile;
 
         /// <summary>
         /// Initializes the deck manager for a new battle.
@@ -112,4 +114,3 @@ namespace ProjectVagabond.Battle
         }
     }
 }
-﻿

@@ -17,6 +17,7 @@ namespace ProjectVagabond.Battle
             StartOfTurn,
             ActionSelection,
             ActionResolution,
+            CheckForDefeat,
             EndOfTurn,
             BattleOver
         }
@@ -96,6 +97,9 @@ namespace ProjectVagabond.Battle
                     break;
                 case BattlePhase.ActionResolution:
                     HandleActionResolution();
+                    break;
+                case BattlePhase.CheckForDefeat:
+                    HandleCheckForDefeat();
                     break;
                 case BattlePhase.EndOfTurn:
                     HandleEndOfTurn();
@@ -241,8 +245,45 @@ namespace ProjectVagabond.Battle
                 DamageResult = result
             });
 
+            _currentPhase = BattlePhase.CheckForDefeat;
             CanAdvance = false; // Pause the manager until the scene says it's okay.
         }
+
+        /// <summary>
+        /// Processes any defeated combatants, allowing for animations and narration to play out.
+        /// </summary>
+        private void HandleCheckForDefeat()
+        {
+            // First, check if we are waiting on a combatant's death sequence to finish.
+            var dyingCombatant = _allCombatants.FirstOrDefault(c => c.IsDying);
+            if (dyingCombatant != null)
+            {
+                // The scene has signaled that the animation/narration is complete.
+                // Finalize the defeat. The combatant will now disappear.
+                dyingCombatant.IsDying = false;
+            }
+
+            // Now, check for any newly defeated combatants that haven't been processed yet.
+            var newlyDefeated = _allCombatants.FirstOrDefault(c => c.IsDefeated && !c.IsDying);
+            if (newlyDefeated != null)
+            {
+                newlyDefeated.IsDying = true;
+                EventBus.Publish(new GameEvents.CombatantDefeated { DefeatedCombatant = newlyDefeated });
+                CanAdvance = false; // Pause until the scene finishes the death sequence.
+                return;
+            }
+
+            // If no one is dying or newly defeated, we can proceed.
+            if (_actionQueue.Any())
+            {
+                _currentPhase = BattlePhase.ActionResolution;
+            }
+            else
+            {
+                _currentPhase = BattlePhase.EndOfTurn;
+            }
+        }
+
 
         /// <summary>
         /// Checks for victory or defeat conditions at the end of the turn.

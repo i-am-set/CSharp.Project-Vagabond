@@ -116,8 +116,6 @@ namespace ProjectVagabond.Battle.UI
         private void SetState(MenuState newState)
         {
             _currentState = newState;
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
 
             if (newState == MenuState.Main)
             {
@@ -165,13 +163,8 @@ namespace ProjectVagabond.Battle.UI
                 var move = newHand[i];
                 if (move == null) continue;
 
-                bool isNew = _previousHandState[i] != move;
-                var moveButton = new MoveButton(move, secondaryFont, spriteManager.ActionButtonTemplateSprite, startVisible: !isNew);
-                moveButton.OnClick += () => {
-                    _selectedMove = move;
-                    if (_allTargets.Count == 1) OnMoveSelected?.Invoke(_selectedMove, _allTargets[0]);
-                    else SetState(MenuState.Targeting);
-                };
+                bool isNew = _previousHandState[i] == null || _previousHandState[i].MoveID != move.MoveID;
+                var moveButton = CreateMoveButton(move, secondaryFont, spriteManager.ActionButtonTemplateSprite, !isNew);
                 _moveButtons.Add(moveButton);
 
                 if (isNew)
@@ -180,7 +173,35 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            _previousHandState = newHand;
+            Array.Copy(newHand, _previousHandState, newHand.Length);
+        }
+
+        private MoveButton CreateMoveButton(MoveData move, BitmapFont font, Texture2D background, bool startVisible)
+        {
+            var moveButton = new MoveButton(move, font, background, startVisible);
+            moveButton.OnClick += () => {
+                _selectedMove = move;
+
+                // Update the internal hand state immediately upon selection to mark the slot as empty.
+                for (int i = 0; i < _previousHandState.Length; i++)
+                {
+                    if (_previousHandState[i] == move)
+                    {
+                        _previousHandState[i] = null;
+                        break;
+                    }
+                }
+
+                if (_allTargets.Count == 1)
+                {
+                    OnMoveSelected?.Invoke(_selectedMove, _allTargets[0]);
+                }
+                else
+                {
+                    SetState(MenuState.Targeting);
+                }
+            };
+            return moveButton;
         }
 
         public void Update(MouseState currentMouseState, GameTime gameTime)

@@ -82,6 +82,12 @@ namespace ProjectVagabond.Battle
         public bool IsDefeated => Stats.CurrentHP <= 0;
 
         /// <summary>
+        /// A flag indicating that this combatant has just been defeated and is playing its death animation/narration.
+        /// It will be drawn while this is true, but not after.
+        /// </summary>
+        public bool IsDying { get; set; } = false;
+
+        /// <summary>
         /// Applies a specified amount of damage to the combatant's CurrentHP.
         /// </summary>
         /// <param name="damageAmount">The amount of damage to apply.</param>

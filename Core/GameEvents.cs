@@ -101,5 +101,13 @@ namespace ProjectVagabond
             public string MoveID { get; set; }
             public MoveSetChangeType ChangeType { get; set; }
         }
+
+        /// <summary>
+        /// Published when a combatant's HP drops to 0 or below, signaling the start of their defeat sequence.
+        /// </summary>
+        public struct CombatantDefeated
+        {
+            public BattleCombatant DefeatedCombatant { get; set; }
+        }
     }
 }

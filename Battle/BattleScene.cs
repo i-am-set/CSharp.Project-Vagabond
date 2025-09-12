@@ -105,6 +105,7 @@ namespace ProjectVagabond.Scenes
             _endOfBattleTimer = 0f;
 
             EventBus.Subscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
+            EventBus.Subscribe<GameEvents.CombatantDefeated>(OnCombatantDefeated);
             _actionMenu.OnMoveSelected += OnPlayerMoveSelected;
             _actionMenu.OnItemMenuRequested += OnItemMenuRequested;
             _actionMenu.OnMovesMenuOpened += () => _subMenuState = BattleSubMenuState.ActionMoves;
@@ -168,6 +169,7 @@ namespace ProjectVagabond.Scenes
         {
             base.Exit();
             EventBus.Unsubscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
+            EventBus.Unsubscribe<GameEvents.CombatantDefeated>(OnCombatantDefeated);
             _actionMenu.OnMoveSelected -= OnPlayerMoveSelected;
             _actionMenu.OnItemMenuRequested -= OnItemMenuRequested;
             _actionMenu.OnMovesMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionMoves;
@@ -242,6 +244,12 @@ namespace ProjectVagabond.Scenes
                 }
                 _narrationQueue.Enqueue(() => StartHealthAnimation(e.Target.CombatantID, (int)e.Target.VisualHP, e.Target.Stats.CurrentHP));
             }
+        }
+
+        private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
+        {
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            _narrationQueue.Enqueue(() => _battleNarrator.Show($"{e.DefeatedCombatant.Name} was defeated!", secondaryFont));
         }
 
         private void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)
@@ -472,7 +480,7 @@ namespace ProjectVagabond.Scenes
             var global = ServiceLocator.Get<Global>();
 
             _currentTargets.Clear();
-            var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
+            var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && (!c.IsDefeated || c.IsDying)).ToList();
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
 
             // --- Draw Enemy HUDs ---
@@ -488,11 +496,14 @@ namespace ProjectVagabond.Scenes
                     var enemy = enemies[i];
                     var centerPosition = new Vector2(enemyAreaPadding + (i * slotWidth) + (slotWidth / 2), enemyHudY);
                     DrawCombatantHud(spriteBatch, font, secondaryFont, enemy, centerPosition);
-                    _currentTargets.Add(new TargetInfo
+                    if (!enemy.IsDefeated)
                     {
-                        Combatant = enemy,
-                        Bounds = GetCombatantInteractionBounds(enemy, centerPosition, font, secondaryFont)
-                    });
+                        _currentTargets.Add(new TargetInfo
+                        {
+                            Combatant = enemy,
+                            Bounds = GetCombatantInteractionBounds(enemy, centerPosition, font, secondaryFont)
+                        });
+                    }
                 }
             }
 
@@ -564,6 +575,61 @@ namespace ProjectVagabond.Scenes
                 _actionMenu.Draw(spriteBatch, font, gameTime, transform);
             }
             _battleNarrator.Draw(spriteBatch, secondaryFont, gameTime);
+
+            if (global.ShowDebugOverlays && _battleManager != null)
+            {
+                var playerCombatant = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+                if (playerCombatant?.DeckManager != null)
+                {
+                    DrawDebugDeckInfo(spriteBatch, secondaryFont, playerCombatant.DeckManager);
+                }
+            }
+        }
+
+        private void DrawDebugDeckInfo(SpriteBatch spriteBatch, BitmapFont font, CombatDeckManager deckManager)
+        {
+            var global = ServiceLocator.Get<Global>();
+            float yOffset = 5f;
+            float xOffset = 5f;
+            var drawPile = deckManager.DrawPile.ToList();
+            var discardPile = deckManager.DiscardPile.ToList();
+
+            // Draw Draw Pile (Queue)
+            string drawHeader = $"DRAW PILE ({drawPile.Count})";
+            spriteBatch.DrawStringSnapped(font, drawHeader, new Vector2(xOffset, yOffset), global.Palette_Yellow);
+            yOffset += font.LineHeight;
+
+            if (!drawPile.Any())
+            {
+                spriteBatch.DrawStringSnapped(font, "-- EMPTY --", new Vector2(xOffset, yOffset), global.Palette_Gray);
+            }
+            else
+            {
+                for (int i = 0; i < Math.Min(drawPile.Count, 10); i++)
+                {
+                    var move = drawPile[i];
+                    Color color = i == 0 ? global.Palette_Red : global.Palette_BrightWhite;
+                    spriteBatch.DrawStringSnapped(font, move.MoveName, new Vector2(xOffset, yOffset), color);
+                    yOffset += font.LineHeight;
+                }
+            }
+
+            // Draw Discard Pile
+            yOffset = 5f;
+            string discardHeader = $"DISCARD ({discardPile.Count})";
+            var headerSize = font.MeasureString(discardHeader);
+            xOffset = Global.VIRTUAL_WIDTH - headerSize.Width - 5f;
+
+            spriteBatch.DrawStringSnapped(font, discardHeader, new Vector2(xOffset, yOffset), global.Palette_Yellow);
+            yOffset += font.LineHeight;
+
+            foreach (var move in discardPile)
+            {
+                var moveNameSize = font.MeasureString(move.MoveName);
+                xOffset = Global.VIRTUAL_WIDTH - moveNameSize.Width - 5f;
+                spriteBatch.DrawStringSnapped(font, move.MoveName, new Vector2(xOffset, yOffset), global.Palette_BrightWhite);
+                yOffset += font.LineHeight;
+            }
         }
 
         private Rectangle GetCombatantInteractionBounds(BattleCombatant combatant, Vector2 centerPosition, BitmapFont nameFont, BitmapFont statsFont)
@@ -602,7 +668,7 @@ namespace ProjectVagabond.Scenes
 
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 centerPosition)
         {
-            if (combatant.IsDefeated) return;
+            if (combatant.IsDefeated && !combatant.IsDying) return;
 
             var global = ServiceLocator.Get<Global>();
             var pixel = ServiceLocator.Get<Texture2D>();
