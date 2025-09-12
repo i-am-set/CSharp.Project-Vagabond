@@ -74,7 +74,8 @@ namespace ProjectVagabond.Battle.UI
         private void OpenSortMenu()
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            string directionText = _currentSortDirection == SortDirection.Ascending ? "Order: Ascending" : "Order: Descending";
+            string direction = _currentSortDirection == SortDirection.Ascending ? "ASCENDING" : "DESCENDING";
+            string directionText = $"ORDER: {direction}";
 
             var items = new List<ContextMenuItem>
             {
@@ -85,32 +86,34 @@ namespace ProjectVagabond.Battle.UI
                         _currentSortDirection = _currentSortDirection == SortDirection.Ascending ? SortDirection.Descending : SortDirection.Ascending;
                         RebuildMoveList();
                         _sortContextMenu.Hide();
-                    }
+                    },
+                    IsVisible = () => _currentSortMode != SortMode.Unsorted
                 },
+                new ContextMenuItem { Text = "---", IsVisible = () => _currentSortMode != SortMode.Unsorted }, // Divider
                 new ContextMenuItem
                 {
-                    Text = "Unsorted",
+                    Text = "BY TYPE",
                     OnClick = () => SetSortMode(SortMode.Unsorted),
                     IsSelected = () => _currentSortMode == SortMode.Unsorted
                 },
                 new ContextMenuItem
                 {
-                    Text = "By Element",
+                    Text = "BY ELEMENT",
                     OnClick = () => SetSortMode(SortMode.ByElement),
                     IsSelected = () => _currentSortMode == SortMode.ByElement
                 },
                 new ContextMenuItem
                 {
-                    Text = "By Power",
+                    Text = "BY POWER",
                     OnClick = () => SetSortMode(SortMode.ByPower),
                     IsSelected = () => _currentSortMode == SortMode.ByPower
                 }
             };
 
             // Pre-calculate the menu's dimensions to position it correctly.
-            float menuWidth = items.Max(i => secondaryFont.MeasureString(i.Text).Width) + 24;
+            float menuWidth = items.Where(i => i.IsVisible()).Max(i => secondaryFont.MeasureString(i.Text).Width) + 24;
             float itemHeight = secondaryFont.LineHeight + 4;
-            float menuHeight = (items.Count * itemHeight) + 8;
+            float menuHeight = (items.Where(i => i.IsVisible()).Count() * itemHeight) + 8;
 
             // Position the menu so its right edge aligns with the sort button's right edge.
             var menuPosition = new Vector2(
@@ -218,12 +221,36 @@ namespace ProjectVagabond.Battle.UI
             switch (_currentSortMode)
             {
                 case SortMode.Unsorted:
-                    var sortedUnsorted = _currentSortDirection == SortDirection.Ascending
-                        ? movesToDisplay.OrderBy(m => m.MoveName)
-                        : movesToDisplay.OrderByDescending(m => m.MoveName);
-                    foreach (var move in sortedUnsorted)
+                    var attackMoves = movesToDisplay
+                        .Where(m => m.ActionType == ActionType.Physical || m.ActionType == ActionType.Magical)
+                        .OrderBy(m => m.MoveName)
+                        .ToList();
+
+                    var otherMoves = movesToDisplay
+                        .Where(m => m.ActionType == ActionType.Other)
+                        .OrderBy(m => m.MoveName)
+                        .ToList();
+
+                    if (attackMoves.Any())
                     {
-                        _displayItems.Add(CreateMoveButton(move, secondaryFont));
+                        if (_displayItems.Count % 2 != 0) _displayItems.Add(null);
+                        _displayItems.Add(new ActionMenuHeader("SPELLS"));
+                        _displayItems.Add(new HeaderContinuation());
+                        foreach (var move in attackMoves)
+                        {
+                            _displayItems.Add(CreateMoveButton(move, secondaryFont));
+                        }
+                    }
+
+                    if (otherMoves.Any())
+                    {
+                        if (_displayItems.Count % 2 != 0) _displayItems.Add(null);
+                        _displayItems.Add(new ActionMenuHeader("OTHER"));
+                        _displayItems.Add(new HeaderContinuation());
+                        foreach (var move in otherMoves)
+                        {
+                            _displayItems.Add(CreateMoveButton(move, secondaryFont));
+                        }
                     }
                     break;
 
@@ -234,7 +261,6 @@ namespace ProjectVagabond.Battle.UI
 
                     foreach (var group in groupedByElement)
                     {
-                        // If the current number of items is odd, add a placeholder to align the header.
                         if (_displayItems.Count % 2 != 0)
                         {
                             _displayItems.Add(null);
@@ -246,7 +272,7 @@ namespace ProjectVagabond.Battle.UI
                             elementName = elementDef.ElementName;
                         }
                         _displayItems.Add(new ActionMenuHeader(elementName));
-                        _displayItems.Add(new HeaderContinuation()); // Marker for the second column
+                        _displayItems.Add(new HeaderContinuation());
 
                         var sortedGroup = _currentSortDirection == SortDirection.Ascending
                             ? group.OrderBy(m => m.MoveName)

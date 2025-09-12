@@ -24,9 +24,9 @@ namespace ProjectVagabond.Battle
         public int Power { get; set; }
 
         /// <summary>
-        /// Whether the move is Physical or Magical.
+        /// The type of action the move performs (Physical, Magical, or Other).
         /// </summary>
-        public DamageType DamageType { get; set; }
+        public ActionType ActionType { get; set; }
 
         /// <summary>
         /// The base accuracy of the move (1-100). A value of -1 represents a "True Hit" that never misses.

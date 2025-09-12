@@ -81,7 +81,7 @@ namespace ProjectVagabond
                 float yOffset = virtualMousePos.Y - _bounds.Y - 4;
                 int itemHeight = font.LineHeight + 4;
                 int index = (int)(yOffset / itemHeight);
-                if (index >= 0 && index < _visibleItems.Count)
+                if (index >= 0 && index < _visibleItems.Count && _visibleItems[index].Text != "---")
                 {
                     _hoveredIndex = index;
                 }
@@ -104,42 +104,51 @@ namespace ProjectVagabond
             for (int i = 0; i < _visibleItems.Count; i++)
             {
                 var item = _visibleItems[i];
-                Color color;
-                bool isEnabled = item.IsEnabled();
 
-                if (!isEnabled)
+                if (item.Text == "---")
                 {
-                    color = _global.Palette_Gray;
-                }
-                else if (i == _hoveredIndex)
-                {
-                    color = _global.ButtonHoverColor;
+                    var lineRect = new Rectangle(_bounds.X + 4, (int)(y + (font.LineHeight / 2)), _bounds.Width - 8, 1);
+                    spriteBatch.Draw(pixel, lineRect, _global.Palette_Gray);
                 }
                 else
                 {
-                    color = item.Color ?? _global.ToolTipTextColor;
-                }
+                    Color color;
+                    bool isEnabled = item.IsEnabled();
 
-                float textX = _bounds.X + 8;
+                    if (!isEnabled)
+                    {
+                        color = _global.Palette_Gray;
+                    }
+                    else if (i == _hoveredIndex)
+                    {
+                        color = _global.ButtonHoverColor;
+                    }
+                    else
+                    {
+                        color = item.Color ?? _global.ToolTipTextColor;
+                    }
 
-                if (item.IsSelected())
-                {
-                    const int squareSize = 5;
-                    var squareRect = new Rectangle(
-                        (int)textX,
-                        (int)(y + (font.LineHeight - squareSize) / 2f),
-                        squareSize,
-                        squareSize
-                    );
-                    spriteBatch.Draw(pixel, squareRect, color);
-                    textX += squareSize + 4;
-                }
-                else
-                {
-                    textX += 9; // Same offset to keep text aligned
-                }
+                    float textX = _bounds.X + 8;
 
-                spriteBatch.DrawString(font, item.Text, new Vector2(textX, y), color);
+                    if (item.IsSelected())
+                    {
+                        const int squareSize = 5;
+                        var squareRect = new Rectangle(
+                            (int)textX,
+                            (int)(y + (font.LineHeight - squareSize) / 2f),
+                            squareSize,
+                            squareSize
+                        );
+                        spriteBatch.Draw(pixel, squareRect, color);
+                        textX += squareSize + 4;
+                    }
+                    else
+                    {
+                        textX += 9; // Same offset to keep text aligned
+                    }
+
+                    spriteBatch.DrawString(font, item.Text, new Vector2(textX, y), color);
+                }
                 y += font.LineHeight + 4;
             }
         }

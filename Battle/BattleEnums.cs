@@ -1,12 +1,13 @@
 ﻿namespace ProjectVagabond.Battle
 {
     /// <summary>
-    /// Specifies the type of damage a move inflicts.
+    /// Specifies the type of action a move performs.
     /// </summary>
-    public enum DamageType
+    public enum ActionType
     {
         Physical,
-        Magical
+        Magical,
+        Other
     }
 
     /// <summary>
