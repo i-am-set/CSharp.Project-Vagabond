@@ -106,8 +106,6 @@ namespace ProjectVagabond.Scenes
 
             EventBus.Subscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
             _actionMenu.OnMoveSelected += OnPlayerMoveSelected;
-            _actionMenu.OnTargetingInitiated += OnTargetingInitiated;
-            _actionMenu.OnTargetingCancelled += OnTargetingCancelled;
             _actionMenu.OnItemMenuRequested += OnItemMenuRequested;
             _actionMenu.OnMovesMenuOpened += () => _subMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened += () => _subMenuState = BattleSubMenuState.ActionRoot;
@@ -171,8 +169,6 @@ namespace ProjectVagabond.Scenes
             base.Exit();
             EventBus.Unsubscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
             _actionMenu.OnMoveSelected -= OnPlayerMoveSelected;
-            _actionMenu.OnTargetingInitiated -= OnTargetingInitiated;
-            _actionMenu.OnTargetingCancelled -= OnTargetingCancelled;
             _actionMenu.OnItemMenuRequested -= OnItemMenuRequested;
             _actionMenu.OnMovesMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionRoot;
@@ -259,17 +255,6 @@ namespace ProjectVagabond.Scenes
             });
         }
 
-        private void OnTargetingInitiated(MoveData move)
-        {
-            _uiState = BattleUIState.Targeting;
-            _moveForTargeting = move;
-        }
-
-        private void OnTargetingCancelled()
-        {
-            _uiState = BattleUIState.Default;
-        }
-
         private void OnPlayerMoveSelected(MoveData move, BattleCombatant target)
         {
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
@@ -312,6 +297,17 @@ namespace ProjectVagabond.Scenes
 
             _battleNarrator.Update(gameTime);
             UpdateHealthAnimations(gameTime);
+
+            // Synchronize BattleScene's UI state with the ActionMenu's state
+            if (_actionMenu.CurrentMenuState == ActionMenu.MenuState.Targeting)
+            {
+                _uiState = BattleUIState.Targeting;
+                _moveForTargeting = _actionMenu.SelectedMove;
+            }
+            else
+            {
+                _uiState = BattleUIState.Default;
+            }
 
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
             {
@@ -358,7 +354,6 @@ namespace ProjectVagabond.Scenes
                     {
                         var selectedTarget = _currentTargets[_hoveredTargetIndex].Combatant;
                         OnPlayerMoveSelected(_moveForTargeting, selectedTarget);
-                        _uiState = BattleUIState.Default;
                         UIInputManager.ConsumeMouseClick();
                     }
                 }
