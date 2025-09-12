@@ -10,10 +10,10 @@ namespace ProjectVagabond
     public class PlayerState
     {
         /// <summary>
-        /// A list of MoveIDs for the combat actions the player currently has available.
-        /// This list can be modified at runtime to learn or forget moves.
+        /// Represents the player's spellbook. The size of the list is the number of
+        /// spell pages the player has. A null or empty string indicates an empty page.
         /// </summary>
-        public List<string> CurrentActionMoveIDs { get; set; } = new List<string>();
+        public List<string> SpellbookPages { get; set; } = new List<string>();
 
         // Future properties like inventory, stats, quest flags, etc., would go here.
     }

@@ -46,6 +46,15 @@ namespace ProjectVagabond.Battle
             _allCombatants.AddRange(_playerCombatants);
             _allCombatants.AddRange(_enemyCombatants);
 
+            // Initialize the player's deck manager
+            var gameState = ServiceLocator.Get<GameState>();
+            foreach (var player in _playerCombatants)
+            {
+                player.DeckManager = new CombatDeckManager();
+                var knownMoves = gameState.PlayerState.SpellbookPages.Where(p => !string.IsNullOrEmpty(p)).ToList();
+                player.DeckManager.Initialize(knownMoves);
+            }
+
             _actionQueue = new List<QueuedAction>();
             _turnNumber = 1;
             _currentPhase = BattlePhase.StartOfTurn;
@@ -99,9 +108,18 @@ namespace ProjectVagabond.Battle
         /// </summary>
         private void HandleStartOfTurn()
         {
-            // 1. Environment Resolution (Placeholder)
+            // 1. Player draws to fill hand
+            foreach (var player in _playerCombatants)
+            {
+                if (!player.IsDefeated)
+                {
+                    player.DeckManager?.DrawToFillHand();
+                }
+            }
 
-            // 2. Duration Countdown
+            // 2. Environment Resolution (Placeholder)
+
+            // 3. Duration Countdown
             foreach (var combatant in _allCombatants)
             {
                 if (combatant.IsDefeated) continue;
@@ -204,6 +222,12 @@ namespace ProjectVagabond.Battle
                 return; // End this step of resolution
             }
             // DoT/HoT effects would be resolved here.
+
+            // If the actor is the player, move the used card to the discard pile.
+            if (action.Actor.IsPlayerControlled)
+            {
+                action.Actor.DeckManager?.CastMove(action.ChosenMove);
+            }
 
             // Execute Action
             var result = DamageCalculator.CalculateDamage(action.Actor, action.Target, action.ChosenMove);

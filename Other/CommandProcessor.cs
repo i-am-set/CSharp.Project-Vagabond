@@ -227,9 +227,30 @@ namespace ProjectVagabond
             (args) =>
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
-                if (args.Length == 0) return _gameState.PlayerState?.CurrentActionMoveIDs ?? new List<string>();
+                if (args.Length == 0) return _gameState.PlayerState?.SpellbookPages.Where(p => !string.IsNullOrEmpty(p)).ToList() ?? new List<string>();
                 return new List<string>();
             });
+
+            _commands["addpage"] = new Command("addpage", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                _gameState.PlayerState.SpellbookPages.Add(null);
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Added a spell page. Total pages: {_gameState.PlayerState.SpellbookPages.Count}" });
+            }, "addpage [gray]- Adds an empty spell page to the player's spellbook.");
+
+            _commands["removepage"] = new Command("removepage", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState.SpellbookPages.Count > 0)
+                {
+                    _gameState.PlayerState.SpellbookPages.RemoveAt(_gameState.PlayerState.SpellbookPages.Count - 1);
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Removed a spell page. Total pages: {_gameState.PlayerState.SpellbookPages.Count}" });
+                }
+                else
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Cannot remove any more spell pages." });
+                }
+            }, "removepage [gray]- Removes the last spell page from the player's spellbook.");
 
             _commands["debugallcolors"] = new Command("debugallcolors", (args) =>
             {

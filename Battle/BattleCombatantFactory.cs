@@ -59,38 +59,23 @@ namespace ProjectVagabond.Battle
             // Initialize visual HP to be the same as logical HP at the start of battle.
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
-            // Populate the combatant's available moves by looking them up in the cache.
-            // This now branches based on whether the combatant is the player or an enemy.
-            if (combatant.IsPlayerControlled)
+            // For non-player combatants, populate their static move list from the archetype.
+            // The player's moves are now handled by the CombatDeckManager, which is initialized in the BattleManager.
+            if (!combatant.IsPlayerControlled)
             {
-                // For the player, get moves from the dynamic PlayerState.
-                var gameState = ServiceLocator.Get<GameState>();
-                foreach (var moveId in gameState.PlayerState.CurrentActionMoveIDs)
-                {
-                    if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
-                    {
-                        combatant.AvailableMoves.Add(moveData);
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"[BattleCombatantFactory] [WARNING] Player MoveID '{moveId}' not found in cache.");
-                    }
-                }
-            }
-            else
-            {
-                // For enemies, get moves from their static archetype definition.
+                var staticMoves = new List<MoveData>();
                 foreach (var moveId in statsComponent.AvailableMoveIDs)
                 {
                     if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
                     {
-                        combatant.AvailableMoves.Add(moveData);
+                        staticMoves.Add(moveData);
                     }
                     else
                     {
                         Debug.WriteLine($"[BattleCombatantFactory] [WARNING] MoveID '{moveId}' not found in cache for combatant '{combatant.Name}'.");
                     }
                 }
+                combatant.SetStaticMoves(staticMoves);
             }
 
             return combatant;

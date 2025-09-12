@@ -96,7 +96,13 @@ namespace ProjectVagabond
             var statsComp = _componentStore.GetComponent<Battle.CombatantStatsComponent>(PlayerEntityId);
             if (statsComp != null)
             {
-                PlayerState.CurrentActionMoveIDs.AddRange(statsComp.AvailableMoveIDs);
+                // For now, let's assume the player starts with 6 pages, filled by their archetype.
+                // This can be made more dynamic later.
+                PlayerState.SpellbookPages = new List<string>(new string[6]);
+                for (int i = 0; i < Math.Min(PlayerState.SpellbookPages.Count, statsComp.AvailableMoveIDs.Count); i++)
+                {
+                    PlayerState.SpellbookPages[i] = statsComp.AvailableMoveIDs[i];
+                }
             }
 
             // Initial map reveal

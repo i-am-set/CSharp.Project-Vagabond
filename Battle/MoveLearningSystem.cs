@@ -43,36 +43,44 @@ namespace ProjectVagabond
             }
 
             // 2. Check if the player already knows the move.
-            if (_gameState.PlayerState.CurrentActionMoveIDs.Any(m => m.Equals(moveId, System.StringComparison.OrdinalIgnoreCase)))
+            if (_gameState.PlayerState.SpellbookPages.Any(p => p != null && p.Equals(moveId, System.StringComparison.OrdinalIgnoreCase)))
             {
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Player already knows {moveData.MoveName}." });
                 return;
             }
 
-            // 3. Add the move and provide feedback.
-            _gameState.PlayerState.CurrentActionMoveIDs.Add(moveId);
+            // 3. Find an empty spell page.
+            int emptyPageIndex = _gameState.PlayerState.SpellbookPages.FindIndex(p => string.IsNullOrEmpty(p));
+            if (emptyPageIndex == -1)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Spellbook is full. Cannot learn new moves." });
+                return;
+            }
+
+            // 4. Add the move and provide feedback.
+            _gameState.PlayerState.SpellbookPages[emptyPageIndex] = moveId;
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Player learned {moveData.MoveName}!" });
         }
 
         private void HandleForgetMove(string moveId)
         {
-            // 1. Find the move in the player's current list (case-insensitive).
-            var moveToRemove = _gameState.PlayerState.CurrentActionMoveIDs
-                .FirstOrDefault(m => m.Equals(moveId, System.StringComparison.OrdinalIgnoreCase));
+            // 1. Find the page with the move to forget.
+            int pageIndex = _gameState.PlayerState.SpellbookPages
+                .FindIndex(p => p != null && p.Equals(moveId, System.StringComparison.OrdinalIgnoreCase));
 
             // 2. Check if the player actually knows the move.
-            if (moveToRemove == null)
+            if (pageIndex == -1)
             {
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Player does not know a move with ID '{moveId}'." });
                 return;
             }
 
             // 3. Get move data for feedback message before removing.
-            BattleDataCache.Moves.TryGetValue(moveToRemove, out var moveData);
+            BattleDataCache.Moves.TryGetValue(moveId, out var moveData);
             string moveName = moveData?.MoveName ?? moveId;
 
-            // 4. Remove the move and provide feedback.
-            _gameState.PlayerState.CurrentActionMoveIDs.Remove(moveToRemove);
+            // 4. Remove the move (by setting the page to null) and provide feedback.
+            _gameState.PlayerState.SpellbookPages[pageIndex] = null;
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_orange]Player forgot {moveName}." });
         }
 

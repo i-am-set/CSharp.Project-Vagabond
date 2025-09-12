@@ -39,9 +39,27 @@ namespace ProjectVagabond.Battle
         public float VisualHP { get; set; }
 
         /// <summary>
-        /// A list of moves this combatant can use.
+        /// For the player, this manages their deck, hand, and discard pile. Null for enemies.
         /// </summary>
-        public List<MoveData> AvailableMoves { get; set; } = new List<MoveData>();
+        public CombatDeckManager DeckManager { get; set; }
+
+        /// <summary>
+        /// A list of moves this combatant can use. For enemies, this is a static list.
+        /// For the player, this is an adapter property that returns their current hand.
+        /// </summary>
+        public List<MoveData> AvailableMoves
+        {
+            get
+            {
+                if (DeckManager != null)
+                {
+                    return DeckManager.Hand.Where(m => m != null).ToList();
+                }
+                return _staticMoves;
+            }
+        }
+        private List<MoveData> _staticMoves = new List<MoveData>();
+
 
         /// <summary>
         /// A list of currently active status effects.
@@ -95,6 +113,14 @@ namespace ProjectVagabond.Battle
             // Remove any existing effect of the same type to reset its duration, as per the design document.
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
             ActiveStatusEffects.Add(newEffect);
+        }
+
+        /// <summary>
+        /// For non-player combatants, this sets their static list of moves for the battle.
+        /// </summary>
+        public void SetStaticMoves(List<MoveData> moves)
+        {
+            _staticMoves = moves;
         }
     }
 }
