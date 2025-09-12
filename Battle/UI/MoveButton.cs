@@ -1,12 +1,16 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle.UI
 {
-    public class MoveButton : Button
+    public class MoveButton : Button, IActionMenuItem
     {
         public MoveData Move { get; }
         private readonly BitmapFont _moveFont;
@@ -73,3 +77,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+﻿

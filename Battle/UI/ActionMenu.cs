@@ -21,16 +21,24 @@ namespace ProjectVagabond.Battle.UI
         private BattleCombatant _player;
         private List<BattleCombatant> _allTargets;
         private List<Button> _actionButtons = new List<Button>();
-        private List<MoveButton> _moveButtons = new List<MoveButton>();
+        private List<IActionMenuItem> _displayItems = new List<IActionMenuItem>();
         private Button _backButton;
-        private Button _filterButton;
+        private Button _sortButton;
         private readonly Global _global;
+        private readonly ContextMenu _sortContextMenu;
 
         private enum MenuState { Main, Moves, Targeting }
+        private enum SortMode { Unsorted, ByElement, ByPower }
+        private enum SortDirection { Ascending, Descending }
         private MenuState _currentState;
+        private SortMode _currentSortMode = SortMode.Unsorted;
+        private SortDirection _currentSortDirection = SortDirection.Ascending;
         private MoveData _selectedMove;
         private float _targetingTextAnimTimer = 0f;
         private bool _buttonsInitialized = false;
+
+        // A private marker class to signify the second half of a full-width header.
+        private class HeaderContinuation : IActionMenuItem { }
 
         // New fields for scrolling and layout
         private int _scrollIndex = 0; // The index of the top-most visible row
@@ -42,6 +50,8 @@ namespace ProjectVagabond.Battle.UI
         public ActionMenu()
         {
             _global = ServiceLocator.Get<Global>();
+            _sortContextMenu = new ContextMenu();
+
             _backButton = new Button(Rectangle.Empty, "BACK");
             _backButton.OnClick += () => {
                 if (_currentState == MenuState.Targeting)
@@ -55,9 +65,68 @@ namespace ProjectVagabond.Battle.UI
                 }
             };
 
-            _filterButton = new Button(Rectangle.Empty, "FILTER") { IsEnabled = false };
+            _sortButton = new Button(Rectangle.Empty, "SORT");
+            _sortButton.OnClick += OpenSortMenu;
 
             _previousMouseState = Mouse.GetState();
+        }
+
+        private void OpenSortMenu()
+        {
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            string directionText = _currentSortDirection == SortDirection.Ascending ? "Order: Ascending" : "Order: Descending";
+
+            var items = new List<ContextMenuItem>
+            {
+                new ContextMenuItem
+                {
+                    Text = directionText,
+                    OnClick = () => {
+                        _currentSortDirection = _currentSortDirection == SortDirection.Ascending ? SortDirection.Descending : SortDirection.Ascending;
+                        RebuildMoveList();
+                        _sortContextMenu.Hide();
+                    }
+                },
+                new ContextMenuItem
+                {
+                    Text = "Unsorted",
+                    OnClick = () => SetSortMode(SortMode.Unsorted),
+                    IsSelected = () => _currentSortMode == SortMode.Unsorted
+                },
+                new ContextMenuItem
+                {
+                    Text = "By Element",
+                    OnClick = () => SetSortMode(SortMode.ByElement),
+                    IsSelected = () => _currentSortMode == SortMode.ByElement
+                },
+                new ContextMenuItem
+                {
+                    Text = "By Power",
+                    OnClick = () => SetSortMode(SortMode.ByPower),
+                    IsSelected = () => _currentSortMode == SortMode.ByPower
+                }
+            };
+
+            // Pre-calculate the menu's dimensions to position it correctly.
+            float menuWidth = items.Max(i => secondaryFont.MeasureString(i.Text).Width) + 24;
+            float itemHeight = secondaryFont.LineHeight + 4;
+            float menuHeight = (items.Count * itemHeight) + 8;
+
+            // Position the menu so its right edge aligns with the sort button's right edge.
+            var menuPosition = new Vector2(
+                _sortButton.Bounds.Right - menuWidth,
+                _sortButton.Bounds.Top - menuHeight
+            );
+
+            _sortContextMenu.Show(menuPosition, items, secondaryFont);
+        }
+
+        private void SetSortMode(SortMode newMode)
+        {
+            _currentSortMode = newMode;
+            RebuildMoveList();
+            _scrollIndex = 0;
+            _sortContextMenu.Hide();
         }
 
         private void InitializeButtons()
@@ -76,7 +145,7 @@ namespace ProjectVagabond.Battle.UI
             _actionButtons[0].OnClick += () => SetState(MenuState.Moves);
 
             _backButton.Font = secondaryFont;
-            _filterButton.Font = secondaryFont;
+            _sortButton.Font = secondaryFont;
 
             _buttonsInitialized = true;
         }
@@ -95,12 +164,15 @@ namespace ProjectVagabond.Battle.UI
             {
                 button.ResetAnimationState();
             }
-            foreach (var button in _moveButtons)
+            foreach (var item in _displayItems)
             {
-                button.ResetAnimationState();
+                if (item is Button button)
+                {
+                    button.ResetAnimationState();
+                }
             }
             _backButton.ResetAnimationState();
-            _filterButton.ResetAnimationState();
+            _sortButton.ResetAnimationState();
         }
 
         public void Show(BattleCombatant player, List<BattleCombatant> allCombatants)
@@ -119,43 +191,11 @@ namespace ProjectVagabond.Battle.UI
         private void SetState(MenuState newState)
         {
             _currentState = newState;
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             if (_currentState == MenuState.Moves)
             {
-                _moveButtons.Clear();
-                // This list can be sorted later by the filter button
-                var movesToDisplay = new List<MoveData>(_player.AvailableMoves);
-
-                // Always add Stall as an available option in the list
-                if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
-                {
-                    movesToDisplay.Add(stallMove);
-                }
-                else
-                {
-                    Debug.WriteLine("[ActionMenu] [FATAL] Could not find 'Stall' move in BattleDataCache.");
-                }
-
-
-                foreach (var move in movesToDisplay)
-                {
-                    var moveButton = new MoveButton(move, secondaryFont);
-                    moveButton.OnClick += () => {
-                        _selectedMove = move;
-                        if (_allTargets.Count == 1)
-                        {
-                            OnMoveSelected?.Invoke(_selectedMove, _allTargets[0]);
-                            Hide();
-                        }
-                        else
-                        {
-                            OnTargetingInitiated?.Invoke(_selectedMove);
-                            SetState(MenuState.Targeting);
-                        }
-                    };
-                    _moveButtons.Add(moveButton);
-                }
+                _currentSortMode = SortMode.Unsorted;
+                RebuildMoveList();
                 _scrollIndex = 0;
             }
             else if (newState == MenuState.Targeting)
@@ -164,10 +204,129 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        private void RebuildMoveList()
+        {
+            _displayItems.Clear();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+
+            var movesToDisplay = new List<MoveData>(_player.AvailableMoves);
+            if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
+            {
+                movesToDisplay.Add(stallMove);
+            }
+
+            switch (_currentSortMode)
+            {
+                case SortMode.Unsorted:
+                    var sortedUnsorted = _currentSortDirection == SortDirection.Ascending
+                        ? movesToDisplay.OrderBy(m => m.MoveName)
+                        : movesToDisplay.OrderByDescending(m => m.MoveName);
+                    foreach (var move in sortedUnsorted)
+                    {
+                        _displayItems.Add(CreateMoveButton(move, secondaryFont));
+                    }
+                    break;
+
+                case SortMode.ByElement:
+                    var groupedByElement = movesToDisplay
+                        .GroupBy(m => m.OffensiveElementIDs.FirstOrDefault())
+                        .OrderBy(g => g.Key);
+
+                    foreach (var group in groupedByElement)
+                    {
+                        // If the current number of items is odd, add a placeholder to align the header.
+                        if (_displayItems.Count % 2 != 0)
+                        {
+                            _displayItems.Add(null);
+                        }
+
+                        string elementName = "Unknown";
+                        if (BattleDataCache.Elements.TryGetValue(group.Key, out var elementDef))
+                        {
+                            elementName = elementDef.ElementName;
+                        }
+                        _displayItems.Add(new ActionMenuHeader(elementName));
+                        _displayItems.Add(new HeaderContinuation()); // Marker for the second column
+
+                        var sortedGroup = _currentSortDirection == SortDirection.Ascending
+                            ? group.OrderBy(m => m.MoveName)
+                            : group.OrderByDescending(m => m.MoveName);
+
+                        foreach (var move in sortedGroup)
+                        {
+                            _displayItems.Add(CreateMoveButton(move, secondaryFont));
+                        }
+                    }
+                    break;
+
+                case SortMode.ByPower:
+                    var groupedByPower = movesToDisplay
+                        .GroupBy(m => m.Power > 0 ? (m.Power - 1) / 10 : -1);
+
+                    var sortedPowerGroups = _currentSortDirection == SortDirection.Ascending
+                        ? groupedByPower.OrderBy(g => g.Key)
+                        : groupedByPower.OrderByDescending(g => g.Key);
+
+                    foreach (var group in sortedPowerGroups)
+                    {
+                        if (_displayItems.Count % 2 != 0)
+                        {
+                            _displayItems.Add(null);
+                        }
+
+                        string headerText;
+                        if (group.Key == -1)
+                        {
+                            headerText = "OTHER";
+                        }
+                        else
+                        {
+                            int minPower = group.Key * 10 + 1;
+                            int maxPower = minPower + 9;
+                            headerText = $"POWER: {minPower}-{maxPower}";
+                        }
+                        _displayItems.Add(new ActionMenuHeader(headerText));
+                        _displayItems.Add(new HeaderContinuation());
+
+                        var sortedGroup = _currentSortDirection == SortDirection.Ascending
+                            ? group.OrderBy(m => m.MoveName)
+                            : group.OrderByDescending(m => m.MoveName);
+
+                        foreach (var move in sortedGroup)
+                        {
+                            _displayItems.Add(CreateMoveButton(move, secondaryFont));
+                        }
+                    }
+                    break;
+            }
+        }
+
+        private MoveButton CreateMoveButton(MoveData move, BitmapFont font)
+        {
+            var moveButton = new MoveButton(move, font);
+            moveButton.OnClick += () => {
+                _selectedMove = move;
+                if (_allTargets.Count == 1)
+                {
+                    OnMoveSelected?.Invoke(_selectedMove, _allTargets[0]);
+                    Hide();
+                }
+                else
+                {
+                    OnTargetingInitiated?.Invoke(_selectedMove);
+                    SetState(MenuState.Targeting);
+                }
+            };
+            return moveButton;
+        }
+
         public void Update(MouseState currentMouseState, GameTime gameTime)
         {
             InitializeButtons();
             if (!_isVisible) return;
+
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             switch (_currentState)
             {
@@ -175,36 +334,44 @@ namespace ProjectVagabond.Battle.UI
                     foreach (var button in _actionButtons) button.Update(currentMouseState);
                     break;
                 case MenuState.Moves:
-                    var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-                    if (_moveListBounds.Contains(virtualMousePos))
+                    if (_sortContextMenu.IsOpen)
                     {
-                        int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
-                        if (scrollDelta != 0)
-                        {
-                            _scrollIndex -= Math.Sign(scrollDelta);
-                        }
+                        _sortContextMenu.Update(currentMouseState, _previousMouseState, virtualMousePos, secondaryFont);
                     }
-
-                    int maxScrollIndex = Math.Max(0, _totalRows - _maxVisibleRows);
-                    _scrollIndex = Math.Clamp(_scrollIndex, 0, maxScrollIndex);
-
-                    int startIndex = _scrollIndex * 2;
-                    int endIndex = Math.Min(_moveButtons.Count, startIndex + _maxVisibleRows * 2);
-                    for (int i = 0; i < _moveButtons.Count; i++)
+                    else
                     {
-                        var button = _moveButtons[i];
-                        if (i >= startIndex && i < endIndex)
+                        if (_moveListBounds.Contains(virtualMousePos))
                         {
-                            button.Update(currentMouseState);
+                            int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
+                            if (scrollDelta != 0)
+                            {
+                                _scrollIndex -= Math.Sign(scrollDelta);
+                            }
                         }
-                        else
-                        {
-                            button.IsHovered = false;
-                        }
-                    }
 
-                    _backButton.Update(currentMouseState);
-                    _filterButton.Update(currentMouseState);
+                        int maxScrollIndex = Math.Max(0, _totalRows - _maxVisibleRows);
+                        _scrollIndex = Math.Clamp(_scrollIndex, 0, maxScrollIndex);
+
+                        int startIndex = _scrollIndex * 2;
+                        int endIndex = Math.Min(_displayItems.Count, startIndex + _maxVisibleRows * 2);
+                        for (int i = 0; i < _displayItems.Count; i++)
+                        {
+                            if (_displayItems[i] is Button button)
+                            {
+                                if (i >= startIndex && i < endIndex)
+                                {
+                                    button.Update(currentMouseState);
+                                }
+                                else
+                                {
+                                    button.IsHovered = false;
+                                }
+                            }
+                        }
+
+                        _backButton.Update(currentMouseState);
+                        _sortButton.Update(currentMouseState);
+                    }
                     break;
                 case MenuState.Targeting:
                     _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -259,13 +426,13 @@ namespace ProjectVagabond.Battle.UI
                         const int bottomBarTopPadding = 3;
                         const int bottomBarHeight = 13;
 
-                        const int moveButtonWidth = 145;
-                        const int moveButtonHeight = 9;
+                        const int itemWidth = 145;
+                        const int itemHeight = 9;
                         const int columnSpacing = 2;
                         const int rowSpacing = 0;
                         const int columns = 2;
 
-                        int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
+                        int totalGridWidth = (itemWidth * columns) + columnSpacing;
                         int gridStartX = horizontalPadding + (Global.VIRTUAL_WIDTH - (horizontalPadding * 2) - totalGridWidth) / 2;
 
                         // --- Background Sprite ---
@@ -276,29 +443,41 @@ namespace ProjectVagabond.Battle.UI
                         // --- Move List Area ---
                         int gridStartY = dividerY + menuVerticalOffset;
                         _moveListBounds = new Rectangle(gridStartX, gridStartY, totalGridWidth, moveListHeight);
-                        _maxVisibleRows = moveListHeight / moveButtonHeight;
+                        _maxVisibleRows = moveListHeight / itemHeight;
 
+                        _totalRows = (int)Math.Ceiling(_displayItems.Count / (double)columns);
                         int startIndex = _scrollIndex * columns;
-                        int visibleButtonCount = Math.Min(_moveButtons.Count - startIndex, _maxVisibleRows * columns);
+                        int visibleItemCount = Math.Min(_displayItems.Count - startIndex, _maxVisibleRows * columns);
 
-                        for (int i = 0; i < visibleButtonCount; i++)
+                        for (int i = 0; i < visibleItemCount; i++)
                         {
-                            int moveIndex = startIndex + i;
-                            var button = _moveButtons[moveIndex];
+                            int itemIndex = startIndex + i;
+                            var item = _displayItems[itemIndex];
+                            if (item == null) continue;
 
                             int row = i / columns;
                             int col = i % columns;
 
-                            button.Bounds = new Rectangle(
-                                gridStartX + col * (moveButtonWidth + columnSpacing),
-                                gridStartY + row * (moveButtonHeight + rowSpacing),
-                                moveButtonWidth,
-                                moveButtonHeight
-                            );
-                            button.Draw(spriteBatch, secondaryFont, gameTime, transform);
+                            if (item is HeaderContinuation) continue;
+
+                            if (item is ActionMenuHeader header)
+                            {
+                                var headerBounds = new Rectangle(gridStartX, gridStartY + row * (itemHeight + rowSpacing), totalGridWidth, itemHeight);
+                                header.Draw(spriteBatch, secondaryFont, headerBounds);
+                            }
+                            else if (item is MoveButton moveButton)
+                            {
+                                var itemBounds = new Rectangle(
+                                    gridStartX + col * (itemWidth + columnSpacing),
+                                    gridStartY + row * (itemHeight + rowSpacing),
+                                    itemWidth,
+                                    itemHeight
+                                );
+                                moveButton.Bounds = itemBounds;
+                                moveButton.Draw(spriteBatch, secondaryFont, gameTime, transform);
+                            }
                         }
 
-                        _totalRows = (int)Math.Ceiling(_moveButtons.Count / (double)columns);
                         if (_totalRows > _maxVisibleRows)
                         {
                             var pixel = ServiceLocator.Get<Texture2D>();
@@ -330,19 +509,20 @@ namespace ProjectVagabond.Battle.UI
                             bottomBarHeight
                         );
 
-                        var filterSize = secondaryFont.MeasureString(_filterButton.Text);
-                        const int filterButtonPadding = 4;
-                        int filterWidth = (int)filterSize.Width + filterButtonPadding;
-                        _filterButton.Bounds = new Rectangle(
-                            _moveListBounds.Right - filterWidth,
+                        var sortSize = secondaryFont.MeasureString(_sortButton.Text);
+                        const int sortButtonPadding = 4;
+                        int sortWidth = (int)sortSize.Width + sortButtonPadding;
+                        _sortButton.Bounds = new Rectangle(
+                            _moveListBounds.Right - sortWidth,
                             bottomBarY,
-                            filterWidth,
+                            sortWidth,
                             bottomBarHeight
                         );
 
                         // --- Draw All ---
-                        _filterButton.Draw(spriteBatch, font, gameTime, transform);
+                        _sortButton.Draw(spriteBatch, font, gameTime, transform);
                         _backButton.Draw(spriteBatch, font, gameTime, transform);
+                        _sortContextMenu.Draw(spriteBatch, secondaryFont);
 
                         // --- DEBUG DRAWING ---
                         if (_global.ShowDebugOverlays)
@@ -350,11 +530,13 @@ namespace ProjectVagabond.Battle.UI
                             var pixel = ServiceLocator.Get<Texture2D>();
                             spriteBatch.DrawSnapped(pixel, bgRect, new Color(255, 165, 0, 100)); // Orange for background
                             spriteBatch.DrawSnapped(pixel, _moveListBounds, new Color(0, 0, 255, 100)); // Blue for scroll area
-                            for (int i = 0; i < visibleButtonCount; i++)
+                            for (int i = 0; i < visibleItemCount; i++)
                             {
-                                int moveIndex = startIndex + i;
-                                var button = _moveButtons[moveIndex];
-                                spriteBatch.DrawSnapped(pixel, button.Bounds, new Color(255, 0, 0, 100)); // Red for buttons
+                                int itemIndex = startIndex + i;
+                                if (_displayItems[itemIndex] is MoveButton button)
+                                {
+                                    spriteBatch.DrawSnapped(pixel, button.Bounds, new Color(255, 0, 0, 100)); // Red for buttons
+                                }
                             }
                         }
                         break;

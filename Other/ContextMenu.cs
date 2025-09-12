@@ -8,15 +8,6 @@ using System.Linq;
 
 namespace ProjectVagabond
 {
-    public class ContextMenuItem
-    {
-        public string Text { get; set; }
-        public Action OnClick { get; set; }
-        public Func<bool> IsVisible { get; set; } = () => true;
-        public Func<bool> IsEnabled { get; set; } = () => true;
-        public Color? Color { get; set; }
-    }
-
     public class ContextMenu
     {
         private readonly Global _global;
@@ -27,6 +18,7 @@ namespace ProjectVagabond
         private Vector2 _position;
         private Rectangle _bounds;
         private int _hoveredIndex = -1;
+        private bool _isPressedInsideMenu = false;
 
         public bool IsOpen => _isOpen;
 
@@ -44,8 +36,9 @@ namespace ProjectVagabond
             _position = position;
             _isOpen = true;
             _hoveredIndex = -1;
+            _isPressedInsideMenu = false;
 
-            float width = _visibleItems.Max(i => font.MeasureString(i.Text).Width) + 16;
+            float width = _visibleItems.Max(i => font.MeasureString(i.Text).Width) + 24; // Increased padding for selection square
             float height = (_visibleItems.Count * (font.LineHeight + 4)) + 8;
             _bounds = new Rectangle((int)position.X, (int)position.Y, (int)width, (int)height);
         }
@@ -56,20 +49,30 @@ namespace ProjectVagabond
         {
             if (!_isOpen) return;
 
-            bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
+            bool mousePressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
+            bool mouseReleased = currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
             bool rightClickPressed = currentMouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released;
 
-            if (leftClickPressed || rightClickPressed)
+            if (mousePressed)
             {
-                if (leftClickPressed && _bounds.Contains(virtualMousePos) && _hoveredIndex != -1 && _visibleItems[_hoveredIndex].IsEnabled())
+                if (_bounds.Contains(virtualMousePos))
+                {
+                    _isPressedInsideMenu = true;
+                }
+            }
+
+            if (mouseReleased)
+            {
+                if (_isPressedInsideMenu && _bounds.Contains(virtualMousePos) && _hoveredIndex != -1 && _visibleItems[_hoveredIndex].IsEnabled())
                 {
                     _visibleItems[_hoveredIndex].OnClick?.Invoke();
-                    Hide();
                 }
-                else if (!_bounds.Contains(virtualMousePos))
-                {
-                    Hide();
-                }
+                // Always hide on release, whether it was a successful click or not
+                Hide();
+            }
+            else if (rightClickPressed)
+            {
+                Hide();
             }
 
             _hoveredIndex = -1;
@@ -117,7 +120,26 @@ namespace ProjectVagabond
                     color = item.Color ?? _global.ToolTipTextColor;
                 }
 
-                spriteBatch.DrawString(font, item.Text, new Vector2(_bounds.X + 8, y), color);
+                float textX = _bounds.X + 8;
+
+                if (item.IsSelected())
+                {
+                    const int squareSize = 5;
+                    var squareRect = new Rectangle(
+                        (int)textX,
+                        (int)(y + (font.LineHeight - squareSize) / 2f),
+                        squareSize,
+                        squareSize
+                    );
+                    spriteBatch.Draw(pixel, squareRect, color);
+                    textX += squareSize + 4;
+                }
+                else
+                {
+                    textX += 9; // Same offset to keep text aligned
+                }
+
+                spriteBatch.DrawString(font, item.Text, new Vector2(textX, y), color);
                 y += font.LineHeight + 4;
             }
         }
