@@ -1,29 +1,27 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
-using System;
-using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle.UI
 {
-    public class MoveButton : Button, IActionMenuItem
+    public class MoveButton : Button
     {
         public MoveData Move { get; }
         private readonly BitmapFont _moveFont;
+        private readonly Texture2D _backgroundTexture;
 
         // Future-proofing for icons
         public Texture2D IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
 
-        public MoveButton(MoveData move, BitmapFont font)
+        public MoveButton(MoveData move, BitmapFont font, Texture2D backgroundTexture)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
             Move = move;
             _moveFont = font;
+            _backgroundTexture = backgroundTexture;
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
@@ -35,15 +33,17 @@ namespace ProjectVagabond.Battle.UI
             float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             var animatedBounds = new Rectangle(Bounds.X + (int)hopOffset, Bounds.Y, Bounds.Width, Bounds.Height);
 
-            // Draw highlight background if hovered
-            if (isActivated)
-            {
-                spriteBatch.DrawSnapped(pixel, animatedBounds, _global.Palette_DarkGray * 0.5f);
-            }
+            // Draw background texture
+            Color tintColor = Color.White;
+            if (!IsEnabled) tintColor = _global.ButtonDisableColor * 0.5f;
+            else if (_isPressed) tintColor = Color.Gray;
+            else if (isActivated) tintColor = _global.ButtonHoverColor;
+            spriteBatch.DrawSnapped(_backgroundTexture, animatedBounds, tintColor);
+
 
             // --- Draw Icon/Placeholder ---
             const int iconSize = 5;
-            const int iconPadding = 2;
+            const int iconPadding = 4;
             var iconRect = new Rectangle(
                 animatedBounds.X + iconPadding,
                 animatedBounds.Y + (animatedBounds.Height - iconSize) / 2,
@@ -69,7 +69,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             var textPosition = new Vector2(
-                iconRect.Right + iconPadding + 1,
+                iconRect.Right + iconPadding,
                 animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2
             );
 
@@ -77,4 +77,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-﻿

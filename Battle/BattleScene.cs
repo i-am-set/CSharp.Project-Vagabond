@@ -25,6 +25,7 @@ namespace ProjectVagabond.Scenes
         // UI Components
         private BattleNarrator _battleNarrator;
         private ActionMenu _actionMenu;
+        private ItemMenu _itemMenu;
 
         private ComponentStore _componentStore;
         private SceneManager _sceneManager;
@@ -40,7 +41,9 @@ namespace ProjectVagabond.Scenes
 
         // UI State
         private enum BattleUIState { Default, Targeting }
+        private enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item }
         private BattleUIState _uiState = BattleUIState.Default;
+        private BattleSubMenuState _subMenuState = BattleSubMenuState.None;
         private MoveData _moveForTargeting;
         private List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private int _hoveredTargetIndex = -1;
@@ -84,6 +87,7 @@ namespace ProjectVagabond.Scenes
             var narratorBounds = new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - DIVIDER_Y);
             _battleNarrator = new BattleNarrator(narratorBounds);
             _actionMenu = new ActionMenu();
+            _itemMenu = new ItemMenu();
         }
 
         public override void Enter()
@@ -92,6 +96,7 @@ namespace ProjectVagabond.Scenes
 
             _actionMenu.ResetAnimationState();
             _uiState = BattleUIState.Default;
+            _subMenuState = BattleSubMenuState.None;
             _enemyEntityIds.Clear();
             _activeHealthAnimations.Clear();
             _narrationQueue.Clear();
@@ -103,6 +108,10 @@ namespace ProjectVagabond.Scenes
             _actionMenu.OnMoveSelected += OnPlayerMoveSelected;
             _actionMenu.OnTargetingInitiated += OnTargetingInitiated;
             _actionMenu.OnTargetingCancelled += OnTargetingCancelled;
+            _actionMenu.OnItemMenuRequested += OnItemMenuRequested;
+            _actionMenu.OnMovesMenuOpened += () => _subMenuState = BattleSubMenuState.ActionMoves;
+            _actionMenu.OnMainMenuOpened += () => _subMenuState = BattleSubMenuState.ActionRoot;
+            _itemMenu.OnBack += OnItemMenuBack;
 
             var gameState = ServiceLocator.Get<GameState>();
             int playerEntityId = gameState.PlayerEntityId;
@@ -164,6 +173,10 @@ namespace ProjectVagabond.Scenes
             _actionMenu.OnMoveSelected -= OnPlayerMoveSelected;
             _actionMenu.OnTargetingInitiated -= OnTargetingInitiated;
             _actionMenu.OnTargetingCancelled -= OnTargetingCancelled;
+            _actionMenu.OnItemMenuRequested -= OnItemMenuRequested;
+            _actionMenu.OnMovesMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionMoves;
+            _actionMenu.OnMainMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionRoot;
+            _itemMenu.OnBack -= OnItemMenuBack;
 
             if (_enemyEntityIds.Any())
             {
@@ -175,6 +188,24 @@ namespace ProjectVagabond.Scenes
                     entityManager.DestroyEntity(id);
                 }
                 _enemyEntityIds.Clear();
+            }
+        }
+
+        private void OnItemMenuRequested()
+        {
+            _subMenuState = BattleSubMenuState.Item;
+            _actionMenu.Hide();
+            _itemMenu.Show();
+        }
+
+        private void OnItemMenuBack()
+        {
+            _subMenuState = BattleSubMenuState.ActionRoot;
+            _itemMenu.Hide();
+            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+            if (player != null)
+            {
+                _actionMenu.Show(player, _battleManager.AllCombatants.ToList());
             }
         }
 
@@ -284,11 +315,28 @@ namespace ProjectVagabond.Scenes
 
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
             {
-                _actionMenu.Update(currentMouseState, gameTime);
+                switch (_subMenuState)
+                {
+                    case BattleSubMenuState.ActionRoot:
+                    case BattleSubMenuState.ActionMoves:
+                        _actionMenu.Update(currentMouseState, gameTime);
+                        break;
+                    case BattleSubMenuState.Item:
+                        _itemMenu.Update(currentMouseState, gameTime);
+                        break;
+                }
+
                 if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState) ||
                     (currentMouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released))
                 {
-                    _actionMenu.GoBack();
+                    if (_subMenuState == BattleSubMenuState.Item)
+                    {
+                        OnItemMenuBack();
+                    }
+                    else
+                    {
+                        _actionMenu.GoBack();
+                    }
                 }
             }
 
@@ -342,6 +390,7 @@ namespace ProjectVagabond.Scenes
             {
                 if (currentPhase == BattleManager.BattlePhase.ActionSelection)
                 {
+                    _subMenuState = BattleSubMenuState.ActionRoot;
                     var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
                     if (player != null)
                     {
@@ -350,7 +399,9 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
+                    _subMenuState = BattleSubMenuState.None;
                     _actionMenu.Hide();
+                    _itemMenu.Hide();
                 }
                 _previousBattlePhase = currentPhase;
             }
@@ -359,6 +410,7 @@ namespace ProjectVagabond.Scenes
             {
                 _isBattleOver = true;
                 _actionMenu.Hide();
+                _itemMenu.Hide();
 
                 var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
                 var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
@@ -476,6 +528,22 @@ namespace ProjectVagabond.Scenes
                 DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY + yOffset));
             }
 
+            // --- Draw UI Title ---
+            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
+            {
+                string title = "";
+                if (_subMenuState == BattleSubMenuState.ActionMoves) title = "ACTIONS";
+                else if (_subMenuState == BattleSubMenuState.Item) title = "ITEMS";
+
+                if (!string.IsNullOrEmpty(title))
+                {
+                    var titleSize = secondaryFont.MeasureString(title);
+                    var titleY = DIVIDER_Y - 10 - font.LineHeight + 7;
+                    var titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.Width) / 2, titleY);
+                    spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_LightGray);
+                }
+            }
+
             // --- Draw Targeting UI ---
             if (_uiState == BattleUIState.Targeting)
             {
@@ -492,7 +560,14 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.DrawSnapped(pixel, new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, 1), Color.White);
 
-            _actionMenu.Draw(spriteBatch, font, gameTime, transform);
+            if (_subMenuState == BattleSubMenuState.Item)
+            {
+                _itemMenu.Draw(spriteBatch, font, gameTime, transform);
+            }
+            else
+            {
+                _actionMenu.Draw(spriteBatch, font, gameTime, transform);
+            }
             _battleNarrator.Draw(spriteBatch, secondaryFont, gameTime);
         }
 
