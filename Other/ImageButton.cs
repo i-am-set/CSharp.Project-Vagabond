@@ -24,14 +24,13 @@ namespace ProjectVagabond.UI
 
         private bool _isHeldDown;
 
-        // Animation state for the squash effect
-        private float _squashAnimationTimer = 0f;
-        private const float SQUASH_ANIMATION_DURATION = 0.03f;
+        // Animation state
+        private enum AnimationState { Hidden, Idle, Appearing }
+        private AnimationState _animState = AnimationState.Idle;
+        private float _appearTimer = 0f;
+        private const float APPEAR_DURATION = 0.25f;
 
-        private const float SHAKE_AMOUNT = 1f;
-        private static readonly Random _random = new Random();
-
-        public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, BitmapFont? font = null, Color? debugColor = null)
+        public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null)
             : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, clickOnPress, font)
         {
             _spriteSheet = spriteSheet;
@@ -41,10 +40,32 @@ namespace ProjectVagabond.UI
             _disabledSourceRect = disabledSourceRect;
             HoverBorderColor = _global.ButtonHoverColor;
             DebugColor = debugColor;
+            _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
+        }
+
+        public void TriggerAppearAnimation()
+        {
+            if (_animState == AnimationState.Hidden)
+            {
+                _animState = AnimationState.Appearing;
+                _appearTimer = 0f;
+            }
+        }
+
+        public void HideForAnimation()
+        {
+            _animState = AnimationState.Hidden;
         }
 
         public override void Update(MouseState currentMouseState)
         {
+            if (_animState != AnimationState.Idle)
+            {
+                IsHovered = false;
+                _isPressed = false;
+                return;
+            }
+
             base.Update(currentMouseState);
             if (!IsEnabled)
             {
@@ -58,6 +79,32 @@ namespace ProjectVagabond.UI
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
+            if (_animState == AnimationState.Hidden) return;
+
+            // --- Animation Scaling ---
+            float verticalScale = 1.0f;
+            if (_animState == AnimationState.Appearing)
+            {
+                _appearTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                float progress = Math.Clamp(_appearTimer / APPEAR_DURATION, 0f, 1f);
+                verticalScale = Easing.EaseOutCubic(progress);
+                if (progress >= 1.0f)
+                {
+                    _animState = AnimationState.Idle;
+                }
+            }
+
+            if (verticalScale < 0.01f) return;
+
+            // --- Calculate Animated Bounds ---
+            int animatedHeight = (int)(Bounds.Height * verticalScale);
+            var animatedBounds = new Rectangle(
+                Bounds.X,
+                Bounds.Center.Y - animatedHeight / 2, // Expand from the center
+                Bounds.Width,
+                animatedHeight
+            );
+
             Rectangle? sourceRectToDraw = _defaultSourceRect;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
@@ -74,48 +121,18 @@ namespace ProjectVagabond.UI
                 sourceRectToDraw = _hoverSourceRect;
             }
 
-            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_isPressed && !ClickOnPress)
-            {
-                _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
-            }
-            else
-            {
-                _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
-            }
-
-            float swayOffsetX = 0f; // Sway has been removed
-
-            Vector2 scale = Vector2.One;
-            Vector2 shakeOffset = Vector2.Zero;
-            if (_squashAnimationTimer > 0)
-            {
-                if (_spriteSheet != null)
-                {
-                    float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
-                    float targetScaleY = 1.5f / Bounds.Height;
-                    scale.Y = MathHelper.Lerp(1.0f, targetScaleY, progress);
-                }
-                shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_AMOUNT);
-            }
-
-            var position = new Vector2(Bounds.Center.X + swayOffsetX, Bounds.Center.Y) + shakeOffset;
-
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
-                var origin = sourceRectToDraw.Value.Size.ToVector2() / 2f;
-                spriteBatch.DrawSnapped(_spriteSheet, position, sourceRectToDraw, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_spriteSheet, animatedBounds, sourceRectToDraw, Color.White);
             }
             else if (DebugColor.HasValue)
             {
-                var debugRect = new Rectangle((int)position.X - Bounds.Width / 2, (int)position.Y - Bounds.Height / 2, Bounds.Width, Bounds.Height);
-                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), debugRect, DebugColor.Value);
+                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), animatedBounds, DebugColor.Value);
             }
 
             if (isActivated && !_hoverSourceRect.HasValue)
             {
-                var rectWithOffset = new Rectangle(Bounds.X + (int)swayOffsetX, Bounds.Y, Bounds.Width, Bounds.Height);
-                DrawCornerBrackets(spriteBatch, ServiceLocator.Get<Texture2D>(), rectWithOffset, BorderThickness, HoverBorderColor);
+                DrawCornerBrackets(spriteBatch, ServiceLocator.Get<Texture2D>(), animatedBounds, BorderThickness, HoverBorderColor);
             }
         }
 

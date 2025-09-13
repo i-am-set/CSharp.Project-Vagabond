@@ -41,6 +41,10 @@ namespace ProjectVagabond.Battle.UI
         private float _animationDelayTimer = 0f;
         private const float SEQUENTIAL_ANIMATION_DELAY = 0.05f;
 
+        private Queue<ImageButton> _actionButtonsToAnimate = new Queue<ImageButton>();
+        private float _actionButtonAnimationDelayTimer = 0f;
+        private const float ACTION_BUTTON_SEQUENTIAL_ANIMATION_DELAY = 0.05f;
+
         public ActionMenu()
         {
             _global = ServiceLocator.Get<Global>();
@@ -66,9 +70,9 @@ namespace ProjectVagabond.Battle.UI
             var rects = spriteManager.ActionButtonSourceRects;
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
-            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[0], rects[1], rects[2], function: "Act", debugColor: new Color(100, 0, 0, 150)));
-            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[3], rects[4], rects[5], function: "Item", debugColor: new Color(0, 100, 0, 150)));
-            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[6], rects[7], rects[8], function: "Flee", debugColor: new Color(0, 0, 100, 150)) { IsEnabled = false });
+            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[0], rects[1], rects[2], function: "Act", startVisible: false, debugColor: new Color(100, 0, 0, 150)));
+            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[3], rects[4], rects[5], function: "Item", startVisible: false, debugColor: new Color(0, 100, 0, 150)));
+            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[6], rects[7], rects[8], function: "Flee", startVisible: false, debugColor: new Color(0, 0, 100, 150)) { IsEnabled = false });
 
             _actionButtons[0].OnClick += () => SetState(MenuState.Moves);
             _actionButtons[1].OnClick += () => OnItemMenuRequested?.Invoke();
@@ -120,6 +124,16 @@ namespace ProjectVagabond.Battle.UI
             if (newState == MenuState.Main)
             {
                 OnMainMenuOpened?.Invoke();
+                _actionButtonsToAnimate.Clear();
+                _actionButtonAnimationDelayTimer = 0f;
+                foreach (var button in _actionButtons)
+                {
+                    if (button is ImageButton imageButton)
+                    {
+                        imageButton.HideForAnimation();
+                        _actionButtonsToAnimate.Enqueue(imageButton);
+                    }
+                }
             }
             else if (newState == MenuState.Moves)
             {
@@ -209,6 +223,17 @@ namespace ProjectVagabond.Battle.UI
             InitializeButtons();
             if (!_isVisible) return;
 
+            if (_actionButtonsToAnimate.Any())
+            {
+                _actionButtonAnimationDelayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_actionButtonAnimationDelayTimer >= ACTION_BUTTON_SEQUENTIAL_ANIMATION_DELAY)
+                {
+                    _actionButtonAnimationDelayTimer = 0f;
+                    var buttonToAnimate = _actionButtonsToAnimate.Dequeue();
+                    buttonToAnimate.TriggerAppearAnimation();
+                }
+            }
+
             if (_buttonsToAnimate.Any())
             {
                 _animationDelayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -279,7 +304,7 @@ namespace ProjectVagabond.Battle.UI
 
                         int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
                         int gridStartX = (Global.VIRTUAL_WIDTH - totalGridWidth) / 2;
-                        int gridStartY = dividerY + 2;
+                        int gridStartY = dividerY - 4;
 
                         for (int i = 0; i < _moveButtons.Count; i++)
                         {
@@ -297,7 +322,7 @@ namespace ProjectVagabond.Battle.UI
                         }
 
                         int gridHeight = (moveButtonHeight * rows) + (rowSpacing * (rows - 1));
-                        int backButtonY = gridStartY + gridHeight + 1;
+                        int backButtonY = gridStartY + gridHeight + 7;
                         var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
                         int backWidth = (int)backSize.Width + 16;
                         _backButton.Bounds = new Rectangle(

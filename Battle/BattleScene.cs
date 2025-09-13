@@ -71,7 +71,7 @@ namespace ProjectVagabond.Scenes
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
 
         // Layout Constants
-        private const int DIVIDER_Y = 111;
+        private const int DIVIDER_Y = 105;
         private const int MAX_ENEMIES = 5;
         private const float PLAYER_INDICATOR_BOB_SPEED = 1.5f;
 
@@ -564,7 +564,7 @@ namespace ProjectVagabond.Scenes
             if (enemies.Any())
             {
                 const int enemyAreaPadding = 20;
-                const int enemyHudY = 86;
+                const int enemyHudY = 80;
                 int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                 int slotWidth = availableWidth / enemies.Count;
 
