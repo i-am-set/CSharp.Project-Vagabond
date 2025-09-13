@@ -44,6 +44,11 @@ namespace ProjectVagabond.Battle
         public bool MakesContact { get; set; }
 
         /// <summary>
+        /// Defines the targeting behavior of the move.
+        /// </summary>
+        public TargetType Target { get; set; }
+
+        /// <summary>
         /// The base accuracy of the move (1-100). A value of -1 represents a "True Hit" that never misses.
         /// </summary>
         public int Accuracy { get; set; }

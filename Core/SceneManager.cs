@@ -22,25 +22,25 @@ namespace ProjectVagabond
     public class SceneManager
     {
         private readonly Dictionary<GameSceneState, GameScene> _scenes = new Dictionary<GameSceneState, GameScene>();
-        private GameScene _currentScene;
+        private GameScene? _currentScene;
         private GameScene? _modalScene;
         private GameSceneState _nextSceneState;
 
-        private SceneOutroAnimator _outroAnimator;
-        private SceneIntroAnimator _introAnimator;
+        private SceneOutroAnimator? _outroAnimator;
+        private SceneIntroAnimator? _introAnimator;
         private bool _isTransitioning = false;
         private bool _isHoldingBlack = false;
         private float _holdTimer = 0f;
         private const float HOLD_DURATION = 0.1f;
 
         private bool _loadIsPending = false;
-        private List<LoadingTask> _pendingLoadingTasks;
+        private List<LoadingTask>? _pendingLoadingTasks;
         private Action? _onTransitionCompleteAction;
 
         /// <summary>
         /// The currently active scene.
         /// </summary>
-        public GameScene CurrentActiveScene => _currentScene;
+        public GameScene? CurrentActiveScene => _currentScene;
         public bool IsModalActive => _modalScene != null;
 
         /// <summary>
@@ -207,7 +207,7 @@ namespace ProjectVagabond
             // The underlying scene and any transitions are paused.
             if (IsModalActive)
             {
-                _modalScene.Update(gameTime);
+                _modalScene?.Update(gameTime);
                 return;
             }
 
@@ -293,8 +293,8 @@ namespace ProjectVagabond
 
             if (IsModalActive)
             {
-                _modalScene.DrawUnderlay(spriteBatch, font, gameTime);
-                _modalScene.Draw(spriteBatch, font, gameTime, transform);
+                _modalScene?.DrawUnderlay(spriteBatch, font, gameTime);
+                _modalScene?.Draw(spriteBatch, font, gameTime, transform);
             }
         }
 
@@ -308,7 +308,7 @@ namespace ProjectVagabond
 
             if (IsModalActive)
             {
-                _modalScene.DrawUnderlay(spriteBatch, font, gameTime);
+                _modalScene?.DrawUnderlay(spriteBatch, font, gameTime);
             }
         }
 
@@ -325,7 +325,7 @@ namespace ProjectVagabond
 
             if (IsModalActive)
             {
-                _modalScene.DrawOverlay(spriteBatch, font, gameTime);
+                _modalScene?.DrawOverlay(spriteBatch, font, gameTime);
             }
         }
 
@@ -335,7 +335,7 @@ namespace ProjectVagabond
 
             if (IsModalActive)
             {
-                _modalScene.DrawFullscreenUI(spriteBatch, font, gameTime, transform);
+                _modalScene?.DrawFullscreenUI(spriteBatch, font, gameTime, transform);
             }
         }
     }

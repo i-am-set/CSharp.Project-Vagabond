@@ -79,9 +79,9 @@ namespace ProjectVagabond
         public struct BattleActionExecuted
         {
             public BattleCombatant Actor { get; set; }
-            public BattleCombatant Target { get; set; }
             public MoveData ChosenMove { get; set; }
-            public DamageCalculator.DamageResult DamageResult { get; set; }
+            public List<BattleCombatant> Targets { get; set; }
+            public List<DamageCalculator.DamageResult> DamageResults { get; set; }
         }
 
         /// <summary>

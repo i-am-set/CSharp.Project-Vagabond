@@ -41,8 +41,9 @@ namespace ProjectVagabond.Battle
         /// <param name="attacker">The combatant performing the action.</param>
         /// <param name="target">The combatant receiving the action.</param>
         /// <param name="move">The move being used.</param>
+        /// <param name="multiTargetModifier">A damage modifier for moves that hit multiple targets.</param>
         /// <returns>A DamageResult struct containing the outcome of the calculation.</returns>
-        public static DamageResult CalculateDamage(BattleCombatant attacker, BattleCombatant target, MoveData move)
+        public static DamageResult CalculateDamage(BattleCombatant attacker, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f)
         {
             // Step 1: Handle non-damaging moves immediately.
             if (move.Power == 0)
@@ -71,10 +72,13 @@ namespace ProjectVagabond.Battle
             // Step 4: Multiplicative Modifier Application
             float finalDamage = baseDamage;
 
-            // Modifier 1 (Weather): Placeholder
+            // Modifier 1 (Multi-Target)
+            finalDamage *= multiTargetModifier;
+
+            // Modifier 2 (Weather): Placeholder
             // finalDamage *= GetWeatherMultiplier(move);
 
-            // Modifier 2 (Critical Hit)
+            // Modifier 3 (Critical Hit)
             bool isCritical = false;
             if (!isGrazed)
             {
@@ -86,7 +90,7 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // Modifier 3 (Attacker/Defender Stat Buffs)
+            // Modifier 4 (Attacker/Defender Stat Buffs)
             if (!isCritical)
             {
                 if (move.ImpactType == ImpactType.Physical && attacker.HasStatusEffect(StatusEffectType.StrengthUp))
@@ -101,13 +105,13 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // Modifier 4 (Elemental Effectiveness)
+            // Modifier 5 (Elemental Effectiveness)
             finalDamage *= GetElementalMultiplier(move, target);
 
-            // Modifier 5 (Random Variance)
+            // Modifier 6 (Random Variance)
             finalDamage *= (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
 
-            // Modifier 6 (Graze Application)
+            // Modifier 7 (Graze Application)
             if (isGrazed)
             {
                 finalDamage *= BattleConstants.GRAZE_MULTIPLIER;

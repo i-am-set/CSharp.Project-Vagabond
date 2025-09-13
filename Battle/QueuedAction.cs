@@ -1,4 +1,15 @@
-﻿namespace ProjectVagabond.Battle
+﻿#nullable enable
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using System;
+using System.Collections.Generic;
+
+namespace ProjectVagabond.Battle
 {
     /// <summary>
     /// Represents a single, chosen action waiting to be executed in the action queue.
@@ -9,17 +20,17 @@
         /// <summary>
         /// The combatant performing the action.
         /// </summary>
-        public BattleCombatant Actor { get; set; }
+        public BattleCombatant Actor { get; set; } = default!;
 
         /// <summary>
         /// The move that was selected.
         /// </summary>
-        public MoveData ChosenMove { get; set; }
+        public MoveData ChosenMove { get; set; } = default!;
 
         /// <summary>
-        /// The combatant being targeted by the move.
+        /// The combatant being targeted by the move. Can be null for non-targeted moves.
         /// </summary>
-        public BattleCombatant Target { get; set; }
+        public BattleCombatant? Target { get; set; }
 
         /// <summary>
         /// A copy of the move's priority, used for sorting the action queue.
@@ -32,3 +43,4 @@
         public int ActorAgility { get; set; }
     }
 }
+﻿

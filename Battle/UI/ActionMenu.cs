@@ -20,6 +20,7 @@ namespace ProjectVagabond.Battle.UI
 
         private bool _isVisible;
         private BattleCombatant _player;
+        private List<BattleCombatant> _allCombatants;
         private List<BattleCombatant> _allTargets;
         private List<Button> _actionButtons = new List<Button>();
         private List<MoveButton> _moveButtons = new List<MoveButton>();
@@ -113,6 +114,7 @@ namespace ProjectVagabond.Battle.UI
         {
             _isVisible = true;
             _player = player;
+            _allCombatants = allCombatants;
             _allTargets = allCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
             SetState(MenuState.Main);
         }
@@ -211,13 +213,41 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
-                if (_allTargets.Count == 1)
+                switch (move.Target)
                 {
-                    OnMoveSelected?.Invoke(_selectedMove, _allTargets[0]);
-                }
-                else
-                {
-                    SetState(MenuState.Targeting);
+                    case TargetType.Self:
+                        OnMoveSelected?.Invoke(move, _player);
+                        break;
+
+                    case TargetType.None:
+                    case TargetType.Every:
+                    case TargetType.EveryAll:
+                        OnMoveSelected?.Invoke(move, null);
+                        break;
+
+                    case TargetType.Single:
+                        var enemies = _allTargets.Where(c => !c.IsDefeated).ToList();
+                        if (enemies.Count == 1)
+                        {
+                            OnMoveSelected?.Invoke(move, enemies[0]);
+                        }
+                        else
+                        {
+                            SetState(MenuState.Targeting);
+                        }
+                        break;
+
+                    case TargetType.SingleAll:
+                        var allValidTargets = _allCombatants.Where(c => !c.IsDefeated).ToList();
+                        if (allValidTargets.Count == 1)
+                        {
+                            OnMoveSelected?.Invoke(move, allValidTargets[0]);
+                        }
+                        else
+                        {
+                            SetState(MenuState.Targeting);
+                        }
+                        break;
                 }
             };
             moveButton.OnRightClick += () => {
@@ -377,7 +407,7 @@ namespace ProjectVagabond.Battle.UI
 
                         // Draw the background sprite for the tooltip area
                         var spriteManager = ServiceLocator.Get<SpriteManager>();
-                        var tooltipBg = spriteManager.ActionMovesBackgroundSprite;
+                        var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
                         var tooltipBgRect = new Rectangle(gridStartX, gridStartY, totalGridWidth, gridHeight);
                         spriteBatch.DrawSnapped(tooltipBg, tooltipBgRect, Color.White);
 

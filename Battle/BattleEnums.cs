@@ -19,6 +19,19 @@
     }
 
     /// <summary>
+    /// Defines the targeting behavior of a move.
+    /// </summary>
+    public enum TargetType
+    {
+        Single,    // One enemy
+        Every,     // All enemies
+        SingleAll, // One combatant (enemy or self)
+        EveryAll,  // All combatants
+        Self,      // Only the user
+        None       // No target
+    }
+
+    /// <summary>
     /// Defines the specific types of status effects that can be applied to a combatant.
     /// </summary>
     public enum StatusEffectType

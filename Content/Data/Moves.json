@@ -8,6 +8,7 @@
     "MoveType": "Action",
     "ImpactType": "Physical",
     "MakesContact": true,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 1 ]
@@ -20,6 +21,7 @@
     "MoveType": "Action",
     "ImpactType": "Physical",
     "MakesContact": true,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 1 ]
@@ -32,6 +34,7 @@
     "MoveType": "Action",
     "ImpactType": "Physical",
     "MakesContact": true,
+    "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
     "OffensiveElementIDs": [ 1 ]
@@ -44,6 +47,7 @@
     "MoveType": "Action",
     "ImpactType": "Physical",
     "MakesContact": true,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 1,
     "OffensiveElementIDs": [ 1 ]
@@ -57,6 +61,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 2 ]
@@ -69,6 +74,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 2 ]
@@ -81,6 +87,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Every",
     "Accuracy": 85,
     "Priority": 0,
     "OffensiveElementIDs": [ 2 ]
@@ -93,6 +100,7 @@
     "MoveType": "Spell",
     "ImpactType": "Physical",
     "MakesContact": true,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 2 ]
@@ -106,6 +114,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Every",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 3 ]
@@ -118,6 +127,7 @@
     "MoveType": "Spell",
     "ImpactType": "Physical",
     "MakesContact": true,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 1,
     "OffensiveElementIDs": [ 3 ]
@@ -130,6 +140,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Every",
     "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 3 ]
@@ -143,6 +154,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 4 ]
@@ -155,6 +167,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Every",
     "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 4 ]
@@ -167,6 +180,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Every",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 4 ]
@@ -180,6 +194,7 @@
     "MoveType": "Spell",
     "ImpactType": "Physical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
     "OffensiveElementIDs": [ 5 ]
@@ -192,6 +207,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Every",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 5 ]
@@ -204,6 +220,7 @@
     "MoveType": "Spell",
     "ImpactType": "Physical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 5 ]
@@ -217,6 +234,7 @@
     "MoveType": "Action",
     "ImpactType": "Physical",
     "MakesContact": true,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ]
@@ -229,6 +247,7 @@
     "MoveType": "Action",
     "ImpactType": "Physical",
     "MakesContact": true,
+    "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ]
@@ -241,6 +260,7 @@
     "MoveType": "Spell",
     "ImpactType": "Physical",
     "MakesContact": true,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 6 ]
@@ -254,6 +274,7 @@
     "MoveType": "Action",
     "ImpactType": "Physical",
     "MakesContact": true,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 7 ]
@@ -266,6 +287,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 7 ]
@@ -279,6 +301,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 8 ]
@@ -291,6 +314,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Every",
     "Accuracy": 90,
     "Priority": 0,
     "OffensiveElementIDs": [ 8 ]
@@ -304,6 +328,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 9 ]
@@ -316,6 +341,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
     "OffensiveElementIDs": [ 9 ]
@@ -329,6 +355,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 10 ]
@@ -341,6 +368,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 10 ]
@@ -354,6 +382,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 11 ]
@@ -366,6 +395,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 11 ]
@@ -378,6 +408,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": -1,
     "Priority": 0,
     "OffensiveElementIDs": [ 11 ]
@@ -391,6 +422,7 @@
     "MoveType": "Spell",
     "ImpactType": "Physical",
     "MakesContact": true,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 1,
     "OffensiveElementIDs": [ 12 ]
@@ -403,6 +435,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 12 ]
@@ -415,6 +448,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Every",
     "Accuracy": 70,
     "Priority": 0,
     "OffensiveElementIDs": [ 12 ]
@@ -428,6 +462,7 @@
     "MoveType": "Spell",
     "ImpactType": "Physical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 13 ]
@@ -440,6 +475,7 @@
     "MoveType": "Spell",
     "ImpactType": "Physical",
     "MakesContact": false,
+    "Target": "Every",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 13 ]
@@ -452,6 +488,7 @@
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "MakesContact": false,
+    "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 13 ]
@@ -465,6 +502,7 @@
     "MoveType": "Action",
     "ImpactType": "Physical",
     "MakesContact": false,
+    "Target": "None",
     "Accuracy": -1,
     "Priority": 0,
     "OffensiveElementIDs": [ 1 ]

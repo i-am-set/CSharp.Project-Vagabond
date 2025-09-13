@@ -219,7 +219,10 @@ namespace ProjectVagabond.Battle
             {
                 EventBus.Publish(new GameEvents.BattleActionExecuted
                 {
-                    Actor = action.Actor
+                    Actor = action.Actor,
+                    ChosenMove = action.ChosenMove,
+                    Targets = new List<BattleCombatant>(),
+                    DamageResults = new List<DamageCalculator.DamageResult>()
                 });
                 action.Actor.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Stun);
                 CanAdvance = false;
@@ -233,21 +236,71 @@ namespace ProjectVagabond.Battle
                 action.Actor.DeckManager?.CastMove(action.ChosenMove);
             }
 
-            // Execute Action
-            var result = DamageCalculator.CalculateDamage(action.Actor, action.Target, action.ChosenMove);
-            action.Target.ApplyDamage(result.DamageAmount);
+            // Resolve targets based on move's TargetType
+            var targets = ResolveTargets(action);
+            var damageResults = new List<DamageCalculator.DamageResult>();
 
-            EventBus.Publish(new GameEvents.BattleActionExecuted
+            if (!targets.Any())
             {
-                Actor = action.Actor,
-                Target = action.Target,
-                ChosenMove = action.ChosenMove,
-                DamageResult = result
-            });
+                // Handle moves with TargetType.None
+                EventBus.Publish(new GameEvents.BattleActionExecuted
+                {
+                    Actor = action.Actor,
+                    ChosenMove = action.ChosenMove,
+                    Targets = targets,
+                    DamageResults = damageResults
+                });
+            }
+            else
+            {
+                float multiTargetModifier = (targets.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
+
+                foreach (var target in targets)
+                {
+                    var result = DamageCalculator.CalculateDamage(action.Actor, target, action.ChosenMove, multiTargetModifier);
+                    target.ApplyDamage(result.DamageAmount);
+                    damageResults.Add(result);
+                }
+
+                EventBus.Publish(new GameEvents.BattleActionExecuted
+                {
+                    Actor = action.Actor,
+                    ChosenMove = action.ChosenMove,
+                    Targets = targets,
+                    DamageResults = damageResults
+                });
+            }
 
             _currentPhase = BattlePhase.CheckForDefeat;
             CanAdvance = false; // Pause the manager until the scene says it's okay.
         }
+
+        private List<BattleCombatant> ResolveTargets(QueuedAction action)
+        {
+            var move = action.ChosenMove;
+            var actor = action.Actor;
+            var specifiedTarget = action.Target;
+            var activeEnemies = _enemyCombatants.Where(c => !c.IsDefeated).ToList();
+            var activePlayers = _playerCombatants.Where(c => !c.IsDefeated).ToList();
+
+            switch (move.Target)
+            {
+                case TargetType.Single:
+                    return specifiedTarget != null && !specifiedTarget.IsDefeated ? new List<BattleCombatant> { specifiedTarget } : new List<BattleCombatant>();
+                case TargetType.Every:
+                    return actor.IsPlayerControlled ? activeEnemies : activePlayers;
+                case TargetType.SingleAll:
+                    return specifiedTarget != null && !specifiedTarget.IsDefeated ? new List<BattleCombatant> { specifiedTarget } : new List<BattleCombatant>();
+                case TargetType.EveryAll:
+                    return _allCombatants.Where(c => !c.IsDefeated).ToList();
+                case TargetType.Self:
+                    return new List<BattleCombatant> { actor };
+                case TargetType.None:
+                default:
+                    return new List<BattleCombatant>();
+            }
+        }
+
 
         /// <summary>
         /// Processes any defeated combatants, allowing for animations and narration to play out.

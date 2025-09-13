@@ -257,34 +257,48 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // Handle the "Stall" move as a special narration case.
-            if (e.ChosenMove.MoveID == "Stall")
+            if (e.ChosenMove.Target == TargetType.None || !e.Targets.Any())
             {
-                _narrationQueue.Enqueue(() => _battleNarrator.Show($"{e.Actor.Name} is stalling for time!", secondaryFont));
-                // Stall does no damage and has no effects, so we can end the narration here.
+                _narrationQueue.Enqueue(() => _battleNarrator.Show($"{e.Actor.Name} uses {e.ChosenMove.MoveName}!", secondaryFont));
                 return;
             }
 
-            string attackNarration = $"{e.Actor.Name} uses {e.ChosenMove.MoveName} on {e.Target.Name}.";
+            // Single narration for the move itself
+            string attackNarration = $"{e.Actor.Name} uses {e.ChosenMove.MoveName}!";
             _narrationQueue.Enqueue(() => _battleNarrator.Show(attackNarration, secondaryFont));
 
-            if (e.DamageResult.WasCritical)
+            // A single lambda to start all animations at once
+            _narrationQueue.Enqueue(() =>
             {
-                _narrationQueue.Enqueue(() => _battleNarrator.Show("A Critical Hit!", secondaryFont));
-            }
-
-            if (e.DamageResult.DamageAmount > 0)
-            {
-                if (e.Target.IsPlayerControlled)
+                for (int i = 0; i < e.Targets.Count; i++)
                 {
-                    _narrationQueue.Enqueue(() => _core.TriggerFullscreenFlash(_global.Palette_Red, 0.15f));
-                    _narrationQueue.Enqueue(() => _core.TriggerFullscreenGlitch(duration: 0.2f));
-                    _narrationQueue.Enqueue(() => _hapticsManager.TriggerShake(magnitude: 2.0f, duration: 0.3f));
+                    var target = e.Targets[i];
+                    var result = e.DamageResults[i];
+
+                    if (result.DamageAmount > 0)
+                    {
+                        if (target.IsPlayerControlled)
+                        {
+                            _core.TriggerFullscreenFlash(_global.Palette_Red, 0.15f);
+                            _core.TriggerFullscreenGlitch(duration: 0.2f);
+                            _hapticsManager.TriggerShake(magnitude: 2.0f, duration: 0.3f);
+                        }
+                        StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
+                        StartHitAnimation(target.CombatantID);
+                    }
                 }
-                _narrationQueue.Enqueue(() => {
-                    StartHealthAnimation(e.Target.CombatantID, (int)e.Target.VisualHP, e.Target.Stats.CurrentHP);
-                    StartHitAnimation(e.Target.CombatantID);
-                });
+            });
+
+            // Queue up individual narrations for results after the animations have started
+            for (int i = 0; i < e.Targets.Count; i++)
+            {
+                var target = e.Targets[i];
+                var result = e.DamageResults[i];
+
+                if (result.WasCritical)
+                {
+                    _narrationQueue.Enqueue(() => _battleNarrator.Show($"A critical hit on {target.Name}!", secondaryFont));
+                }
             }
         }
 
