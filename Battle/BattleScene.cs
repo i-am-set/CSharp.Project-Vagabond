@@ -66,9 +66,17 @@ namespace ProjectVagabond.Scenes
             public float Timer;
             public const float Duration = 0.5f;
         }
+        private class HitAnimationState
+        {
+            public string CombatantID;
+            public float Timer;
+            public const float Duration = 0.5f;
+        }
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
+        private readonly List<HitAnimationState> _activeHitAnimations = new List<HitAnimationState>();
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
+        private readonly Random _random = new Random();
 
         // Layout Constants
         private const int DIVIDER_Y = 105;
@@ -109,6 +117,7 @@ namespace ProjectVagabond.Scenes
             _enemyEntityIds.Clear();
             _activeHealthAnimations.Clear();
             _activeAlphaAnimations.Clear();
+            _activeHitAnimations.Clear();
             _narrationQueue.Clear();
 
             _isBattleOver = false;
@@ -252,7 +261,10 @@ namespace ProjectVagabond.Scenes
                     _narrationQueue.Enqueue(() => _core.TriggerFullscreenGlitch(duration: 0.2f));
                     _narrationQueue.Enqueue(() => _hapticsManager.TriggerShake(magnitude: 2.0f, duration: 0.3f));
                 }
-                _narrationQueue.Enqueue(() => StartHealthAnimation(e.Target.CombatantID, (int)e.Target.VisualHP, e.Target.Stats.CurrentHP));
+                _narrationQueue.Enqueue(() => {
+                    StartHealthAnimation(e.Target.CombatantID, (int)e.Target.VisualHP, e.Target.Stats.CurrentHP);
+                    StartHitAnimation(e.Target.CombatantID);
+                });
             }
         }
 
@@ -281,6 +293,16 @@ namespace ProjectVagabond.Scenes
                 CombatantID = combatantId,
                 StartAlpha = alphaBefore,
                 TargetAlpha = alphaAfter,
+                Timer = 0f
+            });
+        }
+
+        private void StartHitAnimation(string combatantId)
+        {
+            _activeHitAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeHitAnimations.Add(new HitAnimationState
+            {
+                CombatantID = combatantId,
                 Timer = 0f
             });
         }
@@ -328,6 +350,7 @@ namespace ProjectVagabond.Scenes
             _battleNarrator.Update(gameTime);
             UpdateHealthAnimations(gameTime);
             UpdateAlphaAnimations(gameTime);
+            UpdateHitAnimations(gameTime);
 
             // --- Animation Skip Logic ---
             bool skipRequested = (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed) ||
@@ -542,6 +565,19 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        private void UpdateHitAnimations(GameTime gameTime)
+        {
+            for (int i = _activeHitAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeHitAnimations[i];
+                anim.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (anim.Timer >= HitAnimationState.Duration)
+                {
+                    _activeHitAnimations.RemoveAt(i);
+                }
+            }
+        }
+
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (_battleManager == null)
@@ -608,7 +644,8 @@ namespace ProjectVagabond.Scenes
                 Vector2 hpTextSize = secondaryFont.MeasureString(fullHpText);
 
                 float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
-                DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY + yOffset));
+                var playerHitAnim = _activeHitAnimations.FirstOrDefault(a => a.CombatantID == player.CombatantID);
+                DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY + yOffset), 1.0f, playerHitAnim);
             }
 
             // --- Draw UI Title ---
@@ -778,30 +815,48 @@ namespace ProjectVagabond.Scenes
             string fullHpText = hpLabel + currentHp + separator + maxHp;
             Vector2 hpSize = statsFont.MeasureString(fullHpText);
             Vector2 hpPos = new Vector2(centerPosition.X - hpSize.X / 2, centerPosition.Y + 2);
-            DrawHpLine(spriteBatch, statsFont, combatant, hpPos, combatant.VisualAlpha);
+            var hitAnim = _activeHitAnimations.FirstOrDefault(a => a.CombatantID == combatant.CombatantID);
+            DrawHpLine(spriteBatch, statsFont, combatant, hpPos, combatant.VisualAlpha, hitAnim);
         }
 
-        private void DrawHpLine(SpriteBatch spriteBatch, BitmapFont statsFont, BattleCombatant combatant, Vector2 position, float alpha = 1.0f)
+        private void DrawHpLine(SpriteBatch spriteBatch, BitmapFont statsFont, BattleCombatant combatant, Vector2 position, float alpha = 1.0f, HitAnimationState hitAnim = null)
         {
             var global = ServiceLocator.Get<Global>();
             Color labelColor = global.Palette_LightGray * alpha;
             Color numberColor = Color.White * alpha;
+            Vector2 drawPosition = position;
+
+            if (hitAnim != null)
+            {
+                float progress = hitAnim.Timer / HitAnimationState.Duration;
+                float easeOutProgress = Easing.EaseOutCubic(progress);
+
+                // Shake effect
+                float shakeMagnitude = 4.0f * (1.0f - easeOutProgress);
+                drawPosition.X += (float)(_random.NextDouble() * 2 - 1) * shakeMagnitude;
+                drawPosition.Y += (float)(_random.NextDouble() * 2 - 1) * shakeMagnitude;
+
+                // Color flash effect
+                Color flashColor = global.Palette_Red;
+                labelColor = Color.Lerp(flashColor, global.Palette_LightGray, easeOutProgress) * alpha;
+                numberColor = Color.Lerp(flashColor, Color.White, easeOutProgress) * alpha;
+            }
 
             string hpLabel = "HP: ";
             string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
             string separator = "/";
             string maxHp = combatant.Stats.MaxHP.ToString();
 
-            spriteBatch.DrawStringSnapped(statsFont, hpLabel, position, labelColor);
-            float currentX = position.X + statsFont.MeasureString(hpLabel).Width;
+            spriteBatch.DrawStringSnapped(statsFont, hpLabel, drawPosition, labelColor);
+            float currentX = drawPosition.X + statsFont.MeasureString(hpLabel).Width;
 
-            spriteBatch.DrawStringSnapped(statsFont, currentHp, new Vector2(currentX, position.Y), numberColor);
+            spriteBatch.DrawStringSnapped(statsFont, currentHp, new Vector2(currentX, drawPosition.Y), numberColor);
             currentX += statsFont.MeasureString(currentHp).Width;
 
-            spriteBatch.DrawStringSnapped(statsFont, separator, new Vector2(currentX, position.Y), labelColor);
+            spriteBatch.DrawStringSnapped(statsFont, separator, new Vector2(currentX, drawPosition.Y), labelColor);
             currentX += statsFont.MeasureString(separator).Width;
 
-            spriteBatch.DrawStringSnapped(statsFont, maxHp, new Vector2(currentX, position.Y), numberColor);
+            spriteBatch.DrawStringSnapped(statsFont, maxHp, new Vector2(currentX, drawPosition.Y), numberColor);
         }
 
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);

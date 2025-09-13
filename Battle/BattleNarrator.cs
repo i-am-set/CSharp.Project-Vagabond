@@ -36,7 +36,7 @@ namespace ProjectVagabond.Battle.UI
         private KeyboardState _previousKeyboardState;
 
         // Tuning constants
-        private const float TYPEWRITER_SPEED = 0.04f; // Seconds per character
+        private const float TYPEWRITER_SPEED = 0.02f; // Seconds per character
         private const float AUTO_ADVANCE_SECONDS = 5.0f; // Seconds to wait for input
 
         public bool IsBusy => _messageQueue.Count > 0 || !string.IsNullOrEmpty(_currentSegment);
