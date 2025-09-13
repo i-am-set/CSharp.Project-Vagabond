@@ -143,7 +143,7 @@ namespace ProjectVagabond.Battle.UI
             const int dividerY = 114;
             const int menuVerticalOffset = 4;
             const int itemListHeight = 45;
-            const int bottomBarTopPadding = 3;
+            const int bottomBarTopPadding = 5;
             const int bottomBarHeight = 13;
             const int itemWidth = 145;
             const int itemHeight = 9;

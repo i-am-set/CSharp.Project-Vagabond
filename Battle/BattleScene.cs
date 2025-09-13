@@ -73,7 +73,7 @@ namespace ProjectVagabond.Scenes
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
 
         // Layout Constants
-        private const int DIVIDER_Y = 114;
+        private const int DIVIDER_Y = 111;
         private const int MAX_ENEMIES = 5;
         private const float PLAYER_INDICATOR_BOB_SPEED = 1.5f;
 

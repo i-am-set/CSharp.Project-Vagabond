@@ -255,7 +255,7 @@ namespace ProjectVagabond.Battle.UI
                         int buttonWidth = (availableWidth - (buttonSpacing * (_actionButtons.Count - 1))) / _actionButtons.Count;
                         int buttonHeight = availableHeight;
 
-                        int startY = dividerY - 5;
+                        int startY = dividerY - 9;
                         int startX = horizontalPadding;
 
                         int currentX = startX;
