@@ -64,13 +64,13 @@ namespace ProjectVagabond.Scenes
             public float StartAlpha;
             public float TargetAlpha;
             public float Timer;
-            public const float Duration = 0.5f;
+            public const float Duration = 0.167f;
         }
         private class HitAnimationState
         {
             public string CombatantID;
             public float Timer;
-            public const float Duration = 0.5f;
+            public const float Duration = 1.5f;
         }
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();

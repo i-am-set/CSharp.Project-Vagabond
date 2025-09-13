@@ -23,6 +23,22 @@ namespace ProjectVagabond.Battle.UI
         private float _appearTimer = 0f;
         private const float APPEAR_DURATION = 0.25f; // Duration of the appear animation
 
+        // Scrolling Text State
+        private bool _isScrollingInitialized = false;
+        private float _scrollPosition = 0f;
+        private float _scrollWaitTimer = 0f;
+        private float _maxScrollToShowEnd = 0f;
+        private enum ScrollState { PausedAtStart, ScrollingToEnd, PausedAtEnd }
+        private ScrollState _scrollState = ScrollState.PausedAtStart;
+
+        // Scrolling Tuning
+        private const float SCROLL_SPEED = 25f; // pixels per second
+        private const float SCROLL_PAUSE_DURATION = 1.5f; // seconds
+        private const int EXTRA_SCROLL_SPACES = 1; // Number of extra space widths to scroll past the end
+
+        private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
+
+
         public MoveButton(MoveData move, BitmapFont font, Texture2D backgroundTexture, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
@@ -40,6 +56,44 @@ namespace ProjectVagabond.Battle.UI
                 _appearTimer = 0f;
             }
         }
+
+        private void UpdateScrolling(GameTime gameTime)
+        {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            switch (_scrollState)
+            {
+                case ScrollState.PausedAtStart:
+                    _scrollWaitTimer -= dt;
+                    if (_scrollWaitTimer <= 0)
+                    {
+                        _scrollState = ScrollState.ScrollingToEnd;
+                    }
+                    break;
+
+                case ScrollState.ScrollingToEnd:
+                    _scrollPosition += SCROLL_SPEED * dt;
+                    if (_scrollPosition >= _maxScrollToShowEnd)
+                    {
+                        _scrollPosition = _maxScrollToShowEnd;
+                        _scrollState = ScrollState.PausedAtEnd;
+                        _scrollWaitTimer = SCROLL_PAUSE_DURATION;
+                    }
+                    break;
+
+                case ScrollState.PausedAtEnd:
+                    _scrollWaitTimer -= dt;
+                    if (_scrollWaitTimer <= 0)
+                    {
+                        // Snap back to the start and pause again
+                        _scrollPosition = 0;
+                        _scrollState = ScrollState.PausedAtStart;
+                        _scrollWaitTimer = SCROLL_PAUSE_DURATION;
+                    }
+                    break;
+            }
+        }
+
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
@@ -99,18 +153,80 @@ namespace ProjectVagabond.Battle.UI
                 );
                 spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink);
 
-                // --- Draw Text ---
+                // --- Prepare for text drawing ---
                 var textColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
                 if (!IsEnabled)
                 {
                     textColor = _global.ButtonDisableColor;
                 }
+                var statsColor = isActivated ? _global.ButtonHoverColor * 0.9f : _global.Palette_White;
+                if (!IsEnabled)
+                {
+                    statsColor = _global.ButtonDisableColor;
+                }
 
-                var textPosition = new Vector2(
-                    iconRect.Right + iconPadding,
-                    animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2
-                );
-                spriteBatch.DrawStringSnapped(_moveFont, this.Text, textPosition, textColor);
+                // --- Calculate text and stats layout ---
+                string powerText = Move.Power > 0 ? Move.Power.ToString() : "---";
+                string accuracyText = Move.Accuracy >= 0 ? $"{Move.Accuracy}%" : "---";
+                var powerTextSize = _moveFont.MeasureString(powerText);
+                var accuracyTextSize = _moveFont.MeasureString(accuracyText);
+                var maxAccuracyTextSize = _moveFont.MeasureString("100%");
+                const int rightPadding = 6;
+                const int statPadding = 2;
+                const int verticalContentPadding = 3;
+                float contentTopY = animatedBounds.Y + verticalContentPadding;
+                float contentBottomY = animatedBounds.Bottom - verticalContentPadding;
+                var accuracyPosition = new Vector2(animatedBounds.Right - rightPadding - accuracyTextSize.Width, contentTopY);
+                float powerTextRightEdge = animatedBounds.Right - rightPadding - maxAccuracyTextSize.Width - statPadding;
+                var powerPosition = new Vector2(powerTextRightEdge - powerTextSize.Width, contentBottomY - powerTextSize.Height - 1);
+
+                // --- Calculate available space for move name ---
+                float textStartX = iconRect.Right + iconPadding;
+                const int textRightMargin = 4;
+                float textAvailableWidth = powerTextRightEdge - powerTextSize.Width - textStartX - textRightMargin;
+                var moveNameTextSize = _moveFont.MeasureString(this.Text);
+                bool needsScrolling = moveNameTextSize.Width > textAvailableWidth;
+
+                // --- Draw Move Name (static or scrolling) ---
+                if (needsScrolling)
+                {
+                    if (!_isScrollingInitialized)
+                    {
+                        _isScrollingInitialized = true;
+                        float spaceWidth = _moveFont.MeasureString(" ").Width;
+                        _maxScrollToShowEnd = moveNameTextSize.Width - textAvailableWidth + (spaceWidth * EXTRA_SCROLL_SPACES);
+                        _scrollWaitTimer = SCROLL_PAUSE_DURATION;
+                        _scrollState = ScrollState.PausedAtStart;
+                        _scrollPosition = 0;
+                    }
+
+                    UpdateScrolling(gameTime);
+
+                    var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
+                    var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
+                    spriteBatch.End();
+
+                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, _clipRasterizerState, null, transform);
+                    var clipRect = new Rectangle((int)textStartX, animatedBounds.Y, (int)textAvailableWidth, animatedBounds.Height);
+                    spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
+
+                    var scrollingTextPosition = new Vector2(textStartX - _scrollPosition, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2);
+                    spriteBatch.DrawStringSnapped(_moveFont, this.Text, scrollingTextPosition, textColor);
+
+                    spriteBatch.End();
+                    spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
+                    spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, originalRasterizerState, null, transform);
+                }
+                else
+                {
+                    _isScrollingInitialized = false;
+                    var textPosition = new Vector2(textStartX, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2);
+                    spriteBatch.DrawStringSnapped(_moveFont, this.Text, textPosition, textColor);
+                }
+
+                // --- Draw Power & Accuracy ---
+                spriteBatch.DrawStringSnapped(_moveFont, accuracyText, accuracyPosition, statsColor);
+                spriteBatch.DrawStringSnapped(_moveFont, powerText, powerPosition, statsColor);
             }
         }
     }
