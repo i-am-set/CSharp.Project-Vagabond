@@ -38,8 +38,6 @@ namespace ProjectVagabond.Scenes
         private bool _isBattleOver;
         private float _endOfBattleTimer;
         private const float END_OF_BATTLE_DELAY = 2.0f; // Seconds to wait before exiting
-        private float _actionSelectionInputBlockTimer = 0f;
-        private const float ACTION_SELECTION_INPUT_DELAY = 0.5f;
 
         // UI State
         private enum BattleUIState { Default, Targeting }
@@ -323,11 +321,6 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            if (_actionSelectionInputBlockTimer > 0f)
-            {
-                _actionSelectionInputBlockTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-            }
-
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
@@ -361,7 +354,7 @@ namespace ProjectVagabond.Scenes
                 _uiState = BattleUIState.Default;
             }
 
-            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection && _actionSelectionInputBlockTimer <= 0f)
+            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
             {
                 switch (_subMenuState)
                 {
@@ -443,7 +436,6 @@ namespace ProjectVagabond.Scenes
                     {
                         _actionMenu.Show(player, _battleManager.AllCombatants.ToList());
                     }
-                    _actionSelectionInputBlockTimer = ACTION_SELECTION_INPUT_DELAY;
                 }
                 else
                 {
