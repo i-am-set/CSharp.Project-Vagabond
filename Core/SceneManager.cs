@@ -21,6 +21,7 @@ namespace ProjectVagabond
     {
         private readonly Dictionary<GameSceneState, GameScene> _scenes = new Dictionary<GameSceneState, GameScene>();
         private GameScene _currentScene;
+        private GameScene? _modalScene;
         private GameSceneState _nextSceneState;
 
         private SceneOutroAnimator _outroAnimator;
@@ -38,6 +39,7 @@ namespace ProjectVagabond
         /// The currently active scene.
         /// </summary>
         public GameScene CurrentActiveScene => _currentScene;
+        public bool IsModalActive => _modalScene != null;
 
         /// <summary>
         /// True when the manager is transitioning between scenes and a loading operation is active.
@@ -77,6 +79,22 @@ namespace ProjectVagabond
             return scene;
         }
 
+        public void ShowModal(GameSceneState state)
+        {
+            if (IsModalActive || !_scenes.TryGetValue(state, out var newModal)) return;
+
+            _modalScene = newModal;
+            _modalScene.LastUsedInputForNav = _currentScene?.LastUsedInputForNav ?? InputDevice.Mouse;
+            _modalScene.Enter();
+        }
+
+        public void HideModal()
+        {
+            if (!IsModalActive) return;
+            _modalScene?.Exit();
+            _modalScene = null;
+        }
+
         /// <summary>
         /// Changes the currently active scene via an outro/intro animation sequence.
         /// </summary>
@@ -96,6 +114,7 @@ namespace ProjectVagabond
         public void ChangeScene(GameSceneState state, List<LoadingTask> loadingTasks, Action onComplete)
         {
             if (_isTransitioning) return;
+            HideModal(); // Hide any active modal before changing scenes.
 
             _isTransitioning = true;
             _nextSceneState = state;
@@ -182,6 +201,14 @@ namespace ProjectVagabond
         {
             UIInputManager.ResetFrameState();
 
+            // If a modal is active, it gets exclusive update priority.
+            // The underlying scene and any transitions are paused.
+            if (IsModalActive)
+            {
+                _modalScene.Update(gameTime);
+                return;
+            }
+
             // Phase 1: Outro Animation. This is the highest priority.
             if (_outroAnimator != null)
             {
@@ -261,6 +288,12 @@ namespace ProjectVagabond
 
                 _currentScene?.Draw(spriteBatch, font, gameTime, finalTransform);
             }
+
+            if (IsModalActive)
+            {
+                _modalScene.DrawUnderlay(spriteBatch, font, gameTime);
+                _modalScene.Draw(spriteBatch, font, gameTime, transform);
+            }
         }
 
         public void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -269,6 +302,11 @@ namespace ProjectVagabond
             if (_currentScene != null && _currentScene.GetType() != typeof(TransitionScene))
             {
                 _currentScene?.DrawUnderlay(spriteBatch, font, gameTime);
+            }
+
+            if (IsModalActive)
+            {
+                _modalScene.DrawUnderlay(spriteBatch, font, gameTime);
             }
         }
 
@@ -281,6 +319,21 @@ namespace ProjectVagabond
             if (ServiceLocator.Get<LoadingScreen>().IsActive)
             {
                 ServiceLocator.Get<LoadingScreen>().Draw(spriteBatch, font, ServiceLocator.Get<GraphicsDevice>().PresentationParameters.Bounds);
+            }
+
+            if (IsModalActive)
+            {
+                _modalScene.DrawOverlay(spriteBatch, font, gameTime);
+            }
+        }
+
+        public void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            _currentScene?.DrawFullscreenUI(spriteBatch, font, gameTime, transform);
+
+            if (IsModalActive)
+            {
+                _modalScene.DrawFullscreenUI(spriteBatch, font, gameTime, transform);
             }
         }
     }

@@ -225,10 +225,7 @@ namespace ProjectVagabond.Scenes
 
         private void OpenSettings()
         {
-            var settingsScene = _sceneManager.GetScene(GameSceneState.Settings) as SettingsScene;
-            if (settingsScene != null) settingsScene.ReturnScene = GameSceneState.Battle;
-            _sceneManager.LastInputDevice = InputDevice.Mouse;
-            _sceneManager.ChangeScene(GameSceneState.Settings);
+            _sceneManager.ShowModal(GameSceneState.Settings);
         }
 
         private void OnItemMenuRequested()

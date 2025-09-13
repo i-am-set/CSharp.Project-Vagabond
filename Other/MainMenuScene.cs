@@ -113,7 +113,7 @@ namespace ProjectVagabond.Scenes
                 font: secondaryFont
             )
             { TextRenderOffset = new Vector2(0, -1) };
-            settingsButton.OnClick += () => _sceneManager.ChangeScene(GameSceneState.Settings);
+            settingsButton.OnClick += () => _sceneManager.ShowModal(GameSceneState.Settings);
             _buttons.Add(settingsButton);
             currentY += settingsHeight + buttonYSpacing;
 

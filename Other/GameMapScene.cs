@@ -92,10 +92,7 @@ namespace ProjectVagabond.Scenes
 
         private void OpenSettings()
         {
-            var settingsScene = _sceneManager.GetScene(GameSceneState.Settings) as SettingsScene;
-            if (settingsScene != null) settingsScene.ReturnScene = GameSceneState.TerminalMap; // This should now be GameMapScene
-            _sceneManager.LastInputDevice = InputDevice.Mouse;
-            _sceneManager.ChangeScene(GameSceneState.Settings);
+            _sceneManager.ShowModal(GameSceneState.Settings);
         }
 
         public override void Update(GameTime gameTime)

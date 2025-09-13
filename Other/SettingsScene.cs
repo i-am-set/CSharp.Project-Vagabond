@@ -44,8 +44,6 @@ namespace ProjectVagabond.Scenes
 
         private bool _isApplyingSettings = false;
 
-        public GameSceneState ReturnScene { get; set; } = GameSceneState.MainMenu;
-
         public SettingsScene()
         {
             _settings = ServiceLocator.Get<GameSettings>();
@@ -358,11 +356,11 @@ namespace ProjectVagabond.Scenes
         {
             if (IsDirty())
             {
-                _confirmationDialog.Show("You have unsaved changes.", new List<Tuple<string, Action>> { Tuple.Create("APPLY", new Action(() => { ApplySettings(); _sceneManager.ChangeScene(ReturnScene); })), Tuple.Create("DISCARD", new Action(() => { RevertChanges(); _sceneManager.ChangeScene(ReturnScene); })), Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide())) });
+                _confirmationDialog.Show("You have unsaved changes.", new List<Tuple<string, Action>> { Tuple.Create("APPLY", new Action(() => { ApplySettings(); _sceneManager.HideModal(); })), Tuple.Create("DISCARD", new Action(() => { RevertChanges(); _sceneManager.HideModal(); })), Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide())) });
             }
             else
             {
-                _sceneManager.ChangeScene(ReturnScene);
+                _sceneManager.HideModal();
             }
         }
 
@@ -563,10 +561,10 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            if (_confirmationDialog.IsActive || _revertDialog.IsActive)
-            {
-                _confirmationDialog.DrawOverlay(spriteBatch);
-            }
+            var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), screenBounds, _global.GameBg);
+            spriteBatch.End();
         }
 
         private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
