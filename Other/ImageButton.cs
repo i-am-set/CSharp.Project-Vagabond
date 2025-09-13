@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 
@@ -10,12 +11,6 @@ namespace ProjectVagabond.UI
 {
     public class ImageButton : Button
     {
-        public Color HoverBorderColor { get; set; }
-        public int BorderThickness { get; set; } = 1;
-        public float CornerLengthRatio { get; set; } = 0.25f;
-        public int MinCornerArmLength { get; set; } = 3;
-        public int MaxCornerArmLength { get; set; } = 20;
-
         private readonly Texture2D? _spriteSheet;
         private readonly Rectangle? _defaultSourceRect;
         private readonly Rectangle? _hoverSourceRect;
@@ -30,15 +25,22 @@ namespace ProjectVagabond.UI
         private float _appearTimer = 0f;
         private const float APPEAR_DURATION = 0.25f;
 
+        // Sway animation state
+        private float _swayTimer = 0f;
+        private bool _wasHoveredLastFrame = false;
+        private const float SWAY_SPEED = 2.5f;
+        private const float SWAY_AMPLITUDE = 1.0f;
+
+        public float DefaultOpacity { get; set; } = 0.5f;
+
         public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null)
             : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, clickOnPress, font)
         {
             _spriteSheet = spriteSheet;
-            _defaultSourceRect = defaultSourceRect;
+            _defaultSourceRect = defaultSourceRect ?? spriteSheet?.Bounds; // If no default is given, use the whole sheet.
             _hoverSourceRect = hoverSourceRect;
             _clickedSourceRect = clickedSourceRect;
             _disabledSourceRect = disabledSourceRect;
-            HoverBorderColor = _global.ButtonHoverColor;
             DebugColor = debugColor;
             _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
         }
@@ -67,6 +69,14 @@ namespace ProjectVagabond.UI
             }
 
             base.Update(currentMouseState);
+
+            // Reset sway timer when hover begins
+            if (IsHovered && !_wasHoveredLastFrame)
+            {
+                _swayTimer = 0f;
+            }
+            _wasHoveredLastFrame = IsHovered;
+
             if (!IsEnabled)
             {
                 _isHeldDown = false;
@@ -77,9 +87,29 @@ namespace ProjectVagabond.UI
             }
         }
 
+        public override void ResetAnimationState()
+        {
+            base.ResetAnimationState();
+            _swayTimer = 0f;
+            _wasHoveredLastFrame = false;
+        }
+
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
             if (_animState == AnimationState.Hidden) return;
+
+            bool isActivated = IsEnabled && (IsHovered || forceHover);
+
+            // --- Sway Animation ---
+            float swayOffset = 0f;
+            if (isActivated)
+            {
+                _swayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                // Round the result of the sine wave to snap the sway to the virtual pixel grid.
+                swayOffset = MathF.Round(MathF.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMPLITUDE);
+            }
+            float totalHorizontalOffset = swayOffset;
+
 
             // --- Animation Scaling ---
             float verticalScale = 1.0f;
@@ -98,15 +128,22 @@ namespace ProjectVagabond.UI
 
             // --- Calculate Animated Bounds ---
             int animatedHeight = (int)(Bounds.Height * verticalScale);
+
+            // If the button uses screen coordinates, we must scale the virtual hop offset
+            // to match the screen's pixel grid.
+            if (UseScreenCoordinates)
+            {
+                totalHorizontalOffset *= ServiceLocator.Get<Core>().FinalScale;
+            }
+
             var animatedBounds = new Rectangle(
-                Bounds.X,
+                Bounds.X + (int)MathF.Round(totalHorizontalOffset), // Apply the potentially scaled offset
                 Bounds.Center.Y - animatedHeight / 2, // Expand from the center
                 Bounds.Width,
                 animatedHeight
             );
 
             Rectangle? sourceRectToDraw = _defaultSourceRect;
-            bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             if (!IsEnabled && _disabledSourceRect.HasValue)
             {
@@ -121,38 +158,20 @@ namespace ProjectVagabond.UI
                 sourceRectToDraw = _hoverSourceRect;
             }
 
+            Color drawColor = Color.White * DefaultOpacity;
+            if (isActivated)
+            {
+                drawColor = Color.White;
+            }
+
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
-                spriteBatch.DrawSnapped(_spriteSheet, animatedBounds, sourceRectToDraw, Color.White);
+                spriteBatch.DrawSnapped(_spriteSheet, animatedBounds, sourceRectToDraw, drawColor);
             }
             else if (DebugColor.HasValue)
             {
                 spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), animatedBounds, DebugColor.Value);
             }
-
-            if (isActivated && !_hoverSourceRect.HasValue)
-            {
-                DrawCornerBrackets(spriteBatch, ServiceLocator.Get<Texture2D>(), animatedBounds, BorderThickness, HoverBorderColor);
-            }
-        }
-
-        private void DrawCornerBrackets(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
-        {
-            int shorterSide = Math.Min(rect.Width, rect.Height);
-            int armLength = (int)(shorterSide * CornerLengthRatio);
-            armLength = Math.Clamp(armLength, MinCornerArmLength, MaxCornerArmLength);
-
-            if (armLength * 2 > rect.Width) armLength = rect.Width / 2;
-            if (armLength * 2 > rect.Height) armLength = rect.Height / 2;
-
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, armLength, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Top, thickness, armLength), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Right - armLength, rect.Top, armLength, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, armLength), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, armLength, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Left, rect.Bottom - armLength, thickness, armLength), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Right - armLength, rect.Bottom - thickness, armLength, thickness), color);
-            spriteBatch.Draw(pixel, new Rectangle(rect.Right - thickness, rect.Bottom - armLength, thickness, armLength), color);
         }
     }
 }

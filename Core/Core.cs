@@ -56,6 +56,7 @@ namespace ProjectVagabond
 
         public Matrix MouseTransformMatrix => _mouseTransformMatrix;
         public BitmapFont SecondaryFont => _secondaryFont;
+        public float FinalScale => _finalScale;
 
         // Managers & Systems
         private Global _global;
@@ -710,4 +711,3 @@ namespace ProjectVagabond
         public void ExitApplication() => Exit();
     }
 }
-﻿

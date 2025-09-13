@@ -64,7 +64,7 @@ namespace ProjectVagabond.Scenes
                 if (settingsIcon != null) buttonSize = Math.Max(settingsIcon.Width, settingsIcon.Height);
                 _settingsButton = new ImageButton(new Rectangle(0, 0, buttonSize, buttonSize), settingsIcon)
                 {
-                    UseScreenCoordinates = false // Render as part of the virtual scene
+                    UseScreenCoordinates = true // This button operates in screen space, not virtual space.
                 };
             }
             // The event is unsubscribed in Exit(), so it must be re-subscribed every time the scene is entered.
@@ -76,12 +76,6 @@ namespace ProjectVagabond.Scenes
             {
                 button.ResetAnimationState();
             }
-
-            // Set the button's position once, as it's static.
-            const int padding = 5;
-            int buttonX = Global.VIRTUAL_WIDTH - _settingsButton.Bounds.Width - padding;
-            int buttonY = Global.VIRTUAL_HEIGHT - _settingsButton.Bounds.Height - padding;
-            _settingsButton.Bounds = new Rectangle(buttonX, buttonY, _settingsButton.Bounds.Width, _settingsButton.Bounds.Height);
 
             _previousKeyboardState = Keyboard.GetState();
             _previousMouseState = Mouse.GetState();
@@ -112,6 +106,23 @@ namespace ProjectVagabond.Scenes
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             _diceRollingSystem.Update(gameTime);
+
+            // Update button bounds BEFORE updating its input state
+            if (_settingsButton != null)
+            {
+                float scale = _core.FinalScale;
+                int buttonVirtualSize = 16;
+                int buttonScreenSize = (int)(buttonVirtualSize * scale);
+
+                var screenBounds = _core.GraphicsDevice.PresentationParameters.Bounds;
+                const int padding = 5;
+
+                int buttonX = screenBounds.Width - buttonScreenSize - padding;
+                int buttonY = padding;
+
+                _settingsButton.Bounds = new Rectangle(buttonX, buttonY, buttonScreenSize, buttonScreenSize);
+            }
+
             _settingsButton?.Update(currentMouseState);
 
             if (IsInputBlocked)
@@ -177,13 +188,25 @@ namespace ProjectVagabond.Scenes
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             _mapRenderer.DrawMap(spriteBatch, font, gameTime, transform);
-
-            // Draw the settings button. Its position is now static and set in Enter().
-            _settingsButton?.Draw(spriteBatch, font, gameTime, transform);
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
+        }
+
+        public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            // This method is for UI that needs to be drawn in raw screen coordinates, ignoring camera/scene transforms.
+            // We begin a new SpriteBatch without a matrix.
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+            if (_settingsButton != null)
+            {
+                // Bounds are now set in Update, so we just draw.
+                _settingsButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            }
+
+            spriteBatch.End();
         }
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)

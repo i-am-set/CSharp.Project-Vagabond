@@ -26,6 +26,7 @@ namespace ProjectVagabond.Scenes
         private BattleNarrator _battleNarrator;
         private ActionMenu _actionMenu;
         private ItemMenu _itemMenu;
+        private ImageButton _settingsButton;
 
         private ComponentStore _componentStore;
         private SceneManager _sceneManager;
@@ -70,7 +71,7 @@ namespace ProjectVagabond.Scenes
         {
             public string CombatantID;
             public float Timer;
-            public const float Duration = 1.5f;
+            public const float Duration = 1.0f;
         }
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
@@ -130,6 +131,19 @@ namespace ProjectVagabond.Scenes
             _actionMenu.OnMovesMenuOpened += () => _subMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened += () => _subMenuState = BattleSubMenuState.ActionRoot;
             _itemMenu.OnBack += OnItemMenuBack;
+
+            if (_settingsButton == null)
+            {
+                var settingsIcon = _spriteManager.SettingsIconSprite;
+                var buttonSize = 16;
+                if (settingsIcon != null) buttonSize = Math.Max(settingsIcon.Width, settingsIcon.Height);
+                _settingsButton = new ImageButton(new Rectangle(0, 0, buttonSize, buttonSize), settingsIcon)
+                {
+                    UseScreenCoordinates = true
+                };
+            }
+            _settingsButton.OnClick += OpenSettings;
+            _settingsButton.ResetAnimationState();
 
             var gameState = ServiceLocator.Get<GameState>();
             int playerEntityId = gameState.PlayerEntityId;
@@ -194,6 +208,7 @@ namespace ProjectVagabond.Scenes
             _actionMenu.OnMovesMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionRoot;
             _itemMenu.OnBack -= OnItemMenuBack;
+            if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
 
             if (_enemyEntityIds.Any())
             {
@@ -206,6 +221,14 @@ namespace ProjectVagabond.Scenes
                 }
                 _enemyEntityIds.Clear();
             }
+        }
+
+        private void OpenSettings()
+        {
+            var settingsScene = _sceneManager.GetScene(GameSceneState.Settings) as SettingsScene;
+            if (settingsScene != null) settingsScene.ReturnScene = GameSceneState.Battle;
+            _sceneManager.LastInputDevice = InputDevice.Mouse;
+            _sceneManager.ChangeScene(GameSceneState.Settings);
         }
 
         private void OnItemMenuRequested()
@@ -351,6 +374,22 @@ namespace ProjectVagabond.Scenes
             UpdateHealthAnimations(gameTime);
             UpdateAlphaAnimations(gameTime);
             UpdateHitAnimations(gameTime);
+
+            if (_settingsButton != null)
+            {
+                float scale = _core.FinalScale;
+                int buttonVirtualSize = 16;
+                int buttonScreenSize = (int)(buttonVirtualSize * scale);
+
+                var screenBounds = _core.GraphicsDevice.PresentationParameters.Bounds;
+                const int padding = 5;
+
+                int buttonX = screenBounds.Width - buttonScreenSize - padding;
+                int buttonY = padding;
+
+                _settingsButton.Bounds = new Rectangle(buttonX, buttonY, buttonScreenSize, buttonScreenSize);
+            }
+            _settingsButton?.Update(currentMouseState);
 
             // --- Animation Skip Logic ---
             bool skipRequested = (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed) ||
@@ -698,6 +737,18 @@ namespace ProjectVagabond.Scenes
                     DrawDebugDeckInfo(spriteBatch, secondaryFont, playerCombatant.DeckManager);
                 }
             }
+        }
+
+        public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+
+            if (_settingsButton != null)
+            {
+                _settingsButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+            }
+
+            spriteBatch.End();
         }
 
         private void DrawDebugDeckInfo(SpriteBatch spriteBatch, BitmapFont font, CombatDeckManager deckManager)
