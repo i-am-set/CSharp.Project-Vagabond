@@ -434,6 +434,30 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/ButtonIcons/ui_action_tooltip_background.png;Sprites/UI/ButtonIcons/ui_action_tooltip_background
 
+#begin Sprites/UI/ButtonIcons/ui_element_icons_5x5_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/ButtonIcons/ui_element_icons_5x5_spritesheet.png;Sprites/UI/ButtonIcons/ui_element_icons_5x5_spritesheet
+
+#begin Sprites/UI/ButtonIcons/ui_element_icons_9x9_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/ButtonIcons/ui_element_icons_9x9_spritesheet.png;Sprites/UI/ButtonIcons/ui_element_icons_9x9_spritesheet
+
 #begin Sprites/UI/ButtonIcons/ui_settings_icon.png
 /importer:TextureImporter
 /processor:TextureProcessor

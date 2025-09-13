@@ -130,6 +130,7 @@ namespace ProjectVagabond.Scenes
             _actionMenu.OnItemMenuRequested += OnItemMenuRequested;
             _actionMenu.OnMovesMenuOpened += () => _subMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened += () => _subMenuState = BattleSubMenuState.ActionRoot;
+            _actionMenu.OnFleeRequested += FleeBattle;
             _itemMenu.OnBack += OnItemMenuBack;
 
             if (_settingsButton == null)
@@ -207,6 +208,7 @@ namespace ProjectVagabond.Scenes
             _actionMenu.OnItemMenuRequested -= OnItemMenuRequested;
             _actionMenu.OnMovesMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionRoot;
+            _actionMenu.OnFleeRequested -= FleeBattle;
             _itemMenu.OnBack -= OnItemMenuBack;
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
 
@@ -226,6 +228,18 @@ namespace ProjectVagabond.Scenes
         private void OpenSettings()
         {
             _sceneManager.ShowModal(GameSceneState.Settings);
+        }
+
+        private void FleeBattle()
+        {
+            _isBattleOver = true;
+            _actionMenu.Hide();
+            _itemMenu.Hide();
+
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+            string fleeMessage = player != null ? $"{player.Name} escaped..." : "You escaped...";
+            _narrationQueue.Enqueue(() => _battleNarrator.Show(fleeMessage, secondaryFont));
         }
 
         private void OnItemMenuRequested()
@@ -366,19 +380,43 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            if (_isBattleOver)
-            {
-                _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
-                {
-                    _sceneManager.ChangeScene(GameSceneState.TerminalMap);
-                }
-                base.Update(gameTime);
-                return;
-            }
-
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
+
+            // --- Handle End of Battle State ---
+            // If the battle is over (win, lose, or flee), we enter a simplified update loop.
+            // This loop only processes animations and narration until they are complete, then starts a timer to exit the scene.
+            if (_isBattleOver)
+            {
+                _battleNarrator.Update(gameTime);
+                UpdateHealthAnimations(gameTime);
+                UpdateAlphaAnimations(gameTime);
+                UpdateHitAnimations(gameTime);
+                _settingsButton?.Update(currentMouseState);
+
+                bool animationsAndNarrationComplete = !_battleNarrator.IsBusy && !_activeHealthAnimations.Any() && !_activeAlphaAnimations.Any() && !_narrationQueue.Any();
+
+                // If everything is finished, start the exit timer.
+                if (animationsAndNarrationComplete)
+                {
+                    _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
+                    {
+                        _sceneManager.ChangeScene(GameSceneState.TerminalMap);
+                    }
+                }
+                else if (!_battleNarrator.IsBusy && _narrationQueue.Any())
+                {
+                    // If animations are done but there's more narration, process it.
+                    var nextStep = _narrationQueue.Dequeue();
+                    nextStep.Invoke();
+                }
+
+                base.Update(gameTime);
+                return; // Exit here to prevent normal battle logic from running.
+            }
+
+            // --- Normal Battle Update Loop ---
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             _battleNarrator.Update(gameTime);
@@ -485,7 +523,7 @@ namespace ProjectVagabond.Scenes
                     var nextStep = _narrationQueue.Dequeue();
                     nextStep.Invoke();
                 }
-                else if (!_isBattleOver)
+                else
                 {
                     _battleManager.CanAdvance = true;
                 }
@@ -534,15 +572,6 @@ namespace ProjectVagabond.Scenes
                 else
                 {
                     _narrationQueue.Enqueue(() => _battleNarrator.Show("Player Wins!", secondaryFont));
-                }
-            }
-
-            if (_isBattleOver && canProceed && !_narrationQueue.Any())
-            {
-                _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
-                {
-                    _sceneManager.ChangeScene(GameSceneState.TerminalMap);
                 }
             }
 

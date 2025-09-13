@@ -17,6 +17,7 @@ namespace ProjectVagabond.Battle.UI
         public event Action OnItemMenuRequested;
         public event Action OnMovesMenuOpened;
         public event Action OnMainMenuOpened;
+        public event Action OnFleeRequested;
 
         private bool _isVisible;
         private BattleCombatant _player;
@@ -76,10 +77,11 @@ namespace ProjectVagabond.Battle.UI
 
             _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[0], rects[1], rects[2], function: "Act", startVisible: false, debugColor: new Color(100, 0, 0, 150)));
             _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[3], rects[4], rects[5], function: "Item", startVisible: false, debugColor: new Color(0, 100, 0, 150)));
-            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[6], rects[7], rects[8], function: "Flee", startVisible: false, debugColor: new Color(0, 0, 100, 150)) { IsEnabled = false });
+            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[6], rects[7], rects[8], function: "Flee", startVisible: false, debugColor: new Color(0, 0, 100, 150)));
 
             _actionButtons[0].OnClick += () => SetState(MenuState.Moves);
             _actionButtons[1].OnClick += () => OnItemMenuRequested?.Invoke();
+            _actionButtons[2].OnClick += () => OnFleeRequested?.Invoke();
 
             _backButton.Font = secondaryFont;
 
@@ -199,7 +201,15 @@ namespace ProjectVagabond.Battle.UI
 
         private MoveButton CreateMoveButton(MoveData move, BitmapFont font, Texture2D background, bool startVisible)
         {
-            var moveButton = new MoveButton(move, font, background, startVisible);
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+            int elementId = move.OffensiveElementIDs.FirstOrDefault();
+            Rectangle? sourceRect = null;
+            if (spriteManager.ElementIconSourceRects.TryGetValue(elementId, out var rect))
+            {
+                sourceRect = rect;
+            }
+
+            var moveButton = new MoveButton(move, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, startVisible);
             moveButton.OnClick += () => {
                 _selectedMove = move;
 

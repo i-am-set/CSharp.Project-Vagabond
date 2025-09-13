@@ -16,9 +16,11 @@ namespace ProjectVagabond
         public Texture2D ActionButtonTemplateSprite { get; private set; }
         public Texture2D ActionMovesBackgroundSprite { get; private set; }
         public Texture2D ActionTooltipBackgroundSprite { get; private set; }
+        public Texture2D ElementIconsSpriteSheet { get; private set; }
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; } // 0-2: Act, 3-5: Item, 6-8: Flee (Normal, Hover, Clicked)
+        public Dictionary<int, Rectangle> ElementIconSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
 
         // Enemy Sprite Cache
         private readonly Dictionary<string, Texture2D> _enemySprites = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
@@ -134,9 +136,13 @@ namespace ProjectVagabond
             try { ActionTooltipBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_tooltip_background"); }
             catch { ActionTooltipBackgroundSprite = _textureFactory.CreateColoredTexture(319, 178, Color.DarkGray); }
 
+            try { ElementIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_element_icons_5x5_spritesheet"); }
+            catch { ElementIconsSpriteSheet = _textureFactory.CreateColoredTexture(25, 25, Color.Magenta); }
+
 
             InitializeArrowSourceRects();
             InitializeActionButtonsSourceRects();
+            InitializeElementIconsSourceRects();
         }
 
         private void InitializeArrowSourceRects()
@@ -172,6 +178,20 @@ namespace ProjectVagabond
                 int row = i / 3;
                 int col = i % 3;
                 ActionButtonSourceRects[i] = new Rectangle(col * spriteWidth, row * spriteHeight, spriteWidth, spriteHeight);
+            }
+        }
+
+        private void InitializeElementIconsSourceRects()
+        {
+            const int iconSize = 5;
+            const int columns = 5;
+            // There are 13 offensive elements, from ID 1 to 13.
+            for (int i = 0; i < 13; i++)
+            {
+                int elementId = i + 1;
+                int col = i % columns;
+                int row = i / columns;
+                ElementIconSourceRects[elementId] = new Rectangle(col * iconSize, row * iconSize, iconSize, iconSize);
             }
         }
 

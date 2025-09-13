@@ -41,7 +41,7 @@
   },
   {
     "ElementID": 9,
-    "ElementName": "Decay", // Rot, Corruption, Vampire effect, etc.
+    "ElementName": "Void", // Rot, Corruption, Vampire effect, Broad void stuff, etc.
     "Type": "Offensive"
   },
   {

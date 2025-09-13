@@ -1,9 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -13,7 +17,6 @@ namespace ProjectVagabond.Battle.UI
         private readonly BitmapFont _moveFont;
         private readonly Texture2D _backgroundTexture;
 
-        // Future-proofing for icons
         public Texture2D IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
 
@@ -39,12 +42,14 @@ namespace ProjectVagabond.Battle.UI
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
 
-        public MoveButton(MoveData move, BitmapFont font, Texture2D backgroundTexture, bool startVisible = true)
+        public MoveButton(MoveData move, BitmapFont font, Texture2D backgroundTexture, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
             Move = move;
             _moveFont = font;
             _backgroundTexture = backgroundTexture;
+            IconTexture = iconTexture;
+            IconSourceRect = iconSourceRect;
             _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
         }
 
@@ -151,7 +156,15 @@ namespace ProjectVagabond.Battle.UI
                     iconSize,
                     iconSize
                 );
-                spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink);
+
+                if (IconTexture != null && IconSourceRect.HasValue)
+                {
+                    spriteBatch.DrawSnapped(IconTexture, iconRect, IconSourceRect.Value, Color.White);
+                }
+                else
+                {
+                    spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink); // Fallback
+                }
 
                 // --- Prepare for text drawing ---
                 var textColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
