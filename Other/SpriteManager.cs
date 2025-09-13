@@ -15,6 +15,7 @@ namespace ProjectVagabond
         public Texture2D ActionButtonsSpriteSheet { get; private set; }
         public Texture2D ActionButtonTemplateSprite { get; private set; }
         public Texture2D ActionMovesBackgroundSprite { get; private set; }
+        public Texture2D ActionTooltipBackgroundSprite { get; private set; }
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; } // 0-2: Act, 3-5: Item, 6-8: Flee (Normal, Hover, Clicked)
@@ -129,6 +130,10 @@ namespace ProjectVagabond
                 Debug.WriteLine($"4. Detailed error: {ex.Message}");
                 ActionMovesBackgroundSprite = _textureFactory.CreateColoredTexture(294, 47, Color.Magenta);
             }
+
+            try { ActionTooltipBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_tooltip_background"); }
+            catch { ActionTooltipBackgroundSprite = _textureFactory.CreateColoredTexture(319, 178, Color.DarkGray); }
+
 
             InitializeArrowSourceRects();
             InitializeActionButtonsSourceRects();

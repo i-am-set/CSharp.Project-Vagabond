@@ -1,11 +1,13 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using ProjectVagabond.Scenes;
-using System.Collections.Generic;
 using MonoGame.Extended.BitmapFonts;
-using System;
-using System.Linq;
+using ProjectVagabond;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -33,7 +35,7 @@ namespace ProjectVagabond
 
         private bool _loadIsPending = false;
         private List<LoadingTask> _pendingLoadingTasks;
-        private Action _onTransitionCompleteAction;
+        private Action? _onTransitionCompleteAction;
 
         /// <summary>
         /// The currently active scene.
@@ -73,7 +75,7 @@ namespace ProjectVagabond
         /// </summary>
         /// <param name="state">The state of the scene to retrieve.</param>
         /// <returns>The GameScene instance, or null if not found.</returns>
-        public GameScene GetScene(GameSceneState state)
+        public GameScene? GetScene(GameSceneState state)
         {
             _scenes.TryGetValue(state, out var scene);
             return scene;
@@ -100,7 +102,7 @@ namespace ProjectVagabond
         /// </summary>
         /// <param name="state">The state of the scene to switch to.</param>
         /// <param name="loadingTasks">An optional list of tasks to execute during the transition.</param>
-        public void ChangeScene(GameSceneState state, List<LoadingTask> loadingTasks = null)
+        public void ChangeScene(GameSceneState state, List<LoadingTask>? loadingTasks = null)
         {
             ChangeScene(state, loadingTasks, null);
         }
@@ -111,7 +113,7 @@ namespace ProjectVagabond
         /// <param name="state">The state of the scene to switch to.</param>
         /// <param name="loadingTasks">An optional list of tasks to execute during the transition.</param>
         /// <param name="onComplete">An action to invoke after the new scene's Enter() method is called.</param>
-        public void ChangeScene(GameSceneState state, List<LoadingTask> loadingTasks, Action onComplete)
+        public void ChangeScene(GameSceneState state, List<LoadingTask>? loadingTasks, Action? onComplete)
         {
             if (_isTransitioning) return;
             HideModal(); // Hide any active modal before changing scenes.
@@ -140,7 +142,7 @@ namespace ProjectVagabond
             // to handle the black screen and loading process.
             SwitchToSceneInternal(GameSceneState.Transition);
 
-            if (_loadIsPending)
+            if (_loadIsPending && _pendingLoadingTasks != null)
             {
                 var loadingScreen = ServiceLocator.Get<LoadingScreen>();
                 loadingScreen.Clear();
@@ -338,3 +340,4 @@ namespace ProjectVagabond
         }
     }
 }
+#nullable restore

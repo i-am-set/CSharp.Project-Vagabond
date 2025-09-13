@@ -19,14 +19,29 @@ namespace ProjectVagabond.Battle
         public string MoveName { get; set; }
 
         /// <summary>
+        /// Flavor text or a brief explanation of the move's effects.
+        /// </summary>
+        public string Description { get; set; }
+
+        /// <summary>
         /// The base power of the move, used in damage calculation.
         /// </summary>
         public int Power { get; set; }
 
         /// <summary>
-        /// The type of action the move performs (Physical, Magical, or Other).
+        /// The fundamental type of the move, distinguishing magical spells from physical actions.
         /// </summary>
-        public ActionType ActionType { get; set; }
+        public MoveType MoveType { get; set; }
+
+        /// <summary>
+        /// The type of damage the move inflicts upon impact.
+        /// </summary>
+        public ImpactType ImpactType { get; set; }
+
+        /// <summary>
+        /// A boolean indicating whether the move requires the user to make physical contact with the target.
+        /// </summary>
+        public bool MakesContact { get; set; }
 
         /// <summary>
         /// The base accuracy of the move (1-100). A value of -1 represents a "True Hit" that never misses.

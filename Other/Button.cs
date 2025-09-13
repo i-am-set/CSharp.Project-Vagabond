@@ -45,6 +45,7 @@ namespace ProjectVagabond.UI
         public Color? DebugColor { get; set; }
 
         public event Action? OnClick;
+        public event Action? OnRightClick;
 
         protected MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
@@ -139,6 +140,16 @@ namespace ProjectVagabond.UI
                 if (currentMouseState.LeftButton == ButtonState.Released)
                 {
                     _isPressed = false;
+                }
+            }
+
+            bool rightMouseReleasedOverButton = IsHovered && currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
+            if (rightMouseReleasedOverButton)
+            {
+                if (UIInputManager.CanProcessMouseClick())
+                {
+                    OnRightClick?.Invoke();
+                    UIInputManager.ConsumeMouseClick();
                 }
             }
 

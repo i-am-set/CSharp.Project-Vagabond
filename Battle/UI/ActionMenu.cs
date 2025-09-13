@@ -26,14 +26,16 @@ namespace ProjectVagabond.Battle.UI
         private Button _backButton;
         private readonly Global _global;
 
-        public enum MenuState { Main, Moves, Targeting }
+        public enum MenuState { Main, Moves, Targeting, Tooltip }
         private MenuState _currentState;
         public MenuState CurrentMenuState => _currentState;
         private MoveData _selectedMove;
         public MoveData SelectedMove => _selectedMove;
+        private MoveData _tooltipMove;
 
         private float _targetingTextAnimTimer = 0f;
         private bool _buttonsInitialized = false;
+        private MouseState _previousMouseState;
 
         // State for animation
         private MoveData[] _previousHandState = new MoveData[6];
@@ -50,7 +52,7 @@ namespace ProjectVagabond.Battle.UI
             _global = ServiceLocator.Get<Global>();
             _backButton = new Button(Rectangle.Empty, "BACK");
             _backButton.OnClick += () => {
-                if (_currentState == MenuState.Targeting)
+                if (_currentState == MenuState.Targeting || _currentState == MenuState.Tooltip)
                 {
                     SetState(MenuState.Moves);
                 }
@@ -59,6 +61,7 @@ namespace ProjectVagabond.Battle.UI
                     SetState(MenuState.Main);
                 }
             };
+            _previousMouseState = Mouse.GetState();
         }
 
         private void InitializeButtons()
@@ -84,7 +87,9 @@ namespace ProjectVagabond.Battle.UI
 
         public void GoBack()
         {
-            if (_isVisible && (_currentState == MenuState.Moves || _currentState == MenuState.Targeting))
+            if (!_isVisible) return;
+
+            if (_currentState == MenuState.Tooltip || _currentState == MenuState.Moves || _currentState == MenuState.Targeting)
             {
                 _backButton.TriggerClick();
             }
@@ -215,6 +220,10 @@ namespace ProjectVagabond.Battle.UI
                     SetState(MenuState.Targeting);
                 }
             };
+            moveButton.OnRightClick += () => {
+                _tooltipMove = move;
+                SetState(MenuState.Tooltip);
+            };
             return moveButton;
         }
 
@@ -258,7 +267,22 @@ namespace ProjectVagabond.Battle.UI
                     _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                     _backButton.Update(currentMouseState);
                     break;
+                case MenuState.Tooltip:
+                    bool leftClick = currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
+                    bool rightClick = currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
+                    if (leftClick || rightClick)
+                    {
+                        if (UIInputManager.CanProcessMouseClick())
+                        {
+                            SetState(MenuState.Moves);
+                            UIInputManager.ConsumeMouseClick();
+                        }
+                    }
+                    _backButton.Update(currentMouseState);
+                    break;
             }
+
+            _previousMouseState = currentMouseState;
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -294,44 +318,7 @@ namespace ProjectVagabond.Battle.UI
                     }
                 case MenuState.Moves:
                     {
-                        const int dividerY = 114;
-                        const int moveButtonWidth = 157;
-                        const int moveButtonHeight = 17;
-                        const int columnSpacing = 0;
-                        const int rowSpacing = 0;
-                        const int columns = 2;
-                        const int rows = 3;
-
-                        int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
-                        int gridStartX = (Global.VIRTUAL_WIDTH - totalGridWidth) / 2;
-                        int gridStartY = dividerY - 4;
-
-                        for (int i = 0; i < _moveButtons.Count; i++)
-                        {
-                            var button = _moveButtons[i];
-                            int row = i / columns;
-                            int col = i % columns;
-
-                            button.Bounds = new Rectangle(
-                                gridStartX + col * (moveButtonWidth + columnSpacing),
-                                gridStartY + row * (moveButtonHeight + rowSpacing),
-                                moveButtonWidth,
-                                moveButtonHeight
-                            );
-                            button.Draw(spriteBatch, font, gameTime, transform);
-                        }
-
-                        int gridHeight = (moveButtonHeight * rows) + (rowSpacing * (rows - 1));
-                        int backButtonY = gridStartY + gridHeight + 7;
-                        var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
-                        int backWidth = (int)backSize.Width + 16;
-                        _backButton.Bounds = new Rectangle(
-                            (Global.VIRTUAL_WIDTH - backWidth) / 2,
-                            backButtonY,
-                            backWidth,
-                            13
-                        );
-                        _backButton.Draw(spriteBatch, font, gameTime, transform);
+                        DrawMovesMenu(spriteBatch, font, gameTime, transform);
                         break;
                     }
                 case MenuState.Targeting:
@@ -371,7 +358,113 @@ namespace ProjectVagabond.Battle.UI
                         _backButton.Draw(spriteBatch, font, gameTime, transform);
                         break;
                     }
+                case MenuState.Tooltip:
+                    {
+                        var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+                        // Define the area for the tooltip content, matching the moves menu area.
+                        const int dividerY = 114;
+                        const int moveButtonWidth = 157;
+                        const int moveButtonHeight = 17;
+                        const int columns = 2;
+                        const int rows = 3;
+                        const int columnSpacing = 0;
+                        const int rowSpacing = 0;
+
+                        int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
+                        int gridHeight = (moveButtonHeight * rows) + (rowSpacing * (rows - 1));
+                        int gridStartX = (Global.VIRTUAL_WIDTH - totalGridWidth) / 2;
+                        int gridStartY = dividerY - 4;
+
+                        // Draw the background sprite for the tooltip area
+                        var spriteManager = ServiceLocator.Get<SpriteManager>();
+                        var tooltipBg = spriteManager.ActionMovesBackgroundSprite;
+                        var tooltipBgRect = new Rectangle(gridStartX, gridStartY, totalGridWidth, gridHeight);
+                        spriteBatch.DrawSnapped(tooltipBg, tooltipBgRect, Color.White);
+
+                        // Draw the move name and stats
+                        if (_tooltipMove != null)
+                        {
+                            var moveName = _tooltipMove.MoveName.ToUpper();
+                            var nameSize = font.MeasureString(moveName);
+                            var namePos = new Vector2(
+                                tooltipBgRect.Center.X - nameSize.Width / 2,
+                                tooltipBgRect.Y + 10
+                            );
+                            spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_BrightWhite);
+
+                            string powerText = _tooltipMove.Power > 0 ? $"POWER: {_tooltipMove.Power}" : "POWER: ---";
+                            string accuracyText = _tooltipMove.Accuracy >= 0 ? $"ACCURACY: {_tooltipMove.Accuracy}%" : "ACCURACY: ---";
+
+                            var powerSize = secondaryFont.MeasureString(powerText);
+                            var accuracySize = secondaryFont.MeasureString(accuracyText);
+                            const int statSpacing = 20;
+                            float totalStatsWidth = powerSize.Width + accuracySize.Width + statSpacing;
+                            float statsStartX = tooltipBgRect.Center.X - totalStatsWidth / 2;
+
+                            var powerPos = new Vector2(statsStartX, namePos.Y + nameSize.Height + 15);
+                            var accuracyPos = new Vector2(statsStartX + powerSize.Width + statSpacing, powerPos.Y);
+
+                            spriteBatch.DrawStringSnapped(secondaryFont, powerText, powerPos, _global.Palette_White);
+                            spriteBatch.DrawStringSnapped(secondaryFont, accuracyText, accuracyPos, _global.Palette_White);
+                        }
+
+                        // Draw the back button
+                        const int backButtonTopMargin = 7;
+                        int backButtonY = gridStartY + gridHeight + backButtonTopMargin;
+                        var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
+                        int backWidth = (int)backSize.Width + 16;
+                        _backButton.Bounds = new Rectangle(
+                            (Global.VIRTUAL_WIDTH - backWidth) / 2,
+                            backButtonY,
+                            backWidth,
+                            13
+                        );
+                        _backButton.Draw(spriteBatch, font, gameTime, transform);
+                        break;
+                    }
             }
+        }
+
+        private void DrawMovesMenu(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            const int dividerY = 114;
+            const int moveButtonWidth = 157;
+            const int moveButtonHeight = 17;
+            const int columnSpacing = 0;
+            const int rowSpacing = 0;
+            const int columns = 2;
+            const int rows = 3;
+
+            int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
+            int gridStartX = (Global.VIRTUAL_WIDTH - totalGridWidth) / 2;
+            int gridStartY = dividerY - 4;
+
+            for (int i = 0; i < _moveButtons.Count; i++)
+            {
+                var button = _moveButtons[i];
+                int row = i / columns;
+                int col = i % columns;
+
+                button.Bounds = new Rectangle(
+                    gridStartX + col * (moveButtonWidth + columnSpacing),
+                    gridStartY + row * (moveButtonHeight + rowSpacing),
+                    moveButtonWidth,
+                    moveButtonHeight
+                );
+                button.Draw(spriteBatch, font, gameTime, transform);
+            }
+
+            int gridHeight = (moveButtonHeight * rows) + (rowSpacing * (rows - 1));
+            int backButtonY = gridStartY + gridHeight + 7;
+            var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
+            int backWidth = (int)backSize.Width + 16;
+            _backButton.Bounds = new Rectangle(
+                (Global.VIRTUAL_WIDTH - backWidth) / 2,
+                backButtonY,
+                backWidth,
+                13
+            );
+            _backButton.Draw(spriteBatch, font, gameTime, transform);
         }
     }
 }

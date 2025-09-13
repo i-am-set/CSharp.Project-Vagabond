@@ -426,8 +426,7 @@ namespace ProjectVagabond.Scenes
                         break;
                 }
 
-                if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState) ||
-                    (currentMouseState.RightButton == ButtonState.Pressed && previousMouseState.RightButton == ButtonState.Released))
+                if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
                 {
                     if (_subMenuState == BattleSubMenuState.Item)
                     {

@@ -45,7 +45,7 @@ namespace ProjectVagabond.Battle
         public static DamageResult CalculateDamage(BattleCombatant attacker, BattleCombatant target, MoveData move)
         {
             // Step 1: Handle non-damaging moves immediately.
-            if (move.ActionType == ActionType.Other)
+            if (move.Power == 0)
             {
                 return new DamageResult { DamageAmount = 0, WasCritical = false, WasGraze = false };
             }
@@ -62,7 +62,7 @@ namespace ProjectVagabond.Battle
             }
 
             // Step 3: Base Damage Calculation
-            float offensiveStat = move.ActionType == ActionType.Physical ? attacker.Stats.Strength : attacker.Stats.Intelligence;
+            float offensiveStat = move.ImpactType == ImpactType.Physical ? attacker.Stats.Strength : attacker.Stats.Intelligence;
             float defensiveStat = target.Stats.Tenacity;
             if (defensiveStat == 0) defensiveStat = 1; // Prevent division by zero
 
@@ -89,7 +89,7 @@ namespace ProjectVagabond.Battle
             // Modifier 3 (Attacker/Defender Stat Buffs)
             if (!isCritical)
             {
-                if (move.ActionType == ActionType.Physical && attacker.HasStatusEffect(StatusEffectType.StrengthUp))
+                if (move.ImpactType == ImpactType.Physical && attacker.HasStatusEffect(StatusEffectType.StrengthUp))
                 {
                     finalDamage *= BattleConstants.STRENGTH_UP_MULTIPLIER;
                 }
