@@ -981,7 +981,7 @@ namespace ProjectVagabond.Scenes
             int left = (int)namePos.X;
             int right = (int)(hpStartX + hpTextSize.X);
             int top = (int)Math.Min(namePos.Y, playerHudY);
-            int bottom = (int)Math.Max(namePos.Y + nameSize.Height, playerHudY + hpTextSize.Y);
+            int bottom = (int)Math.Max(namePos.Y + nameSize.Y, playerHudY + hpTextSize.Y);
 
             const int padding = 2;
             return new Rectangle(left - padding, top - padding, (right - left) + padding * 2, (bottom - top) + padding * 2);
@@ -1152,7 +1152,7 @@ namespace ProjectVagabond.Scenes
             var arrowRects = _spriteManager.ArrowIconSourceRects;
             if (arrowSheet == null || arrowRects == null) return;
 
-            float bobOffset = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) * 2f;
+            float bobOffset = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) > 0) ? 1f : 0f;
 
             if (_currentActor.IsPlayerControlled)
             {
@@ -1166,8 +1166,8 @@ namespace ProjectVagabond.Scenes
                 Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7);
 
                 var arrowPos = new Vector2(
-                    namePos.X - arrowRect.Width - 4,
-                    namePos.Y + (nameSize.Y - arrowRect.Height) / 2 + bobOffset
+                    namePos.X - arrowRect.Width - 4 + bobOffset,
+                    namePos.Y + (nameSize.Y - arrowRect.Height) / 2 - 1
                 );
 
                 spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);

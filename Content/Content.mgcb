@@ -396,7 +396,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/BasicIcons/ArrowIconSpriteSheet.png;Sprites/UI/ArrowIconSpriteSheet
+/build:Sprites/UI/BasicIcons/ArrowIconSpriteSheet.png;Sprites/UI/BasicIcons/ArrowIconSpriteSheet
 
 #begin Sprites/UI/ButtonIcons/ui_action_button_template.png
 /importer:TextureImporter

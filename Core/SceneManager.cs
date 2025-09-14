@@ -1,13 +1,12 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
-using System;
 using System.Collections.Generic;
+using MonoGame.Extended.BitmapFonts;
+using System;
 using System.Linq;
+using ProjectVagabond.UI;
 
 namespace ProjectVagabond
 {

@@ -49,6 +49,11 @@ namespace ProjectVagabond.Utils
             spriteBatch.Draw(texture, RoundVector(position), color);
         }
 
+        public static void DrawSnapped(this SpriteBatch spriteBatch, Texture2D texture, Vector2 position, Rectangle? sourceRectangle, Color color)
+        {
+            spriteBatch.Draw(texture, RoundVector(position), sourceRectangle, color);
+        }
+
         public static void DrawSnapped(this SpriteBatch spriteBatch, Texture2D texture, Rectangle destinationRectangle, Color color)
         {
             var snappedRect = new Rectangle(
