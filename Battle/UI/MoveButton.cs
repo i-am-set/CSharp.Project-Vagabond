@@ -1,13 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -148,7 +144,7 @@ namespace ProjectVagabond.Battle.UI
             if (verticalScale > 0.8f)
             {
                 // --- Draw Icon/Placeholder ---
-                const int iconSize = 5;
+                const int iconSize = 9;
                 const int iconPadding = 4;
                 var iconRect = new Rectangle(
                     animatedBounds.X + iconPadding,
@@ -240,6 +236,29 @@ namespace ProjectVagabond.Battle.UI
                 // --- Draw Power & Accuracy ---
                 spriteBatch.DrawStringSnapped(_moveFont, accuracyText, accuracyPosition, statsColor);
                 spriteBatch.DrawStringSnapped(_moveFont, powerText, powerPosition, statsColor);
+
+                // --- Draw Target Type Indicator ---
+                string targetIndicator = Move.Target switch
+                {
+                    TargetType.Single => ".",
+                    TargetType.Every => "...",
+                    TargetType.Self => "^",
+                    TargetType.SingleAll => "*",
+                    TargetType.EveryAll => "***",
+                    _ => ""
+                };
+
+                if (!string.IsNullOrEmpty(targetIndicator))
+                {
+                    var indicatorSize = _moveFont.MeasureString(targetIndicator);
+                    // Center the indicator horizontally over the power text.
+                    float powerCenterX = powerPosition.X + powerTextSize.Width / 2;
+                    var indicatorPosition = new Vector2(
+                        powerCenterX - indicatorSize.Width / 2,
+                        powerPosition.Y - 7
+                    );
+                    spriteBatch.DrawStringSnapped(_moveFont, targetIndicator, indicatorPosition, statsColor);
+                }
             }
         }
     }

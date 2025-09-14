@@ -136,8 +136,8 @@ namespace ProjectVagabond
             try { ActionTooltipBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_tooltip_background"); }
             catch { ActionTooltipBackgroundSprite = _textureFactory.CreateColoredTexture(319, 178, Color.DarkGray); }
 
-            try { ElementIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_element_icons_5x5_spritesheet"); }
-            catch { ElementIconsSpriteSheet = _textureFactory.CreateColoredTexture(25, 25, Color.Magenta); }
+            try { ElementIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_element_icons_9x9_spritesheet"); }
+            catch { ElementIconsSpriteSheet = _textureFactory.CreateColoredTexture(45, 45, Color.Magenta); }
 
 
             InitializeArrowSourceRects();
@@ -183,7 +183,7 @@ namespace ProjectVagabond
 
         private void InitializeElementIconsSourceRects()
         {
-            const int iconSize = 5;
+            const int iconSize = 9;
             const int columns = 5;
             // There are 13 offensive elements, from ID 1 to 13.
             for (int i = 0; i < 13; i++)
