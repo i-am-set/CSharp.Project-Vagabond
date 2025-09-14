@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
@@ -22,9 +21,7 @@ namespace ProjectVagabond
         private readonly HapticsManager _hapticsManager;
         private readonly Global _global;
         private AutoCompleteManager _autoCompleteManager; // Lazy loaded
-        private InputHandler _inputHandler; // Lazy loaded
-
-        // History State
+                                                          // History State
         private readonly List<string> _inputHistory = new List<string>();
         private readonly List<ColoredLine> _unwrappedHistory = new List<ColoredLine>();
         private readonly List<ColoredLine> _unwrappedCombatHistory = new List<ColoredLine>();
@@ -157,7 +154,6 @@ namespace ProjectVagabond
         {
             _currentBounds = bounds;
             // Lazy-load dependencies to break initialization cycles
-            _inputHandler ??= ServiceLocator.Get<InputHandler>();
             _autoCompleteManager ??= ServiceLocator.Get<AutoCompleteManager>();
 
             // Re-wrap text only when the history has changed, using the provided font.
@@ -195,17 +191,7 @@ namespace ProjectVagabond
             }
 
             // --- REVISED LAYOUT LOGIC ---
-            int outputAreaBottom;
-            if (!isInCombat && _inputHandler.IsTerminalInputActive)
-            {
-                _inputLineY = bounds.Bottom - Global.TERMINAL_LINE_SPACING - 5;
-                int separatorY = _inputLineY - 5;
-                outputAreaBottom = separatorY;
-            }
-            else
-            {
-                outputAreaBottom = bounds.Bottom;
-            }
+            int outputAreaBottom = bounds.Bottom;
 
             // Draw History
             int outputAreaHeight = outputAreaBottom - bounds.Y;
@@ -230,22 +216,6 @@ namespace ProjectVagabond
                     spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(x, y), segment.Color);
                     x += font.MeasureString(segment.Text).Width;
                 }
-            }
-
-            // Conditionally draw the input section
-            if (!isInCombat && _inputHandler.IsTerminalInputActive)
-            {
-                int separatorY = _inputLineY - 5;
-                spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.X - 5, separatorY, bounds.Width + 10, 2), _global.Palette_White);
-
-                _caratBlinkTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                string caratUnderscore = (_caratBlinkTimer % 1.0f > 0.5f) ? "" : "_";
-
-                _stringBuilder.Clear();
-                _stringBuilder.Append("> ").Append(_inputHandler.CurrentInput).Append(caratUnderscore);
-                string inputCarat = _stringBuilder.ToString();
-                string wrappedInput = WrapText(inputCarat, GetTerminalContentWidthInPixels(), font);
-                spriteBatch.DrawStringSnapped(font, wrappedInput, new Vector2(bounds.X, _inputLineY + 1), _global.InputCaratColor, 0, Vector2.Zero, 1f, SpriteEffects.None, 0f);
             }
         }
 

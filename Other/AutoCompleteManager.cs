@@ -16,18 +16,33 @@ namespace ProjectVagabond
         public int SelectedAutoCompleteSuggestionIndex => _selectedAutoCompleteSuggestionIndex;
         public bool ShowingAutoCompleteSuggestions => _showingAutoCompleteSuggestions;
 
-        public AutoCompleteManager(){}
+        public AutoCompleteManager() { }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
-        public void ToggleShowingAutoCompleteSuggestions(bool toggle)
+        public void HideSuggestions()
         {
-            _showingAutoCompleteSuggestions = toggle;
+            _showingAutoCompleteSuggestions = false;
+            _selectedAutoCompleteSuggestionIndex = -1;
+            _autoCompleteSuggestions.Clear();
         }
 
-        public void SetSelectedAutoCompleteSuggestionIndex(int index)
+        public void CycleSelection(int direction)
         {
-            _selectedAutoCompleteSuggestionIndex = index;
+            if (!_showingAutoCompleteSuggestions || !_autoCompleteSuggestions.Any()) return;
+
+            // Invert direction to match visual layout (up key increases index)
+            _selectedAutoCompleteSuggestionIndex -= direction;
+
+            // Wrap around logic
+            if (_selectedAutoCompleteSuggestionIndex < 0)
+            {
+                _selectedAutoCompleteSuggestionIndex = _autoCompleteSuggestions.Count - 1;
+            }
+            if (_selectedAutoCompleteSuggestionIndex >= _autoCompleteSuggestions.Count)
+            {
+                _selectedAutoCompleteSuggestionIndex = 0;
+            }
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -56,35 +71,25 @@ namespace ProjectVagabond
             string commandName = parts[0].ToLower();
             bool isCompleteCommand = _commandProcessor.Commands.ContainsKey(commandName);
 
-            // Suggest ARGUMENTS if:
-            // 1. The first word is a complete command AND...
-            // 2. ...the user has typed more than one word (e.g., "run u")
-            // 3. ...OR there is a space after the command (e.g., "run ")
-            // 4. ...OR the input is an EXACT match for the command name (e.g., "run")
             if (isCompleteCommand && (parts.Length > 1 || trailingSpace || currentInput.Length == commandName.Length))
             {
-                // User is typing arguments for a known command.
                 var command = _commandProcessor.Commands[commandName];
                 string[] typedArgs = parts.Skip(1).ToArray();
                 string partialArg = "";
 
-                // If there's no space at the end, the last part is a partial argument.
                 if (!trailingSpace && typedArgs.Length > 0)
                 {
                     partialArg = typedArgs.Last().ToLower();
                     typedArgs = typedArgs.Take(typedArgs.Length - 1).ToArray();
                 }
 
-                // Get suggestions for the next argument based on the arguments already fully typed.
                 var argSuggestions = command.SuggestArguments(typedArgs);
 
-                // Filter suggestions based on the partial argument.
                 var filteredSuggestions = argSuggestions
                     .Where(s => s.ToLower().StartsWith(partialArg))
                     .OrderBy(s => s)
                     .ToList();
 
-                // Construct the full command strings for the suggestions list.
                 string prefix = (commandName + " " + string.Join(" ", typedArgs)).Trim();
 
                 _autoCompleteSuggestions = filteredSuggestions
@@ -93,7 +98,6 @@ namespace ProjectVagabond
             }
             else
             {
-                // User is still typing the command name itself (e.g., "ru" for "run").
                 var matches = _commandProcessor.Commands.Keys
                     .Where(cmd => cmd.StartsWith(currentInput.ToLower()))
                     .OrderBy(cmd => cmd)

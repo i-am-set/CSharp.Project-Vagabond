@@ -19,6 +19,7 @@ namespace ProjectVagabond.Utils
         private readonly GameState _gameState;
         private readonly Global _global;
         private readonly CommandProcessor _commandProcessor;
+        private readonly AutoCompleteManager _autoCompleteManager;
 
         private readonly List<ColoredLine> _history = new List<ColoredLine>();
         private readonly List<string> _commandHistory = new List<string>();
@@ -38,6 +39,7 @@ namespace ProjectVagabond.Utils
             _gameState = ServiceLocator.Get<GameState>();
             _global = ServiceLocator.Get<Global>();
             _commandProcessor = ServiceLocator.Get<CommandProcessor>();
+            _autoCompleteManager = new AutoCompleteManager();
             EventBus.Subscribe<GameEvents.TerminalMessagePublished>(OnDebugMessagePublished);
         }
 
@@ -74,6 +76,7 @@ namespace ProjectVagabond.Utils
         {
             IsVisible = false;
             _gameState.IsPausedByConsole = false;
+            _autoCompleteManager.HideSuggestions();
         }
 
         public void Update(GameTime gameTime)
@@ -119,7 +122,6 @@ namespace ProjectVagabond.Utils
                             var commandLine = ParseColoredText($"> {_currentInput}", _global.Palette_BrightWhite);
                             _history.Add(commandLine);
 
-                            // Add to command history if it's not a consecutive duplicate
                             if (!_commandHistory.Any() || _commandHistory.Last() != _currentInput)
                             {
                                 _commandHistory.Add(_currentInput);
@@ -130,21 +132,45 @@ namespace ProjectVagabond.Utils
                             _scrollOffset = 0;
                             _commandHistoryIndex = -1;
                             _currentEditingCommand = "";
+                            _autoCompleteManager.HideSuggestions();
+                        }
+                    }
+                    else if (key == Keys.Tab)
+                    {
+                        if (_autoCompleteManager.ShowingAutoCompleteSuggestions && _autoCompleteManager.SelectedAutoCompleteSuggestionIndex != -1)
+                        {
+                            _currentInput = _autoCompleteManager.AutoCompleteSuggestions[_autoCompleteManager.SelectedAutoCompleteSuggestionIndex];
+                            _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
                         }
                     }
                     else if (key == Keys.Up)
                     {
-                        NavigateCommandHistory(1);
+                        if (_autoCompleteManager.ShowingAutoCompleteSuggestions)
+                        {
+                            _autoCompleteManager.CycleSelection(-1);
+                        }
+                        else
+                        {
+                            NavigateCommandHistory(1);
+                        }
                     }
                     else if (key == Keys.Down)
                     {
-                        NavigateCommandHistory(-1);
+                        if (_autoCompleteManager.ShowingAutoCompleteSuggestions)
+                        {
+                            _autoCompleteManager.CycleSelection(1);
+                        }
+                        else
+                        {
+                            NavigateCommandHistory(-1);
+                        }
                     }
                     else if (key == Keys.Back)
                     {
                         if (_currentInput.Length > 0)
                         {
                             _currentInput = _currentInput.Substring(0, _currentInput.Length - 1);
+                            _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
                         }
                     }
                     else if (key == Keys.PageUp)
@@ -161,6 +187,7 @@ namespace ProjectVagabond.Utils
                         if (character.HasValue)
                         {
                             _currentInput += character.Value;
+                            _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
                         }
                     }
                 }
@@ -171,28 +198,23 @@ namespace ProjectVagabond.Utils
         {
             if (_commandHistory.Count == 0) return;
 
-            // If we are not currently browsing, save the current input
             if (_commandHistoryIndex == -1)
             {
                 _currentEditingCommand = _currentInput;
             }
 
-            // Adjust index
             _commandHistoryIndex += direction;
-
-            // Clamp index
             _commandHistoryIndex = Math.Clamp(_commandHistoryIndex, -1, _commandHistory.Count - 1);
 
             if (_commandHistoryIndex == -1)
             {
-                // Returned to the "present"
                 _currentInput = _currentEditingCommand;
             }
             else
             {
-                // Get command from history (it's stored in reverse order of access)
                 _currentInput = _commandHistory[_commandHistory.Count - 1 - _commandHistoryIndex];
             }
+            _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -225,7 +247,6 @@ namespace ProjectVagabond.Utils
                 var line = _history[historyIndex];
                 foreach (var segment in line.Segments)
                 {
-                    // Use the standard DrawString here as we are in screen space, not virtual space.
                     spriteBatch.DrawString(font, segment.Text, new Vector2(currentX, lineY), segment.Color);
                     currentX += font.MeasureString(segment.Text).Width;
                 }
@@ -238,6 +259,54 @@ namespace ProjectVagabond.Utils
             _stringBuilder.Clear();
             _stringBuilder.Append("> ").Append(_currentInput).Append(carat);
             spriteBatch.DrawString(font, _stringBuilder.ToString(), new Vector2(5, inputLineY), _global.Palette_Yellow);
+
+            DrawAutoComplete(spriteBatch, font, inputLineY);
+        }
+
+        private void DrawAutoComplete(SpriteBatch spriteBatch, BitmapFont font, float inputLineY)
+        {
+            if (!_autoCompleteManager.ShowingAutoCompleteSuggestions || !_autoCompleteManager.AutoCompleteSuggestions.Any())
+            {
+                return;
+            }
+
+            var pixel = ServiceLocator.Get<Texture2D>();
+            int visibleSuggestions = Math.Min(_autoCompleteManager.AutoCompleteSuggestions.Count, 5);
+            float maxSuggestionWidth = 0;
+
+            for (int i = 0; i < visibleSuggestions; i++)
+            {
+                string suggestion = _autoCompleteManager.AutoCompleteSuggestions[i];
+                maxSuggestionWidth = Math.Max(maxSuggestionWidth, font.MeasureString(suggestion).Width);
+            }
+            maxSuggestionWidth += 20;
+
+            float boxHeight = visibleSuggestions * Global.TERMINAL_LINE_SPACING + 4;
+            float boxY = inputLineY - boxHeight - 2;
+            var boxBounds = new Rectangle(5, (int)boxY, (int)maxSuggestionWidth, (int)boxHeight);
+
+            spriteBatch.Draw(pixel, boxBounds, _global.Palette_Black * 0.9f);
+            spriteBatch.Draw(pixel, new Rectangle(boxBounds.Left, boxBounds.Top, boxBounds.Width, 1), _global.Palette_LightGray);
+            spriteBatch.Draw(pixel, new Rectangle(boxBounds.Left, boxBounds.Bottom, boxBounds.Width, 1), _global.Palette_LightGray);
+            spriteBatch.Draw(pixel, new Rectangle(boxBounds.Left, boxBounds.Top, 1, boxBounds.Height), _global.Palette_LightGray);
+            spriteBatch.Draw(pixel, new Rectangle(boxBounds.Right, boxBounds.Top, 1, boxBounds.Height + 1), _global.Palette_LightGray);
+
+            for (int i = 0; i < visibleSuggestions; i++)
+            {
+                bool isSelected = i == _autoCompleteManager.SelectedAutoCompleteSuggestionIndex;
+                Color color = isSelected ? _global.Palette_Yellow : _global.Palette_LightGray;
+                string suggestion = _autoCompleteManager.AutoCompleteSuggestions[i];
+
+                // Calculate Y position from the bottom of the box, upwards.
+                float suggestionY = boxBounds.Bottom - (i + 1) * Global.TERMINAL_LINE_SPACING - 2;
+
+                if (isSelected)
+                {
+                    spriteBatch.Draw(pixel, new Rectangle(boxBounds.X + 1, (int)suggestionY, boxBounds.Width - 2, Global.TERMINAL_LINE_SPACING), _global.Palette_DarkGray);
+                }
+
+                spriteBatch.DrawString(font, suggestion, new Vector2(boxBounds.X + 4, suggestionY), color);
+            }
         }
 
         private ColoredLine ParseColoredText(string text, Color? baseColor = null)
@@ -250,11 +319,10 @@ namespace ProjectVagabond.Utils
             {
                 if (text[i] == '[')
                 {
-                    // Check for escaped bracket [[
                     if (i + 1 < text.Length && text[i + 1] == '[')
                     {
                         currentText += '[';
-                        i++; // Skip the second '['
+                        i++;
                         continue;
                     }
 

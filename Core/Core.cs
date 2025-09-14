@@ -210,9 +210,6 @@ namespace ProjectVagabond
             var commandProcessor = new CommandProcessor(playerInputSystem);
             ServiceLocator.Register<CommandProcessor>(commandProcessor);
 
-            var inputHandler = new InputHandler();
-            ServiceLocator.Register<InputHandler>(inputHandler);
-
             _sceneManager = new SceneManager();
             ServiceLocator.Register<SceneManager>(_sceneManager);
             _sceneManager.AddScene(GameSceneState.Transition, new TransitionScene());

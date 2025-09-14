@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Scenes;
 using System;
@@ -15,7 +16,6 @@ namespace ProjectVagabond
 
         // Lazily-loaded Dependencies (via ServiceLocator)
         private GameState _gameState;
-        private Global _global;
         private ComponentStore _componentStore;
 
         private Dictionary<string, Command> _commands;
@@ -47,8 +47,8 @@ namespace ProjectVagabond
                 sb.AppendLine("  [palette_teal]Inventory & Moves[/]");
                 sb.AppendLine("    inventory          - Shows player's current inventory.");
                 sb.AppendLine("    spellbook          - Shows player's current spellbook.");
-                sb.AppendLine("    give <ID> [[qty]    - Adds an item to inventory.");
-                sb.AppendLine("    remove <ID> [[qty]  - Removes an item from inventory.");
+                sb.AppendLine("    give <ID> [[qty]]    - Adds an item to inventory.");
+                sb.AppendLine("    remove <ID> [[qty]]  - Removes an item from inventory.");
                 sb.AppendLine("    learn <ID>         - Teaches the player a new move.");
                 sb.AppendLine("    forget <ID>        - Makes the player forget a move.");
                 sb.AppendLine("    addpage            - Adds an empty spell page.");
@@ -90,6 +90,11 @@ namespace ProjectVagabond
             _commands["forget"] = new Command("forget", (args) =>
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState == null)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized. Start a game first." });
+                    return;
+                }
                 if (args.Length < 2)
                 {
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: forget <MoveID>" });
@@ -108,6 +113,11 @@ namespace ProjectVagabond
             _commands["addpage"] = new Command("addpage", (args) =>
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState == null)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized. Start a game first." });
+                    return;
+                }
                 _gameState.PlayerState.SpellbookPages.Add(null);
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Added a spell page. Total pages: {_gameState.PlayerState.SpellbookPages.Count}" });
             }, "addpage - Adds an empty spell page to the player's spellbook.");
@@ -115,6 +125,11 @@ namespace ProjectVagabond
             _commands["removepage"] = new Command("removepage", (args) =>
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState == null)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized. Start a game first." });
+                    return;
+                }
                 if (_gameState.PlayerState.SpellbookPages.Count > 0)
                 {
                     _gameState.PlayerState.SpellbookPages.RemoveAt(_gameState.PlayerState.SpellbookPages.Count - 1);
@@ -137,7 +152,7 @@ namespace ProjectVagabond
                 (args) =>
                 {
                     _gameState ??= ServiceLocator.Get<GameState>();
-                    if (args.Length == 0) return _gameState.PlayerState.Inventory.Keys.ToList();
+                    if (args.Length == 0) return _gameState.PlayerState?.Inventory.Keys.ToList() ?? new List<string>();
                     return new List<string>();
                 });
 
@@ -159,6 +174,11 @@ namespace ProjectVagabond
         private void HandleGiveItem(string[] args)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized. Start a game first." });
+                return;
+            }
             if (args.Length < 2)
             {
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: give <ItemID> [quantity]" });
@@ -186,6 +206,11 @@ namespace ProjectVagabond
         private void HandleRemoveItem(string[] args)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized. Start a game first." });
+                return;
+            }
             if (args.Length < 2)
             {
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: remove <ItemID> [quantity]" });
@@ -213,6 +238,11 @@ namespace ProjectVagabond
         private void HandleShowInventory()
         {
             _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized. Start a game first." });
+                return;
+            }
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Player Inventory:" });
             if (_gameState.PlayerState.Inventory.Any())
             {
@@ -230,6 +260,11 @@ namespace ProjectVagabond
         private void HandleShowSpellbook()
         {
             _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized. Start a game first." });
+                return;
+            }
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Player Spellbook:" });
             var spellbook = _gameState.PlayerState.SpellbookPages;
             if (spellbook.Any())
@@ -289,12 +324,15 @@ namespace ProjectVagabond
             }
 
             var stats = _componentStore.GetComponent<CombatantStatsComponent>(_gameState.PlayerEntityId);
-            if (stats != null)
+            if (stats == null)
             {
-                int oldHP = stats.CurrentHP;
-                stats.CurrentHP = Math.Min(stats.MaxHP, stats.CurrentHP + amount);
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Healed {stats.CurrentHP - oldHP} HP. Current HP: {stats.CurrentHP}/{stats.MaxHP}" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player stats component not found." });
+                return;
             }
+
+            int oldHP = stats.CurrentHP;
+            stats.CurrentHP = Math.Min(stats.MaxHP, stats.CurrentHP + amount);
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Healed {stats.CurrentHP - oldHP} HP. Current HP: {stats.CurrentHP}/{stats.MaxHP}" });
         }
 
         private void HandleDamage(string[] args)
@@ -308,12 +346,15 @@ namespace ProjectVagabond
             }
 
             var stats = _componentStore.GetComponent<CombatantStatsComponent>(_gameState.PlayerEntityId);
-            if (stats != null)
+            if (stats == null)
             {
-                int oldHP = stats.CurrentHP;
-                stats.CurrentHP = Math.Max(0, stats.CurrentHP - amount);
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Dealt {oldHP - stats.CurrentHP} damage. Current HP: {stats.CurrentHP}/{stats.MaxHP}" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player stats component not found." });
+                return;
             }
+
+            int oldHP = stats.CurrentHP;
+            stats.CurrentHP = Math.Max(0, stats.CurrentHP - amount);
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Dealt {oldHP - stats.CurrentHP} damage. Current HP: {stats.CurrentHP}/{stats.MaxHP}" });
         }
 
         public void ProcessCommand(string input)
