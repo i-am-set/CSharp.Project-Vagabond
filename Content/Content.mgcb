@@ -386,6 +386,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Backgrounds/tiled_background_1.png
 
+#begin Sprites/UI/BasicIcons/ArrowIconSpriteSheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/ArrowIconSpriteSheet.png;Sprites/UI/ArrowIconSpriteSheet
+
 #begin Sprites/UI/ButtonIcons/ui_action_button_template.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -565,18 +577,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/KeyPrompts/ui_key_up.png;Sprites/UI/KeyPrompts/ui_key_up
-
-#begin Sprites/UI/MapIcons/ArrowIconSpriteSheet.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/MapIcons/ArrowIconSpriteSheet.png
 
 #begin Sprites/UI/ui_local_map_selector.png
 /importer:TextureImporter

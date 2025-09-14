@@ -106,7 +106,7 @@ namespace ProjectVagabond
             try { _softParticleSprite = _textureFactory.CreateSoftCircleParticleTexture(); }
             catch { _softParticleSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
 
-            try { ArrowIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/MapIcons/ArrowIconSpriteSheet"); }
+            try { ArrowIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ArrowIconSpriteSheet"); }
             catch { ArrowIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
 
             try { FireballParticleShaderEffect = _core.Content.Load<Effect>("Shaders/FireballParticleShader"); }

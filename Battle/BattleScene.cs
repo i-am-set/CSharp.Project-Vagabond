@@ -39,6 +39,7 @@ namespace ProjectVagabond.Scenes
         private bool _isBattleOver;
         private float _endOfBattleTimer;
         private const float END_OF_BATTLE_DELAY = 2.0f; // Seconds to wait before exiting
+        private BattleCombatant _currentActor;
 
         // UI State
         private enum BattleUIState { Default, Targeting }
@@ -78,6 +79,21 @@ namespace ProjectVagabond.Scenes
         private readonly List<HitAnimationState> _activeHitAnimations = new List<HitAnimationState>();
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
         private readonly Random _random = new Random();
+
+        // Hover Highlight Animation
+        private class HoverHighlightState
+        {
+            public MoveData CurrentMove;
+            public List<BattleCombatant> Targets = new List<BattleCombatant>();
+            public int CurrentTargetIndex = 0;
+            public float Timer = 0f;
+
+            public const float StartDelay = 0.5f;
+            public const float FadeDuration = 0.6f;
+            public const float HoldDuration = 0.0f;
+        }
+        private readonly HoverHighlightState _hoverHighlightState = new HoverHighlightState();
+
 
         // Layout Constants
         private const int DIVIDER_Y = 105;
@@ -120,6 +136,7 @@ namespace ProjectVagabond.Scenes
             _activeAlphaAnimations.Clear();
             _activeHitAnimations.Clear();
             _narrationQueue.Clear();
+            _currentActor = null;
 
             _isBattleOver = false;
             _endOfBattleTimer = 0f;
@@ -238,7 +255,7 @@ namespace ProjectVagabond.Scenes
 
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            string fleeMessage = player != null ? $"{player.Name} escaped..." : "You escaped...";
+            string fleeMessage = player != null ? $"{player.Name} escaped." : "Got away safely!";
             _narrationQueue.Enqueue(() => _battleNarrator.Show(fleeMessage, secondaryFont));
         }
 
@@ -263,6 +280,7 @@ namespace ProjectVagabond.Scenes
         private void OnBattleActionExecuted(GameEvents.BattleActionExecuted e)
         {
             _narrationQueue.Clear();
+            _currentActor = e.Actor;
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             if (e.Actor.HasStatusEffect(StatusEffectType.Stun))
@@ -423,6 +441,7 @@ namespace ProjectVagabond.Scenes
             UpdateHealthAnimations(gameTime);
             UpdateAlphaAnimations(gameTime);
             UpdateHitAnimations(gameTime);
+            UpdateHoverHighlights(gameTime);
 
             if (_settingsButton != null)
             {
@@ -538,6 +557,11 @@ namespace ProjectVagabond.Scenes
             var currentPhase = _battleManager.CurrentPhase;
             if (currentPhase != _previousBattlePhase)
             {
+                if (currentPhase == BattleManager.BattlePhase.EndOfTurn || currentPhase == BattleManager.BattlePhase.BattleOver)
+                {
+                    _currentActor = null;
+                }
+
                 if (currentPhase == BattleManager.BattlePhase.ActionSelection)
                 {
                     _subMenuState = BattleSubMenuState.ActionRoot;
@@ -656,6 +680,68 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        private void UpdateHoverHighlights(GameTime gameTime)
+        {
+            var hoveredMove = _actionMenu.HoveredMove;
+
+            if (hoveredMove != _hoverHighlightState.CurrentMove)
+            {
+                _hoverHighlightState.CurrentMove = hoveredMove;
+                _hoverHighlightState.Targets.Clear();
+                _hoverHighlightState.CurrentTargetIndex = 0;
+                _hoverHighlightState.Timer = 0f;
+
+                if (hoveredMove != null)
+                {
+                    var player = _battleManager.AllCombatants.First(c => c.IsPlayerControlled);
+                    var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
+                    var all = _battleManager.AllCombatants.Where(c => !c.IsDefeated).ToList();
+
+                    switch (hoveredMove.Target)
+                    {
+                        case TargetType.Single: _hoverHighlightState.Targets.AddRange(enemies); break;
+                        case TargetType.Every: _hoverHighlightState.Targets.AddRange(enemies); break;
+                        case TargetType.Self: _hoverHighlightState.Targets.Add(player); break;
+                        case TargetType.SingleAll: _hoverHighlightState.Targets.AddRange(all); break;
+                        case TargetType.EveryAll: _hoverHighlightState.Targets.AddRange(all); break;
+                    }
+                }
+            }
+
+            if (_hoverHighlightState.CurrentMove != null && _hoverHighlightState.Targets.Any())
+            {
+                _hoverHighlightState.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_hoverHighlightState.Timer < HoverHighlightState.StartDelay)
+                {
+                    return; // Don't start the animation cycle yet
+                }
+
+                float effectiveTimer = _hoverHighlightState.Timer - HoverHighlightState.StartDelay;
+                float cycleDuration = (HoverHighlightState.FadeDuration * 2) + HoverHighlightState.HoldDuration;
+
+                switch (_hoverHighlightState.CurrentMove.Target)
+                {
+                    case TargetType.Single:
+                    case TargetType.SingleAll:
+                        if (effectiveTimer >= cycleDuration)
+                        {
+                            _hoverHighlightState.Timer = HoverHighlightState.StartDelay; // Reset timer to start of animation
+                            _hoverHighlightState.CurrentTargetIndex = (_hoverHighlightState.CurrentTargetIndex + 1) % _hoverHighlightState.Targets.Count;
+                        }
+                        break;
+                    case TargetType.Every:
+                    case TargetType.EveryAll:
+                    case TargetType.Self:
+                        float simpleCycle = HoverHighlightState.FadeDuration * 2;
+                        if (effectiveTimer >= simpleCycle)
+                        {
+                            _hoverHighlightState.Timer = HoverHighlightState.StartDelay; // Reset timer to start of animation
+                        }
+                        break;
+                }
+            }
+        }
+
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (_battleManager == null)
@@ -741,6 +827,9 @@ namespace ProjectVagabond.Scenes
                     spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_LightGray);
                 }
             }
+
+            DrawHoverHighlights(spriteBatch, font, secondaryFont);
+            DrawTurnIndicator(spriteBatch, font, gameTime);
 
             // --- Draw Targeting UI ---
             if (_uiState == BattleUIState.Targeting)
@@ -870,6 +959,34 @@ namespace ProjectVagabond.Scenes
             );
         }
 
+        private Rectangle GetPlayerInteractionBounds(BitmapFont nameFont, BitmapFont statsFont)
+        {
+            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+            if (player == null) return Rectangle.Empty;
+
+            const int playerHudY = DIVIDER_Y - 10;
+            const int playerHudPaddingX = 10;
+
+            Vector2 nameSize = nameFont.MeasureString(player.Name);
+            Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - nameFont.LineHeight + 7);
+
+            string hpLabel = "HP: ";
+            string currentHp = ((int)Math.Round(player.VisualHP)).ToString();
+            string separator = "/";
+            string maxHp = player.Stats.MaxHP.ToString();
+            string fullHpText = hpLabel + currentHp + separator + maxHp;
+            Vector2 hpTextSize = statsFont.MeasureString(fullHpText);
+            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
+
+            int left = (int)namePos.X;
+            int right = (int)(hpStartX + hpTextSize.X);
+            int top = (int)Math.Min(namePos.Y, playerHudY);
+            int bottom = (int)Math.Max(namePos.Y + nameSize.Height, playerHudY + hpTextSize.Y);
+
+            const int padding = 2;
+            return new Rectangle(left - padding, top - padding, (right - left) + padding * 2, (bottom - top) + padding * 2);
+        }
+
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 centerPosition)
         {
             var global = ServiceLocator.Get<Global>();
@@ -947,6 +1064,142 @@ namespace ProjectVagabond.Scenes
             currentX += statsFont.MeasureString(separator).Width;
 
             spriteBatch.DrawStringSnapped(statsFont, maxHp, new Vector2(currentX, drawPosition.Y), numberColor);
+        }
+
+        private void DrawHoverHighlights(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont)
+        {
+            if (_hoverHighlightState.CurrentMove == null || !_hoverHighlightState.Targets.Any() || _hoverHighlightState.Timer < HoverHighlightState.StartDelay) return;
+
+            float alpha = 0f;
+            var move = _hoverHighlightState.CurrentMove;
+            var state = _hoverHighlightState;
+            float effectiveTimer = state.Timer - HoverHighlightState.StartDelay;
+
+            switch (move.Target)
+            {
+                case TargetType.Single:
+                case TargetType.SingleAll:
+                    float cycleDuration = (HoverHighlightState.FadeDuration * 2) + HoverHighlightState.HoldDuration;
+                    float timeInCycle = effectiveTimer % cycleDuration;
+
+                    if (timeInCycle < HoverHighlightState.FadeDuration) // Fading in
+                        alpha = timeInCycle / HoverHighlightState.FadeDuration;
+                    else if (timeInCycle < HoverHighlightState.FadeDuration + HoverHighlightState.HoldDuration) // Holding
+                        alpha = 1f;
+                    else // Fading out
+                        alpha = 1f - ((timeInCycle - HoverHighlightState.FadeDuration - HoverHighlightState.HoldDuration) / HoverHighlightState.FadeDuration);
+
+                    var target = state.Targets[state.CurrentTargetIndex];
+                    DrawHighlightForCombatant(spriteBatch, font, secondaryFont, target, alpha);
+                    break;
+
+                case TargetType.Every:
+                case TargetType.EveryAll:
+                case TargetType.Self:
+                    float simpleCycle = HoverHighlightState.FadeDuration * 2;
+                    float timeInSimpleCycle = effectiveTimer % simpleCycle;
+
+                    if (timeInSimpleCycle < HoverHighlightState.FadeDuration) // Fading in
+                        alpha = timeInSimpleCycle / HoverHighlightState.FadeDuration;
+                    else // Fading out
+                        alpha = 1f - ((timeInSimpleCycle - HoverHighlightState.FadeDuration) / HoverHighlightState.FadeDuration);
+
+                    foreach (var t in state.Targets)
+                    {
+                        DrawHighlightForCombatant(spriteBatch, font, secondaryFont, t, alpha);
+                    }
+                    break;
+            }
+        }
+
+        private void DrawHighlightForCombatant(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant combatant, float alpha)
+        {
+            if (alpha <= 0) return;
+            Color boxColor = Color.Yellow * (alpha * 0.3f);
+            Rectangle bounds;
+
+            if (combatant.IsPlayerControlled)
+            {
+                bounds = GetPlayerInteractionBounds(font, secondaryFont);
+            }
+            else
+            {
+                // This requires re-calculating the enemy's position, which is already done once per frame.
+                // For a production game, this data should be cached to avoid redundant calculations.
+                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled).ToList();
+                int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
+                if (enemyIndex == -1) return;
+
+                const int enemyAreaPadding = 20;
+                const int enemyHudY = 80;
+                int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
+                int slotWidth = availableWidth / enemies.Count;
+                var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
+                bounds = GetCombatantInteractionBounds(combatant, centerPosition, font, secondaryFont);
+            }
+
+            spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Top), new Vector2(bounds.Right, bounds.Top), boxColor);
+            spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Bottom), new Vector2(bounds.Right, bounds.Bottom), boxColor);
+            spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Top), new Vector2(bounds.Left, bounds.Bottom), boxColor);
+            spriteBatch.DrawLineSnapped(new Vector2(bounds.Right, bounds.Top), new Vector2(bounds.Right, bounds.Bottom), boxColor);
+        }
+
+        private void DrawTurnIndicator(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            if (_currentActor == null || _currentActor.IsDefeated) return;
+
+            var arrowSheet = _spriteManager.ArrowIconSpriteSheet;
+            var arrowRects = _spriteManager.ArrowIconSourceRects;
+            if (arrowSheet == null || arrowRects == null) return;
+
+            float bobOffset = MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) * 2f;
+
+            if (_currentActor.IsPlayerControlled)
+            {
+                var player = _currentActor;
+                var arrowRect = arrowRects[4]; // Right arrow
+
+                const int playerHudY = DIVIDER_Y - 10;
+                const int playerHudPaddingX = 10;
+
+                Vector2 nameSize = font.MeasureString(player.Name);
+                Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7);
+
+                var arrowPos = new Vector2(
+                    namePos.X - arrowRect.Width - 4,
+                    namePos.Y + (nameSize.Y - arrowRect.Height) / 2 + bobOffset
+                );
+
+                spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
+            }
+            else // Enemy turn
+            {
+                var arrowRect = arrowRects[6]; // Down arrow
+                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled).ToList();
+                int enemyIndex = enemies.FindIndex(e => e.CombatantID == _currentActor.CombatantID);
+                if (enemyIndex == -1) return;
+
+                const int enemyAreaPadding = 20;
+                const int enemyHudY = 80;
+                int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
+                int slotWidth = availableWidth / enemies.Count;
+                var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
+
+                const int spriteSize = 64;
+                var spriteRect = new Rectangle(
+                    (int)(centerPosition.X - spriteSize / 2),
+                    (int)(centerPosition.Y - spriteSize - 10),
+                    spriteSize,
+                    spriteSize
+                );
+
+                var arrowPos = new Vector2(
+                    spriteRect.Center.X - arrowRect.Width / 2,
+                    spriteRect.Top - arrowRect.Height - 2 + bobOffset
+                );
+
+                spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
+            }
         }
 
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using ProjectVagabond.Battle;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 
@@ -213,6 +214,15 @@ namespace ProjectVagabond.Battle
 
             var action = _actionQueue[0];
             _actionQueue.RemoveAt(0);
+
+            // Liveness Check: Skip the action if the actor was defeated by a prior action in the same turn.
+            if (action.Actor.IsDefeated)
+            {
+                // We still need to advance the state machine, so we go to CheckForDefeat,
+                // which will then loop back here for the next action in the queue.
+                _currentPhase = BattlePhase.CheckForDefeat;
+                return;
+            }
 
             // Pre-computation (Attacker)
             if (action.Actor.HasStatusEffect(StatusEffectType.Stun))

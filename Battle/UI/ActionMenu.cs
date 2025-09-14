@@ -34,6 +34,7 @@ namespace ProjectVagabond.Battle.UI
         private MoveData _selectedMove;
         public MoveData SelectedMove => _selectedMove;
         private MoveData _tooltipMove;
+        public MoveData HoveredMove { get; private set; }
 
         private float _targetingTextAnimTimer = 0f;
         private bool _buttonsInitialized = false;
@@ -129,6 +130,7 @@ namespace ProjectVagabond.Battle.UI
         public void SetState(MenuState newState)
         {
             _currentState = newState;
+            HoveredMove = null;
 
             if (newState == MenuState.Main)
             {
@@ -300,7 +302,15 @@ namespace ProjectVagabond.Battle.UI
                     foreach (var button in _actionButtons) button.Update(currentMouseState);
                     break;
                 case MenuState.Moves:
-                    foreach (var button in _moveButtons) button.Update(currentMouseState);
+                    HoveredMove = null;
+                    foreach (var button in _moveButtons)
+                    {
+                        button.Update(currentMouseState);
+                        if (button.IsHovered)
+                        {
+                            HoveredMove = button.Move;
+                        }
+                    }
                     _backButton.Update(currentMouseState);
                     break;
                 case MenuState.Targeting:
