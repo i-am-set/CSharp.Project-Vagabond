@@ -7,20 +7,23 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 
 namespace ProjectVagabond.Battle.UI
 {
     public class ItemMenu
     {
         public event Action OnBack;
-        public event Action<ConsumableItemData, BattleCombatant> OnItemSelected;
-
+        public event Action<ConsumableItemData> OnItemConfirmed;
+        public event Action<ConsumableItemData> OnItemTargetingRequested;
         private bool _isVisible;
         private readonly Global _global;
         private readonly List<IInventoryMenuItem> _displayItems = new List<IInventoryMenuItem>();
         private readonly Button _backButton;
         private readonly Button _sortButton;
         private readonly ContextMenu _sortContextMenu;
+        private Button _yesButton;
+        private Button _noButton;
 
         private int _scrollIndex = 0;
         private int _totalRows = 0;
@@ -29,12 +32,12 @@ namespace ProjectVagabond.Battle.UI
         private MouseState _previousMouseState;
         private bool _buttonsInitialized = false;
 
-        private enum MenuState { List, Targeting, Tooltip }
+        private enum MenuState { List, Tooltip, Confirm }
         private MenuState _currentState = MenuState.List;
-        public bool IsTargeting => _currentState == MenuState.Targeting;
 
-        private ConsumableItemData _itemForTargeting;
         private ConsumableItemData _itemForTooltip;
+        private ConsumableItemData _itemForConfirmation;
+        private List<BattleCombatant> _allCombatants;
 
         public ItemMenu()
         {
@@ -44,6 +47,19 @@ namespace ProjectVagabond.Battle.UI
             _backButton.OnClick += HandleBack;
             _sortButton = new Button(Rectangle.Empty, "SORT", function: "Sort");
             _sortButton.OnClick += OpenSortMenu;
+
+            _yesButton = new Button(Rectangle.Empty, "YES");
+            _yesButton.OnClick += () =>
+            {
+                if (_itemForConfirmation != null)
+                {
+                    OnItemConfirmed?.Invoke(_itemForConfirmation);
+                }
+            };
+
+            _noButton = new Button(Rectangle.Empty, "NO");
+            _noButton.OnClick += () => _currentState = MenuState.List;
+
             _previousMouseState = Mouse.GetState();
         }
 
@@ -53,13 +69,16 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             _backButton.Font = secondaryFont;
             _sortButton.Font = secondaryFont;
+            _yesButton.Font = secondaryFont;
+            _noButton.Font = secondaryFont;
             _buttonsInitialized = true;
         }
 
-        public void Show()
+        public void Show(List<BattleCombatant> allCombatants)
         {
             _isVisible = true;
             _currentState = MenuState.List;
+            _allCombatants = allCombatants;
             PopulateItems();
         }
 
@@ -68,7 +87,7 @@ namespace ProjectVagabond.Battle.UI
             _isVisible = false;
         }
 
-        private void PopulateItems()
+        public void PopulateItems()
         {
             _displayItems.Clear();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
@@ -98,16 +117,39 @@ namespace ProjectVagabond.Battle.UI
         {
             switch (item.Target)
             {
+                case TargetType.Single:
+                    var enemies = _allCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
+                    if (enemies.Count > 1)
+                    {
+                        OnItemTargetingRequested?.Invoke(item);
+                    }
+                    else
+                    {
+                        _itemForConfirmation = item;
+                        _currentState = MenuState.Confirm;
+                    }
+                    break;
+
+                case TargetType.SingleAll:
+                    var allTargets = _allCombatants.Where(c => !c.IsDefeated).ToList();
+                    if (allTargets.Count > 1)
+                    {
+                        OnItemTargetingRequested?.Invoke(item);
+                    }
+                    else
+                    {
+                        _itemForConfirmation = item;
+                        _currentState = MenuState.Confirm;
+                    }
+                    break;
+
                 case TargetType.Self:
                 case TargetType.None:
                 case TargetType.Every:
                 case TargetType.EveryAll:
-                    OnItemSelected?.Invoke(item, null);
-                    break;
-                case TargetType.Single:
-                case TargetType.SingleAll:
-                    _itemForTargeting = item;
-                    _currentState = MenuState.Targeting;
+                default:
+                    _itemForConfirmation = item;
+                    _currentState = MenuState.Confirm;
                     break;
             }
         }
@@ -122,8 +164,8 @@ namespace ProjectVagabond.Battle.UI
         {
             switch (_currentState)
             {
-                case MenuState.Targeting:
                 case MenuState.Tooltip:
+                case MenuState.Confirm:
                     _currentState = MenuState.List;
                     break;
                 case MenuState.List:
@@ -136,12 +178,6 @@ namespace ProjectVagabond.Battle.UI
         {
             if (!_isVisible) return;
             HandleBack();
-        }
-
-        public void SelectTarget(BattleCombatant target)
-        {
-            if (_currentState != MenuState.Targeting || _itemForTargeting == null) return;
-            OnItemSelected?.Invoke(_itemForTargeting, target);
         }
 
         private void OpenSortMenu()
@@ -168,21 +204,11 @@ namespace ProjectVagabond.Battle.UI
                     case MenuState.List:
                         UpdateList(currentMouseState);
                         break;
-                    case MenuState.Targeting:
-                        _backButton.Update(currentMouseState);
-                        break;
                     case MenuState.Tooltip:
-                        bool leftClick = currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
-                        bool rightClick = currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
-                        if (leftClick || rightClick)
-                        {
-                            if (UIInputManager.CanProcessMouseClick())
-                            {
-                                _currentState = MenuState.List;
-                                UIInputManager.ConsumeMouseClick();
-                            }
-                        }
-                        _backButton.Update(currentMouseState);
+                        UpdateTooltip(currentMouseState);
+                        break;
+                    case MenuState.Confirm:
+                        UpdateConfirm(currentMouseState);
                         break;
                 }
             }
@@ -225,6 +251,27 @@ namespace ProjectVagabond.Battle.UI
             _sortButton.Update(currentMouseState);
         }
 
+        private void UpdateTooltip(MouseState currentMouseState)
+        {
+            bool leftClick = currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
+            bool rightClick = currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
+            if (leftClick || rightClick)
+            {
+                if (UIInputManager.CanProcessMouseClick())
+                {
+                    _currentState = MenuState.List;
+                    UIInputManager.ConsumeMouseClick();
+                }
+            }
+            _backButton.Update(currentMouseState);
+        }
+
+        private void UpdateConfirm(MouseState currentMouseState)
+        {
+            _yesButton.Update(currentMouseState);
+            _noButton.Update(currentMouseState);
+        }
+
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             InitializeButtons();
@@ -235,11 +282,11 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.List:
                     DrawList(spriteBatch, font, gameTime, transform);
                     break;
-                case MenuState.Targeting:
-                    DrawTargeting(spriteBatch, font, gameTime, transform);
-                    break;
                 case MenuState.Tooltip:
                     DrawTooltip(spriteBatch, font, gameTime, transform);
+                    break;
+                case MenuState.Confirm:
+                    DrawConfirm(spriteBatch, font, gameTime, transform);
                     break;
             }
         }
@@ -343,19 +390,12 @@ namespace ProjectVagabond.Battle.UI
             _sortContextMenu.Draw(spriteBatch, secondaryFont);
         }
 
-        private void DrawTargeting(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
-        {
-            // For now, this state is handled by BattleScene. We just need to draw the back button.
-            DrawList(spriteBatch, font, gameTime, transform);
-        }
-
         private void DrawTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             const int horizontalPadding = 10;
             const int dividerY = 114;
             const int menuVerticalOffset = 4;
-            const int itemListHeight = 45;
             const int bottomBarTopPadding = 5;
             const int itemWidth = 145;
             const int columns = 2;
@@ -393,6 +433,50 @@ namespace ProjectVagabond.Battle.UI
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(tooltipBgRect.Center.X - backWidth / 2, bottomBarY, backWidth, 13);
             _backButton.Draw(spriteBatch, font, gameTime, transform);
+        }
+
+        private void DrawConfirm(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            const int horizontalPadding = 10;
+            const int dividerY = 114;
+            const int menuVerticalOffset = 4;
+            const int bottomBarTopPadding = 5;
+            const int itemWidth = 145;
+            const int columns = 2;
+            const int columnSpacing = 2;
+            int totalGridWidth = (itemWidth * columns) + columnSpacing;
+            int gridStartX = horizontalPadding + (Global.VIRTUAL_WIDTH - (horizontalPadding * 2) - totalGridWidth) / 2;
+            int gridStartY = dividerY + menuVerticalOffset;
+
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+            var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
+            var tooltipBgRect = new Rectangle(gridStartX - 1, gridStartY - 1, 294, 47);
+            spriteBatch.DrawSnapped(tooltipBg, tooltipBgRect, Color.White);
+
+            if (_itemForConfirmation != null)
+            {
+                string promptText = $"Use '{_itemForConfirmation.ItemName}'?";
+                var promptSize = font.MeasureString(promptText);
+                var promptPos = new Vector2(
+                    tooltipBgRect.Center.X - promptSize.Width / 2,
+                    tooltipBgRect.Y + 15
+                );
+                spriteBatch.DrawStringSnapped(font, promptText, promptPos, _global.Palette_BrightWhite);
+            }
+
+            int bottomBarY = tooltipBgRect.Bottom + bottomBarTopPadding;
+            const int buttonWidth = 60;
+            const int buttonHeight = 13;
+            const int buttonSpacing = 10;
+            int totalButtonsWidth = buttonWidth * 2 + buttonSpacing;
+            int buttonsStartX = tooltipBgRect.Center.X - totalButtonsWidth / 2;
+
+            _yesButton.Bounds = new Rectangle(buttonsStartX, bottomBarY, buttonWidth, buttonHeight);
+            _noButton.Bounds = new Rectangle(buttonsStartX + buttonWidth + buttonSpacing, bottomBarY, buttonWidth, buttonHeight);
+
+            _yesButton.Draw(spriteBatch, font, gameTime, transform);
+            _noButton.Draw(spriteBatch, font, gameTime, transform);
         }
 
         private string GetItemEffectDescription(ConsumableItemData item)

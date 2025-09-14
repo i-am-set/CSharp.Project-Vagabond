@@ -110,6 +110,19 @@ namespace ProjectVagabond.Battle
         }
 
         /// <summary>
+        /// Applies a specified amount of healing to the combatant's CurrentHP, clamped to MaxHP.
+        /// </summary>
+        /// <param name="healAmount">The amount of health to restore.</param>
+        public void ApplyHealing(int healAmount)
+        {
+            Stats.CurrentHP += healAmount;
+            if (Stats.CurrentHP > Stats.MaxHP)
+            {
+                Stats.CurrentHP = Stats.MaxHP;
+            }
+        }
+
+        /// <summary>
         /// Checks if the combatant currently has a specific status effect.
         /// </summary>
         /// <param name="effectType">The status effect to check for.</param>

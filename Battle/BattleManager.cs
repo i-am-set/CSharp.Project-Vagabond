@@ -218,8 +218,6 @@ namespace ProjectVagabond.Battle
             // Liveness Check: Skip the action if the actor was defeated by a prior action in the same turn.
             if (action.Actor.IsDefeated)
             {
-                // We still need to advance the state machine, so we go to CheckForDefeat,
-                // which will then loop back here for the next action in the queue.
                 _currentPhase = BattlePhase.CheckForDefeat;
                 return;
             }
@@ -238,21 +236,33 @@ namespace ProjectVagabond.Battle
                 CanAdvance = false;
                 return; // End this step of resolution
             }
-            // DoT/HoT effects would be resolved here.
 
+            if (action.ChosenItem != null)
+            {
+                ProcessItemAction(action);
+            }
+            else if (action.ChosenMove != null)
+            {
+                ProcessMoveAction(action);
+            }
+
+            _currentPhase = BattlePhase.CheckForDefeat;
+            CanAdvance = false; // Pause the manager until the scene says it's okay.
+        }
+
+        private void ProcessMoveAction(QueuedAction action)
+        {
             // If the actor is the player, move the used card to the discard pile.
             if (action.Actor.IsPlayerControlled)
             {
                 action.Actor.DeckManager?.CastMove(action.ChosenMove);
             }
 
-            // Resolve targets based on move's TargetType
             var targets = ResolveTargets(action);
             var damageResults = new List<DamageCalculator.DamageResult>();
 
             if (!targets.Any())
             {
-                // Handle moves with TargetType.None
                 EventBus.Publish(new GameEvents.BattleActionExecuted
                 {
                     Actor = action.Actor,
@@ -264,14 +274,12 @@ namespace ProjectVagabond.Battle
             else
             {
                 float multiTargetModifier = (targets.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
-
                 foreach (var target in targets)
                 {
                     var result = DamageCalculator.CalculateDamage(action.Actor, target, action.ChosenMove, multiTargetModifier);
                     target.ApplyDamage(result.DamageAmount);
                     damageResults.Add(result);
                 }
-
                 EventBus.Publish(new GameEvents.BattleActionExecuted
                 {
                     Actor = action.Actor,
@@ -280,20 +288,74 @@ namespace ProjectVagabond.Battle
                     DamageResults = damageResults
                 });
             }
+        }
 
-            _currentPhase = BattlePhase.CheckForDefeat;
-            CanAdvance = false; // Pause the manager until the scene says it's okay.
+        private void ProcessItemAction(QueuedAction action)
+        {
+            var gameState = ServiceLocator.Get<GameState>();
+            if (!gameState.ConsumeItem(action.ChosenItem.ItemID))
+            {
+                Debug.WriteLine($"[BattleManager] [ERROR] Failed to consume item '{action.ChosenItem.ItemID}'. It may have been removed from inventory unexpectedly.");
+                return; // Skip action if item can't be consumed.
+            }
+
+            var targets = ResolveTargets(action);
+            var healAmounts = new List<int>();
+
+            switch (action.ChosenItem.Type)
+            {
+                case ConsumableType.Heal:
+                    foreach (var target in targets)
+                    {
+                        target.ApplyHealing(action.ChosenItem.PrimaryValue);
+                        healAmounts.Add(action.ChosenItem.PrimaryValue);
+                    }
+                    EventBus.Publish(new GameEvents.BattleItemUsed
+                    {
+                        Actor = action.Actor,
+                        UsedItem = action.ChosenItem,
+                        Targets = targets,
+                        HealAmounts = healAmounts
+                    });
+                    break;
+
+                case ConsumableType.Buff:
+                    // Placeholder for buff logic
+                    break;
+
+                case ConsumableType.Attack:
+                    if (!string.IsNullOrEmpty(action.ChosenItem.MoveID) && BattleDataCache.Moves.TryGetValue(action.ChosenItem.MoveID, out var moveData))
+                    {
+                        var damageResults = new List<DamageCalculator.DamageResult>();
+                        float multiTargetModifier = (targets.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
+                        foreach (var target in targets)
+                        {
+                            var result = DamageCalculator.CalculateDamage(action.Actor, target, moveData, multiTargetModifier);
+                            target.ApplyDamage(result.DamageAmount);
+                            damageResults.Add(result);
+                        }
+                        EventBus.Publish(new GameEvents.BattleActionExecuted
+                        {
+                            Actor = action.Actor,
+                            ChosenMove = moveData,
+                            UsedItem = action.ChosenItem, // Pass the item for correct narration
+                            Targets = targets,
+                            DamageResults = damageResults
+                        });
+                    }
+                    break;
+            }
         }
 
         private List<BattleCombatant> ResolveTargets(QueuedAction action)
         {
-            var move = action.ChosenMove;
+            var targetType = action.ChosenMove?.Target ?? action.ChosenItem?.Target ?? TargetType.None;
             var actor = action.Actor;
             var specifiedTarget = action.Target;
             var activeEnemies = _enemyCombatants.Where(c => !c.IsDefeated).ToList();
             var activePlayers = _playerCombatants.Where(c => !c.IsDefeated).ToList();
 
-            switch (move.Target)
+            switch (targetType)
             {
                 case TargetType.Single:
                     return specifiedTarget != null && !specifiedTarget.IsDefeated ? new List<BattleCombatant> { specifiedTarget } : new List<BattleCombatant>();

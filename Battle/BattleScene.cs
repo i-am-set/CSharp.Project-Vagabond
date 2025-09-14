@@ -27,6 +27,7 @@ namespace ProjectVagabond.Scenes
         private ActionMenu _actionMenu;
         private ItemMenu _itemMenu;
         private ImageButton _settingsButton;
+        private Button _itemTargetingBackButton;
 
         private ComponentStore _componentStore;
         private SceneManager _sceneManager;
@@ -42,11 +43,13 @@ namespace ProjectVagabond.Scenes
         private BattleCombatant _currentActor;
 
         // UI State
-        private enum BattleUIState { Default, Targeting }
+        private enum BattleUIState { Default, Targeting, ItemTargeting }
         private enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item }
         private BattleUIState _uiState = BattleUIState.Default;
         private BattleSubMenuState _subMenuState = BattleSubMenuState.None;
         private MoveData _moveForTargeting;
+        private ConsumableItemData _itemForTargeting;
+        private float _itemTargetingTextAnimTimer = 0f;
         private List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private int _hoveredTargetIndex = -1;
         private struct TargetInfo { public BattleCombatant Combatant; public Rectangle Bounds; }
@@ -122,6 +125,12 @@ namespace ProjectVagabond.Scenes
             _battleNarrator = new BattleNarrator(narratorBounds);
             _actionMenu = new ActionMenu();
             _itemMenu = new ItemMenu();
+
+            _itemTargetingBackButton = new Button(Rectangle.Empty, "BACK");
+            _itemTargetingBackButton.OnClick += () => {
+                _uiState = BattleUIState.Default;
+                OnItemMenuRequested(); // Re-opens the item menu
+            };
         }
 
         public override void Enter()
@@ -143,12 +152,15 @@ namespace ProjectVagabond.Scenes
 
             EventBus.Subscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
             EventBus.Subscribe<GameEvents.CombatantDefeated>(OnCombatantDefeated);
+            EventBus.Subscribe<GameEvents.BattleItemUsed>(OnBattleItemUsed);
             _actionMenu.OnMoveSelected += OnPlayerMoveSelected;
             _actionMenu.OnItemMenuRequested += OnItemMenuRequested;
             _actionMenu.OnMovesMenuOpened += () => _subMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened += () => _subMenuState = BattleSubMenuState.ActionRoot;
             _actionMenu.OnFleeRequested += FleeBattle;
             _itemMenu.OnBack += OnItemMenuBack;
+            _itemMenu.OnItemConfirmed += OnPlayerItemSelected;
+            _itemMenu.OnItemTargetingRequested += OnItemTargetingRequested;
 
             if (_settingsButton == null)
             {
@@ -162,6 +174,10 @@ namespace ProjectVagabond.Scenes
             }
             _settingsButton.OnClick += OpenSettings;
             _settingsButton.ResetAnimationState();
+
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            _itemTargetingBackButton.Font = secondaryFont;
+            _itemTargetingBackButton.ResetAnimationState();
 
             var gameState = ServiceLocator.Get<GameState>();
             int playerEntityId = gameState.PlayerEntityId;
@@ -221,12 +237,15 @@ namespace ProjectVagabond.Scenes
             base.Exit();
             EventBus.Unsubscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
             EventBus.Unsubscribe<GameEvents.CombatantDefeated>(OnCombatantDefeated);
+            EventBus.Unsubscribe<GameEvents.BattleItemUsed>(OnBattleItemUsed);
             _actionMenu.OnMoveSelected -= OnPlayerMoveSelected;
             _actionMenu.OnItemMenuRequested -= OnItemMenuRequested;
             _actionMenu.OnMovesMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionRoot;
             _actionMenu.OnFleeRequested -= FleeBattle;
             _itemMenu.OnBack -= OnItemMenuBack;
+            _itemMenu.OnItemConfirmed -= OnPlayerItemSelected;
+            _itemMenu.OnItemTargetingRequested -= OnItemTargetingRequested;
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
 
             if (_enemyEntityIds.Any())
@@ -263,7 +282,15 @@ namespace ProjectVagabond.Scenes
         {
             _subMenuState = BattleSubMenuState.Item;
             _actionMenu.Hide();
-            _itemMenu.Show();
+            _itemMenu.Show(_battleManager.AllCombatants.ToList());
+        }
+
+        private void OnItemTargetingRequested(ConsumableItemData item)
+        {
+            _uiState = BattleUIState.ItemTargeting;
+            _itemForTargeting = item;
+            _itemMenu.Hide();
+            _itemTargetingTextAnimTimer = 0f;
         }
 
         private void OnItemMenuBack()
@@ -289,14 +316,16 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
+            string actionName = e.UsedItem != null ? e.UsedItem.ItemName : e.ChosenMove.MoveName;
+
             if (e.ChosenMove.Target == TargetType.None || !e.Targets.Any())
             {
-                _narrationQueue.Enqueue(() => _battleNarrator.Show($"{e.Actor.Name} uses {e.ChosenMove.MoveName}!", secondaryFont));
+                _narrationQueue.Enqueue(() => _battleNarrator.Show($"{e.Actor.Name} uses {actionName}!", secondaryFont));
                 return;
             }
 
             // Single narration for the move itself
-            string attackNarration = $"{e.Actor.Name} uses {e.ChosenMove.MoveName}!";
+            string attackNarration = $"{e.Actor.Name} uses {actionName}!";
             _narrationQueue.Enqueue(() => _battleNarrator.Show(attackNarration, secondaryFont));
 
             // A single lambda to start all animations at once
@@ -331,6 +360,45 @@ namespace ProjectVagabond.Scenes
                 {
                     _narrationQueue.Enqueue(() => _battleNarrator.Show($"A critical hit on {target.Name}!", secondaryFont));
                 }
+            }
+        }
+
+        private void OnBattleItemUsed(GameEvents.BattleItemUsed e)
+        {
+            _narrationQueue.Clear();
+            _currentActor = e.Actor;
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+
+            string useNarration = $"{e.Actor.Name} uses {e.UsedItem.ItemName}!";
+            _narrationQueue.Enqueue(() => _battleNarrator.Show(useNarration, secondaryFont));
+
+            switch (e.UsedItem.Type)
+            {
+                case ConsumableType.Heal:
+                    if (e.Targets.Any())
+                    {
+                        _narrationQueue.Enqueue(() =>
+                        {
+                            for (int i = 0; i < e.Targets.Count; i++)
+                            {
+                                var target = e.Targets[i];
+                                StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
+                            }
+                        });
+
+                        for (int i = 0; i < e.Targets.Count; i++)
+                        {
+                            var target = e.Targets[i];
+                            var healAmount = e.HealAmounts[i];
+                            _narrationQueue.Enqueue(() => _battleNarrator.Show($"{target.Name} recovered {healAmount} HP!", secondaryFont));
+                        }
+                    }
+                    break;
+
+                case ConsumableType.Attack:
+                    // The BattleManager now fires a BattleActionExecuted event for attack items.
+                    // No special narration is needed here, as that event handler will cover it.
+                    break;
             }
         }
 
@@ -390,6 +458,50 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        private void OnPlayerItemSelected(ConsumableItemData item)
+        {
+            OnPlayerItemSelected(item, null);
+        }
+
+        private void OnPlayerItemSelected(ConsumableItemData item, BattleCombatant target)
+        {
+            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+            if (player == null) return;
+
+            // If a target wasn't passed in (e.g., for non-targeting items), resolve it now.
+            if (target == null)
+            {
+                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
+                switch (item.Target)
+                {
+                    case TargetType.Self:
+                    case TargetType.SingleAll: // Default to self if not targeting
+                        target = player;
+                        break;
+                    case TargetType.Single:
+                        if (enemies.Any()) target = enemies.First();
+                        break;
+                }
+            }
+
+            var action = new QueuedAction
+            {
+                Actor = player,
+                ChosenItem = item,
+                Target = target,
+                Priority = item.Priority,
+                ActorAgility = player.Stats.Agility
+            };
+
+            _battleManager.SetPlayerAction(action);
+
+            // Hide menus and transition to action resolution phase
+            _itemMenu.Hide();
+            _actionMenu.Hide();
+            _subMenuState = BattleSubMenuState.None;
+            _uiState = BattleUIState.Default;
+        }
+
         public override void Update(GameTime gameTime)
         {
             if (_battleManager == null)
@@ -402,8 +514,6 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
 
             // --- Handle End of Battle State ---
-            // If the battle is over (win, lose, or flee), we enter a simplified update loop.
-            // This loop only processes animations and narration until they are complete, then starts a timer to exit the scene.
             if (_isBattleOver)
             {
                 _battleNarrator.Update(gameTime);
@@ -414,7 +524,6 @@ namespace ProjectVagabond.Scenes
 
                 bool animationsAndNarrationComplete = !_battleNarrator.IsBusy && !_activeHealthAnimations.Any() && !_activeAlphaAnimations.Any() && !_narrationQueue.Any();
 
-                // If everything is finished, start the exit timer.
                 if (animationsAndNarrationComplete)
                 {
                     _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -425,13 +534,12 @@ namespace ProjectVagabond.Scenes
                 }
                 else if (!_battleNarrator.IsBusy && _narrationQueue.Any())
                 {
-                    // If animations are done but there's more narration, process it.
                     var nextStep = _narrationQueue.Dequeue();
                     nextStep.Invoke();
                 }
 
                 base.Update(gameTime);
-                return; // Exit here to prevent normal battle logic from running.
+                return;
             }
 
             // --- Normal Battle Update Loop ---
@@ -479,7 +587,7 @@ namespace ProjectVagabond.Scenes
                 _uiState = BattleUIState.Targeting;
                 _moveForTargeting = _actionMenu.SelectedMove;
             }
-            else
+            else if (_uiState != BattleUIState.ItemTargeting)
             {
                 _uiState = BattleUIState.Default;
             }
@@ -499,7 +607,12 @@ namespace ProjectVagabond.Scenes
 
                 if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
                 {
-                    if (_subMenuState == BattleSubMenuState.Item)
+                    if (_uiState == BattleUIState.ItemTargeting)
+                    {
+                        _uiState = BattleUIState.Default;
+                        OnItemMenuRequested(); // Re-open the item menu
+                    }
+                    else if (_subMenuState == BattleSubMenuState.Item)
                     {
                         OnItemMenuBack();
                     }
@@ -510,8 +623,14 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (_uiState == BattleUIState.Targeting)
+            if (_uiState == BattleUIState.Targeting || _uiState == BattleUIState.ItemTargeting)
             {
+                if (_uiState == BattleUIState.ItemTargeting)
+                {
+                    _itemTargetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    _itemTargetingBackButton.Update(currentMouseState);
+                }
+
                 _hoveredTargetIndex = -1;
                 for (int i = 0; i < _currentTargets.Count; i++)
                 {
@@ -527,7 +646,14 @@ namespace ProjectVagabond.Scenes
                     if (_hoveredTargetIndex != -1)
                     {
                         var selectedTarget = _currentTargets[_hoveredTargetIndex].Combatant;
-                        OnPlayerMoveSelected(_moveForTargeting, selectedTarget);
+                        if (_uiState == BattleUIState.Targeting)
+                        {
+                            OnPlayerMoveSelected(_moveForTargeting, selectedTarget);
+                        }
+                        else // ItemTargeting
+                        {
+                            OnPlayerItemSelected(_itemForTargeting, selectedTarget);
+                        }
                         UIInputManager.ConsumeMouseClick();
                     }
                 }
@@ -832,7 +958,43 @@ namespace ProjectVagabond.Scenes
             DrawTurnIndicator(spriteBatch, font, gameTime);
 
             // --- Draw Targeting UI ---
-            if (_uiState == BattleUIState.Targeting)
+            if (_uiState == BattleUIState.ItemTargeting)
+            {
+                const int backButtonPadding = 8;
+                const int backButtonHeight = 13;
+                const int backButtonTopMargin = 1;
+                const int dividerY = 120;
+                const int horizontalPadding = 10;
+                const int verticalPadding = 2;
+                int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
+                int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
+                int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
+                int gridStartY = dividerY + verticalPadding + 4;
+
+                string text = "CHOOSE A TARGET";
+                Vector2 textSize = font.MeasureString(text);
+
+                float animX = MathF.Sin(_itemTargetingTextAnimTimer * 4f) * 1f;
+                float animY = MathF.Sin(_itemTargetingTextAnimTimer * 8f) * 1f;
+                Vector2 animOffset = new Vector2(animX, animY);
+
+                Vector2 textPos = new Vector2(
+                    horizontalPadding + (availableWidth - textSize.X) / 2,
+                    gridStartY + (gridAreaHeight - textSize.Y) / 2
+                ) + animOffset;
+                spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
+
+                int backButtonWidth = (int)(_itemTargetingBackButton.Font ?? font).MeasureString(_itemTargetingBackButton.Text).Width + backButtonPadding * 2;
+                _itemTargetingBackButton.Bounds = new Rectangle(
+                    horizontalPadding + (availableWidth - backButtonWidth) / 2,
+                    gridStartY + gridAreaHeight + backButtonTopMargin,
+                    backButtonWidth,
+                    backButtonHeight
+                );
+                _itemTargetingBackButton.Draw(spriteBatch, font, gameTime, transform);
+            }
+
+            if (_uiState == BattleUIState.Targeting || _uiState == BattleUIState.ItemTargeting)
             {
                 for (int i = 0; i < _currentTargets.Count; i++)
                 {

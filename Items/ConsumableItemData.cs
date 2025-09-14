@@ -16,7 +16,7 @@ namespace ProjectVagabond.Battle
         public TargetType Target { get; set; }
         public int PrimaryValue { get; set; }
         public int? SecondaryValue { get; set; }
-        public string? MoveID { get; set; }
+        public string MoveID { get; set; }
         public int Priority { get; set; }
     }
 }

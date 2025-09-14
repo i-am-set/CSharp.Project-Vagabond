@@ -80,6 +80,7 @@ namespace ProjectVagabond
         {
             public BattleCombatant Actor { get; set; }
             public MoveData ChosenMove { get; set; }
+            public ConsumableItemData UsedItem { get; set; }
             public List<BattleCombatant> Targets { get; set; }
             public List<DamageCalculator.DamageResult> DamageResults { get; set; }
         }
@@ -92,7 +93,7 @@ namespace ProjectVagabond
             public BattleCombatant Actor { get; set; }
             public ConsumableItemData UsedItem { get; set; }
             public List<BattleCombatant> Targets { get; set; }
-            // Can be expanded with results later if needed
+            public List<int> HealAmounts { get; set; }
         }
 
 

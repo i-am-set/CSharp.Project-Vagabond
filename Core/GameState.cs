@@ -116,6 +116,26 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Safely consumes an item from the player's inventory.
+        /// </summary>
+        /// <param name="itemID">The ID of the item to consume.</param>
+        /// <param name="quantity">The number of items to consume.</param>
+        /// <returns>True if the item was successfully consumed, false otherwise.</returns>
+        public bool ConsumeItem(string itemID, int quantity = 1)
+        {
+            if (PlayerState.Inventory.TryGetValue(itemID, out int currentQuantity) && currentQuantity >= quantity)
+            {
+                PlayerState.Inventory[itemID] -= quantity;
+                if (PlayerState.Inventory[itemID] <= 0)
+                {
+                    PlayerState.Inventory.Remove(itemID);
+                }
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Updates the set of explored cells based on the player's current position.
         /// </summary>
         /// <param name="centerPosition">The player's current world position.</param>
