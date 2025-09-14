@@ -23,9 +23,14 @@ namespace ProjectVagabond.Battle
         public BattleCombatant Actor { get; set; } = default!;
 
         /// <summary>
-        /// The move that was selected.
+        /// The move that was selected. Null if an item was used.
         /// </summary>
-        public MoveData ChosenMove { get; set; } = default!;
+        public MoveData? ChosenMove { get; set; }
+
+        /// <summary>
+        /// The item that was used. Null if a move was used.
+        /// </summary>
+        public ConsumableItemData? ChosenItem { get; set; }
 
         /// <summary>
         /// The combatant being targeted by the move. Can be null for non-targeted moves.
@@ -43,4 +48,3 @@ namespace ProjectVagabond.Battle
         public int ActorAgility { get; set; }
     }
 }
-﻿

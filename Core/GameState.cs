@@ -105,6 +105,12 @@ namespace ProjectVagabond
                 }
             }
 
+            // Add some starting items for testing
+            PlayerState.Inventory["HealthPotion"] = 5;
+            PlayerState.Inventory["StrengthTonic"] = 2;
+            PlayerState.Inventory["FireScroll"] = 3;
+
+
             // Initial map reveal
             UpdateExploration(PlayerWorldPos);
         }

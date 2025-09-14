@@ -9,11 +9,15 @@ namespace ProjectVagabond.Battle.UI
     public class InventoryItemButton : Button, IInventoryMenuItem
     {
         private readonly BitmapFont _itemFont;
+        public ConsumableItemData Item { get; }
+        public int Quantity { get; }
 
-        public InventoryItemButton(string itemName, BitmapFont font)
-            : base(Rectangle.Empty, itemName.ToUpper())
+        public InventoryItemButton(ConsumableItemData item, int quantity, BitmapFont font)
+            : base(Rectangle.Empty, item.ItemName.ToUpper())
         {
             _itemFont = font;
+            Item = item;
+            Quantity = quantity;
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
@@ -39,18 +43,32 @@ namespace ProjectVagabond.Battle.UI
             );
             spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink);
 
-            var textColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
+            // --- Item Name Drawing ---
+            var nameColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
             if (!IsEnabled)
             {
-                textColor = _global.ButtonDisableColor;
+                nameColor = _global.ButtonDisableColor;
             }
 
-            var textPosition = new Vector2(
+            var namePosition = new Vector2(
                 iconRect.Right + iconPadding + 1,
                 animatedBounds.Y + (animatedBounds.Height - _itemFont.LineHeight) / 2
             );
 
-            spriteBatch.DrawStringSnapped(_itemFont, this.Text, textPosition, textColor);
+            spriteBatch.DrawStringSnapped(_itemFont, this.Text, namePosition, nameColor);
+
+            // --- Quantity Drawing ---
+            var quantityColor = IsEnabled ? _global.Palette_Gray : _global.ButtonDisableColor;
+
+            string quantityText = $"x{Quantity}";
+            var quantitySize = _itemFont.MeasureString(quantityText);
+
+            var quantityPosition = new Vector2(
+                animatedBounds.Right - quantitySize.Width - (iconPadding * 2),
+                animatedBounds.Y + (animatedBounds.Height - _itemFont.LineHeight) / 2
+            );
+
+            spriteBatch.DrawStringSnapped(_itemFont, quantityText, quantityPosition, quantityColor);
         }
     }
 }

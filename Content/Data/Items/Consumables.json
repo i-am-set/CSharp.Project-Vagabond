@@ -1,0 +1,35 @@
+[
+  {
+    "ItemID": "HealthPotion",
+    "ItemName": "Health Potion",
+    "Description": "A simple concoction that restores a small amount of health.",
+    "Type": "Heal",
+    "Target": "SingleAll",
+    "PrimaryValue": 20,
+    "SecondaryValue": null,
+    "MoveID": null,
+    "Priority": 0
+  },
+  {
+    "ItemID": "StrengthTonic",
+    "ItemName": "Strength Tonic",
+    "Description": "Temporarily boosts the user's physical strength.",
+    "Type": "Buff",
+    "Target": "Self",
+    "PrimaryValue": 3,
+    "SecondaryValue": null,
+    "MoveID": null,
+    "Priority": 0
+  },
+  {
+    "ItemID": "FireScroll",
+    "ItemName": "Fire Scroll",
+    "Description": "A magical scroll that unleashes a fiery attack upon a single target.",
+    "Type": "Attack",
+    "Target": "Single",
+    "PrimaryValue": 0,
+    "SecondaryValue": null,
+    "MoveID": "CinderSpark",
+    "Priority": 0
+  }
+]

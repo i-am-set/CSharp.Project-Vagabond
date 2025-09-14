@@ -85,6 +85,18 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Published when a consumable item is used in battle.
+        /// </summary>
+        public struct BattleItemUsed
+        {
+            public BattleCombatant Actor { get; set; }
+            public ConsumableItemData UsedItem { get; set; }
+            public List<BattleCombatant> Targets { get; set; }
+            // Can be expanded with results later if needed
+        }
+
+
+        /// <summary>
         /// Defines the type of change for a player's move set.
         /// </summary>
         public enum MoveSetChangeType

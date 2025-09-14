@@ -15,6 +15,9 @@ namespace ProjectVagabond
         /// </summary>
         public List<string> SpellbookPages { get; set; } = new List<string>();
 
-        // Future properties like inventory, stats, quest flags, etc., would go here.
+        /// <summary>
+        /// Represents the player's inventory, mapping an ItemID to its quantity.
+        /// </summary>
+        public Dictionary<string, int> Inventory { get; set; } = new Dictionary<string, int>();
     }
 }

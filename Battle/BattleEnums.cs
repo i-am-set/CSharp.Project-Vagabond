@@ -1,4 +1,6 @@
-﻿namespace ProjectVagabond.Battle
+﻿using ProjectVagabond.Battle;
+
+namespace ProjectVagabond.Battle
 {
     /// <summary>
     /// Specifies the type of damage a move inflicts upon impact.
@@ -43,5 +45,16 @@
         Poison,
         Stun,
         Regen
+    }
+
+    /// <summary>
+    /// Defines the primary function of a consumable item.
+    /// </summary>
+    public enum ConsumableType
+    {
+        Heal,
+        Buff,
+        Cleanse,
+        Attack
     }
 }
