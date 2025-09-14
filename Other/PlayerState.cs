@@ -19,5 +19,38 @@ namespace ProjectVagabond
         /// Represents the player's inventory, mapping an ItemID to its quantity.
         /// </summary>
         public Dictionary<string, int> Inventory { get; set; } = new Dictionary<string, int>();
+
+        /// <summary>
+        /// Adds an item to the player's inventory.
+        /// </summary>
+        public void AddItem(string itemID, int quantity = 1)
+        {
+            if (Inventory.ContainsKey(itemID))
+            {
+                Inventory[itemID] += quantity;
+            }
+            else
+            {
+                Inventory[itemID] = quantity;
+            }
+        }
+
+        /// <summary>
+        /// Removes an item from the player's inventory.
+        /// </summary>
+        /// <returns>True if the item was successfully removed, false otherwise.</returns>
+        public bool RemoveItem(string itemID, int quantity = 1)
+        {
+            if (Inventory.TryGetValue(itemID, out int currentQuantity) && currentQuantity >= quantity)
+            {
+                Inventory[itemID] -= quantity;
+                if (Inventory[itemID] <= 0)
+                {
+                    Inventory.Remove(itemID);
+                }
+                return true;
+            }
+            return false;
+        }
     }
 }

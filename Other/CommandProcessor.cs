@@ -4,6 +4,7 @@ using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond
 {
@@ -14,12 +15,8 @@ namespace ProjectVagabond
 
         // Lazily-loaded Dependencies (via ServiceLocator)
         private GameState _gameState;
-        private SceneManager _sceneManager;
-        private HapticsManager _hapticsManager;
         private Global _global;
-        private Core _core;
-        private GraphicsDeviceManager _graphics;
-        private BackgroundManager _backgroundManager;
+        private ComponentStore _componentStore;
 
         private Dictionary<string, Command> _commands;
         public Dictionary<string, Command> Commands => _commands;
@@ -40,162 +37,39 @@ namespace ProjectVagabond
 
             _commands["help"] = new Command("help", (args) =>
             {
-                _global ??= ServiceLocator.Get<Global>();
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = " " });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Available commands:", BaseColor = Color.Magenta });
-                foreach (var cmd in _commands.Values.OrderBy(c => c.Name))
+                var sb = new StringBuilder();
+                sb.AppendLine("[palette_yellow]Available Commands:[/]");
+                sb.AppendLine("  [palette_teal]Player Management[/]");
+                sb.AppendLine("    stats              - Shows player's current stats.");
+                sb.AppendLine("    heal <amount>      - Heals the player.");
+                sb.AppendLine("    damage <amount>    - Damages the player.");
+                sb.AppendLine();
+                sb.AppendLine("  [palette_teal]Inventory & Moves[/]");
+                sb.AppendLine("    inventory          - Shows player's current inventory.");
+                sb.AppendLine("    spellbook          - Shows player's current spellbook.");
+                sb.AppendLine("    give <ID> [[qty]    - Adds an item to inventory.");
+                sb.AppendLine("    remove <ID> [[qty]  - Removes an item from inventory.");
+                sb.AppendLine("    learn <ID>         - Teaches the player a new move.");
+                sb.AppendLine("    forget <ID>        - Makes the player forget a move.");
+                sb.AppendLine("    addpage            - Adds an empty spell page.");
+                sb.AppendLine("    removepage         - Removes the last spell page.");
+                sb.AppendLine();
+                sb.AppendLine("  [palette_teal]System[/]");
+                sb.AppendLine("    clear              - Clears the console history.");
+                sb.AppendLine("    exit               - Exits the game.");
+
+                string[] lines = sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+                foreach (var line in lines)
                 {
-                    if (cmd.Name == "help" || cmd.Name.StartsWith("debug")) continue;
-                    if (!string.IsNullOrEmpty(cmd.HelpText))
-                    {
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = cmd.HelpText, BaseColor = _global.Palette_LightPurple });
-                    }
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = line });
                 }
-            }, "help [gray]- Shows help for possible commands.");
+            }, "help - Shows this help message.");
 
             _commands["clear"] = new Command("clear", (args) =>
             {
-                var terminalRenderer = ServiceLocator.Get<TerminalRenderer>();
-                terminalRenderer.ClearHistory();
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "TERMINAL CLEARED" });
-            }, "clear [gray]- Clear the terminal history.");
-
-            _commands["look"] = new Command("look", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                int x = (int)_gameState.PlayerWorldPos.X;
-                int y = (int)_gameState.PlayerWorldPos.Y;
-                float noise = _gameState.GetNoiseAt(x, y);
-                string terrain = _gameState.GetTerrainDescription(noise);
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"You are standing on {terrain}." });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"World Position: ({x}, {y})" });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Terrain value: {noise:F2}" });
-            }, "look [gray]- Look around current area.");
-
-            _commands["run"] = new Command("run", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                if (args.Length < 2)
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]No run direction given (up, down, left, right, up-left, etc.)." });
-                    return;
-                }
-                string direction = args[1].ToLower();
-                string[] movementArgs = args.Skip(1).ToArray();
-                switch (direction)
-                {
-                    case "up": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(0, -1), movementArgs); break;
-                    case "down": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(0, 1), movementArgs); break;
-                    case "left": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(-1, 0), movementArgs); break;
-                    case "right": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(1, 0), movementArgs); break;
-                    case "up-left": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(-1, -1), movementArgs); break;
-                    case "up-right": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(1, -1), movementArgs); break;
-                    case "down-left": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(-1, 1), movementArgs); break;
-                    case "down-right": _playerInputSystem.QueueRunMovement(_gameState, new Vector2(1, 1), movementArgs); break;
-                    default: EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unknown direction for run: '{direction}'." }); break;
-                }
-            },
-            "run <dir> <count?> [gray]- Queue a run.",
-            (args) =>
-            {
-                if (args.Length == 0) return new List<string> { "up", "down", "left", "right", "up-left", "up-right", "down-left", "down-right" };
-                return new List<string>();
-            });
-
-            _commands["jog"] = new Command("jog", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                if (args.Length < 2)
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]No jog direction given (up, down, left, right, up-left, etc.)." });
-                    return;
-                }
-                string direction = args[1].ToLower();
-                string[] movementArgs = args.Skip(1).ToArray();
-                switch (direction)
-                {
-                    case "up": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(0, -1), movementArgs); break;
-                    case "down": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(0, 1), movementArgs); break;
-                    case "left": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, 0), movementArgs); break;
-                    case "right": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, 0), movementArgs); break;
-                    case "up-left": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, -1), movementArgs); break;
-                    case "up-right": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, -1), movementArgs); break;
-                    case "down-left": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, 1), movementArgs); break;
-                    case "down-right": _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, 1), movementArgs); break;
-                    default: EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unknown direction for jog: '{direction}'." }); break;
-                }
-            },
-            "jog <dir> <count?> [gray]- Queue a jog (default speed).",
-            (args) =>
-            {
-                if (args.Length == 0) return new List<string> { "up", "down", "left", "right", "up-left", "up-right", "down-left", "down-right" };
-                return new List<string>();
-            });
-
-            _commands["walk"] = new Command("walk", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                if (args.Length < 2)
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]No walk direction given (up, down, left, right, up-left, etc.)." });
-                    return;
-                }
-                string direction = args[1].ToLower();
-                string[] movementArgs = args.Skip(1).ToArray();
-                switch (direction)
-                {
-                    case "up": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(0, -1), movementArgs); break;
-                    case "down": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(0, 1), movementArgs); break;
-                    case "left": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, 0), movementArgs); break;
-                    case "right": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, 0), movementArgs); break;
-                    case "up-left": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, -1), movementArgs); break;
-                    case "up-right": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, -1), movementArgs); break;
-                    case "down-left": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(-1, 1), movementArgs); break;
-                    case "down-right": _playerInputSystem.QueueWalkMovement(_gameState, new Vector2(1, 1), movementArgs); break;
-                    default: EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unknown direction for walk: '{direction}'." }); break;
-                }
-            },
-            "walk <dir> <count?> [gray]- Queue a walk (slow speed).",
-            (args) =>
-            {
-                if (args.Length == 0) return new List<string> { "up", "down", "left", "right", "up-left", "up-right", "down-left", "down-right" };
-                return new List<string>();
-            });
-
-            _commands["up"] = new Command("up", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(0, -1), args); }, "up <count?> [gray]- Queue a jog up.");
-            _commands["down"] = new Command("down", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(0, 1), args); }, "down <count?> [gray]- Queue a jog down.");
-            _commands["left"] = new Command("left", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, 0), args); }, "left <count?> [gray]- Queue a jog left.");
-            _commands["right"] = new Command("right", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, 0), args); }, "right <count?> [gray]- Queue a jog right.");
-            _commands["up-left"] = new Command("up-left", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, -1), args); }, "up-left <count?> [gray]- Queue a jog up-left.");
-            _commands["up-right"] = new Command("up-right", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, -1), args); }, "up-right <count?> [gray]- Queue a jog up-right.");
-            _commands["down-left"] = new Command("down-left", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(-1, 1), args); }, "down-left <count?> [gray]- Queue a jog down-left.");
-            _commands["down-right"] = new Command("down-right", (args) => { _gameState ??= ServiceLocator.Get<GameState>(); _playerInputSystem.QueueJogMovement(_gameState, new Vector2(1, 1), args); }, "down-right <count?> [gray]- Queue a jog down-right.");
-
-            _commands["cancel"] = new Command("cancel", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                if (_gameState.PendingActions.Count > 0)
-                {
-                    _playerInputSystem.CancelPendingActions(_gameState);
-                }
-                else
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "No pending actions to clear." });
-                }
-            }, "cancel [gray]- Cancel all pending actions.");
-
-            _commands["pos"] = new Command("pos", (args) =>
-            {
-                _gameState ??= ServiceLocator.Get<GameState>();
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"World position: ({(int)_gameState.PlayerWorldPos.X}, {(int)_gameState.PlayerWorldPos.Y})" });
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Pending actions in queue: {_gameState.PendingActions.Count}" });
-                if (_gameState.IsExecutingActions)
-                {
-                    int totalActions = _gameState.InitialActionCount;
-                    int completedActions = totalActions - _gameState.PendingActions.Count;
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Executing queue: action {completedActions + 1}/{totalActions}" });
-                }
-            }, "pos [gray]- Show current position and queue status.");
+                var debugConsole = ServiceLocator.Get<Utils.DebugConsole>();
+                debugConsole.ClearHistory();
+            }, "clear - Clears the console history.");
 
             _commands["learn"] = new Command("learn", (args) =>
             {
@@ -206,7 +80,7 @@ namespace ProjectVagabond
                 }
                 EventBus.Publish(new GameEvents.PlayerMoveSetChanged { MoveID = args[1], ChangeType = GameEvents.MoveSetChangeType.Learn });
             },
-            "learn <MoveID> [gray]- Teach the player a new move.",
+            "learn <MoveID> - Teach the player a new move.",
             (args) =>
             {
                 if (args.Length == 0) return BattleDataCache.Moves.Keys.ToList();
@@ -223,7 +97,7 @@ namespace ProjectVagabond
                 }
                 EventBus.Publish(new GameEvents.PlayerMoveSetChanged { MoveID = args[1], ChangeType = GameEvents.MoveSetChangeType.Forget });
             },
-            "forget <MoveID> [gray]- Make the player forget a move.",
+            "forget <MoveID> - Make the player forget a move.",
             (args) =>
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
@@ -236,7 +110,7 @@ namespace ProjectVagabond
                 _gameState ??= ServiceLocator.Get<GameState>();
                 _gameState.PlayerState.SpellbookPages.Add(null);
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Added a spell page. Total pages: {_gameState.PlayerState.SpellbookPages.Count}" });
-            }, "addpage [gray]- Adds an empty spell page to the player's spellbook.");
+            }, "addpage - Adds an empty spell page to the player's spellbook.");
 
             _commands["removepage"] = new Command("removepage", (args) =>
             {
@@ -250,148 +124,215 @@ namespace ProjectVagabond
                 {
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Cannot remove any more spell pages." });
                 }
-            }, "removepage [gray]- Removes the last spell page from the player's spellbook.");
+            }, "removepage - Removes the last spell page from the player's spellbook.");
 
-            _commands["debugallcolors"] = new Command("debugallcolors", (args) =>
-            {
-                DebugAllColors();
-            }, "debugallcolors - Shows all XNA colors.");
-
-            _commands["setbgscroll"] = new Command("setbgscroll", (args) =>
-            {
-                _backgroundManager ??= ServiceLocator.Get<BackgroundManager>();
-                if (args.Length < 2)
+            _commands["give"] = new Command("give", (args) => HandleGiveItem(args), "give <ItemID> [quantity=1] - Adds an item to inventory.",
+                (args) =>
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: setbgscroll <direction|stop> <speed?>" });
-                    return;
-                }
+                    if (args.Length == 0) return BattleDataCache.Consumables.Keys.ToList();
+                    return new List<string>();
+                });
 
-                string direction = args[1].ToLower();
-                if (direction == "stop")
+            _commands["remove"] = new Command("remove", (args) => HandleRemoveItem(args), "remove <ItemID> [quantity=1] - Removes an item from inventory.",
+                (args) =>
                 {
-                    _backgroundManager.ScrollSpeed = 0f;
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Background scrolling stopped." });
-                    return;
-                }
+                    _gameState ??= ServiceLocator.Get<GameState>();
+                    if (args.Length == 0) return _gameState.PlayerState.Inventory.Keys.ToList();
+                    return new List<string>();
+                });
 
-                float speed = 10f; // default speed
-                if (args.Length > 2 && float.TryParse(args[2], out float parsedSpeed))
-                {
-                    speed = parsedSpeed;
-                }
-
-                Vector2 dirVector = Vector2.Zero;
-                switch (direction)
-                {
-                    case "up": dirVector = new Vector2(0, -1); break;
-                    case "down": dirVector = new Vector2(0, 1); break;
-                    case "left": dirVector = new Vector2(-1, 0); break;
-                    case "right": dirVector = new Vector2(1, 0); break;
-                    case "up-left": dirVector = new Vector2(-1, -1); break;
-                    case "up-right": dirVector = new Vector2(1, -1); break;
-                    case "down-left": dirVector = new Vector2(-1, 1); break;
-                    case "down-right": dirVector = new Vector2(1, 1); break;
-                    default:
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Unknown direction for setbgscroll: '{direction}'." });
-                        return;
-                }
-
-                _backgroundManager.ScrollDirection = dirVector;
-                _backgroundManager.ScrollSpeed = speed;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Background scrolling set to {direction} at speed {speed}." });
-            },
-            "setbgscroll <dir> <speed?> [gray]- Sets the background scroll.",
-            (args) =>
-            {
-                if (args.Length == 0) return new List<string> { "stop", "up", "down", "left", "right", "up-left", "up-right", "down-left", "down-right" };
-                return new List<string>();
-            });
-
-            _commands["debug"] = new Command("debug", (args) =>
-            {
-                _hapticsManager ??= ServiceLocator.Get<HapticsManager>();
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[debug]This is a debug command for testing purposes." });
-                _hapticsManager.TriggerShake(magnitude: 4.0f, duration: 2.2f);
-            }, "debug - Generic debug command");
-
-            _commands["debug2"] = new Command("debug2", (args) =>
-            {
-                _hapticsManager ??= ServiceLocator.Get<HapticsManager>();
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[debug]This is a second debug command for testing purposes." });
-                _hapticsManager.TriggerWobble(intensity: 4.0f, duration: 0.2f);
-            }, "debug - Generic debug command 2");
-
-            _commands["debugsettings"] = new Command("settings", (args) =>
-            {
-                _sceneManager ??= ServiceLocator.Get<SceneManager>();
-                _sceneManager.ChangeScene(GameSceneState.Settings);
-            }, "debugsettings [gray]- Open the settings menu.");
-
-            _commands["debugsetresolution"] = new Command("setresolution", (args) =>
-            {
-                _core ??= ServiceLocator.Get<Core>();
-                _graphics ??= ServiceLocator.Get<GraphicsDeviceManager>();
-                if (args.Length != 3)
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Invalid arguments. Usage: setres <width> <height>" });
-                    return;
-                }
-                if (!int.TryParse(args[1], out int width) || !int.TryParse(args[2], out int height))
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Width and height must be valid integers." });
-                    return;
-                }
-                const int minWidth = 800;
-                const int minHeight = 600;
-                if (width < minWidth || height < minHeight)
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Minimum resolution is {minWidth}x{minHeight}." });
-                    return;
-                }
-                try
-                {
-                    _graphics.PreferredBackBufferWidth = width;
-                    _graphics.PreferredBackBufferHeight = height;
-                    _graphics.ApplyChanges();
-                    _core.OnResize(null, null);
-
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[green]Window resolution set to {width}x{height}." });
-                }
-                catch (Exception ex)
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Failed to set resolution: {ex.Message}" });
-                    _graphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
-                    _graphics.PreferredBackBufferHeight = Global.VIRTUAL_HEIGHT;
-                    _graphics.ApplyChanges();
-                    _core.OnResize(null, null);
-                }
-            }, "debugsetresolution <width> <height> [gray]- Set the game resolution.");
+            _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows player's current inventory.");
+            _commands["spellbook"] = new Command("spellbook", (args) => HandleShowSpellbook(), "spellbook - Shows the player's current spellbook.");
+            _commands["stats"] = new Command("stats", (args) => HandleShowStats(), "stats - Shows player's current stats.");
+            _commands["heal"] = new Command("heal", (args) => HandleHeal(args), "heal <amount> - Heals the player.");
+            _commands["damage"] = new Command("damage", (args) => HandleDamage(args), "damage <amount> - Damages the player.");
 
             _commands["exit"] = new Command("exit", (args) =>
             {
-                _core ??= ServiceLocator.Get<Core>();
-                _core.ExitApplication();
-            }, "exit [gray]- Exit the game.");
+                var core = ServiceLocator.Get<Core>();
+                core.ExitApplication();
+            }, "exit - Exit the game.");
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- // 
 
-        private void DebugAllColors()
+        private void HandleGiveItem(string[] args)
         {
-            _global ??= ServiceLocator.Get<Global>();
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[gray]Displaying all XNA Framework colors:" });
-
-            var colorProperties = typeof(Color).GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-                .Where(p => p.PropertyType == typeof(Color))
-                .OrderBy(c => c.Name);
-
-            foreach (var property in colorProperties)
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (args.Length < 2)
             {
-                string colorName = property.Name;
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[{colorName.ToLower()}]{colorName}[/]", BaseColor = _global.OutputTextColor });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: give <ItemID> [quantity]" });
+                return;
             }
 
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[gray]Total colors displayed: {colorProperties.Count()}" });
+            string itemID = args[1];
+            if (!BattleDataCache.Consumables.ContainsKey(itemID))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Item '{itemID}' not found." });
+                return;
+            }
+
+            int quantity = 1;
+            if (args.Length > 2 && !int.TryParse(args[2], out quantity))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Invalid quantity." });
+                return;
+            }
+
+            _gameState.PlayerState.AddItem(itemID, quantity);
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Added {quantity}x {itemID} to inventory." });
+        }
+
+        private void HandleRemoveItem(string[] args)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (args.Length < 2)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: remove <ItemID> [quantity]" });
+                return;
+            }
+
+            string itemID = args[1];
+            int quantity = 1;
+            if (args.Length > 2 && !int.TryParse(args[2], out quantity))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Invalid quantity." });
+                return;
+            }
+
+            if (_gameState.PlayerState.RemoveItem(itemID, quantity))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Removed {quantity}x {itemID} from inventory." });
+            }
+            else
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Could not remove {quantity}x {itemID}. Not enough in inventory." });
+            }
+        }
+
+        private void HandleShowInventory()
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Player Inventory:" });
+            if (_gameState.PlayerState.Inventory.Any())
+            {
+                foreach (var item in _gameState.PlayerState.Inventory)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  - {item.Key}: {item.Value}" });
+                }
+            }
+            else
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "  (Empty)" });
+            }
+        }
+
+        private void HandleShowSpellbook()
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Player Spellbook:" });
+            var spellbook = _gameState.PlayerState.SpellbookPages;
+            if (spellbook.Any())
+            {
+                for (int i = 0; i < spellbook.Count; i++)
+                {
+                    string moveId = spellbook[i];
+                    if (string.IsNullOrEmpty(moveId))
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Page {i + 1}: (Empty)" });
+                    }
+                    else
+                    {
+                        string moveName = moveId;
+                        if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
+                        {
+                            moveName = moveData.MoveName;
+                        }
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Page {i + 1}: {moveName} ([dim]{moveId}[/])" });
+                    }
+                }
+            }
+            else
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "  (No pages)" });
+            }
+        }
+
+        private void HandleShowStats()
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            _componentStore ??= ServiceLocator.Get<ComponentStore>();
+            var stats = _componentStore.GetComponent<CombatantStatsComponent>(_gameState.PlayerEntityId);
+            if (stats == null)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player stats component not found." });
+                return;
+            }
+
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Player Stats:" });
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  HP: {stats.CurrentHP} / {stats.MaxHP}" });
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Level: {stats.Level}" });
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Strength: {stats.Strength}" });
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Intelligence: {stats.Intelligence}" });
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Tenacity: {stats.Tenacity}" });
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Agility: {stats.Agility}" });
+        }
+
+        private void HandleHeal(string[] args)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            _componentStore ??= ServiceLocator.Get<ComponentStore>();
+            if (args.Length < 2 || !int.TryParse(args[1], out int amount))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: heal <amount>" });
+                return;
+            }
+
+            var stats = _componentStore.GetComponent<CombatantStatsComponent>(_gameState.PlayerEntityId);
+            if (stats != null)
+            {
+                int oldHP = stats.CurrentHP;
+                stats.CurrentHP = Math.Min(stats.MaxHP, stats.CurrentHP + amount);
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Healed {stats.CurrentHP - oldHP} HP. Current HP: {stats.CurrentHP}/{stats.MaxHP}" });
+            }
+        }
+
+        private void HandleDamage(string[] args)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            _componentStore ??= ServiceLocator.Get<ComponentStore>();
+            if (args.Length < 2 || !int.TryParse(args[1], out int amount))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: damage <amount>" });
+                return;
+            }
+
+            var stats = _componentStore.GetComponent<CombatantStatsComponent>(_gameState.PlayerEntityId);
+            if (stats != null)
+            {
+                int oldHP = stats.CurrentHP;
+                stats.CurrentHP = Math.Max(0, stats.CurrentHP - amount);
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Dealt {oldHP - stats.CurrentHP} damage. Current HP: {stats.CurrentHP}/{stats.MaxHP}" });
+            }
+        }
+
+        public void ProcessCommand(string input)
+        {
+            if (string.IsNullOrEmpty(input)) return;
+
+            string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0) return;
+
+            string commandName = parts[0].ToLower();
+
+            if (_commands.TryGetValue(commandName, out var command))
+            {
+                command.Action(parts);
+            }
+            else
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unknown command: '{commandName}'. Type 'help' for available commands." });
+            }
         }
     }
 }

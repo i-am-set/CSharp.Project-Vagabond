@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
@@ -294,6 +295,14 @@ namespace ProjectVagabond
             {
                 if (text[i] == '[')
                 {
+                    // Check for escaped bracket [[
+                    if (i + 1 < text.Length && text[i + 1] == '[')
+                    {
+                        currentText += '[';
+                        i++; // Skip the second '['
+                        continue;
+                    }
+
                     if (currentText.Length > 0)
                     {
                         line.Segments.Add(new ColoredText(currentText, currentColor));

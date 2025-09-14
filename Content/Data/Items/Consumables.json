@@ -4,7 +4,7 @@
     "ItemName": "Health Potion",
     "Description": "A simple concoction that restores a small amount of health.",
     "Type": "Heal",
-    "Target": "SingleAll",
+    "Target": "Self",
     "PrimaryValue": 20,
     "SecondaryValue": null,
     "MoveID": null,

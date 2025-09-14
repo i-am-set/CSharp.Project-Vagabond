@@ -47,7 +47,7 @@ namespace ProjectVagabond.Battle
                 {
                     Level = statsComponent.Level,
                     MaxHP = statsComponent.MaxHP,
-                    CurrentHP = statsComponent.MaxHP, // Start battle with full health
+                    CurrentHP = statsComponent.CurrentHP, // Use current health from component
                     Strength = statsComponent.Strength,
                     Intelligence = statsComponent.Intelligence,
                     Tenacity = statsComponent.Tenacity,

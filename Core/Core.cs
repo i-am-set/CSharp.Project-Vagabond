@@ -74,6 +74,7 @@ namespace ProjectVagabond
         private BackgroundManager _backgroundManager;
         private LoadingScreen _loadingScreen;
         private AnimationManager _animationManager;
+        private DebugConsole _debugConsole;
 
         // Input State
         private KeyboardState _previousKeyboardState;
@@ -215,6 +216,9 @@ namespace ProjectVagabond
             _sceneManager = new SceneManager();
             ServiceLocator.Register<SceneManager>(_sceneManager);
             _sceneManager.AddScene(GameSceneState.Transition, new TransitionScene());
+
+            _debugConsole = new DebugConsole();
+            ServiceLocator.Register<DebugConsole>(_debugConsole);
 
             // Phase 4: Final Setup
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
@@ -373,6 +377,14 @@ namespace ProjectVagabond
 
             // Handle debug input
             KeyboardState currentKeyboardState = Keyboard.GetState();
+
+            // --- Console Toggle ---
+            if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && _previousKeyboardState.IsKeyUp(Keys.OemTilde))
+            {
+                if (_debugConsole.IsVisible) _debugConsole.Hide();
+                else _debugConsole.Show();
+            }
+
             if (currentKeyboardState.IsKeyDown(Keys.F1) && _previousKeyboardState.IsKeyUp(Keys.F1))
             {
                 _global.ShowDebugOverlays = !_global.ShowDebugOverlays;
@@ -459,6 +471,15 @@ namespace ProjectVagabond
                 {
                     _diceRollingSystem.Update(gameTime);
                 }
+                return; // Block all other game updates
+            }
+
+            // The debug console is the next highest priority modal state.
+            if (_debugConsole.IsVisible)
+            {
+                _debugConsole.Update(gameTime);
+                _hapticsManager.Update(gameTime); // Allow haptics to continue for feedback
+                base.Update(gameTime);
                 return; // Block all other game updates
             }
 
@@ -580,6 +601,11 @@ namespace ProjectVagabond
             // --- Phase 4: Draw UI elements that should NOT have the shader applied ---
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
+
+            if (_debugConsole.IsVisible)
+            {
+                _debugConsole.Draw(_spriteBatch, _defaultFont, gameTime);
+            }
 
             if (_defaultFont != null)
             {

@@ -51,7 +51,8 @@ namespace ProjectVagabond
             }
         }
         public bool IsExecutingActions => _isExecutingActions;
-        public bool IsPaused => _isPaused;
+        public bool IsPausedByConsole { get; set; } = false;
+        public bool IsPaused => _isPaused || IsPausedByConsole;
         public NoiseMapManager NoiseManager => _noiseManager;
         public List<int> ActiveEntities { get; private set; } = new List<int>();
         public int InitialActionCount { get; private set; }
