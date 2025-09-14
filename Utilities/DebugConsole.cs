@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace ProjectVagabond.Utils
@@ -20,6 +21,10 @@ namespace ProjectVagabond.Utils
         private readonly CommandProcessor _commandProcessor;
 
         private readonly List<ColoredLine> _history = new List<ColoredLine>();
+        private readonly List<string> _commandHistory = new List<string>();
+        private int _commandHistoryIndex = -1;
+        private string _currentEditingCommand = "";
+
         private string _currentInput = "";
         private int _scrollOffset = 0;
         private float _caratBlinkTimer = 0f;
@@ -113,10 +118,27 @@ namespace ProjectVagabond.Utils
                         {
                             var commandLine = ParseColoredText($"> {_currentInput}", _global.Palette_BrightWhite);
                             _history.Add(commandLine);
+
+                            // Add to command history if it's not a consecutive duplicate
+                            if (!_commandHistory.Any() || _commandHistory.Last() != _currentInput)
+                            {
+                                _commandHistory.Add(_currentInput);
+                            }
+
                             _commandProcessor.ProcessCommand(_currentInput);
                             _currentInput = "";
                             _scrollOffset = 0;
+                            _commandHistoryIndex = -1;
+                            _currentEditingCommand = "";
                         }
+                    }
+                    else if (key == Keys.Up)
+                    {
+                        NavigateCommandHistory(1);
+                    }
+                    else if (key == Keys.Down)
+                    {
+                        NavigateCommandHistory(-1);
                     }
                     else if (key == Keys.Back)
                     {
@@ -142,6 +164,34 @@ namespace ProjectVagabond.Utils
                         }
                     }
                 }
+            }
+        }
+
+        private void NavigateCommandHistory(int direction)
+        {
+            if (_commandHistory.Count == 0) return;
+
+            // If we are not currently browsing, save the current input
+            if (_commandHistoryIndex == -1)
+            {
+                _currentEditingCommand = _currentInput;
+            }
+
+            // Adjust index
+            _commandHistoryIndex += direction;
+
+            // Clamp index
+            _commandHistoryIndex = Math.Clamp(_commandHistoryIndex, -1, _commandHistory.Count - 1);
+
+            if (_commandHistoryIndex == -1)
+            {
+                // Returned to the "present"
+                _currentInput = _currentEditingCommand;
+            }
+            else
+            {
+                // Get command from history (it's stored in reverse order of access)
+                _currentInput = _commandHistory[_commandHistory.Count - 1 - _commandHistoryIndex];
             }
         }
 
