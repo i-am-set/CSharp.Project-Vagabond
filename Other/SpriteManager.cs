@@ -30,7 +30,6 @@ namespace ProjectVagabond
         private readonly Dictionary<string, Texture2D> _enemySprites = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
 
-
         private Texture2D _logoSprite;
         private Texture2D _waterSprite;
         private Texture2D _flatlandSprite;
@@ -53,8 +52,6 @@ namespace ProjectVagabond
         public Effect FireballParticleShaderEffect { get; private set; }
         public Texture2D ArrowIconSpriteSheet { get; private set; }
         public Rectangle[] ArrowIconSourceRects { get; private set; }
-        public Texture2D StatusButtonIconSprite { get; private set; }
-
 
         public Texture2D LogoSprite => _logoSprite;
         public Texture2D WaterSprite => _waterSprite;
@@ -76,7 +73,6 @@ namespace ProjectVagabond
         public Texture2D EmberParticleSprite => _emberParticleSprite;
         public Texture2D SoftParticleSprite => _softParticleSprite;
 
-
         public SpriteManager()
         {
             _core = ServiceLocator.Get<Core>();
@@ -97,10 +93,10 @@ namespace ProjectVagabond
             try { _circleTextureSprite = _textureFactory.CreateCircleTexture(); }
             catch { _circleTextureSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
 
-            try { _settingsIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_settings_icon"); }
+            try { _settingsIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_settings_icon"); }
             catch { _settingsIconSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
-            try { _turnIndicatorSprite = _core.Content.Load<Texture2D>("Sprites/UI/ui_turn_indicator"); }
+            try { _turnIndicatorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_turn_indicator"); }
             catch { _turnIndicatorSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
 
             try { _circleParticleSprite = _textureFactory.CreateCircleParticleTexture(); }
@@ -112,46 +108,43 @@ namespace ProjectVagabond
             try { _softParticleSprite = _textureFactory.CreateSoftCircleParticleTexture(); }
             catch { _softParticleSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
 
-            try { ArrowIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ArrowIconSpriteSheet"); }
+            try { ArrowIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/arrow_icon_spritesheet"); }
             catch { ArrowIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
-
-            try { StatusButtonIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_status_button_icon"); }
-            catch { StatusButtonIconSprite = _textureFactory.CreateColoredTexture(9, 9, Color.Purple); }
 
             try { FireballParticleShaderEffect = _core.Content.Load<Effect>("Shaders/FireballParticleShader"); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ERROR] Could not load shader 'Shaders/FireballParticleShader'. Please ensure it's in the Content project. {ex.Message}"); }
 
-            try { ActionButtonsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_buttons_icon_spritesheet"); }
+            try { ActionButtonsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_buttons_icon_spritesheet"); }
             catch { ActionButtonsSpriteSheet = _textureFactory.CreateColoredTexture(288, 150, Color.Magenta); }
 
-            try { ActionButtonTemplateSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_button_template"); }
+            try { ActionButtonTemplateSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_template"); }
             catch { ActionButtonTemplateSprite = _textureFactory.CreateColoredTexture(155, 15, Color.Magenta); }
 
-            try { ActionButtonTemplateSecondarySprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_button_template_secondary"); }
+            try { ActionButtonTemplateSecondarySprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_template_secondary"); }
             catch { ActionButtonTemplateSecondarySprite = _textureFactory.CreateColoredTexture(104, 17, Color.Magenta); }
 
             try
             {
-                ActionMovesBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_moves_button_area_background");
+                ActionMovesBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_moves_button_area_background");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("[SpriteManager] [ERROR] Failed to load 'ui_action_moves_button_area_background'. This is a critical UI asset.");
                 Debug.WriteLine("[SpriteManager] [ACTION REQUIRED] Please ensure the following:");
-                Debug.WriteLine("1. The file exists at 'Content/Sprites/UI/ButtonIcons/ui_action_moves_button_area_background.png'");
+                Debug.WriteLine("1. The file exists at 'Content/Sprites/UI/BattleUI/ui_action_moves_button_area_background.png'");
                 Debug.WriteLine("2. The file has been added to your 'Content.mgcb' file.");
                 Debug.WriteLine("3. The file's 'Build Action' in the content pipeline is set to 'Build'.");
                 Debug.WriteLine($"4. Detailed error: {ex.Message}");
                 ActionMovesBackgroundSprite = _textureFactory.CreateColoredTexture(294, 47, Color.Magenta);
             }
 
-            try { ActionTooltipBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_tooltip_background"); }
+            try { ActionTooltipBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_action_tooltip_background"); }
             catch { ActionTooltipBackgroundSprite = _textureFactory.CreateColoredTexture(319, 178, Color.DarkGray); }
 
-            try { ElementIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_element_icons_9x9_spritesheet"); }
+            try { ElementIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet"); }
             catch { ElementIconsSpriteSheet = _textureFactory.CreateColoredTexture(45, 45, Color.Magenta); }
 
-            try { ActionIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_action_icons_9x9"); }
+            try { ActionIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9"); }
             catch { ActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(27, 9, Color.Magenta); }
 
 

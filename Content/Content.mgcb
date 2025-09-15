@@ -386,7 +386,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Backgrounds/tiled_background_1.png
 
-#begin Sprites/UI/BasicIcons/ArrowIconSpriteSheet.png
+#begin Sprites/UI/BasicIcons/arrow_icon_spritesheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -396,7 +396,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/BasicIcons/ArrowIconSpriteSheet.png;Sprites/UI/BasicIcons/ArrowIconSpriteSheet
+/build:Sprites/UI/BasicIcons/arrow_icon_spritesheet.png;Sprites/UI/BasicIcons/arrow_icon_spritesheet
 
 #begin Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon.png
 /importer:TextureImporter
@@ -410,7 +410,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon
 
-#begin Sprites/UI/BasicIcons/ui_action_icons_9x9.png
+#begin Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -420,9 +420,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/BasicIcons/ui_action_icons_9x9.png;Sprites/UI/BasicIcons/ui_action_icons_9x9
+/build:Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9.png;Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9
 
-#begin Sprites/UI/ButtonIcons/ui_action_button_template_secondary.png
+#begin Sprites/UI/BasicIcons/ui_element_icons_5x5_spritesheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -432,9 +432,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/ButtonIcons/ui_action_button_template_secondary.png;Sprites/UI/ButtonIcons/ui_action_button_template_secondary
+/build:Sprites/UI/BasicIcons/ui_element_icons_5x5_spritesheet.png;Sprites/UI/BasicIcons/ui_element_icons_5x5_spritesheet
 
-#begin Sprites/UI/ButtonIcons/ui_action_button_template.png
+#begin Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -444,9 +444,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/ButtonIcons/ui_action_button_template.png;Sprites/UI/ButtonIcons/ui_action_button_template
+/build:Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet.png;Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet
 
-#begin Sprites/UI/ButtonIcons/ui_action_buttons_icon_spritesheet.png
+#begin Sprites/UI/BasicIcons/ui_settings_icon.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -456,9 +456,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/ButtonIcons/ui_action_buttons_icon_spritesheet.png;Sprites/UI/ButtonIcons/ui_action_buttons_icon_spritesheet
+/build:Sprites/UI/BasicIcons/ui_settings_icon.png;Sprites/UI/BasicIcons/ui_settings_icon
 
-#begin Sprites/UI/ButtonIcons/ui_action_moves_button_area_background.png
+#begin Sprites/UI/BasicIcons/ui_turn_indicator.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -468,9 +468,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/ButtonIcons/ui_action_moves_button_area_background.png;Sprites/UI/ButtonIcons/ui_action_moves_button_area_background
+/build:Sprites/UI/BasicIcons/ui_turn_indicator.png;Sprites/UI/BasicIcons/ui_turn_indicator
 
-#begin Sprites/UI/ButtonIcons/ui_action_tooltip_background.png
+#begin Sprites/UI/BattleUI/ui_action_button_template_secondary.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -480,9 +480,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/ButtonIcons/ui_action_tooltip_background.png;Sprites/UI/ButtonIcons/ui_action_tooltip_background
+/build:Sprites/UI/BattleUI/ui_action_button_template_secondary.png;Sprites/UI/BattleUI/ui_action_button_template_secondary
 
-#begin Sprites/UI/ButtonIcons/ui_element_icons_5x5_spritesheet.png
+#begin Sprites/UI/BattleUI/ui_action_button_template.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -492,9 +492,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/ButtonIcons/ui_element_icons_5x5_spritesheet.png;Sprites/UI/ButtonIcons/ui_element_icons_5x5_spritesheet
+/build:Sprites/UI/BattleUI/ui_action_button_template.png;Sprites/UI/BattleUI/ui_action_button_template
 
-#begin Sprites/UI/ButtonIcons/ui_element_icons_9x9_spritesheet.png
+#begin Sprites/UI/BattleUI/ui_action_buttons_icon_spritesheet.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -504,9 +504,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/ButtonIcons/ui_element_icons_9x9_spritesheet.png;Sprites/UI/ButtonIcons/ui_element_icons_9x9_spritesheet
+/build:Sprites/UI/BattleUI/ui_action_buttons_icon_spritesheet.png;Sprites/UI/BattleUI/ui_action_buttons_icon_spritesheet
 
-#begin Sprites/UI/ButtonIcons/ui_settings_icon.png
+#begin Sprites/UI/BattleUI/ui_action_moves_button_area_background.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -516,7 +516,19 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/ButtonIcons/ui_settings_icon.png;Sprites/UI/ButtonIcons/ui_settings_icon
+/build:Sprites/UI/BattleUI/ui_action_moves_button_area_background.png;Sprites/UI/BattleUI/ui_action_moves_button_area_background
+
+#begin Sprites/UI/BattleUI/ui_action_tooltip_background.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BattleUI/ui_action_tooltip_background.png;Sprites/UI/BattleUI/ui_action_tooltip_background
 
 #begin Sprites/UI/KeyPrompts/ui_key_arrows.png
 /importer:TextureImporter
@@ -613,42 +625,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/KeyPrompts/ui_key_up.png;Sprites/UI/KeyPrompts/ui_key_up
-
-#begin Sprites/UI/ui_local_map_selector.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/ui_local_map_selector.png;Sprites/UI/ui_local_map_selector
-
-#begin Sprites/UI/ui_turn_indicator.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/ui_turn_indicator.png;Sprites/UI/ui_turn_indicator
-
-#begin Sprites/UI/ui_world_map_selector.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/UI/ui_world_map_selector.png;Sprites/UI/ui_world_map_selector
 
 #begin Sprites/warningMark.png
 /importer:TextureImporter
