@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond.Battle;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -85,25 +86,48 @@ namespace ProjectVagabond
         public void InitializeWorld()
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0));
+
+            // Initialize PlayerState from the player's base stats component
+            PlayerState = new PlayerState();
+            var baseStats = _componentStore.GetComponent<PlayerBaseStatsComponent>(PlayerEntityId);
+            if (baseStats != null)
+            {
+                PlayerState.Level = 1;
+                PlayerState.MaxHP = baseStats.MaxHP;
+                PlayerState.Strength = baseStats.Strength;
+                PlayerState.Intelligence = baseStats.Intelligence;
+                PlayerState.Tenacity = baseStats.Tenacity;
+                PlayerState.Agility = baseStats.Agility;
+                PlayerState.DefensiveElementIDs = new List<int>(baseStats.DefensiveElementIDs);
+
+                // Initialize spellbook
+                PlayerState.SpellbookPages = new List<string>(new string[10]);
+                for (int i = 0; i < Math.Min(PlayerState.SpellbookPages.Count, baseStats.StartingMoveIDs.Count); i++)
+                {
+                    PlayerState.SpellbookPages[i] = baseStats.StartingMoveIDs[i];
+                }
+            }
+
+            // Create and add the live CombatantStatsComponent to the player entity
+            var liveStats = new CombatantStatsComponent
+            {
+                Level = PlayerState.Level,
+                MaxHP = PlayerState.MaxHP,
+                CurrentHP = PlayerState.MaxHP, // Start with full health
+                Strength = PlayerState.Strength,
+                Intelligence = PlayerState.Intelligence,
+                Tenacity = PlayerState.Tenacity,
+                Agility = PlayerState.Agility,
+                DefensiveElementIDs = new List<int>(PlayerState.DefensiveElementIDs),
+                AvailableMoveIDs = new List<string>(PlayerState.SpellbookPages.Where(p => !string.IsNullOrEmpty(p)))
+            };
+            _componentStore.AddComponent(PlayerEntityId, liveStats);
+
             // Initialize the render position to match the logical position
             var posComp = _componentStore.GetComponent<PositionComponent>(PlayerEntityId);
             if (posComp != null)
             {
                 _componentStore.AddComponent(PlayerEntityId, new RenderPositionComponent { WorldPosition = posComp.WorldPosition });
-            }
-
-            // Initialize the PlayerState with the default moves from the archetype.
-            PlayerState = new PlayerState();
-            var statsComp = _componentStore.GetComponent<Battle.CombatantStatsComponent>(PlayerEntityId);
-            if (statsComp != null)
-            {
-                // For now, let's assume the player starts with 6 pages, filled by their archetype.
-                // This can be made more dynamic later.
-                PlayerState.SpellbookPages = new List<string>(new string[10]);
-                for (int i = 0; i < Math.Min(PlayerState.SpellbookPages.Count, statsComp.AvailableMoveIDs.Count); i++)
-                {
-                    PlayerState.SpellbookPages[i] = statsComp.AvailableMoveIDs[i];
-                }
             }
 
             // Add some starting items for testing

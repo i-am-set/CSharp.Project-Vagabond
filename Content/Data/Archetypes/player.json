@@ -21,27 +21,19 @@
       }
     },
     {
-      "Type": "ProjectVagabond.Battle.CombatantStatsComponent",
+      "Type": "ProjectVagabond.Battle.PlayerBaseStatsComponent",
       "Properties": {
-        "Level": 5,
-        "MaxHP": 25,
-        "CurrentHP": 25,
-        "Strength": 12,
-        "Intelligence": 8,
-        "Tenacity": 10,
-        "Agility": 11,
+        "MaxHP": 10,
+        "Strength": 1,
+        "Intelligence": 1,
+        "Tenacity": 1,
+        "Agility": 1,
         "DefensiveElementIDs": [ 101 ],
-        "AvailableMoveIDs": [
+        "StartingMoveIDs": [
           "ShoulderBash",
           "ClawRake",
           "WintersGrasp",
-          "WhiteoutTempest",
-          "BriarLash",
-          "Needlestorm",
-          "Sunlance",
-          "SparkJolt",
-          "VoltLash",
-          "Bloodleech"
+          "WhiteoutTempest"
         ]
       }
     }

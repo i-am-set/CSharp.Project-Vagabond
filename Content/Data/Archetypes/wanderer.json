@@ -12,19 +12,27 @@
       }
     },
     {
-      "Type": "ProjectVagabond.Battle.CombatantStatsComponent",
+      "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
       "Properties": {
         "Level": 5,
-        "MaxHP": 20,
-        "Strength": 7,
-        "Intelligence": 12,
-        "Tenacity": 8,
-        "Agility": 9,
+        "MinHP": 18,
+        "MaxHP": 22,
+        "MinStrength": 6,
+        "MaxStrength": 8,
+        "MinIntelligence": 11,
+        "MaxIntelligence": 13,
+        "MinTenacity": 7,
+        "MaxTenacity": 9,
+        "MinAgility": 8,
+        "MaxAgility": 10,
         "DefensiveElementIDs": [ 102 ],
-        "AvailableMoveIDs": [
+        "MoveLearnset": [
           "ShoulderBash",
-          "ClawRake"
-        ]
+          "ClawRake",
+          "CinderSpark"
+        ],
+        "MinNumberOfMoves": 2,
+        "MaxNumberOfMoves": 3
       }
     }
   ]
