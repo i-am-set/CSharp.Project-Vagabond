@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace ProjectVagabond.Battle
 {
@@ -12,7 +13,6 @@ namespace ProjectVagabond.Battle
         /// The original Entity ID from the overworld ECS. Used for retrieving visual information.
         /// </summary>
         public int EntityId { get; set; }
-
         /// <summary>
         /// The archetype ID (e.g., "wanderer") used to create this combatant.
         /// </summary>
@@ -154,6 +154,48 @@ namespace ProjectVagabond.Battle
         public void SetStaticMoves(List<MoveData> moves)
         {
             _staticMoves = moves;
+        }
+
+        // --- Effective Stat Calculation ---
+
+        public int GetEffectiveStrength()
+        {
+            float stat = Stats.Strength;
+            if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
+            // Add other modifiers like StrengthUp here
+            return (int)Math.Round(stat);
+        }
+
+        public int GetEffectiveIntelligence()
+        {
+            float stat = Stats.Intelligence;
+            if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
+            // Add other modifiers here
+            return (int)Math.Round(stat);
+        }
+
+        public int GetEffectiveTenacity()
+        {
+            float stat = Stats.Tenacity;
+            if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
+            // Add other modifiers here
+            return (int)Math.Round(stat);
+        }
+
+        public int GetEffectiveAgility()
+        {
+            float stat = Stats.Agility;
+            if (HasStatusEffect(StatusEffectType.Freeze)) stat *= 0.5f;
+            if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
+            // Add other modifiers here
+            return (int)Math.Round(stat);
+        }
+
+        public int GetEffectiveAccuracy(int baseAccuracy)
+        {
+            float accuracy = baseAccuracy;
+            if (HasStatusEffect(StatusEffectType.Blind)) accuracy *= 0.5f;
+            return (int)Math.Round(accuracy);
         }
     }
 }

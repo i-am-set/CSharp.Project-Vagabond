@@ -128,7 +128,7 @@ namespace ProjectVagabond
         public float MountainsLevel { get; set; } = 0.8f;
 
         // Static Color Palette
-        public Color Palette_Black { get; set; } = new Color(14, 13, 19); // #2a2839
+        public Color Palette_Black { get; set; } = new Color(23, 22, 28); // #2a2839
         public Color Palette_DarkGray { get; set; } = new Color(42, 40, 57); // #2E2C3B
         public Color Palette_Gray { get; set; } = new Color(62, 65, 95); // #3E415F
         public Color Palette_LightGray { get; set; } = new Color(85, 96, 125); // #55607D

@@ -1,4 +1,4 @@
-﻿using ProjectVagabond.Battle;
+﻿﻿using ProjectVagabond.Battle;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -63,8 +63,8 @@ namespace ProjectVagabond.Battle
                 else
                 {
                     // Standard accuracy roll if not dodging.
-                    int currentAccuracy = move.Accuracy;
-                    if (_random.Next(1, 101) > currentAccuracy)
+                    int effectiveAccuracy = attacker.GetEffectiveAccuracy(move.Accuracy);
+                    if (_random.Next(1, 101) > effectiveAccuracy)
                     {
                         isGrazed = true;
                     }
@@ -76,24 +76,24 @@ namespace ProjectVagabond.Battle
             switch (move.OffensiveStat)
             {
                 case OffensiveStatType.Strength:
-                    offensiveStat = attacker.Stats.Strength;
+                    offensiveStat = attacker.GetEffectiveStrength();
                     break;
                 case OffensiveStatType.Intelligence:
-                    offensiveStat = attacker.Stats.Intelligence;
+                    offensiveStat = attacker.GetEffectiveIntelligence();
                     break;
                 case OffensiveStatType.Tenacity:
-                    offensiveStat = attacker.Stats.Tenacity;
+                    offensiveStat = attacker.GetEffectiveTenacity();
                     break;
                 case OffensiveStatType.Agility:
-                    offensiveStat = attacker.Stats.Agility;
+                    offensiveStat = attacker.GetEffectiveAgility();
                     break;
                 default:
                     Debug.WriteLine($"[DamageCalculator] [WARNING] Unhandled OffensiveStatType '{move.OffensiveStat}' for move '{move.MoveID}'. Defaulting to Strength.");
-                    offensiveStat = attacker.Stats.Strength;
+                    offensiveStat = attacker.GetEffectiveStrength();
                     break;
             }
 
-            float defensiveStat = target.Stats.Tenacity;
+            float defensiveStat = target.GetEffectiveTenacity();
             if (defensiveStat == 0) defensiveStat = 1; // Prevent division by zero
 
             float baseDamage = ((((2f * attacker.Stats.Level / 5f + 2f) * move.Power * (offensiveStat / defensiveStat)) / 50f) + 2f);
@@ -111,8 +111,13 @@ namespace ProjectVagabond.Battle
             bool isCritical = false;
             if (!isGrazed)
             {
-                // Placeholder critical hit chance (e.g., 6.25%)
-                if (_random.NextDouble() < 0.0625)
+                double critChance = 0.0625;
+                if (target.HasStatusEffect(StatusEffectType.Root))
+                {
+                    critChance *= 2.0;
+                }
+
+                if (_random.NextDouble() < critChance)
                 {
                     isCritical = true;
                     finalDamage *= BattleConstants.CRITICAL_HIT_MULTIPLIER;
@@ -137,17 +142,29 @@ namespace ProjectVagabond.Battle
             // Modifier 5 (Elemental Effectiveness)
             finalDamage *= GetElementalMultiplier(move, target);
 
-            // Modifier 6 (Random Variance)
+            // Modifier 6 (Freeze Vulnerability)
+            if (target.HasStatusEffect(StatusEffectType.Freeze) && move.ImpactType == ImpactType.Physical)
+            {
+                finalDamage *= 2.0f;
+            }
+
+            // Modifier 7 (Random Variance)
             finalDamage *= (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
 
-            // Modifier 7 (Graze Application)
+            // Modifier 8 (Graze Application)
             if (isGrazed)
             {
                 finalDamage *= BattleConstants.GRAZE_MULTIPLIER;
             }
 
-            // Step 5: Final Damage
+            // Step 5: Final Damage & Additive Modifiers
             int finalDamageAmount = (int)Math.Floor(finalDamage);
+
+            // Additive Modifier 1 (Burn)
+            if (target.HasStatusEffect(StatusEffectType.Burn) && move.ImpactType == ImpactType.Physical)
+            {
+                finalDamageAmount += Math.Max(1, (int)(target.Stats.MaxHP / 16f));
+            }
 
             // Ensure that any successful hit that should do damage deals at least 1 point of damage.
             if (finalDamage > 0 && finalDamageAmount == 0)

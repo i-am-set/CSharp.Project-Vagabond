@@ -45,7 +45,14 @@ namespace ProjectVagabond.Battle
         Poison,
         Stun,
         Regen,
-        Dodging
+        Dodging,
+        Burn,
+        Freeze,
+        Blind,
+        Confuse,
+        Silence,
+        Fear,
+        Root
     }
 
     /// <summary>

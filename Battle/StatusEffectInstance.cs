@@ -41,6 +41,13 @@
                 StatusEffectType.Stun => "Stunned",
                 StatusEffectType.Regen => "Regeneration",
                 StatusEffectType.Dodging => "Dodging",
+                StatusEffectType.Burn => "Burn",
+                StatusEffectType.Freeze => "Frozen",
+                StatusEffectType.Blind => "Blind",
+                StatusEffectType.Confuse => "Confused",
+                StatusEffectType.Silence => "Silenced",
+                StatusEffectType.Fear => "Feared",
+                StatusEffectType.Root => "Rooted",
                 _ => EffectType.ToString(),
             };
         }

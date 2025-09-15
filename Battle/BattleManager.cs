@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System;
 
 namespace ProjectVagabond.Battle
 {
@@ -32,6 +33,7 @@ namespace ProjectVagabond.Battle
         private BattlePhase _currentPhase;
         private int _turnNumber;
         private bool _playerActionSubmitted;
+        private static readonly Random _random = new Random();
 
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
@@ -81,6 +83,32 @@ namespace ProjectVagabond.Battle
         {
             if (_currentPhase != BattlePhase.ActionSelection || _playerActionSubmitted) return;
 
+            // Handle Confusion
+            if (action.Actor.HasStatusEffect(StatusEffectType.Confuse) && _random.NextDouble() < 0.25)
+            {
+                var availableMoves = action.Actor.AvailableMoves.Where(m => m != action.ChosenMove).ToList();
+                if (availableMoves.Any())
+                {
+                    var originalMove = action.ChosenMove;
+                    var newMove = availableMoves[_random.Next(availableMoves.Count)];
+                    action.ChosenMove = newMove;
+                    action.Priority = newMove.Priority;
+
+                    bool originalNeedsTarget = originalMove.Target == TargetType.Single || originalMove.Target == TargetType.SingleAll;
+                    bool newNeedsTarget = newMove.Target == TargetType.Single || newMove.Target == TargetType.SingleAll;
+
+                    if (newNeedsTarget && !originalNeedsTarget)
+                    {
+                        var allPossibleTargets = _allCombatants.Where(c => !c.IsDefeated).ToList();
+                        if (allPossibleTargets.Any())
+                        {
+                            action.Target = allPossibleTargets[_random.Next(allPossibleTargets.Count)];
+                        }
+                    }
+                    EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "confused" });
+                }
+            }
+
             _actionQueue.Add(action);
             _playerActionSubmitted = true;
         }
@@ -124,7 +152,7 @@ namespace ProjectVagabond.Battle
         }
 
         /// <summary>
-        /// Handles start-of-turn effects like status effect duration countdowns.
+        /// Handles start-of-turn effects.
         /// </summary>
         private void HandleStartOfTurn()
         {
@@ -138,24 +166,6 @@ namespace ProjectVagabond.Battle
             }
 
             // 2. Environment Resolution (Placeholder)
-
-            // 3. Duration Countdown
-            foreach (var combatant in _allCombatants)
-            {
-                if (combatant.IsDefeated) continue;
-
-                var effectsToRemove = new List<StatusEffectInstance>();
-                foreach (var effect in combatant.ActiveStatusEffects)
-                {
-                    effect.DurationInTurns--;
-                    if (effect.DurationInTurns <= 0)
-                    {
-                        effectsToRemove.Add(effect);
-                    }
-                }
-                // Remove expired effects
-                combatant.ActiveStatusEffects.RemoveAll(e => effectsToRemove.Contains(e));
-            }
 
             _currentPhase = BattlePhase.ActionSelection;
             _playerActionSubmitted = false; // Ready to receive player input
@@ -180,38 +190,56 @@ namespace ProjectVagabond.Battle
                 var target = activePlayers.FirstOrDefault();
                 if (target != null)
                 {
-                    MoveData move;
-                    if (enemy.AvailableMoves.Any())
+                    var possibleMoves = enemy.AvailableMoves;
+                    if (enemy.HasStatusEffect(StatusEffectType.Silence))
                     {
-                        move = enemy.AvailableMoves.First();
+                        possibleMoves = possibleMoves.Where(m => m.MoveType != MoveType.Spell).ToList();
+                    }
+
+                    MoveData move;
+                    if (possibleMoves.Any())
+                    {
+                        move = possibleMoves.First(); // Simple AI: always pick the first valid move
                     }
                     else
                     {
-                        // Fallback to Stall if no moves are available
                         if (!BattleDataCache.Moves.TryGetValue("Stall", out move))
                         {
                             Debug.WriteLine($"[BattleManager] [FATAL] Could not find 'Stall' move in BattleDataCache.");
-                            continue; // Skip this enemy's turn if Stall is missing
+                            continue;
                         }
                     }
 
-                    _actionQueue.Add(new QueuedAction
+                    var action = new QueuedAction
                     {
                         Actor = enemy,
-                        Target = target, // Stall still needs a target for the queue, even if it does nothing to it
+                        Target = target,
                         ChosenMove = move,
                         Priority = move.Priority,
-                        ActorAgility = enemy.Stats.Agility
-                    });
+                        ActorAgility = enemy.GetEffectiveAgility()
+                    };
+
+                    // Handle AI Confusion
+                    if (enemy.HasStatusEffect(StatusEffectType.Confuse) && _random.NextDouble() < 0.25)
+                    {
+                        var availableMoves = enemy.AvailableMoves.Where(m => m != action.ChosenMove).ToList();
+                        if (availableMoves.Any())
+                        {
+                            action.ChosenMove = availableMoves[_random.Next(availableMoves.Count)];
+                            action.Priority = action.ChosenMove.Priority;
+                            EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "confused" });
+                        }
+                    }
+
+                    _actionQueue.Add(action);
                 }
             }
 
-            // Build & Sort Action Queue
+            // Build & Sort Action Queue using effective agility
             _actionQueue = _actionQueue
                 .OrderByDescending(a => a.Priority)
-                .ThenByDescending(a => a.ActorAgility)
+                .ThenByDescending(a => a.Actor.GetEffectiveAgility())
                 .ToList();
-            // A random roll would be the final tie-breaker here.
 
             _currentPhase = BattlePhase.ActionResolution;
         }
@@ -251,7 +279,22 @@ namespace ProjectVagabond.Battle
                 action.Actor.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Stun);
                 CanAdvance = false;
                 _currentPhase = BattlePhase.SecondaryEffectResolution;
-                return; // End this step of resolution
+                return;
+            }
+
+            if (action.Actor.HasStatusEffect(StatusEffectType.Silence) && action.ChosenMove?.MoveType == MoveType.Spell)
+            {
+                EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "silenced" });
+                CanAdvance = false;
+                _currentPhase = BattlePhase.SecondaryEffectResolution;
+                return;
+            }
+
+            if (action.Actor.HasStatusEffect(StatusEffectType.Burn) && action.ChosenMove?.MakesContact == true)
+            {
+                int burnDamage = Math.Max(1, action.Actor.Stats.MaxHP / 16);
+                action.Actor.ApplyDamage(burnDamage);
+                EventBus.Publish(new GameEvents.StatusEffectTriggered { Combatant = action.Actor, EffectType = StatusEffectType.Burn, Damage = burnDamage });
             }
 
             if (action.ChosenItem != null)
@@ -305,6 +348,18 @@ namespace ProjectVagabond.Battle
                     var result = DamageCalculator.CalculateDamage(action.Actor, target, action.ChosenMove, multiTargetModifier);
                     target.ApplyDamage(result.DamageAmount);
                     damageResults.Add(result);
+
+                    // Post-damage status effect interactions
+                    if (target.HasStatusEffect(StatusEffectType.Freeze) && action.ChosenMove?.ImpactType == ImpactType.Physical)
+                    {
+                        target.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Freeze);
+                        EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = StatusEffectType.Freeze });
+                    }
+                    if (target.HasStatusEffect(StatusEffectType.Freeze) && action.ChosenMove?.OffensiveElementIDs.Contains(2) == true) // 2 = Fire
+                    {
+                        var freezeEffect = target.ActiveStatusEffects.FirstOrDefault(e => e.EffectType == StatusEffectType.Freeze);
+                        if (freezeEffect != null) freezeEffect.DurationInTurns--;
+                    }
                 }
                 EventBus.Publish(new GameEvents.BattleActionExecuted
                 {
@@ -313,6 +368,12 @@ namespace ProjectVagabond.Battle
                     Targets = targets,
                     DamageResults = damageResults
                 });
+            }
+
+            if (action.Actor.HasStatusEffect(StatusEffectType.Freeze) && action.ChosenMove?.OffensiveElementIDs.Contains(2) == true) // 2 = Fire
+            {
+                var freezeEffect = action.Actor.ActiveStatusEffects.FirstOrDefault(e => e.EffectType == StatusEffectType.Freeze);
+                if (freezeEffect != null) freezeEffect.DurationInTurns--;
             }
         }
 
@@ -446,10 +507,40 @@ namespace ProjectVagabond.Battle
 
 
         /// <summary>
-        /// Checks for victory or defeat conditions at the end of the turn.
+        /// Checks for victory or defeat conditions and handles end-of-turn status effects.
         /// </summary>
         private void HandleEndOfTurn()
         {
+            // Handle status effect duration countdowns and passive effects
+            foreach (var combatant in _allCombatants)
+            {
+                if (combatant.IsDefeated) continue;
+
+                var effectsToRemove = new List<StatusEffectInstance>();
+                foreach (var effect in combatant.ActiveStatusEffects)
+                {
+                    effect.DurationInTurns--;
+
+                    if (effect.EffectType == StatusEffectType.Poison)
+                    {
+                        int poisonDamage = Math.Max(1, combatant.Stats.MaxHP / 16);
+                        combatant.ApplyDamage(poisonDamage);
+                        EventBus.Publish(new GameEvents.StatusEffectTriggered { Combatant = combatant, EffectType = StatusEffectType.Poison, Damage = poisonDamage });
+                    }
+
+                    if (effect.DurationInTurns <= 0)
+                    {
+                        effectsToRemove.Add(effect);
+                    }
+                }
+                // Remove expired effects
+                foreach (var expiredEffect in effectsToRemove)
+                {
+                    combatant.ActiveStatusEffects.Remove(expiredEffect);
+                    EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = combatant, EffectType = expiredEffect.EffectType });
+                }
+            }
+
             // Victory/Defeat Check
             if (_enemyCombatants.All(c => c.IsDefeated) || _playerCombatants.All(c => c.IsDefeated))
             {

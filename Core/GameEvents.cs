@@ -130,5 +130,34 @@ namespace ProjectVagabond
         public struct SecondaryEffectComplete
         {
         }
+
+        /// <summary>
+        /// Published when a status effect triggers a passive event, like dealing damage or healing.
+        /// </summary>
+        public struct StatusEffectTriggered
+        {
+            public BattleCombatant Combatant { get; set; }
+            public StatusEffectType EffectType { get; set; }
+            public int Damage { get; set; }
+            public int Healing { get; set; }
+        }
+
+        /// <summary>
+        /// Published when a status effect is removed from a combatant.
+        /// </summary>
+        public struct StatusEffectRemoved
+        {
+            public BattleCombatant Combatant { get; set; }
+            public StatusEffectType EffectType { get; set; }
+        }
+
+        /// <summary>
+        /// Published when a combatant's action fails due to a status effect or other reason.
+        /// </summary>
+        public struct ActionFailed
+        {
+            public BattleCombatant Actor { get; set; }
+            public string Reason { get; set; } // e.g., "silenced", "confused"
+        }
     }
 }
