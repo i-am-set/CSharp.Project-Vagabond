@@ -138,7 +138,7 @@ namespace ProjectVagabond
                 ActionMovesBackgroundSprite = _textureFactory.CreateColoredTexture(294, 47, Color.Magenta);
             }
 
-            try { ActionTooltipBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_action_tooltip_background"); }
+            try { ActionTooltipBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_tooltip_background"); }
             catch { ActionTooltipBackgroundSprite = _textureFactory.CreateColoredTexture(319, 178, Color.DarkGray); }
 
             try { ElementIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet"); }
