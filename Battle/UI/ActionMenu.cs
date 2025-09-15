@@ -19,6 +19,7 @@ namespace ProjectVagabond.Battle.UI
         public event Action OnMovesMenuOpened;
         public event Action OnMainMenuOpened;
         public event Action OnFleeRequested;
+
         private bool _isVisible;
         private BattleCombatant _player;
         private List<BattleCombatant> _allCombatants;
@@ -69,8 +70,7 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
             _backButton = new Button(Rectangle.Empty, "BACK");
-            _backButton.OnClick += () =>
-            {
+            _backButton.OnClick += () => {
                 if (_currentState == MenuState.Targeting || _currentState == MenuState.Tooltip)
                 {
                     SetState(MenuState.Moves);
@@ -106,8 +106,7 @@ namespace ProjectVagabond.Battle.UI
 
             // Secondary Action Buttons
             var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0]);
-            strikeButton.OnClick += () =>
-            {
+            strikeButton.OnClick += () => {
                 if (_player != null && !string.IsNullOrEmpty(_player.DefaultStrikeMoveID) && BattleDataCache.Moves.TryGetValue(_player.DefaultStrikeMoveID, out var strikeMove))
                 {
                     SelectMove(strikeMove);
@@ -116,8 +115,7 @@ namespace ProjectVagabond.Battle.UI
             _secondaryActionButtons.Add(strikeButton);
 
             var dodgeButton = new TextOverImageButton(Rectangle.Empty, "DODGE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[1]);
-            dodgeButton.OnClick += () =>
-            {
+            dodgeButton.OnClick += () => {
                 if (BattleDataCache.Moves.TryGetValue("Dodge", out var dodgeMove))
                 {
                     SelectMove(dodgeMove);
@@ -126,8 +124,7 @@ namespace ProjectVagabond.Battle.UI
             _secondaryActionButtons.Add(dodgeButton);
 
             var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2]);
-            stallButton.OnClick += () =>
-            {
+            stallButton.OnClick += () => {
                 if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
                 {
                     SelectMove(stallMove);
@@ -271,8 +268,7 @@ namespace ProjectVagabond.Battle.UI
 
             var moveButton = new MoveButton(move, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, startVisible);
             moveButton.OnClick += () => SelectMove(move);
-            moveButton.OnRightClick += () =>
-            {
+            moveButton.OnRightClick += () => {
                 _tooltipMove = move;
                 SetState(MenuState.Tooltip);
             };
@@ -613,8 +609,8 @@ namespace ProjectVagabond.Battle.UI
 
                             // 4. Update currentY and draw Underline
                             currentY += nameSize.Height;
-                            var underlineStart = new Vector2(namePos.X - 1, currentY + 1);
-                            var underlineEnd = new Vector2(namePos.X + nameSize.Width + 1, currentY + 1);
+                            var underlineStart = new Vector2(namePos.X - 1, currentY + 2);
+                            var underlineEnd = new Vector2(namePos.X + nameSize.Width + 2, currentY + 2);
                             spriteBatch.DrawLineSnapped(underlineStart, underlineEnd, _global.Palette_BrightWhite);
                             currentY += 5;
 
@@ -679,9 +675,9 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // --- Secondary Actions (1x3 Row) ---
-            const int secButtonWidth = 104;
+            const int secButtonWidth = 60;
             const int secButtonHeight = 17;
-            const int secButtonSpacing = 1;
+            const int secButtonSpacing = 0;
             int secRowY = moveGridStartY + (moveButtonHeight * moveRows) + (moveRowSpacing * (moveRows - 1));
 
             int totalSecGridWidth = (secButtonWidth * _secondaryActionButtons.Count) + (secButtonSpacing * (_secondaryActionButtons.Count - 1));
@@ -691,15 +687,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 var button = _secondaryActionButtons[i];
                 int xPos = secGridStartX + i * (secButtonWidth + secButtonSpacing);
-
-                if (i == 0) // Strike button
-                {
-                    xPos += 1;
-                }
-                else if (i == 2) // Stall button
-                {
-                    xPos -= 1;
-                }
 
                 button.Bounds = new Rectangle(
                     xPos,
