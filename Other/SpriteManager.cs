@@ -138,7 +138,7 @@ namespace ProjectVagabond
                 ActionMovesBackgroundSprite = _textureFactory.CreateColoredTexture(294, 47, Color.Magenta);
             }
 
-            try { ActionTooltipBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_tooltip_background"); }
+            try { ActionTooltipBackgroundSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_action_tooltip_background"); }
             catch { ActionTooltipBackgroundSprite = _textureFactory.CreateColoredTexture(319, 178, Color.DarkGray); }
 
             try { ElementIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_element_icons_9x9_spritesheet"); }
@@ -156,17 +156,26 @@ namespace ProjectVagabond
 
         private void InitializeArrowSourceRects()
         {
-            var spriteSheetCoords = new Point[8]
+            // Indices 0-7 are the directional arrows in a circle starting from West, going clockwise.
+            // Index 8 is the center star.
+            var spriteSheetCoords = new Point[9]
             {
-                new Point(0, 1), new Point(0, 0), new Point(1, 0), new Point(2, 0),
-                new Point(2, 1), new Point(2, 2), new Point(1, 2), new Point(0, 2)
+                new Point(0, 1), // 0: W
+                new Point(0, 0), // 1: NW
+                new Point(1, 0), // 2: N (Up)
+                new Point(2, 0), // 3: NE
+                new Point(2, 1), // 4: E (Right)
+                new Point(2, 2), // 5: SE
+                new Point(1, 2), // 6: S (Down)
+                new Point(0, 2), // 7: SW
+                new Point(1, 1)  // 8: Center (Star)
             };
 
-            ArrowIconSourceRects = new Rectangle[8];
+            ArrowIconSourceRects = new Rectangle[9];
             int spriteWidth = ArrowIconSpriteSheet.Width / 3;
             int spriteHeight = ArrowIconSpriteSheet.Height / 3;
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 9; i++)
             {
                 ArrowIconSourceRects[i] = new Rectangle(
                     spriteSheetCoords[i].X * spriteWidth,

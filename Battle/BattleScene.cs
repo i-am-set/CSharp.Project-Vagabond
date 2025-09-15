@@ -75,6 +75,12 @@ namespace ProjectVagabond.Scenes
         private class HoverHighlightState { public MoveData CurrentMove; public List<BattleCombatant> Targets = new List<BattleCombatant>(); public float Timer = 0f; public const float SingleTargetFlashOnDuration = 0.4f; public const float SingleTargetFlashOffDuration = 0.2f; public const float MultiTargetFlashOnDuration = 0.4f; public const float MultiTargetFlashOffDuration = 0.4f; }
         private readonly HoverHighlightState _hoverHighlightState = new HoverHighlightState();
 
+        // Enemy Sprite Animation
+        private Dictionary<string, Vector2[]> _enemySpritePartOffsets = new Dictionary<string, Vector2[]>();
+        private Dictionary<string, float[]> _enemyAnimationTimers = new Dictionary<string, float[]>();
+        private Dictionary<string, float[]> _enemyAnimationIntervals = new Dictionary<string, float[]>();
+        private const int ENEMY_SPRITE_PART_SIZE = 64;
+
 
         // Layout Constants
         private const int DIVIDER_Y = 105;
@@ -127,6 +133,9 @@ namespace ProjectVagabond.Scenes
             _activeDamageIndicators.Clear();
             _narrationQueue.Clear();
             _currentActor = null;
+            _enemySpritePartOffsets.Clear();
+            _enemyAnimationTimers.Clear();
+            _enemyAnimationIntervals.Clear();
 
             _isBattleOver = false;
             _endOfBattleTimer = 0f;
@@ -551,6 +560,7 @@ namespace ProjectVagabond.Scenes
             UpdateHitAnimations(gameTime);
             UpdateDamageIndicators(gameTime);
             UpdateHoverHighlights(gameTime);
+            UpdateEnemyAnimations(gameTime);
 
             if (_settingsButton != null)
             {
@@ -732,6 +742,32 @@ namespace ProjectVagabond.Scenes
             }
 
             base.Update(gameTime);
+        }
+
+        private void UpdateEnemyAnimations(GameTime gameTime)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            var combatantIds = _enemyAnimationTimers.Keys.ToList();
+
+            foreach (var id in combatantIds)
+            {
+                var timers = _enemyAnimationTimers[id];
+                var intervals = _enemyAnimationIntervals[id];
+                var offsets = _enemySpritePartOffsets[id];
+
+                for (int i = 1; i < offsets.Length; i++) // Start at 1 to keep base static
+                {
+                    timers[i] += deltaTime;
+                    if (timers[i] >= intervals[i])
+                    {
+                        timers[i] = 0f;
+                        // Generate a new random interval for the next update
+                        intervals[i] = (float)(_random.NextDouble() * 5);
+                        // Update the offset
+                        offsets[i] = new Vector2(_random.Next(-1, 1), _random.Next(-1, 1));
+                    }
+                }
+            }
         }
 
         private void UpdatePlayerStatusIcons(BattleCombatant player, Vector2 virtualMousePos)
@@ -1210,12 +1246,12 @@ namespace ProjectVagabond.Scenes
         {
             var global = ServiceLocator.Get<Global>();
             var pixel = ServiceLocator.Get<Texture2D>();
-            const int spriteSize = 64;
+
             var spriteRect = new Rectangle(
-                (int)(centerPosition.X - spriteSize / 2),
-                (int)(centerPosition.Y - spriteSize - 10),
-                spriteSize,
-                spriteSize
+                (int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2),
+                (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10),
+                ENEMY_SPRITE_PART_SIZE,
+                ENEMY_SPRITE_PART_SIZE
             );
 
             Color tintColor = Color.White * combatant.VisualAlpha;
@@ -1223,7 +1259,31 @@ namespace ProjectVagabond.Scenes
             Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
             if (enemySprite != null)
             {
-                spriteBatch.DrawSnapped(enemySprite, spriteRect, tintColor);
+                int numParts = enemySprite.Width / ENEMY_SPRITE_PART_SIZE;
+                // Lazily initialize animation state for this enemy if it doesn't exist
+                if (!_enemySpritePartOffsets.ContainsKey(combatant.CombatantID) || _enemySpritePartOffsets[combatant.CombatantID].Length != numParts)
+                {
+                    _enemySpritePartOffsets[combatant.CombatantID] = new Vector2[numParts];
+                    _enemyAnimationTimers[combatant.CombatantID] = new float[numParts];
+                    var intervals = new float[numParts];
+                    for (int i = 0; i < numParts; i++)
+                    {
+                        intervals[i] = (float)(_random.NextDouble() * (0.5f - 0.1f) + 0.1f);
+                    }
+                    _enemyAnimationIntervals[combatant.CombatantID] = intervals;
+                }
+
+                if (_enemySpritePartOffsets.TryGetValue(combatant.CombatantID, out var offsets))
+                {
+                    for (int i = 0; i < numParts; i++)
+                    {
+                        var sourceRect = new Rectangle(i * ENEMY_SPRITE_PART_SIZE, 0, ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
+                        var partOffset = offsets[i];
+                        var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y);
+                        var drawRect = new Rectangle((int)drawPosition.X, (int)drawPosition.Y, spriteRect.Width, spriteRect.Height);
+                        spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
+                    }
+                }
             }
             else
             {
@@ -1289,64 +1349,59 @@ namespace ProjectVagabond.Scenes
         {
             if (_hoverHighlightState.CurrentMove == null || !_hoverHighlightState.Targets.Any()) return;
 
+            var arrowRects = _spriteManager.ArrowIconSourceRects;
+            if (arrowRects == null) return;
+
             var move = _hoverHighlightState.CurrentMove;
             var state = _hoverHighlightState;
             var targets = state.Targets;
+
+            float cycleDuration = HoverHighlightState.MultiTargetFlashOnDuration + HoverHighlightState.MultiTargetFlashOffDuration;
+            bool areAllFlashing = (state.Timer % cycleDuration) < HoverHighlightState.MultiTargetFlashOnDuration;
+            Color flashColor = areAllFlashing ? _global.Palette_Red : Color.White;
 
             switch (move.Target)
             {
                 case TargetType.Single:
                 case TargetType.SingleAll:
                 case TargetType.Self:
-                    float singleCycleDuration = HoverHighlightState.SingleTargetFlashOnDuration + HoverHighlightState.SingleTargetFlashOffDuration;
-                    int flashingIndex = targets.Count > 0 ? (int)(state.Timer / singleCycleDuration) % targets.Count : -1;
-                    bool isFlashOn = (state.Timer % singleCycleDuration) < HoverHighlightState.SingleTargetFlashOnDuration;
-
-                    for (int i = 0; i < targets.Count; i++)
+                    foreach (var target in targets)
                     {
-                        var target = targets[i];
-                        Color color = (i == flashingIndex && isFlashOn) ? _global.Palette_Red : Color.White;
-                        DrawTargetIndicatorArrow(spriteBatch, font, secondaryFont, target, color);
+                        Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
+                        DrawTargetIndicator(spriteBatch, font, secondaryFont, target, sourceRect, flashColor);
                     }
                     break;
 
                 case TargetType.Every:
                 case TargetType.EveryAll:
-                    float multiCycleDuration = HoverHighlightState.MultiTargetFlashOnDuration + HoverHighlightState.MultiTargetFlashOffDuration;
-                    bool areAllFlashing = (state.Timer % multiCycleDuration) < HoverHighlightState.MultiTargetFlashOnDuration;
-                    Color allColor = areAllFlashing ? _global.Palette_Red : Color.White;
-
-                    foreach (var t in targets)
+                    Rectangle starRect = arrowRects[8]; // Center star icon
+                    foreach (var target in targets)
                     {
-                        DrawTargetIndicatorArrow(spriteBatch, font, secondaryFont, t, allColor);
+                        DrawTargetIndicator(spriteBatch, font, secondaryFont, target, starRect, flashColor);
                     }
                     break;
             }
         }
 
-        private void DrawTargetIndicatorArrow(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant combatant, Color color)
+        private void DrawTargetIndicator(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant combatant, Rectangle sourceRect, Color color)
         {
             if (color.A == 0) return;
 
             var arrowSheet = _spriteManager.ArrowIconSpriteSheet;
-            var arrowRects = _spriteManager.ArrowIconSourceRects;
-            if (arrowSheet == null || arrowRects == null) return;
+            if (arrowSheet == null) return;
 
-            Rectangle arrowRect;
             Vector2 arrowPos;
 
             if (combatant.IsPlayerControlled)
             {
-                arrowRect = arrowRects[2]; // Up arrow
                 var playerBounds = GetPlayerInteractionBounds(font, secondaryFont);
                 arrowPos = new Vector2(
-                    playerBounds.Center.X - arrowRect.Width / 2f,
+                    playerBounds.Center.X - sourceRect.Width / 2f,
                     playerBounds.Bottom + 2
                 );
             }
             else
             {
-                arrowRect = arrowRects[6]; // Down arrow
                 var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled).ToList();
                 int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
                 if (enemyIndex == -1) return;
@@ -1361,8 +1416,8 @@ namespace ProjectVagabond.Scenes
                 float spriteTop = centerPosition.Y - spriteSize - 10;
 
                 arrowPos = new Vector2(
-                    centerPosition.X - arrowRect.Width / 2f,
-                    spriteTop - arrowRect.Height - 1
+                    centerPosition.X - sourceRect.Width / 2f,
+                    spriteTop - sourceRect.Height - 1
                 );
             }
 
@@ -1372,7 +1427,7 @@ namespace ProjectVagabond.Scenes
                 arrowPos.Y += 1;
             }
 
-            spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, color);
+            spriteBatch.DrawSnapped(arrowSheet, arrowPos, sourceRect, color);
         }
 
         private void DrawTurnIndicator(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
