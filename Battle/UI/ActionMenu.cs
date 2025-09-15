@@ -546,7 +546,7 @@ namespace ProjectVagabond.Battle.UI
                         int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
                         int gridHeight = (moveButtonHeight * rows) + (rowSpacing * (rows - 1));
                         int gridStartX = (Global.VIRTUAL_WIDTH - totalGridWidth) / 2;
-                        int gridStartY = dividerY - 4;
+                        int gridStartY = dividerY + 2;
 
                         // Draw the background sprite for the tooltip area
                         var spriteManager = ServiceLocator.Get<SpriteManager>();
@@ -651,7 +651,7 @@ namespace ProjectVagabond.Battle.UI
                         }
 
                         // Draw the back button
-                        const int backButtonTopMargin = 7;
+                        const int backButtonTopMargin = 0; // Vertical spacing from the tooltip panel.
                         int backButtonY = gridStartY + gridHeight + backButtonTopMargin;
                         var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
                         int backWidth = (int)backSize.Width + 16;

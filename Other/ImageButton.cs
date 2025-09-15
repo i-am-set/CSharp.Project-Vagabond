@@ -31,8 +31,6 @@ namespace ProjectVagabond.UI
         private const float SWAY_SPEED = 2.5f;
         private const float SWAY_AMPLITUDE = 1.0f;
 
-        public float DefaultOpacity { get; set; } = 0.5f;
-
         public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null)
             : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, clickOnPress, font)
         {
@@ -158,11 +156,9 @@ namespace ProjectVagabond.UI
                 sourceRectToDraw = _hoverSourceRect;
             }
 
-            Color drawColor = Color.White * DefaultOpacity;
-            if (isActivated)
-            {
-                drawColor = Color.White;
-            }
+            // Always use Color.White to render the sprite without any tint or opacity modification.
+            // The visual state is handled entirely by swapping the source rectangle.
+            Color drawColor = Color.White;
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {

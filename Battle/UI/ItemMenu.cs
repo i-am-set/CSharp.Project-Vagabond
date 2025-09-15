@@ -439,11 +439,11 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Draw the back button
-            int backButtonY = tooltipBounds.Bottom + 7;
+            int backButtonY = tooltipBounds.Bottom + 4;
             var backSize = secondaryFont.MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2,
+                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
                 backButtonY,
                 backWidth,
                 13
