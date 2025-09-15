@@ -657,7 +657,7 @@ namespace ProjectVagabond.Battle.UI
 
             int totalMoveGridWidth = (moveButtonWidth * moveColumns) + moveColSpacing;
             int moveGridStartX = (Global.VIRTUAL_WIDTH - totalMoveGridWidth) / 2;
-            int moveGridStartY = 114 - 4;
+            int moveGridStartY = 117;
 
             for (int i = 0; i < _moveButtons.Count; i++)
             {
@@ -698,7 +698,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // --- Back Button ---
-            int backButtonY = secRowY + secButtonHeight + 7;
+            int backButtonY = secRowY + secButtonHeight - 1;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(

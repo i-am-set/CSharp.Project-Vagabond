@@ -13,7 +13,7 @@ namespace ProjectVagabond.UI
         private float _animationTimer = 0f;
         private bool _wasActivatedLastFrame = false;
 
-        private const float AnimationDuration = 0.08f; // How long the entire hop takes
+        private const float AnimationDuration = 0.04f; // How long the entire hop takes
         private const float HopDistance = 3f;         // The maximum distance it hops to the right
 
         public float CurrentOffset { get; private set; }

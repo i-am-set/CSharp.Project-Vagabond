@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using System.Text;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -393,45 +394,60 @@ namespace ProjectVagabond.Battle.UI
         private void DrawTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            const int horizontalPadding = 10;
-            const int dividerY = 114;
-            const int menuVerticalOffset = 4;
-            const int bottomBarTopPadding = 5;
-            const int itemWidth = 145;
-            const int columns = 2;
-            const int columnSpacing = 2;
-            int totalGridWidth = (itemWidth * columns) + columnSpacing;
-            int gridStartX = horizontalPadding + (Global.VIRTUAL_WIDTH - (horizontalPadding * 2) - totalGridWidth) / 2;
-            int gridStartY = dividerY + menuVerticalOffset;
+            var pixel = ServiceLocator.Get<Texture2D>();
 
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
-            var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
-            var tooltipBgRect = new Rectangle(gridStartX - 1, gridStartY - 1, 294, 47);
-            spriteBatch.DrawSnapped(tooltipBg, tooltipBgRect, Color.White);
+            // --- Layout Constants from Screenshot ---
+            const int boxWidth = 294;
+            const int boxHeight = 47;
+            const int boxY = 117;
+            int boxX = (Global.VIRTUAL_WIDTH - boxWidth) / 2;
+
+            var tooltipBounds = new Rectangle(boxX, boxY, boxWidth, boxHeight);
+
+            // Draw the border
+            spriteBatch.DrawLineSnapped(new Vector2(tooltipBounds.Left, tooltipBounds.Top), new Vector2(tooltipBounds.Right, tooltipBounds.Top), _global.Palette_White);
+            spriteBatch.DrawLineSnapped(new Vector2(tooltipBounds.Left, tooltipBounds.Bottom), new Vector2(tooltipBounds.Right, tooltipBounds.Bottom), _global.Palette_White);
+            spriteBatch.DrawLineSnapped(new Vector2(tooltipBounds.Left, tooltipBounds.Top), new Vector2(tooltipBounds.Left, tooltipBounds.Bottom), _global.Palette_White);
+            spriteBatch.DrawLineSnapped(new Vector2(tooltipBounds.Right, tooltipBounds.Top), new Vector2(tooltipBounds.Right, tooltipBounds.Bottom), _global.Palette_White);
 
             if (_itemForTooltip != null)
             {
+                // 1. Draw Item Name
                 var itemName = _itemForTooltip.ItemName.ToUpper();
                 var nameSize = font.MeasureString(itemName);
                 var namePos = new Vector2(
-                    tooltipBgRect.Center.X - nameSize.Width / 2,
-                    tooltipBgRect.Y + 10
+                    tooltipBounds.Center.X - nameSize.Width / 2,
+                    tooltipBounds.Y + 8
                 );
                 spriteBatch.DrawStringSnapped(font, itemName, namePos, _global.Palette_BrightWhite);
 
+                // 2. Draw Description (wrapped)
                 string effectText = GetItemEffectDescription(_itemForTooltip);
-                var effectSize = secondaryFont.MeasureString(effectText);
-                var effectPos = new Vector2(
-                    tooltipBgRect.Center.X - effectSize.Width / 2,
-                    namePos.Y + nameSize.Height + 15
-                );
-                spriteBatch.DrawStringSnapped(secondaryFont, effectText, effectPos, _global.Palette_White);
+                var wrappedLines = WrapTextByCharCount(effectText, 46);
+                float currentY = namePos.Y + nameSize.Height + 6;
+
+                foreach (var line in wrappedLines)
+                {
+                    var lineSize = secondaryFont.MeasureString(line);
+                    var linePos = new Vector2(
+                        tooltipBounds.Center.X - lineSize.Width / 2,
+                        currentY
+                    );
+                    spriteBatch.DrawStringSnapped(secondaryFont, line, linePos, _global.Palette_White);
+                    currentY += secondaryFont.LineHeight;
+                }
             }
 
-            int bottomBarY = tooltipBgRect.Bottom + bottomBarTopPadding;
+            // Draw the back button
+            int backButtonY = tooltipBounds.Bottom + 7;
             var backSize = secondaryFont.MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
-            _backButton.Bounds = new Rectangle(tooltipBgRect.Center.X - backWidth / 2, bottomBarY, backWidth, 13);
+            _backButton.Bounds = new Rectangle(
+                (Global.VIRTUAL_WIDTH - backWidth) / 2,
+                backButtonY,
+                backWidth,
+                13
+            );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }
 
@@ -481,23 +497,49 @@ namespace ProjectVagabond.Battle.UI
 
         private string GetItemEffectDescription(ConsumableItemData item)
         {
-            switch (item.Type)
+            return item.Description.ToUpper();
+        }
+
+        private List<string> WrapTextByCharCount(string text, int maxCharsPerLine)
+        {
+            var lines = new List<string>();
+            if (string.IsNullOrEmpty(text)) return lines;
+
+            var words = text.Split(' ');
+            var currentLine = new StringBuilder();
+
+            foreach (var word in words)
             {
-                case ConsumableType.Heal:
-                    return $"Restores {item.PrimaryValue} HP";
-                case ConsumableType.Buff:
-                    return $"Boosts a stat for {item.PrimaryValue} turns";
-                case ConsumableType.Cleanse:
-                    return "Removes negative status effects";
-                case ConsumableType.Attack:
-                    if (BattleDataCache.Moves.TryGetValue(item.MoveID, out var move))
+                if (currentLine.Length > 0 && currentLine.Length + word.Length + 1 > maxCharsPerLine)
+                {
+                    lines.Add(currentLine.ToString());
+                    currentLine.Clear();
+                }
+
+                if (word.Length > maxCharsPerLine)
+                {
+                    if (currentLine.Length > 0)
                     {
-                        return $"Casts the spell '{move.MoveName}'";
+                        lines.Add(currentLine.ToString());
+                        currentLine.Clear();
                     }
-                    return "An attack item";
-                default:
-                    return item.Description;
+                    lines.Add(word);
+                    continue;
+                }
+
+                if (currentLine.Length > 0)
+                {
+                    currentLine.Append(" ");
+                }
+                currentLine.Append(word);
             }
+
+            if (currentLine.Length > 0)
+            {
+                lines.Add(currentLine.ToString());
+            }
+
+            return lines;
         }
     }
 }

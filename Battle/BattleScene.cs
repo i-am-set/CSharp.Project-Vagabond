@@ -997,7 +997,7 @@ namespace ProjectVagabond.Scenes
                 if (!string.IsNullOrEmpty(title))
                 {
                     var titleSize = secondaryFont.MeasureString(title);
-                    var titleY = DIVIDER_Y - 10 - font.LineHeight + 7;
+                    var titleY = DIVIDER_Y + 2; // Move title below the divider line
                     var titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.Width) / 2, titleY);
                     spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_LightGray);
                 }
@@ -1360,7 +1360,7 @@ namespace ProjectVagabond.Scenes
 
                 arrowPos = new Vector2(
                     centerPosition.X - arrowRect.Width / 2f,
-                    spriteTop - arrowRect.Height - 2
+                    spriteTop - arrowRect.Height - 1
                 );
             }
 
@@ -1424,7 +1424,7 @@ namespace ProjectVagabond.Scenes
 
                 var arrowPos = new Vector2(
                     spriteRect.Center.X - arrowRect.Width / 2,
-                    spriteRect.Top - arrowRect.Height - 2 + bobOffset
+                    spriteRect.Top - arrowRect.Height - 1 + bobOffset
                 );
 
                 spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
