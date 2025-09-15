@@ -47,12 +47,13 @@ namespace ProjectVagabond.UI
             _previousMouseState = Mouse.GetState();
             _core.IsMouseVisible = true;
 
-            var font = ServiceLocator.Get<BitmapFont>();
+            var defaultFont = ServiceLocator.Get<BitmapFont>();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             float dialogWidth = 280;
             float currentHeight = 20;
 
-            var wrappedPrompt = WrapText(font, _prompt, dialogWidth - 40);
-            currentHeight += wrappedPrompt.Count * font.LineHeight;
+            var wrappedPrompt = WrapText(secondaryFont, _prompt.ToUpper(), dialogWidth - 40);
+            currentHeight += wrappedPrompt.Count * secondaryFont.LineHeight;
             currentHeight += 10;
 
             if (_details.Any())
@@ -60,8 +61,8 @@ namespace ProjectVagabond.UI
                 currentHeight += 10;
                 foreach (var detail in _details)
                 {
-                    var wrappedDetail = WrapText(font, detail, dialogWidth - 60);
-                    currentHeight += wrappedDetail.Count * (font.LineHeight + Global.APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING);
+                    var wrappedDetail = WrapText(defaultFont, detail, dialogWidth - 60);
+                    currentHeight += wrappedDetail.Count * (defaultFont.LineHeight + Global.APPLY_OPTION_DIFFERENCE_TEXT_LINE_SPACING);
                 }
                 currentHeight += 15;
             }
@@ -89,8 +90,8 @@ namespace ProjectVagabond.UI
                 var (text1, color1) = ParseButtonTextAndColor(taggedText1);
                 var (text2, color2) = ParseButtonTextAndColor(taggedText2);
 
-                float width1 = font.MeasureString(text1).Width + textHorizontalPadding;
-                float width2 = font.MeasureString(text2).Width + textHorizontalPadding;
+                float width1 = defaultFont.MeasureString(text1).Width + textHorizontalPadding;
+                float width2 = defaultFont.MeasureString(text2).Width + textHorizontalPadding;
 
                 float totalGroupWidth = width1 + interButtonGap + width2;
                 float startX = _dialogBounds.Center.X - totalGroupWidth / 2;
@@ -203,17 +204,19 @@ namespace ProjectVagabond.UI
             if (!IsActive) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            spriteBatch.Draw(pixel, _dialogBounds, _global.Palette_DarkGray);
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+
+            spriteBatch.Draw(pixel, _dialogBounds, _global.GameBg);
             DrawRectangleBorder(spriteBatch, pixel, _dialogBounds, 1, _global.Palette_LightGray);
 
             float currentY = _dialogBounds.Y + 20;
 
-            var wrappedPrompt = WrapText(font, _prompt, _dialogBounds.Width - 40);
+            var wrappedPrompt = WrapText(secondaryFont, _prompt.ToUpper(), _dialogBounds.Width - 40);
             foreach (var line in wrappedPrompt)
             {
-                var promptSize = font.MeasureString(line);
-                spriteBatch.DrawString(font, line, new Vector2(_dialogBounds.Center.X - promptSize.Width / 2, currentY), _global.Palette_BrightWhite);
-                currentY += font.LineHeight;
+                var promptSize = secondaryFont.MeasureString(line);
+                spriteBatch.DrawString(secondaryFont, line, new Vector2(_dialogBounds.Center.X - promptSize.Width / 2, currentY), _global.Palette_BrightWhite);
+                currentY += secondaryFont.LineHeight;
             }
 
             if (_details.Any())

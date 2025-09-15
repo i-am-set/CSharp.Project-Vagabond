@@ -80,6 +80,7 @@ namespace ProjectVagabond.Scenes
         private const int DIVIDER_Y = 105;
         private const int MAX_ENEMIES = 5;
         private const float PLAYER_INDICATOR_BOB_SPEED = 1.5f;
+        private const float TITLE_INDICATOR_BOB_SPEED = PLAYER_INDICATOR_BOB_SPEED / 2f;
 
         public BattleScene()
         {
@@ -996,9 +997,10 @@ namespace ProjectVagabond.Scenes
 
                 if (!string.IsNullOrEmpty(title))
                 {
+                    float titleBobOffset = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * TITLE_INDICATOR_BOB_SPEED * MathF.PI) > 0) ? -1f : 0f;
                     var titleSize = secondaryFont.MeasureString(title);
-                    var titleY = DIVIDER_Y + 2; // Move title below the divider line
-                    var titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.Width) / 2, titleY);
+                    var titleY = DIVIDER_Y + 3;
+                    var titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.Width) / 2, titleY + titleBobOffset);
                     spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_LightGray);
                 }
             }
