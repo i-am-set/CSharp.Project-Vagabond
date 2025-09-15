@@ -58,4 +58,15 @@ namespace ProjectVagabond.Battle
         Cleanse,
         Attack
     }
+
+    /// <summary>
+    /// Defines the combat stat used for a move's damage calculation.
+    /// </summary>
+    public enum OffensiveStatType
+    {
+        Strength,
+        Intelligence,
+        Tenacity,
+        Agility
+    }
 }

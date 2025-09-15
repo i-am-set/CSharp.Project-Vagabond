@@ -72,7 +72,27 @@ namespace ProjectVagabond.Battle
             }
 
             // Step 3: Base Damage Calculation
-            float offensiveStat = move.ImpactType == ImpactType.Physical ? attacker.Stats.Strength : attacker.Stats.Intelligence;
+            float offensiveStat;
+            switch (move.OffensiveStat)
+            {
+                case OffensiveStatType.Strength:
+                    offensiveStat = attacker.Stats.Strength;
+                    break;
+                case OffensiveStatType.Intelligence:
+                    offensiveStat = attacker.Stats.Intelligence;
+                    break;
+                case OffensiveStatType.Tenacity:
+                    offensiveStat = attacker.Stats.Tenacity;
+                    break;
+                case OffensiveStatType.Agility:
+                    offensiveStat = attacker.Stats.Agility;
+                    break;
+                default:
+                    Debug.WriteLine($"[DamageCalculator] [WARNING] Unhandled OffensiveStatType '{move.OffensiveStat}' for move '{move.MoveID}'. Defaulting to Strength.");
+                    offensiveStat = attacker.Stats.Strength;
+                    break;
+            }
+
             float defensiveStat = target.Stats.Tenacity;
             if (defensiveStat == 0) defensiveStat = 1; // Prevent division by zero
 

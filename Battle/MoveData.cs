@@ -39,6 +39,11 @@ namespace ProjectVagabond.Battle
         public ImpactType ImpactType { get; set; }
 
         /// <summary>
+        /// The stat used to calculate the move's offensive power.
+        /// </summary>
+        public OffensiveStatType OffensiveStat { get; set; }
+
+        /// <summary>
         /// A boolean indicating whether the move requires the user to make physical contact with the target.
         /// </summary>
         public bool MakesContact { get; set; }
