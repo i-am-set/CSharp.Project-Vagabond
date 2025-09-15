@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -18,7 +19,6 @@ namespace ProjectVagabond.Battle.UI
         public event Action OnMovesMenuOpened;
         public event Action OnMainMenuOpened;
         public event Action OnFleeRequested;
-
         private bool _isVisible;
         private BattleCombatant _player;
         private List<BattleCombatant> _allCombatants;
@@ -41,6 +41,20 @@ namespace ProjectVagabond.Battle.UI
         private bool _buttonsInitialized = false;
         private MouseState _previousMouseState;
 
+        // Tooltip Title Scrolling State
+        private bool _isTooltipScrollingInitialized = false;
+        private float _tooltipScrollPosition = 0f;
+        private float _tooltipScrollWaitTimer = 0f;
+        private float _tooltipMaxScrollToShowEnd = 0f;
+        private enum TooltipScrollState { PausedAtStart, ScrollingToEnd, PausedAtEnd }
+        private TooltipScrollState _tooltipScrollState = TooltipScrollState.PausedAtStart;
+
+        // Scrolling Tuning
+        private const float SCROLL_SPEED = 25f;
+        private const float SCROLL_PAUSE_DURATION = 1.5f;
+        private const int EXTRA_SCROLL_SPACES = 1;
+        private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
+
         // State for animation
         private MoveData[] _previousHandState = new MoveData[4];
         private Queue<MoveButton> _buttonsToAnimate = new Queue<MoveButton>();
@@ -55,7 +69,8 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
             _backButton = new Button(Rectangle.Empty, "BACK");
-            _backButton.OnClick += () => {
+            _backButton.OnClick += () =>
+            {
                 if (_currentState == MenuState.Targeting || _currentState == MenuState.Tooltip)
                 {
                     SetState(MenuState.Moves);
@@ -91,7 +106,8 @@ namespace ProjectVagabond.Battle.UI
 
             // Secondary Action Buttons
             var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0]);
-            strikeButton.OnClick += () => {
+            strikeButton.OnClick += () =>
+            {
                 if (_player != null && !string.IsNullOrEmpty(_player.DefaultStrikeMoveID) && BattleDataCache.Moves.TryGetValue(_player.DefaultStrikeMoveID, out var strikeMove))
                 {
                     SelectMove(strikeMove);
@@ -100,7 +116,8 @@ namespace ProjectVagabond.Battle.UI
             _secondaryActionButtons.Add(strikeButton);
 
             var dodgeButton = new TextOverImageButton(Rectangle.Empty, "DODGE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[1]);
-            dodgeButton.OnClick += () => {
+            dodgeButton.OnClick += () =>
+            {
                 if (BattleDataCache.Moves.TryGetValue("Dodge", out var dodgeMove))
                 {
                     SelectMove(dodgeMove);
@@ -109,7 +126,8 @@ namespace ProjectVagabond.Battle.UI
             _secondaryActionButtons.Add(dodgeButton);
 
             var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2]);
-            stallButton.OnClick += () => {
+            stallButton.OnClick += () =>
+            {
                 if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
                 {
                     SelectMove(stallMove);
@@ -193,6 +211,13 @@ namespace ProjectVagabond.Battle.UI
             {
                 _targetingTextAnimTimer = 0f;
             }
+            else if (newState == MenuState.Tooltip)
+            {
+                _isTooltipScrollingInitialized = false;
+                _tooltipScrollPosition = 0f;
+                _tooltipScrollState = TooltipScrollState.PausedAtStart;
+                _tooltipScrollWaitTimer = SCROLL_PAUSE_DURATION;
+            }
         }
 
         private void PopulateAndAnimateMoveButtons()
@@ -246,7 +271,8 @@ namespace ProjectVagabond.Battle.UI
 
             var moveButton = new MoveButton(move, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, startVisible);
             moveButton.OnClick += () => SelectMove(move);
-            moveButton.OnRightClick += () => {
+            moveButton.OnRightClick += () =>
+            {
                 _tooltipMove = move;
                 SetState(MenuState.Tooltip);
             };
@@ -305,6 +331,44 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        private void UpdateTooltipScrolling(GameTime gameTime)
+        {
+            if (!_isTooltipScrollingInitialized) return;
+
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            switch (_tooltipScrollState)
+            {
+                case TooltipScrollState.PausedAtStart:
+                    _tooltipScrollWaitTimer -= dt;
+                    if (_tooltipScrollWaitTimer <= 0)
+                    {
+                        _tooltipScrollState = TooltipScrollState.ScrollingToEnd;
+                    }
+                    break;
+
+                case TooltipScrollState.ScrollingToEnd:
+                    _tooltipScrollPosition += SCROLL_SPEED * dt;
+                    if (_tooltipScrollPosition >= _tooltipMaxScrollToShowEnd)
+                    {
+                        _tooltipScrollPosition = _tooltipMaxScrollToShowEnd;
+                        _tooltipScrollState = TooltipScrollState.PausedAtEnd;
+                        _tooltipScrollWaitTimer = SCROLL_PAUSE_DURATION;
+                    }
+                    break;
+
+                case TooltipScrollState.PausedAtEnd:
+                    _tooltipScrollWaitTimer -= dt;
+                    if (_tooltipScrollWaitTimer <= 0)
+                    {
+                        _tooltipScrollPosition = 0;
+                        _tooltipScrollState = TooltipScrollState.PausedAtStart;
+                        _tooltipScrollWaitTimer = SCROLL_PAUSE_DURATION;
+                    }
+                    break;
+            }
+        }
+
         public void Update(MouseState currentMouseState, GameTime gameTime)
         {
             InitializeButtons();
@@ -358,6 +422,7 @@ namespace ProjectVagabond.Battle.UI
                     _backButton.Update(currentMouseState);
                     break;
                 case MenuState.Tooltip:
+                    UpdateTooltipScrolling(gameTime);
                     bool leftClick = currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
                     bool rightClick = currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
                     if (leftClick || rightClick)
@@ -474,28 +539,97 @@ namespace ProjectVagabond.Battle.UI
                         // Draw the move name and stats
                         if (_tooltipMove != null)
                         {
+                            const int horizontalPadding = 8;
+                            const int verticalPadding = 6;
+                            float currentY = tooltipBgRect.Y + verticalPadding;
+
+                            // 1. Prepare Move Name and Stats
                             var moveName = _tooltipMove.MoveName.ToUpper();
                             var nameSize = font.MeasureString(moveName);
-                            var namePos = new Vector2(
-                                tooltipBgRect.Center.X - nameSize.Width / 2,
-                                tooltipBgRect.Y + 10
-                            );
-                            spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_BrightWhite);
+                            var namePos = new Vector2(tooltipBgRect.X + horizontalPadding, currentY);
 
-                            string powerText = _tooltipMove.Power > 0 ? $"POWER: {_tooltipMove.Power}" : "POWER: ---";
-                            string accuracyText = _tooltipMove.Accuracy >= 0 ? $"ACCURACY: {_tooltipMove.Accuracy}%" : "ACCURACY: ---";
+                            string powerText = _tooltipMove.Power > 0 ? $"POW: {_tooltipMove.Power}" : "POW: ---";
+                            string accuracyText = _tooltipMove.Accuracy >= 0 ? $"ACC: {_tooltipMove.Accuracy}%" : "ACC: ---";
+                            string moveTypeText = _tooltipMove.MoveType.ToString().ToUpper();
+                            string separator = " / ";
 
                             var powerSize = secondaryFont.MeasureString(powerText);
-                            var accuracySize = secondaryFont.MeasureString(accuracyText);
-                            const int statSpacing = 20;
-                            float totalStatsWidth = powerSize.Width + accuracySize.Width + statSpacing;
-                            float statsStartX = tooltipBgRect.Center.X - totalStatsWidth / 2;
+                            var accSize = secondaryFont.MeasureString(accuracyText);
+                            var moveTypeSize = secondaryFont.MeasureString(moveTypeText);
+                            var separatorSize = secondaryFont.MeasureString(separator);
 
-                            var powerPos = new Vector2(statsStartX, namePos.Y + nameSize.Height + 15);
-                            var accuracyPos = new Vector2(statsStartX + powerSize.Width + statSpacing, powerPos.Y);
+                            float totalStatsWidth = powerSize.Width + separatorSize.Width + accSize.Width + separatorSize.Width + moveTypeSize.Width;
+                            float statsY = currentY + (nameSize.Height - powerSize.Height) / 2;
+                            float statsStartX = tooltipBgRect.Right - horizontalPadding - totalStatsWidth;
 
-                            spriteBatch.DrawStringSnapped(secondaryFont, powerText, powerPos, _global.Palette_White);
-                            spriteBatch.DrawStringSnapped(secondaryFont, accuracyText, accuracyPos, _global.Palette_White);
+                            // 2. Draw Stats Line (RIGHT ALIGNED, with colored separators)
+                            float currentX = statsStartX;
+                            spriteBatch.DrawStringSnapped(secondaryFont, powerText, new Vector2(currentX, statsY), _global.Palette_White);
+                            currentX += powerSize.Width;
+                            spriteBatch.DrawStringSnapped(secondaryFont, separator, new Vector2(currentX, statsY), _global.Palette_DarkGray);
+                            currentX += separatorSize.Width;
+                            spriteBatch.DrawStringSnapped(secondaryFont, accuracyText, new Vector2(currentX, statsY), _global.Palette_White);
+                            currentX += accSize.Width;
+                            spriteBatch.DrawStringSnapped(secondaryFont, separator, new Vector2(currentX, statsY), _global.Palette_DarkGray);
+                            currentX += separatorSize.Width;
+                            spriteBatch.DrawStringSnapped(secondaryFont, moveTypeText, new Vector2(currentX, statsY), _global.Palette_White);
+
+                            // 3. Draw Move Name (static or scrolling)
+                            const int titleCharLimit = 16;
+                            bool needsScrolling = moveName.Length > titleCharLimit;
+                            float textAvailableWidth = statsStartX - namePos.X - 4;
+
+                            if (needsScrolling)
+                            {
+                                if (!_isTooltipScrollingInitialized)
+                                {
+                                    _isTooltipScrollingInitialized = true;
+                                    float spaceWidth = font.MeasureString(" ").Width;
+                                    _tooltipMaxScrollToShowEnd = nameSize.Width - textAvailableWidth + (spaceWidth * EXTRA_SCROLL_SPACES);
+                                    _tooltipScrollWaitTimer = SCROLL_PAUSE_DURATION;
+                                    _tooltipScrollState = TooltipScrollState.PausedAtStart;
+                                    _tooltipScrollPosition = 0;
+                                }
+
+                                var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
+                                var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
+                                spriteBatch.End();
+
+                                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, _clipRasterizerState, null, transform);
+                                var clipRect = new Rectangle((int)namePos.X, (int)namePos.Y, (int)textAvailableWidth, (int)nameSize.Height);
+                                spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
+
+                                var scrollingTextPosition = new Vector2(namePos.X - _tooltipScrollPosition, namePos.Y);
+                                spriteBatch.DrawStringSnapped(font, moveName, scrollingTextPosition, _global.Palette_BrightWhite);
+
+                                spriteBatch.End();
+                                spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
+                                spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, originalRasterizerState, null, transform);
+                            }
+                            else
+                            {
+                                spriteBatch.DrawStringSnapped(font, moveName, namePos, _global.Palette_BrightWhite);
+                            }
+
+                            // 4. Update currentY and draw Underline
+                            currentY += nameSize.Height;
+                            var underlineStart = new Vector2(namePos.X - 1, currentY + 1);
+                            var underlineEnd = new Vector2(namePos.X + nameSize.Width + 1, currentY + 1);
+                            spriteBatch.DrawLineSnapped(underlineStart, underlineEnd, _global.Palette_BrightWhite);
+                            currentY += 5;
+
+                            // 5. Draw Description (word-wrapped and capitalized)
+                            if (!string.IsNullOrEmpty(_tooltipMove.Description))
+                            {
+                                float availableWidth = tooltipBgRect.Width - (horizontalPadding * 2);
+                                var wrappedLines = WrapText(_tooltipMove.Description.ToUpper(), availableWidth, secondaryFont);
+                                foreach (var line in wrappedLines)
+                                {
+                                    var descPos = new Vector2(tooltipBgRect.X + horizontalPadding, currentY);
+                                    spriteBatch.DrawStringSnapped(secondaryFont, line, descPos, _global.Palette_White);
+                                    currentY += secondaryFont.LineHeight;
+                                }
+                            }
                         }
 
                         // Draw the back button
@@ -587,6 +721,37 @@ namespace ProjectVagabond.Battle.UI
                 13
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
+        }
+
+        private List<string> WrapText(string text, float maxLineWidth, BitmapFont font)
+        {
+            var lines = new List<string>();
+            if (string.IsNullOrEmpty(text)) return lines;
+
+            var words = text.Split(' ');
+            var currentLine = new StringBuilder();
+
+            foreach (var word in words)
+            {
+                var testLine = currentLine.Length > 0 ? currentLine.ToString() + " " + word : word;
+                if (font.MeasureString(testLine).Width > maxLineWidth)
+                {
+                    lines.Add(currentLine.ToString());
+                    currentLine.Clear();
+                    currentLine.Append(word);
+                }
+                else
+                {
+                    if (currentLine.Length > 0)
+                        currentLine.Append(" ");
+                    currentLine.Append(word);
+                }
+            }
+
+            if (currentLine.Length > 0)
+                lines.Add(currentLine.ToString());
+
+            return lines;
         }
     }
 }

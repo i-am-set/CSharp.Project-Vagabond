@@ -28,33 +28,47 @@ namespace ProjectVagabond.UI
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
         {
             bool isActivated = IsEnabled && (IsHovered || forceHover);
-            Color tintColor = Color.White;
             BitmapFont font = this.Font ?? defaultFont;
+
+            // 1. Calculate animation offset
+            float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            var animatedBounds = new Rectangle(Bounds.X + (int)hopOffset, Bounds.Y, Bounds.Width, Bounds.Height);
+
+            // 2. Determine colors based on state
+            Color backgroundTintColor;
+            Color textColor;
+            Color iconColor;
 
             if (!IsEnabled)
             {
-                tintColor = _global.ButtonDisableColor * 0.5f;
+                backgroundTintColor = _global.ButtonDisableColor * 0.5f;
+                textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
+                iconColor = _global.ButtonDisableColor;
             }
             else if (_isPressed)
             {
-                tintColor = Color.Gray;
+                backgroundTintColor = Color.Gray;
+                textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
+                iconColor = _global.ButtonHoverColor;
             }
             else if (isActivated)
             {
-                tintColor = _global.ButtonHoverColor;
+                backgroundTintColor = _global.ButtonHoverColor;
+                textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
+                iconColor = _global.ButtonHoverColor;
+            }
+            else
+            {
+                backgroundTintColor = Color.White;
+                textColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
+                iconColor = Color.White;
             }
 
-            spriteBatch.DrawSnapped(_backgroundTexture, this.Bounds, tintColor);
+            // 3. Draw background with animation offset
+            spriteBatch.DrawSnapped(_backgroundTexture, animatedBounds, backgroundTintColor);
 
-            // --- Text Color ---
-            Color textColor;
-            if (!IsEnabled) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
-            else textColor = isActivated ? (CustomHoverTextColor ?? _global.ButtonHoverColor) : (CustomDefaultTextColor ?? _global.Palette_BrightWhite);
-
-            float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            // 4. Calculate content layout
             Vector2 textSize = font.MeasureString(Text);
-
-            // --- Combined Layout Calculation ---
             float totalContentWidth = textSize.X;
             int iconWidth = 0;
             const int iconTextGap = 2;
@@ -65,26 +79,24 @@ namespace ProjectVagabond.UI
                 totalContentWidth += iconWidth + iconTextGap;
             }
 
-            // Calculate the starting X for the whole content block to be centered
-            float contentStartX = Bounds.X + (Bounds.Width - totalContentWidth) / 2f;
+            float contentStartX = animatedBounds.X + (animatedBounds.Width - totalContentWidth) / 2f;
 
-            // --- Icon Drawing ---
+            // 5. Draw Icon
             if (IconTexture != null && IconSourceRect.HasValue)
             {
                 var iconRect = new Rectangle(
-                    (int)(contentStartX + hopOffset),
-                    Bounds.Y + (Bounds.Height - IconSourceRect.Value.Height) / 2,
+                    (int)contentStartX,
+                    animatedBounds.Y + (animatedBounds.Height - IconSourceRect.Value.Height) / 2,
                     IconSourceRect.Value.Width,
                     IconSourceRect.Value.Height
                 );
-                spriteBatch.DrawSnapped(IconTexture, iconRect, IconSourceRect.Value, Color.White);
+                spriteBatch.DrawSnapped(IconTexture, iconRect, IconSourceRect.Value, iconColor);
             }
 
-            // --- Text Drawing ---
-            // The text starts after the icon and the gap
+            // 6. Draw Text
             float textStartX = contentStartX + iconWidth + (IconTexture != null ? iconTextGap : 0);
-            Vector2 textPosition = new Vector2(textStartX + hopOffset, Bounds.Center.Y) + TextRenderOffset;
-            Vector2 textOrigin = new Vector2(0, MathF.Round(textSize.Y / 2f)); // Left-align origin for text
+            Vector2 textPosition = new Vector2(textStartX, animatedBounds.Center.Y) + TextRenderOffset;
+            Vector2 textOrigin = new Vector2(0, MathF.Round(textSize.Y / 2f));
 
             spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, 1f, SpriteEffects.None, 0f);
         }
