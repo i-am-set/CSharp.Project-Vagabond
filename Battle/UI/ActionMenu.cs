@@ -66,6 +66,9 @@ namespace ProjectVagabond.Battle.UI
         private float _actionButtonAnimationDelayTimer = 0f;
         private const float ACTION_BUTTON_SEQUENTIAL_ANIMATION_DELAY = 0.05f;
 
+        private Queue<TextOverImageButton> _secondaryButtonsToAnimate = new Queue<TextOverImageButton>();
+        private float _secondaryButtonAnimationDelayTimer = 0f;
+
         public ActionMenu()
         {
             _global = ServiceLocator.Get<Global>();
@@ -203,6 +206,17 @@ namespace ProjectVagabond.Battle.UI
             {
                 OnMovesMenuOpened?.Invoke();
                 PopulateAndAnimateMoveButtons();
+
+                _secondaryButtonsToAnimate.Clear();
+                _secondaryButtonAnimationDelayTimer = 0f;
+                foreach (var button in _secondaryActionButtons)
+                {
+                    if (button is TextOverImageButton toib)
+                    {
+                        toib.HideForAnimation();
+                        _secondaryButtonsToAnimate.Enqueue(toib);
+                    }
+                }
             }
             else if (newState == MenuState.Targeting)
             {
@@ -244,19 +258,16 @@ namespace ProjectVagabond.Battle.UI
                 if (move == null) continue;
 
                 bool isNew = _previousHandState[i] == null || _previousHandState[i].MoveID != move.MoveID;
-                var moveButton = CreateMoveButton(move, secondaryFont, spriteManager.ActionButtonTemplateSprite, !isNew);
+                var moveButton = CreateMoveButton(move, secondaryFont, spriteManager.ActionButtonTemplateSprite, isNew, false);
                 _moveButtons.Add(moveButton);
 
-                if (isNew)
-                {
-                    _buttonsToAnimate.Enqueue(moveButton);
-                }
+                _buttonsToAnimate.Enqueue(moveButton);
             }
 
             Array.Copy(newHand, _previousHandState, newHand.Length);
         }
 
-        private MoveButton CreateMoveButton(MoveData move, BitmapFont font, Texture2D background, bool startVisible)
+        private MoveButton CreateMoveButton(MoveData move, BitmapFont font, Texture2D background, bool isNew, bool startVisible)
         {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             int elementId = move.OffensiveElementIDs.FirstOrDefault();
@@ -266,7 +277,7 @@ namespace ProjectVagabond.Battle.UI
                 sourceRect = rect;
             }
 
-            var moveButton = new MoveButton(move, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, startVisible);
+            var moveButton = new MoveButton(move, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, isNew, startVisible);
             moveButton.OnClick += () => SelectMove(move);
             moveButton.OnRightClick += () => {
                 _tooltipMove = move;
@@ -388,6 +399,17 @@ namespace ProjectVagabond.Battle.UI
                 {
                     _animationDelayTimer = 0f;
                     var buttonToAnimate = _buttonsToAnimate.Dequeue();
+                    buttonToAnimate.TriggerAppearAnimation();
+                }
+            }
+
+            if (_secondaryButtonsToAnimate.Any())
+            {
+                _secondaryButtonAnimationDelayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_secondaryButtonAnimationDelayTimer >= SEQUENTIAL_ANIMATION_DELAY)
+                {
+                    _secondaryButtonAnimationDelayTimer = 0f;
+                    var buttonToAnimate = _secondaryButtonsToAnimate.Dequeue();
                     buttonToAnimate.TriggerAppearAnimation();
                 }
             }

@@ -12,6 +12,7 @@ namespace ProjectVagabond.Battle.UI
         public MoveData Move { get; }
         private readonly BitmapFont _moveFont;
         private readonly Texture2D _backgroundTexture;
+        private readonly bool _isNew;
 
         public Texture2D IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
@@ -38,7 +39,7 @@ namespace ProjectVagabond.Battle.UI
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
 
-        public MoveButton(MoveData move, BitmapFont font, Texture2D backgroundTexture, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
+        public MoveButton(MoveData move, BitmapFont font, Texture2D backgroundTexture, Texture2D iconTexture, Rectangle? iconSourceRect, bool isNew, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
             Move = move;
@@ -46,6 +47,7 @@ namespace ProjectVagabond.Battle.UI
             _backgroundTexture = backgroundTexture;
             IconTexture = iconTexture;
             IconSourceRect = iconSourceRect;
+            _isNew = isNew;
             _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
         }
 
@@ -137,6 +139,19 @@ namespace ProjectVagabond.Battle.UI
             if (!IsEnabled) tintColor = _global.ButtonDisableColor * 0.5f;
             else if (_isPressed) tintColor = Color.Gray;
             else if (isActivated) tintColor = _global.ButtonHoverColor;
+
+            if (_isNew && _animState == AnimationState.Appearing)
+            {
+                // Flash from pink to the normal tint color during the first part of the animation
+                const float flashRatio = 0.75f;
+                float flashDuration = APPEAR_DURATION * flashRatio;
+                if (_appearTimer < flashDuration)
+                {
+                    float flashProgress = _appearTimer / flashDuration;
+                    tintColor = Color.Lerp(_global.Palette_Red, tintColor, Easing.EaseInQuad(flashProgress));
+                }
+            }
+
             spriteBatch.DrawSnapped(_backgroundTexture, animatedBounds, tintColor);
 
 
