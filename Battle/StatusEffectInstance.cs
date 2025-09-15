@@ -25,5 +25,24 @@
             EffectType = effectType;
             DurationInTurns = durationInTurns;
         }
+
+        /// <summary>
+        /// Gets a user-friendly display name for the status effect.
+        /// </summary>
+        public string GetDisplayName()
+        {
+            return EffectType switch
+            {
+                StatusEffectType.StrengthUp => "Strength Up",
+                StatusEffectType.IntelligenceDown => "Intelligence Down",
+                StatusEffectType.TenacityUp => "Tenacity Up",
+                StatusEffectType.AgilityDown => "Agility Down",
+                StatusEffectType.Poison => "Poisoned",
+                StatusEffectType.Stun => "Stunned",
+                StatusEffectType.Regen => "Regeneration",
+                StatusEffectType.Dodging => "Dodging",
+                _ => EffectType.ToString(),
+            };
+        }
     }
 }

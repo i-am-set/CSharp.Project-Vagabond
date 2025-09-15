@@ -19,7 +19,7 @@ namespace ProjectVagabond.Battle
         {
             var componentStore = ServiceLocator.Get<ComponentStore>();
             var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
-
+            var gameState = ServiceLocator.Get<GameState>();
             // An entity must have stats to be a combatant.
             var statsComponent = componentStore.GetComponent<CombatantStatsComponent>(entityId);
             if (statsComponent == null)
@@ -59,10 +59,14 @@ namespace ProjectVagabond.Battle
             // Initialize visual HP to be the same as logical HP at the start of battle.
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
-            // For non-player combatants, populate their static move list from the archetype.
-            // The player's moves are now handled by the CombatDeckManager, which is initialized in the BattleManager.
-            if (!combatant.IsPlayerControlled)
+            if (combatant.IsPlayerControlled)
             {
+                combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
+            }
+            else
+            {
+                // For non-player combatants, populate their static move list from the archetype.
+                // The player's moves are now handled by the CombatDeckManager, which is initialized in the BattleManager.
                 var staticMoves = new List<MoveData>();
                 foreach (var moveId in statsComponent.AvailableMoveIDs)
                 {

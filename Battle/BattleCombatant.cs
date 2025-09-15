@@ -65,6 +65,11 @@ namespace ProjectVagabond.Battle
         }
         private List<MoveData> _staticMoves = new List<MoveData>();
 
+        /// <summary>
+        /// The move ID for the player's basic "Strike" action. Null for enemies.
+        /// </summary>
+        public string DefaultStrikeMoveID { get; set; }
+
 
         /// <summary>
         /// A list of currently active status effects.

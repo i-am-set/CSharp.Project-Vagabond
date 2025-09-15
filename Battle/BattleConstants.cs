@@ -11,7 +11,7 @@
         public const float TENACITY_UP_MULTIPLIER = 0.66f;
         public const float RANDOM_VARIANCE_MIN = 0.85f;
         public const float RANDOM_VARIANCE_MAX = 1.00f;
-        public const float GRAZE_MULTIPLIER = 0.5f;
+        public const float GRAZE_MULTIPLIER = 0.25f;
         public const float MULTI_TARGET_MODIFIER = 0.75f;
     }
 }

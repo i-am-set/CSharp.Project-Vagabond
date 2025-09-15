@@ -62,5 +62,10 @@ namespace ProjectVagabond.Battle
         /// A list of element IDs associated with this move's attack type.
         /// </summary>
         public List<int> OffensiveElementIDs { get; set; } = new List<int>();
+
+        /// <summary>
+        /// A list of string identifiers for any secondary effects this move triggers.
+        /// </summary>
+        public List<string> SecondaryEffectIDs { get; set; } = new List<string>();
     }
 }

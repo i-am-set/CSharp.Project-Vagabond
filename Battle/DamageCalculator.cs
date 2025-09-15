@@ -53,12 +53,21 @@ namespace ProjectVagabond.Battle
 
             // Step 2: Accuracy Check & The Graze Mechanic
             bool isGrazed = false;
-            if (move.Accuracy != -1) // -1 is our convention for a "True Hit"
+            if (move.Accuracy != -1) // -1 is our convention for a "True Hit" that always hits.
             {
-                int currentAccuracy = move.Accuracy; // Modifiers will be subtracted here later
-                if (_random.Next(1, 101) > currentAccuracy)
+                // The "Dodging" status effect guarantees a graze (miss) on any standard attack.
+                if (target.HasStatusEffect(StatusEffectType.Dodging))
                 {
                     isGrazed = true;
+                }
+                else
+                {
+                    // Standard accuracy roll if not dodging.
+                    int currentAccuracy = move.Accuracy;
+                    if (_random.Next(1, 101) > currentAccuracy)
+                    {
+                        isGrazed = true;
+                    }
                 }
             }
 
@@ -118,9 +127,17 @@ namespace ProjectVagabond.Battle
             }
 
             // Step 5: Final Damage
+            int finalDamageAmount = (int)Math.Floor(finalDamage);
+
+            // Ensure that any successful hit that should do damage deals at least 1 point of damage.
+            if (finalDamage > 0 && finalDamageAmount == 0)
+            {
+                finalDamageAmount = 1;
+            }
+
             return new DamageResult
             {
-                DamageAmount = (int)Math.Floor(finalDamage),
+                DamageAmount = finalDamageAmount,
                 WasCritical = isCritical,
                 WasGraze = isGrazed
             };

@@ -23,7 +23,7 @@
     {
       "Type": "ProjectVagabond.Battle.PlayerBaseStatsComponent",
       "Properties": {
-        "MaxHP": 10,
+        "MaxHP": 100,
         "Strength": 1,
         "Intelligence": 1,
         "Tenacity": 1,
@@ -31,10 +31,11 @@
         "DefensiveElementIDs": [ 101 ],
         "StartingMoveIDs": [
           "ShoulderBash",
-          "ClawRake",
           "WintersGrasp",
-          "WhiteoutTempest"
-        ]
+          "WhiteoutTempest",
+          "Sunlance"
+        ],
+        "DefaultStrikeMoveID": "ClawRake"
       }
     }
   ]

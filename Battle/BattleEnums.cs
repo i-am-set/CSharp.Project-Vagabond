@@ -44,7 +44,8 @@ namespace ProjectVagabond.Battle
         AgilityDown,
         Poison,
         Stun,
-        Regen
+        Regen,
+        Dodging
     }
 
     /// <summary>

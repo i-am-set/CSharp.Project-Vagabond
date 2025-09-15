@@ -506,5 +506,19 @@
     "Accuracy": -1,
     "Priority": 0,
     "OffensiveElementIDs": [ 1 ]
+  },
+  {
+    "MoveID": "Dodge",
+    "MoveName": "Dodge",
+    "Description": "The user focuses on evasion, halving the accuracy of incoming attacks for one turn.",
+    "Power": 0,
+    "MoveType": "Action",
+    "ImpactType": "Physical",
+    "MakesContact": false,
+    "Target": "Self",
+    "Accuracy": -1,
+    "Priority": 1,
+    "OffensiveElementIDs": [],
+    "SecondaryEffectIDs": [ "ApplyDodgeStatus" ]
   }
 ]

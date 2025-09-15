@@ -9,7 +9,7 @@ namespace ProjectVagabond.Battle
     /// </summary>
     public class CombatDeckManager
     {
-        private const int HAND_SIZE = 6;
+        private const int HAND_SIZE = 4;
         private static readonly Random _rng = new Random();
 
         private List<MoveData> _deck = new List<MoveData>();

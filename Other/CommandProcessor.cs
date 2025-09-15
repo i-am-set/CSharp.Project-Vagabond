@@ -47,8 +47,8 @@ namespace ProjectVagabond
                 sb.AppendLine("  [palette_teal]Inventory & Moves[/]");
                 sb.AppendLine("    inventory          - Shows player's current inventory.");
                 sb.AppendLine("    spellbook          - Shows player's current spellbook.");
-                sb.AppendLine("    give <ID> [[qty]]    - Adds an item to inventory.");
-                sb.AppendLine("    remove <ID> [[qty]]  - Removes an item from inventory.");
+                sb.AppendLine("    give <ID> [[qty]    - Adds an item to inventory.");
+                sb.AppendLine("    remove <ID> [[qty]  - Removes an item from inventory.");
                 sb.AppendLine("    learn <ID>         - Teaches the player a new move.");
                 sb.AppendLine("    forget <ID>        - Makes the player forget a move.");
                 sb.AppendLine("    addpage            - Adds an empty spell page.");

@@ -15,6 +15,7 @@ namespace ProjectVagabond.Battle
         public int Agility { get; set; }
         public List<int> DefensiveElementIDs { get; set; } = new List<int>();
         public List<string> StartingMoveIDs { get; set; } = new List<string>();
+        public string DefaultStrikeMoveID { get; set; }
 
         public IComponent Clone()
         {

@@ -99,6 +99,7 @@ namespace ProjectVagabond
                 PlayerState.Tenacity = baseStats.Tenacity;
                 PlayerState.Agility = baseStats.Agility;
                 PlayerState.DefensiveElementIDs = new List<int>(baseStats.DefensiveElementIDs);
+                PlayerState.DefaultStrikeMoveID = baseStats.DefaultStrikeMoveID;
 
                 // Initialize spellbook
                 PlayerState.SpellbookPages = new List<string>(new string[10]);

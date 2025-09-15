@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using ProjectVagabond.Battle;
 
 namespace ProjectVagabond
 {
@@ -14,16 +15,20 @@ namespace ProjectVagabond
         // UI Sprite Sheets
         public Texture2D ActionButtonsSpriteSheet { get; private set; }
         public Texture2D ActionButtonTemplateSprite { get; private set; }
+        public Texture2D ActionButtonTemplateSecondarySprite { get; private set; }
         public Texture2D ActionMovesBackgroundSprite { get; private set; }
         public Texture2D ActionTooltipBackgroundSprite { get; private set; }
         public Texture2D ElementIconsSpriteSheet { get; private set; }
+        public Texture2D ActionIconsSpriteSheet { get; private set; }
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; } // 0-2: Act, 3-5: Item, 6-8: Flee (Normal, Hover, Clicked)
         public Dictionary<int, Rectangle> ElementIconSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
+        public Rectangle[] ActionIconSourceRects { get; private set; } // 0: Strike, 1: Dodge, 2: Stall
 
         // Enemy Sprite Cache
         private readonly Dictionary<string, Texture2D> _enemySprites = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
 
 
         private Texture2D _logoSprite;
@@ -48,6 +53,7 @@ namespace ProjectVagabond
         public Effect FireballParticleShaderEffect { get; private set; }
         public Texture2D ArrowIconSpriteSheet { get; private set; }
         public Rectangle[] ArrowIconSourceRects { get; private set; }
+        public Texture2D StatusButtonIconSprite { get; private set; }
 
 
         public Texture2D LogoSprite => _logoSprite;
@@ -109,6 +115,9 @@ namespace ProjectVagabond
             try { ArrowIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ArrowIconSpriteSheet"); }
             catch { ArrowIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
 
+            try { StatusButtonIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_status_button_icon"); }
+            catch { StatusButtonIconSprite = _textureFactory.CreateColoredTexture(9, 9, Color.Purple); }
+
             try { FireballParticleShaderEffect = _core.Content.Load<Effect>("Shaders/FireballParticleShader"); }
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ERROR] Could not load shader 'Shaders/FireballParticleShader'. Please ensure it's in the Content project. {ex.Message}"); }
 
@@ -117,6 +126,9 @@ namespace ProjectVagabond
 
             try { ActionButtonTemplateSprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_button_template"); }
             catch { ActionButtonTemplateSprite = _textureFactory.CreateColoredTexture(155, 15, Color.Magenta); }
+
+            try { ActionButtonTemplateSecondarySprite = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_action_button_template_secondary"); }
+            catch { ActionButtonTemplateSecondarySprite = _textureFactory.CreateColoredTexture(104, 17, Color.Magenta); }
 
             try
             {
@@ -139,10 +151,14 @@ namespace ProjectVagabond
             try { ElementIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/ButtonIcons/ui_element_icons_9x9_spritesheet"); }
             catch { ElementIconsSpriteSheet = _textureFactory.CreateColoredTexture(45, 45, Color.Magenta); }
 
+            try { ActionIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_action_icons_9x9"); }
+            catch { ActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(27, 9, Color.Magenta); }
+
 
             InitializeArrowSourceRects();
             InitializeActionButtonsSourceRects();
             InitializeElementIconsSourceRects();
+            InitializeActionIconsSourceRects();
         }
 
         private void InitializeArrowSourceRects()
@@ -195,6 +211,16 @@ namespace ProjectVagabond
             }
         }
 
+        private void InitializeActionIconsSourceRects()
+        {
+            ActionIconSourceRects = new Rectangle[3];
+            const int iconSize = 9;
+            for (int i = 0; i < 3; i++)
+            {
+                ActionIconSourceRects[i] = new Rectangle(i * iconSize, 0, iconSize, iconSize);
+            }
+        }
+
         public Texture2D GetEnemySprite(string archetypeId)
         {
             if (string.IsNullOrEmpty(archetypeId)) return null;
@@ -214,6 +240,29 @@ namespace ProjectVagabond
             {
                 _enemySprites[archetypeId] = null;
                 return null;
+            }
+        }
+
+        public Texture2D GetStatusEffectIcon(StatusEffectType effectType)
+        {
+            if (_statusEffectIcons.TryGetValue(effectType, out var cachedIcon))
+            {
+                return cachedIcon;
+            }
+
+            try
+            {
+                string iconName = effectType.ToString().ToLowerInvariant();
+                var icon = _core.Content.Load<Texture2D>($"Sprites/UI/BasicIcons/StatusEffects/{iconName}_status_icon");
+                _statusEffectIcons[effectType] = icon;
+                return icon;
+            }
+            catch
+            {
+                Debug.WriteLine($"[SpriteManager] [WARNING] Could not load status icon for '{effectType}'. Using placeholder.");
+                var placeholder = _textureFactory.CreateColoredTexture(5, 5, Color.Magenta);
+                _statusEffectIcons[effectType] = placeholder; // Cache the placeholder to avoid repeated load attempts
+                return placeholder;
             }
         }
 

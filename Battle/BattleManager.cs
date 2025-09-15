@@ -18,6 +18,7 @@ namespace ProjectVagabond.Battle
             StartOfTurn,
             ActionSelection,
             ActionResolution,
+            SecondaryEffectResolution,
             CheckForDefeat,
             EndOfTurn,
             BattleOver
@@ -27,6 +28,7 @@ namespace ProjectVagabond.Battle
         private readonly List<BattleCombatant> _enemyCombatants;
         private readonly List<BattleCombatant> _allCombatants;
         private List<QueuedAction> _actionQueue;
+        private QueuedAction _currentActionForEffects;
         private BattlePhase _currentPhase;
         private int _turnNumber;
         private bool _playerActionSubmitted;
@@ -60,6 +62,16 @@ namespace ProjectVagabond.Battle
             _actionQueue = new List<QueuedAction>();
             _turnNumber = 1;
             _currentPhase = BattlePhase.StartOfTurn;
+
+            EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
+        }
+
+        private void OnSecondaryEffectComplete(GameEvents.SecondaryEffectComplete e)
+        {
+            if (_currentPhase == BattlePhase.SecondaryEffectResolution)
+            {
+                _currentPhase = BattlePhase.CheckForDefeat;
+            }
         }
 
         /// <summary>
@@ -98,6 +110,9 @@ namespace ProjectVagabond.Battle
                     break;
                 case BattlePhase.ActionResolution:
                     HandleActionResolution();
+                    break;
+                case BattlePhase.SecondaryEffectResolution:
+                    HandleSecondaryEffectResolution();
                     break;
                 case BattlePhase.CheckForDefeat:
                     HandleCheckForDefeat();
@@ -214,11 +229,12 @@ namespace ProjectVagabond.Battle
 
             var action = _actionQueue[0];
             _actionQueue.RemoveAt(0);
+            _currentActionForEffects = action;
 
             // Liveness Check: Skip the action if the actor was defeated by a prior action in the same turn.
             if (action.Actor.IsDefeated)
             {
-                _currentPhase = BattlePhase.CheckForDefeat;
+                _currentPhase = BattlePhase.SecondaryEffectResolution;
                 return;
             }
 
@@ -234,6 +250,7 @@ namespace ProjectVagabond.Battle
                 });
                 action.Actor.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Stun);
                 CanAdvance = false;
+                _currentPhase = BattlePhase.SecondaryEffectResolution;
                 return; // End this step of resolution
             }
 
@@ -246,8 +263,17 @@ namespace ProjectVagabond.Battle
                 ProcessMoveAction(action);
             }
 
-            _currentPhase = BattlePhase.CheckForDefeat;
+            _currentPhase = BattlePhase.SecondaryEffectResolution;
             CanAdvance = false; // Pause the manager until the scene says it's okay.
+        }
+
+        private void HandleSecondaryEffectResolution()
+        {
+            // This phase is entered, and we immediately process the effects.
+            // The system will publish an event when it's done.
+            // The BattleManager will then wait for that event to transition state.
+            SecondaryEffectSystem.ProcessEffects(_currentActionForEffects);
+            _currentActionForEffects = null; // Clear it after passing it to the system
         }
 
         private void ProcessMoveAction(QueuedAction action)

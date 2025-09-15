@@ -398,6 +398,42 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/ArrowIconSpriteSheet.png;Sprites/UI/BasicIcons/ArrowIconSpriteSheet
 
+#begin Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon
+
+#begin Sprites/UI/BasicIcons/ui_action_icons_9x9.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/ui_action_icons_9x9.png;Sprites/UI/BasicIcons/ui_action_icons_9x9
+
+#begin Sprites/UI/ButtonIcons/ui_action_button_template_secondary.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/ButtonIcons/ui_action_button_template_secondary.png;Sprites/UI/ButtonIcons/ui_action_button_template_secondary
+
 #begin Sprites/UI/ButtonIcons/ui_action_button_template.png
 /importer:TextureImporter
 /processor:TextureProcessor

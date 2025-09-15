@@ -122,5 +122,13 @@ namespace ProjectVagabond
         {
             public BattleCombatant DefeatedCombatant { get; set; }
         }
+
+        /// <summary>
+        /// Published by the SecondaryEffectSystem after it has finished processing all effects for an action.
+        /// This signals the BattleManager to proceed with its state machine.
+        /// </summary>
+        public struct SecondaryEffectComplete
+        {
+        }
     }
 }

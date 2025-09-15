@@ -25,6 +25,7 @@ namespace ProjectVagabond.Battle.UI
         private List<BattleCombatant> _allTargets;
         private List<Button> _actionButtons = new List<Button>();
         private List<MoveButton> _moveButtons = new List<MoveButton>();
+        private List<Button> _secondaryActionButtons = new List<Button>();
         private Button _backButton;
         private readonly Global _global;
 
@@ -41,7 +42,7 @@ namespace ProjectVagabond.Battle.UI
         private MouseState _previousMouseState;
 
         // State for animation
-        private MoveData[] _previousHandState = new MoveData[6];
+        private MoveData[] _previousHandState = new MoveData[4];
         private Queue<MoveButton> _buttonsToAnimate = new Queue<MoveButton>();
         private float _animationDelayTimer = 0f;
         private const float SEQUENTIAL_ANIMATION_DELAY = 0.05f;
@@ -75,7 +76,11 @@ namespace ProjectVagabond.Battle.UI
             var actionSheet = spriteManager.ActionButtonsSpriteSheet;
             var rects = spriteManager.ActionButtonSourceRects;
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var secondaryButtonBg = spriteManager.ActionButtonTemplateSecondarySprite;
+            var actionIconsSheet = spriteManager.ActionIconsSpriteSheet;
+            var actionIconRects = spriteManager.ActionIconSourceRects;
 
+            // Main Menu Buttons
             _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[0], rects[1], rects[2], function: "Act", startVisible: false, debugColor: new Color(100, 0, 0, 150)));
             _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[3], rects[4], rects[5], function: "Item", startVisible: false, debugColor: new Color(0, 100, 0, 150)));
             _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[6], rects[7], rects[8], function: "Flee", startVisible: false, debugColor: new Color(0, 0, 100, 150)));
@@ -83,6 +88,35 @@ namespace ProjectVagabond.Battle.UI
             _actionButtons[0].OnClick += () => SetState(MenuState.Moves);
             _actionButtons[1].OnClick += () => OnItemMenuRequested?.Invoke();
             _actionButtons[2].OnClick += () => OnFleeRequested?.Invoke();
+
+            // Secondary Action Buttons
+            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0]);
+            strikeButton.OnClick += () => {
+                if (_player != null && !string.IsNullOrEmpty(_player.DefaultStrikeMoveID) && BattleDataCache.Moves.TryGetValue(_player.DefaultStrikeMoveID, out var strikeMove))
+                {
+                    SelectMove(strikeMove);
+                }
+            };
+            _secondaryActionButtons.Add(strikeButton);
+
+            var dodgeButton = new TextOverImageButton(Rectangle.Empty, "DODGE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[1]);
+            dodgeButton.OnClick += () => {
+                if (BattleDataCache.Moves.TryGetValue("Dodge", out var dodgeMove))
+                {
+                    SelectMove(dodgeMove);
+                }
+            };
+            _secondaryActionButtons.Add(dodgeButton);
+
+            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2]);
+            stallButton.OnClick += () => {
+                if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
+                {
+                    SelectMove(stallMove);
+                }
+            };
+            _secondaryActionButtons.Add(stallButton);
+
 
             _backButton.Font = secondaryFont;
 
@@ -106,6 +140,10 @@ namespace ProjectVagabond.Battle.UI
                 button.ResetAnimationState();
             }
             foreach (var button in _moveButtons)
+            {
+                button.ResetAnimationState();
+            }
+            foreach (var button in _secondaryActionButtons)
             {
                 button.ResetAnimationState();
             }
@@ -166,24 +204,19 @@ namespace ProjectVagabond.Battle.UI
             _buttonsToAnimate.Clear();
             _animationDelayTimer = 0f;
 
-            var currentHand = _player.AvailableMoves.Take(6).ToList();
+            var currentHand = _player.AvailableMoves.Take(4).ToList();
             if (!currentHand.Any())
             {
-                if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
-                {
-                    var target = _allTargets.FirstOrDefault();
-                    if (target != null) OnMoveSelected?.Invoke(stallMove, target);
-                }
-                return;
+                // If hand is empty, we don't auto-stall. The player can still use secondary actions.
             }
 
-            var newHand = new MoveData[6];
-            for (int i = 0; i < Math.Min(currentHand.Count, 6); i++)
+            var newHand = new MoveData[4];
+            for (int i = 0; i < Math.Min(currentHand.Count, 4); i++)
             {
                 newHand[i] = currentHand[i];
             }
 
-            for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 4; i++)
             {
                 var move = newHand[i];
                 if (move == null) continue;
@@ -212,61 +245,64 @@ namespace ProjectVagabond.Battle.UI
             }
 
             var moveButton = new MoveButton(move, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, startVisible);
-            moveButton.OnClick += () => {
-                _selectedMove = move;
-
-                // Update the internal hand state immediately upon selection to mark the slot as empty.
-                for (int i = 0; i < _previousHandState.Length; i++)
-                {
-                    if (_previousHandState[i] == move)
-                    {
-                        _previousHandState[i] = null;
-                        break;
-                    }
-                }
-
-                switch (move.Target)
-                {
-                    case TargetType.Self:
-                        OnMoveSelected?.Invoke(move, _player);
-                        break;
-
-                    case TargetType.None:
-                    case TargetType.Every:
-                    case TargetType.EveryAll:
-                        OnMoveSelected?.Invoke(move, null);
-                        break;
-
-                    case TargetType.Single:
-                        var enemies = _allTargets.Where(c => !c.IsDefeated).ToList();
-                        if (enemies.Count == 1)
-                        {
-                            OnMoveSelected?.Invoke(move, enemies[0]);
-                        }
-                        else
-                        {
-                            SetState(MenuState.Targeting);
-                        }
-                        break;
-
-                    case TargetType.SingleAll:
-                        var allValidTargets = _allCombatants.Where(c => !c.IsDefeated).ToList();
-                        if (allValidTargets.Count == 1)
-                        {
-                            OnMoveSelected?.Invoke(move, allValidTargets[0]);
-                        }
-                        else
-                        {
-                            SetState(MenuState.Targeting);
-                        }
-                        break;
-                }
-            };
+            moveButton.OnClick += () => SelectMove(move);
             moveButton.OnRightClick += () => {
                 _tooltipMove = move;
                 SetState(MenuState.Tooltip);
             };
             return moveButton;
+        }
+
+        private void SelectMove(MoveData move)
+        {
+            _selectedMove = move;
+
+            // Mark the move as used if it's in the hand
+            for (int i = 0; i < _previousHandState.Length; i++)
+            {
+                if (_previousHandState[i] == move)
+                {
+                    _previousHandState[i] = null;
+                    break;
+                }
+            }
+
+            switch (move.Target)
+            {
+                case TargetType.Self:
+                    OnMoveSelected?.Invoke(move, _player);
+                    break;
+
+                case TargetType.None:
+                case TargetType.Every:
+                case TargetType.EveryAll:
+                    OnMoveSelected?.Invoke(move, null);
+                    break;
+
+                case TargetType.Single:
+                    var enemies = _allTargets.Where(c => !c.IsDefeated).ToList();
+                    if (enemies.Count == 1)
+                    {
+                        OnMoveSelected?.Invoke(move, enemies[0]);
+                    }
+                    else
+                    {
+                        SetState(MenuState.Targeting);
+                    }
+                    break;
+
+                case TargetType.SingleAll:
+                    var allValidTargets = _allCombatants.Where(c => !c.IsDefeated).ToList();
+                    if (allValidTargets.Count == 1)
+                    {
+                        OnMoveSelected?.Invoke(move, allValidTargets[0]);
+                    }
+                    else
+                    {
+                        SetState(MenuState.Targeting);
+                    }
+                    break;
+            }
         }
 
         public void Update(MouseState currentMouseState, GameTime gameTime)
@@ -310,6 +346,10 @@ namespace ProjectVagabond.Battle.UI
                         {
                             HoveredMove = button.Move;
                         }
+                    }
+                    foreach (var button in _secondaryActionButtons)
+                    {
+                        button.Update(currentMouseState);
                     }
                     _backButton.Update(currentMouseState);
                     break;
@@ -477,35 +517,67 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawMovesMenu(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            const int dividerY = 114;
+            // --- Main Moves (2x2 Grid) ---
             const int moveButtonWidth = 157;
             const int moveButtonHeight = 17;
-            const int columnSpacing = 0;
-            const int rowSpacing = 0;
-            const int columns = 2;
-            const int rows = 3;
+            const int moveColumns = 2;
+            const int moveRows = 2;
+            const int moveColSpacing = 0;
+            const int moveRowSpacing = 0;
 
-            int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
-            int gridStartX = (Global.VIRTUAL_WIDTH - totalGridWidth) / 2;
-            int gridStartY = dividerY - 4;
+            int totalMoveGridWidth = (moveButtonWidth * moveColumns) + moveColSpacing;
+            int moveGridStartX = (Global.VIRTUAL_WIDTH - totalMoveGridWidth) / 2;
+            int moveGridStartY = 114 - 4;
 
             for (int i = 0; i < _moveButtons.Count; i++)
             {
                 var button = _moveButtons[i];
-                int row = i / columns;
-                int col = i % columns;
+                int row = i / moveColumns;
+                int col = i % moveColumns;
 
                 button.Bounds = new Rectangle(
-                    gridStartX + col * (moveButtonWidth + columnSpacing),
-                    gridStartY + row * (moveButtonHeight + rowSpacing),
+                    moveGridStartX + col * (moveButtonWidth + moveColSpacing),
+                    moveGridStartY + row * (moveButtonHeight + moveRowSpacing),
                     moveButtonWidth,
                     moveButtonHeight
                 );
                 button.Draw(spriteBatch, font, gameTime, transform);
             }
 
-            int gridHeight = (moveButtonHeight * rows) + (rowSpacing * (rows - 1));
-            int backButtonY = gridStartY + gridHeight + 7;
+            // --- Secondary Actions (1x3 Row) ---
+            const int secButtonWidth = 104;
+            const int secButtonHeight = 17;
+            const int secButtonSpacing = 1;
+            int secRowY = moveGridStartY + (moveButtonHeight * moveRows) + (moveRowSpacing * (moveRows - 1));
+
+            int totalSecGridWidth = (secButtonWidth * _secondaryActionButtons.Count) + (secButtonSpacing * (_secondaryActionButtons.Count - 1));
+            int secGridStartX = (Global.VIRTUAL_WIDTH - totalSecGridWidth) / 2;
+
+            for (int i = 0; i < _secondaryActionButtons.Count; i++)
+            {
+                var button = _secondaryActionButtons[i];
+                int xPos = secGridStartX + i * (secButtonWidth + secButtonSpacing);
+
+                if (i == 0) // Strike button
+                {
+                    xPos += 1;
+                }
+                else if (i == 2) // Stall button
+                {
+                    xPos -= 1;
+                }
+
+                button.Bounds = new Rectangle(
+                    xPos,
+                    secRowY,
+                    secButtonWidth,
+                    secButtonHeight
+                );
+                button.Draw(spriteBatch, font, gameTime, transform);
+            }
+
+            // --- Back Button ---
+            int backButtonY = secRowY + secButtonHeight + 7;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(

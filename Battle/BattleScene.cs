@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Scenes
 {
@@ -34,6 +35,7 @@ namespace ProjectVagabond.Scenes
         private SpriteManager _spriteManager;
         private Global _global;
         private HapticsManager _hapticsManager;
+        private TooltipManager _tooltipManager;
 
         // State Tracking
         private BattleManager.BattlePhase _previousBattlePhase;
@@ -53,48 +55,24 @@ namespace ProjectVagabond.Scenes
         private List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private int _hoveredTargetIndex = -1;
         private struct TargetInfo { public BattleCombatant Combatant; public Rectangle Bounds; }
+        private struct StatusIconInfo { public StatusEffectInstance Effect; public Rectangle Bounds; }
+        private readonly List<StatusIconInfo> _playerStatusIcons = new List<StatusIconInfo>();
 
-        // Health & Alpha Animation
-        private class HealthAnimationState
-        {
-            public string CombatantID;
-            public float StartHP;
-            public float TargetHP;
-            public float Timer;
-            public const float Duration = 1.0f;
-        }
-        private class AlphaAnimationState
-        {
-            public string CombatantID;
-            public float StartAlpha;
-            public float TargetAlpha;
-            public float Timer;
-            public const float Duration = 0.167f;
-        }
-        private class HitAnimationState
-        {
-            public string CombatantID;
-            public float Timer;
-            public const float Duration = 1.0f;
-        }
+
+        // Animation & Haptics
+        private class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; public const float Duration = 1.0f; }
+        private class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.167f; }
+        private class HitAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.0f; }
+        private class DamageIndicatorState { public string CombatantID; public string Text; public Vector2 StartPosition; public Color Color; public float Timer; public const float DURATION = 1.2f; public const float RISE_DISTANCE = 10f; }
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
         private readonly List<HitAnimationState> _activeHitAnimations = new List<HitAnimationState>();
+        private readonly List<DamageIndicatorState> _activeDamageIndicators = new List<DamageIndicatorState>();
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
         private readonly Random _random = new Random();
 
         // Hover Highlight Animation
-        private class HoverHighlightState
-        {
-            public MoveData CurrentMove;
-            public List<BattleCombatant> Targets = new List<BattleCombatant>();
-            public float Timer = 0f;
-
-            public const float SingleTargetFlashOnDuration = 0.4f;
-            public const float SingleTargetFlashOffDuration = 0.2f;
-            public const float MultiTargetFlashOnDuration = 0.4f;
-            public const float MultiTargetFlashOffDuration = 0.4f;
-        }
+        private class HoverHighlightState { public MoveData CurrentMove; public List<BattleCombatant> Targets = new List<BattleCombatant>(); public float Timer = 0f; public const float SingleTargetFlashOnDuration = 0.4f; public const float SingleTargetFlashOffDuration = 0.2f; public const float MultiTargetFlashOnDuration = 0.4f; public const float MultiTargetFlashOffDuration = 0.4f; }
         private readonly HoverHighlightState _hoverHighlightState = new HoverHighlightState();
 
 
@@ -110,6 +88,7 @@ namespace ProjectVagabond.Scenes
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _tooltipManager = ServiceLocator.Get<TooltipManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -144,6 +123,7 @@ namespace ProjectVagabond.Scenes
             _activeHealthAnimations.Clear();
             _activeAlphaAnimations.Clear();
             _activeHitAnimations.Clear();
+            _activeDamageIndicators.Clear();
             _narrationQueue.Clear();
             _currentActor = null;
 
@@ -347,6 +327,12 @@ namespace ProjectVagabond.Scenes
                         StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
                         StartHitAnimation(target.CombatantID);
                     }
+
+                    if (result.WasGraze)
+                    {
+                        Vector2 hudPosition = GetCombatantHudCenterPosition(target);
+                        StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, _global.Palette_LightGray);
+                    }
                 }
             });
 
@@ -441,6 +427,18 @@ namespace ProjectVagabond.Scenes
             });
         }
 
+        private void StartDamageIndicator(string combatantId, string text, Vector2 startPosition, Color color)
+        {
+            _activeDamageIndicators.Add(new DamageIndicatorState
+            {
+                CombatantID = combatantId,
+                Text = text,
+                StartPosition = startPosition,
+                Color = color,
+                Timer = 0f
+            });
+        }
+
         private void OnPlayerMoveSelected(MoveData move, BattleCombatant target)
         {
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
@@ -520,6 +518,7 @@ namespace ProjectVagabond.Scenes
                 UpdateHealthAnimations(gameTime);
                 UpdateAlphaAnimations(gameTime);
                 UpdateHitAnimations(gameTime);
+                UpdateDamageIndicators(gameTime);
                 _settingsButton?.Update(currentMouseState);
 
                 bool animationsAndNarrationComplete = !_battleNarrator.IsBusy && !_activeHealthAnimations.Any() && !_activeAlphaAnimations.Any() && !_narrationQueue.Any();
@@ -549,6 +548,7 @@ namespace ProjectVagabond.Scenes
             UpdateHealthAnimations(gameTime);
             UpdateAlphaAnimations(gameTime);
             UpdateHitAnimations(gameTime);
+            UpdateDamageIndicators(gameTime);
             UpdateHoverHighlights(gameTime);
 
             if (_settingsButton != null)
@@ -566,6 +566,13 @@ namespace ProjectVagabond.Scenes
                 _settingsButton.Bounds = new Rectangle(buttonX, buttonY, buttonScreenSize, buttonScreenSize);
             }
             _settingsButton?.Update(currentMouseState);
+
+            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+            if (player != null)
+            {
+                UpdatePlayerStatusIcons(player, virtualMousePos);
+            }
+
 
             // --- Animation Skip Logic ---
             bool skipRequested = (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed) ||
@@ -691,8 +698,7 @@ namespace ProjectVagabond.Scenes
                 if (currentPhase == BattleManager.BattlePhase.ActionSelection)
                 {
                     _subMenuState = BattleSubMenuState.ActionRoot;
-                    var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
-                    if (player != null)
+                    if (player != null && !player.IsDefeated)
                     {
                         _actionMenu.Show(player, _battleManager.AllCombatants.ToList());
                     }
@@ -714,7 +720,6 @@ namespace ProjectVagabond.Scenes
                 _itemMenu.Hide();
 
                 var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-                var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
                 if (player != null && player.IsDefeated)
                 {
                     _narrationQueue.Enqueue(() => _battleNarrator.Show("Player Loses!", secondaryFont));
@@ -726,6 +731,37 @@ namespace ProjectVagabond.Scenes
             }
 
             base.Update(gameTime);
+        }
+
+        private void UpdatePlayerStatusIcons(BattleCombatant player, Vector2 virtualMousePos)
+        {
+            _playerStatusIcons.Clear();
+            if (!player.ActiveStatusEffects.Any()) return;
+
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            const int playerHudY = DIVIDER_Y - 10;
+            const int playerHudPaddingX = 10;
+            string hpText = $"HP: {((int)Math.Round(player.VisualHP))}/{player.Stats.MaxHP}";
+            Vector2 hpTextSize = secondaryFont.MeasureString(hpText);
+            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
+
+            const int iconSize = 5;
+            const int iconPadding = 2;
+            int currentX = (int)hpStartX - iconPadding - iconSize;
+
+            foreach (var effect in player.ActiveStatusEffects)
+            {
+                int iconY = (int)(playerHudY + (secondaryFont.LineHeight - iconSize) / 2f) + 1;
+                var iconBounds = new Rectangle(currentX, iconY, iconSize, iconSize);
+                _playerStatusIcons.Add(new StatusIconInfo { Effect = effect, Bounds = iconBounds });
+
+                if (iconBounds.Contains(virtualMousePos))
+                {
+                    _tooltipManager.RequestTooltip(effect, effect.GetDisplayName(), virtualMousePos);
+                }
+
+                currentX -= (iconSize + iconPadding);
+            }
         }
 
         private void SkipAllHealthAnimations()
@@ -802,6 +838,19 @@ namespace ProjectVagabond.Scenes
                 if (anim.Timer >= HitAnimationState.Duration)
                 {
                     _activeHitAnimations.RemoveAt(i);
+                }
+            }
+        }
+
+        private void UpdateDamageIndicators(GameTime gameTime)
+        {
+            for (int i = _activeDamageIndicators.Count - 1; i >= 0; i--)
+            {
+                var indicator = _activeDamageIndicators[i];
+                indicator.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (indicator.Timer >= DamageIndicatorState.DURATION)
+                {
+                    _activeDamageIndicators.RemoveAt(i);
                 }
             }
         }
@@ -923,6 +972,8 @@ namespace ProjectVagabond.Scenes
                 var playerHitAnim = _activeHitAnimations.FirstOrDefault(a => a.CombatantID == player.CombatantID);
                 DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY + yOffset), 1.0f, playerHitAnim);
 
+                DrawPlayerStatusIcons(spriteBatch);
+
                 if (!player.IsDefeated && currentTargetType.HasValue)
                 {
                     if (currentTargetType == TargetType.SingleAll)
@@ -954,6 +1005,7 @@ namespace ProjectVagabond.Scenes
 
             DrawHoverHighlights(spriteBatch, font, secondaryFont);
             DrawTurnIndicator(spriteBatch, font, gameTime);
+            DrawDamageIndicators(spriteBatch, secondaryFont);
 
             // --- Draw Targeting UI ---
             if (_uiState == BattleUIState.ItemTargeting)
@@ -1037,6 +1089,11 @@ namespace ProjectVagabond.Scenes
             }
 
             spriteBatch.End();
+        }
+
+        public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            _tooltipManager.Draw(spriteBatch, font);
         }
 
         private void DrawDebugDeckInfo(SpriteBatch spriteBatch, BitmapFont font, CombatDeckManager deckManager)
@@ -1371,6 +1428,77 @@ namespace ProjectVagabond.Scenes
                 );
 
                 spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
+            }
+        }
+
+        private void DrawDamageIndicators(SpriteBatch spriteBatch, BitmapFont font)
+        {
+            foreach (var indicator in _activeDamageIndicators)
+            {
+                float progress = indicator.Timer / DamageIndicatorState.DURATION;
+
+                float yOffset = -Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
+                Vector2 position = indicator.StartPosition + new Vector2(0, yOffset);
+
+                float alpha = 1.0f;
+                if (progress > 0.5f)
+                {
+                    float fadeProgress = (progress - 0.5f) * 2f;
+                    alpha = 1.0f - Easing.EaseInQuad(fadeProgress);
+                }
+
+                Color drawColor = indicator.Color;
+                if (indicator.Text == "GRAZE")
+                {
+                    const float flashInterval = 0.2f;
+                    bool useYellow = (int)(indicator.Timer / flashInterval) % 2 == 0;
+                    drawColor = useYellow ? _global.Palette_Yellow : _global.Palette_LightBlue;
+                }
+
+                Vector2 textSize = font.MeasureString(indicator.Text);
+                Vector2 textPosition = position - new Vector2(textSize.X / 2f, textSize.Y);
+
+                spriteBatch.DrawStringSnapped(font, indicator.Text, textPosition, drawColor * alpha);
+            }
+        }
+
+        private void DrawPlayerStatusIcons(SpriteBatch spriteBatch)
+        {
+            foreach (var iconInfo in _playerStatusIcons)
+            {
+                var iconTexture = _spriteManager.GetStatusEffectIcon(iconInfo.Effect.EffectType);
+                spriteBatch.DrawSnapped(iconTexture, iconInfo.Bounds, Color.White);
+            }
+        }
+
+        private Vector2 GetCombatantHudCenterPosition(BattleCombatant combatant)
+        {
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+
+            if (combatant.IsPlayerControlled)
+            {
+                const int playerHudY = DIVIDER_Y - 10;
+                const int playerHudPaddingX = 10;
+                string hpLabel = "HP: ";
+                string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
+                string separator = "/";
+                string maxHp = combatant.Stats.MaxHP.ToString();
+                string fullHpText = hpLabel + currentHp + separator + maxHp;
+                Vector2 hpTextSize = secondaryFont.MeasureString(fullHpText);
+                float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
+                return new Vector2(hpStartX + hpTextSize.X / 2, playerHudY);
+            }
+            else
+            {
+                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled).ToList();
+                int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
+                if (enemyIndex == -1) return Vector2.Zero;
+
+                const int enemyAreaPadding = 20;
+                const int enemyHudY = 80;
+                int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
+                int slotWidth = availableWidth / enemies.Count;
+                return new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
             }
         }
 
