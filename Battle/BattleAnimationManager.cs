@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -13,11 +14,27 @@ namespace ProjectVagabond.Battle.UI
     /// </summary>
     public class BattleAnimationManager
     {
+        // --- Tuning ---
+        private const float HEALTH_ANIMATION_DURATION = 0.25f; // Duration of the health bar drain animation in seconds.
+
         // Internal animation state structs
-        public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; public const float Duration = 1.0f; }
+        public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; }
         public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.167f; }
         public class HitAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.0f; }
-        public class DamageIndicatorState { public string CombatantID; public string Text; public Vector2 StartPosition; public Color Color; public float Timer; public const float DURATION = 1.2f; public const float RISE_DISTANCE = 10f; }
+        public class DamageIndicatorState
+        {
+            public enum IndicatorType { Text, Number }
+            public IndicatorType Type;
+            public string CombatantID;
+            public string Text;
+            public Vector2 Position; // Current position
+            public Vector2 Velocity; // For physics-based indicators
+            public Vector2 InitialPosition; // For simple animation paths
+            public Color Color; // Used for text indicators like "CRITICAL"
+            public float Timer;
+            public const float DURATION = 1.2f;
+            public const float RISE_DISTANCE = 10f;
+        }
 
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
@@ -82,10 +99,25 @@ namespace ProjectVagabond.Battle.UI
         {
             _activeDamageIndicators.Add(new DamageIndicatorState
             {
+                Type = DamageIndicatorState.IndicatorType.Text,
                 CombatantID = combatantId,
                 Text = text,
-                StartPosition = startPosition,
+                Position = startPosition,
+                InitialPosition = startPosition,
                 Color = color,
+                Timer = 0f
+            });
+        }
+
+        public void StartDamageNumberIndicator(string combatantId, int damageAmount, Vector2 startPosition)
+        {
+            _activeDamageIndicators.Add(new DamageIndicatorState
+            {
+                Type = DamageIndicatorState.IndicatorType.Number,
+                CombatantID = combatantId,
+                Text = damageAmount.ToString(),
+                Position = startPosition,
+                Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 20)), // Slower, floatier arc
                 Timer = 0f
             });
         }
@@ -129,14 +161,14 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 anim.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (anim.Timer >= HealthAnimationState.Duration)
+                if (anim.Timer >= HEALTH_ANIMATION_DURATION)
                 {
                     combatant.VisualHP = anim.TargetHP;
                     _activeHealthAnimations.RemoveAt(i);
                 }
                 else
                 {
-                    float progress = anim.Timer / HealthAnimationState.Duration;
+                    float progress = anim.Timer / HEALTH_ANIMATION_DURATION;
                     combatant.VisualHP = MathHelper.Lerp(anim.StartHP, anim.TargetHP, Easing.EaseOutQuart(progress));
                 }
             }
@@ -183,13 +215,29 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateDamageIndicators(GameTime gameTime)
         {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
             for (int i = _activeDamageIndicators.Count - 1; i >= 0; i--)
             {
                 var indicator = _activeDamageIndicators[i];
-                indicator.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                indicator.Timer += deltaTime;
                 if (indicator.Timer >= DamageIndicatorState.DURATION)
                 {
                     _activeDamageIndicators.RemoveAt(i);
+                    continue;
+                }
+
+                // Apply physics or simple animation based on the indicator type
+                if (indicator.Type == DamageIndicatorState.IndicatorType.Number)
+                {
+                    const float gravity = 80f; // Reduced gravity for a floatier effect
+                    indicator.Velocity.Y += gravity * deltaTime;
+                    indicator.Position += indicator.Velocity * deltaTime;
+                }
+                else // Text indicators like GRAZE
+                {
+                    float progress = indicator.Timer / DamageIndicatorState.DURATION;
+                    float yOffset = -Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
+                    indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);
                 }
             }
         }
@@ -200,9 +248,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 float progress = indicator.Timer / DamageIndicatorState.DURATION;
 
-                float yOffset = -Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
-                Vector2 position = indicator.StartPosition + new Vector2(0, yOffset);
-
                 float alpha = 1.0f;
                 if (progress > 0.5f)
                 {
@@ -210,18 +255,28 @@ namespace ProjectVagabond.Battle.UI
                     alpha = 1.0f - Easing.EaseInQuad(fadeProgress);
                 }
 
-                Color drawColor = indicator.Color;
-                if (indicator.Text == "GRAZE")
+                Color drawColor;
+                Vector2 textSize = font.MeasureString(indicator.Text);
+                Vector2 textPosition = indicator.Position - new Vector2(textSize.X / 2f, textSize.Y);
+
+                if (indicator.Type == DamageIndicatorState.IndicatorType.Number)
                 {
-                    const float flashInterval = 0.2f;
-                    bool useYellow = (int)(indicator.Timer / flashInterval) % 2 == 0;
-                    drawColor = useYellow ? _global.Palette_Yellow : _global.Palette_LightBlue;
+                    const float flashInterval = 0.1f;
+                    bool useRed = (int)(indicator.Timer / flashInterval) % 2 == 0;
+                    drawColor = useRed ? _global.Palette_Red : _global.Palette_BrightWhite;
+                }
+                else // Text indicator
+                {
+                    drawColor = indicator.Color;
+                    if (indicator.Text == "GRAZE")
+                    {
+                        const float flashInterval = 0.2f;
+                        bool useYellow = (int)(indicator.Timer / flashInterval) % 2 == 0;
+                        drawColor = useYellow ? _global.Palette_Yellow : _global.Palette_LightBlue;
+                    }
                 }
 
-                Vector2 textSize = font.MeasureString(indicator.Text);
-                Vector2 textPosition = position - new Vector2(textSize.X / 2f, textSize.Y);
-
-                spriteBatch.DrawStringSnapped(font, indicator.Text, textPosition, drawColor * alpha);
+                spriteBatch.DrawStringOutlinedSnapped(font, indicator.Text, textPosition, drawColor * alpha, Color.Black * alpha);
             }
         }
     }

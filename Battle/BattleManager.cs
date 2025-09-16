@@ -34,7 +34,7 @@ namespace ProjectVagabond.Battle
         private List<DamageCalculator.DamageResult> _currentActionDamageResults;
         private List<BattleCombatant> _currentActionFinalTargets;
         private BattlePhase _currentPhase;
-        private int _turnNumber;
+        public int RoundNumber { get; private set; }
         private bool _playerActionSubmitted;
         private static readonly Random _random = new Random();
 
@@ -73,7 +73,7 @@ namespace ProjectVagabond.Battle
             }
 
             _actionQueue = new List<QueuedAction>();
-            _turnNumber = 1;
+            RoundNumber = 1;
             _currentPhase = BattlePhase.StartOfTurn;
 
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
@@ -620,7 +620,7 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
-            _turnNumber++;
+            RoundNumber++;
             _currentPhase = BattlePhase.StartOfTurn;
         }
 

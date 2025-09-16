@@ -138,7 +138,7 @@ namespace ProjectVagabond.Battle
             bool isCritical = false;
             if (!isGrazed)
             {
-                double critChance = 0.0625;
+                double critChance = BattleConstants.CRITICAL_HIT_CHANCE;
                 if (target.HasStatusEffect(StatusEffectType.Root)) critChance *= 2.0;
                 if (_random.NextDouble() < critChance)
                 {

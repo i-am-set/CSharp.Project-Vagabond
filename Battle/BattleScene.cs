@@ -319,9 +319,14 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            string roundText = _battleManager.RoundNumber.ToString();
+            Vector2 roundTextPosition = new Vector2(5, 5);
+            spriteBatch.DrawStringSnapped(font, roundText, roundTextPosition, ServiceLocator.Get<Global>().Palette_DarkGray);
+
             _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, _currentActor, _uiManager, _inputHandler, _animationManager);
             _uiManager.Draw(spriteBatch, font, gameTime, transform);
-            _animationManager.DrawDamageIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
+            _animationManager.DrawDamageIndicators(spriteBatch, secondaryFont);
         }
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -405,6 +410,7 @@ namespace ProjectVagabond.Scenes
             {
                 var target = e.Targets[i];
                 var result = e.DamageResults[i];
+                Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
 
                 if (result.DamageAmount > 0)
                 {
@@ -416,17 +422,18 @@ namespace ProjectVagabond.Scenes
                     }
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHitAnimation(target.CombatantID);
+                    _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
                 }
 
                 if (result.WasGraze)
                 {
-                    Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
                     _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, ServiceLocator.Get<Global>().Palette_LightGray);
                 }
 
                 if (result.WasCritical)
                 {
                     _uiManager.ShowNarration($"A critical hit on {target.Name}!");
+                    _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().Palette_Yellow);
                 }
             }
         }
