@@ -288,6 +288,20 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            // Draw the main scene content
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            DrawSceneContent(spriteBatch, font, gameTime, transform);
+            spriteBatch.End();
+
+            // Draw the overlay content (tooltips) on top, using the same transform
+            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+            _renderer.DrawOverlay(spriteBatch, font);
+            spriteBatch.End();
+        }
+
+
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (_battleManager == null)
@@ -323,7 +337,8 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            ServiceLocator.Get<TooltipManager>().Draw(spriteBatch, font);
+            // This is now empty, as the tooltip is part of the virtual scene space.
+            // This method is for screen-space UI that should NOT be scaled.
         }
 
         #region Event Handlers

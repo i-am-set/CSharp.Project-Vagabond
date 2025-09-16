@@ -51,5 +51,14 @@
                 _ => EffectType.ToString(),
             };
         }
+
+        /// <summary>
+        /// Gets the formatted text for the tooltip, including name and duration.
+        /// </summary>
+        /// <returns>A formatted string for the tooltip.</returns>
+        public string GetTooltipText()
+        {
+            return $"{GetDisplayName()} ({DurationInTurns})".ToUpper();
+        }
     }
 }

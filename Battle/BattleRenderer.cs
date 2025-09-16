@@ -2,11 +2,11 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
@@ -22,12 +22,14 @@ namespace ProjectVagabond.Battle.UI
         // Dependencies
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
-        private readonly TooltipManager _tooltipManager;
         private readonly Core _core;
 
         // State
         private List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private readonly List<StatusIconInfo> _playerStatusIcons = new List<StatusIconInfo>();
+        private string _hoveredStatusEffectText = null;
+        private Vector2? _hoveredStatusIconAnchorPosition = null;
+
 
         // Enemy Sprite Animation
         private Dictionary<string, Vector2[]> _enemySpritePartOffsets = new Dictionary<string, Vector2[]>();
@@ -46,7 +48,6 @@ namespace ProjectVagabond.Battle.UI
         {
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
-            _tooltipManager = ServiceLocator.Get<TooltipManager>();
             _core = ServiceLocator.Get<Core>();
         }
 
@@ -100,6 +101,56 @@ namespace ProjectVagabond.Battle.UI
 
             // --- Draw Divider ---
             spriteBatch.DrawSnapped(pixel, new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, 1), Color.White);
+        }
+
+        public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font)
+        {
+            if (!string.IsNullOrEmpty(_hoveredStatusEffectText) && _hoveredStatusIconAnchorPosition.HasValue)
+            {
+                var secondaryFont = _core.SecondaryFont;
+                var pixel = ServiceLocator.Get<Texture2D>();
+                var anchorPosition = _hoveredStatusIconAnchorPosition.Value;
+
+                Vector2 textSize = secondaryFont.MeasureString(_hoveredStatusEffectText);
+
+                const int paddingX = 8;
+                const int paddingY = 4;
+                int tooltipWidth = (int)textSize.X + paddingX;
+                int tooltipHeight = (int)textSize.Y + paddingY;
+
+                // Position the tooltip above the icon, centered horizontally.
+                Vector2 finalTopLeftPosition = new Vector2(
+                    anchorPosition.X - tooltipWidth / 2f,
+                    anchorPosition.Y - tooltipHeight - 2 // 2 pixels of space
+                );
+
+                // Clamp to screen bounds
+                if (finalTopLeftPosition.X < 0) finalTopLeftPosition.X = 0;
+                if (finalTopLeftPosition.Y < 0) finalTopLeftPosition.Y = 0;
+                if (finalTopLeftPosition.X + tooltipWidth > Global.VIRTUAL_WIDTH)
+                {
+                    finalTopLeftPosition.X = Global.VIRTUAL_WIDTH - tooltipWidth;
+                }
+                if (finalTopLeftPosition.Y + tooltipHeight > Global.VIRTUAL_HEIGHT)
+                {
+                    finalTopLeftPosition.Y = Global.VIRTUAL_HEIGHT - tooltipHeight;
+                }
+
+                // Round the final position *before* creating the drawing primitives to prevent desync.
+                Vector2 snappedPosition = new Vector2(MathF.Round(finalTopLeftPosition.X), MathF.Round(finalTopLeftPosition.Y));
+
+                Rectangle tooltipBg = new Rectangle((int)snappedPosition.X, (int)snappedPosition.Y, tooltipWidth, tooltipHeight);
+                Vector2 textPosition = new Vector2(snappedPosition.X + (paddingX / 2), snappedPosition.Y + (paddingY / 2));
+
+                // The DrawSnapped methods will now receive already-snapped integer coordinates, preventing further rounding.
+                spriteBatch.DrawSnapped(pixel, tooltipBg, _global.ToolTipBGColor * 0.9f);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), _global.ToolTipBorderColor);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), _global.ToolTipBorderColor);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
+
+                spriteBatch.DrawStringSnapped(secondaryFont, _hoveredStatusEffectText, textPosition, _global.ToolTipTextColor);
+            }
         }
 
         private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, TargetType? currentTargetType, BattleAnimationManager animationManager)
@@ -439,6 +490,8 @@ namespace ProjectVagabond.Battle.UI
         private void UpdatePlayerStatusIcons(BattleCombatant player)
         {
             _playerStatusIcons.Clear();
+            _hoveredStatusEffectText = null; // Reset hover text each frame
+            _hoveredStatusIconAnchorPosition = null; // Reset anchor position
             if (player == null || !player.ActiveStatusEffects.Any()) return;
 
             var secondaryFont = _core.SecondaryFont;
@@ -461,7 +514,8 @@ namespace ProjectVagabond.Battle.UI
 
                 if (iconBounds.Contains(virtualMousePos))
                 {
-                    _tooltipManager.RequestTooltip(effect, effect.GetDisplayName(), virtualMousePos);
+                    _hoveredStatusEffectText = effect.GetTooltipText();
+                    _hoveredStatusIconAnchorPosition = new Vector2(iconBounds.Center.X, iconBounds.Top);
                 }
                 currentX -= (iconSize + iconPadding);
             }

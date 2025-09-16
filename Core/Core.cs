@@ -495,7 +495,6 @@ namespace ProjectVagabond
 
             // --- Frame-Rate Dependent Updates ---
             _sceneManager.Update(gameTime);
-            _tooltipManager.Update(gameTime); // Tooltips should always update.
             _particleSystemManager.Update(gameTime);
             _diceRollingSystem.Update(gameTime); // Update dice visuals and game logic every frame.
             _animationManager.Update(gameTime);

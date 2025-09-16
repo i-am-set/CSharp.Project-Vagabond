@@ -23,6 +23,7 @@ namespace ProjectVagabond.Scenes
         private readonly DiceRollingSystem _diceRollingSystem;
         private readonly PlayerInputSystem _playerInputSystem;
         private readonly AnimationManager _animationManager;
+        private readonly TooltipManager _tooltipManager;
         private ImageButton _settingsButton;
         private readonly Global _global;
 
@@ -39,6 +40,7 @@ namespace ProjectVagabond.Scenes
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _playerInputSystem = ServiceLocator.Get<PlayerInputSystem>();
             _animationManager = ServiceLocator.Get<AnimationManager>();
+            _tooltipManager = ServiceLocator.Get<TooltipManager>();
             _global = ServiceLocator.Get<Global>();
         }
 
@@ -103,6 +105,7 @@ namespace ProjectVagabond.Scenes
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
             _diceRollingSystem.Update(gameTime);
+            _tooltipManager.Update(gameTime); // Update tooltip logic after requests have been made
 
             // Update button bounds BEFORE updating its input state
             if (_settingsButton != null)
@@ -208,8 +211,7 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // This method is available for UI elements that need to be drawn on top of the entire scene,
-            // directly to the backbuffer.
+            _tooltipManager.Draw(spriteBatch, font);
         }
 
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);

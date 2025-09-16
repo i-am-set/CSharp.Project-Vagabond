@@ -313,14 +313,14 @@ namespace ProjectVagabond
 
         public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            // The animators no longer draw anything themselves.
-            // This method is now only for the loading screen.
-
             // Draw the loading screen if active.
             if (ServiceLocator.Get<LoadingScreen>().IsActive)
             {
                 ServiceLocator.Get<LoadingScreen>().Draw(spriteBatch, font, ServiceLocator.Get<GraphicsDevice>().PresentationParameters.Bounds);
             }
+
+            // The current scene should always draw its overlay content.
+            _currentScene?.DrawOverlay(spriteBatch, font, gameTime);
 
             if (IsModalActive)
             {
