@@ -30,6 +30,7 @@ namespace ProjectVagabond.Battle
         private readonly List<BattleCombatant> _allCombatants;
         private List<QueuedAction> _actionQueue;
         private QueuedAction _currentActionForEffects;
+        private List<DamageCalculator.DamageResult> _currentActionDamageResults;
         private BattlePhase _currentPhase;
         private int _turnNumber;
         private bool _playerActionSubmitted;
@@ -258,6 +259,7 @@ namespace ProjectVagabond.Battle
             var action = _actionQueue[0];
             _actionQueue.RemoveAt(0);
             _currentActionForEffects = action;
+            _currentActionDamageResults = new List<DamageCalculator.DamageResult>(); // Reset damage results
 
             // Liveness Check: Skip the action if the actor was defeated by a prior action in the same turn.
             if (action.Actor.IsDefeated)
@@ -315,8 +317,9 @@ namespace ProjectVagabond.Battle
             // This phase is entered, and we immediately process the effects.
             // The system will publish an event when it's done.
             // The BattleManager will then wait for that event to transition state.
-            SecondaryEffectSystem.ProcessEffects(_currentActionForEffects);
+            SecondaryEffectSystem.ProcessEffects(_currentActionForEffects, _currentActionDamageResults);
             _currentActionForEffects = null; // Clear it after passing it to the system
+            _currentActionDamageResults = null;
         }
 
         private void ProcessMoveAction(QueuedAction action)
@@ -370,6 +373,8 @@ namespace ProjectVagabond.Battle
                 });
             }
 
+            _currentActionDamageResults = damageResults;
+
             if (action.Actor.HasStatusEffect(StatusEffectType.Freeze) && action.ChosenMove?.OffensiveElementIDs.Contains(2) == true) // 2 = Fire
             {
                 var freezeEffect = action.Actor.ActiveStatusEffects.FirstOrDefault(e => e.EffectType == StatusEffectType.Freeze);
@@ -388,6 +393,7 @@ namespace ProjectVagabond.Battle
 
             var targets = ResolveTargets(action);
             var healAmounts = new List<int>();
+            var damageResults = new List<DamageCalculator.DamageResult>();
 
             switch (action.ChosenItem.Type)
             {
@@ -413,7 +419,6 @@ namespace ProjectVagabond.Battle
                 case ConsumableType.Attack:
                     if (!string.IsNullOrEmpty(action.ChosenItem.MoveID) && BattleDataCache.Moves.TryGetValue(action.ChosenItem.MoveID, out var moveData))
                     {
-                        var damageResults = new List<DamageCalculator.DamageResult>();
                         float multiTargetModifier = (targets.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
                         foreach (var target in targets)
                         {
@@ -432,6 +437,7 @@ namespace ProjectVagabond.Battle
                     }
                     break;
             }
+            _currentActionDamageResults = damageResults;
         }
 
         private List<BattleCombatant> ResolveTargets(QueuedAction action)

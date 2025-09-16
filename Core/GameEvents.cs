@@ -1,4 +1,11 @@
-﻿using ProjectVagabond.Battle;
+﻿using ProjectVagabond;
+using ProjectVagabond.Battle;
+using System.Collections.Generic;
+
+MoveData.cs
+GameEvents.cs
+```csharp
+using ProjectVagabond.Battle;
 using System.Collections.Generic;
 
 namespace ProjectVagabond
@@ -158,6 +165,15 @@ namespace ProjectVagabond
         {
             public BattleCombatant Actor { get; set; }
             public string Reason { get; set; } // e.g., "silenced", "confused"
+        }
+
+        /// <summary>
+        /// Published when a combatant begins charging a move.
+        /// </summary>
+        public struct CombatantChargingAction
+        {
+            public BattleCombatant Actor { get; set; }
+            public string MoveName { get; set; }
         }
     }
 }

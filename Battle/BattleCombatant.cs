@@ -102,6 +102,22 @@ namespace ProjectVagabond.Battle
         public bool IsRemovalProcessed { get; set; } = false;
 
         /// <summary>
+        /// Tracks moves that increase in power with successive uses. Key: MoveID, Value: Use count.
+        /// </summary>
+        public Dictionary<string, int> RampingMoveCounters { get; set; } = new Dictionary<string, int>();
+
+        /// <summary>
+        /// If not null, this combatant is charging a move and cannot act.
+        /// </summary>
+        public DelayedAction ChargingAction { get; set; }
+
+        /// <summary>
+        /// A queue of actions that will execute on future turns.
+        /// </summary>
+        public Queue<DelayedAction> DelayedActions { get; set; } = new Queue<DelayedAction>();
+
+
+        /// <summary>
         /// Applies a specified amount of damage to the combatant's CurrentHP.
         /// </summary>
         /// <param name="damageAmount">The amount of damage to apply.</param>

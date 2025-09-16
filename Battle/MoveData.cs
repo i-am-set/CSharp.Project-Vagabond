@@ -1,4 +1,5 @@
 ﻿using ProjectVagabond.Battle;
+using System;
 using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle
@@ -69,8 +70,9 @@ namespace ProjectVagabond.Battle
         public List<int> OffensiveElementIDs { get; set; } = new List<int>();
 
         /// <summary>
-        /// A list of string identifiers for any secondary effects this move triggers.
+        /// A dictionary of special effects for this move. The key is the effect name (e.g., "Lifesteal")
+        /// and the value is a string of its parameters (e.g., "50").
         /// </summary>
-        public List<string> SecondaryEffectIDs { get; set; } = new List<string>();
+        public Dictionary<string, string> Effects { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     }
 }

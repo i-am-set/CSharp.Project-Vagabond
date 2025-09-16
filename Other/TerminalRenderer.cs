@@ -35,12 +35,10 @@ namespace ProjectVagabond
 
         private int _nextLineNumber = 1;
         private int _nextCombatLineNumber = 1;
-        private float _caratBlinkTimer = 0f;
         private readonly StringBuilder _stringBuilder = new StringBuilder(256);
 
         public List<ColoredLine> WrappedHistory => _wrappedHistory;
         private Rectangle _currentBounds;
-        private int _inputLineY;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -58,11 +56,6 @@ namespace ProjectVagabond
         private void OnTerminalMessagePublished(GameEvents.TerminalMessagePublished e)
         {
             AddToHistory(e.Message, e.BaseColor);
-        }
-
-        public void ResetCaratBlink()
-        {
-            _caratBlinkTimer = 0f;
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -216,40 +209,6 @@ namespace ProjectVagabond
                     spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(x, y), segment.Color);
                     x += font.MeasureString(segment.Text).Width;
                 }
-            }
-        }
-
-        public void DrawAutoComplete(SpriteBatch spriteBatch, BitmapFont font)
-        {
-            if (!_autoCompleteManager.ShowingAutoCompleteSuggestions || !_autoCompleteManager.AutoCompleteSuggestions.Any())
-            {
-                return;
-            }
-
-            Texture2D pixel = ServiceLocator.Get<Texture2D>();
-            int suggestionY = _inputLineY - 20;
-            int visibleSuggestions = Math.Min(_autoCompleteManager.AutoCompleteSuggestions.Count, 5);
-            int maxSuggestionWidth = 0;
-            for (int i = 0; i < visibleSuggestions; i++)
-            {
-                string prefix = (i == _autoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? " >" : "  ";
-                string fullText = prefix + _autoCompleteManager.AutoCompleteSuggestions[i];
-                int textWidth = (int)font.MeasureString(fullText).Width;
-                maxSuggestionWidth = Math.Max(maxSuggestionWidth, textWidth);
-            }
-            int backgroundHeight = visibleSuggestions * Global.FONT_SIZE;
-            int backgroundY = suggestionY - (visibleSuggestions - 1) * Global.FONT_SIZE;
-            spriteBatch.DrawSnapped(pixel, new Rectangle(_currentBounds.X, backgroundY, maxSuggestionWidth + 4, backgroundHeight), _global.Palette_Black);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(_currentBounds.X, backgroundY, maxSuggestionWidth + 4, 1), _global.Palette_LightGray); // Top
-            spriteBatch.DrawSnapped(pixel, new Rectangle(_currentBounds.X, backgroundY + backgroundHeight, maxSuggestionWidth + 4, 1), _global.Palette_LightGray); // Bottom
-            spriteBatch.DrawSnapped(pixel, new Rectangle(_currentBounds.X, backgroundY, 1, backgroundHeight), _global.Palette_LightGray); // Left
-            spriteBatch.DrawSnapped(pixel, new Rectangle(_currentBounds.X + maxSuggestionWidth + 4, backgroundY, 1, backgroundHeight), _global.Palette_LightGray); // Right
-            for (int i = 0; i < visibleSuggestions; i++)
-            {
-                Color suggestionColor = (i == _autoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? Color.Khaki : _global.Palette_LightGray;
-                string prefix = (i == _autoCompleteManager.SelectedAutoCompleteSuggestionIndex) ? " >" : "  ";
-                spriteBatch.DrawStringSnapped(font, prefix + _autoCompleteManager.AutoCompleteSuggestions[i],
-                    new Vector2(_currentBounds.X + 2, suggestionY - i * Global.FONT_SIZE), suggestionColor);
             }
         }
 
