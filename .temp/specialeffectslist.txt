@@ -1,0 +1,40 @@
+Ok, I want more special effects for moves to the game. Can you give me big list of possible special effects for moves? These should be stuff like "Apply XYZ Status effect to hit targets" or "the spell hits 2-6 times (if a single targeting spell it hits that one target that many times- if a "every" targeting spell, the targets are random for each individual hit [just to prevent every target getting hit X number of times])" or "Heal for 50% of the damage dealt"
+
+Give me a big list of ideas like that that add flavor to the game and I'll choose which ones you should add
+
+
+
+Status Effects & Stat Modifications
+Apply Status Effect (Chance-Based): The move has an X% chance to apply a specific status effect (e.g., Poison, Burn, Freeze, Stun, Blind, Silence, Fear, Root) to the target upon a successful hit.
+Apply Status Effect (Guaranteed): A successful hit is guaranteed to apply a specific status effect. These moves typically have lower base power.
+Stat Buff (Self): The move increases one of the user's stats (e.g., Strength, Agility, Tenacity) for a set number of turns.
+Stat Debuff (Target): The move decreases one of the target's stats for a set number of turns.
+Stat Steal: The move decreases a target's stat and increases the user's corresponding stat by the same amount for a set number of turns.
+Status Cleanse: Removes all negative status effects from the user or a targeted ally.
+Buff Removal: Removes all positive status effects from the target.
+Damage & Healing Mechanics
+Multi-Hit: The move hits 2-5 times. For single-target moves, it hits the same target repeatedly. For multi-target moves (e.g., TargetType.Every), each hit randomly selects a valid target.
+Lifesteal / HP Drain: The user is healed for X% of the damage dealt by the move.
+Recoil Damage: The user takes X% of the damage dealt as recoil damage.
+Fixed Damage: The move deals a fixed amount of damage that ignores all stats, elemental resistances, and defensive modifiers.
+Percentage-Based Damage: The move deals damage equal to X% of the target's current or maximum HP.
+High Critical Hit Ratio: The move has a significantly increased chance to land a critical hit.
+Guaranteed Critical Hit: The move will always be a critical hit, but may have a drawback like lower base power or a "charge-up" turn.
+Finisher: The move's power increases as the target's HP decreases.
+Setup Finisher: The move's power is doubled if the target is afflicted with a specific status effect (e.g., deals double damage to a Frozen target).
+Delayed Damage: The move deals no initial damage, but the target takes a set amount of damage at the end of their next turn.
+Splash Damage: Hits the primary target for full damage and adjacent targets for 50% damage.
+Turn Order & Action Manipulation
+Increased/Decreased Priority: The move always executes before (or after) moves of normal priority, regardless of the user's Agility stat. (This is already supported by the Priority field in MoveData).
+Flinch: If the user attacks before the target, the move has an X% chance to make the target lose their turn.
+Charge-Up: The user spends the first turn charging, then unleashes a very powerful attack on the second turn. The user is often vulnerable while charging.
+Taunt / Redirect: The user becomes the target of all single-target enemy attacks for the next turn.
+High-Risk / High-Reward
+Low Accuracy / High Power: The move has immense power but very low accuracy (e.g., 50%).
+Self-KO: The user is defeated after using the move, but it deals catastrophic damage to the target(s).
+Stat Sacrifice: The move is powerful, but sharply lowers one or more of the user's stats (e.g., Strength, Tenacity) after use.
+Last Resort: A very powerful move that can only be used when the user has low HP (e.g., below 25%).
+Deck & Hand Manipulation (Player-Specific)
+Mulligan: Discard your current hand and draw a new hand of four moves. This action ends your turn.
+Tutor: Search your draw pile for a move of a specific element (e.g., a Fire move) and add it to your hand.
+Cycle: Draw two moves, then choose one move from your hand to place on the bottom of your draw pile.
