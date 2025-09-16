@@ -44,6 +44,10 @@ namespace ProjectVagabond.Battle.UI
 
         public void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)
         {
+            // Remove any existing health animation for this combatant to ensure the new one takes precedence.
+            // This is crucial for multi-hit moves, where each hit should restart the animation.
+            _activeHealthAnimations.RemoveAll(a => a.CombatantID == combatantId);
+
             _activeHealthAnimations.Add(new HealthAnimationState
             {
                 CombatantID = combatantId,

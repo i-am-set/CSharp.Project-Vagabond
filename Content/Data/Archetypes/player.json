@@ -26,14 +26,17 @@
         "MaxHP": 100,
         "Strength": 1,
         "Intelligence": 1,
-        "Tenacity": 1,
+        "Tenacity": 100,
         "Agility": 1,
         "DefensiveElementIDs": [ 101 ],
         "StartingMoveIDs": [
           "ShoulderBash",
           "WintersGrasp",
           "WhiteoutTempest",
-          "Sunlance"
+          "Sunlance",
+          "SolarBeam",
+          "VampiricBite",
+          "FurySwipes"
         ],
         "DefaultStrikeMoveID": "ClawRake"
       }

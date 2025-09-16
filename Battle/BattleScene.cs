@@ -103,11 +103,13 @@ namespace ProjectVagabond.Scenes
 
         private void SubscribeToEvents()
         {
+            EventBus.Subscribe<GameEvents.ActionDeclared>(OnActionDeclared);
             EventBus.Subscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
             EventBus.Subscribe<GameEvents.CombatantDefeated>(OnCombatantDefeated);
-            EventBus.Subscribe<GameEvents.BattleItemUsed>(OnBattleItemUsed);
             EventBus.Subscribe<GameEvents.ActionFailed>(OnActionFailed);
             EventBus.Subscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
+            EventBus.Subscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
+            EventBus.Subscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
@@ -119,11 +121,13 @@ namespace ProjectVagabond.Scenes
 
         private void UnsubscribeFromEvents()
         {
+            EventBus.Unsubscribe<GameEvents.ActionDeclared>(OnActionDeclared);
             EventBus.Unsubscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
             EventBus.Unsubscribe<GameEvents.CombatantDefeated>(OnCombatantDefeated);
-            EventBus.Unsubscribe<GameEvents.BattleItemUsed>(OnBattleItemUsed);
             EventBus.Unsubscribe<GameEvents.ActionFailed>(OnActionFailed);
             EventBus.Unsubscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
+            EventBus.Unsubscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
+            EventBus.Unsubscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
@@ -373,18 +377,26 @@ namespace ProjectVagabond.Scenes
             _uiManager.HideAllMenus();
         }
 
+        private void OnActionDeclared(GameEvents.ActionDeclared e)
+        {
+            _currentActor = e.Actor;
+            string actionName = e.Item != null ? e.Item.ItemName : e.Move.MoveName;
+            var targetType = e.Item?.Target ?? e.Move?.Target ?? TargetType.None;
+
+            if (targetType != TargetType.None)
+            {
+                _uiManager.ShowNarration($"{e.Actor.Name} uses {actionName}!");
+            }
+        }
+
+        private void OnMultiHitActionCompleted(GameEvents.MultiHitActionCompleted e)
+        {
+            _uiManager.ShowNarration($"Hit {e.HitCount} times!");
+        }
+
         private void OnBattleActionExecuted(GameEvents.BattleActionExecuted e)
         {
             _currentActor = e.Actor;
-            string actionName = e.UsedItem != null ? e.UsedItem.ItemName : e.ChosenMove.MoveName;
-
-            if (e.ChosenMove.Target == TargetType.None || !e.Targets.Any())
-            {
-                _uiManager.ShowNarration($"{e.Actor.Name} uses {actionName}!");
-                return;
-            }
-
-            _uiManager.ShowNarration($"{e.Actor.Name} uses {actionName}!");
 
             for (int i = 0; i < e.Targets.Count; i++)
             {
@@ -416,20 +428,10 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void OnBattleItemUsed(GameEvents.BattleItemUsed e)
+        private void OnCombatantHealed(GameEvents.CombatantHealed e)
         {
-            _currentActor = e.Actor;
-            _uiManager.ShowNarration($"{e.Actor.Name} uses {e.UsedItem.ItemName}!");
-
-            if (e.UsedItem.Type == ConsumableType.Heal && e.Targets.Any())
-            {
-                for (int i = 0; i < e.Targets.Count; i++)
-                {
-                    var target = e.Targets[i];
-                    _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
-                    _uiManager.ShowNarration($"{target.Name} recovered {e.HealAmounts[i]} HP!");
-                }
-            }
+            _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
+            _uiManager.ShowNarration($"{e.Target.Name} recovered {e.HealAmount} HP!");
         }
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)

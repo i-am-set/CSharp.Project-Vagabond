@@ -1,11 +1,4 @@
-﻿using ProjectVagabond;
-using ProjectVagabond.Battle;
-using System.Collections.Generic;
-
-MoveData.cs
-GameEvents.cs
-```csharp
-using ProjectVagabond.Battle;
+﻿using ProjectVagabond.Battle;
 using System.Collections.Generic;
 
 namespace ProjectVagabond
@@ -81,7 +74,19 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Published at the start of an action's resolution, before any effects are calculated.
+        /// Used for initial narration like "Player uses Tackle!".
+        /// </summary>
+        public struct ActionDeclared
+        {
+            public BattleCombatant Actor { get; set; }
+            public MoveData Move { get; set; }
+            public ConsumableItemData Item { get; set; }
+        }
+
+        /// <summary>
         /// Published when a single action in a battle is resolved, providing detailed results for narration and animation.
+        /// For multi-hit moves, this event is published for each individual hit.
         /// </summary>
         public struct BattleActionExecuted
         {
@@ -93,16 +98,14 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published when a consumable item is used in battle.
+        /// Published after all hits of a multi-hit move have been resolved.
         /// </summary>
-        public struct BattleItemUsed
+        public struct MultiHitActionCompleted
         {
             public BattleCombatant Actor { get; set; }
-            public ConsumableItemData UsedItem { get; set; }
-            public List<BattleCombatant> Targets { get; set; }
-            public List<int> HealAmounts { get; set; }
+            public MoveData ChosenMove { get; set; }
+            public int HitCount { get; set; }
         }
-
 
         /// <summary>
         /// Defines the type of change for a player's move set.
@@ -174,6 +177,17 @@ namespace ProjectVagabond
         {
             public BattleCombatant Actor { get; set; }
             public string MoveName { get; set; }
+        }
+
+        /// <summary>
+        /// Published whenever a combatant is healed, either by an item or a move effect.
+        /// </summary>
+        public struct CombatantHealed
+        {
+            public BattleCombatant Actor { get; set; } // The one causing the healing
+            public BattleCombatant Target { get; set; } // The one receiving the healing
+            public int HealAmount { get; set; }
+            public int VisualHPBefore { get; set; }
         }
     }
 }
