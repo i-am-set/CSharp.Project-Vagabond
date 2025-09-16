@@ -1,6 +1,16 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -32,7 +42,7 @@ namespace ProjectVagabond
                 var callingMethod = callingFrame?.GetMethod();
                 var callingType = callingMethod?.DeclaringType;
 
-                string warningMessage = 
+                string warningMessage =
                     $"[ServiceLocator WARNING] Service of type '{type.Name}' is being overwritten. " +
                     $"The new registration was called from '{callingType?.Name}.{callingMethod?.Name}'. " +
                     "This may be intentional, but can lead to unexpected behavior if not.";
@@ -64,6 +74,17 @@ namespace ProjectVagabond
             }
             return (T)service;
         }
+
+        /// <summary>
+        /// Unregisters a service of a specific type. Useful for scene-scoped services.
+        /// </summary>
+        /// <typeparam name="T">The type of the service to unregister.</typeparam>
+        public static void Unregister<T>()
+        {
+            var type = typeof(T);
+            _services.Remove(type);
+        }
+
 
         /// <summary>
         /// Clears all registered services. Useful for teardown or resetting state.

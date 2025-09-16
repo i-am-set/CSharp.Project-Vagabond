@@ -11,147 +11,131 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 
 namespace ProjectVagabond.Scenes
 {
     /// <summary>
     /// A scene dedicated to managing and rendering a turn-based battle.
+    /// Acts as a conductor for specialized manager classes.
     /// </summary>
     public class BattleScene : GameScene
     {
+        // Core Battle Logic
         private BattleManager _battleManager;
-        private List<int> _enemyEntityIds = new List<int>();
 
-        // UI Components
-        private BattleNarrator _battleNarrator;
-        private ActionMenu _actionMenu;
-        private ItemMenu _itemMenu;
+        // Specialized Managers
+        private BattleUIManager _uiManager;
+        private BattleRenderer _renderer;
+        private BattleAnimationManager _animationManager;
+        private BattleInputHandler _inputHandler;
+
+        // Scene-level UI & Services
         private ImageButton _settingsButton;
-        private Button _itemTargetingBackButton;
-
         private ComponentStore _componentStore;
         private SceneManager _sceneManager;
         private SpriteManager _spriteManager;
-        private Global _global;
         private HapticsManager _hapticsManager;
-        private TooltipManager _tooltipManager;
 
         // State Tracking
+        private List<int> _enemyEntityIds = new List<int>();
         private BattleManager.BattlePhase _previousBattlePhase;
         private bool _isBattleOver;
         private float _endOfBattleTimer;
-        private const float END_OF_BATTLE_DELAY = 2.0f; // Seconds to wait before exiting
+        private const float END_OF_BATTLE_DELAY = 2.0f;
         private BattleCombatant _currentActor;
 
-        // UI State
-        private enum BattleUIState { Default, Targeting, ItemTargeting }
-        private enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item }
-        private BattleUIState _uiState = BattleUIState.Default;
-        private BattleSubMenuState _subMenuState = BattleSubMenuState.None;
-        private MoveData _moveForTargeting;
-        private ConsumableItemData _itemForTargeting;
-        private float _itemTargetingTextAnimTimer = 0f;
-        private List<TargetInfo> _currentTargets = new List<TargetInfo>();
-        private int _hoveredTargetIndex = -1;
-        private struct TargetInfo { public BattleCombatant Combatant; public Rectangle Bounds; }
-        private struct StatusIconInfo { public StatusEffectInstance Effect; public Rectangle Bounds; }
-        private readonly List<StatusIconInfo> _playerStatusIcons = new List<StatusIconInfo>();
-
-
-        // Animation & Haptics
-        private class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; public const float Duration = 1.0f; }
-        private class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.167f; }
-        private class HitAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.0f; }
-        private class DamageIndicatorState { public string CombatantID; public string Text; public Vector2 StartPosition; public Color Color; public float Timer; public const float DURATION = 1.2f; public const float RISE_DISTANCE = 10f; }
-        private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
-        private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
-        private readonly List<HitAnimationState> _activeHitAnimations = new List<HitAnimationState>();
-        private readonly List<DamageIndicatorState> _activeDamageIndicators = new List<DamageIndicatorState>();
-        private readonly Queue<Action> _narrationQueue = new Queue<Action>();
-        private readonly Random _random = new Random();
-
-        // Hover Highlight Animation
-        private class HoverHighlightState { public MoveData CurrentMove; public List<BattleCombatant> Targets = new List<BattleCombatant>(); public float Timer = 0f; public const float SingleTargetFlashOnDuration = 0.4f; public const float SingleTargetFlashOffDuration = 0.2f; public const float MultiTargetFlashOnDuration = 0.4f; public const float MultiTargetFlashOffDuration = 0.4f; }
-        private readonly HoverHighlightState _hoverHighlightState = new HoverHighlightState();
-
-        // Enemy Sprite Animation
-        private Dictionary<string, Vector2[]> _enemySpritePartOffsets = new Dictionary<string, Vector2[]>();
-        private Dictionary<string, float[]> _enemyAnimationTimers = new Dictionary<string, float[]>();
-        private Dictionary<string, float[]> _enemyAnimationIntervals = new Dictionary<string, float[]>();
-        private const int ENEMY_SPRITE_PART_SIZE = 64;
-
-
-        // Layout Constants
-        private const int DIVIDER_Y = 105;
-        private const int MAX_ENEMIES = 5;
-        private const float PLAYER_INDICATOR_BOB_SPEED = 1.5f;
-        private const float TITLE_INDICATOR_BOB_SPEED = PLAYER_INDICATOR_BOB_SPEED / 2f;
+        public BattleAnimationManager AnimationManager => _animationManager;
 
         public BattleScene()
         {
             _componentStore = ServiceLocator.Get<ComponentStore>();
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
-            _global = ServiceLocator.Get<Global>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
-            _tooltipManager = ServiceLocator.Get<TooltipManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
         {
-            // The battle scene animation can encompass the whole screen.
             return new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
         }
 
         public override void Initialize()
         {
             base.Initialize();
-            var narratorBounds = new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - DIVIDER_Y);
-            _battleNarrator = new BattleNarrator(narratorBounds);
-            _actionMenu = new ActionMenu();
-            _itemMenu = new ItemMenu();
-
-            _itemTargetingBackButton = new Button(Rectangle.Empty, "BACK");
-            _itemTargetingBackButton.OnClick += () => {
-                _uiState = BattleUIState.Default;
-                OnItemMenuRequested(); // Re-opens the item menu
-            };
+            _uiManager = new BattleUIManager();
+            _renderer = new BattleRenderer();
+            _animationManager = new BattleAnimationManager();
+            _inputHandler = new BattleInputHandler();
         }
 
         public override void Enter()
         {
             base.Enter();
 
-            _actionMenu.ResetAnimationState();
-            _uiState = BattleUIState.Default;
-            _subMenuState = BattleSubMenuState.None;
-            _enemyEntityIds.Clear();
-            _activeHealthAnimations.Clear();
-            _activeAlphaAnimations.Clear();
-            _activeHitAnimations.Clear();
-            _activeDamageIndicators.Clear();
-            _narrationQueue.Clear();
-            _currentActor = null;
-            _enemySpritePartOffsets.Clear();
-            _enemyAnimationTimers.Clear();
-            _enemyAnimationIntervals.Clear();
+            // Reset all managers
+            _uiManager.Reset();
+            _renderer.Reset();
+            _animationManager.Reset();
 
+            // Clear state
+            _enemyEntityIds.Clear();
+            _currentActor = null;
             _isBattleOver = false;
             _endOfBattleTimer = 0f;
 
+            // Subscribe to events
+            SubscribeToEvents();
+
+            // Initialize scene-level UI
+            InitializeSettingsButton();
+
+            // Setup combatants and start the battle
+            SetupBattle();
+        }
+
+        public override void Exit()
+        {
+            base.Exit();
+            UnsubscribeFromEvents();
+            CleanupEntities();
+            ServiceLocator.Unregister<BattleManager>(); // Unregister on exit
+        }
+
+        private void SubscribeToEvents()
+        {
             EventBus.Subscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
             EventBus.Subscribe<GameEvents.CombatantDefeated>(OnCombatantDefeated);
             EventBus.Subscribe<GameEvents.BattleItemUsed>(OnBattleItemUsed);
-            _actionMenu.OnMoveSelected += OnPlayerMoveSelected;
-            _actionMenu.OnItemMenuRequested += OnItemMenuRequested;
-            _actionMenu.OnMovesMenuOpened += () => _subMenuState = BattleSubMenuState.ActionMoves;
-            _actionMenu.OnMainMenuOpened += () => _subMenuState = BattleSubMenuState.ActionRoot;
-            _actionMenu.OnFleeRequested += FleeBattle;
-            _itemMenu.OnBack += OnItemMenuBack;
-            _itemMenu.OnItemConfirmed += OnPlayerItemSelected;
-            _itemMenu.OnItemTargetingRequested += OnItemTargetingRequested;
+            EventBus.Subscribe<GameEvents.ActionFailed>(OnActionFailed);
+            EventBus.Subscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
 
+            _uiManager.OnMoveSelected += OnPlayerMoveSelected;
+            _uiManager.OnItemSelected += OnPlayerItemSelected;
+            _uiManager.OnFleeRequested += FleeBattle;
+            _inputHandler.OnMoveTargetSelected += OnPlayerMoveSelected;
+            _inputHandler.OnItemTargetSelected += OnPlayerItemSelected;
+            _inputHandler.OnBackRequested += () => _uiManager.GoBack();
+        }
+
+        private void UnsubscribeFromEvents()
+        {
+            EventBus.Unsubscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
+            EventBus.Unsubscribe<GameEvents.CombatantDefeated>(OnCombatantDefeated);
+            EventBus.Unsubscribe<GameEvents.BattleItemUsed>(OnBattleItemUsed);
+            EventBus.Unsubscribe<GameEvents.ActionFailed>(OnActionFailed);
+            EventBus.Unsubscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
+
+            _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
+            _uiManager.OnItemSelected -= OnPlayerItemSelected;
+            _uiManager.OnFleeRequested -= FleeBattle;
+            _inputHandler.OnMoveTargetSelected -= OnPlayerMoveSelected;
+            _inputHandler.OnItemTargetSelected -= OnPlayerItemSelected;
+            _inputHandler.OnBackRequested -= () => _uiManager.GoBack();
+            if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
+        }
+
+        private void InitializeSettingsButton()
+        {
             if (_settingsButton == null)
             {
                 var settingsIcon = _spriteManager.SettingsIconSprite;
@@ -164,52 +148,34 @@ namespace ProjectVagabond.Scenes
             }
             _settingsButton.OnClick += OpenSettings;
             _settingsButton.ResetAnimationState();
+        }
 
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            _itemTargetingBackButton.Font = secondaryFont;
-            _itemTargetingBackButton.ResetAnimationState();
-
+        private void SetupBattle()
+        {
             var gameState = ServiceLocator.Get<GameState>();
             int playerEntityId = gameState.PlayerEntityId;
             var playerCombatant = BattleCombatantFactory.CreateFromEntity(playerEntityId, "player_1");
             var playerParty = new List<BattleCombatant> { playerCombatant };
 
             var enemyParty = new List<BattleCombatant>();
-            var enemyArchetypesToSpawn = BattleSetup.EnemyArchetypes;
+            var enemyArchetypesToSpawn = BattleSetup.EnemyArchetypes ?? new List<string> { "wanderer" };
 
-            if (enemyArchetypesToSpawn != null && enemyArchetypesToSpawn.Any())
+            int enemyCount = Math.Min(enemyArchetypesToSpawn.Count, 5);
+            for (int i = 0; i < enemyCount; i++)
             {
-                int enemyCount = Math.Min(enemyArchetypesToSpawn.Count, MAX_ENEMIES);
-                for (int i = 0; i < enemyCount; i++)
+                string archetypeId = enemyArchetypesToSpawn[i];
+                int newEnemyId = Spawner.Spawn(archetypeId, new Vector2(-1, -1));
+                if (newEnemyId != -1)
                 {
-                    string archetypeId = enemyArchetypesToSpawn[i];
-                    int newEnemyId = Spawner.Spawn(archetypeId, new Vector2(-1, -1));
-                    if (newEnemyId != -1)
-                    {
-                        var enemyCombatant = BattleCombatantFactory.CreateFromEntity(newEnemyId, $"enemy_{i + 1}");
-                        if (enemyCombatant != null)
-                        {
-                            enemyParty.Add(enemyCombatant);
-                            _enemyEntityIds.Add(newEnemyId);
-                        }
-                    }
-                }
-                BattleSetup.EnemyArchetypes = null; // Clear after use
-            }
-            else
-            {
-                // Fallback to a single default enemy if none are specified
-                int defaultEnemyId = Spawner.Spawn("wanderer", new Vector2(-1, -1));
-                if (defaultEnemyId != -1)
-                {
-                    var enemyCombatant = BattleCombatantFactory.CreateFromEntity(defaultEnemyId, "enemy_1");
+                    var enemyCombatant = BattleCombatantFactory.CreateFromEntity(newEnemyId, $"enemy_{i + 1}");
                     if (enemyCombatant != null)
                     {
                         enemyParty.Add(enemyCombatant);
-                        _enemyEntityIds.Add(defaultEnemyId);
+                        _enemyEntityIds.Add(newEnemyId);
                     }
                 }
             }
+            BattleSetup.EnemyArchetypes = null;
 
             if (playerCombatant == null || !enemyParty.Any())
             {
@@ -219,295 +185,22 @@ namespace ProjectVagabond.Scenes
             }
 
             _battleManager = new BattleManager(playerParty, enemyParty);
+            ServiceLocator.Register<BattleManager>(_battleManager); // Register the instance
             _previousBattlePhase = _battleManager.CurrentPhase;
         }
 
-        public override void Exit()
+        private void CleanupEntities()
         {
-            base.Exit();
-            EventBus.Unsubscribe<GameEvents.BattleActionExecuted>(OnBattleActionExecuted);
-            EventBus.Unsubscribe<GameEvents.CombatantDefeated>(OnCombatantDefeated);
-            EventBus.Unsubscribe<GameEvents.BattleItemUsed>(OnBattleItemUsed);
-            _actionMenu.OnMoveSelected -= OnPlayerMoveSelected;
-            _actionMenu.OnItemMenuRequested -= OnItemMenuRequested;
-            _actionMenu.OnMovesMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionMoves;
-            _actionMenu.OnMainMenuOpened -= () => _subMenuState = BattleSubMenuState.ActionRoot;
-            _actionMenu.OnFleeRequested -= FleeBattle;
-            _itemMenu.OnBack -= OnItemMenuBack;
-            _itemMenu.OnItemConfirmed -= OnPlayerItemSelected;
-            _itemMenu.OnItemTargetingRequested -= OnItemTargetingRequested;
-            if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
-
             if (_enemyEntityIds.Any())
             {
                 var entityManager = ServiceLocator.Get<EntityManager>();
-                var componentStore = ServiceLocator.Get<ComponentStore>();
                 foreach (var id in _enemyEntityIds)
                 {
-                    componentStore.EntityDestroyed(id);
+                    _componentStore.EntityDestroyed(id);
                     entityManager.DestroyEntity(id);
                 }
                 _enemyEntityIds.Clear();
             }
-        }
-
-        private void OpenSettings()
-        {
-            _sceneManager.ShowModal(GameSceneState.Settings);
-        }
-
-        private void FleeBattle()
-        {
-            _isBattleOver = true;
-            _actionMenu.Hide();
-            _itemMenu.Hide();
-
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            string fleeMessage = player != null ? $"{player.Name} escaped." : "Got away safely!";
-            _narrationQueue.Enqueue(() => _battleNarrator.Show(fleeMessage, secondaryFont));
-        }
-
-        private void OnItemMenuRequested()
-        {
-            _subMenuState = BattleSubMenuState.Item;
-            _actionMenu.Hide();
-            _itemMenu.Show(_battleManager.AllCombatants.ToList());
-        }
-
-        private void OnItemTargetingRequested(ConsumableItemData item)
-        {
-            _uiState = BattleUIState.ItemTargeting;
-            _itemForTargeting = item;
-            _itemMenu.Hide();
-            _itemTargetingTextAnimTimer = 0f;
-        }
-
-        private void OnItemMenuBack()
-        {
-            _subMenuState = BattleSubMenuState.ActionRoot;
-            _itemMenu.Hide();
-            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
-            if (player != null)
-            {
-                _actionMenu.Show(player, _battleManager.AllCombatants.ToList());
-            }
-        }
-
-        private void OnBattleActionExecuted(GameEvents.BattleActionExecuted e)
-        {
-            _narrationQueue.Clear();
-            _currentActor = e.Actor;
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-
-            if (e.Actor.HasStatusEffect(StatusEffectType.Stun))
-            {
-                _narrationQueue.Enqueue(() => _battleNarrator.Show($"{e.Actor.Name} is stunned and cannot move!", secondaryFont));
-                return;
-            }
-
-            string actionName = e.UsedItem != null ? e.UsedItem.ItemName : e.ChosenMove.MoveName;
-
-            if (e.ChosenMove.Target == TargetType.None || !e.Targets.Any())
-            {
-                _narrationQueue.Enqueue(() => _battleNarrator.Show($"{e.Actor.Name} uses {actionName}!", secondaryFont));
-                return;
-            }
-
-            // Single narration for the move itself
-            string attackNarration = $"{e.Actor.Name} uses {actionName}!";
-            _narrationQueue.Enqueue(() => _battleNarrator.Show(attackNarration, secondaryFont));
-
-            // A single lambda to start all animations at once
-            _narrationQueue.Enqueue(() =>
-            {
-                for (int i = 0; i < e.Targets.Count; i++)
-                {
-                    var target = e.Targets[i];
-                    var result = e.DamageResults[i];
-
-                    if (result.DamageAmount > 0)
-                    {
-                        if (target.IsPlayerControlled)
-                        {
-                            _core.TriggerFullscreenFlash(_global.Palette_Red, 0.15f);
-                            _core.TriggerFullscreenGlitch(duration: 0.2f);
-                            _hapticsManager.TriggerShake(magnitude: 2.0f, duration: 0.3f);
-                        }
-                        StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
-                        StartHitAnimation(target.CombatantID);
-                    }
-
-                    if (result.WasGraze)
-                    {
-                        Vector2 hudPosition = GetCombatantHudCenterPosition(target);
-                        StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, _global.Palette_LightGray);
-                    }
-                }
-            });
-
-            // Queue up individual narrations for results after the animations have started
-            for (int i = 0; i < e.Targets.Count; i++)
-            {
-                var target = e.Targets[i];
-                var result = e.DamageResults[i];
-
-                if (result.WasCritical)
-                {
-                    _narrationQueue.Enqueue(() => _battleNarrator.Show($"A critical hit on {target.Name}!", secondaryFont));
-                }
-            }
-        }
-
-        private void OnBattleItemUsed(GameEvents.BattleItemUsed e)
-        {
-            _narrationQueue.Clear();
-            _currentActor = e.Actor;
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-
-            string useNarration = $"{e.Actor.Name} uses {e.UsedItem.ItemName}!";
-            _narrationQueue.Enqueue(() => _battleNarrator.Show(useNarration, secondaryFont));
-
-            switch (e.UsedItem.Type)
-            {
-                case ConsumableType.Heal:
-                    if (e.Targets.Any())
-                    {
-                        _narrationQueue.Enqueue(() =>
-                        {
-                            for (int i = 0; i < e.Targets.Count; i++)
-                            {
-                                var target = e.Targets[i];
-                                StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
-                            }
-                        });
-
-                        for (int i = 0; i < e.Targets.Count; i++)
-                        {
-                            var target = e.Targets[i];
-                            var healAmount = e.HealAmounts[i];
-                            _narrationQueue.Enqueue(() => _battleNarrator.Show($"{target.Name} recovered {healAmount} HP!", secondaryFont));
-                        }
-                    }
-                    break;
-
-                case ConsumableType.Attack:
-                    // The BattleManager now fires a BattleActionExecuted event for attack items.
-                    // No special narration is needed here, as that event handler will cover it.
-                    break;
-            }
-        }
-
-        private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
-        {
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            _narrationQueue.Enqueue(() => _battleNarrator.Show($"{e.DefeatedCombatant.Name} was defeated!", secondaryFont));
-            StartAlphaAnimation(e.DefeatedCombatant.CombatantID, e.DefeatedCombatant.VisualAlpha, 0.1f);
-        }
-
-        private void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)
-        {
-            _activeHealthAnimations.Add(new HealthAnimationState
-            {
-                CombatantID = combatantId,
-                StartHP = hpBefore,
-                TargetHP = hpAfter,
-                Timer = 0f
-            });
-        }
-
-        private void StartAlphaAnimation(string combatantId, float alphaBefore, float alphaAfter)
-        {
-            _activeAlphaAnimations.Add(new AlphaAnimationState
-            {
-                CombatantID = combatantId,
-                StartAlpha = alphaBefore,
-                TargetAlpha = alphaAfter,
-                Timer = 0f
-            });
-        }
-
-        private void StartHitAnimation(string combatantId)
-        {
-            _activeHitAnimations.RemoveAll(a => a.CombatantID == combatantId);
-            _activeHitAnimations.Add(new HitAnimationState
-            {
-                CombatantID = combatantId,
-                Timer = 0f
-            });
-        }
-
-        private void StartDamageIndicator(string combatantId, string text, Vector2 startPosition, Color color)
-        {
-            _activeDamageIndicators.Add(new DamageIndicatorState
-            {
-                CombatantID = combatantId,
-                Text = text,
-                StartPosition = startPosition,
-                Color = color,
-                Timer = 0f
-            });
-        }
-
-        private void OnPlayerMoveSelected(MoveData move, BattleCombatant target)
-        {
-            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            if (player != null)
-            {
-                var action = new QueuedAction
-                {
-                    Actor = player,
-                    Target = target,
-                    ChosenMove = move,
-                    Priority = move.Priority,
-                    ActorAgility = player.Stats.Agility
-                };
-                _battleManager.SetPlayerAction(action);
-            }
-        }
-
-        private void OnPlayerItemSelected(ConsumableItemData item)
-        {
-            OnPlayerItemSelected(item, null);
-        }
-
-        private void OnPlayerItemSelected(ConsumableItemData item, BattleCombatant target)
-        {
-            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            if (player == null) return;
-
-            // If a target wasn't passed in (e.g., for non-targeting items), resolve it now.
-            if (target == null)
-            {
-                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
-                switch (item.Target)
-                {
-                    case TargetType.Self:
-                    case TargetType.SingleAll: // Default to self if not targeting
-                        target = player;
-                        break;
-                    case TargetType.Single:
-                        if (enemies.Any()) target = enemies.First();
-                        break;
-                }
-            }
-
-            var action = new QueuedAction
-            {
-                Actor = player,
-                ChosenItem = item,
-                Target = target,
-                Priority = item.Priority,
-                ActorAgility = player.Stats.Agility
-            };
-
-            _battleManager.SetPlayerAction(action);
-
-            // Hide menus and transition to action resolution phase
-            _itemMenu.Hide();
-            _actionMenu.Hide();
-            _subMenuState = BattleSubMenuState.None;
-            _uiState = BattleUIState.Default;
         }
 
         public override void Update(GameTime gameTime)
@@ -521,19 +214,17 @@ namespace ProjectVagabond.Scenes
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
 
-            // --- Handle End of Battle State ---
+            // Update managers
+            _animationManager.Update(gameTime, _battleManager.AllCombatants);
+            _uiManager.Update(gameTime, currentMouseState, currentKeyboardState);
+            _inputHandler.Update(gameTime, _uiManager, _renderer);
+            _renderer.Update(gameTime, _battleManager.AllCombatants);
+            _settingsButton?.Update(currentMouseState);
+
+            // Handle end of battle state
             if (_isBattleOver)
             {
-                _battleNarrator.Update(gameTime);
-                UpdateHealthAnimations(gameTime);
-                UpdateAlphaAnimations(gameTime);
-                UpdateHitAnimations(gameTime);
-                UpdateDamageIndicators(gameTime);
-                _settingsButton?.Update(currentMouseState);
-
-                bool animationsAndNarrationComplete = !_battleNarrator.IsBusy && !_activeHealthAnimations.Any() && !_activeAlphaAnimations.Any() && !_narrationQueue.Any();
-
-                if (animationsAndNarrationComplete)
+                if (!_uiManager.IsBusy && !_animationManager.IsAnimating)
                 {
                     _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                     if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
@@ -541,387 +232,59 @@ namespace ProjectVagabond.Scenes
                         _sceneManager.ChangeScene(GameSceneState.TerminalMap);
                     }
                 }
-                else if (!_battleNarrator.IsBusy && _narrationQueue.Any())
-                {
-                    var nextStep = _narrationQueue.Dequeue();
-                    nextStep.Invoke();
-                }
-
                 base.Update(gameTime);
                 return;
             }
 
-            // --- Normal Battle Update Loop ---
-            var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-
-            _battleNarrator.Update(gameTime);
-            UpdateHealthAnimations(gameTime);
-            UpdateAlphaAnimations(gameTime);
-            UpdateHitAnimations(gameTime);
-            UpdateDamageIndicators(gameTime);
-            UpdateHoverHighlights(gameTime);
-            UpdateEnemyAnimations(gameTime);
-
-            if (_settingsButton != null)
+            // Animation Skip Logic
+            if (_animationManager.IsAnimating && (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed))
             {
-                float scale = _core.FinalScale;
-                int buttonVirtualSize = 16;
-                int buttonScreenSize = (int)(buttonVirtualSize * scale);
-
-                var screenBounds = _core.GraphicsDevice.PresentationParameters.Bounds;
-                const int padding = 5;
-
-                int buttonX = screenBounds.Width - buttonScreenSize - padding;
-                int buttonY = padding;
-
-                _settingsButton.Bounds = new Rectangle(buttonX, buttonY, buttonScreenSize, buttonScreenSize);
-            }
-            _settingsButton?.Update(currentMouseState);
-
-            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            if (player != null)
-            {
-                UpdatePlayerStatusIcons(player, virtualMousePos);
+                _animationManager.SkipAllHealthAnimations(_battleManager.AllCombatants);
+                UIInputManager.ConsumeMouseClick();
             }
 
-
-            // --- Animation Skip Logic ---
-            bool skipRequested = (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed) ||
-                                 (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState)) ||
-                                 (KeyPressed(Keys.Space, currentKeyboardState, _previousKeyboardState));
-
-            if (_activeHealthAnimations.Any() && skipRequested)
-            {
-                SkipAllHealthAnimations();
-                if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed)
-                {
-                    UIInputManager.ConsumeMouseClick();
-                }
-            }
-
-            // Synchronize BattleScene's UI state with the ActionMenu's state
-            if (_actionMenu.CurrentMenuState == ActionMenu.MenuState.Targeting)
-            {
-                _uiState = BattleUIState.Targeting;
-                _moveForTargeting = _actionMenu.SelectedMove;
-            }
-            else if (_uiState != BattleUIState.ItemTargeting)
-            {
-                _uiState = BattleUIState.Default;
-            }
-
-            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
-            {
-                switch (_subMenuState)
-                {
-                    case BattleSubMenuState.ActionRoot:
-                    case BattleSubMenuState.ActionMoves:
-                        _actionMenu.Update(currentMouseState, gameTime);
-                        break;
-                    case BattleSubMenuState.Item:
-                        _itemMenu.Update(currentMouseState, gameTime);
-                        break;
-                }
-
-                if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
-                {
-                    if (_uiState == BattleUIState.ItemTargeting)
-                    {
-                        _uiState = BattleUIState.Default;
-                        OnItemMenuRequested(); // Re-open the item menu
-                    }
-                    else if (_subMenuState == BattleSubMenuState.Item)
-                    {
-                        OnItemMenuBack();
-                    }
-                    else
-                    {
-                        _actionMenu.GoBack();
-                    }
-                }
-            }
-
-            if (_uiState == BattleUIState.Targeting || _uiState == BattleUIState.ItemTargeting)
-            {
-                if (_uiState == BattleUIState.ItemTargeting)
-                {
-                    _itemTargetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    _itemTargetingBackButton.Update(currentMouseState);
-                }
-
-                _hoveredTargetIndex = -1;
-                for (int i = 0; i < _currentTargets.Count; i++)
-                {
-                    if (_currentTargets[i].Bounds.Contains(virtualMousePos))
-                    {
-                        _hoveredTargetIndex = i;
-                        break;
-                    }
-                }
-
-                if (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed)
-                {
-                    if (_hoveredTargetIndex != -1)
-                    {
-                        var selectedTarget = _currentTargets[_hoveredTargetIndex].Combatant;
-                        if (_uiState == BattleUIState.Targeting)
-                        {
-                            OnPlayerMoveSelected(_moveForTargeting, selectedTarget);
-                        }
-                        else // ItemTargeting
-                        {
-                            OnPlayerItemSelected(_itemForTargeting, selectedTarget);
-                        }
-                        UIInputManager.ConsumeMouseClick();
-                    }
-                }
-            }
-
-            bool canProceed = !_battleNarrator.IsBusy && !_activeHealthAnimations.Any() && !_activeAlphaAnimations.Any();
-
-            if (canProceed)
-            {
-                if (_narrationQueue.Any())
-                {
-                    var nextStep = _narrationQueue.Dequeue();
-                    nextStep.Invoke();
-                }
-                else
-                {
-                    _battleManager.CanAdvance = true;
-                }
-            }
-            else
-            {
-                _battleManager.CanAdvance = false;
-            }
-
+            // Battle Manager Advancement Logic
+            _battleManager.CanAdvance = !_uiManager.IsBusy && !_animationManager.IsAnimating;
             _battleManager.Update();
 
+            // Handle Phase Changes
             var currentPhase = _battleManager.CurrentPhase;
             if (currentPhase != _previousBattlePhase)
             {
-                if (currentPhase == BattleManager.BattlePhase.EndOfTurn || currentPhase == BattleManager.BattlePhase.BattleOver)
-                {
-                    _currentActor = null;
-                }
-
-                if (currentPhase == BattleManager.BattlePhase.ActionSelection)
-                {
-                    _subMenuState = BattleSubMenuState.ActionRoot;
-                    if (player != null && !player.IsDefeated)
-                    {
-                        _actionMenu.Show(player, _battleManager.AllCombatants.ToList());
-                    }
-                }
-                else
-                {
-                    _subMenuState = BattleSubMenuState.None;
-                    _actionMenu.Hide();
-                    _actionMenu.SetState(ActionMenu.MenuState.Main);
-                    _itemMenu.Hide();
-                }
+                HandlePhaseChange(currentPhase);
                 _previousBattlePhase = currentPhase;
             }
 
+            // Check for battle over condition
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver && !_isBattleOver)
             {
                 _isBattleOver = true;
-                _actionMenu.Hide();
-                _itemMenu.Hide();
-
-                var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-                if (player != null && player.IsDefeated)
-                {
-                    _narrationQueue.Enqueue(() => _battleNarrator.Show("Player Loses!", secondaryFont));
-                }
-                else
-                {
-                    _narrationQueue.Enqueue(() => _battleNarrator.Show("Player Wins!", secondaryFont));
-                }
+                _uiManager.HideAllMenus();
+                var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+                _uiManager.ShowNarration(player != null && player.IsDefeated ? "Player Loses!" : "Player Wins!");
             }
 
             base.Update(gameTime);
         }
 
-        private void UpdateEnemyAnimations(GameTime gameTime)
+        private void HandlePhaseChange(BattleManager.BattlePhase newPhase)
         {
-            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            var combatantIds = _enemyAnimationTimers.Keys.ToList();
-
-            foreach (var id in combatantIds)
+            if (newPhase == BattleManager.BattlePhase.EndOfTurn || newPhase == BattleManager.BattlePhase.BattleOver)
             {
-                var timers = _enemyAnimationTimers[id];
-                var intervals = _enemyAnimationIntervals[id];
-                var offsets = _enemySpritePartOffsets[id];
-
-                for (int i = 1; i < offsets.Length; i++) // Start at 1 to keep base static
-                {
-                    timers[i] += deltaTime;
-                    if (timers[i] >= intervals[i])
-                    {
-                        timers[i] = 0f;
-                        // Generate a new random interval for the next update
-                        intervals[i] = (float)(_random.NextDouble() * 5);
-                        // Update the offset
-                        offsets[i] = new Vector2(_random.Next(-1, 1), _random.Next(-1, 1));
-                    }
-                }
-            }
-        }
-
-        private void UpdatePlayerStatusIcons(BattleCombatant player, Vector2 virtualMousePos)
-        {
-            _playerStatusIcons.Clear();
-            if (!player.ActiveStatusEffects.Any()) return;
-
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            const int playerHudY = DIVIDER_Y - 10;
-            const int playerHudPaddingX = 10;
-            string hpText = $"HP: {((int)Math.Round(player.VisualHP))}/{player.Stats.MaxHP}";
-            Vector2 hpTextSize = secondaryFont.MeasureString(hpText);
-            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
-
-            const int iconSize = 5;
-            const int iconPadding = 2;
-            int currentX = (int)hpStartX - iconPadding - iconSize;
-
-            foreach (var effect in player.ActiveStatusEffects)
-            {
-                int iconY = (int)(playerHudY + (secondaryFont.LineHeight - iconSize) / 2f) + 1;
-                var iconBounds = new Rectangle(currentX, iconY, iconSize, iconSize);
-                _playerStatusIcons.Add(new StatusIconInfo { Effect = effect, Bounds = iconBounds });
-
-                if (iconBounds.Contains(virtualMousePos))
-                {
-                    _tooltipManager.RequestTooltip(effect, effect.GetDisplayName(), virtualMousePos);
-                }
-
-                currentX -= (iconSize + iconPadding);
-            }
-        }
-
-        private void SkipAllHealthAnimations()
-        {
-            foreach (var anim in _activeHealthAnimations)
-            {
-                var combatant = _battleManager.AllCombatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
-                if (combatant != null)
-                {
-                    combatant.VisualHP = anim.TargetHP;
-                }
-            }
-            _activeHealthAnimations.Clear();
-        }
-
-        private void UpdateHealthAnimations(GameTime gameTime)
-        {
-            for (int i = _activeHealthAnimations.Count - 1; i >= 0; i--)
-            {
-                var anim = _activeHealthAnimations[i];
-                var combatant = _battleManager.AllCombatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
-                if (combatant == null)
-                {
-                    _activeHealthAnimations.RemoveAt(i);
-                    continue;
-                }
-
-                anim.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (anim.Timer >= HealthAnimationState.Duration)
-                {
-                    combatant.VisualHP = anim.TargetHP;
-                    _activeHealthAnimations.RemoveAt(i);
-                }
-                else
-                {
-                    float progress = anim.Timer / HealthAnimationState.Duration;
-                    combatant.VisualHP = MathHelper.Lerp(anim.StartHP, anim.TargetHP, Easing.EaseOutQuart(progress));
-                }
-            }
-        }
-
-        private void UpdateAlphaAnimations(GameTime gameTime)
-        {
-            for (int i = _activeAlphaAnimations.Count - 1; i >= 0; i--)
-            {
-                var anim = _activeAlphaAnimations[i];
-                var combatant = _battleManager.AllCombatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
-                if (combatant == null)
-                {
-                    _activeAlphaAnimations.RemoveAt(i);
-                    continue;
-                }
-
-                anim.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (anim.Timer >= AlphaAnimationState.Duration)
-                {
-                    combatant.VisualAlpha = anim.TargetAlpha;
-                    _activeAlphaAnimations.RemoveAt(i);
-                }
-                else
-                {
-                    float progress = anim.Timer / AlphaAnimationState.Duration;
-                    combatant.VisualAlpha = MathHelper.Lerp(anim.StartAlpha, anim.TargetAlpha, Easing.EaseOutQuad(progress));
-                }
-            }
-        }
-
-        private void UpdateHitAnimations(GameTime gameTime)
-        {
-            for (int i = _activeHitAnimations.Count - 1; i >= 0; i--)
-            {
-                var anim = _activeHitAnimations[i];
-                anim.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (anim.Timer >= HitAnimationState.Duration)
-                {
-                    _activeHitAnimations.RemoveAt(i);
-                }
-            }
-        }
-
-        private void UpdateDamageIndicators(GameTime gameTime)
-        {
-            for (int i = _activeDamageIndicators.Count - 1; i >= 0; i--)
-            {
-                var indicator = _activeDamageIndicators[i];
-                indicator.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (indicator.Timer >= DamageIndicatorState.DURATION)
-                {
-                    _activeDamageIndicators.RemoveAt(i);
-                }
-            }
-        }
-
-        private void UpdateHoverHighlights(GameTime gameTime)
-        {
-            var hoveredMove = _actionMenu.HoveredMove;
-
-            if (hoveredMove != _hoverHighlightState.CurrentMove)
-            {
-                _hoverHighlightState.CurrentMove = hoveredMove;
-                _hoverHighlightState.Targets.Clear();
-                _hoverHighlightState.Timer = 0f;
-
-                if (hoveredMove != null)
-                {
-                    var player = _battleManager.AllCombatants.First(c => c.IsPlayerControlled);
-                    var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
-                    var all = _battleManager.AllCombatants.Where(c => !c.IsDefeated).ToList();
-
-                    switch (hoveredMove.Target)
-                    {
-                        case TargetType.Single: _hoverHighlightState.Targets.AddRange(enemies); break;
-                        case TargetType.Every: _hoverHighlightState.Targets.AddRange(enemies); break;
-                        case TargetType.Self: _hoverHighlightState.Targets.Add(player); break;
-                        case TargetType.SingleAll: _hoverHighlightState.Targets.AddRange(all); break;
-                        case TargetType.EveryAll: _hoverHighlightState.Targets.AddRange(all); break;
-                    }
-                }
+                _currentActor = null;
             }
 
-            if (_hoverHighlightState.CurrentMove != null && _hoverHighlightState.Targets.Any())
+            if (newPhase == BattleManager.BattlePhase.ActionSelection)
             {
-                _hoverHighlightState.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+                if (player != null)
+                {
+                    _uiManager.ShowActionMenu(player, _battleManager.AllCombatants.ToList());
+                }
+            }
+            else
+            {
+                _uiManager.HideAllMenus();
             }
         }
 
@@ -935,630 +298,158 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var pixel = ServiceLocator.Get<Texture2D>();
-            var global = ServiceLocator.Get<Global>();
-
-            _currentTargets.Clear();
-            var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled).ToList();
-            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-
-            TargetType? currentTargetType = null;
-            if (_uiState == BattleUIState.Targeting && _moveForTargeting != null)
-            {
-                currentTargetType = _moveForTargeting.Target;
-            }
-            else if (_uiState == BattleUIState.ItemTargeting && _itemForTargeting != null)
-            {
-                currentTargetType = _itemForTargeting.Target;
-            }
-
-            // --- Draw Enemy HUDs ---
-            if (enemies.Any())
-            {
-                const int enemyAreaPadding = 20;
-                const int enemyHudY = 80;
-                int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
-                int slotWidth = availableWidth / enemies.Count;
-
-                for (int i = 0; i < enemies.Count; i++)
-                {
-                    var enemy = enemies[i];
-                    var centerPosition = new Vector2(enemyAreaPadding + (i * slotWidth) + (slotWidth / 2), enemyHudY);
-                    DrawCombatantHud(spriteBatch, font, secondaryFont, enemy, centerPosition);
-
-                    if (!enemy.IsDefeated && currentTargetType.HasValue)
-                    {
-                        bool isTarget = currentTargetType == TargetType.Single || currentTargetType == TargetType.SingleAll;
-                        if (isTarget)
-                        {
-                            _currentTargets.Add(new TargetInfo
-                            {
-                                Combatant = enemy,
-                                Bounds = GetCombatantInteractionBounds(enemy, centerPosition, font, secondaryFont)
-                            });
-                        }
-                    }
-                }
-            }
-
-            // --- Draw Player HUD ---
-            if (player != null)
-            {
-                const int playerHudY = DIVIDER_Y - 10;
-                const int playerHudPaddingX = 10;
-                float yOffset = 0;
-
-                if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
-                {
-                    yOffset = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * PLAYER_INDICATOR_BOB_SPEED * MathF.PI) > 0) ? -1f : 0f;
-                }
-
-                // Player Name on the left
-                spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7 + yOffset), Color.White);
-
-                // Player HP on the right
-                string hpLabel = "HP: ";
-                string currentHp = ((int)Math.Round(player.VisualHP)).ToString();
-                string separator = "/";
-                string maxHp = player.Stats.MaxHP.ToString();
-                string fullHpText = hpLabel + currentHp + separator + maxHp;
-                Vector2 hpTextSize = secondaryFont.MeasureString(fullHpText);
-
-                float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
-                var playerHitAnim = _activeHitAnimations.FirstOrDefault(a => a.CombatantID == player.CombatantID);
-                DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY + yOffset), 1.0f, playerHitAnim);
-
-                DrawPlayerStatusIcons(spriteBatch);
-
-                if (!player.IsDefeated && currentTargetType.HasValue)
-                {
-                    if (currentTargetType == TargetType.SingleAll)
-                    {
-                        _currentTargets.Add(new TargetInfo
-                        {
-                            Combatant = player,
-                            Bounds = GetPlayerInteractionBounds(font, secondaryFont)
-                        });
-                    }
-                }
-            }
-
-            // --- Draw UI Title ---
-            if (_battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection)
-            {
-                string title = "";
-                if (_subMenuState == BattleSubMenuState.ActionMoves) title = "ACTIONS";
-                else if (_subMenuState == BattleSubMenuState.Item) title = "ITEMS";
-
-                if (!string.IsNullOrEmpty(title))
-                {
-                    float titleBobOffset = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * TITLE_INDICATOR_BOB_SPEED * MathF.PI) > 0) ? -1f : 0f;
-                    var titleSize = secondaryFont.MeasureString(title);
-                    var titleY = DIVIDER_Y + 3;
-                    var titlePos = new Vector2((Global.VIRTUAL_WIDTH - titleSize.Width) / 2, titleY + titleBobOffset);
-                    spriteBatch.DrawStringSnapped(secondaryFont, title, titlePos, _global.Palette_LightGray);
-                }
-            }
-
-            DrawHoverHighlights(spriteBatch, font, secondaryFont);
-            DrawTurnIndicator(spriteBatch, font, gameTime);
-            DrawDamageIndicators(spriteBatch, secondaryFont);
-
-            // --- Draw Targeting UI ---
-            if (_uiState == BattleUIState.ItemTargeting)
-            {
-                const int backButtonPadding = 8;
-                const int backButtonHeight = 13;
-                const int backButtonTopMargin = 1;
-                const int dividerY = 120;
-                const int horizontalPadding = 10;
-                const int verticalPadding = 2;
-                int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
-                int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
-                int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
-                int gridStartY = dividerY + verticalPadding + 4;
-
-                string text = "CHOOSE A TARGET";
-                Vector2 textSize = font.MeasureString(text);
-
-                float animX = MathF.Sin(_itemTargetingTextAnimTimer * 4f) * 1f;
-                float animY = MathF.Sin(_itemTargetingTextAnimTimer * 8f) * 1f;
-                Vector2 animOffset = new Vector2(animX, animY);
-
-                Vector2 textPos = new Vector2(
-                    horizontalPadding + (availableWidth - textSize.X) / 2,
-                    gridStartY + (gridAreaHeight - textSize.Y) / 2
-                ) + animOffset;
-                spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
-
-                int backButtonWidth = (int)(_itemTargetingBackButton.Font ?? font).MeasureString(_itemTargetingBackButton.Text).Width + backButtonPadding * 2;
-                _itemTargetingBackButton.Bounds = new Rectangle(
-                    horizontalPadding + (availableWidth - backButtonWidth) / 2,
-                    gridStartY + gridAreaHeight + backButtonTopMargin,
-                    backButtonWidth,
-                    backButtonHeight
-                );
-                _itemTargetingBackButton.Draw(spriteBatch, font, gameTime, transform);
-            }
-
-            if (_uiState == BattleUIState.Targeting || _uiState == BattleUIState.ItemTargeting)
-            {
-                for (int i = 0; i < _currentTargets.Count; i++)
-                {
-                    Color boxColor = i == _hoveredTargetIndex ? Color.Red : Color.Yellow;
-                    var bounds = _currentTargets[i].Bounds;
-                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Top), new Vector2(bounds.Right, bounds.Top), boxColor);
-                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Bottom), new Vector2(bounds.Right, bounds.Bottom), boxColor);
-                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Top), new Vector2(bounds.Left, bounds.Bottom), boxColor);
-                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Right, bounds.Top), new Vector2(bounds.Right, bounds.Bottom), boxColor);
-                }
-            }
-
-            spriteBatch.DrawSnapped(pixel, new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, 1), Color.White);
-
-            if (_subMenuState == BattleSubMenuState.Item)
-            {
-                _itemMenu.Draw(spriteBatch, font, gameTime, transform);
-            }
-            else
-            {
-                _actionMenu.Draw(spriteBatch, font, gameTime, transform);
-            }
-            _battleNarrator.Draw(spriteBatch, secondaryFont, gameTime);
-
-            if (global.ShowDebugOverlays && _battleManager != null)
-            {
-                var playerCombatant = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-                if (playerCombatant?.DeckManager != null)
-                {
-                    DrawDebugDeckInfo(spriteBatch, secondaryFont, playerCombatant.DeckManager);
-                }
-            }
+            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, _currentActor, _uiManager, _inputHandler, _animationManager);
+            _uiManager.Draw(spriteBatch, font, gameTime, transform);
+            _animationManager.DrawDamageIndicators(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
         }
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-
             if (_settingsButton != null)
             {
+                float scale = _core.FinalScale;
+                int buttonVirtualSize = 16;
+                int buttonScreenSize = (int)(buttonVirtualSize * scale);
+                var screenBounds = _core.GraphicsDevice.PresentationParameters.Bounds;
+                const int padding = 5;
+                int buttonX = screenBounds.Width - buttonScreenSize - padding;
+                int buttonY = padding;
+                _settingsButton.Bounds = new Rectangle(buttonX, buttonY, buttonScreenSize, buttonScreenSize);
                 _settingsButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
             }
-
             spriteBatch.End();
         }
 
         public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            _tooltipManager.Draw(spriteBatch, font);
+            ServiceLocator.Get<TooltipManager>().Draw(spriteBatch, font);
         }
 
-        private void DrawDebugDeckInfo(SpriteBatch spriteBatch, BitmapFont font, CombatDeckManager deckManager)
-        {
-            var global = ServiceLocator.Get<Global>();
-            float yOffset = 5f;
-            float xOffset = 5f;
-            var drawPile = deckManager.DrawPile.ToList();
-            var discardPile = deckManager.DiscardPile.ToList();
-
-            // Draw Draw Pile (Queue)
-            string drawHeader = $"DRAW PILE ({drawPile.Count})";
-            spriteBatch.DrawStringSnapped(font, drawHeader, new Vector2(xOffset, yOffset), global.Palette_Yellow);
-            yOffset += font.LineHeight;
-
-            if (!drawPile.Any())
-            {
-                spriteBatch.DrawStringSnapped(font, "-- EMPTY --", new Vector2(xOffset, yOffset), global.Palette_Gray);
-            }
-            else
-            {
-                for (int i = 0; i < Math.Min(drawPile.Count, 10); i++)
-                {
-                    var move = drawPile[i];
-                    Color color = i == 0 ? global.Palette_Red : global.Palette_BrightWhite;
-                    spriteBatch.DrawStringSnapped(font, move.MoveName, new Vector2(xOffset, yOffset), color);
-                    yOffset += font.LineHeight;
-                }
-            }
-
-            // Draw Discard Pile
-            yOffset = 5f;
-            string discardHeader = $"DISCARD ({discardPile.Count})";
-            var headerSize = font.MeasureString(discardHeader);
-            xOffset = Global.VIRTUAL_WIDTH - headerSize.Width - 5f;
-
-            spriteBatch.DrawStringSnapped(font, discardHeader, new Vector2(xOffset, yOffset), global.Palette_Yellow);
-            yOffset += font.LineHeight;
-
-            foreach (var move in discardPile)
-            {
-                var moveNameSize = font.MeasureString(move.MoveName);
-                xOffset = Global.VIRTUAL_WIDTH - moveNameSize.Width - 5f;
-                spriteBatch.DrawStringSnapped(font, move.MoveName, new Vector2(xOffset, yOffset), global.Palette_BrightWhite);
-                yOffset += font.LineHeight;
-            }
-        }
-
-        private Rectangle GetCombatantInteractionBounds(BattleCombatant combatant, Vector2 centerPosition, BitmapFont nameFont, BitmapFont statsFont)
-        {
-            const int spriteSize = 64;
-            float spriteTop = centerPosition.Y - spriteSize - 10;
-
-            Vector2 nameSize = nameFont.MeasureString(combatant.Name);
-            float nameY = centerPosition.Y - 8;
-
-            string hpLabel = "HP: ";
-            string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
-            string separator = "/";
-            string maxHp = combatant.Stats.MaxHP.ToString();
-            string fullHpText = hpLabel + currentHp + separator + maxHp;
-            Vector2 hpSize = statsFont.MeasureString(fullHpText);
-            float hpY = centerPosition.Y + 2;
-            float hpBottom = hpY + statsFont.LineHeight;
-
-            float top = spriteTop;
-            float bottom = hpBottom;
-            float maxWidth = Math.Max(spriteSize, Math.Max(nameSize.X, hpSize.X));
-
-            float left = centerPosition.X - maxWidth / 2;
-            float width = maxWidth;
-            float height = bottom - top;
-
-            const int padding = 2;
-            return new Rectangle(
-                (int)left - padding,
-                (int)top - padding,
-                (int)width + padding * 2,
-                (int)height + padding * 2
-            );
-        }
-
-        private Rectangle GetPlayerInteractionBounds(BitmapFont nameFont, BitmapFont statsFont)
+        #region Event Handlers
+        private void OnPlayerMoveSelected(MoveData move, BattleCombatant target)
         {
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-            if (player == null) return Rectangle.Empty;
-
-            const int playerHudY = DIVIDER_Y - 10;
-            const int playerHudPaddingX = 10;
-
-            Vector2 nameSize = nameFont.MeasureString(player.Name);
-            Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - nameFont.LineHeight + 7);
-
-            string hpLabel = "HP: ";
-            string currentHp = ((int)Math.Round(player.VisualHP)).ToString();
-            string separator = "/";
-            string maxHp = player.Stats.MaxHP.ToString();
-            string fullHpText = hpLabel + currentHp + separator + maxHp;
-            Vector2 hpTextSize = statsFont.MeasureString(fullHpText);
-            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
-
-            int left = (int)namePos.X;
-            int right = (int)(hpStartX + hpTextSize.X);
-            int top = (int)Math.Min(namePos.Y, playerHudY);
-            int bottom = (int)Math.Max(namePos.Y + nameSize.Y, playerHudY + hpTextSize.Y);
-
-            const int padding = 2;
-            return new Rectangle(left - padding, top - padding, (right - left) + padding * 2, (bottom - top) + padding * 2);
+            if (player != null)
+            {
+                var action = new QueuedAction { Actor = player, Target = target, ChosenMove = move, Priority = move.Priority, ActorAgility = player.Stats.Agility };
+                _battleManager.SetPlayerAction(action);
+            }
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 centerPosition)
+        private void OnPlayerItemSelected(ConsumableItemData item, BattleCombatant target)
         {
-            var global = ServiceLocator.Get<Global>();
-            var pixel = ServiceLocator.Get<Texture2D>();
+            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+            if (player == null) return;
 
-            var spriteRect = new Rectangle(
-                (int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2),
-                (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10),
-                ENEMY_SPRITE_PART_SIZE,
-                ENEMY_SPRITE_PART_SIZE
-            );
-
-            Color tintColor = Color.White * combatant.VisualAlpha;
-
-            Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
-            if (enemySprite != null)
+            if (target == null)
             {
-                int numParts = enemySprite.Width / ENEMY_SPRITE_PART_SIZE;
-                // Lazily initialize animation state for this enemy if it doesn't exist
-                if (!_enemySpritePartOffsets.ContainsKey(combatant.CombatantID) || _enemySpritePartOffsets[combatant.CombatantID].Length != numParts)
+                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
+                switch (item.Target)
                 {
-                    _enemySpritePartOffsets[combatant.CombatantID] = new Vector2[numParts];
-                    _enemyAnimationTimers[combatant.CombatantID] = new float[numParts];
-                    var intervals = new float[numParts];
-                    for (int i = 0; i < numParts; i++)
-                    {
-                        intervals[i] = (float)(_random.NextDouble() * (0.5f - 0.1f) + 0.1f);
-                    }
-                    _enemyAnimationIntervals[combatant.CombatantID] = intervals;
-                }
-
-                if (_enemySpritePartOffsets.TryGetValue(combatant.CombatantID, out var offsets))
-                {
-                    for (int i = 0; i < numParts; i++)
-                    {
-                        var sourceRect = new Rectangle(i * ENEMY_SPRITE_PART_SIZE, 0, ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
-                        var partOffset = offsets[i];
-                        var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y);
-                        var drawRect = new Rectangle((int)drawPosition.X, (int)drawPosition.Y, spriteRect.Width, spriteRect.Height);
-                        spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
-                    }
+                    case TargetType.Self:
+                    case TargetType.SingleAll: target = player; break;
+                    case TargetType.Single: if (enemies.Any()) target = enemies.First(); break;
                 }
             }
-            else
-            {
-                spriteBatch.DrawSnapped(pixel, spriteRect, global.Palette_Pink * combatant.VisualAlpha);
-            }
 
-            Vector2 nameSize = nameFont.MeasureString(combatant.Name);
-            Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 8);
-            spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, tintColor);
-
-            string hpLabel = "HP: ";
-            string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
-            string separator = "/";
-            string maxHp = combatant.Stats.MaxHP.ToString();
-            string fullHpText = hpLabel + currentHp + separator + maxHp;
-            Vector2 hpSize = statsFont.MeasureString(fullHpText);
-            Vector2 hpPos = new Vector2(centerPosition.X - hpSize.X / 2, centerPosition.Y + 2);
-            var hitAnim = _activeHitAnimations.FirstOrDefault(a => a.CombatantID == combatant.CombatantID);
-            DrawHpLine(spriteBatch, statsFont, combatant, hpPos, combatant.VisualAlpha, hitAnim);
+            var action = new QueuedAction { Actor = player, ChosenItem = item, Target = target, Priority = item.Priority, ActorAgility = player.Stats.Agility };
+            _battleManager.SetPlayerAction(action);
+            _uiManager.HideAllMenus();
         }
 
-        private void DrawHpLine(SpriteBatch spriteBatch, BitmapFont statsFont, BattleCombatant combatant, Vector2 position, float alpha = 1.0f, HitAnimationState hitAnim = null)
+        private void OnBattleActionExecuted(GameEvents.BattleActionExecuted e)
         {
-            var global = ServiceLocator.Get<Global>();
-            Color labelColor = global.Palette_LightGray * alpha;
-            Color numberColor = Color.White * alpha;
-            Vector2 drawPosition = position;
+            _currentActor = e.Actor;
+            string actionName = e.UsedItem != null ? e.UsedItem.ItemName : e.ChosenMove.MoveName;
 
-            if (hitAnim != null)
+            if (e.ChosenMove.Target == TargetType.None || !e.Targets.Any())
             {
-                float progress = hitAnim.Timer / HitAnimationState.Duration;
-                float easeOutProgress = Easing.EaseOutCubic(progress);
-
-                // Shake effect
-                float shakeMagnitude = 4.0f * (1.0f - easeOutProgress);
-                drawPosition.X += (float)(_random.NextDouble() * 2 - 1) * shakeMagnitude;
-                drawPosition.Y += (float)(_random.NextDouble() * 2 - 1) * shakeMagnitude;
-
-                // Color flash effect
-                Color flashColor = global.Palette_Red;
-                labelColor = Color.Lerp(flashColor, global.Palette_LightGray, easeOutProgress) * alpha;
-                numberColor = Color.Lerp(flashColor, Color.White, easeOutProgress) * alpha;
+                _uiManager.ShowNarration($"{e.Actor.Name} uses {actionName}!");
+                return;
             }
 
-            string hpLabel = "HP: ";
-            string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
-            string separator = "/";
-            string maxHp = combatant.Stats.MaxHP.ToString();
+            _uiManager.ShowNarration($"{e.Actor.Name} uses {actionName}!");
 
-            spriteBatch.DrawStringSnapped(statsFont, hpLabel, drawPosition, labelColor);
-            float currentX = drawPosition.X + statsFont.MeasureString(hpLabel).Width;
-
-            spriteBatch.DrawStringSnapped(statsFont, currentHp, new Vector2(currentX, drawPosition.Y), numberColor);
-            currentX += statsFont.MeasureString(currentHp).Width;
-
-            spriteBatch.DrawStringSnapped(statsFont, separator, new Vector2(currentX, drawPosition.Y), labelColor);
-            currentX += statsFont.MeasureString(separator).Width;
-
-            spriteBatch.DrawStringSnapped(statsFont, maxHp, new Vector2(currentX, drawPosition.Y), numberColor);
-        }
-
-        private void DrawHoverHighlights(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont)
-        {
-            if (_hoverHighlightState.CurrentMove == null || !_hoverHighlightState.Targets.Any()) return;
-
-            var arrowRects = _spriteManager.ArrowIconSourceRects;
-            if (arrowRects == null) return;
-
-            var move = _hoverHighlightState.CurrentMove;
-            var state = _hoverHighlightState;
-            var targets = state.Targets;
-
-            float cycleDuration = HoverHighlightState.MultiTargetFlashOnDuration + HoverHighlightState.MultiTargetFlashOffDuration;
-            bool areAllFlashing = (state.Timer % cycleDuration) < HoverHighlightState.MultiTargetFlashOnDuration;
-            Color flashColor = areAllFlashing ? _global.Palette_Red : Color.White;
-
-            switch (move.Target)
+            for (int i = 0; i < e.Targets.Count; i++)
             {
-                case TargetType.Single:
-                case TargetType.SingleAll:
-                case TargetType.Self:
-                    foreach (var target in targets)
-                    {
-                        Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
-                        DrawTargetIndicator(spriteBatch, font, secondaryFont, target, sourceRect, flashColor);
-                    }
-                    break;
+                var target = e.Targets[i];
+                var result = e.DamageResults[i];
 
-                case TargetType.Every:
-                case TargetType.EveryAll:
-                    Rectangle starRect = arrowRects[8]; // Center star icon
-                    foreach (var target in targets)
-                    {
-                        DrawTargetIndicator(spriteBatch, font, secondaryFont, target, starRect, flashColor);
-                    }
-                    break;
-            }
-        }
-
-        private void DrawTargetIndicator(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant combatant, Rectangle sourceRect, Color color)
-        {
-            if (color.A == 0) return;
-
-            var arrowSheet = _spriteManager.ArrowIconSpriteSheet;
-            if (arrowSheet == null) return;
-
-            Vector2 arrowPos;
-
-            if (combatant.IsPlayerControlled)
-            {
-                var playerBounds = GetPlayerInteractionBounds(font, secondaryFont);
-                arrowPos = new Vector2(
-                    playerBounds.Center.X - sourceRect.Width / 2f,
-                    playerBounds.Bottom + 2
-                );
-            }
-            else
-            {
-                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled).ToList();
-                int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
-                if (enemyIndex == -1) return;
-
-                const int enemyAreaPadding = 20;
-                const int enemyHudY = 80;
-                int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
-                int slotWidth = availableWidth / enemies.Count;
-                var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
-
-                const int spriteSize = 64;
-                float spriteTop = centerPosition.Y - spriteSize - 10;
-
-                arrowPos = new Vector2(
-                    centerPosition.X - sourceRect.Width / 2f,
-                    spriteTop - sourceRect.Height - 1
-                );
-            }
-
-            // Apply vertical offset if the arrow is red (flashing)
-            if (color == _global.Palette_Red)
-            {
-                arrowPos.Y += 1;
-            }
-
-            spriteBatch.DrawSnapped(arrowSheet, arrowPos, sourceRect, color);
-        }
-
-        private void DrawTurnIndicator(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
-        {
-            if (_currentActor == null || _currentActor.IsDefeated) return;
-
-            var arrowSheet = _spriteManager.ArrowIconSpriteSheet;
-            var arrowRects = _spriteManager.ArrowIconSourceRects;
-            if (arrowSheet == null || arrowRects == null) return;
-
-            float bobOffset = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) > 0) ? 1f : 0f;
-
-            if (_currentActor.IsPlayerControlled)
-            {
-                var player = _currentActor;
-                var arrowRect = arrowRects[4]; // Right arrow
-
-                const int playerHudY = DIVIDER_Y - 10;
-                const int playerHudPaddingX = 10;
-
-                Vector2 nameSize = font.MeasureString(player.Name);
-                Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7);
-
-                var arrowPos = new Vector2(
-                    namePos.X - arrowRect.Width - 4 + bobOffset,
-                    namePos.Y + (nameSize.Y - arrowRect.Height) / 2 - 1
-                );
-
-                spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
-            }
-            else // Enemy turn
-            {
-                var arrowRect = arrowRects[6]; // Down arrow
-                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled).ToList();
-                int enemyIndex = enemies.FindIndex(e => e.CombatantID == _currentActor.CombatantID);
-                if (enemyIndex == -1) return;
-
-                const int enemyAreaPadding = 20;
-                const int enemyHudY = 80;
-                int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
-                int slotWidth = availableWidth / enemies.Count;
-                var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
-
-                const int spriteSize = 64;
-                var spriteRect = new Rectangle(
-                    (int)(centerPosition.X - spriteSize / 2),
-                    (int)(centerPosition.Y - spriteSize - 10),
-                    spriteSize,
-                    spriteSize
-                );
-
-                var arrowPos = new Vector2(
-                    spriteRect.Center.X - arrowRect.Width / 2,
-                    spriteRect.Top - arrowRect.Height - 1 + bobOffset
-                );
-
-                spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
-            }
-        }
-
-        private void DrawDamageIndicators(SpriteBatch spriteBatch, BitmapFont font)
-        {
-            foreach (var indicator in _activeDamageIndicators)
-            {
-                float progress = indicator.Timer / DamageIndicatorState.DURATION;
-
-                float yOffset = -Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
-                Vector2 position = indicator.StartPosition + new Vector2(0, yOffset);
-
-                float alpha = 1.0f;
-                if (progress > 0.5f)
+                if (result.DamageAmount > 0)
                 {
-                    float fadeProgress = (progress - 0.5f) * 2f;
-                    alpha = 1.0f - Easing.EaseInQuad(fadeProgress);
+                    if (target.IsPlayerControlled)
+                    {
+                        _core.TriggerFullscreenFlash(ServiceLocator.Get<Global>().Palette_Red, 0.15f);
+                        _core.TriggerFullscreenGlitch(duration: 0.2f);
+                        _hapticsManager.TriggerShake(magnitude: 2.0f, duration: 0.3f);
+                    }
+                    _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
+                    _animationManager.StartHitAnimation(target.CombatantID);
                 }
 
-                Color drawColor = indicator.Color;
-                if (indicator.Text == "GRAZE")
+                if (result.WasGraze)
                 {
-                    const float flashInterval = 0.2f;
-                    bool useYellow = (int)(indicator.Timer / flashInterval) % 2 == 0;
-                    drawColor = useYellow ? _global.Palette_Yellow : _global.Palette_LightBlue;
+                    Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
+                    _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, ServiceLocator.Get<Global>().Palette_LightGray);
                 }
 
-                Vector2 textSize = font.MeasureString(indicator.Text);
-                Vector2 textPosition = position - new Vector2(textSize.X / 2f, textSize.Y);
-
-                spriteBatch.DrawStringSnapped(font, indicator.Text, textPosition, drawColor * alpha);
+                if (result.WasCritical)
+                {
+                    _uiManager.ShowNarration($"A critical hit on {target.Name}!");
+                }
             }
         }
 
-        private void DrawPlayerStatusIcons(SpriteBatch spriteBatch)
+        private void OnBattleItemUsed(GameEvents.BattleItemUsed e)
         {
-            foreach (var iconInfo in _playerStatusIcons)
+            _currentActor = e.Actor;
+            _uiManager.ShowNarration($"{e.Actor.Name} uses {e.UsedItem.ItemName}!");
+
+            if (e.UsedItem.Type == ConsumableType.Heal && e.Targets.Any())
             {
-                var iconTexture = _spriteManager.GetStatusEffectIcon(iconInfo.Effect.EffectType);
-                spriteBatch.DrawSnapped(iconTexture, iconInfo.Bounds, Color.White);
+                for (int i = 0; i < e.Targets.Count; i++)
+                {
+                    var target = e.Targets[i];
+                    _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
+                    _uiManager.ShowNarration($"{target.Name} recovered {e.HealAmounts[i]} HP!");
+                }
             }
         }
 
-        private Vector2 GetCombatantHudCenterPosition(BattleCombatant combatant)
+        private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was defeated!");
+            _animationManager.StartAlphaAnimation(e.DefeatedCombatant.CombatantID, e.DefeatedCombatant.VisualAlpha, 0.1f);
+        }
 
-            if (combatant.IsPlayerControlled)
-            {
-                const int playerHudY = DIVIDER_Y - 10;
-                const int playerHudPaddingX = 10;
-                string hpLabel = "HP: ";
-                string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
-                string separator = "/";
-                string maxHp = combatant.Stats.MaxHP.ToString();
-                string fullHpText = hpLabel + currentHp + separator + maxHp;
-                Vector2 hpTextSize = secondaryFont.MeasureString(fullHpText);
-                float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
-                return new Vector2(hpStartX + hpTextSize.X / 2, playerHudY);
-            }
-            else
-            {
-                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled).ToList();
-                int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
-                if (enemyIndex == -1) return Vector2.Zero;
+        private void OnActionFailed(GameEvents.ActionFailed e)
+        {
+            _currentActor = e.Actor;
+            _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason} and cannot move!");
+        }
 
-                const int enemyAreaPadding = 20;
-                const int enemyHudY = 80;
-                int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
-                int slotWidth = availableWidth / enemies.Count;
-                return new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
+        private void OnStatusEffectTriggered(GameEvents.StatusEffectTriggered e)
+        {
+            if (e.Damage > 0)
+            {
+                _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from {e.EffectType}!");
+                _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
             }
         }
 
-        private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
+        private void FleeBattle()
+        {
+            _isBattleOver = true;
+            _uiManager.HideAllMenus();
+            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+            _uiManager.ShowNarration(player != null ? $"{player.Name} escaped." : "Got away safely!");
+        }
+
+        private void OpenSettings()
+        {
+            _sceneManager.ShowModal(GameSceneState.Settings);
+        }
+        #endregion
     }
 }

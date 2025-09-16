@@ -1,0 +1,285 @@
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace ProjectVagabond.Battle.UI
+{
+    public enum BattleUIState { Default, Targeting, ItemTargeting }
+    public enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item }
+    public class HoverHighlightState { public MoveData CurrentMove; public List<BattleCombatant> Targets = new List<BattleCombatant>(); public float Timer = 0f; public const float SingleTargetFlashOnDuration = 0.4f; public const float SingleTargetFlashOffDuration = 0.2f; public const float MultiTargetFlashOnDuration = 0.4f; public const float MultiTargetFlashOffDuration = 0.4f; }
+
+    /// <summary>
+    /// Manages the state and interaction of all UI components in the battle scene, including menus and narration.
+    /// </summary>
+    public class BattleUIManager
+    {
+        public event Action<MoveData, BattleCombatant> OnMoveSelected;
+        public event Action<ConsumableItemData, BattleCombatant> OnItemSelected;
+        public event Action OnFleeRequested;
+
+        // UI Components
+        private readonly BattleNarrator _battleNarrator;
+        private readonly ActionMenu _actionMenu;
+        private readonly ItemMenu _itemMenu;
+        private readonly Button _itemTargetingBackButton;
+
+        // State
+        public BattleUIState UIState { get; private set; } = BattleUIState.Default;
+        public BattleSubMenuState SubMenuState { get; private set; } = BattleSubMenuState.None;
+        public MoveData MoveForTargeting { get; private set; }
+        public ConsumableItemData ItemForTargeting { get; private set; }
+        public TargetType? TargetTypeForSelection =>
+            UIState == BattleUIState.Targeting ? MoveForTargeting?.Target :
+            UIState == BattleUIState.ItemTargeting ? ItemForTargeting?.Target :
+            null;
+
+        private float _itemTargetingTextAnimTimer = 0f;
+        private readonly Queue<Action> _narrationQueue = new Queue<Action>();
+        public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
+
+        public bool IsBusy => _battleNarrator.IsBusy || _narrationQueue.Any();
+
+        public BattleUIManager()
+        {
+            var narratorBounds = new Rectangle(0, 105, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - 105);
+            _battleNarrator = new BattleNarrator(narratorBounds);
+            _actionMenu = new ActionMenu();
+            _itemMenu = new ItemMenu();
+
+            _itemTargetingBackButton = new Button(Rectangle.Empty, "BACK");
+            _itemTargetingBackButton.OnClick += () =>
+            {
+                UIState = BattleUIState.Default;
+                OnItemMenuRequested();
+            };
+
+            // Wire up events from menus to internal handlers
+            _actionMenu.OnMoveSelected += HandlePlayerMoveSelected;
+            _actionMenu.OnItemMenuRequested += OnItemMenuRequested;
+            _actionMenu.OnMovesMenuOpened += () => SubMenuState = BattleSubMenuState.ActionMoves;
+            _actionMenu.OnMainMenuOpened += () => SubMenuState = BattleSubMenuState.ActionRoot;
+            _actionMenu.OnFleeRequested += () => OnFleeRequested?.Invoke();
+            _itemMenu.OnBack += OnItemMenuBack;
+            _itemMenu.OnItemConfirmed += HandlePlayerItemSelected;
+            _itemMenu.OnItemTargetingRequested += OnItemTargetingRequested;
+        }
+
+        public void Reset()
+        {
+            _actionMenu.ResetAnimationState();
+            _itemTargetingBackButton.ResetAnimationState();
+            UIState = BattleUIState.Default;
+            SubMenuState = BattleSubMenuState.None;
+            _narrationQueue.Clear();
+        }
+
+        public void ShowActionMenu(BattleCombatant player, List<BattleCombatant> allCombatants)
+        {
+            SubMenuState = BattleSubMenuState.ActionRoot;
+            _actionMenu.Show(player, allCombatants);
+            _itemMenu.Hide();
+        }
+
+        public void HideAllMenus()
+        {
+            UIState = BattleUIState.Default;
+            SubMenuState = BattleSubMenuState.None;
+            _actionMenu.Hide();
+            _actionMenu.SetState(ActionMenu.MenuState.Main);
+            _itemMenu.Hide();
+        }
+
+        public void ShowNarration(string message)
+        {
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            _narrationQueue.Enqueue(() => _battleNarrator.Show(message, secondaryFont));
+        }
+
+        public void GoBack()
+        {
+            if (UIState == BattleUIState.ItemTargeting)
+            {
+                UIState = BattleUIState.Default;
+                OnItemMenuRequested();
+            }
+            else if (SubMenuState == BattleSubMenuState.Item)
+            {
+                OnItemMenuBack();
+            }
+            else
+            {
+                _actionMenu.GoBack();
+            }
+        }
+
+        public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState)
+        {
+            _battleNarrator.Update(gameTime);
+            UpdateHoverHighlights(gameTime);
+
+            if (SubMenuState == BattleSubMenuState.ActionRoot || SubMenuState == BattleSubMenuState.ActionMoves)
+            {
+                _actionMenu.Update(currentMouseState, gameTime);
+            }
+            else if (SubMenuState == BattleSubMenuState.Item)
+            {
+                _itemMenu.Update(currentMouseState, gameTime);
+            }
+
+            if (UIState == BattleUIState.ItemTargeting)
+            {
+                _itemTargetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _itemTargetingBackButton.Update(currentMouseState);
+            }
+
+            // Synchronize UI state with ActionMenu's internal state
+            if (_actionMenu.CurrentMenuState == ActionMenu.MenuState.Targeting)
+            {
+                UIState = BattleUIState.Targeting;
+                MoveForTargeting = _actionMenu.SelectedMove;
+            }
+            else if (UIState != BattleUIState.ItemTargeting)
+            {
+                UIState = BattleUIState.Default;
+            }
+
+            if (!_battleNarrator.IsBusy && _narrationQueue.Any())
+            {
+                var nextStep = _narrationQueue.Dequeue();
+                nextStep.Invoke();
+            }
+        }
+
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            if (SubMenuState == BattleSubMenuState.Item)
+            {
+                _itemMenu.Draw(spriteBatch, font, gameTime, transform);
+            }
+            else
+            {
+                _actionMenu.Draw(spriteBatch, font, gameTime, transform);
+            }
+
+            if (UIState == BattleUIState.ItemTargeting)
+            {
+                DrawItemTargetingOverlay(spriteBatch, font, gameTime, transform);
+            }
+
+            _battleNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
+        }
+
+        private void DrawItemTargetingOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        {
+            const int backButtonPadding = 8;
+            const int backButtonHeight = 13;
+            const int backButtonTopMargin = 1;
+            const int dividerY = 120;
+            const int horizontalPadding = 10;
+            const int verticalPadding = 2;
+            int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
+            int availableHeight = Global.VIRTUAL_HEIGHT - dividerY - (verticalPadding * 2);
+            int gridAreaHeight = availableHeight - backButtonHeight - backButtonTopMargin;
+            int gridStartY = dividerY + verticalPadding + 4;
+
+            string text = "CHOOSE A TARGET";
+            Vector2 textSize = font.MeasureString(text);
+
+            float animX = MathF.Sin(_itemTargetingTextAnimTimer * 4f) * 1f;
+            float animY = MathF.Sin(_itemTargetingTextAnimTimer * 8f) * 1f;
+            Vector2 animOffset = new Vector2(animX, animY);
+
+            Vector2 textPos = new Vector2(
+                horizontalPadding + (availableWidth - textSize.X) / 2,
+                gridStartY + (gridAreaHeight - textSize.Y) / 2
+            ) + animOffset;
+            spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
+
+            int backButtonWidth = (int)(_itemTargetingBackButton.Font ?? font).MeasureString(_itemTargetingBackButton.Text).Width + backButtonPadding * 2;
+            _itemTargetingBackButton.Bounds = new Rectangle(
+                horizontalPadding + (availableWidth - backButtonWidth) / 2,
+                gridStartY + gridAreaHeight + backButtonTopMargin,
+                backButtonWidth,
+                backButtonHeight
+            );
+            _itemTargetingBackButton.Draw(spriteBatch, font, gameTime, transform);
+        }
+
+        private void HandlePlayerMoveSelected(MoveData move, BattleCombatant target)
+        {
+            OnMoveSelected?.Invoke(move, target);
+        }
+
+        private void HandlePlayerItemSelected(ConsumableItemData item)
+        {
+            OnItemSelected?.Invoke(item, null);
+        }
+
+        private void OnItemMenuRequested()
+        {
+            SubMenuState = BattleSubMenuState.Item;
+            _actionMenu.Hide();
+            _itemMenu.Show(ServiceLocator.Get<BattleManager>().AllCombatants.ToList());
+        }
+
+        private void OnItemTargetingRequested(ConsumableItemData item)
+        {
+            UIState = BattleUIState.ItemTargeting;
+            ItemForTargeting = item;
+            _itemMenu.Hide();
+            _itemTargetingTextAnimTimer = 0f;
+        }
+
+        private void OnItemMenuBack()
+        {
+            SubMenuState = BattleSubMenuState.ActionRoot;
+            _itemMenu.Hide();
+            var player = ServiceLocator.Get<BattleManager>().AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+            if (player != null)
+            {
+                _actionMenu.Show(player, ServiceLocator.Get<BattleManager>().AllCombatants.ToList());
+            }
+        }
+
+        private void UpdateHoverHighlights(GameTime gameTime)
+        {
+            var hoveredMove = _actionMenu.HoveredMove;
+            var allCombatants = ServiceLocator.Get<BattleManager>().AllCombatants;
+
+            if (hoveredMove != HoverHighlightState.CurrentMove)
+            {
+                HoverHighlightState.CurrentMove = hoveredMove;
+                HoverHighlightState.Targets.Clear();
+                HoverHighlightState.Timer = 0f;
+
+                if (hoveredMove != null)
+                {
+                    var player = allCombatants.First(c => c.IsPlayerControlled);
+                    var enemies = allCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
+                    var all = allCombatants.Where(c => !c.IsDefeated).ToList();
+
+                    switch (hoveredMove.Target)
+                    {
+                        case TargetType.Single: HoverHighlightState.Targets.AddRange(enemies); break;
+                        case TargetType.Every: HoverHighlightState.Targets.AddRange(enemies); break;
+                        case TargetType.Self: HoverHighlightState.Targets.Add(player); break;
+                        case TargetType.SingleAll: HoverHighlightState.Targets.AddRange(all); break;
+                        case TargetType.EveryAll: HoverHighlightState.Targets.AddRange(all); break;
+                    }
+                }
+            }
+
+            if (HoverHighlightState.CurrentMove != null && HoverHighlightState.Targets.Any())
+            {
+                HoverHighlightState.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+        }
+    }
+}
