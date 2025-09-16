@@ -11,12 +11,24 @@ using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle
 {
+    public enum QueuedActionType
+    {
+        Move,
+        Item,
+        Charging
+    }
+
     /// <summary>
     /// Represents a single, chosen action waiting to be executed in the action queue.
     /// It captures the state of the actor and target at the moment the action is chosen.
     /// </summary>
     public class QueuedAction
     {
+        /// <summary>
+        /// The type of action being performed.
+        /// </summary>
+        public QueuedActionType Type { get; set; }
+
         /// <summary>
         /// The combatant performing the action.
         /// </summary>
@@ -48,3 +60,4 @@ namespace ProjectVagabond.Battle
         public int ActorAgility { get; set; }
     }
 }
+#nullable restore

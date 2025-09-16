@@ -280,10 +280,13 @@ namespace ProjectVagabond.Scenes
 
             if (newPhase == BattleManager.BattlePhase.ActionSelection)
             {
-                var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
-                if (player != null)
+                if (!_battleManager.IsPlayerTurnSkipped)
                 {
-                    _uiManager.ShowActionMenu(player, _battleManager.AllCombatants.ToList());
+                    var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+                    if (player != null)
+                    {
+                        _uiManager.ShowActionMenu(player, _battleManager.AllCombatants.ToList());
+                    }
                 }
             }
             else
@@ -351,7 +354,7 @@ namespace ProjectVagabond.Scenes
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
             if (player != null)
             {
-                var action = new QueuedAction { Actor = player, Target = target, ChosenMove = move, Priority = move.Priority, ActorAgility = player.Stats.Agility };
+                var action = new QueuedAction { Actor = player, Target = target, ChosenMove = move, Priority = move.Priority, ActorAgility = player.Stats.Agility, Type = QueuedActionType.Move };
                 _battleManager.SetPlayerAction(action);
             }
         }
@@ -372,7 +375,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            var action = new QueuedAction { Actor = player, ChosenItem = item, Target = target, Priority = item.Priority, ActorAgility = player.Stats.Agility };
+            var action = new QueuedAction { Actor = player, ChosenItem = item, Target = target, Priority = item.Priority, ActorAgility = player.Stats.Agility, Type = QueuedActionType.Item };
             _battleManager.SetPlayerAction(action);
             _uiManager.HideAllMenus();
         }
@@ -443,7 +446,14 @@ namespace ProjectVagabond.Scenes
         private void OnActionFailed(GameEvents.ActionFailed e)
         {
             _currentActor = e.Actor;
-            _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason} and cannot move!");
+            if (e.Reason.StartsWith("charging"))
+            {
+                _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason}!");
+            }
+            else
+            {
+                _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason} and cannot move!");
+            }
         }
 
         private void OnStatusEffectTriggered(GameEvents.StatusEffectTriggered e)

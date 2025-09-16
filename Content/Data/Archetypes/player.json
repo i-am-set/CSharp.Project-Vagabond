@@ -30,10 +30,7 @@
         "Agility": 1,
         "DefensiveElementIDs": [ 101 ],
         "StartingMoveIDs": [
-          "ShoulderBash",
-          "WintersGrasp",
-          "WhiteoutTempest",
-          "Sunlance",
+          "FinishingBlow",
           "SolarBeam",
           "VampiricBite",
           "FurySwipes"

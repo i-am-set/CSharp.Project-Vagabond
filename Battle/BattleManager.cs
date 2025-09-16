@@ -48,6 +48,7 @@ namespace ProjectVagabond.Battle
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
         public bool CanAdvance { get; set; } = true;
+        public bool IsPlayerTurnSkipped { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the BattleManager class and starts the battle.
@@ -147,7 +148,8 @@ namespace ProjectVagabond.Battle
         /// </summary>
         private void HandleStartOfTurn()
         {
-            var priorityActions = new List<QueuedAction>();
+            IsPlayerTurnSkipped = false;
+            var startOfTurnActions = new List<QueuedAction>();
 
             foreach (var combatant in _allCombatants)
             {
@@ -159,8 +161,21 @@ namespace ProjectVagabond.Battle
                     combatant.ChargingAction.TurnsRemaining--;
                     if (combatant.ChargingAction.TurnsRemaining <= 0)
                     {
-                        priorityActions.Add(combatant.ChargingAction.Action);
+                        // Charge is complete, queue the action
+                        startOfTurnActions.Add(combatant.ChargingAction.Action);
                         combatant.ChargingAction = null;
+                        if (combatant.IsPlayerControlled)
+                        {
+                            IsPlayerTurnSkipped = true;
+                        }
+                    }
+                    else
+                    {
+                        // Still charging, player turn will be skipped for selection.
+                        if (combatant.IsPlayerControlled)
+                        {
+                            IsPlayerTurnSkipped = true;
+                        }
                     }
                 }
 
@@ -178,7 +193,7 @@ namespace ProjectVagabond.Battle
                     }
                     foreach (var ready in readyActions)
                     {
-                        priorityActions.Add(ready.Action);
+                        startOfTurnActions.Add(ready.Action);
                         // This is tricky with a Queue. It's safer to rebuild it.
                     }
                     if (readyActions.Any())
@@ -189,7 +204,7 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            _actionQueue.InsertRange(0, priorityActions);
+            _actionQueue.InsertRange(0, startOfTurnActions);
 
             // Player draws to fill hand
             foreach (var player in _playerCombatants)
@@ -201,7 +216,7 @@ namespace ProjectVagabond.Battle
             }
 
             _currentPhase = BattlePhase.ActionSelection;
-            _playerActionSubmitted = false;
+            _playerActionSubmitted = IsPlayerTurnSkipped;
         }
 
         /// <summary>
@@ -210,6 +225,23 @@ namespace ProjectVagabond.Battle
         private void HandleActionSelection()
         {
             if (!_playerActionSubmitted) return;
+
+            // Inject placeholder "Charging" actions for any combatant that is currently charging.
+            foreach (var combatant in _allCombatants)
+            {
+                if (combatant.ChargingAction != null)
+                {
+                    var chargingAction = new QueuedAction
+                    {
+                        Actor = combatant,
+                        ChosenMove = combatant.ChargingAction.Action.ChosenMove,
+                        ActorAgility = combatant.GetEffectiveAgility(),
+                        Priority = 100, // High priority to show charging message before other actions of same agility
+                        Type = QueuedActionType.Charging
+                    };
+                    _actionQueue.Add(chargingAction);
+                }
+            }
 
             // AI Actions
             var activePlayers = _playerCombatants.Where(c => !c.IsDefeated).ToList();
@@ -229,7 +261,7 @@ namespace ProjectVagabond.Battle
 
                     MoveData move = possibleMoves.Any() ? possibleMoves.First() : BattleDataCache.Moves["Stall"];
 
-                    var action = new QueuedAction { Actor = enemy, Target = target, ChosenMove = move, Priority = move.Priority, ActorAgility = enemy.GetEffectiveAgility() };
+                    var action = new QueuedAction { Actor = enemy, Target = target, ChosenMove = move, Priority = move.Priority, ActorAgility = enemy.GetEffectiveAgility(), Type = QueuedActionType.Move };
 
                     if (!HandlePreActionEffects(action))
                     {
@@ -263,6 +295,15 @@ namespace ProjectVagabond.Battle
             }
 
             var action = _actionQueue[0];
+
+            // Handle special action types first
+            if (action.Type == QueuedActionType.Charging)
+            {
+                EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = $"charging {action.ChosenMove.MoveName}" });
+                _actionQueue.RemoveAt(0);
+                CanAdvance = false;
+                return;
+            }
 
             // --- Pre-action checks ---
             if (action.Actor.IsDefeated)
