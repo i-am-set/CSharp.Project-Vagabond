@@ -105,6 +105,7 @@ namespace ProjectVagabond
             public BattleCombatant Actor { get; set; }
             public MoveData ChosenMove { get; set; }
             public int HitCount { get; set; }
+            public int CriticalHitCount { get; set; }
         }
 
         /// <summary>

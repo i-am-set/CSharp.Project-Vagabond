@@ -20,6 +20,9 @@ namespace ProjectVagabond.Scenes
     /// </summary>
     public class BattleScene : GameScene
     {
+        // --- Tuning ---
+        private const float MULTI_HIT_DELAY = 0.1f; // The delay in seconds between each hit of a multi-hit move.
+
         // Core Battle Logic
         private BattleManager _battleManager;
 
@@ -43,6 +46,10 @@ namespace ProjectVagabond.Scenes
         private float _endOfBattleTimer;
         private const float END_OF_BATTLE_DELAY = 2.0f;
         private BattleCombatant _currentActor;
+        private bool _isWaitingForMultiHitDelay = false;
+        private float _multiHitDelayTimer = 0f;
+        private readonly Queue<Action> _pendingAnimations = new Queue<Action>();
+
 
         public BattleAnimationManager AnimationManager => _animationManager;
 
@@ -82,6 +89,9 @@ namespace ProjectVagabond.Scenes
             _currentActor = null;
             _isBattleOver = false;
             _endOfBattleTimer = 0f;
+            _isWaitingForMultiHitDelay = false;
+            _multiHitDelayTimer = 0f;
+            _pendingAnimations.Clear();
 
             // Subscribe to events
             SubscribeToEvents();
@@ -247,8 +257,36 @@ namespace ProjectVagabond.Scenes
                 UIInputManager.ConsumeMouseClick();
             }
 
+            // Process pending animations only when the UI is free
+            if (!_uiManager.IsBusy && !_animationManager.IsAnimating && _pendingAnimations.Any())
+            {
+                var nextAnimation = _pendingAnimations.Dequeue();
+                nextAnimation.Invoke();
+            }
+
             // Battle Manager Advancement Logic
-            _battleManager.CanAdvance = !_uiManager.IsBusy && !_animationManager.IsAnimating;
+            bool canAdvance = !_uiManager.IsBusy && !_animationManager.IsAnimating && !_pendingAnimations.Any();
+
+            if (_isWaitingForMultiHitDelay && canAdvance)
+            {
+                if (_multiHitDelayTimer <= 0)
+                {
+                    _multiHitDelayTimer = MULTI_HIT_DELAY;
+                }
+
+                _multiHitDelayTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+                if (_multiHitDelayTimer > 0)
+                {
+                    canAdvance = false;
+                }
+                else
+                {
+                    _multiHitDelayTimer = 0f;
+                }
+            }
+
+            _battleManager.CanAdvance = canAdvance;
             _battleManager.Update();
 
             // Handle Phase Changes
@@ -400,11 +438,29 @@ namespace ProjectVagabond.Scenes
         private void OnMultiHitActionCompleted(GameEvents.MultiHitActionCompleted e)
         {
             _uiManager.ShowNarration($"Hit {e.HitCount} times!");
+            if (e.CriticalHitCount > 0)
+            {
+                if (e.CriticalHitCount == 1)
+                {
+                    _uiManager.ShowNarration("Landed a critical hit!");
+                }
+                else
+                {
+                    _uiManager.ShowNarration($"Landed {e.CriticalHitCount} critical hits!");
+                }
+            }
+            _isWaitingForMultiHitDelay = false;
+            _multiHitDelayTimer = 0f;
         }
 
         private void OnBattleActionExecuted(GameEvents.BattleActionExecuted e)
         {
             _currentActor = e.Actor;
+            bool isMultiHit = e.ChosenMove != null && e.ChosenMove.Effects.ContainsKey("MultiHit");
+            if (isMultiHit)
+            {
+                _isWaitingForMultiHitDelay = true;
+            }
 
             for (int i = 0; i < e.Targets.Count; i++)
             {
@@ -430,7 +486,7 @@ namespace ProjectVagabond.Scenes
                     _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, ServiceLocator.Get<Global>().Palette_LightGray);
                 }
 
-                if (result.WasCritical)
+                if (result.WasCritical && !isMultiHit)
                 {
                     _uiManager.ShowNarration($"A critical hit on {target.Name}!");
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().Palette_Yellow);
@@ -440,8 +496,8 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantHealed(GameEvents.CombatantHealed e)
         {
-            _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
             _uiManager.ShowNarration($"{e.Target.Name} recovered {e.HealAmount} HP!");
+            _pendingAnimations.Enqueue(() => _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP));
         }
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
