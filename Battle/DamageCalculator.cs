@@ -36,13 +36,8 @@ namespace ProjectVagabond.Battle
         }
 
         /// <summary>
-        /// Calculates the damage an attacker will deal to a target with a specific move.
+        /// Calculates the final damage an attacker will deal to a target with a specific move, including all modifiers.
         /// </summary>
-        /// <param name="attacker">The combatant performing the action.</param>
-        /// <param name="target">The combatant receiving the action.</param>
-        /// <param name="move">The move being used.</param>
-        /// <param name="multiTargetModifier">A damage modifier for moves that hit multiple targets.</param>
-        /// <returns>A DamageResult struct containing the outcome of the calculation.</returns>
         public static DamageResult CalculateDamage(BattleCombatant attacker, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f)
         {
             // Step 0: Handle Fixed Damage moves immediately.
@@ -193,6 +188,56 @@ namespace ProjectVagabond.Battle
                 WasGraze = isGrazed
             };
         }
+
+        /// <summary>
+        /// Calculates a "pure baseline" damage value, ignoring all conditional multipliers.
+        /// This is used to determine if a hit was exceptionally strong for special visual feedback.
+        /// </summary>
+        public static int CalculateBaselineDamage(BattleCombatant attacker, BattleCombatant target, MoveData move)
+        {
+            if (move.Power == 0) return 0;
+
+            float movePower = move.Power; // Use base power, ignore RampUp
+
+            // Use base stats, ignoring status effects
+            float offensiveStat;
+            switch (move.OffensiveStat)
+            {
+                case OffensiveStatType.Strength:
+                    offensiveStat = attacker.Stats.Strength;
+                    break;
+                case OffensiveStatType.Intelligence:
+                    offensiveStat = attacker.Stats.Intelligence;
+                    break;
+                case OffensiveStatType.Tenacity:
+                    offensiveStat = attacker.Stats.Tenacity;
+                    break;
+                case OffensiveStatType.Agility:
+                    offensiveStat = attacker.Stats.Agility;
+                    break;
+                default:
+                    offensiveStat = attacker.Stats.Strength;
+                    break;
+            }
+
+            float defensiveStat = target.Stats.Tenacity;
+            if (defensiveStat <= 0) defensiveStat = 1;
+
+            // Core damage formula
+            float baseDamage = ((((2f * attacker.Stats.Level / 5f + 2f) * movePower * (offensiveStat / defensiveStat)) / 50f) + 2f);
+
+            // Apply random variance of 1.0x as requested
+            baseDamage *= BattleConstants.RANDOM_VARIANCE_MAX;
+
+            int finalDamageAmount = (int)Math.Floor(baseDamage);
+            if (baseDamage > 0 && finalDamageAmount == 0)
+            {
+                finalDamageAmount = 1;
+            }
+
+            return finalDamageAmount;
+        }
+
 
         /// <summary>
         /// Calculates the final elemental multiplier based on the move's offensive elements and the target's defensive elements.

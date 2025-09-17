@@ -1,10 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
@@ -21,9 +26,11 @@ namespace ProjectVagabond.Battle.UI
         public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; }
         public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.167f; }
         public class HitAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.0f; }
+        public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.1f; }
+        public class HealFlashAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.5f; }
         public class DamageIndicatorState
         {
-            public enum IndicatorType { Text, Number }
+            public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber }
             public IndicatorType Type;
             public string CombatantID;
             public string Text;
@@ -39,12 +46,14 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
         private readonly List<HitAnimationState> _activeHitAnimations = new List<HitAnimationState>();
+        private readonly List<HealBounceAnimationState> _activeHealBounceAnimations = new List<HealBounceAnimationState>();
+        private readonly List<HealFlashAnimationState> _activeHealFlashAnimations = new List<HealFlashAnimationState>();
         private readonly List<DamageIndicatorState> _activeDamageIndicators = new List<DamageIndicatorState>();
 
         private readonly Random _random = new Random();
         private readonly Global _global;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any();
 
         public BattleAnimationManager()
         {
@@ -56,6 +65,8 @@ namespace ProjectVagabond.Battle.UI
             _activeHealthAnimations.Clear();
             _activeAlphaAnimations.Clear();
             _activeHitAnimations.Clear();
+            _activeHealBounceAnimations.Clear();
+            _activeHealFlashAnimations.Clear();
             _activeDamageIndicators.Clear();
         }
 
@@ -95,6 +106,26 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
+        public void StartHealBounceAnimation(string combatantId)
+        {
+            _activeHealBounceAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeHealBounceAnimations.Add(new HealBounceAnimationState
+            {
+                CombatantID = combatantId,
+                Timer = 0f
+            });
+        }
+
+        public void StartHealFlashAnimation(string combatantId)
+        {
+            _activeHealFlashAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeHealFlashAnimations.Add(new HealFlashAnimationState
+            {
+                CombatantID = combatantId,
+                Timer = 0f
+            });
+        }
+
         public void StartDamageIndicator(string combatantId, string text, Vector2 startPosition, Color color)
         {
             _activeDamageIndicators.Add(new DamageIndicatorState
@@ -122,6 +153,32 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
+        public void StartEmphasizedDamageNumberIndicator(string combatantId, int damageAmount, Vector2 startPosition)
+        {
+            _activeDamageIndicators.Add(new DamageIndicatorState
+            {
+                Type = DamageIndicatorState.IndicatorType.EmphasizedNumber,
+                CombatantID = combatantId,
+                Text = damageAmount.ToString(),
+                Position = startPosition,
+                Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 40)), // Higher initial upward velocity
+                Timer = 0f
+            });
+        }
+
+        public void StartHealNumberIndicator(string combatantId, int healAmount, Vector2 startPosition)
+        {
+            _activeDamageIndicators.Add(new DamageIndicatorState
+            {
+                Type = DamageIndicatorState.IndicatorType.HealNumber,
+                CombatantID = combatantId,
+                Text = healAmount.ToString(),
+                Position = startPosition,
+                Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 20)),
+                Timer = 0f
+            });
+        }
+
         public void SkipAllHealthAnimations(IEnumerable<BattleCombatant> combatants)
         {
             foreach (var anim in _activeHealthAnimations)
@@ -140,11 +197,22 @@ namespace ProjectVagabond.Battle.UI
             return _activeHitAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
+        public HealBounceAnimationState GetHealBounceAnimationState(string combatantId)
+        {
+            return _activeHealBounceAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
+        }
+
+        public HealFlashAnimationState GetHealFlashAnimationState(string combatantId)
+        {
+            return _activeHealFlashAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
+        }
+
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
             UpdateHealthAnimations(gameTime, combatants);
             UpdateAlphaAnimations(gameTime, combatants);
             UpdateHitAnimations(gameTime);
+            UpdateHealAnimations(gameTime);
             UpdateDamageIndicators(gameTime);
         }
 
@@ -213,6 +281,29 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        private void UpdateHealAnimations(GameTime gameTime)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeHealBounceAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeHealBounceAnimations[i];
+                anim.Timer += deltaTime;
+                if (anim.Timer >= HealBounceAnimationState.Duration)
+                {
+                    _activeHealBounceAnimations.RemoveAt(i);
+                }
+            }
+            for (int i = _activeHealFlashAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeHealFlashAnimations[i];
+                anim.Timer += deltaTime;
+                if (anim.Timer >= HealFlashAnimationState.Duration)
+                {
+                    _activeHealFlashAnimations.RemoveAt(i);
+                }
+            }
+        }
+
         private void UpdateDamageIndicators(GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -227,7 +318,7 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // Apply physics or simple animation based on the indicator type
-                if (indicator.Type == DamageIndicatorState.IndicatorType.Number)
+                if (indicator.Type == DamageIndicatorState.IndicatorType.Number || indicator.Type == DamageIndicatorState.IndicatorType.HealNumber || indicator.Type == DamageIndicatorState.IndicatorType.EmphasizedNumber)
                 {
                     const float gravity = 80f; // Reduced gravity for a floatier effect
                     indicator.Velocity.Y += gravity * deltaTime;
@@ -244,8 +335,21 @@ namespace ProjectVagabond.Battle.UI
 
         public void DrawDamageIndicators(SpriteBatch spriteBatch, BitmapFont font)
         {
+            // Two-pass rendering: text first, then numbers on top.
+            DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Text);
+            DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Number);
+            DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.HealNumber);
+            DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.EmphasizedNumber);
+        }
+
+        private void DrawIndicatorsOfType(SpriteBatch spriteBatch, BitmapFont font, DamageIndicatorState.IndicatorType typeToDraw)
+        {
+            var defaultFont = ServiceLocator.Get<BitmapFont>();
+
             foreach (var indicator in _activeDamageIndicators)
             {
+                if (indicator.Type != typeToDraw) continue;
+
                 float progress = indicator.Timer / DamageIndicatorState.DURATION;
 
                 float alpha = 1.0f;
@@ -256,14 +360,24 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 Color drawColor;
-                Vector2 textSize = font.MeasureString(indicator.Text);
-                Vector2 textPosition = indicator.Position - new Vector2(textSize.X / 2f, textSize.Y);
+                BitmapFont activeFont = font;
 
-                if (indicator.Type == DamageIndicatorState.IndicatorType.Number)
+                if (indicator.Type == DamageIndicatorState.IndicatorType.EmphasizedNumber)
                 {
-                    const float flashInterval = 0.1f;
+                    activeFont = defaultFont;
+                    const float flashInterval = 0.05f; // Faster flash
                     bool useRed = (int)(indicator.Timer / flashInterval) % 2 == 0;
                     drawColor = useRed ? _global.Palette_Red : _global.Palette_BrightWhite;
+                }
+                else if (indicator.Type == DamageIndicatorState.IndicatorType.Number)
+                {
+                    drawColor = _global.Palette_Red;
+                }
+                else if (indicator.Type == DamageIndicatorState.IndicatorType.HealNumber)
+                {
+                    const float flashInterval = 0.1f;
+                    bool useLightGreen = (int)(indicator.Timer / flashInterval) % 2 == 0;
+                    drawColor = useLightGreen ? _global.Palette_LightGreen : _global.Palette_DarkGreen;
                 }
                 else // Text indicator
                 {
@@ -276,7 +390,10 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
-                spriteBatch.DrawStringOutlinedSnapped(font, indicator.Text, textPosition, drawColor * alpha, Color.Black * alpha);
+                Vector2 textSize = activeFont.MeasureString(indicator.Text);
+                Vector2 textPosition = indicator.Position - new Vector2(textSize.X / 2f, textSize.Y);
+
+                spriteBatch.DrawStringOutlinedSnapped(activeFont, indicator.Text, textPosition, drawColor * alpha, Color.Black * alpha);
             }
         }
     }

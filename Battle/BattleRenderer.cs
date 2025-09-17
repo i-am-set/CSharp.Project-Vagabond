@@ -201,8 +201,7 @@ namespace ProjectVagabond.Battle.UI
             string hpText = $"HP: {((int)Math.Round(player.VisualHP))}/{player.Stats.MaxHP}";
             Vector2 hpTextSize = secondaryFont.MeasureString(hpText);
             float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
-            var playerHitAnim = animationManager.GetHitAnimationState(player.CombatantID);
-            DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY + yOffset), 1.0f, playerHitAnim);
+            DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY + yOffset), 1.0f, animationManager);
 
             DrawPlayerStatusIcons(spriteBatch);
 
@@ -420,15 +419,18 @@ namespace ProjectVagabond.Battle.UI
 
             Vector2 hpSize = statsFont.MeasureString($"HP: {((int)Math.Round(combatant.VisualHP))}/{combatant.Stats.MaxHP}");
             Vector2 hpPos = new Vector2(centerPosition.X - hpSize.X / 2, centerPosition.Y + 2);
-            var hitAnim = animationManager.GetHitAnimationState(combatant.CombatantID);
-            DrawHpLine(spriteBatch, statsFont, combatant, hpPos, combatant.VisualAlpha, hitAnim);
+            DrawHpLine(spriteBatch, statsFont, combatant, hpPos, combatant.VisualAlpha, animationManager);
         }
 
-        private void DrawHpLine(SpriteBatch spriteBatch, BitmapFont statsFont, BattleCombatant combatant, Vector2 position, float alpha = 1.0f, BattleAnimationManager.HitAnimationState hitAnim = null)
+        private void DrawHpLine(SpriteBatch spriteBatch, BitmapFont statsFont, BattleCombatant combatant, Vector2 position, float alpha, BattleAnimationManager animationManager)
         {
             Color labelColor = _global.Palette_LightGray * alpha;
             Color numberColor = Color.White * alpha;
             Vector2 drawPosition = position;
+
+            var hitAnim = animationManager.GetHitAnimationState(combatant.CombatantID);
+            var healBounceAnim = animationManager.GetHealBounceAnimationState(combatant.CombatantID);
+            var healFlashAnim = animationManager.GetHealFlashAnimationState(combatant.CombatantID);
 
             if (hitAnim != null)
             {
@@ -440,6 +442,20 @@ namespace ProjectVagabond.Battle.UI
                 Color flashColor = _global.Palette_Red;
                 labelColor = Color.Lerp(flashColor, _global.Palette_LightGray, easeOutProgress) * alpha;
                 numberColor = Color.Lerp(flashColor, Color.White, easeOutProgress) * alpha;
+            }
+            else if (healFlashAnim != null)
+            {
+                float flashProgress = healFlashAnim.Timer / BattleAnimationManager.HealFlashAnimationState.Duration;
+                Color flashColor = _global.Palette_LightGreen;
+                labelColor = Color.Lerp(flashColor, _global.Palette_LightGray, Easing.EaseOutQuad(flashProgress)) * alpha;
+                numberColor = Color.Lerp(flashColor, Color.White, Easing.EaseOutQuad(flashProgress)) * alpha;
+            }
+
+            if (healBounceAnim != null)
+            {
+                float bounceProgress = healBounceAnim.Timer / BattleAnimationManager.HealBounceAnimationState.Duration;
+                float hopAmount = MathF.Sin(bounceProgress * MathHelper.Pi) * -3f; // Hop up
+                drawPosition.Y += hopAmount;
             }
 
             string hpLabel = "HP: ";

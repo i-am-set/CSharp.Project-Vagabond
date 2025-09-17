@@ -478,7 +478,16 @@ namespace ProjectVagabond.Scenes
                     }
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHitAnimation(target.CombatantID);
-                    _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+
+                    int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
+                    if (result.WasCritical || (result.DamageAmount >= baselineDamage * 2 && baselineDamage > 0))
+                    {
+                        _animationManager.StartEmphasizedDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                    }
+                    else
+                    {
+                        _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
+                    }
                 }
 
                 if (result.WasGraze)
@@ -486,10 +495,13 @@ namespace ProjectVagabond.Scenes
                     _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, ServiceLocator.Get<Global>().Palette_LightGray);
                 }
 
-                if (result.WasCritical && !isMultiHit)
+                if (result.WasCritical)
                 {
-                    _uiManager.ShowNarration($"A critical hit on {target.Name}!");
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().Palette_Yellow);
+                    if (!isMultiHit)
+                    {
+                        _uiManager.ShowNarration($"A critical hit on {target.Name}!");
+                    }
                 }
             }
         }
@@ -497,7 +509,14 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantHealed(GameEvents.CombatantHealed e)
         {
             _uiManager.ShowNarration($"{e.Target.Name} recovered {e.HealAmount} HP!");
-            _pendingAnimations.Enqueue(() => _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP));
+            _pendingAnimations.Enqueue(() =>
+            {
+                _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
+                _animationManager.StartHealBounceAnimation(e.Target.CombatantID);
+                _animationManager.StartHealFlashAnimation(e.Target.CombatantID);
+                Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
+                _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
+            });
         }
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
