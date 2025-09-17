@@ -73,8 +73,6 @@ namespace ProjectVagabond.Battle
                 case "executeonkill":
                     if (wasDefeated) HandleExecuteOnKill(actor, allTargets, value);
                     break;
-                    // Note: DetonateStatus would need access to damage results if it were a target effect,
-                    // which would require a more complex refactor. For now, it's not implemented in this structure.
             }
         }
 

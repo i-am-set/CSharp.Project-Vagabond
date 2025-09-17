@@ -682,8 +682,8 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 2 ],
     "Effects": {
-      "ApplyStatus": "Burn,100,3",
-      "SelfDebuff": "Burn,100,3" }
+      "ApplyStatus": "Burn,100,3"
+    }
   },
   {
     "MoveID": "Immolate",
@@ -698,7 +698,7 @@
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 2 ],
-    "Effects": { "DetonateStatus": "Burn,1.5" }
+    "Effects": { "DetonateStatus": "Burn,3" }
   },
   {
     "MoveID": "PurifyingLight",

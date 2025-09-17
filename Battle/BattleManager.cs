@@ -25,6 +25,7 @@ namespace ProjectVagabond.Battle
             EndOfTurn,
             BattleOver
         }
+
         private readonly List<BattleCombatant> _playerCombatants;
         private readonly List<BattleCombatant> _enemyCombatants;
         private readonly List<BattleCombatant> _allCombatants;
@@ -364,15 +365,6 @@ namespace ProjectVagabond.Battle
                 action.Actor.DeckManager?.CastMove(action.ChosenMove);
             }
 
-            if (action.ChosenMove.Effects.ContainsKey("RampUp"))
-            {
-                if (!action.Actor.RampingMoveCounters.ContainsKey(action.ChosenMove.MoveID))
-                {
-                    action.Actor.RampingMoveCounters[action.ChosenMove.MoveID] = 0;
-                }
-                action.Actor.RampingMoveCounters[action.ChosenMove.MoveID]++;
-            }
-
             if (action.ChosenMove.Effects.TryGetValue("MultiHit", out var multiHitValue) && EffectParser.TryParseIntArray(multiHitValue, out int[] hitParams) && hitParams.Length == 2)
             {
                 _currentMultiHitAction = action;
@@ -393,10 +385,11 @@ namespace ProjectVagabond.Battle
                     float multiTargetModifier = (finalTargets.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
                     foreach (var target in finalTargets)
                     {
-                        var result = DamageCalculator.CalculateDamage(action.Actor, target, action.ChosenMove, multiTargetModifier);
+                        var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
+                        var result = DamageCalculator.CalculateDamage(action.Actor, target, moveInstance, multiTargetModifier);
                         target.ApplyDamage(result.DamageAmount);
                         damageResults.Add(result);
-                        HandleReactiveStatusEffects(action.ChosenMove, target, result);
+                        HandleReactiveStatusEffects(moveInstance, target, result);
                     }
                 }
 
@@ -437,11 +430,12 @@ namespace ProjectVagabond.Battle
 
                 foreach (var target in targetsForThisHit)
                 {
-                    var result = DamageCalculator.CalculateDamage(action.Actor, target, action.ChosenMove, multiTargetModifier);
+                    var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
+                    var result = DamageCalculator.CalculateDamage(action.Actor, target, moveInstance, multiTargetModifier);
                     target.ApplyDamage(result.DamageAmount);
                     damageResultsForThisHit.Add(result);
                     _multiHitAggregatedFinalTargets.Add(target);
-                    HandleReactiveStatusEffects(action.ChosenMove, target, result);
+                    HandleReactiveStatusEffects(moveInstance, target, result);
                 }
                 _multiHitAggregatedDamageResults.AddRange(damageResultsForThisHit);
 
@@ -513,10 +507,11 @@ namespace ProjectVagabond.Battle
                         float multiTargetModifier = (targets.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
                         foreach (var target in targets)
                         {
-                            var result = DamageCalculator.CalculateDamage(action.Actor, target, moveData, multiTargetModifier);
+                            var moveInstance = HandlePreDamageEffects(moveData, target);
+                            var result = DamageCalculator.CalculateDamage(action.Actor, target, moveInstance, multiTargetModifier);
                             target.ApplyDamage(result.DamageAmount);
                             damageResults.Add(result);
-                            HandleReactiveStatusEffects(moveData, target, result);
+                            HandleReactiveStatusEffects(moveInstance, target, result);
                         }
                         EventBus.Publish(new GameEvents.BattleActionExecuted { Actor = action.Actor, ChosenMove = moveData, UsedItem = action.ChosenItem, Targets = targets, DamageResults = damageResults });
                     }
@@ -695,6 +690,33 @@ namespace ProjectVagabond.Battle
             }
 
             return false; // Action should be queued normally
+        }
+
+        private MoveData HandlePreDamageEffects(MoveData originalMove, BattleCombatant target)
+        {
+            var moveInstance = originalMove; // Start with the original
+
+            if (moveInstance.Effects.TryGetValue("DetonateStatus", out var detonateValue))
+            {
+                var parts = detonateValue.Split(',');
+                if (parts.Length == 2 &&
+                    Enum.TryParse<StatusEffectType>(parts[0].Trim(), true, out var statusTypeToDetonate) &&
+                    EffectParser.TryParseFloat(parts[1].Trim(), out float multiplier))
+                {
+                    if (target.HasStatusEffect(statusTypeToDetonate))
+                    {
+                        // Create a temporary copy of the move to modify its power for this one calculation
+                        moveInstance = originalMove.Clone();
+                        moveInstance.Power = (int)(moveInstance.Power * multiplier);
+                        target.ActiveStatusEffects.RemoveAll(e => e.EffectType == statusTypeToDetonate);
+                        EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = target, EffectType = statusTypeToDetonate });
+                    }
+                }
+            }
+
+            // Add other pre-damage effects here
+
+            return moveInstance;
         }
     }
 }

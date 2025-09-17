@@ -30,10 +30,10 @@
         "Agility": 1,
         "DefensiveElementIDs": [ 101 ],
         "StartingMoveIDs": [
-          "SearingCoals",
-          "Immolate",
-          "PurifyingLight",
-          "TimeBomb"
+          "WildCharge",
+          "BloodMagic",
+          "Overload",
+          "Misfire"
         ],
         "DefaultStrikeMoveID": "ClawRake"
       }

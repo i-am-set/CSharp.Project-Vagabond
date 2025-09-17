@@ -74,5 +74,13 @@ namespace ProjectVagabond.Battle
         /// and the value is a string of its parameters (e.g., "50").
         /// </summary>
         public Dictionary<string, string> Effects { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Creates a shallow copy of the MoveData object.
+        /// </summary>
+        public MoveData Clone()
+        {
+            return (MoveData)this.MemberwiseClone();
+        }
     }
 }
