@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -23,12 +24,13 @@ namespace ProjectVagabond.Battle.UI
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
         private readonly Core _core;
+        private readonly TooltipManager _tooltipManager;
 
         // State
         private List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private readonly List<StatusIconInfo> _playerStatusIcons = new List<StatusIconInfo>();
-        private string _hoveredStatusEffectText = null;
-        private Vector2? _hoveredStatusIconAnchorPosition = null;
+        private readonly Dictionary<string, List<StatusIconInfo>> _enemyStatusIcons = new Dictionary<string, List<StatusIconInfo>>();
+        private StatusIconInfo? _hoveredStatusIcon;
 
 
         // Enemy Sprite Animation
@@ -49,12 +51,14 @@ namespace ProjectVagabond.Battle.UI
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
+            _tooltipManager = ServiceLocator.Get<TooltipManager>();
         }
 
         public void Reset()
         {
             _currentTargets.Clear();
             _playerStatusIcons.Clear();
+            _enemyStatusIcons.Clear();
             _enemySpritePartOffsets.Clear();
             _enemyAnimationTimers.Clear();
             _enemyAnimationIntervals.Clear();
@@ -66,6 +70,38 @@ namespace ProjectVagabond.Battle.UI
         {
             UpdateEnemyAnimations(gameTime);
             UpdatePlayerStatusIcons(combatants.FirstOrDefault(c => c.IsPlayerControlled));
+            UpdateStatusIconTooltips(combatants);
+        }
+
+        private void UpdateStatusIconTooltips(IEnumerable<BattleCombatant> allCombatants)
+        {
+            var virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
+            _hoveredStatusIcon = null;
+
+            // Player Icons
+            foreach (var iconInfo in _playerStatusIcons)
+            {
+                if (iconInfo.Bounds.Contains(virtualMousePos))
+                {
+                    _tooltipManager.RequestTooltip(iconInfo.Effect, iconInfo.Effect.GetTooltipText(), new Vector2(iconInfo.Bounds.Center.X, iconInfo.Bounds.Top));
+                    _hoveredStatusIcon = iconInfo;
+                    return;
+                }
+            }
+
+            // Enemy Icons
+            foreach (var combatantEntry in _enemyStatusIcons)
+            {
+                foreach (var iconInfo in combatantEntry.Value)
+                {
+                    if (iconInfo.Bounds.Contains(virtualMousePos))
+                    {
+                        _tooltipManager.RequestTooltip(iconInfo.Effect, iconInfo.Effect.GetTooltipText(), new Vector2(iconInfo.Bounds.Center.X, iconInfo.Bounds.Top));
+                        _hoveredStatusIcon = iconInfo;
+                        return;
+                    }
+                }
+            }
         }
 
         public void Draw(
@@ -105,52 +141,8 @@ namespace ProjectVagabond.Battle.UI
 
         public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font)
         {
-            if (!string.IsNullOrEmpty(_hoveredStatusEffectText) && _hoveredStatusIconAnchorPosition.HasValue)
-            {
-                var secondaryFont = _core.SecondaryFont;
-                var pixel = ServiceLocator.Get<Texture2D>();
-                var anchorPosition = _hoveredStatusIconAnchorPosition.Value;
-
-                Vector2 textSize = secondaryFont.MeasureString(_hoveredStatusEffectText);
-
-                const int paddingX = 8;
-                const int paddingY = 4;
-                int tooltipWidth = (int)textSize.X + paddingX;
-                int tooltipHeight = (int)textSize.Y + paddingY;
-
-                // Position the tooltip above the icon, centered horizontally.
-                Vector2 finalTopLeftPosition = new Vector2(
-                    anchorPosition.X - tooltipWidth / 2f,
-                    anchorPosition.Y - tooltipHeight - 2 // 2 pixels of space
-                );
-
-                // Clamp to screen bounds
-                if (finalTopLeftPosition.X < 0) finalTopLeftPosition.X = 0;
-                if (finalTopLeftPosition.Y < 0) finalTopLeftPosition.Y = 0;
-                if (finalTopLeftPosition.X + tooltipWidth > Global.VIRTUAL_WIDTH)
-                {
-                    finalTopLeftPosition.X = Global.VIRTUAL_WIDTH - tooltipWidth;
-                }
-                if (finalTopLeftPosition.Y + tooltipHeight > Global.VIRTUAL_HEIGHT)
-                {
-                    finalTopLeftPosition.Y = Global.VIRTUAL_HEIGHT - tooltipHeight;
-                }
-
-                // Round the final position *before* creating the drawing primitives to prevent desync.
-                Vector2 snappedPosition = new Vector2(MathF.Round(finalTopLeftPosition.X), MathF.Round(finalTopLeftPosition.Y));
-
-                Rectangle tooltipBg = new Rectangle((int)snappedPosition.X, (int)snappedPosition.Y, tooltipWidth, tooltipHeight);
-                Vector2 textPosition = new Vector2(snappedPosition.X + (paddingX / 2), snappedPosition.Y + (paddingY / 2));
-
-                // The DrawSnapped methods will now receive already-snapped integer coordinates, preventing further rounding.
-                spriteBatch.DrawSnapped(pixel, tooltipBg, _global.ToolTipBGColor * 0.9f);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), _global.ToolTipBorderColor);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), _global.ToolTipBorderColor);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
-                spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.Right - 1, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
-
-                spriteBatch.DrawStringSnapped(secondaryFont, _hoveredStatusEffectText, textPosition, _global.ToolTipTextColor);
-            }
+            // All tooltips are now handled by the TooltipManager, which is drawn
+            // in the BattleScene's final draw pass. This method is now empty.
         }
 
         private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, TargetType? currentTargetType, BattleAnimationManager animationManager)
@@ -203,7 +195,7 @@ namespace ProjectVagabond.Battle.UI
             float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
             DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY + yOffset), 1.0f, animationManager);
 
-            DrawPlayerStatusIcons(spriteBatch);
+            DrawPlayerStatusIcons(spriteBatch, player, secondaryFont, playerHudY);
 
             if (!player.IsDefeated && currentTargetType.HasValue)
             {
@@ -413,12 +405,16 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawSnapped(pixel, spriteRect, _global.Palette_Pink * combatant.VisualAlpha);
             }
 
+            DrawEnemyStatusIcons(spriteBatch, combatant, spriteRect);
+
             Vector2 nameSize = nameFont.MeasureString(combatant.Name);
             Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 8);
             spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, tintColor);
 
-            Vector2 hpSize = statsFont.MeasureString($"HP: {((int)Math.Round(combatant.VisualHP))}/{combatant.Stats.MaxHP}");
+            string hpText = $"HP: {((int)Math.Round(combatant.VisualHP))}/{combatant.Stats.MaxHP}";
+            Vector2 hpSize = statsFont.MeasureString(hpText);
             Vector2 hpPos = new Vector2(centerPosition.X - hpSize.X / 2, centerPosition.Y + 2);
+
             DrawHpLine(spriteBatch, statsFont, combatant, hpPos, combatant.VisualAlpha, animationManager);
         }
 
@@ -483,12 +479,53 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawStringSnapped(statsFont, maxHp, new Vector2(currentX, drawPosition.Y), numberColor);
         }
 
-        private void DrawPlayerStatusIcons(SpriteBatch spriteBatch)
+        private void DrawPlayerStatusIcons(SpriteBatch spriteBatch, BattleCombatant player, BitmapFont font, int hudY)
         {
+            if (player == null || !player.ActiveStatusEffects.Any()) return;
+
+            var pixel = ServiceLocator.Get<Texture2D>();
+
             foreach (var iconInfo in _playerStatusIcons)
             {
                 var iconTexture = _spriteManager.GetStatusEffectIcon(iconInfo.Effect.EffectType);
                 spriteBatch.DrawSnapped(iconTexture, iconInfo.Bounds, Color.White);
+
+                var borderColor = IsNegativeStatus(iconInfo.Effect.EffectType) ? _global.Palette_Red : _global.Palette_LightBlue;
+                var borderBounds = new Rectangle(iconInfo.Bounds.X - 1, iconInfo.Bounds.Y - 1, iconInfo.Bounds.Width + 2, iconInfo.Bounds.Height + 2);
+                float alpha = (_hoveredStatusIcon.HasValue && _hoveredStatusIcon.Value.Effect == iconInfo.Effect) ? 0.25f : 0.1f;
+                DrawRectangleBorder(spriteBatch, pixel, borderBounds, 1, borderColor * alpha);
+            }
+        }
+
+        private void DrawEnemyStatusIcons(SpriteBatch spriteBatch, BattleCombatant combatant, Rectangle spriteRect)
+        {
+            if (!combatant.ActiveStatusEffects.Any()) return;
+
+            var pixel = ServiceLocator.Get<Texture2D>();
+            if (!_enemyStatusIcons.ContainsKey(combatant.CombatantID))
+            {
+                _enemyStatusIcons[combatant.CombatantID] = new List<StatusIconInfo>();
+            }
+            _enemyStatusIcons[combatant.CombatantID].Clear();
+
+            const int iconSize = 5;
+            const int iconPadding = 1;
+            int currentX = spriteRect.Left + iconPadding;
+            int iconY = spriteRect.Top + iconPadding;
+
+            foreach (var effect in combatant.ActiveStatusEffects)
+            {
+                var iconBounds = new Rectangle(currentX, iconY, iconSize, iconSize);
+                _enemyStatusIcons[combatant.CombatantID].Add(new StatusIconInfo { Effect = effect, Bounds = iconBounds });
+                var iconTexture = _spriteManager.GetStatusEffectIcon(effect.EffectType);
+                spriteBatch.DrawSnapped(iconTexture, iconBounds, Color.White);
+
+                var borderColor = IsNegativeStatus(effect.EffectType) ? _global.Palette_Red : _global.Palette_LightBlue;
+                var borderBounds = new Rectangle(iconBounds.X - 1, iconBounds.Y - 1, iconBounds.Width + 2, iconBounds.Height + 2);
+                float alpha = (_hoveredStatusIcon.HasValue && _hoveredStatusIcon.Value.Effect == effect) ? 0.25f : 0.1f;
+                DrawRectangleBorder(spriteBatch, pixel, borderBounds, 1, borderColor * alpha);
+
+                currentX += iconSize + iconPadding;
             }
         }
 
@@ -516,13 +553,11 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdatePlayerStatusIcons(BattleCombatant player)
         {
+            // This method now only calculates the bounds for hover detection, drawing is done in DrawPlayerHud
             _playerStatusIcons.Clear();
-            _hoveredStatusEffectText = null; // Reset hover text each frame
-            _hoveredStatusIconAnchorPosition = null; // Reset anchor position
             if (player == null || !player.ActiveStatusEffects.Any()) return;
 
             var secondaryFont = _core.SecondaryFont;
-            var virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
             const int playerHudY = DIVIDER_Y - 10;
             const int playerHudPaddingX = 10;
             string hpText = $"HP: {((int)Math.Round(player.VisualHP))}/{player.Stats.MaxHP}";
@@ -538,12 +573,6 @@ namespace ProjectVagabond.Battle.UI
                 int iconY = (int)(playerHudY + (secondaryFont.LineHeight - iconSize) / 2f) + 1;
                 var iconBounds = new Rectangle(currentX, iconY, iconSize, iconSize);
                 _playerStatusIcons.Add(new StatusIconInfo { Effect = effect, Bounds = iconBounds });
-
-                if (iconBounds.Contains(virtualMousePos))
-                {
-                    _hoveredStatusEffectText = effect.GetTooltipText();
-                    _hoveredStatusIconAnchorPosition = new Vector2(iconBounds.Center.X, iconBounds.Top);
-                }
                 currentX -= (iconSize + iconPadding);
             }
         }
@@ -613,6 +642,35 @@ namespace ProjectVagabond.Battle.UI
                 int slotWidth = availableWidth / enemies.Count;
                 return new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
             }
+        }
+
+        private bool IsNegativeStatus(StatusEffectType type)
+        {
+            switch (type)
+            {
+                case StatusEffectType.Poison:
+                case StatusEffectType.Stun:
+                case StatusEffectType.Burn:
+                case StatusEffectType.Freeze:
+                case StatusEffectType.Blind:
+                case StatusEffectType.Confuse:
+                case StatusEffectType.Silence:
+                case StatusEffectType.Fear:
+                case StatusEffectType.Root:
+                case StatusEffectType.IntelligenceDown:
+                case StatusEffectType.AgilityDown:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
+        {
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
         }
     }
 }

@@ -38,6 +38,7 @@ namespace ProjectVagabond.Scenes
         private SceneManager _sceneManager;
         private SpriteManager _spriteManager;
         private HapticsManager _hapticsManager;
+        private TooltipManager _tooltipManager;
 
         // State Tracking
         private List<int> _enemyEntityIds = new List<int>();
@@ -59,6 +60,7 @@ namespace ProjectVagabond.Scenes
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _tooltipManager = ServiceLocator.Get<TooltipManager>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -234,6 +236,7 @@ namespace ProjectVagabond.Scenes
             _inputHandler.Update(gameTime, _uiManager, _renderer);
             _renderer.Update(gameTime, _battleManager.AllCombatants);
             _settingsButton?.Update(currentMouseState);
+            _tooltipManager.Update(gameTime);
 
             // Handle end of battle state
             if (_isBattleOver)
@@ -343,6 +346,7 @@ namespace ProjectVagabond.Scenes
             // Draw the overlay content (tooltips) on top, using the same transform
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             _renderer.DrawOverlay(spriteBatch, font);
+            _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
             spriteBatch.End();
         }
 
@@ -542,11 +546,19 @@ namespace ProjectVagabond.Scenes
         {
             if (e.Damage > 0)
             {
-                _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from {e.EffectType}!");
+                string effectName = e.EffectType == StatusEffectType.Burn ? "the burn" : e.EffectType.ToString();
+                _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from {effectName}!");
                 _pendingAnimations.Enqueue(() =>
                 {
                     _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
-                    _animationManager.StartPoisonEffectAnimation(e.Combatant.CombatantID);
+                    if (e.EffectType == StatusEffectType.Poison)
+                    {
+                        _animationManager.StartPoisonEffectAnimation(e.Combatant.CombatantID);
+                    }
+                    else if (e.EffectType == StatusEffectType.Burn)
+                    {
+                        _animationManager.StartHitAnimation(e.Combatant.CombatantID);
+                    }
                     Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
                     _animationManager.StartDamageNumberIndicator(e.Combatant.CombatantID, e.Damage, hudPosition);
                 });

@@ -171,11 +171,6 @@ namespace ProjectVagabond.Battle
             // Step 5: Final Damage & Additive Modifiers
             int finalDamageAmount = (int)Math.Floor(finalDamage);
 
-            if (target.HasStatusEffect(StatusEffectType.Burn) && move.ImpactType == ImpactType.Physical)
-            {
-                finalDamageAmount += Math.Max(1, (int)(target.Stats.MaxHP / 16f));
-            }
-
             if (finalDamage > 0 && finalDamageAmount == 0)
             {
                 finalDamageAmount = 1;

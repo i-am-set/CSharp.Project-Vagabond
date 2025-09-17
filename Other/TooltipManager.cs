@@ -83,22 +83,28 @@ namespace ProjectVagabond
             int tooltipWidth = (int)textSize.X + paddingX;
             int tooltipHeight = (int)textSize.Y + paddingY;
 
-            Vector2 finalTopLeftPosition = new Vector2(_anchorPosition.X + 15, _anchorPosition.Y + 15);
+            // Position the tooltip above the anchor, centered horizontally.
+            Vector2 finalTopLeftPosition = new Vector2(
+                _anchorPosition.X - tooltipWidth / 2f,
+                _anchorPosition.Y - tooltipHeight - 2 // 2 pixels of space
+            );
 
+            // Clamp to screen bounds
+            if (finalTopLeftPosition.X < 0) finalTopLeftPosition.X = 0;
+            if (finalTopLeftPosition.Y < 0) finalTopLeftPosition.Y = 0;
             if (finalTopLeftPosition.X + tooltipWidth > Global.VIRTUAL_WIDTH)
             {
-                finalTopLeftPosition.X = _anchorPosition.X - tooltipWidth - 5;
+                finalTopLeftPosition.X = Global.VIRTUAL_WIDTH - tooltipWidth;
             }
-
             if (finalTopLeftPosition.Y + tooltipHeight > Global.VIRTUAL_HEIGHT)
             {
-                finalTopLeftPosition.Y = _anchorPosition.Y - tooltipHeight - 5;
+                finalTopLeftPosition.Y = Global.VIRTUAL_HEIGHT - tooltipHeight;
             }
 
             Rectangle tooltipBg = new Rectangle((int)finalTopLeftPosition.X, (int)finalTopLeftPosition.Y, tooltipWidth, tooltipHeight);
-            Vector2 textPosition = new Vector2(finalTopLeftPosition.X + (paddingX / 2), finalTopLeftPosition.Y + (paddingY / 2));
+            Vector2 textPosition = new Vector2(tooltipBg.X + (paddingX / 2), tooltipBg.Y + (paddingY / 2));
 
-            spriteBatch.DrawSnapped(pixel, tooltipBg, _global.ToolTipBGColor * 0.9f);
+            spriteBatch.DrawSnapped(pixel, tooltipBg, _global.ToolTipBGColor);
             spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, tooltipBg.Width, 1), _global.ToolTipBorderColor);
             spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Bottom - 1, tooltipBg.Width, 1), _global.ToolTipBorderColor);
             spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBg.X, tooltipBg.Y, 1, tooltipBg.Height), _global.ToolTipBorderColor);
