@@ -25,15 +25,15 @@
       "Properties": {
         "MaxHP": 100,
         "Strength": 1,
-        "Intelligence": 1,
+        "Intelligence": 15,
         "Tenacity": 100,
         "Agility": 1,
         "DefensiveElementIDs": [ 101 ],
         "StartingMoveIDs": [
-          "SonicBoom",
-          "FocusEnergy",
-          "DrillPeck",
-          "ToxicSting"
+          "SearingCoals",
+          "Immolate",
+          "PurifyingLight",
+          "TimeBomb"
         ],
         "DefaultStrikeMoveID": "ClawRake"
       }

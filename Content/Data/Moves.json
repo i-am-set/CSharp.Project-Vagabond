@@ -627,7 +627,7 @@
     "MoveID": "FocusEnergy",
     "MoveName": "Focus Energy",
     "Description": "An arcane bolt that grows in power by 10 each time it is used, up to a maximum of 50 bonus power.",
-    "Power": 40,
+    "Power": 30,
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "OffensiveStat": "Intelligence",
@@ -636,7 +636,7 @@
     "Accuracy": 100,
     "Priority": 0,
     "OffensiveElementIDs": [ 4 ],
-    "Effects": { "RampUp": "10,50" }
+    "Effects": { "RampUp": "30,120" }
   },
   {
     "MoveID": "DrillPeck",
@@ -667,6 +667,23 @@
     "Priority": 0,
     "OffensiveElementIDs": [ 7 ],
     "Effects": { "ApplyStatus": "Poison,100,3" }
+  },
+  {
+    "MoveID": "SearingCoals",
+    "MoveName": "Searing Coals",
+    "Description": "Hot coals are summoned at the targets feet, burning them for 3 turns.",
+    "Power": 20,
+    "MoveType": "Spell",
+    "ImpactType": "Physical",
+    "OffensiveStat": "Intelligence",
+    "MakesContact": false,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 0,
+    "OffensiveElementIDs": [ 2 ],
+    "Effects": {
+      "ApplyStatus": "Burn,100,3",
+      "SelfDebuff": "Burn,100,3" }
   },
   {
     "MoveID": "Immolate",

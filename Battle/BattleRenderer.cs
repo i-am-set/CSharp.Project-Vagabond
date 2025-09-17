@@ -431,6 +431,7 @@ namespace ProjectVagabond.Battle.UI
             var hitAnim = animationManager.GetHitAnimationState(combatant.CombatantID);
             var healBounceAnim = animationManager.GetHealBounceAnimationState(combatant.CombatantID);
             var healFlashAnim = animationManager.GetHealFlashAnimationState(combatant.CombatantID);
+            var poisonAnim = animationManager.GetPoisonEffectAnimationState(combatant.CombatantID);
 
             if (hitAnim != null)
             {
@@ -440,6 +441,16 @@ namespace ProjectVagabond.Battle.UI
                 drawPosition.X += (float)(_random.NextDouble() * 2 - 1) * shakeMagnitude;
                 drawPosition.Y += (float)(_random.NextDouble() * 2 - 1) * shakeMagnitude;
                 Color flashColor = _global.Palette_Red;
+                labelColor = Color.Lerp(flashColor, _global.Palette_LightGray, easeOutProgress) * alpha;
+                numberColor = Color.Lerp(flashColor, Color.White, easeOutProgress) * alpha;
+            }
+            else if (poisonAnim != null)
+            {
+                float progress = poisonAnim.Timer / BattleAnimationManager.PoisonEffectAnimationState.Duration;
+                float easeOutProgress = Easing.EaseOutCubic(progress);
+                float shakeMagnitude = 4.0f * (1.0f - easeOutProgress);
+                drawPosition.X += MathF.Sin(poisonAnim.Timer * 20f) * shakeMagnitude;
+                Color flashColor = _global.Palette_LightPurple;
                 labelColor = Color.Lerp(flashColor, _global.Palette_LightGray, easeOutProgress) * alpha;
                 numberColor = Color.Lerp(flashColor, Color.White, easeOutProgress) * alpha;
             }

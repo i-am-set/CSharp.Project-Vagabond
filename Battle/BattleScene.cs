@@ -543,7 +543,13 @@ namespace ProjectVagabond.Scenes
             if (e.Damage > 0)
             {
                 _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from {e.EffectType}!");
-                _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
+                _pendingAnimations.Enqueue(() =>
+                {
+                    _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
+                    _animationManager.StartPoisonEffectAnimation(e.Combatant.CombatantID);
+                    Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
+                    _animationManager.StartDamageNumberIndicator(e.Combatant.CombatantID, e.Damage, hudPosition);
+                });
             }
         }
 

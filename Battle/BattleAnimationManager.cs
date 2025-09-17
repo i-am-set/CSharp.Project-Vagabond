@@ -1,15 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
@@ -28,6 +22,7 @@ namespace ProjectVagabond.Battle.UI
         public class HitAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.0f; }
         public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.1f; }
         public class HealFlashAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.5f; }
+        public class PoisonEffectAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.5f; }
         public class DamageIndicatorState
         {
             public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber }
@@ -48,12 +43,13 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<HitAnimationState> _activeHitAnimations = new List<HitAnimationState>();
         private readonly List<HealBounceAnimationState> _activeHealBounceAnimations = new List<HealBounceAnimationState>();
         private readonly List<HealFlashAnimationState> _activeHealFlashAnimations = new List<HealFlashAnimationState>();
+        private readonly List<PoisonEffectAnimationState> _activePoisonEffectAnimations = new List<PoisonEffectAnimationState>();
         private readonly List<DamageIndicatorState> _activeDamageIndicators = new List<DamageIndicatorState>();
 
         private readonly Random _random = new Random();
         private readonly Global _global;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any();
 
         public BattleAnimationManager()
         {
@@ -67,6 +63,7 @@ namespace ProjectVagabond.Battle.UI
             _activeHitAnimations.Clear();
             _activeHealBounceAnimations.Clear();
             _activeHealFlashAnimations.Clear();
+            _activePoisonEffectAnimations.Clear();
             _activeDamageIndicators.Clear();
         }
 
@@ -120,6 +117,16 @@ namespace ProjectVagabond.Battle.UI
         {
             _activeHealFlashAnimations.RemoveAll(a => a.CombatantID == combatantId);
             _activeHealFlashAnimations.Add(new HealFlashAnimationState
+            {
+                CombatantID = combatantId,
+                Timer = 0f
+            });
+        }
+
+        public void StartPoisonEffectAnimation(string combatantId)
+        {
+            _activePoisonEffectAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activePoisonEffectAnimations.Add(new PoisonEffectAnimationState
             {
                 CombatantID = combatantId,
                 Timer = 0f
@@ -207,12 +214,18 @@ namespace ProjectVagabond.Battle.UI
             return _activeHealFlashAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
+        public PoisonEffectAnimationState GetPoisonEffectAnimationState(string combatantId)
+        {
+            return _activePoisonEffectAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
+        }
+
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
             UpdateHealthAnimations(gameTime, combatants);
             UpdateAlphaAnimations(gameTime, combatants);
             UpdateHitAnimations(gameTime);
             UpdateHealAnimations(gameTime);
+            UpdatePoisonEffectAnimations(gameTime);
             UpdateDamageIndicators(gameTime);
         }
 
@@ -300,6 +313,19 @@ namespace ProjectVagabond.Battle.UI
                 if (anim.Timer >= HealFlashAnimationState.Duration)
                 {
                     _activeHealFlashAnimations.RemoveAt(i);
+                }
+            }
+        }
+
+        private void UpdatePoisonEffectAnimations(GameTime gameTime)
+        {
+            for (int i = _activePoisonEffectAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activePoisonEffectAnimations[i];
+                anim.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (anim.Timer >= PoisonEffectAnimationState.Duration)
+                {
+                    _activePoisonEffectAnimations.RemoveAt(i);
                 }
             }
         }
