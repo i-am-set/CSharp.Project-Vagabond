@@ -155,12 +155,18 @@ namespace ProjectVagabond.Battle
 
         /// <summary>
         /// Adds a new status effect to the combatant, resetting the duration if it already exists.
+        /// An extra turn is added to the duration to account for the end-of-round decrement.
         /// </summary>
         /// <param name="newEffect">The new status effect instance to add.</param>
         public void AddStatusEffect(StatusEffectInstance newEffect)
         {
-            // Remove any existing effect of the same type to reset its duration, as per the design document.
+            // Remove any existing effect of the same type to reset its duration.
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
+
+            // Add 1 to the duration to account for the immediate end-of-round decrement.
+            // A 1-turn effect should last until the end of the *next* round.
+            newEffect.DurationInTurns += 1;
+
             ActiveStatusEffects.Add(newEffect);
         }
 

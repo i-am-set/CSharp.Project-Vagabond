@@ -20,7 +20,7 @@ namespace ProjectVagabond.Battle
         Spell
     }
 
-    /// <summary>
+    /// <summary> 
     /// Defines the targeting behavior of a move.
     /// </summary>
     public enum TargetType
