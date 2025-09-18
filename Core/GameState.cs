@@ -61,7 +61,7 @@ namespace ProjectVagabond
 
         // Fog of War
         public HashSet<Point> ExploredCells { get; private set; } = new HashSet<Point>();
-        private const int FOG_OF_WAR_RADIUS = 20;
+        private const int FOG_OF_WAR_RADIUS = 40;
 
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

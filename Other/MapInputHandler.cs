@@ -46,32 +46,6 @@ namespace ProjectVagabond
             _componentStore = ServiceLocator.Get<ComponentStore>();
 
             _previousKeyboardState = Keyboard.GetState();
-
-            Dictionary<string, int> seen = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            int count = 0;
-            foreach (Button button in _mapRenderer.HeaderButtons)
-            {
-                count++;
-                var function = button.Function;
-                if (seen.TryGetValue(function, out var firstIndex))
-                {
-                    throw new InvalidOperationException($"Duplicate button function '{function}' found at indices {firstIndex} and {count}.");
-                }
-                seen[function] = count;
-            }
-
-            count = 0;
-            foreach (var button in _mapRenderer.HeaderButtons)
-            {
-                count++;
-                switch (button.Function.ToLowerInvariant())
-                {
-                    case "go": button.OnClick += HandleGoClick; break;
-                    case "stop": button.OnClick += HandleStopClick; break;
-                    case "clear": button.OnClick += () => _playerInputSystem.CancelPendingActions(_gameState); break;
-                    default: throw new InvalidOperationException($"ERROR! No click handler defined for button with function '{button.Function}' at index {count}.");
-                }
-            }
         }
 
         public void Update(GameTime gameTime)
@@ -85,17 +59,6 @@ namespace ProjectVagabond
             Vector2 virtualMousePos = Core.TransformMouse(_currentMouseState.Position);
 
             _pathUpdateTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            foreach (var button in _mapRenderer.HeaderButtons)
-            {
-                switch (button.Function.ToLower())
-                {
-                    case "go": button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions; break;
-                    case "stop": button.IsEnabled = _gameState.IsExecutingActions; break;
-                    case "clear": button.IsEnabled = _gameState.PendingActions.Count > 0 && !_gameState.IsExecutingActions; break;
-                }
-                button.Update(_currentMouseState);
-            }
 
             bool menuWasOpen = _contextMenu.IsOpen;
             _contextMenu.Update(_currentMouseState, _previousMouseState, virtualMousePos, _font);
@@ -115,16 +78,6 @@ namespace ProjectVagabond
             }
 
             _previousKeyboardState = keyboardState;
-        }
-
-        private void HandleGoClick()
-        {
-            _gameState.ToggleExecutingActions(true);
-        }
-
-        private void HandleStopClick()
-        {
-            _gameState.CancelExecutingActions();
         }
 
         private void HandleCameraPan(Vector2 virtualMousePos)

@@ -74,10 +74,6 @@ namespace ProjectVagabond.Scenes
 
             // Reset animation states
             _settingsButton.ResetAnimationState();
-            foreach (var button in _mapRenderer.HeaderButtons)
-            {
-                button.ResetAnimationState();
-            }
 
             _previousKeyboardState = Keyboard.GetState();
             _previousMouseState = Mouse.GetState();

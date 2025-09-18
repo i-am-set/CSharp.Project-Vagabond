@@ -23,7 +23,6 @@ namespace ProjectVagabond
         private Vector2? _hoveredGridPos;
         private Rectangle _mapGridBounds;
         private readonly ContextMenu _contextMenu;
-        private readonly Dictionary<string, Button> _buttonMap;
 
         private readonly List<Button> _headerButtons = new List<Button>();
         public IEnumerable<Button> HeaderButtons => _headerButtons;
@@ -44,7 +43,7 @@ namespace ProjectVagabond
 
 
         // --- TUNING ---
-        private const int DEFAULT_MAP_GRID_CELLS = 29;
+        private const int DEFAULT_MAP_GRID_CELLS = 33;
         private const int DEFAULT_CELL_SIZE = 5;
         private const int MAP_GRID_PIXEL_WIDTH = DEFAULT_MAP_GRID_CELLS * DEFAULT_CELL_SIZE;
         private const int MAP_GRID_PIXEL_HEIGHT = DEFAULT_MAP_GRID_CELLS * DEFAULT_CELL_SIZE;
@@ -54,12 +53,6 @@ namespace ProjectVagabond
         // Animation state for path nodes
         private readonly Dictionary<Vector2, float> _pathNodeAnimationOffsets = new Dictionary<Vector2, float>();
         private readonly Random _pathAnimRandom = new Random();
-
-        // Animation state for the footer tab
-        private float _footerYOffset;
-        private float _footerTargetYOffset;
-        private const float FOOTER_ANIMATION_SPEED = 8f;
-        private const float FOOTER_HIDDEN_Y_OFFSET = -20f; // Negative to move it UP, just enough to hide it
 
         // Animation state for map frame sway
         public OrganicSwayAnimation SwayAnimation { get; }
@@ -76,12 +69,6 @@ namespace ProjectVagabond
             _archetypeManager = ServiceLocator.Get<ArchetypeManager>();
             _global = ServiceLocator.Get<Global>();
             _contextMenu = new ContextMenu();
-
-            _headerButtons.Add(new Button(Rectangle.Empty, "Clear") { IsEnabled = false });
-            _headerButtons.Add(new Button(Rectangle.Empty, "Go") { IsEnabled = false });
-            _headerButtons.Add(new Button(Rectangle.Empty, "Stop") { IsEnabled = false });
-
-            _buttonMap = _headerButtons.ToDictionary(b => b.Function.ToLowerInvariant(), b => b);
 
             SwayAnimation = new OrganicSwayAnimation(SWAY_SPEED_X, SWAY_SPEED_Y, SWAY_AMOUNT, SWAY_AMOUNT);
 
@@ -135,8 +122,6 @@ namespace ProjectVagabond
 
         public void ResetHeaderState()
         {
-            _footerYOffset = FOOTER_HIDDEN_Y_OFFSET;
-            _footerTargetYOffset = FOOTER_HIDDEN_Y_OFFSET;
         }
 
         public void Update(GameTime gameTime, BitmapFont font)
@@ -145,12 +130,6 @@ namespace ProjectVagabond
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
             UpdateHover(virtualMousePos);
             _contextMenu.Update(mouseState, mouseState, virtualMousePos, font); // Note: prevMouseState is same as current here, might need adjustment if complex logic is added
-
-            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            // --- Footer Animation Logic ---
-            _footerTargetYOffset = _gameState.PendingActions.Any() ? 0f : FOOTER_HIDDEN_Y_OFFSET;
-            _footerYOffset = MathHelper.Lerp(_footerYOffset, _footerTargetYOffset, deltaTime * FOOTER_ANIMATION_SPEED);
         }
 
         private void CalculateMapLayout(Rectangle? overrideBounds = null)
@@ -170,7 +149,7 @@ namespace ProjectVagabond
 
                 // --- CENTERING CALCULATION ---
                 int mapX = (Global.VIRTUAL_WIDTH - finalMapWidth) / 2;
-                int mapY = (Global.VIRTUAL_HEIGHT - finalMapHeight) / 2 - 7; // Shift map up by 7 pixels
+                int mapY = (Global.VIRTUAL_HEIGHT - finalMapHeight) / 2;
                 MapScreenBounds = new Rectangle(mapX, mapY, finalMapWidth, finalMapHeight);
             }
 
@@ -196,25 +175,6 @@ namespace ProjectVagabond
 
             // Do not show tooltips while the player is auto-moving.
             if (_gameState.IsExecutingActions) return;
-
-            var stringBuilder = new StringBuilder();
-
-            // --- Tooltip Logic ---
-            int posX = (int)currentHoveredGridPos.Value.X;
-            int posY = (int)currentHoveredGridPos.Value.Y;
-
-            if (!_gameState.ExploredCells.Contains(new Point(posX, posY)))
-            {
-                _tooltipManager.RequestTooltip(currentHoveredGridPos.Value, "Unexplored", virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
-                return;
-            }
-
-            float noise = _gameState.GetNoiseAt(posX, posY);
-            string terrainName = GetTerrainName(noise);
-            stringBuilder.Append($"Pos: ({posX}, {posY})\n");
-            stringBuilder.Append($"Terrain: {terrainName}\n");
-            stringBuilder.Append($"Noise: {noise:F2}");
-            _tooltipManager.RequestTooltip(currentHoveredGridPos.Value, stringBuilder.ToString(), virtualMousePos, Global.TOOLTIP_AVERAGE_POPUP_TIME);
         }
 
         public void DrawMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Rectangle? overrideBounds = null)
@@ -245,7 +205,7 @@ namespace ProjectVagabond
         private void DrawWorldMap(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, Rectangle? overrideBounds)
         {
             CalculateMapLayout(overrideBounds);
-            DrawMapFrame(spriteBatch, font, gameTime, transform);
+            DrawMapFrameAndBackground(spriteBatch);
 
             var gridElements = GenerateWorldMapGridElements();
             foreach (var element in gridElements)
@@ -268,9 +228,10 @@ namespace ProjectVagabond
             }
 
             DrawPlayerOffscreenIndicator(spriteBatch);
+            DrawMapFrameOverlay(spriteBatch, font);
         }
 
-        private void DrawMapFrame(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
+        private void DrawMapFrameAndBackground(SpriteBatch spriteBatch)
         {
             Texture2D pixel = ServiceLocator.Get<Texture2D>();
 
@@ -285,32 +246,7 @@ namespace ProjectVagabond
                 MapScreenBounds.Height
             );
 
-            // --- 1. Draw the animated footer FIRST ---
-            // Only draw if it's not fully hidden
-            if (_footerYOffset > FOOTER_HIDDEN_Y_OFFSET + 1)
-            {
-                int footerWidth = swayedMapScreenBounds.Width;
-                int footerX = swayedMapScreenBounds.X;
-                int footerY = (int)(swayedMapScreenBounds.Bottom + 4 + _footerYOffset);
-
-                Rectangle footerBounds = new Rectangle(footerX, footerY, footerWidth, 16);
-
-                // Draw footer background
-                spriteBatch.Draw(pixel, footerBounds, _global.TerminalBg);
-
-                // Draw footer frame lines (1px thick)
-                spriteBatch.Draw(pixel, new Rectangle(footerBounds.X, footerBounds.Bottom - 1, footerBounds.Width, 1), _global.Palette_White); // Bottom
-                spriteBatch.Draw(pixel, new Rectangle(footerBounds.X, footerBounds.Y, 1, footerBounds.Height), _global.Palette_White); // Left
-                spriteBatch.Draw(pixel, new Rectangle(footerBounds.Right - 1, footerBounds.Y, 1, footerBounds.Height), _global.Palette_White); // Right
-
-                LayoutAndPositionButtons(footerBounds);
-                foreach (var b in _headerButtons)
-                {
-                    b.Draw(spriteBatch, font, gameTime, transform);
-                }
-            }
-
-            // --- 2. Draw the main map frame and background on top of the footer ---
+            // --- Draw the main map frame and background ---
             int framePadding = 4;
             Rectangle fullFrameArea = new Rectangle(
                 swayedMapScreenBounds.X - framePadding,
@@ -327,10 +263,21 @@ namespace ProjectVagabond
             spriteBatch.Draw(pixel, new Rectangle(fullFrameArea.X, fullFrameArea.Bottom - 1, fullFrameArea.Width, 1), _global.Palette_White); // Bottom border
             spriteBatch.Draw(pixel, new Rectangle(fullFrameArea.X, fullFrameArea.Y, 1, fullFrameArea.Height), _global.Palette_White); // Left border
             spriteBatch.Draw(pixel, new Rectangle(fullFrameArea.Right - 1, fullFrameArea.Y, 1, fullFrameArea.Height), _global.Palette_White); // Right border
+        }
 
-            // --- 3. Draw the recenter prompt if needed ---
+        private void DrawMapFrameOverlay(SpriteBatch spriteBatch, BitmapFont font)
+        {
+            // --- Draw the recenter prompt if needed ---
             if (IsCameraDetached)
             {
+                var swayOffset = SwayAnimation.Offset;
+                var swayedMapScreenBounds = new Rectangle(
+                    MapScreenBounds.X + (int)swayOffset.X,
+                    MapScreenBounds.Y + (int)swayOffset.Y,
+                    MapScreenBounds.Width,
+                    MapScreenBounds.Height
+                );
+
                 string part1 = "[SPACE]";
                 string part2 = " Recenter";
                 Vector2 part1Size = font.MeasureString(part1);
@@ -343,36 +290,6 @@ namespace ProjectVagabond
 
                 spriteBatch.DrawStringSnapped(font, part1, startPos, _global.Palette_Orange);
                 spriteBatch.DrawStringSnapped(font, part2, new Vector2(startPos.X + part1Size.X, startPos.Y), _global.Palette_Yellow);
-            }
-        }
-
-        public void LayoutAndPositionButtons(Rectangle footerBounds)
-        {
-            const int buttonHeight = 16;
-            const int buttonSpacing = 5;
-            const int buttonWidth = 45;
-
-            int totalWidth = (buttonWidth * 3) + (buttonSpacing * 2);
-            int groupStartX = footerBounds.X + (footerBounds.Width - totalWidth) / 2;
-
-            int currentX = groupStartX;
-            int buttonY = footerBounds.Y + (footerBounds.Height - buttonHeight) / 2;
-
-            if (_buttonMap.TryGetValue("clear", out Button clearButton))
-            {
-                clearButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
-                currentX += buttonWidth + buttonSpacing;
-            }
-
-            if (_buttonMap.TryGetValue("go", out Button goButton))
-            {
-                goButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
-                currentX += buttonWidth + buttonSpacing;
-            }
-
-            if (_buttonMap.TryGetValue("stop", out Button stopButton))
-            {
-                stopButton.Bounds = new Rectangle(currentX, buttonY, buttonWidth, buttonHeight);
             }
         }
 
@@ -582,8 +499,8 @@ namespace ProjectVagabond
             if (_mapGridBounds.IsEmpty) return null;
 
             Vector2 viewCenter = GetPlayerRenderPosition() + CameraOffset;
-            float startX = viewCenter.X - GridSizeX / 2f;
-            float startY = viewCenter.Y - GridSizeY / 2f;
+            int startX = (int)viewCenter.X - GridSizeX / 2;
+            int startY = (int)viewCenter.Y - GridSizeY / 2;
 
             float gridX = mapPos.X - startX;
             float gridY = mapPos.Y - startY;
@@ -600,8 +517,8 @@ namespace ProjectVagabond
         {
             var viewCenter = GetPlayerRenderPosition() + CameraOffset;
 
-            float cameraWorldX = viewCenter.X - GridSizeX / 2f;
-            float cameraWorldY = viewCenter.Y - GridSizeY / 2f;
+            int cameraWorldX = (int)viewCenter.X - GridSizeX / 2;
+            int cameraWorldY = (int)viewCenter.Y - GridSizeY / 2;
 
             // Apply the requested 1-pixel offset to the mouse position before calculation.
             float adjustedMouseX = virtualMousePos.X + 0.5f;
