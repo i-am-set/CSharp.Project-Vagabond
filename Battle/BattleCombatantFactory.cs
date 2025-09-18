@@ -59,6 +59,23 @@ namespace ProjectVagabond.Battle
             // Initialize visual HP to be the same as logical HP at the start of battle.
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
+            // Populate passive abilities from the entity's component
+            var abilitiesComponent = componentStore.GetComponent<PassiveAbilitiesComponent>(entityId);
+            if (abilitiesComponent != null)
+            {
+                foreach (var abilityId in abilitiesComponent.AbilityIDs)
+                {
+                    if (BattleDataCache.Abilities.TryGetValue(abilityId, out var abilityData))
+                    {
+                        combatant.ActiveAbilities.Add(abilityData);
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"[BattleCombatantFactory] [WARNING] AbilityID '{abilityId}' not found in cache for combatant '{combatant.Name}'.");
+                    }
+                }
+            }
+
             if (combatant.IsPlayerControlled)
             {
                 combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;

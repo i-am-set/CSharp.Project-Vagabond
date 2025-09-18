@@ -432,7 +432,7 @@ namespace ProjectVagabond.Battle.UI
                     switch (indicator.Text)
                     {
                         case "EFFECTIVE":
-                            drawColor = useAltColor ? _global.Palette_LightBlue : _global.Palette_White;
+                            drawColor = useAltColor ? _global.Palette_LightBlue : _global.Palette_Yellow;
                             break;
                         case "RESISTED":
                             drawColor = useAltColor ? _global.Palette_Red : _global.Palette_White;

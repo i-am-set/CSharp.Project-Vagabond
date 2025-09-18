@@ -77,6 +77,11 @@ namespace ProjectVagabond.Battle
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
 
         /// <summary>
+        /// A list of currently active passive abilities.
+        /// </summary>
+        public List<AbilityData> ActiveAbilities { get; set; } = new List<AbilityData>();
+
+        /// <summary>
         /// A list of element IDs associated with this combatant's defensive type.
         /// </summary>
         public List<int> DefensiveElementIDs { get; set; } = new List<int>();
@@ -179,6 +184,26 @@ namespace ProjectVagabond.Battle
         }
 
         // --- Effective Stat Calculation ---
+
+        /// <summary>
+        /// Gets the combatant's effective defensive element IDs, including those granted by passive abilities.
+        /// </summary>
+        /// <returns>A list of unique defensive element IDs.</returns>
+        public List<int> GetEffectiveDefensiveElementIDs()
+        {
+            var effectiveElements = new List<int>(this.DefensiveElementIDs);
+            foreach (var ability in ActiveAbilities)
+            {
+                if (ability.Effects.TryGetValue("AddDefensiveElement", out var elementIdStr) && int.TryParse(elementIdStr, out int elementId))
+                {
+                    if (!effectiveElements.Contains(elementId))
+                    {
+                        effectiveElements.Add(elementId);
+                    }
+                }
+            }
+            return effectiveElements;
+        }
 
         public int GetEffectiveStrength()
         {

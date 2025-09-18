@@ -1,0 +1,11 @@
+[
+  {
+    "AbilityID": "GreenThumb",
+    "AbilityName": "Green Thumb",
+    "Description": "Boosts Nature-type moves and grants the Nature defensive type.",
+    "Effects": {
+      "AddDefensiveElement": "109",
+      "DamageBonus": "13,20"
+    }
+  }
+]

@@ -126,6 +126,24 @@ namespace ProjectVagabond.Battle
             // Step 4: Multiplicative Modifier Application
             float finalDamage = baseDamage;
 
+            // Modifier (Ability Damage Bonus)
+            foreach (var ability in attacker.ActiveAbilities)
+            {
+                if (ability.Effects.TryGetValue("DamageBonus", out var damageBonusValue))
+                {
+                    var parts = damageBonusValue.Split(',');
+                    if (parts.Length == 2 &&
+                        EffectParser.TryParseInt(parts[0].Trim(), out int elementId) &&
+                        EffectParser.TryParseFloat(parts[1].Trim(), out float bonusPercent))
+                    {
+                        if (move.OffensiveElementIDs.Contains(elementId))
+                        {
+                            finalDamage *= (1.0f + (bonusPercent / 100f));
+                        }
+                    }
+                }
+            }
+
             // Modifier (Execute)
             if (move.Effects.TryGetValue("Execute", out var executeValue) && EffectParser.TryParseFloatArray(executeValue, out float[] execParams) && execParams.Length == 2)
             {
@@ -248,8 +266,9 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public static float GetElementalMultiplier(MoveData move, BattleCombatant target)
         {
+            var targetDefensiveElements = target.GetEffectiveDefensiveElementIDs();
             if (move.OffensiveElementIDs == null || !move.OffensiveElementIDs.Any() ||
-                target.DefensiveElementIDs == null || !target.DefensiveElementIDs.Any())
+                targetDefensiveElements == null || !targetDefensiveElements.Any())
             {
                 return 1.0f;
             }
@@ -260,7 +279,7 @@ namespace ProjectVagabond.Battle
             {
                 if (BattleDataCache.InteractionMatrix.TryGetValue(offensiveId, out var attackRow))
                 {
-                    foreach (int defensiveId in target.DefensiveElementIDs)
+                    foreach (int defensiveId in targetDefensiveElements)
                     {
                         if (attackRow.TryGetValue(defensiveId, out float multiplier))
                         {

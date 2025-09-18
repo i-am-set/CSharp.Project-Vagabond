@@ -38,6 +38,11 @@ namespace ProjectVagabond.Battle
         public static Dictionary<string, ConsumableItemData> Consumables { get; private set; }
 
         /// <summary>
+        /// A dictionary mapping Ability IDs to their definitions.
+        /// </summary>
+        public static Dictionary<string, AbilityData> Abilities { get; private set; }
+
+        /// <summary>
         /// Loads all battle data from JSON files into memory.
         /// </summary>
         /// <param name="content">The game's ContentManager.</param>
@@ -92,6 +97,20 @@ namespace ProjectVagabond.Battle
             {
                 Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load Consumables.json: {ex.Message}");
                 Consumables = new Dictionary<string, ConsumableItemData>();
+            }
+
+            try
+            {
+                string abilitiesPath = Path.Combine(content.RootDirectory, "Data", "Abilities.json");
+                string abilitiesJson = File.ReadAllText(abilitiesPath);
+                var abilityList = JsonSerializer.Deserialize<List<AbilityData>>(abilitiesJson, jsonOptions);
+                Abilities = abilityList.ToDictionary(a => a.AbilityID, a => a);
+                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Abilities.Count} ability definitions.");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load Abilities.json: {ex.Message}");
+                Abilities = new Dictionary<string, AbilityData>();
             }
         }
 

@@ -33,9 +33,17 @@
           "VampiricBite",
           "BloodMagic",
           "Overload",
-          "Misfire"
+          "BriarLash"
         ],
         "DefaultStrikeMoveID": "ClawRake"
+      }
+    },
+    {
+      "Type": "ProjectVagabond.Battle.PassiveAbilitiesComponent",
+      "Properties": {
+        "AbilityIDs": [
+          "GreenThumb"
+        ]
       }
     }
   ]
