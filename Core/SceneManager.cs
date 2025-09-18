@@ -30,7 +30,7 @@ namespace ProjectVagabond
         private bool _isTransitioning = false;
         private bool _isHoldingBlack = false;
         private float _holdTimer = 0f;
-        private const float HOLD_DURATION = 0.1f;
+        private const float HOLD_DURATION = 0.5f;
 
         private bool _loadIsPending = false;
         private List<LoadingTask>? _pendingLoadingTasks;
