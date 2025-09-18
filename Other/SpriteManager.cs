@@ -14,7 +14,7 @@ namespace ProjectVagabond
 
         // UI Sprite Sheets
         public Texture2D ActionButtonsSpriteSheet { get; private set; }
-        public Texture2D ActionButtonTemplateSprite { get; private set; }
+        public Texture2D ActionButtonTemplateSpriteSheet { get; private set; }
         public Texture2D ActionButtonTemplateSecondarySprite { get; private set; }
         public Texture2D ActionMovesBackgroundSprite { get; private set; }
         public Texture2D ActionTooltipBackgroundSprite { get; private set; }
@@ -25,6 +25,8 @@ namespace ProjectVagabond
         public Rectangle[] ActionButtonSourceRects { get; private set; } // 0-2: Act, 3-5: Item, 6-8: Flee (Normal, Hover, Clicked)
         public Dictionary<int, Rectangle> ElementIconSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Rectangle[] ActionIconSourceRects { get; private set; } // 0: Strike, 1: Dodge, 2: Stall
+        public Dictionary<int, Rectangle> RarityBackgroundSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
+
 
         // Enemy Sprite Cache
         private readonly Dictionary<string, Texture2D> _enemySprites = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
@@ -117,8 +119,8 @@ namespace ProjectVagabond
             try { ActionButtonsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_buttons_icon_spritesheet"); }
             catch { ActionButtonsSpriteSheet = _textureFactory.CreateColoredTexture(288, 150, Color.Magenta); }
 
-            try { ActionButtonTemplateSprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_template"); }
-            catch { ActionButtonTemplateSprite = _textureFactory.CreateColoredTexture(155, 15, Color.Magenta); }
+            try { ActionButtonTemplateSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_template_spritesheet"); }
+            catch { ActionButtonTemplateSpriteSheet = _textureFactory.CreateColoredTexture(1099, 17, Color.Magenta); }
 
             try { ActionButtonTemplateSecondarySprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_template_secondary"); }
             catch { ActionButtonTemplateSecondarySprite = _textureFactory.CreateColoredTexture(104, 17, Color.Magenta); }
@@ -152,6 +154,22 @@ namespace ProjectVagabond
             InitializeActionButtonsSourceRects();
             InitializeElementIconsSourceRects();
             InitializeActionIconsSourceRects();
+            InitializeRarityBackgrounds();
+        }
+
+        private void InitializeRarityBackgrounds()
+        {
+            if (ActionButtonTemplateSpriteSheet == null) return;
+
+            int spriteWidth = 157;
+            int spriteHeight = 17;
+            int[] rarityMap = { 0, 1, 2, 3, 4, 5, -1 }; // The rarity values corresponding to each frame
+
+            for (int i = 0; i < rarityMap.Length; i++)
+            {
+                int rarityValue = rarityMap[i];
+                RarityBackgroundSourceRects[rarityValue] = new Rectangle(i * spriteWidth, 0, spriteWidth, spriteHeight);
+            }
         }
 
         private void InitializeArrowSourceRects()

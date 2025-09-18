@@ -11,7 +11,7 @@ namespace ProjectVagabond.Battle.UI
     {
         public MoveData Move { get; }
         private readonly BitmapFont _moveFont;
-        private readonly Texture2D _backgroundTexture;
+        private readonly Texture2D _backgroundSpriteSheet;
         private readonly bool _isNew;
 
         public Texture2D IconTexture { get; set; }
@@ -39,12 +39,12 @@ namespace ProjectVagabond.Battle.UI
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
 
-        public MoveButton(MoveData move, BitmapFont font, Texture2D backgroundTexture, Texture2D iconTexture, Rectangle? iconSourceRect, bool isNew, bool startVisible = true)
+        public MoveButton(MoveData move, BitmapFont font, Texture2D backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool isNew, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
             Move = move;
             _moveFont = font;
-            _backgroundTexture = backgroundTexture;
+            _backgroundSpriteSheet = backgroundSpriteSheet;
             IconTexture = iconTexture;
             IconSourceRect = iconSourceRect;
             _isNew = isNew;
@@ -152,7 +152,11 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            spriteBatch.DrawSnapped(_backgroundTexture, animatedBounds, tintColor);
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+            if (spriteManager.RarityBackgroundSourceRects.TryGetValue(Move.Rarity, out var bgSourceRect))
+            {
+                spriteBatch.DrawSnapped(_backgroundSpriteSheet, animatedBounds, bgSourceRect, tintColor);
+            }
 
 
             // Only draw contents if the button is mostly visible to avoid squashed text/icons

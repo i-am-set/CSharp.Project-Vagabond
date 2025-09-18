@@ -25,7 +25,7 @@
         "MaxTenacity": 9,
         "MinAgility": 8,
         "MaxAgility": 10,
-        "DefensiveElementIDs": [ 102 ],
+        "DefensiveElementIDs": [ 101 ],
         "MoveLearnset": [
           "ShoulderBash",
           "ClawRake",

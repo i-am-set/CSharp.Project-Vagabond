@@ -12,6 +12,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": -1,
     "OffensiveElementIDs": [ 1 ]
   },
   {
@@ -26,6 +27,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": -1,
     "OffensiveElementIDs": [ 1 ]
   },
   {
@@ -40,6 +42,7 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 1 ]
   },
   {
@@ -54,6 +57,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 1,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 1 ]
   },
   // --- Fire ---
@@ -69,6 +73,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 0,
     "OffensiveElementIDs": [ 2 ]
   },
   {
@@ -83,6 +88,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 2 ]
   },
   {
@@ -97,6 +103,7 @@
     "Target": "Every",
     "Accuracy": 85,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 2 ]
   },
   {
@@ -111,6 +118,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 2 ]
   },
   // --- Water ---
@@ -126,6 +134,7 @@
     "Target": "Every",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 3 ]
   },
   {
@@ -140,6 +149,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 1,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 3 ]
   },
   {
@@ -154,6 +164,7 @@
     "Target": "Every",
     "Accuracy": 95,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 3 ]
   },
   // --- Arcane ---
@@ -169,6 +180,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 0,
     "OffensiveElementIDs": [ 4 ]
   },
   {
@@ -183,6 +195,7 @@
     "Target": "Every",
     "Accuracy": 95,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 4 ]
   },
   {
@@ -197,6 +210,7 @@
     "Target": "Every",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 4 ]
   },
   // --- Earth ---
@@ -212,6 +226,7 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
+    "Rarity": 0,
     "OffensiveElementIDs": [ 5 ]
   },
   {
@@ -226,6 +241,7 @@
     "Target": "Every",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 5 ]
   },
   {
@@ -240,6 +256,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 0,
     "OffensiveElementIDs": [ 5 ]
   },
   // --- Metal ---
@@ -255,6 +272,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 6 ]
   },
   {
@@ -269,6 +287,7 @@
     "Target": "Single",
     "Accuracy": 90,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 6 ]
   },
   {
@@ -283,6 +302,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 6 ]
   },
   // --- Toxic ---
@@ -298,6 +318,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 7 ]
   },
   {
@@ -312,6 +333,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 7 ]
   },
   // --- Wind ---
@@ -327,6 +349,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 0,
     "OffensiveElementIDs": [ 8 ]
   },
   {
@@ -341,6 +364,7 @@
     "Target": "Every",
     "Accuracy": 90,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 8 ]
   },
   // --- Decay ---
@@ -356,6 +380,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 9 ]
   },
   {
@@ -370,6 +395,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 9 ]
   },
   // --- Light ---
@@ -385,6 +411,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 10 ]
   },
   {
@@ -399,6 +426,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 0,
     "OffensiveElementIDs": [ 10 ]
   },
   // --- Electric ---
@@ -414,6 +442,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 0,
     "OffensiveElementIDs": [ 11 ]
   },
   {
@@ -428,6 +457,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 0,
     "OffensiveElementIDs": [ 11 ]
   },
   {
@@ -442,6 +472,7 @@
     "Target": "Single",
     "Accuracy": -1,
     "Priority": 0,
+    "Rarity": 3,
     "OffensiveElementIDs": [ 11 ]
   },
   // --- Ice ---
@@ -457,6 +488,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 1,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 12 ]
   },
   {
@@ -471,6 +503,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 12 ]
   },
   {
@@ -485,6 +518,7 @@
     "Target": "Every",
     "Accuracy": 70,
     "Priority": 0,
+    "Rarity": 3,
     "OffensiveElementIDs": [ 12 ]
   },
   // --- Nature ---
@@ -500,6 +534,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 0,
     "OffensiveElementIDs": [ 13 ]
   },
   {
@@ -514,6 +549,7 @@
     "Target": "Every",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 13 ]
   },
   {
@@ -528,6 +564,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 3,
     "OffensiveElementIDs": [ 13 ]
   },
   // --- Special ---
@@ -543,6 +580,7 @@
     "Target": "None",
     "Accuracy": -1,
     "Priority": 0,
+    "Rarity": -1,
     "OffensiveElementIDs": [ 1 ]
   },
   {
@@ -557,6 +595,7 @@
     "Target": "Self",
     "Accuracy": -1,
     "Priority": 1,
+    "Rarity": -1,
     "OffensiveElementIDs": [],
     "Effects": {
       "ApplyStatus": "Dodging,100,1"
@@ -575,6 +614,7 @@
     "Target": "Single",
     "Accuracy": 95,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 1 ],
     "Effects": { "MultiHit": "2,5" }
   },
@@ -590,6 +630,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 9 ],
     "Effects": { "Lifesteal": "50" }
   },
@@ -605,6 +646,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 3,
     "OffensiveElementIDs": [ 6 ],
     "Effects": { "Execute": "25,3.0" }
   },
@@ -620,6 +662,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 8 ],
     "Effects": { "FixedDamage": "40" }
   },
@@ -635,6 +678,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 3,
     "OffensiveElementIDs": [ 4 ],
     "Effects": { "RampUp": "30,120" }
   },
@@ -650,6 +694,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 1 ],
     "Effects": { "ArmorPierce": "50" }
   },
@@ -665,6 +710,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 7 ],
     "Effects": { "ApplyStatus": "Poison,100,3" }
   },
@@ -680,6 +726,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 1,
     "OffensiveElementIDs": [ 2 ],
     "Effects": {
       "ApplyStatus": "Burn,100,3"
@@ -697,6 +744,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 3,
     "OffensiveElementIDs": [ 2 ],
     "Effects": { "DetonateStatus": "Burn,3" }
   },
@@ -712,6 +760,7 @@
     "Target": "Self",
     "Accuracy": -1,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 10 ],
     "Effects": { "Cleanse": "Self,All" }
   },
@@ -727,6 +776,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 3,
     "OffensiveElementIDs": [ 4 ],
     "Effects": { "StealBuff": "75" }
   },
@@ -742,6 +792,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 3,
     "OffensiveElementIDs": [ 10, 13 ],
     "Effects": { "Charge": "1" }
   },
@@ -757,6 +808,7 @@
     "Target": "Single",
     "Accuracy": -1,
     "Priority": 0,
+    "Rarity": 3,
     "OffensiveElementIDs": [ 2 ],
     "Effects": { "DelayedAttack": "2" }
   },
@@ -772,6 +824,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 3,
     "OffensiveElementIDs": [ 1 ],
     "Effects": { "ExecuteOnKill": "ApplyStatus(StrengthUp,100,3)" }
   },
@@ -787,6 +840,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 2,
     "OffensiveElementIDs": [ 11 ],
     "Effects": { "Recoil": "25" }
   },
@@ -802,6 +856,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 3,
     "OffensiveElementIDs": [ 9 ],
     "Effects": { "HPCost": "20" }
   },
@@ -817,6 +872,7 @@
     "Target": "Every",
     "Accuracy": 90,
     "Priority": 0,
+    "Rarity": 4,
     "OffensiveElementIDs": [ 11 ],
     "Effects": { "SelfDebuff": "Stun,100,1" }
   },
@@ -832,6 +888,7 @@
     "Target": "Single",
     "Accuracy": 100,
     "Priority": 0,
+    "Rarity": 4,
     "OffensiveElementIDs": [ 4 ],
     "Effects": { "Gamble": "50,SelfDamage(50)" }
   }

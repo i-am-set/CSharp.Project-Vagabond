@@ -258,7 +258,7 @@ namespace ProjectVagabond.Battle.UI
                 if (move == null) continue;
 
                 bool isNew = _previousHandState[i] == null || _previousHandState[i].MoveID != move.MoveID;
-                var moveButton = CreateMoveButton(move, secondaryFont, spriteManager.ActionButtonTemplateSprite, isNew, false);
+                var moveButton = CreateMoveButton(move, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, isNew, false);
                 _moveButtons.Add(moveButton);
 
                 _buttonsToAnimate.Enqueue(moveButton);
