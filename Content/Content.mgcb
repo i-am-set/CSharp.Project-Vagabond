@@ -698,7 +698,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BattleUI/ui_action_tooltip_background.png;Sprites/UI/BattleUI/ui_action_tooltip_background
 
-#begin Sprites/UI/GameMap/ui_map_fog_of_war_spritesheet.png
+#begin Sprites/UI/GameMap/ui_map_fog_of_war.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -708,7 +708,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/UI/GameMap/ui_map_fog_of_war_spritesheet.png;Sprites/UI/GameMap/ui_map_fog_of_war_spritesheet
+/build:Sprites/UI/GameMap/ui_map_fog_of_war.png;Sprites/UI/GameMap/ui_map_fog_of_war
 
 #begin Sprites/UI/KeyPrompts/ui_key_arrows.png
 /importer:TextureImporter

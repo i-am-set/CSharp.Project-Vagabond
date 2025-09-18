@@ -1,9 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using ProjectVagabond.Battle;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -51,6 +57,7 @@ namespace ProjectVagabond
         private Texture2D _circleParticleSprite;
         private Texture2D _emberParticleSprite;
         private Texture2D _softParticleSprite;
+        private Texture2D _fogOfWarSprite;
         public Effect FireballParticleShaderEffect { get; private set; }
         public Texture2D ArrowIconSpriteSheet { get; private set; }
         public Rectangle[] ArrowIconSourceRects { get; private set; }
@@ -74,6 +81,7 @@ namespace ProjectVagabond
         public Texture2D CircleParticleSprite => _circleParticleSprite;
         public Texture2D EmberParticleSprite => _emberParticleSprite;
         public Texture2D SoftParticleSprite => _softParticleSprite;
+        public Texture2D FogOfWarSprite => _fogOfWarSprite;
 
         public SpriteManager()
         {
@@ -323,6 +331,9 @@ namespace ProjectVagabond
 
             try { _speedMarkSprite = _core.Content.Load<Texture2D>("Sprites/speedMark"); }
             catch { _speedMarkSprite = _textureFactory.CreateColoredTexture(8, 8, Color.Red); }
+
+            try { _fogOfWarSprite = _core.Content.Load<Texture2D>("Sprites/UI/GameMap/ui_map_fog_of_war"); }
+            catch { _fogOfWarSprite = _textureFactory.CreateColoredTexture(5, 5, Color.Black); }
         }
 
         [Obsolete("LoadSpriteContent is deprecated, please use LoadEssentialContent and LoadGameContent instead.")]

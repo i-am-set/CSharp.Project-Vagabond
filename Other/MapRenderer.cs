@@ -300,23 +300,24 @@ namespace ProjectVagabond
             int startX = (int)viewCenter.X - GridSizeX / 2;
             int startY = (int)viewCenter.Y - GridSizeY / 2;
 
-            // 1. Draw Terrain
+            // 1. Draw Terrain and Fog of War
             for (int y = 0; y < GridSizeY; y++)
             {
                 for (int x = 0; x < GridSizeX; x++)
                 {
                     int worldX = startX + x;
                     int worldY = startY + y;
+                    Vector2? screenPos = MapCoordsToScreen(new Vector2(worldX, worldY));
+
+                    if (!screenPos.HasValue) continue;
 
                     if (!_gameState.ExploredCells.Contains(new Point(worldX, worldY)))
                     {
-                        continue;
+                        elements.Add(new GridElement(_spriteManager.FogOfWarSprite, Color.White, screenPos.Value, new Vector2(worldX, worldY)));
                     }
-
-                    float noise = _gameState.GetNoiseAt(worldX, worldY);
-                    Vector2? screenPos = MapCoordsToScreen(new Vector2(worldX, worldY));
-                    if (screenPos.HasValue)
+                    else
                     {
+                        float noise = _gameState.GetNoiseAt(worldX, worldY);
                         elements.Add(new GridElement(GetTerrainTexture(noise), GetTerrainColor(noise), screenPos.Value, new Vector2(worldX, worldY)));
                     }
                 }
