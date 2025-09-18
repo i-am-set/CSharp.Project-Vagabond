@@ -14,6 +14,8 @@ namespace ProjectVagabond.Battle
     {
         private static readonly Random _random = new Random();
 
+        public enum ElementalEffectiveness { Neutral, Effective, Resisted, Immune }
+
         /// <summary>
         /// Contains the results of a damage calculation.
         /// </summary>
@@ -33,6 +35,11 @@ namespace ProjectVagabond.Battle
             /// True if the attack was a graze (a partial hit).
             /// </summary>
             public bool WasGraze;
+
+            /// <summary>
+            /// The elemental effectiveness of the attack.
+            /// </summary>
+            public ElementalEffectiveness Effectiveness;
         }
 
         /// <summary>
@@ -40,32 +47,34 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public static DamageResult CalculateDamage(BattleCombatant attacker, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f)
         {
+            var result = new DamageResult { Effectiveness = ElementalEffectiveness.Neutral };
+
             // Step 0: Handle Fixed Damage moves immediately.
             if (move.Effects.TryGetValue("FixedDamage", out var fixedDamageValue) && EffectParser.TryParseInt(fixedDamageValue, out int fixedDamage))
             {
-                return new DamageResult { DamageAmount = fixedDamage, WasCritical = false, WasGraze = false };
+                result.DamageAmount = fixedDamage;
+                return result;
             }
 
             // Step 1: Handle non-damaging moves.
             if (move.Power == 0)
             {
-                return new DamageResult { DamageAmount = 0, WasCritical = false, WasGraze = false };
+                return result;
             }
 
             // Step 2: Accuracy Check & The Graze Mechanic
-            bool isGrazed = false;
             if (move.Accuracy != -1) // -1 is our convention for a "True Hit" that always hits.
             {
                 if (target.HasStatusEffect(StatusEffectType.Dodging))
                 {
-                    isGrazed = true;
+                    result.WasGraze = true;
                 }
                 else
                 {
                     int effectiveAccuracy = attacker.GetEffectiveAccuracy(move.Accuracy);
                     if (_random.Next(1, 101) > effectiveAccuracy)
                     {
-                        isGrazed = true;
+                        result.WasGraze = true;
                     }
                 }
             }
@@ -130,19 +139,18 @@ namespace ProjectVagabond.Battle
 
             finalDamage *= multiTargetModifier;
 
-            bool isCritical = false;
-            if (!isGrazed)
+            if (!result.WasGraze)
             {
                 double critChance = BattleConstants.CRITICAL_HIT_CHANCE;
                 if (target.HasStatusEffect(StatusEffectType.Root)) critChance *= 2.0;
                 if (_random.NextDouble() < critChance)
                 {
-                    isCritical = true;
+                    result.WasCritical = true;
                     finalDamage *= BattleConstants.CRITICAL_HIT_MULTIPLIER;
                 }
             }
 
-            if (!isCritical)
+            if (!result.WasCritical)
             {
                 if (move.ImpactType == ImpactType.Physical && attacker.HasStatusEffect(StatusEffectType.StrengthUp))
                 {
@@ -154,7 +162,12 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            finalDamage *= GetElementalMultiplier(move, target);
+            float elementalMultiplier = GetElementalMultiplier(move, target);
+            if (elementalMultiplier > 1.0f) result.Effectiveness = ElementalEffectiveness.Effective;
+            else if (elementalMultiplier > 0f && elementalMultiplier < 1.0f) result.Effectiveness = ElementalEffectiveness.Resisted;
+            else if (elementalMultiplier == 0f) result.Effectiveness = ElementalEffectiveness.Immune;
+
+            finalDamage *= elementalMultiplier;
 
             if (target.HasStatusEffect(StatusEffectType.Freeze) && move.ImpactType == ImpactType.Physical)
             {
@@ -163,7 +176,7 @@ namespace ProjectVagabond.Battle
 
             finalDamage *= (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
 
-            if (isGrazed)
+            if (result.WasGraze)
             {
                 finalDamage *= BattleConstants.GRAZE_MULTIPLIER;
             }
@@ -176,12 +189,8 @@ namespace ProjectVagabond.Battle
                 finalDamageAmount = 1;
             }
 
-            return new DamageResult
-            {
-                DamageAmount = finalDamageAmount,
-                WasCritical = isCritical,
-                WasGraze = isGrazed
-            };
+            result.DamageAmount = finalDamageAmount;
+            return result;
         }
 
         /// <summary>

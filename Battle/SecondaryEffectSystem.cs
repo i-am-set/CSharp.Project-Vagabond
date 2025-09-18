@@ -55,6 +55,11 @@ namespace ProjectVagabond.Battle
             {
                 HandleSelfDebuff(action.Actor, selfDebuffValue);
             }
+            if (move.Effects.TryGetValue("Recoil", out var recoilValue))
+            {
+                int totalDamage = damageResults.Sum(r => r.DamageAmount);
+                HandleRecoil(action.Actor, totalDamage, recoilValue);
+            }
         }
 
         private static void ProcessTargetEffect(string key, string value, BattleCombatant actor, BattleCombatant target, bool wasDefeated, List<BattleCombatant> allTargets)
@@ -103,6 +108,19 @@ namespace ProjectVagabond.Battle
                         HealAmount = healAmount,
                         VisualHPBefore = hpBefore
                     });
+                }
+            }
+        }
+
+        private static void HandleRecoil(BattleCombatant actor, int totalDamage, string value)
+        {
+            if (EffectParser.TryParseFloat(value, out float percentage))
+            {
+                if (totalDamage > 0)
+                {
+                    int recoilDamage = Math.Max(1, (int)(totalDamage * (percentage / 100f)));
+                    actor.ApplyDamage(recoilDamage);
+                    EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = actor, RecoilDamage = recoilDamage });
                 }
             }
         }

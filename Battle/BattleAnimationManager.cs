@@ -25,7 +25,7 @@ namespace ProjectVagabond.Battle.UI
         public class PoisonEffectAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.5f; }
         public class DamageIndicatorState
         {
-            public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber }
+            public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber, Effectiveness }
             public IndicatorType Type;
             public string CombatantID;
             public string Text;
@@ -34,8 +34,8 @@ namespace ProjectVagabond.Battle.UI
             public Vector2 InitialPosition; // For simple animation paths
             public Color Color; // Used for text indicators like "CRITICAL"
             public float Timer;
-            public const float DURATION = 1.2f;
-            public const float RISE_DISTANCE = 10f;
+            public const float DURATION = 1.75f;
+            public const float RISE_DISTANCE = 5f;
         }
 
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
@@ -143,6 +143,19 @@ namespace ProjectVagabond.Battle.UI
                 Position = startPosition,
                 InitialPosition = startPosition,
                 Color = color,
+                Timer = 0f
+            });
+        }
+
+        public void StartEffectivenessIndicator(string combatantId, string text, Vector2 startPosition)
+        {
+            _activeDamageIndicators.Add(new DamageIndicatorState
+            {
+                Type = DamageIndicatorState.IndicatorType.Effectiveness,
+                CombatantID = combatantId,
+                Text = text,
+                Position = startPosition,
+                InitialPosition = startPosition,
                 Timer = 0f
             });
         }
@@ -350,6 +363,12 @@ namespace ProjectVagabond.Battle.UI
                     indicator.Velocity.Y += gravity * deltaTime;
                     indicator.Position += indicator.Velocity * deltaTime;
                 }
+                else if (indicator.Type == DamageIndicatorState.IndicatorType.Effectiveness)
+                {
+                    float progress = indicator.Timer / DamageIndicatorState.DURATION;
+                    float yOffset = Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE; // Move down
+                    indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);
+                }
                 else // Text indicators like GRAZE
                 {
                     float progress = indicator.Timer / DamageIndicatorState.DURATION;
@@ -363,6 +382,7 @@ namespace ProjectVagabond.Battle.UI
         {
             // Two-pass rendering: text first, then numbers on top.
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Text);
+            DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Effectiveness);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.Number);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.HealNumber);
             DrawIndicatorsOfType(spriteBatch, font, DamageIndicatorState.IndicatorType.EmphasizedNumber);
@@ -404,6 +424,26 @@ namespace ProjectVagabond.Battle.UI
                     const float flashInterval = 0.1f;
                     bool useLightGreen = (int)(indicator.Timer / flashInterval) % 2 == 0;
                     drawColor = useLightGreen ? _global.Palette_LightGreen : _global.Palette_DarkGreen;
+                }
+                else if (indicator.Type == DamageIndicatorState.IndicatorType.Effectiveness)
+                {
+                    const float flashInterval = 0.2f;
+                    bool useAltColor = (int)(indicator.Timer / flashInterval) % 2 == 0;
+                    switch (indicator.Text)
+                    {
+                        case "EFFECTIVE":
+                            drawColor = useAltColor ? _global.Palette_LightBlue : _global.Palette_White;
+                            break;
+                        case "RESISTED":
+                            drawColor = useAltColor ? _global.Palette_Red : _global.Palette_White;
+                            break;
+                        case "IMMUNE":
+                            drawColor = useAltColor ? _global.Palette_White : _global.Palette_LightGray;
+                            break;
+                        default:
+                            drawColor = Color.White;
+                            break;
+                    }
                 }
                 else // Text indicator
                 {

@@ -1,5 +1,9 @@
-﻿using ProjectVagabond.Battle;
+﻿using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Utils;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -189,6 +193,15 @@ namespace ProjectVagabond
             public BattleCombatant Target { get; set; } // The one receiving the healing
             public int HealAmount { get; set; }
             public int VisualHPBefore { get; set; }
+        }
+
+        /// <summary>
+        /// Published when a combatant takes recoil damage from their own move.
+        /// </summary>
+        public struct CombatantRecoiled
+        {
+            public BattleCombatant Actor { get; set; }
+            public int RecoilDamage { get; set; }
         }
     }
 }

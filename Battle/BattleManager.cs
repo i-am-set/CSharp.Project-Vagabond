@@ -288,7 +288,7 @@ namespace ProjectVagabond.Battle
             // State 1: We are in the middle of a multi-hit move.
             if (_currentMultiHitAction != null)
             {
-                ProcessNextHit();
+                ProcessHit();
                 return;
             }
 
@@ -344,6 +344,13 @@ namespace ProjectVagabond.Battle
                 return;
             }
 
+            // Handle pre-resolution effects like HP cost or gamble
+            if (!ProcessPreResolutionEffects(nextAction))
+            {
+                CanAdvance = false;
+                return; // Effect failed (e.g. gamble), so stop the action.
+            }
+
             // If the action is valid, announce it and wait.
             _actionToExecute = nextAction;
             EventBus.Publish(new GameEvents.ActionDeclared { Actor = _actionToExecute.Actor, Move = _actionToExecute.ChosenMove, Item = _actionToExecute.ChosenItem });
@@ -372,93 +379,70 @@ namespace ProjectVagabond.Battle
                 _multiHitCountRemaining = _totalHitsForNarration;
                 _multiHitAggregatedDamageResults = new List<DamageCalculator.DamageResult>();
                 _multiHitAggregatedFinalTargets = new List<BattleCombatant>();
-                // The phase remains ActionResolution. The next Update() will call ProcessNextHit().
             }
             else
             {
-                // It's a single-hit move, process it fully now.
-                var damageResults = new List<DamageCalculator.DamageResult>();
-                var finalTargets = ResolveTargets(action);
-
-                if (finalTargets.Any())
-                {
-                    float multiTargetModifier = (finalTargets.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
-                    foreach (var target in finalTargets)
-                    {
-                        var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
-                        var result = DamageCalculator.CalculateDamage(action.Actor, target, moveInstance, multiTargetModifier);
-                        target.ApplyDamage(result.DamageAmount);
-                        damageResults.Add(result);
-                        HandleReactiveStatusEffects(moveInstance, target, result);
-                    }
-                }
-
-                EventBus.Publish(new GameEvents.BattleActionExecuted
-                {
-                    Actor = action.Actor,
-                    ChosenMove = action.ChosenMove,
-                    Targets = finalTargets,
-                    DamageResults = damageResults
-                });
-
-                _currentActionForEffects = action;
-                _currentActionDamageResults = damageResults;
-                _currentActionFinalTargets = finalTargets;
-                _currentPhase = BattlePhase.SecondaryEffectResolution;
-                CanAdvance = false;
+                // It's a single-hit move, set it up for the hit processor
+                _currentMultiHitAction = action;
+                _multiHitCountRemaining = 1;
+                _multiHitAggregatedDamageResults = new List<DamageCalculator.DamageResult>();
+                _multiHitAggregatedFinalTargets = new List<BattleCombatant>();
             }
+            // The phase remains ActionResolution. The next Update() will call ProcessHit().
+            ProcessHit();
         }
 
-        private void ProcessNextHit()
+        private void ProcessHit()
         {
             if (_multiHitCountRemaining > 0)
             {
                 _multiHitCountRemaining--;
 
                 var action = _currentMultiHitAction;
-                var targetsForThisHit = ResolveTargets(action, isMultiHit: true);
+                var targetsForThisHit = ResolveTargets(action, isMultiHit: _totalHitsForNarration > 1);
 
-                if (!targetsForThisHit.Any())
+                if (targetsForThisHit.Any())
                 {
-                    // If no valid targets remain (e.g., all defeated), skip to the next hit immediately.
-                    ProcessNextHit();
-                    return;
+                    var damageResultsForThisHit = new List<DamageCalculator.DamageResult>();
+                    float multiTargetModifier = (targetsForThisHit.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
+
+                    foreach (var target in targetsForThisHit)
+                    {
+                        var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
+                        var result = DamageCalculator.CalculateDamage(action.Actor, target, moveInstance, multiTargetModifier);
+                        target.ApplyDamage(result.DamageAmount);
+                        damageResultsForThisHit.Add(result);
+                        _multiHitAggregatedFinalTargets.Add(target);
+                        HandleReactiveStatusEffects(moveInstance, target, result);
+                    }
+                    _multiHitAggregatedDamageResults.AddRange(damageResultsForThisHit);
+
+                    EventBus.Publish(new GameEvents.BattleActionExecuted
+                    {
+                        Actor = action.Actor,
+                        ChosenMove = action.ChosenMove,
+                        Targets = targetsForThisHit,
+                        DamageResults = damageResultsForThisHit
+                    });
                 }
-
-                var damageResultsForThisHit = new List<DamageCalculator.DamageResult>();
-                float multiTargetModifier = (targetsForThisHit.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
-
-                foreach (var target in targetsForThisHit)
-                {
-                    var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
-                    var result = DamageCalculator.CalculateDamage(action.Actor, target, moveInstance, multiTargetModifier);
-                    target.ApplyDamage(result.DamageAmount);
-                    damageResultsForThisHit.Add(result);
-                    _multiHitAggregatedFinalTargets.Add(target);
-                    HandleReactiveStatusEffects(moveInstance, target, result);
-                }
-                _multiHitAggregatedDamageResults.AddRange(damageResultsForThisHit);
-
-                EventBus.Publish(new GameEvents.BattleActionExecuted
-                {
-                    Actor = action.Actor,
-                    ChosenMove = action.ChosenMove,
-                    Targets = targetsForThisHit,
-                    DamageResults = damageResultsForThisHit
-                });
 
                 CanAdvance = false; // Wait for this hit's animation
             }
-            else // All hits are done
+
+            // Check if all hits are done (for both single and multi-hit moves)
+            if (_multiHitCountRemaining <= 0)
             {
-                int criticalHitCount = _multiHitAggregatedDamageResults.Count(r => r.WasCritical);
-                EventBus.Publish(new GameEvents.MultiHitActionCompleted
+                if (_totalHitsForNarration > 1)
                 {
-                    Actor = _currentMultiHitAction.Actor,
-                    ChosenMove = _currentMultiHitAction.ChosenMove,
-                    HitCount = _totalHitsForNarration,
-                    CriticalHitCount = criticalHitCount
-                });
+                    int criticalHitCount = _multiHitAggregatedDamageResults.Count(r => r.WasCritical);
+                    EventBus.Publish(new GameEvents.MultiHitActionCompleted
+                    {
+                        Actor = _currentMultiHitAction.Actor,
+                        ChosenMove = _currentMultiHitAction.ChosenMove,
+                        HitCount = _totalHitsForNarration,
+                        CriticalHitCount = criticalHitCount
+                    });
+                }
 
                 _currentActionForEffects = _currentMultiHitAction;
                 _currentActionDamageResults = _multiHitAggregatedDamageResults;
@@ -672,6 +656,14 @@ namespace ProjectVagabond.Battle
                 return true;
             }
 
+            return false; // Action should be queued normally
+        }
+
+        private bool ProcessPreResolutionEffects(QueuedAction action)
+        {
+            var move = action.ChosenMove;
+            if (move == null) return true;
+
             if (move.Effects.TryGetValue("HPCost", out var hpCostValue) && EffectParser.TryParseFloat(hpCostValue, out float hpCostPercent))
             {
                 int cost = (int)(action.Actor.Stats.MaxHP * (hpCostPercent / 100f));
@@ -683,13 +675,12 @@ namespace ProjectVagabond.Battle
                 float chance = gambleParams[0];
                 if (_random.Next(1, 101) > chance)
                 {
-                    // Gamble failed. For now, just fail the action.
                     EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "bad luck" });
-                    return true;
+                    return false; // Gamble failed, stop the action.
                 }
             }
 
-            return false; // Action should be queued normally
+            return true; // Action can proceed.
         }
 
         private MoveData HandlePreDamageEffects(MoveData originalMove, BattleCombatant target)

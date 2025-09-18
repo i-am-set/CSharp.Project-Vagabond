@@ -122,6 +122,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
             EventBus.Subscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
             EventBus.Subscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
+            EventBus.Subscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
@@ -140,6 +141,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
             EventBus.Unsubscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
             EventBus.Unsubscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
+            EventBus.Unsubscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
@@ -507,6 +509,21 @@ namespace ProjectVagabond.Scenes
                         _uiManager.ShowNarration($"A critical hit on {target.Name}!");
                     }
                 }
+
+                var font = ServiceLocator.Get<Core>().SecondaryFont;
+                Vector2 effectivenessPosition = hudPosition + new Vector2(0, font.LineHeight / 2f + 10);
+                switch (result.Effectiveness)
+                {
+                    case DamageCalculator.ElementalEffectiveness.Effective:
+                        _animationManager.StartEffectivenessIndicator(target.CombatantID, "EFFECTIVE", effectivenessPosition);
+                        break;
+                    case DamageCalculator.ElementalEffectiveness.Resisted:
+                        _animationManager.StartEffectivenessIndicator(target.CombatantID, "RESISTED", effectivenessPosition);
+                        break;
+                    case DamageCalculator.ElementalEffectiveness.Immune:
+                        _animationManager.StartEffectivenessIndicator(target.CombatantID, "IMMUNE", effectivenessPosition);
+                        break;
+                }
             }
         }
 
@@ -520,6 +537,18 @@ namespace ProjectVagabond.Scenes
                 _animationManager.StartHealFlashAnimation(e.Target.CombatantID);
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
                 _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
+            });
+        }
+
+        private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e)
+        {
+            _uiManager.ShowNarration($"{e.Actor.Name} is damaged by recoil!");
+            _pendingAnimations.Enqueue(() =>
+            {
+                _animationManager.StartHealthAnimation(e.Actor.CombatantID, (int)e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
+                _animationManager.StartHitAnimation(e.Actor.CombatantID);
+                Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
+                _animationManager.StartDamageNumberIndicator(e.Actor.CombatantID, e.RecoilDamage, hudPosition);
             });
         }
 
