@@ -61,7 +61,7 @@ namespace ProjectVagabond.Scenes
 
             const int horizontalPadding = 4;
             const int verticalPadding = 2;
-            const int buttonYSpacing = 2; // Vertical gap between buttons
+            const int buttonYSpacing = 0; // Vertical gap between buttons
             float currentY = 90f;
 
             // --- PLAY Button ---
@@ -322,24 +322,36 @@ namespace ProjectVagabond.Scenes
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             int screenWidth = Global.VIRTUAL_WIDTH;
-            Texture2D pixel = ServiceLocator.Get<Texture2D>();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             spriteBatch.DrawSnapped(_spriteManager.LogoSprite, new Vector2(screenWidth / 2 - _spriteManager.LogoSprite.Width / 2, 25), Color.White);
 
-            foreach (var button in _buttons)
+            for (int i = 0; i < _buttons.Count; i++)
             {
-                button.Draw(spriteBatch, font, gameTime, transform);
+                bool forceHover = (i == _selectedButtonIndex) && (_sceneManager.LastInputDevice == InputDevice.Keyboard || keyboardNavigatedLastFrame);
+                _buttons[i].Draw(spriteBatch, font, gameTime, transform, forceHover);
             }
 
             if (_selectedButtonIndex >= 0 && _selectedButtonIndex < _buttons.Count)
             {
                 var selectedButton = _buttons[_selectedButtonIndex];
-
-                if (selectedButton.IsHovered || keyboardNavigatedLastFrame)
+                if (selectedButton.IsHovered)
                 {
-                    var highlightBounds = selectedButton.Bounds;
-                    highlightBounds.X -= 1; // Shift 1 pixel to the left as requested.
-                    DrawRectangleBorder(spriteBatch, pixel, highlightBounds, 1, _global.ButtonHoverColor);
+                    var bounds = selectedButton.Bounds;
+                    var color = _global.ButtonHoverColor;
+                    var fontToUse = selectedButton.Font ?? secondaryFont;
+
+                    string leftArrow = ">";
+                    string rightArrow = "<";
+                    var arrowSize = fontToUse.MeasureString(leftArrow);
+
+                    float pressOffset = selectedButton.IsPressed ? 2f : 0f;
+
+                    var leftPos = new Vector2(bounds.Left - arrowSize.Width - 4 + pressOffset, bounds.Center.Y - arrowSize.Height / 2f + selectedButton.TextRenderOffset.Y);
+                    var rightPos = new Vector2(bounds.Right - pressOffset, bounds.Center.Y - arrowSize.Height / 2f + selectedButton.TextRenderOffset.Y);
+
+                    spriteBatch.DrawStringSnapped(fontToUse, leftArrow, leftPos, color);
+                    spriteBatch.DrawStringSnapped(fontToUse, rightArrow, rightPos, color);
                 }
             }
 
@@ -361,14 +373,6 @@ namespace ProjectVagabond.Scenes
             {
                 _confirmationDialog.DrawOverlay(spriteBatch);
             }
-        }
-
-        private static void DrawRectangleBorder(SpriteBatch spriteBatch, Texture2D pixel, Rectangle rect, int thickness, Color color)
-        {
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Top, rect.Width, thickness), color);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Bottom - thickness, rect.Width, thickness), color);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Left, rect.Top, thickness, rect.Height), color);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(rect.Right - thickness, rect.Top, thickness, rect.Height), color);
         }
     }
 }

@@ -34,6 +34,7 @@ namespace ProjectVagabond.UI
         public Color? CustomDisabledTextColor { get; set; }
         public bool IsEnabled { get; set; } = true;
         public bool IsHovered { get; set; }
+        public bool IsPressed => _isPressed;
         public bool UseScreenCoordinates { get; set; } = false;
         public bool AlignLeft { get; set; } = false;
         public float OverflowScrollSpeed { get; set; } = 0f;

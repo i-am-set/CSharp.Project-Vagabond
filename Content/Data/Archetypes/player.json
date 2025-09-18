@@ -30,7 +30,7 @@
         "Agility": 1,
         "DefensiveElementIDs": [ 101 ],
         "StartingMoveIDs": [
-          "WildCharge",
+          "VampiricBite",
           "BloodMagic",
           "Overload",
           "Misfire"
