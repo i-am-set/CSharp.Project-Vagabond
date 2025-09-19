@@ -43,6 +43,35 @@ namespace ProjectVagabond.Battle
         }
 
         /// <summary>
+        /// Calculates the effective power of a move after applying static bonuses from the attacker's abilities.
+        /// This is used for both UI display and the final damage calculation.
+        /// </summary>
+        public static int GetEffectiveMovePower(BattleCombatant attacker, MoveData move)
+        {
+            float movePower = move.Power;
+
+            foreach (var ability in attacker.ActiveAbilities)
+            {
+                if (ability.Effects.TryGetValue("DamageBonus", out var damageBonusValue))
+                {
+                    var parts = damageBonusValue.Split(',');
+                    if (parts.Length == 2 &&
+                        EffectParser.TryParseInt(parts[0].Trim(), out int elementId) &&
+                        EffectParser.TryParseFloat(parts[1].Trim(), out float bonusPercent))
+                    {
+                        // Check if the move is a spell and has the correct element
+                        if (move.MoveType == MoveType.Spell && move.OffensiveElementIDs.Contains(elementId))
+                        {
+                            movePower *= (1.0f + (bonusPercent / 100f));
+                        }
+                    }
+                }
+            }
+
+            return (int)Math.Round(movePower);
+        }
+
+        /// <summary>
         /// Calculates the final damage an attacker will deal to a target with a specific move, including all modifiers.
         /// </summary>
         public static DamageResult CalculateDamage(BattleCombatant attacker, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f)
@@ -80,7 +109,7 @@ namespace ProjectVagabond.Battle
             }
 
             // Step 3: Base Damage Calculation
-            float movePower = move.Power;
+            float movePower = GetEffectiveMovePower(attacker, move);
 
             // Add bonus from Ramping Damage
             if (move.Effects.ContainsKey("RampUp") && attacker.RampingMoveCounters.TryGetValue(move.MoveID, out int useCount))
@@ -125,24 +154,6 @@ namespace ProjectVagabond.Battle
 
             // Step 4: Multiplicative Modifier Application
             float finalDamage = baseDamage;
-
-            // Modifier (Ability Damage Bonus)
-            foreach (var ability in attacker.ActiveAbilities)
-            {
-                if (ability.Effects.TryGetValue("DamageBonus", out var damageBonusValue))
-                {
-                    var parts = damageBonusValue.Split(',');
-                    if (parts.Length == 2 &&
-                        EffectParser.TryParseInt(parts[0].Trim(), out int elementId) &&
-                        EffectParser.TryParseFloat(parts[1].Trim(), out float bonusPercent))
-                    {
-                        if (move.OffensiveElementIDs.Contains(elementId))
-                        {
-                            finalDamage *= (1.0f + (bonusPercent / 100f));
-                        }
-                    }
-                }
-            }
 
             // Modifier (Execute)
             if (move.Effects.TryGetValue("Execute", out var executeValue) && EffectParser.TryParseFloatArray(executeValue, out float[] execParams) && execParams.Length == 2)

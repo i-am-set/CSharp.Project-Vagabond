@@ -42,7 +42,7 @@
       "Type": "ProjectVagabond.Battle.PassiveAbilitiesComponent",
       "Properties": {
         "AbilityIDs": [
-          "GreenThumb"
+          "Umbramancer"
         ]
       }
     }

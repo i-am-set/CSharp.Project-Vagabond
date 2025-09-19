@@ -258,7 +258,8 @@ namespace ProjectVagabond.Battle.UI
                 if (move == null) continue;
 
                 bool isNew = _previousHandState[i] == null || _previousHandState[i].MoveID != move.MoveID;
-                var moveButton = CreateMoveButton(move, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, isNew, false);
+                int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, move);
+                var moveButton = CreateMoveButton(move, effectivePower, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, isNew, false);
                 _moveButtons.Add(moveButton);
 
                 _buttonsToAnimate.Enqueue(moveButton);
@@ -267,7 +268,7 @@ namespace ProjectVagabond.Battle.UI
             Array.Copy(newHand, _previousHandState, newHand.Length);
         }
 
-        private MoveButton CreateMoveButton(MoveData move, BitmapFont font, Texture2D background, bool isNew, bool startVisible)
+        private MoveButton CreateMoveButton(MoveData move, int displayPower, BitmapFont font, Texture2D background, bool isNew, bool startVisible)
         {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             int elementId = move.OffensiveElementIDs.FirstOrDefault();
@@ -277,7 +278,7 @@ namespace ProjectVagabond.Battle.UI
                 sourceRect = rect;
             }
 
-            var moveButton = new MoveButton(move, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, isNew, startVisible);
+            var moveButton = new MoveButton(move, displayPower, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, isNew, startVisible);
             moveButton.OnClick += () => SelectMove(move);
             moveButton.OnRightClick += () => {
                 _tooltipMove = move;
@@ -566,7 +567,8 @@ namespace ProjectVagabond.Battle.UI
                             var nameSize = font.MeasureString(moveName);
                             var namePos = new Vector2(tooltipBgRect.X + horizontalPadding, currentY);
 
-                            string powerText = _tooltipMove.Power > 0 ? $"POW: {_tooltipMove.Power}" : "POW: ---";
+                            int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, _tooltipMove);
+                            string powerText = effectivePower > 0 ? $"POW: {effectivePower}" : "POW: ---";
                             string accuracyText = _tooltipMove.Accuracy >= 0 ? $"ACC: {_tooltipMove.Accuracy}%" : "ACC: ---";
                             string moveTypeText = _tooltipMove.MoveType.ToString().ToUpper();
                             string separator = " / ";

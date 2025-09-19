@@ -10,6 +10,7 @@ namespace ProjectVagabond.Battle.UI
     public class MoveButton : Button
     {
         public MoveData Move { get; }
+        public int DisplayPower { get; }
         private readonly BitmapFont _moveFont;
         private readonly Texture2D _backgroundSpriteSheet;
         private readonly bool _isNew;
@@ -39,10 +40,11 @@ namespace ProjectVagabond.Battle.UI
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
 
-        public MoveButton(MoveData move, BitmapFont font, Texture2D backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool isNew, bool startVisible = true)
+        public MoveButton(MoveData move, int displayPower, BitmapFont font, Texture2D backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool isNew, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
             Move = move;
+            DisplayPower = displayPower;
             _moveFont = font;
             _backgroundSpriteSheet = backgroundSpriteSheet;
             IconTexture = iconTexture;
@@ -194,7 +196,7 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // --- Calculate text and stats layout ---
-                string powerText = Move.Power > 0 ? Move.Power.ToString() : "---";
+                string powerText = DisplayPower > 0 ? DisplayPower.ToString() : "---";
                 string accuracyText = Move.Accuracy >= 0 ? $"{Move.Accuracy}%" : "---";
                 var powerTextSize = _moveFont.MeasureString(powerText);
                 var accuracyTextSize = _moveFont.MeasureString(accuracyText);
