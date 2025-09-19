@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -567,8 +568,7 @@ namespace ProjectVagabond.Battle.UI
                             var nameSize = font.MeasureString(moveName);
                             var namePos = new Vector2(tooltipBgRect.X + horizontalPadding, currentY);
 
-                            int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, _tooltipMove);
-                            string powerText = effectivePower > 0 ? $"POW: {effectivePower}" : "POW: ---";
+                            string powerText = _tooltipMove.Power > 0 ? $"POW: {_tooltipMove.Power}" : "POW: ---";
                             string accuracyText = _tooltipMove.Accuracy >= 0 ? $"ACC: {_tooltipMove.Accuracy}%" : "ACC: ---";
                             string moveTypeText = _tooltipMove.MoveType.ToString().ToUpper();
                             string separator = " / ";

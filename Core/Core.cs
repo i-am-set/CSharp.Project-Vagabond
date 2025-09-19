@@ -391,7 +391,7 @@ namespace ProjectVagabond
             {
                 if (_sceneManager.CurrentActiveScene?.GetType() != typeof(BattleScene))
                 {
-                    BattleSetup.EnemyArchetypes = new List<string> { "wanderer", "wanderer", "wanderer" };
+                    BattleSetup.EnemyArchetypes = new List<string> { "wanderer", "scarab", "wanderer" };
                     _sceneManager.ChangeScene(GameSceneState.Battle);
                 }
             }

@@ -1,0 +1,38 @@
+{
+  "Id": "scarab",
+  "Name": "Scarab",
+  "Components": [
+    {
+      "Type": "ProjectVagabond.PositionComponent"
+    },
+    {
+      "Type": "ProjectVagabond.RenderableComponent",
+      "Properties": {
+        "Color": "Palette_DarkPurple"
+      }
+    },
+    {
+      "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
+      "Properties": {
+        "Level": 7,
+        "MinHP": 30,
+        "MaxHP": 35,
+        "MinStrength": 15,
+        "MaxStrength": 18,
+        "MinIntelligence": 5,
+        "MaxIntelligence": 7,
+        "MinTenacity": 14,
+        "MaxTenacity": 16,
+        "MinAgility": 4,
+        "MaxAgility": 6,
+        "DefensiveElementIDs": [ 101, 102 ],
+        "MoveLearnset": [
+          "IronfangSlash",
+          "TitanSlam"
+        ],
+        "MinNumberOfMoves": 2,
+        "MaxNumberOfMoves": 2
+      }
+    }
+  ]
+}

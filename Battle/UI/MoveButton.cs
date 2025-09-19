@@ -256,16 +256,35 @@ namespace ProjectVagabond.Battle.UI
 
                 // --- Draw Power & Accuracy ---
                 Color powerTextColor = statsColor;
-                if (Move.Power > 0 && DisplayPower > Move.Power)
+                string powerIndicator = "";
+
+                if (Move.Power > 0 && DisplayPower != Move.Power)
                 {
-                    // Calculate the percentage of the increase, capping at 100% for the Lerp
-                    float increaseRatio = (float)(DisplayPower - Move.Power) / Move.Power;
-                    float lerpAmount = Math.Clamp(increaseRatio, 0f, 1f); // Clamp to 0-1 range for Lerp
-                    powerTextColor = Color.Lerp(statsColor, Color.DeepPink, lerpAmount);
+                    if (DisplayPower > Move.Power)
+                    {
+                        powerIndicator = "+";
+                        float increaseRatio = (float)(DisplayPower - Move.Power) / Move.Power;
+                        float lerpAmount = Math.Clamp(increaseRatio, 0f, 1f);
+                        powerTextColor = Color.Lerp(statsColor, Color.DeepPink, lerpAmount);
+                    }
+                    else // DisplayPower < Move.Power
+                    {
+                        powerIndicator = "-";
+                        // Use a dim red for reduced power to indicate a penalty.
+                        powerTextColor = Color.Lerp(statsColor, _global.Palette_Red, 0.75f);
+                    }
                 }
 
                 spriteBatch.DrawStringSnapped(_moveFont, accuracyText, accuracyPosition, statsColor);
                 spriteBatch.DrawStringSnapped(_moveFont, powerText, powerPosition, powerTextColor);
+
+                if (!string.IsNullOrEmpty(powerIndicator))
+                {
+                    var indicatorPosition = new Vector2(powerPosition.X + powerTextSize.Width + 1, powerPosition.Y);
+                    Color indicatorColor = powerTextColor * 0.25f;
+                    spriteBatch.DrawStringSnapped(_moveFont, powerIndicator, indicatorPosition, indicatorColor);
+                }
+
 
                 // --- Draw Target Type Indicator ---
                 string targetIndicator = Move.Target switch
