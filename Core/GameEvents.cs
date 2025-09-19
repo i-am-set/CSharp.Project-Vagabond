@@ -202,6 +202,17 @@ namespace ProjectVagabond
         {
             public BattleCombatant Actor { get; set; }
             public int RecoilDamage { get; set; }
+            public AbilityData? SourceAbility { get; set; }
+        }
+
+        /// <summary>
+        /// Published when a passive ability activates, for narration purposes.
+        /// </summary>
+        public struct AbilityActivated
+        {
+            public BattleCombatant Combatant { get; set; }
+            public AbilityData Ability { get; set; }
+            public string NarrationText { get; set; }
         }
     }
 }

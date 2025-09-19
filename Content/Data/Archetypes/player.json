@@ -24,7 +24,7 @@
       "Type": "ProjectVagabond.Battle.PlayerBaseStatsComponent",
       "Properties": {
         "MaxHP": 100,
-        "Strength": 5,
+        "Strength": 15,
         "Intelligence": 15,
         "Tenacity": 30,
         "Agility": 1,
@@ -42,7 +42,7 @@
       "Type": "ProjectVagabond.Battle.PassiveAbilitiesComponent",
       "Properties": {
         "AbilityIDs": [
-          "Photosynthesis"
+          "IronBarbs"
         ]
       }
     }

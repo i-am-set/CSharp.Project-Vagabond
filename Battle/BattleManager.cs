@@ -82,6 +82,9 @@ namespace ProjectVagabond.Battle
             _currentPhase = BattlePhase.StartOfTurn;
 
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
+
+            // Process on-enter abilities
+            HandleOnEnterAbilities();
         }
 
         private void OnSecondaryEffectComplete(GameEvents.SecondaryEffectComplete e)
@@ -276,6 +279,14 @@ namespace ProjectVagabond.Battle
             }
 
             _actionQueue = _actionQueue.OrderByDescending(a => a.Priority).ThenByDescending(a => a.ActorAgility).ToList();
+
+            // Set the flag for the last action in the round
+            var lastAction = _actionQueue.LastOrDefault(a => a.Type == QueuedActionType.Move || a.Type == QueuedActionType.Item);
+            if (lastAction != null)
+            {
+                lastAction.IsLastActionInRound = true;
+            }
+
             _currentPhase = BattlePhase.ActionResolution;
         }
 
@@ -409,7 +420,7 @@ namespace ProjectVagabond.Battle
                     foreach (var target in targetsForThisHit)
                     {
                         var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
-                        var result = DamageCalculator.CalculateDamage(action.Actor, target, moveInstance, multiTargetModifier);
+                        var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier);
                         target.ApplyDamage(result.DamageAmount);
                         damageResultsForThisHit.Add(result);
                         _multiHitAggregatedFinalTargets.Add(target);
@@ -491,7 +502,7 @@ namespace ProjectVagabond.Battle
                         foreach (var target in targets)
                         {
                             var moveInstance = HandlePreDamageEffects(moveData, target);
-                            var result = DamageCalculator.CalculateDamage(action.Actor, target, moveInstance, multiTargetModifier);
+                            var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier);
                             target.ApplyDamage(result.DamageAmount);
                             damageResults.Add(result);
                         }
@@ -581,10 +592,11 @@ namespace ProjectVagabond.Battle
             {
                 if (combatant.IsDefeated) continue;
 
-                // Regeneration
+                // Handle end-of-turn abilities
                 foreach (var ability in combatant.ActiveAbilities)
                 {
-                    if (ability.Effects.TryGetValue("RegenEndOfTurn", out var value) && EffectParser.TryParseFloat(value, out float healPercent))
+                    // Regeneration
+                    if (ability.Effects.TryGetValue("RegenEndOfTurn", out var regenValue) && EffectParser.TryParseFloat(regenValue, out float healPercent))
                     {
                         int hpBefore = (int)combatant.VisualHP;
                         int healAmount = (int)(combatant.Stats.MaxHP * (healPercent / 100f));
@@ -598,6 +610,24 @@ namespace ProjectVagabond.Battle
                                 HealAmount = healAmount,
                                 VisualHPBefore = hpBefore
                             });
+                        }
+                    }
+
+                    // Toxic Aura
+                    if (ability.Effects.TryGetValue("AuraApplyStatusEndOfTurn", out var auraValue))
+                    {
+                        if (EffectParser.TryParseStatusEffectParams(auraValue, out var type, out int chance, out int duration))
+                        {
+                            if (_random.Next(1, 101) <= chance)
+                            {
+                                var potentialTargets = combatant.IsPlayerControlled ? _enemyCombatants : _playerCombatants;
+                                var validTargets = potentialTargets.Where(c => !c.IsDefeated && !c.HasStatusEffect(type)).ToList();
+                                if (validTargets.Any())
+                                {
+                                    var target = validTargets[_random.Next(validTargets.Count)];
+                                    target.AddStatusEffect(new StatusEffectInstance(type, duration));
+                                }
+                            }
                         }
                     }
                 }
@@ -632,6 +662,29 @@ namespace ProjectVagabond.Battle
 
             RoundNumber++;
             _currentPhase = BattlePhase.StartOfTurn;
+        }
+
+        private void HandleOnEnterAbilities()
+        {
+            foreach (var combatant in _allCombatants)
+            {
+                foreach (var ability in combatant.ActiveAbilities)
+                {
+                    // Intimidate
+                    if (ability.Effects.TryGetValue("IntimidateOnEnter", out var value) && EffectParser.TryParseInt(value, out int duration))
+                    {
+                        var opponents = combatant.IsPlayerControlled ? _enemyCombatants : _playerCombatants;
+                        foreach (var opponent in opponents)
+                        {
+                            if (!opponent.IsDefeated)
+                            {
+                                opponent.AddStatusEffect(new StatusEffectInstance(StatusEffectType.StrengthDown, duration));
+                            }
+                        }
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = combatant, Ability = ability, NarrationText = $"{combatant.Name}'s Intimidate lowered the opponents' Strength!" });
+                    }
+                }
+            }
         }
 
         private bool HandlePreActionEffects(QueuedAction action)

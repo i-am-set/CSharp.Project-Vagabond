@@ -39,6 +39,7 @@ namespace ProjectVagabond.Battle
     public enum StatusEffectType
     {
         StrengthUp,
+        StrengthDown,
         IntelligenceDown,
         TenacityUp,
         AgilityDown,

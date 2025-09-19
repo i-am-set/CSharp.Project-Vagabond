@@ -55,7 +55,7 @@ namespace ProjectVagabond.Battle
                         }
                     }
 
-                    // Target abilities (e.g., Static Charge)
+                    // Target abilities (e.g., Static Charge, Iron Barbs)
                     if (move.MakesContact)
                     {
                         foreach (var ability in target.ActiveAbilities)
@@ -63,6 +63,13 @@ namespace ProjectVagabond.Battle
                             if (ability.Effects.TryGetValue("ApplyStatusOnBeingHitContact", out var value))
                             {
                                 HandleApplyStatus(target, attacker, value); // Note: target applies status to attacker
+                            }
+
+                            if (ability.Effects.TryGetValue("IronBarbsOnContact", out var barbValue) && EffectParser.TryParseFloat(barbValue, out float percent))
+                            {
+                                int recoilDamage = Math.Max(1, (int)(attacker.Stats.MaxHP * (percent / 100f)));
+                                attacker.ApplyDamage(recoilDamage);
+                                EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = attacker, RecoilDamage = recoilDamage, SourceAbility = ability });
                             }
                         }
                     }
@@ -184,6 +191,18 @@ namespace ProjectVagabond.Battle
         {
             if (EffectParser.TryParseStatusEffectParams(value, out var type, out int chance, out int duration))
             {
+                // Check for Lingering Curse ability on the actor
+                foreach (var ability in actor.ActiveAbilities)
+                {
+                    if (ability.Effects.TryGetValue("StatusDurationBonus", out var bonusValue) && IsNegativeStatus(type))
+                    {
+                        if (EffectParser.TryParseInt(bonusValue, out int bonusDuration))
+                        {
+                            duration += bonusDuration;
+                        }
+                    }
+                }
+
                 if (_random.Next(1, 101) <= chance)
                 {
                     target.AddStatusEffect(new StatusEffectInstance(type, duration));
@@ -284,6 +303,7 @@ namespace ProjectVagabond.Battle
                 case StatusEffectType.Root:
                 case StatusEffectType.IntelligenceDown:
                 case StatusEffectType.AgilityDown:
+                case StatusEffectType.StrengthDown:
                     return true;
                 default:
                     return false;

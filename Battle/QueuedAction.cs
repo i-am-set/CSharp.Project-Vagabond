@@ -58,6 +58,11 @@ namespace ProjectVagabond.Battle
         /// A copy of the actor's agility, used for tie-breaking in the action queue.
         /// </summary>
         public int ActorAgility { get; set; }
+
+        /// <summary>
+        /// A flag indicating if this is the final action to be resolved in the current round.
+        /// </summary>
+        public bool IsLastActionInRound { get; set; } = false;
     }
 }
 #nullable restore

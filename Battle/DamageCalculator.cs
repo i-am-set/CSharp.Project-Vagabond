@@ -74,8 +74,9 @@ namespace ProjectVagabond.Battle
         /// <summary>
         /// Calculates the final damage an attacker will deal to a target with a specific move, including all modifiers.
         /// </summary>
-        public static DamageResult CalculateDamage(BattleCombatant attacker, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f)
+        public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f)
         {
+            var attacker = action.Actor;
             var result = new DamageResult { Effectiveness = ElementalEffectiveness.Neutral };
 
             // Step 0: Handle Fixed Damage moves immediately.
@@ -110,6 +111,18 @@ namespace ProjectVagabond.Battle
 
             // Step 3: Base Damage Calculation
             float movePower = GetEffectiveMovePower(attacker, move);
+
+            // Add bonus from Last Stand
+            if (action.IsLastActionInRound)
+            {
+                foreach (var ability in attacker.ActiveAbilities)
+                {
+                    if (ability.Effects.TryGetValue("PowerBonusLastAct", out var value) && EffectParser.TryParseFloat(value, out float bonusPercent))
+                    {
+                        movePower *= (1.0f + (bonusPercent / 100f));
+                    }
+                }
+            }
 
             // Add bonus from Ramping Damage
             if (move.Effects.ContainsKey("RampUp") && attacker.RampingMoveCounters.TryGetValue(move.MoveID, out int useCount))
@@ -179,6 +192,16 @@ namespace ProjectVagabond.Battle
                         finalDamage *= (1.0f + (bonus / 100f));
                     }
                 }
+
+                // First Blood
+                if (!attacker.HasUsedFirstAttack && ability.Effects.TryGetValue("FirstAttackBonus", out var fbValue))
+                {
+                    if (EffectParser.TryParseFloat(fbValue, out float bonus))
+                    {
+                        finalDamage *= (1.0f + (bonus / 100f));
+                        attacker.HasUsedFirstAttack = true;
+                    }
+                }
             }
 
             // Modifier (Execute)
@@ -211,6 +234,15 @@ namespace ProjectVagabond.Battle
                 {
                     result.WasCritical = true;
                     finalDamage *= BattleConstants.CRITICAL_HIT_MULTIPLIER;
+
+                    // Bulwark
+                    foreach (var ability in target.ActiveAbilities)
+                    {
+                        if (ability.Effects.TryGetValue("CritDamageReduction", out var value) && EffectParser.TryParseFloat(value, out float reductionPercent))
+                        {
+                            finalDamage *= (1.0f - (reductionPercent / 100f));
+                        }
+                    }
                 }
             }
 
@@ -324,13 +356,26 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public static float GetElementalMultiplier(MoveData move, BattleCombatant target)
         {
-            // Photosynthesis (and other immunities) check
+            // Check for elemental immunities from abilities first.
             foreach (var ability in target.ActiveAbilities)
             {
-                if (ability.Effects.TryGetValue("ElementImmunityAndHeal", out var value))
+                // Handles abilities like Photosynthesis that grant immunity and heal.
+                if (ability.Effects.TryGetValue("ElementImmunityAndHeal", out var healValue))
                 {
-                    var parts = value.Split(',');
+                    var parts = healValue.Split(',');
                     if (parts.Length == 2 && EffectParser.TryParseInt(parts[0], out int immuneElementId))
+                    {
+                        if (move.OffensiveElementIDs.Contains(immuneElementId))
+                        {
+                            return 0f; // Grant immunity
+                        }
+                    }
+                }
+
+                // Handles abilities like Grounding that grant simple immunity.
+                if (ability.Effects.TryGetValue("ElementImmunity", out var immunityValue))
+                {
+                    if (EffectParser.TryParseInt(immunityValue, out int immuneElementId))
                     {
                         if (move.OffensiveElementIDs.Contains(immuneElementId))
                         {

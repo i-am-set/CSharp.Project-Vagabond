@@ -27,8 +27,8 @@
         "MaxAgility": 6,
         "DefensiveElementIDs": [ 101, 102 ],
         "MoveLearnset": [
-          "IronfangSlash",
-          "TitanSlam"
+          "Rampage",
+          "VoltLash"
         ],
         "MinNumberOfMoves": 2,
         "MaxNumberOfMoves": 2

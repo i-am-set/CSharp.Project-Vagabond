@@ -486,7 +486,7 @@ namespace ProjectVagabond.Scenes
                     _animationManager.StartHitAnimation(target.CombatantID);
 
                     int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
-                    if (result.WasCritical || (result.DamageAmount >= baselineDamage * 2 && baselineDamage > 0))
+                    if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0))
                     {
                         _animationManager.StartEmphasizedDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
                     }
@@ -542,7 +542,15 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e)
         {
-            _uiManager.ShowNarration($"{e.Actor.Name} is damaged by recoil!");
+            if (e.SourceAbility != null)
+            {
+                _uiManager.ShowNarration($"{e.Actor.Name} was hurt by {e.SourceAbility.AbilityName}!");
+            }
+            else
+            {
+                _uiManager.ShowNarration($"{e.Actor.Name} is damaged by recoil!");
+            }
+
             _pendingAnimations.Enqueue(() =>
             {
                 _animationManager.StartHealthAnimation(e.Actor.CombatantID, (int)e.Actor.VisualHP, e.Actor.Stats.CurrentHP);

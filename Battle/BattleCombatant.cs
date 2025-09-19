@@ -121,6 +121,11 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public Queue<DelayedAction> DelayedActions { get; set; } = new Queue<DelayedAction>();
 
+        /// <summary>
+        /// A flag to track if the combatant has used their first attack, for abilities like "First Blood".
+        /// </summary>
+        public bool HasUsedFirstAttack { get; set; } = false;
+
 
         /// <summary>
         /// Applies a specified amount of damage to the combatant's CurrentHP.
@@ -165,6 +170,26 @@ namespace ProjectVagabond.Battle
         /// <param name="newEffect">The new status effect instance to add.</param>
         public void AddStatusEffect(StatusEffectInstance newEffect)
         {
+            // Check for immunities from passive abilities before applying the effect.
+            foreach (var ability in ActiveAbilities)
+            {
+                if (ability.Effects.TryGetValue("StatusImmunity", out var immunityValue))
+                {
+                    var immuneTypes = immunityValue.Split(',');
+                    foreach (var typeStr in immuneTypes)
+                    {
+                        if (Enum.TryParse<StatusEffectType>(typeStr.Trim(), true, out var immuneType))
+                        {
+                            if (newEffect.EffectType == immuneType)
+                            {
+                                // This combatant is immune to this status effect.
+                                return; // Exit the method, preventing the effect from being added.
+                            }
+                        }
+                    }
+                }
+            }
+
             // Remove any existing effect of the same type to reset its duration.
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
 
