@@ -40,6 +40,16 @@ namespace ProjectVagabond.Battle
             /// The elemental effectiveness of the attack.
             /// </summary>
             public ElementalEffectiveness Effectiveness;
+
+            /// <summary>
+            /// A list of abilities from the attacker that triggered during this calculation.
+            /// </summary>
+            public List<AbilityData> AttackerAbilitiesTriggered;
+
+            /// <summary>
+            /// A list of abilities from the defender that triggered during this calculation.
+            /// </summary>
+            public List<AbilityData> DefenderAbilitiesTriggered;
         }
 
         /// <summary>
@@ -77,7 +87,12 @@ namespace ProjectVagabond.Battle
         public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f)
         {
             var attacker = action.Actor;
-            var result = new DamageResult { Effectiveness = ElementalEffectiveness.Neutral };
+            var result = new DamageResult
+            {
+                Effectiveness = ElementalEffectiveness.Neutral,
+                AttackerAbilitiesTriggered = new List<AbilityData>(),
+                DefenderAbilitiesTriggered = new List<AbilityData>()
+            };
 
             // Step 0: Handle Fixed Damage moves immediately.
             if (move.Effects.TryGetValue("FixedDamage", out var fixedDamageValue) && EffectParser.TryParseInt(fixedDamageValue, out int fixedDamage))
@@ -120,6 +135,7 @@ namespace ProjectVagabond.Battle
                     if (ability.Effects.TryGetValue("PowerBonusLastAct", out var value) && EffectParser.TryParseFloat(value, out float bonusPercent))
                     {
                         movePower *= (1.0f + (bonusPercent / 100f));
+                        result.AttackerAbilitiesTriggered.Add(ability);
                     }
                 }
             }
@@ -180,6 +196,7 @@ namespace ProjectVagabond.Battle
                         if ((float)attacker.Stats.CurrentHP / attacker.Stats.MaxHP * 100f < hpThreshold)
                         {
                             finalDamage *= (1.0f + (bonus / 100f));
+                            result.AttackerAbilitiesTriggered.Add(ability);
                         }
                     }
                 }
@@ -190,6 +207,7 @@ namespace ProjectVagabond.Battle
                     if (target.ActiveStatusEffects.Any() && EffectParser.TryParseFloat(oppValue, out float bonus))
                     {
                         finalDamage *= (1.0f + (bonus / 100f));
+                        result.AttackerAbilitiesTriggered.Add(ability);
                     }
                 }
 
@@ -200,6 +218,7 @@ namespace ProjectVagabond.Battle
                     {
                         finalDamage *= (1.0f + (bonus / 100f));
                         attacker.HasUsedFirstAttack = true;
+                        result.AttackerAbilitiesTriggered.Add(ability);
                     }
                 }
             }
@@ -241,6 +260,7 @@ namespace ProjectVagabond.Battle
                         if (ability.Effects.TryGetValue("CritDamageReduction", out var value) && EffectParser.TryParseFloat(value, out float reductionPercent))
                         {
                             finalDamage *= (1.0f - (reductionPercent / 100f));
+                            result.DefenderAbilitiesTriggered.Add(ability);
                         }
                     }
                 }
@@ -258,7 +278,7 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            float elementalMultiplier = GetElementalMultiplier(move, target);
+            float elementalMultiplier = GetElementalMultiplier(move, target, result.DefenderAbilitiesTriggered);
             if (elementalMultiplier > 1.0f) result.Effectiveness = ElementalEffectiveness.Effective;
             else if (elementalMultiplier > 0f && elementalMultiplier < 1.0f) result.Effectiveness = ElementalEffectiveness.Resisted;
             else if (elementalMultiplier == 0f) result.Effectiveness = ElementalEffectiveness.Immune;
@@ -353,8 +373,17 @@ namespace ProjectVagabond.Battle
 
         /// <summary>
         /// Calculates the final elemental multiplier based on the move's offensive elements and the target's defensive elements.
+        /// This overload does not track which abilities triggered.
         /// </summary>
         public static float GetElementalMultiplier(MoveData move, BattleCombatant target)
+        {
+            return GetElementalMultiplier(move, target, null);
+        }
+
+        /// <summary>
+        /// Calculates the final elemental multiplier based on the move's offensive elements and the target's defensive elements.
+        /// </summary>
+        public static float GetElementalMultiplier(MoveData move, BattleCombatant target, List<AbilityData> defenderAbilitiesTriggered)
         {
             // Check for elemental immunities from abilities first.
             foreach (var ability in target.ActiveAbilities)
@@ -367,6 +396,7 @@ namespace ProjectVagabond.Battle
                     {
                         if (move.OffensiveElementIDs.Contains(immuneElementId))
                         {
+                            defenderAbilitiesTriggered?.Add(ability);
                             return 0f; // Grant immunity
                         }
                     }
@@ -379,6 +409,7 @@ namespace ProjectVagabond.Battle
                     {
                         if (move.OffensiveElementIDs.Contains(immuneElementId))
                         {
+                            defenderAbilitiesTriggered?.Add(ability);
                             return 0f; // Grant immunity
                         }
                     }

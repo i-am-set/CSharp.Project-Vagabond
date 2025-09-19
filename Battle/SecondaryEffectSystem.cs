@@ -50,7 +50,7 @@ namespace ProjectVagabond.Battle
                         {
                             if (ability.Effects.TryGetValue("ApplyStatusOnContact", out var value))
                             {
-                                HandleApplyStatus(attacker, target, value);
+                                HandleApplyStatus(attacker, target, value, ability);
                             }
                         }
                     }
@@ -62,7 +62,7 @@ namespace ProjectVagabond.Battle
                         {
                             if (ability.Effects.TryGetValue("ApplyStatusOnBeingHitContact", out var value))
                             {
-                                HandleApplyStatus(target, attacker, value); // Note: target applies status to attacker
+                                HandleApplyStatus(target, attacker, value, ability); // Note: target applies status to attacker
                             }
 
                             if (ability.Effects.TryGetValue("IronBarbsOnContact", out var barbValue) && EffectParser.TryParseFloat(barbValue, out float percent))
@@ -70,6 +70,7 @@ namespace ProjectVagabond.Battle
                                 int recoilDamage = Math.Max(1, (int)(attacker.Stats.MaxHP * (percent / 100f)));
                                 attacker.ApplyDamage(recoilDamage);
                                 EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = attacker, RecoilDamage = recoilDamage, SourceAbility = ability });
+                                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability });
                             }
                         }
                     }
@@ -106,6 +107,7 @@ namespace ProjectVagabond.Battle
                                             HealAmount = healAmount,
                                             VisualHPBefore = hpBefore
                                         });
+                                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability, NarrationText = $"{target.Name}'s {ability.AbilityName} absorbed the attack!" });
                                     }
                                 }
                             }
@@ -187,7 +189,7 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private static void HandleApplyStatus(BattleCombatant actor, BattleCombatant target, string value)
+        private static void HandleApplyStatus(BattleCombatant actor, BattleCombatant target, string value, AbilityData sourceAbility = null)
         {
             if (EffectParser.TryParseStatusEffectParams(value, out var type, out int chance, out int duration))
             {
@@ -199,6 +201,7 @@ namespace ProjectVagabond.Battle
                         if (EffectParser.TryParseInt(bonusValue, out int bonusDuration))
                         {
                             duration += bonusDuration;
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = actor, Ability = ability });
                         }
                     }
                 }
@@ -206,6 +209,10 @@ namespace ProjectVagabond.Battle
                 if (_random.Next(1, 101) <= chance)
                 {
                     target.AddStatusEffect(new StatusEffectInstance(type, duration));
+                    if (sourceAbility != null)
+                    {
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = actor, Ability = sourceAbility, NarrationText = $"{actor.Name}'s {sourceAbility.AbilityName} afflicted {target.Name}!" });
+                    }
                 }
             }
         }

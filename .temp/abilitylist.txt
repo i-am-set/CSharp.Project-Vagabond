@@ -1,0 +1,95 @@
+Pyromancer: Increases the damage of all Fire spells by 20%.
+
+Hydromancer: Increases the damage of all Water spells by 20%.
+
+Thaumomancer: Increases the damage of all Arcane spells by 20%.
+
+Geomancer: Increases the damage of all Earth spells by 20%.
+
+Ferromancer: Increases the damage of all Metal spells by 20%.
+
+Venommancer: Increases the damage of all Toxic spells by 20%.
+
+Aeromancer: Increases the damage of all Wind spells by 20%.
+
+Umbramancer: Increases the damage of all Void spells by 20%.
+
+Photomancer: Increases the damage of all Light spells by 20%.
+
+Electromancer: Increases the damage of all Electric spells by 20%.
+
+Cryomancer: Increases the damage of all Ice spells by 20%.
+
+Floramancer: Increases the damage of all Nature spells by 20%.
+---
+Venomous: Contact attacks have a 50% chance to inflict Poison for 4 turns.
+
+Thick Skin: Reduces all incoming physical damage by 20%.
+
+Sniper: Increases critical hit chance by 10%.
+
+Regeneration: Restores 5% of max HP at the end of each turn.
+
+Opportunist: Deal 25% more damage to targets already afflicted with a status effect.
+
+Static Charge: When the holder is hit by a contact move, there is a 30% chance the attacker becomes Stunned for 1 turn.
+
+Adrenaline Rush: Increases all damage dealt by 50% when the holder's HP is below 33%.
+
+Photosynthesis: Grants immunity to the light element and restores 25% of max HP when hit by a move of that element.
+---
+Last Stand: If the holder acts last in a round, their move's power is increased by 30%.
+
+Lingering Curse: All non-damaging status effects (e.g., Stun, Blind) applied by the holder last one additional turn.
+
+Grounding: Grants immunity to the Electric element.
+
+Toxic Aura: At the end of each turn, has a 30% chance to inflict Poison on a random enemy for 2 turns.
+
+Unwavering: Grants immunity to Stun and Fear status effects.
+
+Bulwark: Reduces incoming damage from critical hits by 30%.
+
+First Blood: The holder's first attack in a battle deals 50% more damage.
+
+Intimidate: Upon entering battle, lowers the Strength of all opponents for 3 turns.
+
+Iron Barbs: When hit by a contact move, the attacker takes damage equal to 1/8th of their maximum HP.
+---
+Full Power: While the holder is at 100% HP, their moves deal 30% more damage.
+
+Keen Eye: The holder's moves ignore the target's Dodging status effect.
+
+Nimble Feet: When dodging, hits against you have a 50% chance of missing fully.
+
+Glass Cannon: Increases all damage dealt by 30%, but also increases all damage taken by 15%
+
+Chain Reaction: For multi-hit moves, each subsequent hit deals 5% more damage than the last
+
+Reckless Abandon: Increases the power of all contact moves by 30%, but lowers their accuracy by 10%
+
+Armor Piercer: The holder's attacks ignore 25% of the target's Tenacity when calculating damage.
+
+Sanguine Thirst: The holder heals for 10% of the damage they deal with contact moves.
++++++++++
+Vigor: While the holder is above 75% HP, they take 20% less damage from all sources.
+
+Cornered Animal: The holder's Agility is increased by 50% when their HP is below 33% or theres 4+ living enemy combatants
+
+Contagion: When the holder inflicts a non-damaging status effect on a target, there is a 100% chance for that effect to also apply to one other random enemy for 1 turn.
+
+Ambush Predator: The holder's first move in a battle has its priority increased by 1, but its power is reduced by 20%.
+
+Sadist: Whenever the holder successfully applies a negative status effect to a target, thee holder gets strength up for 2 turns.
+
+Bloodletter: The holder's void spells cost 5% of their maximum HP to cast, but their void spell's damage is increased by 30%.
+
+Spellweaver: After using a non-magical Action, the holder's next Spell deals 30% more damage.
+
+Momentum: If the holder defeats a target, their next attack in the battle deals 50% more damage.
+
+Escalation: At the start of each round, the holder gains a 5% damage boost for the rest of the battle (stacks up to 10 times for a total of 50%).
+
+Pain Fuel: The holder channels agony into power. When hit by a critical hit, the holder gains the Strength Up and Intelligence up status effect for 2 turns.
+
+Caustic Blood: When an opponent uses a Lifesteal effect on the holder, the opponent takes damage equal to the amount they would have healed.

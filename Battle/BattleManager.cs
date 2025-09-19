@@ -610,6 +610,7 @@ namespace ProjectVagabond.Battle
                                 HealAmount = healAmount,
                                 VisualHPBefore = hpBefore
                             });
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = combatant, Ability = ability });
                         }
                     }
 
@@ -626,6 +627,7 @@ namespace ProjectVagabond.Battle
                                 {
                                     var target = validTargets[_random.Next(validTargets.Count)];
                                     target.AddStatusEffect(new StatusEffectInstance(type, duration));
+                                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = combatant, Ability = ability, NarrationText = $"{combatant.Name}'s {ability.AbilityName} afflicted {target.Name}!" });
                                 }
                             }
                         }

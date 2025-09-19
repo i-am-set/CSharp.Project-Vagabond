@@ -206,12 +206,15 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published when a passive ability activates, for narration purposes.
+        /// Published when a passive ability activates, for narration and debug logging purposes.
         /// </summary>
         public struct AbilityActivated
         {
             public BattleCombatant Combatant { get; set; }
             public AbilityData Ability { get; set; }
+            /// <summary>
+            /// Optional text for the player-facing battle narrator.
+            /// </summary>
             public string NarrationText { get; set; }
         }
     }

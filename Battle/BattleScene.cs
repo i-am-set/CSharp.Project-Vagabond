@@ -22,8 +22,7 @@ namespace ProjectVagabond.Scenes
     {
         // --- Tuning ---
         private const float MULTI_HIT_DELAY = 0.1f; // The delay in seconds between each hit of a multi-hit move.
-
-        // Core Battle Logic
+                                                    // Core Battle Logic
         private BattleManager _battleManager;
 
         // Specialized Managers
@@ -123,6 +122,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
             EventBus.Subscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
             EventBus.Subscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
+            EventBus.Subscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
@@ -142,6 +142,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
             EventBus.Unsubscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
             EventBus.Unsubscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
+            EventBus.Unsubscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
@@ -474,6 +475,21 @@ namespace ProjectVagabond.Scenes
                 var result = e.DamageResults[i];
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
 
+                if (result.AttackerAbilitiesTriggered != null)
+                {
+                    foreach (var ability in result.AttackerAbilitiesTriggered)
+                    {
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = e.Actor, Ability = ability });
+                    }
+                }
+                if (result.DefenderAbilitiesTriggered != null)
+                {
+                    foreach (var ability in result.DefenderAbilitiesTriggered)
+                    {
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability });
+                    }
+                }
+
                 if (result.DamageAmount > 0)
                 {
                     if (target.IsPlayerControlled)
@@ -599,6 +615,21 @@ namespace ProjectVagabond.Scenes
                     Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
                     _animationManager.StartDamageNumberIndicator(e.Combatant.CombatantID, e.Damage, hudPosition);
                 });
+            }
+        }
+
+        private void OnAbilityActivated(GameEvents.AbilityActivated e)
+        {
+            // Direct debug output to the IDE console for guaranteed visibility during testing.
+            System.Diagnostics.Debug.WriteLine($"[ABILITY TRIGGERED] Combatant: {e.Combatant.Name}, Ability: {e.Ability.AbilityName}");
+
+            // Publish a message to the in-game terminal.
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[debug]Ability Activated: {e.Ability.AbilityName} ({e.Combatant.Name})" });
+
+            // If narration text is provided, show it to the player.
+            if (!string.IsNullOrEmpty(e.NarrationText))
+            {
+                _uiManager.ShowNarration(e.NarrationText);
             }
         }
 
