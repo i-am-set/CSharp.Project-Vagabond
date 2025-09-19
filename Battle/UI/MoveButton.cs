@@ -255,8 +255,17 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // --- Draw Power & Accuracy ---
+                Color powerTextColor = statsColor;
+                if (Move.Power > 0 && DisplayPower > Move.Power)
+                {
+                    // Calculate the percentage of the increase, capping at 100% for the Lerp
+                    float increaseRatio = (float)(DisplayPower - Move.Power) / Move.Power;
+                    float lerpAmount = Math.Clamp(increaseRatio, 0f, 1f); // Clamp to 0-1 range for Lerp
+                    powerTextColor = Color.Lerp(statsColor, Color.DeepPink, lerpAmount);
+                }
+
                 spriteBatch.DrawStringSnapped(_moveFont, accuracyText, accuracyPosition, statsColor);
-                spriteBatch.DrawStringSnapped(_moveFont, powerText, powerPosition, statsColor);
+                spriteBatch.DrawStringSnapped(_moveFont, powerText, powerPosition, powerTextColor);
 
                 // --- Draw Target Type Indicator ---
                 string targetIndicator = Move.Target switch
