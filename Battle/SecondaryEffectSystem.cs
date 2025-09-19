@@ -20,11 +20,7 @@ namespace ProjectVagabond.Battle
         public static void ProcessEffects(QueuedAction action, List<BattleCombatant> finalTargets, List<DamageCalculator.DamageResult> damageResults)
         {
             var move = action.ChosenMove;
-            if (move?.Effects == null || !move.Effects.Any())
-            {
-                EventBus.Publish(new GameEvents.SecondaryEffectComplete());
-                return;
-            }
+            var attacker = action.Actor;
 
             // Process effects that apply once to the actor, based on aggregate results.
             ProcessActorEffects(action, finalTargets, damageResults);
@@ -33,10 +29,111 @@ namespace ProjectVagabond.Battle
             var uniqueTargets = finalTargets.Distinct().ToList();
             foreach (var target in uniqueTargets)
             {
-                bool wasDefeatedByThisAction = target.IsDefeated && finalTargets.Contains(target);
-                foreach (var effectEntry in move.Effects)
+                if (target.IsDefeated) continue; // Don't apply effects to already defeated targets
+
+                // --- Process Move-based Effects ---
+                if (move?.Effects != null)
                 {
-                    ProcessTargetEffect(effectEntry.Key, effectEntry.Value, action.Actor, target, wasDefeatedByThisAction, finalTargets);
+                    foreach (var effectEntry in move.Effects)
+                    {
+                        ProcessTargetEffect(effectEntry.Key, effectEntry.Value, attacker, target, finalTargets);
+                    }
+                }
+
+                // --- Process Ability-based Reactive Effects ---
+                if (move != null)
+                {
+                    // Attacker abilities (e.g., Venomous)
+                    if (move.MakesContact)
+                    {
+                        foreach (var ability in attacker.ActiveAbilities)
+                        {
+                            if (ability.Effects.TryGetValue("ApplyStatusOnContact", out var value))
+                            {
+                                HandleApplyStatus(attacker, target, value);
+                            }
+                        }
+                    }
+
+                    // Target abilities (e.g., Static Charge)
+                    if (move.MakesContact)
+                    {
+                        foreach (var ability in target.ActiveAbilities)
+                        {
+                            if (ability.Effects.TryGetValue("ApplyStatusOnBeingHitContact", out var value))
+                            {
+                                HandleApplyStatus(target, attacker, value); // Note: target applies status to attacker
+                            }
+                        }
+                    }
+
+                    // Target abilities (e.g. Photosynthesis heal)
+                    bool wasImmuneHit = false;
+                    for (int i = 0; i < finalTargets.Count; i++)
+                    {
+                        if (finalTargets[i] == target && damageResults[i].Effectiveness == DamageCalculator.ElementalEffectiveness.Immune)
+                        {
+                            wasImmuneHit = true;
+                            break;
+                        }
+                    }
+
+                    if (wasImmuneHit)
+                    {
+                        foreach (var ability in target.ActiveAbilities)
+                        {
+                            if (ability.Effects.TryGetValue("ElementImmunityAndHeal", out var value))
+                            {
+                                var parts = value.Split(',');
+                                if (parts.Length == 2 && EffectParser.TryParseInt(parts[0], out int immuneElementId) && EffectParser.TryParseFloat(parts[1], out float healPercent))
+                                {
+                                    if (move.OffensiveElementIDs.Contains(immuneElementId))
+                                    {
+                                        int hpBefore = (int)target.VisualHP;
+                                        int healAmount = (int)(target.Stats.MaxHP * (healPercent / 100f));
+                                        target.ApplyHealing(healAmount);
+                                        EventBus.Publish(new GameEvents.CombatantHealed
+                                        {
+                                            Actor = target,
+                                            Target = target,
+                                            HealAmount = healAmount,
+                                            VisualHPBefore = hpBefore
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // --- Process Reactive Status Effects on Target ---
+                if (target.HasStatusEffect(StatusEffectType.Burn) && move != null)
+                {
+                    bool isPhysical = move.ImpactType == ImpactType.Physical;
+                    bool isFire = move.OffensiveElementIDs.Contains(2); // 2 is the ElementID for Fire
+
+                    if (isPhysical || isFire)
+                    {
+                        int totalDamageToThisTarget = 0;
+                        for (int i = 0; i < finalTargets.Count; i++)
+                        {
+                            if (finalTargets[i] == target)
+                            {
+                                totalDamageToThisTarget += damageResults[i].DamageAmount;
+                            }
+                        }
+
+                        if (totalDamageToThisTarget > 0)
+                        {
+                            target.ApplyDamage(totalDamageToThisTarget);
+                            EventBus.Publish(new GameEvents.StatusEffectTriggered
+                            {
+                                Combatant = target,
+                                EffectType = StatusEffectType.Burn,
+                                Damage = totalDamageToThisTarget
+                            });
+                        }
+                    }
                 }
             }
 
@@ -46,6 +143,8 @@ namespace ProjectVagabond.Battle
         private static void ProcessActorEffects(QueuedAction action, List<BattleCombatant> finalTargets, List<DamageCalculator.DamageResult> damageResults)
         {
             var move = action.ChosenMove;
+            if (move == null) return;
+
             if (move.Effects.TryGetValue("Lifesteal", out var lifestealValue))
             {
                 int totalDamage = damageResults.Sum(r => r.DamageAmount);
@@ -62,7 +161,7 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private static void ProcessTargetEffect(string key, string value, BattleCombatant actor, BattleCombatant target, bool wasDefeated, List<BattleCombatant> allTargets)
+        private static void ProcessTargetEffect(string key, string value, BattleCombatant actor, BattleCombatant target, List<BattleCombatant> allTargets)
         {
             switch (key.ToLowerInvariant())
             {
@@ -76,7 +175,7 @@ namespace ProjectVagabond.Battle
                     HandleStealBuff(actor, target, value);
                     break;
                 case "executeonkill":
-                    if (wasDefeated) HandleExecuteOnKill(actor, allTargets, value);
+                    if (target.IsDefeated) HandleExecuteOnKill(actor, allTargets, value);
                     break;
             }
         }
@@ -155,7 +254,7 @@ namespace ProjectVagabond.Battle
             {
                 string effectName = parts[0];
                 string effectParams = parts[1];
-                ProcessTargetEffect(effectName, effectParams, actor, actor, false, allTargets);
+                ProcessTargetEffect(effectName, effectParams, actor, actor, allTargets);
             }
         }
 

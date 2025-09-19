@@ -139,9 +139,9 @@
   {
     "AbilityID": "Opportunist",
     "AbilityName": "Opportunist",
-    "Description": "Deal 25% more damage to targets already afflicted with a status effect.",
+    "Description": "Deal 2x more damage to targets already afflicted with a status effect.",
     "Effects": {
-      "DamageBonusVsStatused": "25"
+      "DamageBonusVsStatused": "100"
     }
   },
   {

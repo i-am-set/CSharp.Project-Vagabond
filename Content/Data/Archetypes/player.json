@@ -24,16 +24,16 @@
       "Type": "ProjectVagabond.Battle.PlayerBaseStatsComponent",
       "Properties": {
         "MaxHP": 100,
-        "Strength": 1,
+        "Strength": 5,
         "Intelligence": 15,
-        "Tenacity": 100,
+        "Tenacity": 30,
         "Agility": 1,
         "DefensiveElementIDs": [ 101 ],
         "StartingMoveIDs": [
           "VampiricBite",
-          "BloodMagic",
+          "ToxicSting",
           "Overload",
-          "BriarLash"
+          "Rampage"
         ],
         "DefaultStrikeMoveID": "ClawRake"
       }
@@ -42,7 +42,7 @@
       "Type": "ProjectVagabond.Battle.PassiveAbilitiesComponent",
       "Properties": {
         "AbilityIDs": [
-          "Umbramancer"
+          "Photosynthesis"
         ]
       }
     }

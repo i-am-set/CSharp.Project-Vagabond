@@ -155,6 +155,32 @@ namespace ProjectVagabond.Battle
             // Step 4: Multiplicative Modifier Application
             float finalDamage = baseDamage;
 
+            // Modifier (Ability Damage Bonus)
+            foreach (var ability in attacker.ActiveAbilities)
+            {
+                // Adrenaline Rush
+                if (ability.Effects.TryGetValue("DamageBonusLowHP", out var adrValue))
+                {
+                    var parts = adrValue.Split(',');
+                    if (parts.Length == 2 && EffectParser.TryParseFloat(parts[0], out float hpThreshold) && EffectParser.TryParseFloat(parts[1], out float bonus))
+                    {
+                        if ((float)attacker.Stats.CurrentHP / attacker.Stats.MaxHP * 100f < hpThreshold)
+                        {
+                            finalDamage *= (1.0f + (bonus / 100f));
+                        }
+                    }
+                }
+
+                // Opportunist
+                if (ability.Effects.TryGetValue("DamageBonusVsStatused", out var oppValue))
+                {
+                    if (target.ActiveStatusEffects.Any() && EffectParser.TryParseFloat(oppValue, out float bonus))
+                    {
+                        finalDamage *= (1.0f + (bonus / 100f));
+                    }
+                }
+            }
+
             // Modifier (Execute)
             if (move.Effects.TryGetValue("Execute", out var executeValue) && EffectParser.TryParseFloatArray(executeValue, out float[] execParams) && execParams.Length == 2)
             {
@@ -171,6 +197,15 @@ namespace ProjectVagabond.Battle
             if (!result.WasGraze)
             {
                 double critChance = BattleConstants.CRITICAL_HIT_CHANCE;
+                // Sniper
+                foreach (var ability in attacker.ActiveAbilities)
+                {
+                    if (ability.Effects.TryGetValue("CritChanceBonus", out var value) && EffectParser.TryParseFloat(value, out float bonus))
+                    {
+                        critChance += bonus / 100.0;
+                    }
+                }
+
                 if (target.HasStatusEffect(StatusEffectType.Root)) critChance *= 2.0;
                 if (_random.NextDouble() < critChance)
                 {
@@ -201,6 +236,18 @@ namespace ProjectVagabond.Battle
             if (target.HasStatusEffect(StatusEffectType.Freeze) && move.ImpactType == ImpactType.Physical)
             {
                 finalDamage *= 2.0f;
+            }
+
+            // Thick Skin
+            foreach (var ability in target.ActiveAbilities)
+            {
+                if (ability.Effects.TryGetValue("DamageReductionPhysical", out var value) && EffectParser.TryParseFloat(value, out float reduction))
+                {
+                    if (move.ImpactType == ImpactType.Physical)
+                    {
+                        finalDamage *= (1.0f - (reduction / 100f));
+                    }
+                }
             }
 
             finalDamage *= (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
@@ -277,6 +324,22 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public static float GetElementalMultiplier(MoveData move, BattleCombatant target)
         {
+            // Photosynthesis (and other immunities) check
+            foreach (var ability in target.ActiveAbilities)
+            {
+                if (ability.Effects.TryGetValue("ElementImmunityAndHeal", out var value))
+                {
+                    var parts = value.Split(',');
+                    if (parts.Length == 2 && EffectParser.TryParseInt(parts[0], out int immuneElementId))
+                    {
+                        if (move.OffensiveElementIDs.Contains(immuneElementId))
+                        {
+                            return 0f; // Grant immunity
+                        }
+                    }
+                }
+            }
+
             var targetDefensiveElements = target.GetEffectiveDefensiveElementIDs();
             if (move.OffensiveElementIDs == null || !move.OffensiveElementIDs.Any() ||
                 targetDefensiveElements == null || !targetDefensiveElements.Any())

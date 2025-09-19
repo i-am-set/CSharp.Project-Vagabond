@@ -413,7 +413,6 @@ namespace ProjectVagabond.Battle
                         target.ApplyDamage(result.DamageAmount);
                         damageResultsForThisHit.Add(result);
                         _multiHitAggregatedFinalTargets.Add(target);
-                        HandleReactiveStatusEffects(moveInstance, target, result);
                     }
                     _multiHitAggregatedDamageResults.AddRange(damageResultsForThisHit);
 
@@ -495,7 +494,6 @@ namespace ProjectVagabond.Battle
                             var result = DamageCalculator.CalculateDamage(action.Actor, target, moveInstance, multiTargetModifier);
                             target.ApplyDamage(result.DamageAmount);
                             damageResults.Add(result);
-                            HandleReactiveStatusEffects(moveInstance, target, result);
                         }
                         EventBus.Publish(new GameEvents.BattleActionExecuted { Actor = action.Actor, ChosenMove = moveData, UsedItem = action.ChosenItem, Targets = targets, DamageResults = damageResults });
                     }
@@ -504,30 +502,6 @@ namespace ProjectVagabond.Battle
             _currentActionForEffects = action;
             _currentActionDamageResults = damageResults;
             _currentActionFinalTargets = targets;
-        }
-
-        private void HandleReactiveStatusEffects(MoveData move, BattleCombatant target, DamageCalculator.DamageResult result)
-        {
-            if (target.HasStatusEffect(StatusEffectType.Burn))
-            {
-                bool isPhysical = move.ImpactType == ImpactType.Physical;
-                bool isFire = move.OffensiveElementIDs.Contains(2); // 2 is the ElementID for Fire
-
-                if (isPhysical || isFire)
-                {
-                    int burnProcDamage = result.DamageAmount;
-                    if (burnProcDamage > 0)
-                    {
-                        target.ApplyDamage(burnProcDamage);
-                        EventBus.Publish(new GameEvents.StatusEffectTriggered
-                        {
-                            Combatant = target,
-                            EffectType = StatusEffectType.Burn,
-                            Damage = burnProcDamage
-                        });
-                    }
-                }
-            }
         }
 
         private List<BattleCombatant> ResolveTargets(QueuedAction action, bool isMultiHit = false)
@@ -606,6 +580,28 @@ namespace ProjectVagabond.Battle
             foreach (var combatant in _allCombatants)
             {
                 if (combatant.IsDefeated) continue;
+
+                // Regeneration
+                foreach (var ability in combatant.ActiveAbilities)
+                {
+                    if (ability.Effects.TryGetValue("RegenEndOfTurn", out var value) && EffectParser.TryParseFloat(value, out float healPercent))
+                    {
+                        int hpBefore = (int)combatant.VisualHP;
+                        int healAmount = (int)(combatant.Stats.MaxHP * (healPercent / 100f));
+                        if (healAmount > 0)
+                        {
+                            combatant.ApplyHealing(healAmount);
+                            EventBus.Publish(new GameEvents.CombatantHealed
+                            {
+                                Actor = combatant,
+                                Target = combatant,
+                                HealAmount = healAmount,
+                                VisualHPBefore = hpBefore
+                            });
+                        }
+                    }
+                }
+
                 var effectsToRemove = new List<StatusEffectInstance>();
                 foreach (var effect in combatant.ActiveStatusEffects)
                 {
