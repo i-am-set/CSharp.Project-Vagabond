@@ -47,6 +47,7 @@ namespace ProjectVagabond.Battle
 
         // State for action resolution flow
         private QueuedAction _actionToExecute;
+        private bool _endOfTurnEffectsProcessed;
 
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
@@ -80,6 +81,7 @@ namespace ProjectVagabond.Battle
             _actionQueue = new List<QueuedAction>();
             RoundNumber = 1;
             _currentPhase = BattlePhase.StartOfTurn;
+            _endOfTurnEffectsProcessed = false;
 
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
 
@@ -157,6 +159,7 @@ namespace ProjectVagabond.Battle
         private void HandleStartOfTurn()
         {
             IsPlayerTurnSkipped = false;
+            _endOfTurnEffectsProcessed = false;
             var startOfTurnActions = new List<QueuedAction>();
 
             foreach (var combatant in _allCombatants)
@@ -580,14 +583,21 @@ namespace ProjectVagabond.Battle
             {
                 _currentPhase = BattlePhase.ActionResolution;
             }
-            else
+            else if (!_endOfTurnEffectsProcessed)
             {
                 _currentPhase = BattlePhase.EndOfTurn;
+            }
+            else
+            {
+                RoundNumber++;
+                _currentPhase = BattlePhase.StartOfTurn;
             }
         }
 
         private void HandleEndOfTurn()
         {
+            _endOfTurnEffectsProcessed = true;
+
             foreach (var combatant in _allCombatants)
             {
                 if (combatant.IsDefeated) continue;
@@ -656,14 +666,7 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            if (_enemyCombatants.All(c => c.IsDefeated) || _playerCombatants.All(c => c.IsDefeated))
-            {
-                _currentPhase = BattlePhase.BattleOver;
-                return;
-            }
-
-            RoundNumber++;
-            _currentPhase = BattlePhase.StartOfTurn;
+            _currentPhase = BattlePhase.CheckForDefeat;
         }
 
         private void HandleOnEnterAbilities()

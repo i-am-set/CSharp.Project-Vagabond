@@ -22,7 +22,8 @@ namespace ProjectVagabond.Scenes
     {
         // --- Tuning ---
         private const float MULTI_HIT_DELAY = 0.1f; // The delay in seconds between each hit of a multi-hit move.
-                                                    // Core Battle Logic
+
+        // Core Battle Logic
         private BattleManager _battleManager;
 
         // Specialized Managers
@@ -372,6 +373,7 @@ namespace ProjectVagabond.Scenes
             _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, _currentActor, _uiManager, _inputHandler, _animationManager);
             _uiManager.Draw(spriteBatch, font, gameTime, transform);
             _animationManager.DrawDamageIndicators(spriteBatch, secondaryFont);
+            _animationManager.DrawAbilityIndicators(spriteBatch, font);
         }
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -625,6 +627,9 @@ namespace ProjectVagabond.Scenes
 
             // Publish a message to the in-game terminal.
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[debug]Ability Activated: {e.Ability.AbilityName} ({e.Combatant.Name})" });
+
+            // Start the visual indicator animation
+            _animationManager.StartAbilityIndicator(e.Ability.AbilityName);
 
             // If narration text is provided, show it to the player.
             if (!string.IsNullOrEmpty(e.NarrationText))

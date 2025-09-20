@@ -249,7 +249,6 @@ namespace ProjectVagabond.Battle.UI
             var arrowRects = _spriteManager.ArrowIconSourceRects;
             if (arrowRects == null) return;
 
-            var move = hoverHighlightState.CurrentMove;
             var state = hoverHighlightState;
             var targets = state.Targets;
 
@@ -257,26 +256,11 @@ namespace ProjectVagabond.Battle.UI
             bool areAllFlashing = (state.Timer % cycleDuration) < HoverHighlightState.MultiTargetFlashOnDuration;
             Color flashColor = areAllFlashing ? _global.Palette_Red : Color.White;
 
-            switch (move.Target)
+            foreach (var target in targets)
             {
-                case TargetType.Single:
-                case TargetType.SingleAll:
-                case TargetType.Self:
-                    foreach (var target in targets)
-                    {
-                        Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
-                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor);
-                    }
-                    break;
-
-                case TargetType.Every:
-                case TargetType.EveryAll:
-                    Rectangle starRect = arrowRects[8]; // Center star icon
-                    foreach (var target in targets)
-                    {
-                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, starRect, flashColor);
-                    }
-                    break;
+                // Use an UP arrow for the player (below their HUD) and a DOWN arrow for enemies (above their sprite).
+                Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6];
+                DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor);
             }
         }
 
@@ -309,13 +293,10 @@ namespace ProjectVagabond.Battle.UI
                 int slotWidth = availableWidth / enemies.Count;
                 var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
 
-                const int spriteSize = 64;
-                float spriteTop = centerPosition.Y - spriteSize - 10;
+                var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
+                float highestPointY = GetEnemySpriteTopY(combatant, spriteRect.Y);
 
-                arrowPos = new Vector2(
-                    centerPosition.X - sourceRect.Width / 2f,
-                    spriteTop - sourceRect.Height - 1
-                );
+                arrowPos = new Vector2(spriteRect.Center.X - sourceRect.Width / 2f, highestPointY - sourceRect.Height - 1);
             }
 
             if (color == _global.Palette_Red)
@@ -362,9 +343,12 @@ namespace ProjectVagabond.Battle.UI
                 int slotWidth = availableWidth / enemies.Count;
                 var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
 
-                const int spriteSize = 64;
-                var spriteRect = new Rectangle((int)(centerPosition.X - spriteSize / 2), (int)(centerPosition.Y - spriteSize - 10), spriteSize, spriteSize);
-                var arrowPos = new Vector2(spriteRect.Center.X - arrowRect.Width / 2, spriteRect.Top - arrowRect.Height - 1 + bobOffset);
+                var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
+
+                // Calculate the highest point of the sprite for this frame
+                float highestPointY = GetEnemySpriteTopY(currentActor, spriteRect.Y);
+
+                var arrowPos = new Vector2(spriteRect.Center.X - arrowRect.Width / 2, highestPointY - arrowRect.Height - 1 + bobOffset);
                 spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
             }
         }
@@ -642,6 +626,26 @@ namespace ProjectVagabond.Battle.UI
                 int slotWidth = availableWidth / enemies.Count;
                 return new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
             }
+        }
+
+        private float GetEnemySpriteTopY(BattleCombatant enemy, float spriteRectTopY)
+        {
+            var staticOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(enemy.ArchetypeId);
+            if (staticOffsets == null || !_enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var animOffsets))
+            {
+                return spriteRectTopY; // Fallback to the top of the bounding box
+            }
+
+            float minTopY = float.MaxValue;
+            for (int i = 0; i < staticOffsets.Length; i++)
+            {
+                if (staticOffsets[i] == int.MaxValue) continue; // Skip empty parts
+
+                float currentPartTopY = staticOffsets[i] + (animOffsets.Length > i ? animOffsets[i].Y : 0);
+                minTopY = Math.Min(minTopY, currentPartTopY);
+            }
+
+            return minTopY == float.MaxValue ? spriteRectTopY : spriteRectTopY + minTopY;
         }
 
         private bool IsNegativeStatus(StatusEffectType type)

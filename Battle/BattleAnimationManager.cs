@@ -23,6 +23,21 @@ namespace ProjectVagabond.Battle.UI
         public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.1f; }
         public class HealFlashAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.5f; }
         public class PoisonEffectAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.5f; }
+        public class AbilityIndicatorState
+        {
+            public enum AnimationPhase { EasingIn, Flashing, Holding, EasingOut }
+            public AnimationPhase Phase;
+            public string Text;
+            public Vector2 InitialPosition; // Off-screen top
+            public Vector2 TargetPosition;  // On-screen "hang" position
+            public Vector2 CurrentPosition;
+            public float Timer;
+            public const float EASE_IN_DURATION = 0.2f;
+            public const float FLASH_DURATION = 0.3f; // 3 flashes at 0.1s interval (0.05 on, 0.05 off)
+            public const float HOLD_DURATION = 1.5f;
+            public const float EASE_OUT_DURATION = 0.2f;
+            public const float TOTAL_DURATION = EASE_IN_DURATION + FLASH_DURATION + HOLD_DURATION + EASE_OUT_DURATION;
+        }
         public class DamageIndicatorState
         {
             public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber, Effectiveness }
@@ -45,11 +60,12 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<HealFlashAnimationState> _activeHealFlashAnimations = new List<HealFlashAnimationState>();
         private readonly List<PoisonEffectAnimationState> _activePoisonEffectAnimations = new List<PoisonEffectAnimationState>();
         private readonly List<DamageIndicatorState> _activeDamageIndicators = new List<DamageIndicatorState>();
+        private readonly List<AbilityIndicatorState> _activeAbilityIndicators = new List<AbilityIndicatorState>();
 
         private readonly Random _random = new Random();
         private readonly Global _global;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeAbilityIndicators.Any();
 
         public BattleAnimationManager()
         {
@@ -65,6 +81,7 @@ namespace ProjectVagabond.Battle.UI
             _activeHealFlashAnimations.Clear();
             _activePoisonEffectAnimations.Clear();
             _activeDamageIndicators.Clear();
+            _activeAbilityIndicators.Clear();
         }
 
         public void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)
@@ -131,6 +148,39 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 Timer = 0f
             });
+        }
+
+        public void StartAbilityIndicator(string abilityName)
+        {
+            var font = ServiceLocator.Get<BitmapFont>();
+            string text = abilityName.ToUpper();
+            Vector2 textSize = font.MeasureString(text);
+            const int paddingX = 8;
+            const int paddingY = 2;
+            int boxWidth = (int)textSize.X + paddingX * 2;
+            int boxHeight = (int)textSize.Y + paddingY * 2;
+
+            // Calculate the starting Y position based on existing indicators
+            float yOffset = 0;
+            foreach (var existing in _activeAbilityIndicators)
+            {
+                Vector2 existingSize = font.MeasureString(existing.Text);
+                yOffset += (int)existingSize.Y + paddingY * 2 + 2; // Add height + 2px gap
+            }
+
+            const float leftPadding = 20f; // Position it to the right of the round counter
+
+            var indicator = new AbilityIndicatorState
+            {
+                Text = text,
+                Timer = 0f,
+                Phase = AbilityIndicatorState.AnimationPhase.EasingIn,
+                TargetPosition = new Vector2(leftPadding + boxWidth / 2f, yOffset)
+            };
+            indicator.InitialPosition = new Vector2(indicator.TargetPosition.X, -boxHeight);
+            indicator.CurrentPosition = indicator.InitialPosition;
+
+            _activeAbilityIndicators.Add(indicator);
         }
 
         public void StartDamageIndicator(string combatantId, string text, Vector2 startPosition, Color color)
@@ -240,6 +290,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateHealAnimations(gameTime);
             UpdatePoisonEffectAnimations(gameTime);
             UpdateDamageIndicators(gameTime);
+            UpdateAbilityIndicators(gameTime);
         }
 
         private void UpdateHealthAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
@@ -378,6 +429,56 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        private void UpdateAbilityIndicators(GameTime gameTime)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeAbilityIndicators.Count - 1; i >= 0; i--)
+            {
+                var indicator = _activeAbilityIndicators[i];
+                indicator.Timer += deltaTime;
+
+                if (indicator.Timer >= AbilityIndicatorState.TOTAL_DURATION)
+                {
+                    _activeAbilityIndicators.RemoveAt(i);
+                    continue;
+                }
+
+                switch (indicator.Phase)
+                {
+                    case AbilityIndicatorState.AnimationPhase.EasingIn:
+                        float easeInProgress = indicator.Timer / AbilityIndicatorState.EASE_IN_DURATION;
+                        indicator.CurrentPosition = Vector2.Lerp(indicator.InitialPosition, indicator.TargetPosition, Easing.EaseOutQuint(easeInProgress));
+                        if (easeInProgress >= 1.0f)
+                        {
+                            indicator.Phase = AbilityIndicatorState.AnimationPhase.Flashing;
+                        }
+                        break;
+
+                    case AbilityIndicatorState.AnimationPhase.Flashing:
+                        float flashPhaseEnd = AbilityIndicatorState.EASE_IN_DURATION + AbilityIndicatorState.FLASH_DURATION;
+                        if (indicator.Timer >= flashPhaseEnd)
+                        {
+                            indicator.Phase = AbilityIndicatorState.AnimationPhase.Holding;
+                        }
+                        break;
+
+                    case AbilityIndicatorState.AnimationPhase.Holding:
+                        float holdPhaseEnd = AbilityIndicatorState.EASE_IN_DURATION + AbilityIndicatorState.FLASH_DURATION + AbilityIndicatorState.HOLD_DURATION;
+                        if (indicator.Timer >= holdPhaseEnd)
+                        {
+                            indicator.Phase = AbilityIndicatorState.AnimationPhase.EasingOut;
+                        }
+                        break;
+
+                    case AbilityIndicatorState.AnimationPhase.EasingOut:
+                        float easeOutStart = AbilityIndicatorState.EASE_IN_DURATION + AbilityIndicatorState.FLASH_DURATION + AbilityIndicatorState.HOLD_DURATION;
+                        float easeOutProgress = (indicator.Timer - easeOutStart) / AbilityIndicatorState.EASE_OUT_DURATION;
+                        indicator.CurrentPosition = Vector2.Lerp(indicator.TargetPosition, indicator.InitialPosition, Easing.EaseInCubic(easeOutProgress));
+                        break;
+                }
+            }
+        }
+
         public void DrawDamageIndicators(SpriteBatch spriteBatch, BitmapFont font)
         {
             // Two-pass rendering: text first, then numbers on top.
@@ -460,6 +561,64 @@ namespace ProjectVagabond.Battle.UI
                 Vector2 textPosition = indicator.Position - new Vector2(textSize.X / 2f, textSize.Y);
 
                 spriteBatch.DrawStringOutlinedSnapped(activeFont, indicator.Text, textPosition, drawColor * alpha, Color.Black * alpha);
+            }
+        }
+
+        public void DrawAbilityIndicators(SpriteBatch spriteBatch, BitmapFont font)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+
+            foreach (var indicator in _activeAbilityIndicators)
+            {
+                // --- Alpha Calculation ---
+                float alpha = 1.0f;
+                if (indicator.Phase == AbilityIndicatorState.AnimationPhase.EasingIn)
+                {
+                    alpha = Easing.EaseOutQuint(indicator.Timer / AbilityIndicatorState.EASE_IN_DURATION);
+                }
+                else if (indicator.Phase == AbilityIndicatorState.AnimationPhase.EasingOut)
+                {
+                    float easeOutStart = AbilityIndicatorState.EASE_IN_DURATION + AbilityIndicatorState.FLASH_DURATION + AbilityIndicatorState.HOLD_DURATION;
+                    float fadeOutProgress = (indicator.Timer - easeOutStart) / AbilityIndicatorState.EASE_OUT_DURATION;
+                    alpha = 1.0f - Easing.EaseInQuad(fadeOutProgress);
+                }
+
+                // --- Pulsing Flash Logic ---
+                const float PULSE_SPEED = 15f;
+                float pulse = (MathF.Sin(indicator.Timer * PULSE_SPEED) + 1f) / 2f; // Oscillates between 0.0 and 1.0
+
+                // --- Color Determination ---
+                Color bgColor = Color.Lerp(_global.TerminalBg, _global.Palette_LightBlue, pulse);
+                Color outlineColor = Color.Black;
+                Color textColor = Color.White;
+
+                // --- Final Transparency ---
+                float finalDrawAlpha = alpha * 0.5f;
+
+                // --- Layout Calculation ---
+                Vector2 textSize = font.MeasureString(indicator.Text);
+                const int paddingX = 8;
+                const int paddingY = 2;
+                int boxWidth = (int)textSize.X + paddingX * 2;
+                int boxHeight = (int)textSize.Y + paddingY * 2;
+
+                var boxRect = new Rectangle(
+                    (int)(indicator.CurrentPosition.X - boxWidth / 2f),
+                    (int)indicator.CurrentPosition.Y,
+                    boxWidth,
+                    boxHeight
+                );
+
+                var textPosition = new Vector2(boxRect.X + paddingX, boxRect.Y + paddingY);
+
+                // --- Drawing ---
+                spriteBatch.DrawSnapped(pixel, boxRect, bgColor * 0.8f * finalDrawAlpha);
+                spriteBatch.DrawLineSnapped(new Vector2(boxRect.Left, boxRect.Top), new Vector2(boxRect.Right, boxRect.Top), _global.Palette_White * finalDrawAlpha);
+                spriteBatch.DrawLineSnapped(new Vector2(boxRect.Left, boxRect.Bottom), new Vector2(boxRect.Right, boxRect.Bottom), _global.Palette_White * finalDrawAlpha);
+                spriteBatch.DrawLineSnapped(new Vector2(boxRect.Left, boxRect.Top), new Vector2(boxRect.Left, boxRect.Bottom), _global.Palette_White * finalDrawAlpha);
+                spriteBatch.DrawLineSnapped(new Vector2(boxRect.Right, boxRect.Top), new Vector2(boxRect.Right, boxRect.Bottom), _global.Palette_White * finalDrawAlpha);
+
+                spriteBatch.DrawStringOutlinedSnapped(font, indicator.Text, textPosition, textColor * finalDrawAlpha, outlineColor * finalDrawAlpha);
             }
         }
     }

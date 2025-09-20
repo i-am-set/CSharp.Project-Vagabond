@@ -36,6 +36,7 @@ namespace ProjectVagabond
 
         // Enemy Sprite Cache
         private readonly Dictionary<string, Texture2D> _enemySprites = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int[]> _enemySpriteTopPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
 
         private Texture2D _logoSprite;
@@ -262,6 +263,7 @@ namespace ProjectVagabond
             {
                 var sprite = _core.Content.Load<Texture2D>($"Sprites/Enemies/{archetypeId.ToLower()}");
                 _enemySprites[archetypeId] = sprite;
+                PreCalculateTopPixelOffsets(sprite, archetypeId); // Pre-calculate on first load
                 return sprite;
             }
             catch
@@ -269,6 +271,45 @@ namespace ProjectVagabond
                 _enemySprites[archetypeId] = null;
                 return null;
             }
+        }
+
+        public int[] GetEnemySpriteTopPixelOffsets(string archetypeId)
+        {
+            _enemySpriteTopPixelOffsets.TryGetValue(archetypeId, out var offsets);
+            return offsets;
+        }
+
+        private void PreCalculateTopPixelOffsets(Texture2D sprite, string archetypeId)
+        {
+            const int partSize = 64;
+            int numParts = sprite.Width / partSize;
+            var offsets = new int[numParts];
+            var pixelData = new Color[sprite.Width * sprite.Height];
+            sprite.GetData(pixelData);
+
+            for (int i = 0; i < numParts; i++)
+            {
+                int partStartX = i * partSize;
+                int topY = -1;
+
+                for (int y = 0; y < partSize; y++)
+                {
+                    for (int x = 0; x < partSize; x++)
+                    {
+                        int index = (y * sprite.Width) + (partStartX + x);
+                        if (pixelData[index].A > 0)
+                        {
+                            topY = y;
+                            goto FoundTopPixel; // Break out of both loops
+                        }
+                    }
+                }
+
+            FoundTopPixel:
+                offsets[i] = topY != -1 ? topY : int.MaxValue; // Use MaxValue for empty parts
+            }
+
+            _enemySpriteTopPixelOffsets[archetypeId] = offsets;
         }
 
         public Texture2D GetStatusEffectIcon(StatusEffectType effectType)
