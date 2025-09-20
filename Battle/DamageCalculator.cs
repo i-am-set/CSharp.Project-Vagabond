@@ -302,6 +302,22 @@ namespace ProjectVagabond.Battle
                 }
             }
 
+            // Vigor
+            foreach (var ability in target.ActiveAbilities)
+            {
+                if (ability.Effects.TryGetValue("Vigor", out var vigorValue) && EffectParser.TryParseFloatArray(vigorValue, out float[] vigorParams) && vigorParams.Length == 2)
+                {
+                    float hpThreshold = vigorParams[0];
+                    float damageReduction = vigorParams[1];
+
+                    if ((float)target.Stats.CurrentHP / target.Stats.MaxHP * 100f > hpThreshold)
+                    {
+                        finalDamage *= (1.0f - (damageReduction / 100f));
+                        result.DefenderAbilitiesTriggered.Add(ability);
+                    }
+                }
+            }
+
             finalDamage *= (float)(_random.NextDouble() * (BattleConstants.RANDOM_VARIANCE_MAX - BattleConstants.RANDOM_VARIANCE_MIN) + BattleConstants.RANDOM_VARIANCE_MIN);
 
             if (result.WasGraze)

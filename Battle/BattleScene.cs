@@ -347,10 +347,11 @@ namespace ProjectVagabond.Scenes
             DrawSceneContent(spriteBatch, font, gameTime, transform);
             spriteBatch.End();
 
-            // Draw the overlay content (tooltips) on top, using the same transform
+            // Draw the overlay content (tooltips, ability indicators) on top, using the same transform
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             _renderer.DrawOverlay(spriteBatch, font);
             _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
+            _animationManager.DrawAbilityIndicators(spriteBatch, font);
             spriteBatch.End();
         }
 
@@ -373,7 +374,6 @@ namespace ProjectVagabond.Scenes
             _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, _currentActor, _uiManager, _inputHandler, _animationManager);
             _uiManager.Draw(spriteBatch, font, gameTime, transform);
             _animationManager.DrawDamageIndicators(spriteBatch, secondaryFont);
-            _animationManager.DrawAbilityIndicators(spriteBatch, font);
         }
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)

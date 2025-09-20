@@ -27,15 +27,17 @@ namespace ProjectVagabond.Battle.UI
         {
             public enum AnimationPhase { EasingIn, Flashing, Holding, EasingOut }
             public AnimationPhase Phase;
+            public string OriginalText;
             public string Text;
-            public Vector2 InitialPosition; // Off-screen top
+            public int Count;
+            public Vector2 InitialPosition; // Off-screen bottom
             public Vector2 TargetPosition;  // On-screen "hang" position
             public Vector2 CurrentPosition;
             public float Timer;
-            public const float EASE_IN_DURATION = 0.2f;
-            public const float FLASH_DURATION = 0.3f; // 3 flashes at 0.1s interval (0.05 on, 0.05 off)
-            public const float HOLD_DURATION = 1.5f;
-            public const float EASE_OUT_DURATION = 0.2f;
+            public const float EASE_IN_DURATION = 0.1f;
+            public const float FLASH_DURATION = 0.15f;
+            public const float HOLD_DURATION = 1.0f;
+            public const float EASE_OUT_DURATION = 0.4f;
             public const float TOTAL_DURATION = EASE_IN_DURATION + FLASH_DURATION + HOLD_DURATION + EASE_OUT_DURATION;
         }
         public class DamageIndicatorState
@@ -65,7 +67,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly Random _random = new Random();
         private readonly Global _global;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeAbilityIndicators.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any();
 
         public BattleAnimationManager()
         {
@@ -152,32 +154,33 @@ namespace ProjectVagabond.Battle.UI
 
         public void StartAbilityIndicator(string abilityName)
         {
-            var font = ServiceLocator.Get<BitmapFont>();
+            var font = ServiceLocator.Get<Core>().SecondaryFont;
             string text = abilityName.ToUpper();
-            Vector2 textSize = font.MeasureString(text);
-            const int paddingX = 8;
-            const int paddingY = 2;
-            int boxWidth = (int)textSize.X + paddingX * 2;
-            int boxHeight = (int)textSize.Y + paddingY * 2;
 
-            // Calculate the starting Y position based on existing indicators
-            float yOffset = 0;
-            foreach (var existing in _activeAbilityIndicators)
+            // Check if an indicator for this ability already exists.
+            var existingIndicator = _activeAbilityIndicators.FirstOrDefault(ind => ind.OriginalText == text);
+            if (existingIndicator != null)
             {
-                Vector2 existingSize = font.MeasureString(existing.Text);
-                yOffset += (int)existingSize.Y + paddingY * 2 + 2; // Add height + 2px gap
+                existingIndicator.Count++;
+                existingIndicator.Text = $"{existingIndicator.OriginalText} x{existingIndicator.Count}";
+                existingIndicator.Timer = 0f; // Reset timer to restart animation/duration
+                existingIndicator.Phase = AbilityIndicatorState.AnimationPhase.EasingIn;
+                return;
             }
 
-            const float leftPadding = 20f; // Position it to the right of the round counter
+            Vector2 textSize = font.MeasureString(text);
+            const int paddingY = 1;
+            int boxHeight = (int)textSize.Y + paddingY * 2;
 
             var indicator = new AbilityIndicatorState
             {
+                OriginalText = text,
                 Text = text,
+                Count = 1,
                 Timer = 0f,
                 Phase = AbilityIndicatorState.AnimationPhase.EasingIn,
-                TargetPosition = new Vector2(leftPadding + boxWidth / 2f, yOffset)
             };
-            indicator.InitialPosition = new Vector2(indicator.TargetPosition.X, -boxHeight);
+            indicator.InitialPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT + boxHeight);
             indicator.CurrentPosition = indicator.InitialPosition;
 
             _activeAbilityIndicators.Add(indicator);
@@ -432,6 +435,22 @@ namespace ProjectVagabond.Battle.UI
         private void UpdateAbilityIndicators(GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            var font = ServiceLocator.Get<Core>().SecondaryFont;
+            const int paddingY = 1;
+            const int gap = 2;
+
+            // Recalculate all target positions every frame for smooth stacking
+            float yStackOffset = Global.VIRTUAL_HEIGHT;
+            for (int i = 0; i < _activeAbilityIndicators.Count; i++)
+            {
+                var indicator = _activeAbilityIndicators[i];
+                Vector2 textSize = font.MeasureString(indicator.Text);
+                int boxHeight = (int)textSize.Y + paddingY * 2;
+                yStackOffset -= boxHeight;
+                indicator.TargetPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, yStackOffset);
+                yStackOffset -= gap;
+            }
+
             for (int i = _activeAbilityIndicators.Count - 1; i >= 0; i--)
             {
                 var indicator = _activeAbilityIndicators[i];
@@ -443,38 +462,21 @@ namespace ProjectVagabond.Battle.UI
                     continue;
                 }
 
-                switch (indicator.Phase)
+                // Smoothly move towards the (potentially changing) target position
+                indicator.CurrentPosition = Vector2.Lerp(indicator.CurrentPosition, indicator.TargetPosition, 10f * deltaTime);
+
+                // Update animation phase based on timer
+                if (indicator.Phase == AbilityIndicatorState.AnimationPhase.EasingIn && indicator.Timer >= AbilityIndicatorState.EASE_IN_DURATION)
                 {
-                    case AbilityIndicatorState.AnimationPhase.EasingIn:
-                        float easeInProgress = indicator.Timer / AbilityIndicatorState.EASE_IN_DURATION;
-                        indicator.CurrentPosition = Vector2.Lerp(indicator.InitialPosition, indicator.TargetPosition, Easing.EaseOutQuint(easeInProgress));
-                        if (easeInProgress >= 1.0f)
-                        {
-                            indicator.Phase = AbilityIndicatorState.AnimationPhase.Flashing;
-                        }
-                        break;
-
-                    case AbilityIndicatorState.AnimationPhase.Flashing:
-                        float flashPhaseEnd = AbilityIndicatorState.EASE_IN_DURATION + AbilityIndicatorState.FLASH_DURATION;
-                        if (indicator.Timer >= flashPhaseEnd)
-                        {
-                            indicator.Phase = AbilityIndicatorState.AnimationPhase.Holding;
-                        }
-                        break;
-
-                    case AbilityIndicatorState.AnimationPhase.Holding:
-                        float holdPhaseEnd = AbilityIndicatorState.EASE_IN_DURATION + AbilityIndicatorState.FLASH_DURATION + AbilityIndicatorState.HOLD_DURATION;
-                        if (indicator.Timer >= holdPhaseEnd)
-                        {
-                            indicator.Phase = AbilityIndicatorState.AnimationPhase.EasingOut;
-                        }
-                        break;
-
-                    case AbilityIndicatorState.AnimationPhase.EasingOut:
-                        float easeOutStart = AbilityIndicatorState.EASE_IN_DURATION + AbilityIndicatorState.FLASH_DURATION + AbilityIndicatorState.HOLD_DURATION;
-                        float easeOutProgress = (indicator.Timer - easeOutStart) / AbilityIndicatorState.EASE_OUT_DURATION;
-                        indicator.CurrentPosition = Vector2.Lerp(indicator.TargetPosition, indicator.InitialPosition, Easing.EaseInCubic(easeOutProgress));
-                        break;
+                    indicator.Phase = AbilityIndicatorState.AnimationPhase.Flashing;
+                }
+                else if (indicator.Phase == AbilityIndicatorState.AnimationPhase.Flashing && indicator.Timer >= AbilityIndicatorState.EASE_IN_DURATION + AbilityIndicatorState.FLASH_DURATION)
+                {
+                    indicator.Phase = AbilityIndicatorState.AnimationPhase.Holding;
+                }
+                else if (indicator.Phase == AbilityIndicatorState.AnimationPhase.Holding && indicator.Timer >= AbilityIndicatorState.EASE_IN_DURATION + AbilityIndicatorState.FLASH_DURATION + AbilityIndicatorState.HOLD_DURATION)
+                {
+                    indicator.Phase = AbilityIndicatorState.AnimationPhase.EasingOut;
                 }
             }
         }
@@ -567,6 +569,7 @@ namespace ProjectVagabond.Battle.UI
         public void DrawAbilityIndicators(SpriteBatch spriteBatch, BitmapFont font)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             foreach (var indicator in _activeAbilityIndicators)
             {
@@ -588,28 +591,34 @@ namespace ProjectVagabond.Battle.UI
                 float pulse = (MathF.Sin(indicator.Timer * PULSE_SPEED) + 1f) / 2f; // Oscillates between 0.0 and 1.0
 
                 // --- Color Determination ---
-                Color bgColor = Color.Lerp(_global.TerminalBg, _global.Palette_LightBlue, pulse);
+                Color bgColor = Color.Lerp(_global.TerminalBg, _global.Palette_Gray, pulse);
                 Color outlineColor = Color.Black;
                 Color textColor = Color.White;
 
                 // --- Final Transparency ---
-                float finalDrawAlpha = alpha * 0.5f;
+                float finalDrawAlpha = alpha;
 
                 // --- Layout Calculation ---
-                Vector2 textSize = font.MeasureString(indicator.Text);
+                Vector2 textSize = secondaryFont.MeasureString(indicator.Text);
                 const int paddingX = 8;
-                const int paddingY = 2;
-                int boxWidth = (int)textSize.X + paddingX * 2;
+                const int paddingY = 1;
+
+                const int maxChars = 20;
+                float maxWidth = secondaryFont.MeasureString(new string('W', maxChars)).Width;
+                int boxWidth = (int)maxWidth + paddingX * 2;
                 int boxHeight = (int)textSize.Y + paddingY * 2;
 
                 var boxRect = new Rectangle(
                     (int)(indicator.CurrentPosition.X - boxWidth / 2f),
-                    (int)indicator.CurrentPosition.Y,
+                    (int)(indicator.CurrentPosition.Y - boxHeight),
                     boxWidth,
                     boxHeight
                 );
 
-                var textPosition = new Vector2(boxRect.X + paddingX, boxRect.Y + paddingY);
+                var textPosition = new Vector2(
+                    boxRect.X + (boxWidth - textSize.X) / 2f,
+                    boxRect.Y + paddingY - 1
+                );
 
                 // --- Drawing ---
                 spriteBatch.DrawSnapped(pixel, boxRect, bgColor * 0.8f * finalDrawAlpha);
@@ -618,7 +627,7 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawLineSnapped(new Vector2(boxRect.Left, boxRect.Top), new Vector2(boxRect.Left, boxRect.Bottom), _global.Palette_White * finalDrawAlpha);
                 spriteBatch.DrawLineSnapped(new Vector2(boxRect.Right, boxRect.Top), new Vector2(boxRect.Right, boxRect.Bottom), _global.Palette_White * finalDrawAlpha);
 
-                spriteBatch.DrawStringOutlinedSnapped(font, indicator.Text, textPosition, textColor * finalDrawAlpha, outlineColor * finalDrawAlpha);
+                spriteBatch.DrawStringOutlinedSnapped(secondaryFont, indicator.Text, textPosition, textColor * finalDrawAlpha, outlineColor * finalDrawAlpha);
             }
         }
     }
