@@ -1,4 +1,5 @@
-﻿using ProjectVagabond;
+﻿#nullable enable
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Utils;
 using System;
@@ -223,7 +224,8 @@ namespace ProjectVagabond
             /// <summary>
             /// Optional text for the player-facing battle narrator.
             /// </summary>
-            public string NarrationText { get; set; }
+            public string? NarrationText { get; set; }
         }
     }
 }
+#nullable restore

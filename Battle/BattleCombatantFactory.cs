@@ -53,7 +53,8 @@ namespace ProjectVagabond.Battle
                     Tenacity = statsComponent.Tenacity,
                     Agility = statsComponent.Agility
                 },
-                DefensiveElementIDs = new List<int>(statsComponent.DefensiveElementIDs)
+                DefensiveElementIDs = new List<int>(statsComponent.DefensiveElementIDs),
+                EscalationStacks = 0 // Ensure stacks are reset at the start of battle
             };
 
             // Initialize visual HP to be the same as logical HP at the start of battle.

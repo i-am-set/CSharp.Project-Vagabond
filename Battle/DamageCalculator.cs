@@ -222,12 +222,12 @@ namespace ProjectVagabond.Battle
                 }
 
                 // Bloodletter
-                if (ability.Effects.TryGetValue("Bloodletter", out var bloodletterValue) && EffectParser.TryParseFloatArray(bloodletterValue, out float[] p) && p.Length == 2)
+                if (ability.Effects.TryGetValue("Bloodletter", out var bloodletterValue) && EffectParser.TryParseFloatArray(bloodletterValue, out float[] bloodletterParams) && bloodletterParams.Length == 2)
                 {
                     // Void element ID is 9
                     if (move.MoveType == MoveType.Spell && move.OffensiveElementIDs.Contains(9))
                     {
-                        finalDamage *= (1.0f + (p[1] / 100f));
+                        finalDamage *= (1.0f + (bloodletterParams[1] / 100f));
                         result.AttackerAbilitiesTriggered.Add(ability);
                     }
                 }
@@ -248,6 +248,18 @@ namespace ProjectVagabond.Battle
                     if (move.Power > 0 && EffectParser.TryParseFloat(momentumValue, out float bonus))
                     {
                         finalDamage *= (1.0f + (bonus / 100f));
+                        result.AttackerAbilitiesTriggered.Add(ability);
+                    }
+                }
+
+                // Escalation
+                if (attacker.EscalationStacks > 0 && ability.Effects.TryGetValue("Escalation", out var escalationValue))
+                {
+                    if (EffectParser.TryParseIntArray(escalationValue, out int[] escalationParams) && escalationParams.Length == 2)
+                    {
+                        float bonusPerStack = escalationParams[0];
+                        float totalBonus = attacker.EscalationStacks * bonusPerStack;
+                        finalDamage *= (1.0f + (totalBonus / 100f));
                         result.AttackerAbilitiesTriggered.Add(ability);
                     }
                 }

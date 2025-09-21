@@ -137,6 +137,11 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public bool IsMomentumActive { get; set; } = false;
 
+        /// <summary>
+        /// The number of damage-boosting stacks from the Escalation ability.
+        /// </summary>
+        public int EscalationStacks { get; set; } = 0;
+
 
         /// <summary>
         /// Applies a specified amount of damage to the combatant's CurrentHP.

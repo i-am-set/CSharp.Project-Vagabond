@@ -701,6 +701,20 @@ namespace ProjectVagabond.Battle
                     combatant.ActiveStatusEffects.Remove(expiredEffect);
                     EventBus.Publish(new GameEvents.StatusEffectRemoved { Combatant = combatant, EffectType = expiredEffect.EffectType });
                 }
+
+                // Handle Escalation at the very end of the turn's effects
+                foreach (var ability in combatant.ActiveAbilities)
+                {
+                    if (ability.Effects.TryGetValue("Escalation", out var escalationValue) && EffectParser.TryParseIntArray(escalationValue, out int[] p) && p.Length == 2)
+                    {
+                        int maxStacks = p[1];
+                        if (combatant.EscalationStacks < maxStacks)
+                        {
+                            combatant.EscalationStacks++;
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = combatant, Ability = ability });
+                        }
+                    }
+                }
             }
 
             _currentPhase = BattlePhase.CheckForDefeat;
