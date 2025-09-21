@@ -42,7 +42,8 @@
       "Type": "ProjectVagabond.Battle.PassiveAbilitiesComponent",
       "Properties": {
         "AbilityIDs": [
-          "Vigor"
+          "Vigor",
+          "CorneredAnimal"
         ]
       }
     }

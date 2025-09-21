@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System;
+using ProjectVagabond.Utils;
 
 namespace ProjectVagabond.Battle
 {
@@ -259,7 +260,24 @@ namespace ProjectVagabond.Battle
             float stat = Stats.Agility;
             if (HasStatusEffect(StatusEffectType.Freeze)) stat *= 0.5f;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
-            // Add other modifiers here
+
+            foreach (var ability in ActiveAbilities)
+            {
+                if (ability.Effects.TryGetValue("CorneredAnimal", out var value) && EffectParser.TryParseFloatArray(value, out float[] p) && p.Length == 3)
+                {
+                    var battleManager = ServiceLocator.Get<BattleManager>();
+                    bool hpCondition = (float)Stats.CurrentHP / Stats.MaxHP * 100f < p[0];
+                    int enemyCount = battleManager.AllCombatants.Count(c => c.IsPlayerControlled != this.IsPlayerControlled && !c.IsDefeated);
+                    bool enemyCountCondition = enemyCount >= p[1];
+
+                    if (hpCondition || enemyCountCondition)
+                    {
+                        stat *= (1.0f + (p[2] / 100f));
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = this, Ability = ability });
+                    }
+                }
+            }
+
             return (int)Math.Round(stat);
         }
 
