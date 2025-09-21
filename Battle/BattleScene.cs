@@ -413,7 +413,7 @@ namespace ProjectVagabond.Scenes
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
             if (player != null)
             {
-                var action = new QueuedAction { Actor = player, Target = target, ChosenMove = move, Priority = move.Priority, ActorAgility = player.Stats.Agility, Type = QueuedActionType.Move };
+                var action = _battleManager.CreateActionFromMove(player, move, target);
                 _battleManager.SetPlayerAction(action);
             }
         }

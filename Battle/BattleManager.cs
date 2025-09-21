@@ -272,7 +272,7 @@ namespace ProjectVagabond.Battle
 
                     MoveData move = possibleMoves.Any() ? possibleMoves.First() : BattleDataCache.Moves["Stall"];
 
-                    var action = new QueuedAction { Actor = enemy, Target = target, ChosenMove = move, Priority = move.Priority, ActorAgility = enemy.GetEffectiveAgility(), Type = QueuedActionType.Move };
+                    var action = CreateActionFromMove(enemy, move, target);
 
                     if (!HandlePreActionEffects(action))
                     {
@@ -445,6 +445,12 @@ namespace ProjectVagabond.Battle
             // Check if all hits are done (for both single and multi-hit moves)
             if (_multiHitCountRemaining <= 0)
             {
+                // Set the "first attack" flag after the damage calculation for the first move is complete.
+                if (!_currentMultiHitAction.Actor.HasUsedFirstAttack)
+                {
+                    _currentMultiHitAction.Actor.HasUsedFirstAttack = true;
+                }
+
                 if (_totalHitsForNarration > 1)
                 {
                     int criticalHitCount = _multiHitAggregatedDamageResults.Count(r => r.WasCritical);
@@ -690,6 +696,40 @@ namespace ProjectVagabond.Battle
                     }
                 }
             }
+        }
+
+        public QueuedAction CreateActionFromMove(BattleCombatant actor, MoveData move, BattleCombatant target)
+        {
+            MoveData moveInstance = move;
+            int priority = move.Priority;
+
+            if (!actor.HasUsedFirstAttack)
+            {
+                foreach (var ability in actor.ActiveAbilities)
+                {
+                    if (ability.Effects.TryGetValue("AmbushPredator", out var value) && EffectParser.TryParseIntArray(value, out int[] p) && p.Length == 2)
+                    {
+                        priority += p[0];
+
+                        moveInstance = move.Clone();
+                        float powerModifier = 1.0f + (p[1] / 100f);
+                        moveInstance.Power = (int)(moveInstance.Power * powerModifier);
+
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = actor, Ability = ability });
+                        break;
+                    }
+                }
+            }
+
+            return new QueuedAction
+            {
+                Actor = actor,
+                Target = target,
+                ChosenMove = moveInstance,
+                Priority = priority,
+                ActorAgility = actor.GetEffectiveAgility(),
+                Type = QueuedActionType.Move
+            };
         }
 
         private bool HandlePreActionEffects(QueuedAction action)
