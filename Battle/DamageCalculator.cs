@@ -13,7 +13,6 @@ namespace ProjectVagabond.Battle
     public static class DamageCalculator
     {
         private static readonly Random _random = new Random();
-
         public enum ElementalEffectiveness { Neutral, Effective, Resisted, Immune }
 
         /// <summary>
@@ -217,7 +216,17 @@ namespace ProjectVagabond.Battle
                     if (EffectParser.TryParseFloat(fbValue, out float bonus))
                     {
                         finalDamage *= (1.0f + (bonus / 100f));
-                        attacker.HasUsedFirstAttack = true;
+                        result.AttackerAbilitiesTriggered.Add(ability);
+                    }
+                }
+
+                // Bloodletter
+                if (ability.Effects.TryGetValue("Bloodletter", out var bloodletterValue) && EffectParser.TryParseFloatArray(bloodletterValue, out float[] p) && p.Length == 2)
+                {
+                    // Void element ID is 9
+                    if (move.MoveType == MoveType.Spell && move.OffensiveElementIDs.Contains(9))
+                    {
+                        finalDamage *= (1.0f + (p[1] / 100f));
                         result.AttackerAbilitiesTriggered.Add(ability);
                     }
                 }

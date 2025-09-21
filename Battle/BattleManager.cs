@@ -764,6 +764,20 @@ namespace ProjectVagabond.Battle
                 action.Actor.ApplyDamage(cost);
             }
 
+            foreach (var ability in action.Actor.ActiveAbilities)
+            {
+                if (ability.Effects.TryGetValue("Bloodletter", out var bloodletterValue) && EffectParser.TryParseFloatArray(bloodletterValue, out float[] p) && p.Length == 2)
+                {
+                    // Void element ID is 9
+                    if (move.MoveType == MoveType.Spell && move.OffensiveElementIDs.Contains(9))
+                    {
+                        int cost = (int)(action.Actor.Stats.MaxHP * (p[0] / 100f));
+                        action.Actor.ApplyDamage(cost);
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = action.Actor, Ability = ability, NarrationText = $"{action.Actor.Name} pays the price for {ability.AbilityName}!" });
+                    }
+                }
+            }
+
             if (move.Effects.TryGetValue("Gamble", out var gambleValue) && EffectParser.TryParseFloatArray(gambleValue, out float[] gambleParams) && gambleParams.Length >= 1)
             {
                 float chance = gambleParams[0];
