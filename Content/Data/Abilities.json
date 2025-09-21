@@ -323,7 +323,7 @@
   {
     "AbilityID": "Contagion",
     "AbilityName": "Contagion",
-    "Description": "When the holder inflicts a non-damaging status effect on a target, there is a 100% chance for that effect to also apply to one other random enemy for 1 turn.",
+    "Description": "When the holder inflicts any status effect on a target, there is a 100% chance for that effect to also apply to one other random enemy for 1 turn.",
     "Effects": {
       "Contagion": "100,1"
     }
