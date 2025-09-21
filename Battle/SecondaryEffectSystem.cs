@@ -215,9 +215,9 @@ namespace ProjectVagabond.Battle
                         EventBus.Publish(new GameEvents.AbilityActivated { Combatant = actor, Ability = sourceAbility, NarrationText = $"{actor.Name}'s {sourceAbility.AbilityName} afflicted {target.Name}!" });
                     }
 
-                    // --- Handle Contagion ---
                     if (wasNewlyApplied && IsNegativeStatus(type))
                     {
+                        // --- Handle Contagion ---
                         foreach (var ability in actor.ActiveAbilities)
                         {
                             if (ability.Effects.TryGetValue("Contagion", out var contagionValue))
@@ -251,6 +251,24 @@ namespace ProjectVagabond.Battle
                                             });
                                         }
                                     }
+                                }
+                            }
+                        }
+
+                        // --- Handle Sadist ---
+                        foreach (var ability in actor.ActiveAbilities)
+                        {
+                            if (ability.Effects.TryGetValue("Sadist", out var sadistValue))
+                            {
+                                if (EffectParser.TryParseInt(sadistValue, out int strengthUpDuration))
+                                {
+                                    actor.AddStatusEffect(new StatusEffectInstance(StatusEffectType.StrengthUp, strengthUpDuration));
+                                    EventBus.Publish(new GameEvents.AbilityActivated
+                                    {
+                                        Combatant = actor,
+                                        Ability = ability,
+                                        NarrationText = $"{actor.Name}'s {ability.AbilityName} raised their Strength!"
+                                    });
                                 }
                             }
                         }
