@@ -475,6 +475,12 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
+                // Consume Momentum if it was active and the move dealt damage
+                if (actor.IsMomentumActive && move.Power > 0)
+                {
+                    actor.IsMomentumActive = false;
+                }
+
 
                 if (_totalHitsForNarration > 1)
                 {

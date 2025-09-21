@@ -132,6 +132,11 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public bool IsSpellweaverActive { get; set; } = false;
 
+        /// <summary>
+        /// A flag to track if the Momentum ability is charged and ready to be consumed.
+        /// </summary>
+        public bool IsMomentumActive { get; set; } = false;
+
 
         /// <summary>
         /// Applies a specified amount of damage to the combatant's CurrentHP.

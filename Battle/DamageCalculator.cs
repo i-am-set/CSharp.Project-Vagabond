@@ -241,6 +241,16 @@ namespace ProjectVagabond.Battle
                         result.AttackerAbilitiesTriggered.Add(ability);
                     }
                 }
+
+                // Momentum
+                if (attacker.IsMomentumActive && ability.Effects.TryGetValue("Momentum", out var momentumValue))
+                {
+                    if (move.Power > 0 && EffectParser.TryParseFloat(momentumValue, out float bonus))
+                    {
+                        finalDamage *= (1.0f + (bonus / 100f));
+                        result.AttackerAbilitiesTriggered.Add(ability);
+                    }
+                }
             }
 
             // Modifier (Execute)

@@ -147,6 +147,19 @@ namespace ProjectVagabond.Battle
                 }
             }
 
+            // --- Handle Momentum Activation ---
+            if (finalTargets.Any(t => t.IsDefeated))
+            {
+                foreach (var ability in attacker.ActiveAbilities)
+                {
+                    if (ability.Effects.ContainsKey("Momentum"))
+                    {
+                        attacker.IsMomentumActive = true;
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = attacker, Ability = ability, NarrationText = $"{attacker.Name}'s {ability.AbilityName} is building!" });
+                    }
+                }
+            }
+
             EventBus.Publish(new GameEvents.SecondaryEffectComplete());
         }
 
