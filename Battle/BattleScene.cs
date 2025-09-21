@@ -31,6 +31,7 @@ namespace ProjectVagabond.Scenes
         private BattleRenderer _renderer;
         private BattleAnimationManager _animationManager;
         private BattleInputHandler _inputHandler;
+        private AlertManager _alertManager;
 
         // Scene-level UI & Services
         private ImageButton _settingsButton;
@@ -75,6 +76,7 @@ namespace ProjectVagabond.Scenes
             _renderer = new BattleRenderer();
             _animationManager = new BattleAnimationManager();
             _inputHandler = new BattleInputHandler();
+            _alertManager = new AlertManager();
         }
 
         public override void Enter()
@@ -85,6 +87,7 @@ namespace ProjectVagabond.Scenes
             _uiManager.Reset();
             _renderer.Reset();
             _animationManager.Reset();
+            _alertManager.Reset();
 
             // Clear state
             _enemyEntityIds.Clear();
@@ -124,6 +127,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
             EventBus.Subscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Subscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
+            EventBus.Subscribe<GameEvents.AlertPublished>(OnAlertPublished);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
@@ -144,6 +148,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
             EventBus.Unsubscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Unsubscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
+            EventBus.Unsubscribe<GameEvents.AlertPublished>(OnAlertPublished);
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
@@ -239,6 +244,7 @@ namespace ProjectVagabond.Scenes
             _uiManager.Update(gameTime, currentMouseState, currentKeyboardState);
             _inputHandler.Update(gameTime, _uiManager, _renderer);
             _renderer.Update(gameTime, _battleManager.AllCombatants);
+            _alertManager.Update(gameTime);
             _settingsButton?.Update(currentMouseState);
             _tooltipManager.Update(gameTime);
 
@@ -347,11 +353,12 @@ namespace ProjectVagabond.Scenes
             DrawSceneContent(spriteBatch, font, gameTime, transform);
             spriteBatch.End();
 
-            // Draw the overlay content (tooltips, ability indicators) on top, using the same transform
+            // Draw the overlay content (tooltips, ability indicators, alerts) on top, using the same transform
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             _renderer.DrawOverlay(spriteBatch, font);
             _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
             _animationManager.DrawAbilityIndicators(spriteBatch, font);
+            _alertManager.Draw(spriteBatch);
             spriteBatch.End();
         }
 
@@ -636,6 +643,11 @@ namespace ProjectVagabond.Scenes
             {
                 _uiManager.ShowNarration(e.NarrationText);
             }
+        }
+
+        private void OnAlertPublished(GameEvents.AlertPublished e)
+        {
+            _alertManager.StartAlert(e.Message);
         }
 
         private void FleeBattle()

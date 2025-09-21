@@ -31,6 +31,12 @@ namespace ProjectVagabond.UI
         private const float SWAY_SPEED = 2.5f;
         private const float SWAY_AMPLITUDE = 1.0f;
 
+        // Shake animation state
+        private float _shakeTimer = 0f;
+        private const float SHAKE_DURATION = 0.3f;
+        private const float SHAKE_MAGNITUDE = 4f;
+        private const float SHAKE_FREQUENCY = 30f;
+
         public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null)
             : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, clickOnPress, font)
         {
@@ -50,6 +56,11 @@ namespace ProjectVagabond.UI
                 _animState = AnimationState.Appearing;
                 _appearTimer = 0f;
             }
+        }
+
+        public void TriggerShake()
+        {
+            _shakeTimer = SHAKE_DURATION;
         }
 
         public void HideForAnimation()
@@ -90,6 +101,7 @@ namespace ProjectVagabond.UI
             base.ResetAnimationState();
             _swayTimer = 0f;
             _wasHoveredLastFrame = false;
+            _shakeTimer = 0f;
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
@@ -97,23 +109,35 @@ namespace ProjectVagabond.UI
             if (_animState == AnimationState.Hidden) return;
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // --- Sway Animation ---
             float swayOffset = 0f;
             if (isActivated)
             {
-                _swayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _swayTimer += dt;
                 // Round the result of the sine wave to snap the sway to the virtual pixel grid.
                 swayOffset = MathF.Round(MathF.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMPLITUDE);
             }
-            float totalHorizontalOffset = swayOffset;
+
+            // --- Shake Animation ---
+            float shakeOffset = 0f;
+            if (_shakeTimer > 0)
+            {
+                _shakeTimer -= dt;
+                float progress = 1f - (_shakeTimer / SHAKE_DURATION);
+                float magnitude = SHAKE_MAGNITUDE * (1f - Easing.EaseOutQuad(progress));
+                shakeOffset = MathF.Sin(_shakeTimer * SHAKE_FREQUENCY) * magnitude;
+            }
+
+            float totalHorizontalOffset = swayOffset + shakeOffset;
 
 
             // --- Animation Scaling ---
             float verticalScale = 1.0f;
             if (_animState == AnimationState.Appearing)
             {
-                _appearTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _appearTimer += dt;
                 float progress = Math.Clamp(_appearTimer / APPEAR_DURATION, 0f, 1f);
                 verticalScale = Easing.EaseOutCubic(progress);
                 if (progress >= 1.0f)

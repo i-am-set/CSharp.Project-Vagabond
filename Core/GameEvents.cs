@@ -22,6 +22,14 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Published when a high-priority, short-duration message should be displayed to the user.
+        /// </summary>
+        public struct AlertPublished
+        {
+            public string Message { get; set; }
+        }
+
+        /// <summary>
         /// Published when the player's action queue is modified.
         /// </summary>
         public struct ActionQueueChanged

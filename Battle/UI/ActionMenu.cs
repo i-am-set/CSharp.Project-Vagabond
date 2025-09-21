@@ -70,6 +70,14 @@ namespace ProjectVagabond.Battle.UI
         private Queue<TextOverImageButton> _secondaryButtonsToAnimate = new Queue<TextOverImageButton>();
         private float _secondaryButtonAnimationDelayTimer = 0f;
 
+        // Spam Click Prevention State
+        private readonly Queue<float> _clickTimestamps = new Queue<float>();
+        private bool _isSpamming = false;
+        private float _spamCooldownTimer = 0f;
+        private const int SPAM_CLICKS = 3; // Number of clicks to be considered spam
+        private const float SPAM_WINDOW_SECONDS = 1f; // Time window to check for spam
+        private const float SPAM_COOLDOWN_SECONDS = 0.25f; // Time to wait after spamming stops
+
         public ActionMenu()
         {
             _global = ServiceLocator.Get<Global>();
@@ -100,13 +108,26 @@ namespace ProjectVagabond.Battle.UI
             var actionIconRects = spriteManager.ActionIconSourceRects;
 
             // Main Menu Buttons
-            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[0], rects[1], rects[2], function: "Act", startVisible: false, debugColor: new Color(100, 0, 0, 150)));
-            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[3], rects[4], rects[5], function: "Item", startVisible: false, debugColor: new Color(0, 100, 0, 150)));
-            _actionButtons.Add(new ImageButton(Rectangle.Empty, actionSheet, rects[6], rects[7], rects[8], function: "Flee", startVisible: false, debugColor: new Color(0, 0, 100, 150)));
+            var actButton = new ImageButton(Rectangle.Empty, actionSheet, rects[0], rects[1], rects[2], function: "Act", startVisible: false, debugColor: new Color(100, 0, 0, 150));
+            var itemButton = new ImageButton(Rectangle.Empty, actionSheet, rects[3], rects[4], rects[5], function: "Item", startVisible: false, debugColor: new Color(0, 100, 0, 150));
+            var fleeButton = new ImageButton(Rectangle.Empty, actionSheet, rects[6], rects[7], rects[8], function: "Flee", startVisible: false, debugColor: new Color(0, 0, 100, 150));
 
-            _actionButtons[0].OnClick += () => SetState(MenuState.Moves);
-            _actionButtons[1].OnClick += () => OnItemMenuRequested?.Invoke();
-            _actionButtons[2].OnClick += () => OnFleeRequested?.Invoke();
+            actButton.OnClick += () => {
+                if (_isSpamming) { actButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
+                SetState(MenuState.Moves);
+            };
+            itemButton.OnClick += () => {
+                if (_isSpamming) { itemButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
+                OnItemMenuRequested?.Invoke();
+            };
+            fleeButton.OnClick += () => {
+                if (_isSpamming) { fleeButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
+                OnFleeRequested?.Invoke();
+            };
+
+            _actionButtons.Add(actButton);
+            _actionButtons.Add(itemButton);
+            _actionButtons.Add(fleeButton);
 
             // Secondary Action Buttons
             var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0]);
@@ -378,10 +399,44 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        private void UpdateSpamDetection(GameTime gameTime, MouseState currentMouseState)
+        {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            float now = (float)gameTime.TotalGameTime.TotalSeconds;
+
+            if (_spamCooldownTimer > 0)
+            {
+                _spamCooldownTimer -= dt;
+                if (_spamCooldownTimer <= 0)
+                {
+                    _isSpamming = false;
+                    _clickTimestamps.Clear();
+                }
+            }
+
+            if (_currentState == MenuState.Main && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
+            {
+                _clickTimestamps.Enqueue(now);
+                _spamCooldownTimer = SPAM_COOLDOWN_SECONDS;
+
+                while (_clickTimestamps.Count > 0 && now - _clickTimestamps.Peek() > SPAM_WINDOW_SECONDS)
+                {
+                    _clickTimestamps.Dequeue();
+                }
+
+                if (_clickTimestamps.Count >= SPAM_CLICKS)
+                {
+                    _isSpamming = true;
+                }
+            }
+        }
+
         public void Update(MouseState currentMouseState, GameTime gameTime)
         {
             InitializeButtons();
             if (!_isVisible) return;
+
+            UpdateSpamDetection(gameTime, currentMouseState);
 
             if (_actionButtonsToAnimate.Any())
             {
