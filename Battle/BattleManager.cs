@@ -445,11 +445,36 @@ namespace ProjectVagabond.Battle
             // Check if all hits are done (for both single and multi-hit moves)
             if (_multiHitCountRemaining <= 0)
             {
+                var actor = _currentMultiHitAction.Actor;
+                var move = _currentMultiHitAction.ChosenMove;
+
                 // Set the "first attack" flag after the damage calculation for the first move is complete.
-                if (!_currentMultiHitAction.Actor.HasUsedFirstAttack)
+                if (!actor.HasUsedFirstAttack)
                 {
-                    _currentMultiHitAction.Actor.HasUsedFirstAttack = true;
+                    actor.HasUsedFirstAttack = true;
                 }
+
+                // Handle Spellweaver activation
+                if (move.MoveType == MoveType.Action)
+                {
+                    foreach (var ability in actor.ActiveAbilities)
+                    {
+                        if (ability.Effects.ContainsKey("Spellweaver"))
+                        {
+                            actor.IsSpellweaverActive = true;
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = actor, Ability = ability, NarrationText = $"{actor.Name}'s {ability.AbilityName} is now active!" });
+                        }
+                    }
+                }
+                else if (move.MoveType == MoveType.Spell)
+                {
+                    // Consume Spellweaver if it was active
+                    if (actor.IsSpellweaverActive)
+                    {
+                        actor.IsSpellweaverActive = false;
+                    }
+                }
+
 
                 if (_totalHitsForNarration > 1)
                 {

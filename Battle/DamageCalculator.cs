@@ -13,6 +13,7 @@ namespace ProjectVagabond.Battle
     public static class DamageCalculator
     {
         private static readonly Random _random = new Random();
+
         public enum ElementalEffectiveness { Neutral, Effective, Resisted, Immune }
 
         /// <summary>
@@ -227,6 +228,16 @@ namespace ProjectVagabond.Battle
                     if (move.MoveType == MoveType.Spell && move.OffensiveElementIDs.Contains(9))
                     {
                         finalDamage *= (1.0f + (p[1] / 100f));
+                        result.AttackerAbilitiesTriggered.Add(ability);
+                    }
+                }
+
+                // Spellweaver
+                if (attacker.IsSpellweaverActive && ability.Effects.TryGetValue("Spellweaver", out var spellweaverValue))
+                {
+                    if (move.MoveType == MoveType.Spell && EffectParser.TryParseFloat(spellweaverValue, out float bonus))
+                    {
+                        finalDamage *= (1.0f + (bonus / 100f));
                         result.AttackerAbilitiesTriggered.Add(ability);
                     }
                 }

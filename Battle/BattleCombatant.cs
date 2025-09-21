@@ -127,6 +127,11 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public bool HasUsedFirstAttack { get; set; } = false;
 
+        /// <summary>
+        /// A flag to track if the Spellweaver ability is charged and ready to be consumed.
+        /// </summary>
+        public bool IsSpellweaverActive { get; set; } = false;
+
 
         /// <summary>
         /// Applies a specified amount of damage to the combatant's CurrentHP.
