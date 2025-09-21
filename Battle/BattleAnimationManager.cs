@@ -34,6 +34,10 @@ namespace ProjectVagabond.Battle.UI
             public Vector2 TargetPosition;  // On-screen "hang" position
             public Vector2 CurrentPosition;
             public float Timer;
+            public float ShakeTimer;
+            public const float SHAKE_DURATION = 0.5f;
+            public const float SHAKE_MAGNITUDE = 4.0f;
+            public const float SHAKE_FREQUENCY = 15f;
             public const float EASE_IN_DURATION = 0.1f;
             public const float FLASH_DURATION = 0.15f;
             public const float HOLD_DURATION = 1.0f;
@@ -165,6 +169,7 @@ namespace ProjectVagabond.Battle.UI
                 existingIndicator.Text = $"{existingIndicator.OriginalText} x{existingIndicator.Count}";
                 existingIndicator.Timer = 0f; // Reset timer to restart animation/duration
                 existingIndicator.Phase = AbilityIndicatorState.AnimationPhase.EasingIn;
+                existingIndicator.ShakeTimer = AbilityIndicatorState.SHAKE_DURATION;
                 return;
             }
 
@@ -179,6 +184,7 @@ namespace ProjectVagabond.Battle.UI
                 Count = 1,
                 Timer = 0f,
                 Phase = AbilityIndicatorState.AnimationPhase.EasingIn,
+                ShakeTimer = AbilityIndicatorState.SHAKE_DURATION
             };
             indicator.InitialPosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT + boxHeight);
             indicator.CurrentPosition = indicator.InitialPosition;
@@ -455,6 +461,10 @@ namespace ProjectVagabond.Battle.UI
             {
                 var indicator = _activeAbilityIndicators[i];
                 indicator.Timer += deltaTime;
+                if (indicator.ShakeTimer > 0)
+                {
+                    indicator.ShakeTimer -= deltaTime;
+                }
 
                 if (indicator.Timer >= AbilityIndicatorState.TOTAL_DURATION)
                 {
@@ -591,12 +601,43 @@ namespace ProjectVagabond.Battle.UI
                 float pulse = (MathF.Sin(indicator.Timer * PULSE_SPEED) + 1f) / 2f; // Oscillates between 0.0 and 1.0
 
                 // --- Color Determination ---
-                Color bgColor = Color.Lerp(_global.TerminalBg, _global.Palette_Gray, pulse);
+                Color pulseTargetColor;
+                if (indicator.Count >= 5)
+                {
+                    pulseTargetColor = _global.Palette_Pink;
+                }
+                else if (indicator.Count == 4)
+                {
+                    pulseTargetColor = _global.Palette_Red;
+                }
+                else if (indicator.Count == 3)
+                {
+                    pulseTargetColor = _global.Palette_Orange;
+                }
+                else if (indicator.Count == 2)
+                {
+                    pulseTargetColor = _global.Palette_Yellow;
+                }
+                else // Count is 1
+                {
+                    pulseTargetColor = _global.Palette_Gray;
+                }
+
+                Color bgColor = Color.Lerp(_global.TerminalBg, pulseTargetColor, pulse);
                 Color outlineColor = Color.Black;
                 Color textColor = Color.White;
 
                 // --- Final Transparency ---
                 float finalDrawAlpha = alpha;
+
+                // --- Shake Calculation ---
+                Vector2 shakeOffset = Vector2.Zero;
+                if (indicator.ShakeTimer > 0)
+                {
+                    float progress = 1.0f - (indicator.ShakeTimer / AbilityIndicatorState.SHAKE_DURATION);
+                    float magnitude = AbilityIndicatorState.SHAKE_MAGNITUDE * (1.0f - Easing.EaseOutQuad(progress));
+                    shakeOffset.X = MathF.Sin(indicator.Timer * AbilityIndicatorState.SHAKE_FREQUENCY) * magnitude;
+                }
 
                 // --- Layout Calculation ---
                 Vector2 textSize = secondaryFont.MeasureString(indicator.Text);
@@ -609,8 +650,8 @@ namespace ProjectVagabond.Battle.UI
                 int boxHeight = (int)textSize.Y + paddingY * 2;
 
                 var boxRect = new Rectangle(
-                    (int)(indicator.CurrentPosition.X - boxWidth / 2f),
-                    (int)(indicator.CurrentPosition.Y - boxHeight),
+                    (int)(indicator.CurrentPosition.X - boxWidth / 2f + shakeOffset.X),
+                    (int)(indicator.CurrentPosition.Y - boxHeight + shakeOffset.Y),
                     boxWidth,
                     boxHeight
                 );
