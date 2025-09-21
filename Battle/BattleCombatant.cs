@@ -169,7 +169,8 @@ namespace ProjectVagabond.Battle
         /// An extra turn is added to the duration to account for the end-of-round decrement.
         /// </summary>
         /// <param name="newEffect">The new status effect instance to add.</param>
-        public void AddStatusEffect(StatusEffectInstance newEffect)
+        /// <returns>True if the status effect was newly applied, false if it was just refreshed.</returns>
+        public bool AddStatusEffect(StatusEffectInstance newEffect)
         {
             // Check for immunities from passive abilities before applying the effect.
             foreach (var ability in ActiveAbilities)
@@ -184,12 +185,14 @@ namespace ProjectVagabond.Battle
                             if (newEffect.EffectType == immuneType)
                             {
                                 // This combatant is immune to this status effect.
-                                return; // Exit the method, preventing the effect from being added.
+                                return false; // Exit the method, preventing the effect from being added.
                             }
                         }
                     }
                 }
             }
+
+            bool hadEffectBefore = HasStatusEffect(newEffect.EffectType);
 
             // Remove any existing effect of the same type to reset its duration.
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
@@ -199,6 +202,8 @@ namespace ProjectVagabond.Battle
             newEffect.DurationInTurns += 1;
 
             ActiveStatusEffects.Add(newEffect);
+
+            return !hadEffectBefore;
         }
 
         /// <summary>

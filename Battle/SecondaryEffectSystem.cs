@@ -1,4 +1,5 @@
-﻿using ProjectVagabond.Utils;
+﻿using ProjectVagabond.Battle;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -208,10 +209,51 @@ namespace ProjectVagabond.Battle
 
                 if (_random.Next(1, 101) <= chance)
                 {
-                    target.AddStatusEffect(new StatusEffectInstance(type, duration));
+                    bool wasNewlyApplied = target.AddStatusEffect(new StatusEffectInstance(type, duration));
                     if (sourceAbility != null)
                     {
                         EventBus.Publish(new GameEvents.AbilityActivated { Combatant = actor, Ability = sourceAbility, NarrationText = $"{actor.Name}'s {sourceAbility.AbilityName} afflicted {target.Name}!" });
+                    }
+
+                    // --- Handle Contagion ---
+                    if (wasNewlyApplied && IsNegativeStatus(type))
+                    {
+                        foreach (var ability in actor.ActiveAbilities)
+                        {
+                            if (ability.Effects.TryGetValue("Contagion", out var contagionValue))
+                            {
+                                if (EffectParser.TryParseIntArray(contagionValue, out int[] contagionParams) && contagionParams.Length == 2)
+                                {
+                                    int contagionChance = contagionParams[0];
+                                    int contagionDuration = contagionParams[1];
+
+                                    if (_random.Next(1, 101) <= contagionChance)
+                                    {
+                                        var battleManager = ServiceLocator.Get<BattleManager>();
+                                        var allCombatants = battleManager.AllCombatants;
+
+                                        var potentialTargets = allCombatants.Where(c =>
+                                            c.IsPlayerControlled != actor.IsPlayerControlled && // Must be an opponent
+                                            c != target &&                                     // Not the original target
+                                            !c.IsDefeated &&                                   // Must be alive
+                                            !c.HasStatusEffect(type)                           // Must not already have the effect
+                                        ).ToList();
+
+                                        if (potentialTargets.Any())
+                                        {
+                                            var contagionTarget = potentialTargets[_random.Next(potentialTargets.Count)];
+                                            contagionTarget.AddStatusEffect(new StatusEffectInstance(type, contagionDuration));
+                                            EventBus.Publish(new GameEvents.AbilityActivated
+                                            {
+                                                Combatant = actor,
+                                                Ability = ability,
+                                                NarrationText = $"{actor.Name}'s {ability.AbilityName} spread the effect to {contagionTarget.Name}!"
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
