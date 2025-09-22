@@ -112,7 +112,8 @@ namespace ProjectVagabond.Battle.UI
             BattleCombatant currentActor,
             BattleUIManager uiManager,
             BattleInputHandler inputHandler,
-            BattleAnimationManager animationManager)
+            BattleAnimationManager animationManager,
+            float sharedBobbingTimer)
         {
             var secondaryFont = _core.SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -131,7 +132,7 @@ namespace ProjectVagabond.Battle.UI
             DrawUITitle(spriteBatch, secondaryFont, gameTime, uiManager.SubMenuState);
 
             // --- Draw Highlights & Indicators ---
-            DrawHoverHighlights(spriteBatch, font, secondaryFont, allCombatants, uiManager.HoverHighlightState);
+            DrawHoverHighlights(spriteBatch, font, secondaryFont, allCombatants, uiManager.HoverHighlightState, sharedBobbingTimer);
             DrawTurnIndicator(spriteBatch, font, gameTime, currentActor, allCombatants);
             DrawTargetingUI(spriteBatch, font, gameTime, uiManager, inputHandler);
 
@@ -242,13 +243,14 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawHoverHighlights(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, IEnumerable<BattleCombatant> allCombatants, HoverHighlightState hoverHighlightState)
+        private void DrawHoverHighlights(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, IEnumerable<BattleCombatant> allCombatants, HoverHighlightState hoverHighlightState, float sharedBobbingTimer)
         {
             if (hoverHighlightState.CurrentMove == null || !hoverHighlightState.Targets.Any()) return;
 
             var arrowRects = _spriteManager.ArrowIconSourceRects;
             if (arrowRects == null) return;
 
+            var move = hoverHighlightState.CurrentMove;
             var state = hoverHighlightState;
             var targets = state.Targets;
 
@@ -256,15 +258,32 @@ namespace ProjectVagabond.Battle.UI
             bool areAllFlashing = (state.Timer % cycleDuration) < HoverHighlightState.MultiTargetFlashOnDuration;
             Color flashColor = areAllFlashing ? _global.Palette_Red : Color.White;
 
-            foreach (var target in targets)
+            float bobOffset = (MathF.Sin(sharedBobbingTimer * 4f) > 0) ? 1f : 0f;
+
+            switch (move.Target)
             {
-                // Use an UP arrow for the player (below their HUD) and a DOWN arrow for enemies (above their sprite).
-                Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6];
-                DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor);
+                case TargetType.Single:
+                case TargetType.SingleAll:
+                case TargetType.Self:
+                    foreach (var target in targets)
+                    {
+                        Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
+                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor, bobOffset);
+                    }
+                    break;
+
+                case TargetType.Every:
+                case TargetType.EveryAll:
+                    foreach (var target in targets)
+                    {
+                        Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
+                        DrawMultiArrowIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor, bobOffset);
+                    }
+                    break;
             }
         }
 
-        private void DrawTargetIndicator(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, IEnumerable<BattleCombatant> allCombatants, BattleCombatant combatant, Rectangle sourceRect, Color color)
+        private void DrawTargetIndicator(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, IEnumerable<BattleCombatant> allCombatants, BattleCombatant combatant, Rectangle sourceRect, Color color, float bobOffset = 0f)
         {
             if (color.A == 0) return;
 
@@ -278,6 +297,50 @@ namespace ProjectVagabond.Battle.UI
                 var playerBounds = GetPlayerInteractionBounds(font, secondaryFont, combatant);
                 arrowPos = new Vector2(
                     playerBounds.Center.X - sourceRect.Width / 2f,
+                    playerBounds.Bottom + 2 + bobOffset
+                );
+            }
+            else
+            {
+                var enemies = allCombatants.Where(c => !c.IsPlayerControlled).ToList();
+                int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
+                if (enemyIndex == -1) return;
+
+                const int enemyAreaPadding = 20;
+                const int enemyHudY = 80;
+                int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
+                int slotWidth = availableWidth / enemies.Count;
+                var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
+
+                var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
+                float highestPointY = GetEnemySpriteTopY(combatant, spriteRect.Y);
+
+                arrowPos = new Vector2(spriteRect.Center.X - sourceRect.Width / 2f, highestPointY - sourceRect.Height - 1 + bobOffset);
+            }
+
+            if (color == _global.Palette_Red)
+            {
+                arrowPos.Y += 1;
+            }
+
+            spriteBatch.DrawSnapped(arrowSheet, arrowPos, sourceRect, color);
+        }
+
+        private void DrawMultiArrowIndicator(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, IEnumerable<BattleCombatant> allCombatants, BattleCombatant combatant, Rectangle sourceRect, Color color, float bobOffset = 0f)
+        {
+            var arrowSheet = _spriteManager.ArrowIconSpriteSheet;
+            if (arrowSheet == null) return;
+
+            const int arrowCount = 3;
+            const int arrowGap = 1;
+            int totalWidth = (sourceRect.Width * arrowCount) + (arrowGap * (arrowCount - 1));
+            Vector2 groupCenterPos;
+
+            if (combatant.IsPlayerControlled)
+            {
+                var playerBounds = GetPlayerInteractionBounds(font, secondaryFont, combatant);
+                groupCenterPos = new Vector2(
+                    playerBounds.Center.X,
                     playerBounds.Bottom + 2
                 );
             }
@@ -296,15 +359,24 @@ namespace ProjectVagabond.Battle.UI
                 var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
                 float highestPointY = GetEnemySpriteTopY(combatant, spriteRect.Y);
 
-                arrowPos = new Vector2(spriteRect.Center.X - sourceRect.Width / 2f, highestPointY - sourceRect.Height - 1);
+                groupCenterPos = new Vector2(spriteRect.Center.X, highestPointY - sourceRect.Height - 1);
             }
 
-            if (color == _global.Palette_Red)
+            float startX = groupCenterPos.X - (totalWidth / 2f);
+            float yPos = groupCenterPos.Y + bobOffset;
+
+            for (int i = 0; i < arrowCount; i++)
             {
-                arrowPos.Y += 1;
+                Vector2 arrowPos = new Vector2(
+                    startX + i * (sourceRect.Width + arrowGap),
+                    yPos
+                );
+                if (color == _global.Palette_Red)
+                {
+                    arrowPos.Y += 1;
+                }
+                spriteBatch.DrawSnapped(arrowSheet, arrowPos, sourceRect, color);
             }
-
-            spriteBatch.DrawSnapped(arrowSheet, arrowPos, sourceRect, color);
         }
 
         private void DrawTurnIndicator(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, BattleCombatant currentActor, IEnumerable<BattleCombatant> allCombatants)
@@ -665,6 +737,7 @@ namespace ProjectVagabond.Battle.UI
                 case StatusEffectType.Root:
                 case StatusEffectType.IntelligenceDown:
                 case StatusEffectType.AgilityDown:
+                case StatusEffectType.TenacityDown:
                     return true;
                 default:
                     return false;

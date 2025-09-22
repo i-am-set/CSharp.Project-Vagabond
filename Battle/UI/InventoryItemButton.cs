@@ -20,7 +20,7 @@ namespace ProjectVagabond.Battle.UI
             Quantity = quantity;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             bool isActivated = IsEnabled && (IsHovered || forceHover);

@@ -104,7 +104,7 @@ namespace ProjectVagabond.UI
             _shakeTimer = 0f;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
         {
             if (_animState == AnimationState.Hidden) return;
 
@@ -113,11 +113,17 @@ namespace ProjectVagabond.UI
 
             // --- Sway Animation ---
             float swayOffset = 0f;
-            if (isActivated)
+            if (isActivated && EnableHoverSway)
             {
-                _swayTimer += dt;
-                // Round the result of the sine wave to snap the sway to the virtual pixel grid.
-                swayOffset = MathF.Round(MathF.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMPLITUDE);
+                if (externalSwayOffset.HasValue)
+                {
+                    swayOffset = externalSwayOffset.Value;
+                }
+                else
+                {
+                    _swayTimer += dt;
+                    swayOffset = MathF.Round(MathF.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMPLITUDE);
+                }
             }
 
             // --- Shake Animation ---

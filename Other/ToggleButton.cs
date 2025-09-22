@@ -19,7 +19,7 @@ namespace ProjectVagabond.UI
             CustomToggledTextColor = customToggledTextColor;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
         {
             // This method now just determines the color and then calls the base Draw method.
             // The base Draw method handles all animation and rendering logic.

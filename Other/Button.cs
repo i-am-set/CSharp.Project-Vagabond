@@ -183,7 +183,7 @@ namespace ProjectVagabond.UI
             IsHovered = false;
         }
 
-        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
+        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
         {
             if (_spriteSheet != null)
             {

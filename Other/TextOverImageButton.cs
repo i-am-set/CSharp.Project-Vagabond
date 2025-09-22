@@ -53,7 +53,7 @@ namespace ProjectVagabond.UI
             _appearTimer = 0f;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
         {
             if (_animState == AnimationState.Hidden) return;
 

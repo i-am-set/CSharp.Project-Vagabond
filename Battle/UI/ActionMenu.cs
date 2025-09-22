@@ -78,6 +78,10 @@ namespace ProjectVagabond.Battle.UI
         private const float SPAM_WINDOW_SECONDS = 1f; // Time window to check for spam
         private const float SPAM_COOLDOWN_SECONDS = 0.25f; // Time to wait after spamming stops
 
+        // Shared animation timer for main action buttons
+        public float SharedSwayTimer { get; private set; } = 0f;
+        private bool _wasAnyActionHoveredLastFrame = false;
+
         public ActionMenu()
         {
             _global = ServiceLocator.Get<Global>();
@@ -474,7 +478,25 @@ namespace ProjectVagabond.Battle.UI
             switch (_currentState)
             {
                 case MenuState.Main:
-                    foreach (var button in _actionButtons) button.Update(currentMouseState);
+                    bool isAnyActionHovered = false;
+                    foreach (var button in _actionButtons)
+                    {
+                        button.Update(currentMouseState);
+                        if (button.IsHovered)
+                        {
+                            isAnyActionHovered = true;
+                        }
+                    }
+
+                    if (isAnyActionHovered)
+                    {
+                        SharedSwayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    }
+                    else if (_wasAnyActionHoveredLastFrame)
+                    {
+                        SharedSwayTimer = 0f; // Reset when mouse leaves the button group
+                    }
+                    _wasAnyActionHoveredLastFrame = isAnyActionHovered;
                     break;
                 case MenuState.Moves:
                     HoveredMove = null;
@@ -541,7 +563,18 @@ namespace ProjectVagabond.Battle.UI
                         foreach (var button in _actionButtons)
                         {
                             button.Bounds = new Rectangle(currentX, startY, buttonWidth, buttonHeight);
-                            button.Draw(spriteBatch, font, gameTime, transform);
+                            if (button is ImageButton imageButton)
+                            {
+                                // Pass the shared timer to the button's draw call
+                                const float SWAY_SPEED = 2.5f;
+                                const float SWAY_AMPLITUDE = 1.0f;
+                                float swayOffset = MathF.Round(MathF.Sin(SharedSwayTimer * SWAY_SPEED) * SWAY_AMPLITUDE);
+                                imageButton.Draw(spriteBatch, font, gameTime, transform, false, swayOffset);
+                            }
+                            else
+                            {
+                                button.Draw(spriteBatch, font, gameTime, transform);
+                            }
                             currentX += buttonWidth + buttonSpacing;
                         }
                         break;

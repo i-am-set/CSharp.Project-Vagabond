@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -43,6 +44,7 @@ namespace ProjectVagabond.Battle.UI
         private float _itemTargetingTextAnimTimer = 0f;
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
         public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
+        public float SharedHoverBobbingTimer => _actionMenu.SharedSwayTimer;
 
         public bool IsBusy => _battleNarrator.IsBusy || _narrationQueue.Any();
 
@@ -250,6 +252,9 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateHoverHighlights(GameTime gameTime)
         {
+            // The timer now updates every frame, regardless of hover state.
+            HoverHighlightState.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
             var hoveredMove = _actionMenu.HoveredMove;
             var allCombatants = ServiceLocator.Get<BattleManager>().AllCombatants;
 
@@ -257,7 +262,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 HoverHighlightState.CurrentMove = hoveredMove;
                 HoverHighlightState.Targets.Clear();
-                HoverHighlightState.Timer = 0f;
 
                 if (hoveredMove != null)
                 {
@@ -274,11 +278,6 @@ namespace ProjectVagabond.Battle.UI
                         case TargetType.EveryAll: HoverHighlightState.Targets.AddRange(all); break;
                     }
                 }
-            }
-
-            if (HoverHighlightState.CurrentMove != null && HoverHighlightState.Targets.Any())
-            {
-                HoverHighlightState.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
         }
     }
