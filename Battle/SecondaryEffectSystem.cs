@@ -1,5 +1,4 @@
-﻿using ProjectVagabond.Battle;
-using ProjectVagabond.Utils;
+﻿using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -28,8 +27,9 @@ namespace ProjectVagabond.Battle
 
             // Process effects that apply once per unique target.
             var uniqueTargets = finalTargets.Distinct().ToList();
-            foreach (var target in uniqueTargets)
+            for (int targetIndex = 0; targetIndex < uniqueTargets.Count; targetIndex++)
             {
+                var target = uniqueTargets[targetIndex];
                 if (target.IsDefeated) continue; // Don't apply effects to already defeated targets
 
                 // --- Process Move-based Effects ---
@@ -76,16 +76,23 @@ namespace ProjectVagabond.Battle
                         }
                     }
 
-                    // Target abilities (e.g. Photosynthesis heal)
-                    bool wasImmuneHit = false;
-                    for (int i = 0; i < finalTargets.Count; i++)
+                    // Target abilities (e.g. Photosynthesis heal, Pain Fuel)
+                    bool wasCriticallyHit = damageResults.Any(r => r.WasCritical);
+
+                    if (wasCriticallyHit)
                     {
-                        if (finalTargets[i] == target && damageResults[i].Effectiveness == DamageCalculator.ElementalEffectiveness.Immune)
+                        foreach (var ability in target.ActiveAbilities)
                         {
-                            wasImmuneHit = true;
-                            break;
+                            if (ability.Effects.TryGetValue("PainFuel", out var painFuelValue) && EffectParser.TryParseInt(painFuelValue, out int duration))
+                            {
+                                target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.StrengthUp, duration));
+                                target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.IntelligenceUp, duration));
+                                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability, NarrationText = $"{target.Name}'s {ability.AbilityName} turned pain into power!" });
+                            }
                         }
                     }
+
+                    bool wasImmuneHit = damageResults.Any(r => r.Effectiveness == DamageCalculator.ElementalEffectiveness.Immune);
 
                     if (wasImmuneHit)
                     {
@@ -327,7 +334,7 @@ namespace ProjectVagabond.Battle
         {
             // For now, we assume "Cleanse" removes all negative status effects from the target.
             // This could be expanded to parse specific effects or categories.
-            target.ActiveStatusEffects.RemoveAll(e => IsNegativeStatus(e.EffectType));
+            target.ActiveStatusEffects.RemoveAll(e => IsNegativeStatus(e.EffectType)); 
         }
 
         private static void HandleStealBuff(BattleCombatant actor, BattleCombatant target, string value)

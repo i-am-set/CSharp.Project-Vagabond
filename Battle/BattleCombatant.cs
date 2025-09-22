@@ -254,30 +254,33 @@ namespace ProjectVagabond.Battle
         public int GetEffectiveStrength()
         {
             float stat = Stats.Strength;
+            if (HasStatusEffect(StatusEffectType.StrengthUp)) stat *= BattleConstants.STAT_BUFF_MULTIPLIER;
+            if (HasStatusEffect(StatusEffectType.StrengthDown)) stat *= BattleConstants.STAT_DEBUFF_MULTIPLIER;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
-            // Add other modifiers like StrengthUp here
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveIntelligence()
         {
             float stat = Stats.Intelligence;
+            if (HasStatusEffect(StatusEffectType.IntelligenceUp)) stat *= BattleConstants.STAT_BUFF_MULTIPLIER;
+            if (HasStatusEffect(StatusEffectType.IntelligenceDown)) stat *= BattleConstants.STAT_DEBUFF_MULTIPLIER;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
-            // Add other modifiers here
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveTenacity()
         {
             float stat = Stats.Tenacity;
+            if (HasStatusEffect(StatusEffectType.TenacityUp)) stat *= BattleConstants.STAT_BUFF_MULTIPLIER;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
-            // Add other modifiers here
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveAgility()
         {
             float stat = Stats.Agility;
+            if (HasStatusEffect(StatusEffectType.AgilityDown)) stat *= BattleConstants.STAT_DEBUFF_MULTIPLIER;
             if (HasStatusEffect(StatusEffectType.Freeze)) stat *= 0.5f;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
 

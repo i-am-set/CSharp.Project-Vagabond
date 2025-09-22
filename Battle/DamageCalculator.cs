@@ -310,14 +310,7 @@ namespace ProjectVagabond.Battle
 
             if (!result.WasCritical)
             {
-                if (move.ImpactType == ImpactType.Physical && attacker.HasStatusEffect(StatusEffectType.StrengthUp))
-                {
-                    finalDamage *= BattleConstants.STRENGTH_UP_MULTIPLIER;
-                }
-                if (target.HasStatusEffect(StatusEffectType.TenacityUp))
-                {
-                    finalDamage *= BattleConstants.TENACITY_UP_MULTIPLIER;
-                }
+                // Stat down/up effects are now handled in BattleCombatant.GetEffective... methods.
             }
 
             float elementalMultiplier = GetElementalMultiplier(move, target, result.DefenderAbilitiesTriggered);

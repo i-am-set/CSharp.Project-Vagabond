@@ -40,6 +40,7 @@ namespace ProjectVagabond.Battle
     {
         StrengthUp,
         StrengthDown,
+        IntelligenceUp,
         IntelligenceDown,
         TenacityUp,
         AgilityDown,
