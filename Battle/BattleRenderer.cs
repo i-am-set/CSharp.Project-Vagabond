@@ -494,6 +494,7 @@ namespace ProjectVagabond.Battle.UI
 
             const int iconSize = 5;
             const int iconPadding = 1;
+            const int iconGap = 1;
             int currentX = spriteRect.Left + iconPadding;
             int iconY = spriteRect.Top + iconPadding;
 
@@ -509,7 +510,7 @@ namespace ProjectVagabond.Battle.UI
                 float alpha = (_hoveredStatusIcon.HasValue && _hoveredStatusIcon.Value.Effect == effect) ? 0.25f : 0.1f;
                 DrawRectangleBorder(spriteBatch, pixel, borderBounds, 1, borderColor * alpha);
 
-                currentX += iconSize + iconPadding;
+                currentX += iconSize + iconPadding + iconGap;
             }
         }
 
@@ -550,6 +551,7 @@ namespace ProjectVagabond.Battle.UI
 
             const int iconSize = 5;
             const int iconPadding = 2;
+            const int iconGap = 1;
             int currentX = (int)hpStartX - iconPadding - iconSize;
 
             foreach (var effect in player.ActiveStatusEffects)
@@ -557,7 +559,7 @@ namespace ProjectVagabond.Battle.UI
                 int iconY = (int)(playerHudY + (secondaryFont.LineHeight - iconSize) / 2f) + 1;
                 var iconBounds = new Rectangle(currentX, iconY, iconSize, iconSize);
                 _playerStatusIcons.Add(new StatusIconInfo { Effect = effect, Bounds = iconBounds });
-                currentX -= (iconSize + iconPadding);
+                currentX -= (iconSize + iconPadding + iconGap);
             }
         }
 

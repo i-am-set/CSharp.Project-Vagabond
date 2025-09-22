@@ -422,6 +422,30 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/StatusEffects/agilitydown_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/agilitydown_status_icon
 
+#begin Sprites/UI/BasicIcons/StatusEffects/agilitydown_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/agilitydown_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/agilitydown_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/agilityup_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/agilityup_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/agilityup_status_icon
+
 #begin Sprites/UI/BasicIcons/StatusEffects/blind_status_icon.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -433,6 +457,30 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/StatusEffects/blind_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/blind_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/blind_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/blind_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/blind_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/burn_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/burn_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/burn_status_icon
 
 #begin Sprites/UI/BasicIcons/StatusEffects/burn_status_icon.png
 /importer:TextureImporter
@@ -458,6 +506,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/StatusEffects/confuse_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/confuse_status_icon
 
+#begin Sprites/UI/BasicIcons/StatusEffects/confuse_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/confuse_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/confuse_status_icon
+
 #begin Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -469,6 +529,30 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/dodging_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/fear_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/fear_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/fear_status_icon
 
 #begin Sprites/UI/BasicIcons/StatusEffects/fear_status_icon.png
 /importer:TextureImporter
@@ -494,6 +578,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/StatusEffects/freeze_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/freeze_status_icon
 
+#begin Sprites/UI/BasicIcons/StatusEffects/freeze_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/freeze_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/freeze_status_icon
+
 #begin Sprites/UI/BasicIcons/StatusEffects/intelligencedown_status_icon.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -505,6 +601,42 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/StatusEffects/intelligencedown_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/intelligencedown_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/intelligencedown_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/intelligencedown_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/intelligencedown_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/intelligenceup_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/intelligenceup_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/intelligenceup_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/poison_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/poison_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/poison_status_icon
 
 #begin Sprites/UI/BasicIcons/StatusEffects/poison_status_icon.png
 /importer:TextureImporter
@@ -530,6 +662,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/StatusEffects/root_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/root_status_icon
 
+#begin Sprites/UI/BasicIcons/StatusEffects/root_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/root_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/root_status_icon
+
 #begin Sprites/UI/BasicIcons/StatusEffects/silence_status_icon.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -541,6 +685,42 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/StatusEffects/silence_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/silence_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/silence_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/silence_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/silence_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/strengthdown_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/strengthdown_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/strengthdown_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/strengthup_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/strengthup_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/strengthup_status_icon
 
 #begin Sprites/UI/BasicIcons/StatusEffects/strengthup_status_icon.png
 /importer:TextureImporter
@@ -565,6 +745,42 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/StatusEffects/stun_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/stun_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/stun_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/stun_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/stun_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/tenacitydown_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/tenacitydown_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/tenacitydown_status_icon
+
+#begin Sprites/UI/BasicIcons/StatusEffects/tenacityup_status_icon.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/StatusEffects/tenacityup_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/tenacityup_status_icon
 
 #begin Sprites/UI/BasicIcons/StatusEffects/tenacityup_status_icon.png
 /importer:TextureImporter

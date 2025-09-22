@@ -43,6 +43,8 @@ namespace ProjectVagabond.Battle
         IntelligenceUp,
         IntelligenceDown,
         TenacityUp,
+        TenacityDown,
+        AgilityUp,
         AgilityDown,
         Poison,
         Stun,

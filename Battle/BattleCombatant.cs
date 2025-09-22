@@ -273,6 +273,7 @@ namespace ProjectVagabond.Battle
         {
             float stat = Stats.Tenacity;
             if (HasStatusEffect(StatusEffectType.TenacityUp)) stat *= BattleConstants.STAT_BUFF_MULTIPLIER;
+            if (HasStatusEffect(StatusEffectType.TenacityDown)) stat *= BattleConstants.STAT_DEBUFF_MULTIPLIER;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
@@ -280,6 +281,7 @@ namespace ProjectVagabond.Battle
         public int GetEffectiveAgility()
         {
             float stat = Stats.Agility;
+            if (HasStatusEffect(StatusEffectType.AgilityUp)) stat *= BattleConstants.STAT_BUFF_MULTIPLIER;
             if (HasStatusEffect(StatusEffectType.AgilityDown)) stat *= BattleConstants.STAT_DEBUFF_MULTIPLIER;
             if (HasStatusEffect(StatusEffectType.Freeze)) stat *= 0.5f;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
