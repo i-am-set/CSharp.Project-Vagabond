@@ -291,7 +291,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     TargetType.Single => ".",
                     TargetType.Every => "...",
-                    TargetType.Self => "^",
+                    TargetType.Self => "+",
                     TargetType.SingleAll => "*",
                     TargetType.EveryAll => "***",
                     _ => ""
@@ -302,9 +302,11 @@ namespace ProjectVagabond.Battle.UI
                     var indicatorSize = _moveFont.MeasureString(targetIndicator);
                     // Center the indicator horizontally over the power text.
                     float powerCenterX = powerPosition.X + powerTextSize.Width / 2;
+                    // Add a 1px downward offset specifically for the 'Self' target indicator.
+                    float yOffset = (Move.Target == TargetType.Self) ? 2f : 0f;
                     var indicatorPosition = new Vector2(
                         powerCenterX - indicatorSize.Width / 2,
-                        powerPosition.Y - 7
+                        powerPosition.Y - 7 + yOffset
                     );
                     spriteBatch.DrawStringSnapped(_moveFont, targetIndicator, indicatorPosition, statsColor);
                 }
