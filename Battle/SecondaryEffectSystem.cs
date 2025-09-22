@@ -1,4 +1,5 @@
-﻿using ProjectVagabond.Utils;
+﻿using ProjectVagabond.Battle;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -178,7 +179,7 @@ namespace ProjectVagabond.Battle
             if (move.Effects.TryGetValue("Lifesteal", out var lifestealValue))
             {
                 int totalDamage = damageResults.Sum(r => r.DamageAmount);
-                HandleLifesteal(action.Actor, totalDamage, lifestealValue);
+                HandleLifesteal(action.Actor, totalDamage, lifestealValue, finalTargets);
             }
             if (move.Effects.TryGetValue("SelfDebuff", out var selfDebuffValue))
             {
@@ -297,13 +298,39 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private static void HandleLifesteal(BattleCombatant actor, int totalDamage, string value)
+        private static void HandleLifesteal(BattleCombatant actor, int totalDamage, string value, List<BattleCombatant> targets)
         {
             if (EffectParser.TryParseFloat(value, out float percentage))
             {
                 int healAmount = (int)Math.Round(totalDamage * (percentage / 100f));
-                if (healAmount > 0)
+                if (healAmount <= 0) return;
+
+                bool causticBloodTriggered = false;
+                AbilityData sourceAbility = null;
+
+                // Check if ANY target has Caustic Blood
+                foreach (var target in targets.Distinct())
                 {
+                    var cbAbility = target.ActiveAbilities.FirstOrDefault(a => a.Effects.ContainsKey("CausticBlood"));
+                    if (cbAbility != null)
+                    {
+                        causticBloodTriggered = true;
+                        sourceAbility = cbAbility;
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = cbAbility, NarrationText = $"{target.Name}'s {cbAbility.AbilityName} burns {actor.Name}!" });
+                        // We only need one trigger to convert the heal to damage. No need to check further.
+                        break;
+                    }
+                }
+
+                if (causticBloodTriggered)
+                {
+                    // Apply damage to the lifestealer instead of healing
+                    actor.ApplyDamage(healAmount);
+                    EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = actor, RecoilDamage = healAmount, SourceAbility = sourceAbility });
+                }
+                else
+                {
+                    // Apply healing normally
                     int hpBefore = (int)actor.VisualHP;
                     actor.ApplyHealing(healAmount);
                     EventBus.Publish(new GameEvents.CombatantHealed
@@ -334,7 +361,7 @@ namespace ProjectVagabond.Battle
         {
             // For now, we assume "Cleanse" removes all negative status effects from the target.
             // This could be expanded to parse specific effects or categories.
-            target.ActiveStatusEffects.RemoveAll(e => IsNegativeStatus(e.EffectType)); 
+            target.ActiveStatusEffects.RemoveAll(e => IsNegativeStatus(e.EffectType));
         }
 
         private static void HandleStealBuff(BattleCombatant actor, BattleCombatant target, string value)
@@ -391,6 +418,7 @@ namespace ProjectVagabond.Battle
                 case StatusEffectType.IntelligenceDown:
                 case StatusEffectType.AgilityDown:
                 case StatusEffectType.StrengthDown:
+                case StatusEffectType.TenacityDown:
                     return true;
                 default:
                     return false;
