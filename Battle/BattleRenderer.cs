@@ -262,9 +262,34 @@ namespace ProjectVagabond.Battle.UI
 
             switch (move.Target)
             {
+                case TargetType.Self:
+                    var player = targets.FirstOrDefault(t => t.IsPlayerControlled);
+                    if (player != null)
+                    {
+                        var arrowSheet = _spriteManager.ArrowIconSpriteSheet;
+                        if (arrowSheet == null) return;
+
+                        // Use right-pointing arrow, same as turn indicator
+                        var arrowRect = arrowRects[4];
+
+                        // Use horizontal sway instead of vertical bob
+                        float swayOffset = (MathF.Sin(sharedBobbingTimer * 4f) > 0) ? 1f : 0f;
+
+                        // Positioning logic from DrawTurnIndicator
+                        const int playerHudY = DIVIDER_Y - 10;
+                        const int playerHudPaddingX = 10;
+                        Vector2 nameSize = font.MeasureString(player.Name);
+                        Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7);
+                        var arrowPos = new Vector2(
+                            namePos.X - arrowRect.Width - 4 + swayOffset, // Horizontal sway
+                            namePos.Y + (nameSize.Y - arrowRect.Height) / 2 - 1
+                        );
+                        spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, flashColor);
+                    }
+                    break;
+
                 case TargetType.Single:
                 case TargetType.SingleAll:
-                case TargetType.Self:
                     foreach (var target in targets)
                     {
                         Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
