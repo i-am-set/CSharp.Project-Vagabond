@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using System;
 using System.Collections.Generic;
@@ -101,11 +102,15 @@ namespace ProjectVagabond
                 PlayerState.DefensiveElementIDs = new List<int>(baseStats.DefensiveElementIDs);
                 PlayerState.DefaultStrikeMoveID = baseStats.DefaultStrikeMoveID;
 
-                // Initialize spellbook
-                PlayerState.SpellbookPages = new List<string>(new string[10]);
+                // Initialize spellbook with SpellbookEntry objects
+                PlayerState.SpellbookPages = new List<SpellbookEntry>(new SpellbookEntry[10]);
                 for (int i = 0; i < Math.Min(PlayerState.SpellbookPages.Count, baseStats.StartingMoveIDs.Count); i++)
                 {
-                    PlayerState.SpellbookPages[i] = baseStats.StartingMoveIDs[i];
+                    string moveId = baseStats.StartingMoveIDs[i];
+                    if (!string.IsNullOrEmpty(moveId))
+                    {
+                        PlayerState.SpellbookPages[i] = new SpellbookEntry(moveId);
+                    }
                 }
             }
 
@@ -120,7 +125,10 @@ namespace ProjectVagabond
                 Tenacity = PlayerState.Tenacity,
                 Agility = PlayerState.Agility,
                 DefensiveElementIDs = new List<int>(PlayerState.DefensiveElementIDs),
-                AvailableMoveIDs = new List<string>(PlayerState.SpellbookPages.Where(p => !string.IsNullOrEmpty(p)))
+                AvailableMoveIDs = PlayerState.SpellbookPages
+                                        .Where(p => p != null && !string.IsNullOrEmpty(p.MoveID))
+                                        .Select(p => p.MoveID)
+                                        .ToList()
             };
             _componentStore.AddComponent(PlayerEntityId, liveStats);
 

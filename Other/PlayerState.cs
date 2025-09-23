@@ -21,9 +21,9 @@ namespace ProjectVagabond
 
         /// <summary>
         /// Represents the player's spellbook. The size of the list is the number of
-        /// spell pages the player has. A null or empty string indicates an empty page.
+        /// spell pages the player has. A null entry indicates an empty page.
         /// </summary>
-        public List<string> SpellbookPages { get; set; } = new List<string>();
+        public List<SpellbookEntry> SpellbookPages { get; set; } = new List<SpellbookEntry>();
 
         /// <summary>
         /// Represents the player's inventory, mapping an ItemID to its quantity.

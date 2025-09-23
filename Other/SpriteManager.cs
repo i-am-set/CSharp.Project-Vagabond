@@ -26,12 +26,14 @@ namespace ProjectVagabond
         public Texture2D ActionTooltipBackgroundSprite { get; private set; }
         public Texture2D ElementIconsSpriteSheet { get; private set; }
         public Texture2D ActionIconsSpriteSheet { get; private set; }
+        public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; } // 0-2: Act, 3-5: Item, 6-8: Flee (Normal, Hover, Clicked)
         public Dictionary<int, Rectangle> ElementIconSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Rectangle[] ActionIconSourceRects { get; private set; } // 0: Strike, 1: Dodge, 2: Stall
         public Dictionary<int, Rectangle> RarityBackgroundSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
+        public Dictionary<int, Rectangle> SpellUsesSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
 
 
         // Enemy Sprite Cache
@@ -158,12 +160,16 @@ namespace ProjectVagabond
             try { ActionIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9"); }
             catch { ActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(27, 9, Color.Magenta); }
 
+            try { ActionButtonUsesSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_uses_spritesheet"); }
+            catch { ActionButtonUsesSpriteSheet = _textureFactory.CreateColoredTexture(471, 17, Color.Magenta); }
+
 
             InitializeArrowSourceRects();
             InitializeActionButtonsSourceRects();
             InitializeElementIconsSourceRects();
             InitializeActionIconsSourceRects();
             InitializeRarityBackgrounds();
+            InitializeSpellUsesRects();
         }
 
         private void InitializeRarityBackgrounds()
@@ -179,6 +185,18 @@ namespace ProjectVagabond
                 int rarityValue = rarityMap[i];
                 RarityBackgroundSourceRects[rarityValue] = new Rectangle(i * spriteWidth, 0, spriteWidth, spriteHeight);
             }
+        }
+
+        private void InitializeSpellUsesRects()
+        {
+            if (ActionButtonUsesSpriteSheet == null) return;
+            int spriteWidth = 157;
+            int spriteHeight = 17;
+            // Corrected mapping based on user feedback.
+            // Assumes the sprite sheet is ordered: [3 uses], [2 uses], [1 use]
+            SpellUsesSourceRects[3] = new Rectangle(0 * spriteWidth, 0, spriteWidth, spriteHeight); // 3 uses left (leftmost sprite)
+            SpellUsesSourceRects[2] = new Rectangle(1 * spriteWidth, 0, spriteWidth, spriteHeight); // 2 uses left (middle sprite)
+            SpellUsesSourceRects[1] = new Rectangle(2 * spriteWidth, 0, spriteWidth, spriteHeight); // 1 use left (rightmost sprite)
         }
 
         private void InitializeArrowSourceRects()

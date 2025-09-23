@@ -12,28 +12,23 @@ namespace ProjectVagabond.Battle
         private const int HAND_SIZE = 4;
         private static readonly Random _rng = new Random();
 
-        private List<MoveData> _deck = new List<MoveData>();
-        private Queue<MoveData> _drawPile = new Queue<MoveData>();
-        private List<MoveData> _discardPile = new List<MoveData>();
+        private List<SpellbookEntry> _deck = new List<SpellbookEntry>();
+        private Queue<SpellbookEntry> _drawPile = new Queue<SpellbookEntry>();
+        private List<SpellbookEntry> _discardPile = new List<SpellbookEntry>();
 
-        public MoveData[] Hand { get; private set; } = new MoveData[HAND_SIZE];
-        public IEnumerable<MoveData> DrawPile => _drawPile;
-        public IEnumerable<MoveData> DiscardPile => _discardPile;
+        public SpellbookEntry[] Hand { get; private set; } = new SpellbookEntry[HAND_SIZE];
+        public IEnumerable<SpellbookEntry> DrawPile => _drawPile;
+        public IEnumerable<SpellbookEntry> DiscardPile => _discardPile;
 
         /// <summary>
         /// Initializes the deck manager for a new battle.
         /// </summary>
-        /// <param name="knownMoveIDs">A list of all move IDs the combatant knows.</param>
-        public void Initialize(List<string> knownMoveIDs)
+        /// <param name="spellbookPages">A list of all spellbook entries the combatant knows.</param>
+        public void Initialize(List<SpellbookEntry> spellbookPages)
         {
             _deck.Clear();
-            foreach (var moveId in knownMoveIDs)
-            {
-                if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
-                {
-                    _deck.Add(moveData);
-                }
-            }
+            // Only add non-null entries from the spellbook to the battle deck.
+            _deck.AddRange(spellbookPages.Where(p => p != null));
 
             _discardPile.Clear();
             ShuffleDeckIntoDrawPile();
@@ -41,16 +36,25 @@ namespace ProjectVagabond.Battle
         }
 
         /// <summary>
-        /// Moves a used spell from the hand to the discard pile.
+        /// Moves a used spell from the hand to the discard pile, decrementing its uses.
+        /// If the spell is exhausted, it is not added to the discard pile.
         /// </summary>
-        /// <param name="move">The move that was cast.</param>
-        public void CastMove(MoveData move)
+        /// <param name="entry">The spellbook entry that was cast from the hand.</param>
+        public void CastMove(SpellbookEntry entry)
         {
             for (int i = 0; i < Hand.Length; i++)
             {
-                if (Hand[i] == move)
+                if (Hand[i] == entry)
                 {
-                    _discardPile.Add(Hand[i]);
+                    // Decrement uses on the original entry from the spellbook.
+                    entry.RemainingUses--;
+
+                    // If it still has uses, add it to the discard pile for this combat.
+                    if (entry.RemainingUses > 0)
+                    {
+                        _discardPile.Add(Hand[i]);
+                    }
+
                     Hand[i] = null; // Leave an empty slot
                     return;
                 }
@@ -103,13 +107,13 @@ namespace ProjectVagabond.Battle
         private void ShuffleDeckIntoDrawPile()
         {
             var shuffled = _deck.OrderBy(a => _rng.Next()).ToList();
-            _drawPile = new Queue<MoveData>(shuffled);
+            _drawPile = new Queue<SpellbookEntry>(shuffled);
         }
 
         private void ShuffleDiscardIntoDrawPile()
         {
             var shuffled = _discardPile.OrderBy(a => _rng.Next()).ToList();
-            _drawPile = new Queue<MoveData>(shuffled);
+            _drawPile = new Queue<SpellbookEntry>(shuffled);
             _discardPile.Clear();
         }
     }

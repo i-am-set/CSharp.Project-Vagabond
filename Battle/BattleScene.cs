@@ -113,6 +113,7 @@ namespace ProjectVagabond.Scenes
             base.Exit();
             UnsubscribeFromEvents();
             CleanupEntities();
+            CleanupPlayerState();
             ServiceLocator.Unregister<BattleManager>(); // Unregister on exit
         }
 
@@ -132,7 +133,7 @@ namespace ProjectVagabond.Scenes
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
             _uiManager.OnFleeRequested += FleeBattle;
-            _inputHandler.OnMoveTargetSelected += OnPlayerMoveSelected;
+            _inputHandler.OnMoveTargetSelected += OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected += OnPlayerItemSelected;
             _inputHandler.OnBackRequested += () => _uiManager.GoBack();
         }
@@ -153,7 +154,7 @@ namespace ProjectVagabond.Scenes
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
             _uiManager.OnFleeRequested -= FleeBattle;
-            _inputHandler.OnMoveTargetSelected -= OnPlayerMoveSelected;
+            _inputHandler.OnMoveTargetSelected -= OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected -= OnPlayerItemSelected;
             _inputHandler.OnBackRequested -= () => _uiManager.GoBack();
             if (_settingsButton != null) _settingsButton.OnClick -= OpenSettings;
@@ -225,6 +226,22 @@ namespace ProjectVagabond.Scenes
                     entityManager.DestroyEntity(id);
                 }
                 _enemyEntityIds.Clear();
+            }
+        }
+
+        private void CleanupPlayerState()
+        {
+            var gameState = ServiceLocator.Get<GameState>();
+            if (gameState.PlayerState == null) return;
+
+            // Iterate through the spellbook pages and set any exhausted spells to null.
+            for (int i = 0; i < gameState.PlayerState.SpellbookPages.Count; i++)
+            {
+                var entry = gameState.PlayerState.SpellbookPages[i];
+                if (entry != null && entry.RemainingUses <= 0)
+                {
+                    gameState.PlayerState.SpellbookPages[i] = null;
+                }
             }
         }
 
@@ -408,14 +425,20 @@ namespace ProjectVagabond.Scenes
         }
 
         #region Event Handlers
-        private void OnPlayerMoveSelected(MoveData move, BattleCombatant target)
+        private void OnPlayerMoveSelected(MoveData move, SpellbookEntry entry, BattleCombatant target)
         {
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
             if (player != null)
             {
                 var action = _battleManager.CreateActionFromMove(player, move, target);
+                action.SpellbookEntry = entry; // Attach the specific entry to the action
                 _battleManager.SetPlayerAction(action);
             }
+        }
+
+        private void OnPlayerMoveTargetSelected(MoveData move, SpellbookEntry entry, BattleCombatant target)
+        {
+            OnPlayerMoveSelected(move, entry, target);
         }
 
         private void OnPlayerItemSelected(ConsumableItemData item, BattleCombatant target)

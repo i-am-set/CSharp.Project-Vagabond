@@ -80,6 +80,8 @@ namespace ProjectVagabond.Battle
             if (combatant.IsPlayerControlled)
             {
                 combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
+                combatant.DeckManager = new CombatDeckManager();
+                combatant.DeckManager.Initialize(gameState.PlayerState.SpellbookPages);
             }
             else
             {

@@ -12,7 +12,7 @@ namespace ProjectVagabond.Battle.UI
     /// </summary>
     public class BattleInputHandler
     {
-        public event Action<MoveData, BattleCombatant> OnMoveTargetSelected;
+        public event Action<MoveData, SpellbookEntry, BattleCombatant> OnMoveTargetSelected;
         public event Action<ConsumableItemData, BattleCombatant> OnItemTargetSelected;
         public event Action OnBackRequested;
 
@@ -62,7 +62,7 @@ namespace ProjectVagabond.Battle.UI
                         var selectedTarget = currentTargets[_hoveredTargetIndex].Combatant;
                         if (uiManager.UIState == BattleUIState.Targeting)
                         {
-                            OnMoveTargetSelected?.Invoke(uiManager.MoveForTargeting, selectedTarget);
+                            OnMoveTargetSelected?.Invoke(uiManager.MoveForTargeting, uiManager.SpellForTargeting, selectedTarget);
                         }
                         else // ItemTargeting
                         {

@@ -106,7 +106,7 @@ namespace ProjectVagabond
             (args) =>
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
-                if (args.Length == 0) return _gameState.PlayerState?.SpellbookPages.Where(p => !string.IsNullOrEmpty(p)).ToList() ?? new List<string>();
+                if (args.Length == 0) return _gameState.PlayerState?.SpellbookPages.Where(p => p != null).Select(p => p.MoveID).ToList() ?? new List<string>();
                 return new List<string>();
             });
 
@@ -267,29 +267,29 @@ namespace ProjectVagabond
             }
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Player Spellbook:" });
             var spellbook = _gameState.PlayerState.SpellbookPages;
-            if (spellbook.Any())
+            if (spellbook.Any(p => p != null))
             {
                 for (int i = 0; i < spellbook.Count; i++)
                 {
-                    string moveId = spellbook[i];
-                    if (string.IsNullOrEmpty(moveId))
+                    var entry = spellbook[i];
+                    if (entry == null)
                     {
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Page {i + 1}: (Empty)" });
                     }
                     else
                     {
-                        string moveName = moveId;
-                        if (BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
+                        string moveName = entry.MoveID;
+                        if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
                         {
                             moveName = moveData.MoveName;
                         }
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Page {i + 1}: {moveName} ([dim]{moveId}[/])" });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Page {i + 1}: {moveName} ({entry.RemainingUses}/{SpellbookEntry.MAX_USES}) [dim]({entry.MoveID})[/]" });
                     }
                 }
             }
             else
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "  (No pages)" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "  (No pages or all pages empty)" });
             }
         }
 

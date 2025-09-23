@@ -21,7 +21,7 @@ namespace ProjectVagabond.Battle.UI
     /// </summary>
     public class BattleUIManager
     {
-        public event Action<MoveData, BattleCombatant> OnMoveSelected;
+        public event Action<MoveData, SpellbookEntry, BattleCombatant> OnMoveSelected;
         public event Action<ConsumableItemData, BattleCombatant> OnItemSelected;
         public event Action OnFleeRequested;
 
@@ -35,6 +35,7 @@ namespace ProjectVagabond.Battle.UI
         public BattleUIState UIState { get; private set; } = BattleUIState.Default;
         public BattleSubMenuState SubMenuState { get; private set; } = BattleSubMenuState.None;
         public MoveData MoveForTargeting { get; private set; }
+        public SpellbookEntry SpellForTargeting => _actionMenu.SelectedSpellbookEntry;
         public ConsumableItemData ItemForTargeting { get; private set; }
         public TargetType? TargetTypeForSelection =>
             UIState == BattleUIState.Targeting ? MoveForTargeting?.Target :
@@ -214,9 +215,9 @@ namespace ProjectVagabond.Battle.UI
             _itemTargetingBackButton.Draw(spriteBatch, font, gameTime, transform);
         }
 
-        private void HandlePlayerMoveSelected(MoveData move, BattleCombatant target)
+        private void HandlePlayerMoveSelected(MoveData move, SpellbookEntry entry, BattleCombatant target)
         {
-            OnMoveSelected?.Invoke(move, target);
+            OnMoveSelected?.Invoke(move, entry, target);
         }
 
         private void HandlePlayerItemSelected(ConsumableItemData item)

@@ -69,15 +69,6 @@ namespace ProjectVagabond.Battle
             _allCombatants.AddRange(_playerCombatants);
             _allCombatants.AddRange(_enemyCombatants);
 
-            // Initialize the player's deck manager
-            var gameState = ServiceLocator.Get<GameState>();
-            foreach (var player in _playerCombatants)
-            {
-                player.DeckManager = new CombatDeckManager();
-                var knownMoves = gameState.PlayerState.SpellbookPages.Where(p => !string.IsNullOrEmpty(p)).ToList();
-                player.DeckManager.Initialize(knownMoves);
-            }
-
             _actionQueue = new List<QueuedAction>();
             RoundNumber = 1;
             _currentPhase = BattlePhase.StartOfTurn;
@@ -383,7 +374,12 @@ namespace ProjectVagabond.Battle
         {
             if (action.Actor.IsPlayerControlled)
             {
-                action.Actor.DeckManager?.CastMove(action.ChosenMove);
+                // Find the specific SpellbookEntry in the hand that corresponds to this move.
+                var spellbookEntry = action.Actor.Hand.FirstOrDefault(e => e != null && e.MoveID == action.ChosenMove.MoveID);
+                if (spellbookEntry != null)
+                {
+                    action.Actor.DeckManager?.CastMove(spellbookEntry);
+                }
             }
 
             if (action.ChosenMove.Effects.TryGetValue("MultiHit", out var multiHitValue) && EffectParser.TryParseIntArray(multiHitValue, out int[] hitParams) && hitParams.Length == 2)

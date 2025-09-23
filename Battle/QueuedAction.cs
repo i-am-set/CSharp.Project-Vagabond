@@ -40,6 +40,12 @@ namespace ProjectVagabond.Battle
         public MoveData? ChosenMove { get; set; }
 
         /// <summary>
+        /// The specific spellbook entry used for this action, if applicable.
+        /// This is used to track spell uses.
+        /// </summary>
+        public SpellbookEntry? SpellbookEntry { get; set; }
+
+        /// <summary>
         /// The item that was used. Null if a move was used.
         /// </summary>
         public ConsumableItemData? ChosenItem { get; set; }

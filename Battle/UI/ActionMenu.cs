@@ -15,7 +15,7 @@ namespace ProjectVagabond.Battle.UI
 {
     public class ActionMenu
     {
-        public event Action<MoveData, BattleCombatant> OnMoveSelected;
+        public event Action<MoveData, SpellbookEntry, BattleCombatant> OnMoveSelected;
         public event Action OnItemMenuRequested;
         public event Action OnMovesMenuOpened;
         public event Action OnMainMenuOpened;
@@ -35,9 +35,12 @@ namespace ProjectVagabond.Battle.UI
         private MenuState _currentState;
         public MenuState CurrentMenuState => _currentState;
         private MoveData _selectedMove;
+        private SpellbookEntry _selectedSpellbookEntry;
         public MoveData SelectedMove => _selectedMove;
+        public SpellbookEntry SelectedSpellbookEntry => _selectedSpellbookEntry;
         private MoveData _tooltipMove;
         public MoveData HoveredMove { get; private set; }
+        private SpellbookEntry _hoveredSpellbookEntry;
 
         private float _targetingTextAnimTimer = 0f;
         private bool _buttonsInitialized = false;
@@ -58,7 +61,7 @@ namespace ProjectVagabond.Battle.UI
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
         // State for animation
-        private MoveData[] _previousHandState = new MoveData[4];
+        private SpellbookEntry[] _previousHandState = new SpellbookEntry[4];
         private Queue<MoveButton> _buttonsToAnimate = new Queue<MoveButton>();
         private float _animationDelayTimer = 0f;
         private const float SEQUENTIAL_ANIMATION_DELAY = 0.05f;
@@ -138,7 +141,7 @@ namespace ProjectVagabond.Battle.UI
             strikeButton.OnClick += () => {
                 if (_player != null && !string.IsNullOrEmpty(_player.DefaultStrikeMoveID) && BattleDataCache.Moves.TryGetValue(_player.DefaultStrikeMoveID, out var strikeMove))
                 {
-                    SelectMove(strikeMove);
+                    SelectMove(strikeMove, null);
                 }
             };
             _secondaryActionButtons.Add(strikeButton);
@@ -147,7 +150,7 @@ namespace ProjectVagabond.Battle.UI
             dodgeButton.OnClick += () => {
                 if (BattleDataCache.Moves.TryGetValue("Dodge", out var dodgeMove))
                 {
-                    SelectMove(dodgeMove);
+                    SelectMove(dodgeMove, null);
                 }
             };
             _secondaryActionButtons.Add(dodgeButton);
@@ -156,7 +159,7 @@ namespace ProjectVagabond.Battle.UI
             stallButton.OnClick += () => {
                 if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
                 {
-                    SelectMove(stallMove);
+                    SelectMove(stallMove, null);
                 }
             };
             _secondaryActionButtons.Add(stallButton);
@@ -266,26 +269,23 @@ namespace ProjectVagabond.Battle.UI
             _buttonsToAnimate.Clear();
             _animationDelayTimer = 0f;
 
-            var currentHand = _player.AvailableMoves.Take(4).ToList();
-            if (!currentHand.Any())
-            {
-                // If hand is empty, we don't auto-stall. The player can still use secondary actions.
-            }
+            var currentHand = _player.Hand;
+            if (currentHand == null) return;
 
-            var newHand = new MoveData[4];
-            for (int i = 0; i < Math.Min(currentHand.Count, 4); i++)
+            var newHand = new SpellbookEntry[4];
+            for (int i = 0; i < Math.Min(currentHand.Length, 4); i++)
             {
                 newHand[i] = currentHand[i];
             }
 
             for (int i = 0; i < 4; i++)
             {
-                var move = newHand[i];
-                if (move == null) continue;
+                var entry = newHand[i];
+                if (entry == null || !BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move)) continue;
 
-                bool isNew = _previousHandState[i] == null || _previousHandState[i].MoveID != move.MoveID;
+                bool isNew = _previousHandState[i] == null || _previousHandState[i].MoveID != entry.MoveID;
                 int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, move);
-                var moveButton = CreateMoveButton(move, effectivePower, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, isNew, false);
+                var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, isNew, false);
                 _moveButtons.Add(moveButton);
 
                 _buttonsToAnimate.Enqueue(moveButton);
@@ -294,7 +294,7 @@ namespace ProjectVagabond.Battle.UI
             Array.Copy(newHand, _previousHandState, newHand.Length);
         }
 
-        private MoveButton CreateMoveButton(MoveData move, int displayPower, BitmapFont font, Texture2D background, bool isNew, bool startVisible)
+        private MoveButton CreateMoveButton(MoveData move, SpellbookEntry entry, int displayPower, BitmapFont font, Texture2D background, bool isNew, bool startVisible)
         {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             int elementId = move.OffensiveElementIDs.FirstOrDefault();
@@ -304,8 +304,8 @@ namespace ProjectVagabond.Battle.UI
                 sourceRect = rect;
             }
 
-            var moveButton = new MoveButton(move, displayPower, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, isNew, startVisible);
-            moveButton.OnClick += () => SelectMove(move);
+            var moveButton = new MoveButton(move, entry, displayPower, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, isNew, startVisible);
+            moveButton.OnClick += () => SelectMove(move, entry);
             moveButton.OnRightClick += () => {
                 _tooltipMove = move;
                 SetState(MenuState.Tooltip);
@@ -313,14 +313,15 @@ namespace ProjectVagabond.Battle.UI
             return moveButton;
         }
 
-        private void SelectMove(MoveData move)
+        private void SelectMove(MoveData move, SpellbookEntry entry)
         {
             _selectedMove = move;
+            _selectedSpellbookEntry = entry;
 
             // Mark the move as used if it's in the hand
             for (int i = 0; i < _previousHandState.Length; i++)
             {
-                if (_previousHandState[i] == move)
+                if (_previousHandState[i] != null && _previousHandState[i].MoveID == move.MoveID)
                 {
                     _previousHandState[i] = null;
                     break;
@@ -330,20 +331,20 @@ namespace ProjectVagabond.Battle.UI
             switch (move.Target)
             {
                 case TargetType.Self:
-                    OnMoveSelected?.Invoke(move, _player);
+                    OnMoveSelected?.Invoke(move, entry, _player);
                     break;
 
                 case TargetType.None:
                 case TargetType.Every:
                 case TargetType.EveryAll:
-                    OnMoveSelected?.Invoke(move, null);
+                    OnMoveSelected?.Invoke(move, entry, null);
                     break;
 
                 case TargetType.Single:
                     var enemies = _allTargets.Where(c => !c.IsDefeated).ToList();
                     if (enemies.Count == 1)
                     {
-                        OnMoveSelected?.Invoke(move, enemies[0]);
+                        OnMoveSelected?.Invoke(move, entry, enemies[0]);
                     }
                     else
                     {
@@ -355,7 +356,7 @@ namespace ProjectVagabond.Battle.UI
                     var allValidTargets = _allCombatants.Where(c => !c.IsDefeated).ToList();
                     if (allValidTargets.Count == 1)
                     {
-                        OnMoveSelected?.Invoke(move, allValidTargets[0]);
+                        OnMoveSelected?.Invoke(move, entry, allValidTargets[0]);
                     }
                     else
                     {
@@ -500,12 +501,14 @@ namespace ProjectVagabond.Battle.UI
                     break;
                 case MenuState.Moves:
                     HoveredMove = null;
+                    _hoveredSpellbookEntry = null;
                     foreach (var button in _moveButtons)
                     {
                         button.Update(currentMouseState);
                         if (button.IsHovered)
                         {
                             HoveredMove = button.Move;
+                            _hoveredSpellbookEntry = button.Entry;
                         }
                     }
                     foreach (var button in _secondaryActionButtons)
@@ -808,6 +811,64 @@ namespace ProjectVagabond.Battle.UI
                 );
                 button.Draw(spriteBatch, font, gameTime, transform);
             }
+
+            // --- Draw Hovered Spell Uses Counter ---
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            string currentUsesText, maxUsesText, slashText, usesLabelText;
+            Color currentUsesColor, maxUsesColor, usesLabelColor;
+
+            if (_hoveredSpellbookEntry != null)
+            {
+                currentUsesText = _hoveredSpellbookEntry.RemainingUses.ToString();
+                maxUsesText = SpellbookEntry.MAX_USES.ToString();
+                currentUsesColor = _hoveredSpellbookEntry.RemainingUses switch
+                {
+                    3 => _global.Palette_White,
+                    2 => _global.Palette_Yellow,
+                    1 => _global.Palette_Red,
+                    _ => _global.Palette_DarkGray
+                };
+                maxUsesColor = _global.Palette_White;
+                usesLabelColor = _global.Palette_DarkGray;
+            }
+            else
+            {
+                currentUsesText = "-";
+                maxUsesText = "-";
+                currentUsesColor = _global.Palette_DarkGray;
+                maxUsesColor = _global.Palette_DarkGray;
+                usesLabelColor = _global.Palette_DarkGray;
+            }
+            slashText = "/";
+            usesLabelText = " USES";
+
+            // --- Position and Draw Counter Components ---
+            var stallButton = _secondaryActionButtons.Last();
+            float baseY = stallButton.Bounds.Center.Y;
+            float anchorX = stallButton.Bounds.Right + 8 + 10; // Start 18px right of stall button
+
+            Vector2 slashSize = secondaryFont.MeasureString(slashText);
+            Vector2 currentUsesSize = secondaryFont.MeasureString(currentUsesText);
+            // Get the width of the widest possible number for stable layout
+            float maxNumberWidth = secondaryFont.MeasureString(SpellbookEntry.MAX_USES.ToString()).Width;
+
+            // The slash is our central anchor
+            Vector2 slashPos = new Vector2(anchorX, baseY - slashSize.Y / 2f);
+
+            // Current uses is right-aligned to the slash with a 1px gap
+            Vector2 currentUsesPos = new Vector2(slashPos.X - currentUsesSize.X - 1, baseY - currentUsesSize.Y / 2f);
+
+            // Max uses is left-aligned to the slash with a 1px gap
+            Vector2 maxUsesPos = new Vector2(slashPos.X + slashSize.X + 1, baseY - secondaryFont.MeasureString(maxUsesText).Height / 2f);
+
+            // The "USES" label is positioned after where the widest number would end, ensuring it doesn't move.
+            Vector2 usesLabelPos = new Vector2(maxUsesPos.X + maxNumberWidth, baseY - secondaryFont.MeasureString(usesLabelText).Height / 2f);
+
+            spriteBatch.DrawStringSnapped(secondaryFont, currentUsesText, currentUsesPos, currentUsesColor);
+            spriteBatch.DrawStringSnapped(secondaryFont, slashText, slashPos, _global.Palette_White); // Slash is always white
+            spriteBatch.DrawStringSnapped(secondaryFont, maxUsesText, maxUsesPos, maxUsesColor);
+            spriteBatch.DrawStringSnapped(secondaryFont, usesLabelText, usesLabelPos, usesLabelColor);
+
 
             // --- Back Button ---
             int backButtonY = secRowY + secButtonHeight - 1;

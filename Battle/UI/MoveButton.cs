@@ -10,6 +10,7 @@ namespace ProjectVagabond.Battle.UI
     public class MoveButton : Button
     {
         public MoveData Move { get; }
+        public SpellbookEntry Entry { get; }
         public int DisplayPower { get; }
         private readonly BitmapFont _moveFont;
         private readonly Texture2D _backgroundSpriteSheet;
@@ -39,11 +40,17 @@ namespace ProjectVagabond.Battle.UI
 
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
+        // Overlay Fade Animation
+        private static readonly Random _random = new Random();
+        private float _overlayFadeTimer;
+        private const float OVERLAY_FADE_SPEED = 2.0f;
 
-        public MoveButton(MoveData move, int displayPower, BitmapFont font, Texture2D backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool isNew, bool startVisible = true)
+
+        public MoveButton(MoveData move, SpellbookEntry entry, int displayPower, BitmapFont font, Texture2D backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool isNew, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
             Move = move;
+            Entry = entry;
             DisplayPower = displayPower;
             _moveFont = font;
             _backgroundSpriteSheet = backgroundSpriteSheet;
@@ -51,6 +58,7 @@ namespace ProjectVagabond.Battle.UI
             IconSourceRect = iconSourceRect;
             _isNew = isNew;
             _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
+            _overlayFadeTimer = (float)(_random.NextDouble() * Math.PI * 2.0); // Random start phase for desynchronization
         }
 
         public void TriggerAppearAnimation()
@@ -108,6 +116,7 @@ namespace ProjectVagabond.Battle.UI
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            _overlayFadeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // --- Animation Scaling ---
             float verticalScale = 1.0f;
@@ -158,6 +167,16 @@ namespace ProjectVagabond.Battle.UI
             if (spriteManager.RarityBackgroundSourceRects.TryGetValue(Move.Rarity, out var bgSourceRect))
             {
                 spriteBatch.DrawSnapped(_backgroundSpriteSheet, animatedBounds, bgSourceRect, tintColor);
+            }
+
+            // Draw spell uses overlay if this is a spell from the spellbook
+            if (Entry != null && spriteManager.SpellUsesSourceRects.TryGetValue(Entry.RemainingUses, out var usesSourceRect))
+            {
+                // Calculate the pulsing opacity using a sine wave for a smooth fade in/out effect.
+                float sine = (MathF.Sin(_overlayFadeTimer * OVERLAY_FADE_SPEED) + 1f) / 2f; // Oscillates 0 -> 1 -> 0
+                float opacity = MathHelper.Lerp(0.05f, 0.15f, sine); // Map to 5%-15% range
+
+                spriteBatch.DrawSnapped(spriteManager.ActionButtonUsesSpriteSheet, animatedBounds, usesSourceRect, tintColor * opacity);
             }
 
 
@@ -303,7 +322,7 @@ namespace ProjectVagabond.Battle.UI
                     // Center the indicator horizontally over the power text.
                     float powerCenterX = powerPosition.X + powerTextSize.Width / 2;
                     // Add a 1px downward offset specifically for the 'Self' target indicator.
-                    float yOffset = (Move.Target == TargetType.Self) ? 2f : 0f;
+                    float yOffset = (Move.Target == TargetType.Self) ? 1f : 0f;
                     var indicatorPosition = new Vector2(
                         powerCenterX - indicatorSize.Width / 2,
                         powerPosition.Y - 7 + yOffset

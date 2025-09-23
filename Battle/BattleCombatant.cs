@@ -59,12 +59,20 @@ namespace ProjectVagabond.Battle
             {
                 if (DeckManager != null)
                 {
-                    return DeckManager.Hand.Where(m => m != null).ToList();
+                    return DeckManager.Hand
+                        .Where(entry => entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID))
+                        .Select(entry => BattleDataCache.Moves[entry.MoveID])
+                        .ToList();
                 }
                 return _staticMoves;
             }
         }
         private List<MoveData> _staticMoves = new List<MoveData>();
+
+        /// <summary>
+        /// For the player, provides direct access to the SpellbookEntry objects in their hand.
+        /// </summary>
+        public SpellbookEntry[] Hand => DeckManager?.Hand;
 
         /// <summary>
         /// The move ID for the player's basic "Strike" action. Null for enemies.
