@@ -283,7 +283,7 @@ namespace ProjectVagabond
                         {
                             moveName = moveData.MoveName;
                         }
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Page {i + 1}: {moveName} ({entry.RemainingUses}/{SpellbookEntry.MAX_USES}) [dim]({entry.MoveID})[/]" });
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Page {i + 1}: {moveName} [dim](Used: {entry.TimesUsed}) ({entry.MoveID})[/]" });
                     }
                 }
             }

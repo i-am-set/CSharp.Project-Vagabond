@@ -2,19 +2,17 @@
 {
     /// <summary>
     /// Represents a single entry in the player's spellbook, containing a move
-    /// and its remaining uses.
+    /// and a persistent counter for how many times it has been used.
     /// </summary>
     public class SpellbookEntry
     {
-        public const int MAX_USES = 3;
-
         public string MoveID { get; set; }
-        public int RemainingUses { get; set; }
+        public int TimesUsed { get; set; }
 
-        public SpellbookEntry(string moveId, int uses = MAX_USES)
+        public SpellbookEntry(string moveId, int timesUsed = 0)
         {
             MoveID = moveId;
-            RemainingUses = uses;
+            TimesUsed = timesUsed;
         }
 
         // Parameterless constructor for serialization if needed in the future.

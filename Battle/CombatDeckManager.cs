@@ -36,8 +36,7 @@ namespace ProjectVagabond.Battle
         }
 
         /// <summary>
-        /// Moves a used spell from the hand to the discard pile, decrementing its uses.
-        /// If the spell is exhausted, it is not added to the discard pile.
+        /// Moves a used spell from the hand to the discard pile and increments its usage count.
         /// </summary>
         /// <param name="entry">The spellbook entry that was cast from the hand.</param>
         public void CastMove(SpellbookEntry entry)
@@ -46,14 +45,11 @@ namespace ProjectVagabond.Battle
             {
                 if (Hand[i] == entry)
                 {
-                    // Decrement uses on the original entry from the spellbook.
-                    entry.RemainingUses--;
+                    // Increment the persistent usage counter.
+                    entry.TimesUsed++;
 
-                    // If it still has uses, add it to the discard pile for this combat.
-                    if (entry.RemainingUses > 0)
-                    {
-                        _discardPile.Add(Hand[i]);
-                    }
+                    // Always add the spell to the discard pile.
+                    _discardPile.Add(Hand[i]);
 
                     Hand[i] = null; // Leave an empty slot
                     return;

@@ -169,17 +169,6 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawSnapped(_backgroundSpriteSheet, animatedBounds, bgSourceRect, tintColor);
             }
 
-            // Draw spell uses overlay if this is a spell from the spellbook
-            if (Entry != null && spriteManager.SpellUsesSourceRects.TryGetValue(Entry.RemainingUses, out var usesSourceRect))
-            {
-                // Calculate the pulsing opacity using a sine wave for a smooth fade in/out effect.
-                float sine = (MathF.Sin(_overlayFadeTimer * OVERLAY_FADE_SPEED) + 1f) / 2f; // Oscillates 0 -> 1 -> 0
-                float opacity = MathHelper.Lerp(0.05f, 0.15f, sine); // Map to 5%-15% range
-
-                spriteBatch.DrawSnapped(spriteManager.ActionButtonUsesSpriteSheet, animatedBounds, usesSourceRect, tintColor * opacity);
-            }
-
-
             // Only draw contents if the button is mostly visible to avoid squashed text/icons
             if (verticalScale > 0.8f)
             {

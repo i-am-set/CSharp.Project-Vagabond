@@ -1,6 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
 using System;
 using System.Collections.Generic;
@@ -109,7 +108,7 @@ namespace ProjectVagabond
                     string moveId = baseStats.StartingMoveIDs[i];
                     if (!string.IsNullOrEmpty(moveId))
                     {
-                        PlayerState.SpellbookPages[i] = new SpellbookEntry(moveId);
+                        PlayerState.SpellbookPages[i] = new SpellbookEntry(moveId, 0);
                     }
                 }
             }

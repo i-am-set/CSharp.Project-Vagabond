@@ -113,7 +113,6 @@ namespace ProjectVagabond.Scenes
             base.Exit();
             UnsubscribeFromEvents();
             CleanupEntities();
-            CleanupPlayerState();
             ServiceLocator.Unregister<BattleManager>(); // Unregister on exit
         }
 
@@ -226,22 +225,6 @@ namespace ProjectVagabond.Scenes
                     entityManager.DestroyEntity(id);
                 }
                 _enemyEntityIds.Clear();
-            }
-        }
-
-        private void CleanupPlayerState()
-        {
-            var gameState = ServiceLocator.Get<GameState>();
-            if (gameState.PlayerState == null) return;
-
-            // Iterate through the spellbook pages and set any exhausted spells to null.
-            for (int i = 0; i < gameState.PlayerState.SpellbookPages.Count; i++)
-            {
-                var entry = gameState.PlayerState.SpellbookPages[i];
-                if (entry != null && entry.RemainingUses <= 0)
-                {
-                    gameState.PlayerState.SpellbookPages[i] = null;
-                }
             }
         }
 

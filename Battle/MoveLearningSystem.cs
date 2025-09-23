@@ -65,7 +65,7 @@ namespace ProjectVagabond
             }
 
             // 5. Add the move and provide feedback.
-            _gameState.PlayerState.SpellbookPages[emptyPageIndex] = new SpellbookEntry(moveId);
+            _gameState.PlayerState.SpellbookPages[emptyPageIndex] = new SpellbookEntry(moveId, 0);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Player learned {moveData.MoveName}!" });
         }
 

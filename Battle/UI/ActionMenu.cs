@@ -812,64 +812,6 @@ namespace ProjectVagabond.Battle.UI
                 button.Draw(spriteBatch, font, gameTime, transform);
             }
 
-            // --- Draw Hovered Spell Uses Counter ---
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            string currentUsesText, maxUsesText, slashText, usesLabelText;
-            Color currentUsesColor, maxUsesColor, usesLabelColor;
-
-            if (_hoveredSpellbookEntry != null)
-            {
-                currentUsesText = _hoveredSpellbookEntry.RemainingUses.ToString();
-                maxUsesText = SpellbookEntry.MAX_USES.ToString();
-                currentUsesColor = _hoveredSpellbookEntry.RemainingUses switch
-                {
-                    3 => _global.Palette_White,
-                    2 => _global.Palette_Yellow,
-                    1 => _global.Palette_Red,
-                    _ => _global.Palette_DarkGray
-                };
-                maxUsesColor = _global.Palette_White;
-                usesLabelColor = _global.Palette_DarkGray;
-            }
-            else
-            {
-                currentUsesText = "-";
-                maxUsesText = "-";
-                currentUsesColor = _global.Palette_DarkGray;
-                maxUsesColor = _global.Palette_DarkGray;
-                usesLabelColor = _global.Palette_DarkGray;
-            }
-            slashText = "/";
-            usesLabelText = " USES";
-
-            // --- Position and Draw Counter Components ---
-            var stallButton = _secondaryActionButtons.Last();
-            float baseY = stallButton.Bounds.Center.Y;
-            float anchorX = stallButton.Bounds.Right + 8 + 10; // Start 18px right of stall button
-
-            Vector2 slashSize = secondaryFont.MeasureString(slashText);
-            Vector2 currentUsesSize = secondaryFont.MeasureString(currentUsesText);
-            // Get the width of the widest possible number for stable layout
-            float maxNumberWidth = secondaryFont.MeasureString(SpellbookEntry.MAX_USES.ToString()).Width;
-
-            // The slash is our central anchor
-            Vector2 slashPos = new Vector2(anchorX, baseY - slashSize.Y / 2f);
-
-            // Current uses is right-aligned to the slash with a 1px gap
-            Vector2 currentUsesPos = new Vector2(slashPos.X - currentUsesSize.X - 1, baseY - currentUsesSize.Y / 2f);
-
-            // Max uses is left-aligned to the slash with a 1px gap
-            Vector2 maxUsesPos = new Vector2(slashPos.X + slashSize.X + 1, baseY - secondaryFont.MeasureString(maxUsesText).Height / 2f);
-
-            // The "USES" label is positioned after where the widest number would end, ensuring it doesn't move.
-            Vector2 usesLabelPos = new Vector2(maxUsesPos.X + maxNumberWidth, baseY - secondaryFont.MeasureString(usesLabelText).Height / 2f);
-
-            spriteBatch.DrawStringSnapped(secondaryFont, currentUsesText, currentUsesPos, currentUsesColor);
-            spriteBatch.DrawStringSnapped(secondaryFont, slashText, slashPos, _global.Palette_White); // Slash is always white
-            spriteBatch.DrawStringSnapped(secondaryFont, maxUsesText, maxUsesPos, maxUsesColor);
-            spriteBatch.DrawStringSnapped(secondaryFont, usesLabelText, usesLabelPos, usesLabelColor);
-
-
             // --- Back Button ---
             int backButtonY = secRowY + secButtonHeight - 1;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
