@@ -41,6 +41,8 @@ namespace ProjectVagabond.Battle.UI
             UIState == BattleUIState.Targeting ? MoveForTargeting?.Target :
             UIState == BattleUIState.ItemTargeting ? ItemForTargeting?.Target :
             null;
+        public MoveData HoveredMove => _actionMenu.HoveredMove;
+
 
         private float _itemTargetingTextAnimTimer = 0f;
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();

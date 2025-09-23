@@ -113,6 +113,7 @@ namespace ProjectVagabond.Scenes
             base.Exit();
             UnsubscribeFromEvents();
             CleanupEntities();
+            CleanupPlayerState();
             ServiceLocator.Unregister<BattleManager>(); // Unregister on exit
         }
 
@@ -124,6 +125,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.ActionFailed>(OnActionFailed);
             EventBus.Subscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
             EventBus.Subscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
+            EventBus.Subscribe<GameEvents.CombatantManaRestored>(OnCombatantManaRestored);
             EventBus.Subscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
             EventBus.Subscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Subscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
@@ -145,6 +147,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.ActionFailed>(OnActionFailed);
             EventBus.Unsubscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
             EventBus.Unsubscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
+            EventBus.Unsubscribe<GameEvents.CombatantManaRestored>(OnCombatantManaRestored);
             EventBus.Unsubscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
             EventBus.Unsubscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Unsubscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
@@ -225,6 +228,22 @@ namespace ProjectVagabond.Scenes
                     entityManager.DestroyEntity(id);
                 }
                 _enemyEntityIds.Clear();
+            }
+        }
+
+        private void CleanupPlayerState()
+        {
+            var gameState = ServiceLocator.Get<GameState>();
+            if (gameState.PlayerState == null) return;
+
+            // Iterate through the spellbook pages and set any exhausted spells to null.
+            for (int i = 0; i < gameState.PlayerState.SpellbookPages.Count; i++)
+            {
+                var entry = gameState.PlayerState.SpellbookPages[i];
+                if (entry != null && entry.TimesUsed <= 0)
+                {
+                    gameState.PlayerState.SpellbookPages[i] = null;
+                }
             }
         }
 
@@ -569,6 +588,11 @@ namespace ProjectVagabond.Scenes
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
                 _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
             });
+        }
+
+        private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
+        {
+            _uiManager.ShowNarration($"{e.Target.Name} restored {e.AmountRestored} Mana!");
         }
 
         private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e)

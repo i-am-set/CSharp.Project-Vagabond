@@ -164,6 +164,15 @@ namespace ProjectVagabond.Battle.UI
             };
             _secondaryActionButtons.Add(stallButton);
 
+            var channelButton = new TextOverImageButton(Rectangle.Empty, "CHANNEL", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[3]);
+            channelButton.OnClick += () => {
+                if (BattleDataCache.Moves.TryGetValue("Channel", out var channelMove))
+                {
+                    SelectMove(channelMove, null);
+                }
+            };
+            _secondaryActionButtons.Add(channelButton);
+
 
             _backButton.Font = secondaryFont;
 
@@ -305,7 +314,17 @@ namespace ProjectVagabond.Battle.UI
             }
 
             var moveButton = new MoveButton(move, entry, displayPower, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, isNew, startVisible);
-            moveButton.OnClick += () => SelectMove(move, entry);
+            moveButton.OnClick += () =>
+            {
+                if (_player.Stats.CurrentMana < move.ManaCost)
+                {
+                    EventBus.Publish(new GameEvents.AlertPublished { Message = "NOT ENOUGH MANA" });
+                }
+                else
+                {
+                    SelectMove(move, entry);
+                }
+            };
             moveButton.OnRightClick += () => {
                 _tooltipMove = move;
                 SetState(MenuState.Tooltip);
@@ -789,7 +808,7 @@ namespace ProjectVagabond.Battle.UI
                 button.Draw(spriteBatch, font, gameTime, transform);
             }
 
-            // --- Secondary Actions (1x3 Row) ---
+            // --- Secondary Actions (1x4 Row) ---
             const int secButtonWidth = 60;
             const int secButtonHeight = 17;
             const int secButtonSpacing = 0;

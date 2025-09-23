@@ -126,7 +126,7 @@ namespace ProjectVagabond.Battle.UI
             DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, uiManager.TargetTypeForSelection, animationManager);
 
             // --- Draw Player HUD ---
-            DrawPlayerHud(spriteBatch, font, secondaryFont, player, gameTime, animationManager, uiManager.TargetTypeForSelection);
+            DrawPlayerHud(spriteBatch, font, secondaryFont, player, gameTime, animationManager, uiManager);
 
             // --- Draw UI Title ---
             DrawUITitle(spriteBatch, secondaryFont, gameTime, uiManager.SubMenuState);
@@ -176,7 +176,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, GameTime gameTime, BattleAnimationManager animationManager, TargetType? currentTargetType)
+        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, GameTime gameTime, BattleAnimationManager animationManager, BattleUIManager uiManager)
         {
             if (player == null) return;
 
@@ -191,13 +191,13 @@ namespace ProjectVagabond.Battle.UI
 
             spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7 + yOffset), Color.White);
 
-            DrawPlayerResourceBars(spriteBatch, player, new Vector2(0, yOffset));
+            DrawPlayerResourceBars(spriteBatch, player, new Vector2(0, yOffset), uiManager);
 
             DrawPlayerStatusIcons(spriteBatch, player, secondaryFont, playerHudY);
 
-            if (!player.IsDefeated && currentTargetType.HasValue)
+            if (!player.IsDefeated && uiManager.TargetTypeForSelection.HasValue)
             {
-                if (currentTargetType == TargetType.SingleAll)
+                if (uiManager.TargetTypeForSelection == TargetType.SingleAll)
                 {
                     _currentTargets.Add(new TargetInfo
                     {
@@ -208,7 +208,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawPlayerResourceBars(SpriteBatch spriteBatch, BattleCombatant player, Vector2 offset)
+        private void DrawPlayerResourceBars(SpriteBatch spriteBatch, BattleCombatant player, Vector2 offset, BattleUIManager uiManager)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             const int barWidth = 60;
@@ -230,6 +230,35 @@ namespace ProjectVagabond.Battle.UI
             var manaFgRect = new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), (int)(barWidth * manaPercent), 1);
             spriteBatch.DrawSnapped(pixel, manaBgRect, _global.Palette_DarkGray);
             spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue);
+
+            // Mana Cost Preview
+            var hoveredMove = uiManager.HoveredMove;
+            if (hoveredMove != null && hoveredMove.MoveType == MoveType.Spell && hoveredMove.ManaCost > 0)
+            {
+                float currentManaWidth = barWidth * manaPercent;
+
+                if (player.Stats.CurrentMana >= hoveredMove.ManaCost)
+                {
+                    // Draw yellow cost preview
+                    float costPercent = (float)hoveredMove.ManaCost / player.Stats.MaxMana;
+                    int costWidth = (int)(barWidth * costPercent);
+                    int previewX = (int)(startX + currentManaWidth - costWidth);
+                    var previewRect = new Rectangle(
+                        (int)(previewX + offset.X),
+                        (int)(manaBarY + offset.Y),
+                        costWidth,
+                        1
+                    );
+
+                    spriteBatch.DrawSnapped(pixel, previewRect, _global.Palette_Yellow);
+                }
+                else
+                {
+                    // Draw red "not enough" indicator over the remaining mana
+                    var previewRect = new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), (int)currentManaWidth, 1);
+                    spriteBatch.DrawSnapped(pixel, previewRect, _global.Palette_Red);
+                }
+            }
         }
 
         private void DrawUITitle(SpriteBatch spriteBatch, BitmapFont secondaryFont, GameTime gameTime, BattleSubMenuState subMenuState)

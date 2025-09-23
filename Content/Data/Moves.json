@@ -640,6 +640,25 @@
       "ApplyStatus": "Dodging,100,1"
     }
   },
+  {
+    "MoveID": "Attune",
+    "MoveName": "Attune",
+    "Description": "Focus your inner energy to restore all mana.",
+    "Power": 0,
+    "ManaCost": 0,
+    "MoveType": "Action",
+    "ImpactType": "Magical",
+    "OffensiveStat": "Intelligence",
+    "MakesContact": false,
+    "Target": "Self",
+    "Accuracy": -1,
+    "Priority": 0,
+    "Rarity": -1,
+    "OffensiveElementIDs": [],
+    "Effects": {
+      "RestoreMana": "100"
+    }
+  },
   // --- NEW SPECIAL EFFECT MOVES ---
   {
     "MoveID": "FurySwipes",

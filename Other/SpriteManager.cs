@@ -158,7 +158,7 @@ namespace ProjectVagabond
             catch { ElementIconsSpriteSheet = _textureFactory.CreateColoredTexture(45, 45, Color.Magenta); }
 
             try { ActionIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9"); }
-            catch { ActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(27, 9, Color.Magenta); }
+            catch { ActionIconsSpriteSheet = _textureFactory.CreateColoredTexture(36, 9, Color.Magenta); }
 
             try { ActionButtonUsesSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_uses_spritesheet"); }
             catch { ActionButtonUsesSpriteSheet = _textureFactory.CreateColoredTexture(471, 17, Color.Magenta); }
@@ -260,9 +260,9 @@ namespace ProjectVagabond
 
         private void InitializeActionIconsSourceRects()
         {
-            ActionIconSourceRects = new Rectangle[3];
+            ActionIconSourceRects = new Rectangle[4];
             const int iconSize = 9;
-            for (int i = 0; i < 3; i++)
+            for (int i = 0; i < 4; i++)
             {
                 ActionIconSourceRects[i] = new Rectangle(i * iconSize, 0, iconSize, iconSize);
             }

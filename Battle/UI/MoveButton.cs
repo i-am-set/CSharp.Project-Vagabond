@@ -4,6 +4,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -113,6 +114,9 @@ namespace ProjectVagabond.Battle.UI
             if (_animState == AnimationState.Hidden) return;
 
             var pixel = ServiceLocator.Get<Texture2D>();
+            var player = ServiceLocator.Get<BattleManager>().AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+            bool canAfford = player != null && player.Stats.CurrentMana >= Move.ManaCost;
+
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
@@ -147,7 +151,7 @@ namespace ProjectVagabond.Battle.UI
 
             // Draw background texture
             Color tintColor = Color.White;
-            if (!IsEnabled) tintColor = _global.ButtonDisableColor * 0.5f;
+            if (!canAfford) tintColor = _global.ButtonDisableColor * 0.5f;
             else if (_isPressed) tintColor = Color.Gray;
             else if (isActivated) tintColor = _global.ButtonHoverColor;
 
@@ -192,13 +196,13 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // --- Prepare for text drawing ---
-                var textColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
-                if (!IsEnabled)
+                var textColor = isActivated && canAfford ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
+                if (!canAfford)
                 {
                     textColor = _global.ButtonDisableColor;
                 }
-                var statsColor = isActivated ? _global.ButtonHoverColor * 0.9f : _global.Palette_White;
-                if (!IsEnabled)
+                var statsColor = isActivated && canAfford ? _global.ButtonHoverColor * 0.9f : _global.Palette_White;
+                if (!canAfford)
                 {
                     statsColor = _global.ButtonDisableColor;
                 }
@@ -317,6 +321,18 @@ namespace ProjectVagabond.Battle.UI
                         powerPosition.Y - 7 + yOffset
                     );
                     spriteBatch.DrawStringSnapped(_moveFont, targetIndicator, indicatorPosition, statsColor);
+                }
+
+                // --- Draw "NO MANA" overlay ---
+                if (isActivated && !canAfford)
+                {
+                    string noManaText = "NOT ENOUGH MANA";
+                    Vector2 noManaSize = _moveFont.MeasureString(noManaText);
+                    Vector2 noManaPos = new Vector2(
+                        animatedBounds.Center.X - noManaSize.X / 2f,
+                        animatedBounds.Center.Y - noManaSize.Y / 2f
+                    );
+                    spriteBatch.DrawStringOutlinedSnapped(_moveFont, noManaText, noManaPos, _global.Palette_Red, Color.Black);
                 }
             }
         }

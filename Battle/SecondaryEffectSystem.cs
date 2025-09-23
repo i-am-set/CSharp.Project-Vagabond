@@ -208,6 +208,9 @@ namespace ProjectVagabond.Battle
                 case "executeonkill":
                     if (target.IsDefeated) HandleExecuteOnKill(actor, allTargets, value);
                     break;
+                case "restoremana":
+                    HandleRestoreMana(actor, target, value);
+                    break;
             }
         }
 
@@ -398,6 +401,22 @@ namespace ProjectVagabond.Battle
                 if (_random.Next(1, 101) <= chance)
                 {
                     actor.AddStatusEffect(new StatusEffectInstance(type, duration));
+                }
+            }
+        }
+
+        private static void HandleRestoreMana(BattleCombatant actor, BattleCombatant target, string value)
+        {
+            if (EffectParser.TryParseFloat(value, out float percentage))
+            {
+                int amountToRestore = (int)(target.Stats.MaxMana * (percentage / 100f));
+                int manaBefore = target.Stats.CurrentMana;
+                target.Stats.CurrentMana = Math.Min(target.Stats.MaxMana, target.Stats.CurrentMana + amountToRestore);
+                int actualRestored = target.Stats.CurrentMana - manaBefore;
+
+                if (actualRestored > 0)
+                {
+                    EventBus.Publish(new GameEvents.CombatantManaRestored { Target = target, AmountRestored = actualRestored });
                 }
             }
         }

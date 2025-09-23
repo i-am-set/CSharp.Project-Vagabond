@@ -205,6 +205,15 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Published whenever a combatant's mana is restored.
+        /// </summary>
+        public struct CombatantManaRestored
+        {
+            public BattleCombatant Target { get; set; }
+            public int AmountRestored { get; set; }
+        }
+
+        /// <summary>
         /// Published when a combatant takes recoil damage from their own move.
         /// </summary>
         public struct CombatantRecoiled

@@ -105,6 +105,14 @@ namespace ProjectVagabond.UI
 
         public virtual void Update(MouseState currentMouseState)
         {
+            if (!IsEnabled)
+            {
+                IsHovered = false;
+                _isPressed = false;
+                _previousMouseState = currentMouseState;
+                return;
+            }
+
             Vector2 virtualMousePos = UseScreenCoordinates
                 ? currentMouseState.Position.ToVector2()
                 : Core.TransformMouse(currentMouseState.Position);

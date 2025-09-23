@@ -31,7 +31,7 @@
         "DefensiveElementIDs": [ 101 ],
         "StartingMoveIDs": [
           "VampiricBite",
-          "ToxicSting",
+          "Maelstrom",
           "Overload",
           "PurifyingLight"
         ],
