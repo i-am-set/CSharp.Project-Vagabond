@@ -164,14 +164,14 @@ namespace ProjectVagabond.Battle.UI
             };
             _secondaryActionButtons.Add(stallButton);
 
-            var channelButton = new TextOverImageButton(Rectangle.Empty, "CHANNEL", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[3]);
-            channelButton.OnClick += () => {
-                if (BattleDataCache.Moves.TryGetValue("Channel", out var channelMove))
+            var attuneButton = new TextOverImageButton(Rectangle.Empty, "ATTUNE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[3]);
+            attuneButton.OnClick += () => {
+                if (BattleDataCache.Moves.TryGetValue("Attune", out var attuneMove))
                 {
-                    SelectMove(channelMove, null);
+                    SelectMove(attuneMove, null);
                 }
             };
-            _secondaryActionButtons.Add(channelButton);
+            _secondaryActionButtons.Add(attuneButton);
 
 
             _backButton.Font = secondaryFont;
