@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using ProjectVagabond.Battle;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace ProjectVagabond.Battle
@@ -11,6 +12,8 @@ namespace ProjectVagabond.Battle
         public int Level { get; set; }
         public int MaxHP { get; set; }
         public int CurrentHP { get; set; }
+        public int MaxMana { get; set; }
+        public int CurrentMana { get; set; }
         public int Strength { get; set; }
         public int Intelligence { get; set; }
         public int Tenacity { get; set; }

@@ -191,10 +191,7 @@ namespace ProjectVagabond.Battle.UI
 
             spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7 + yOffset), Color.White);
 
-            string hpText = $"HP: {((int)Math.Round(player.VisualHP))}/{player.Stats.MaxHP}";
-            Vector2 hpTextSize = secondaryFont.MeasureString(hpText);
-            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
-            DrawHpLine(spriteBatch, secondaryFont, player, new Vector2(hpStartX, playerHudY + yOffset), 1.0f, animationManager);
+            DrawPlayerResourceBars(spriteBatch, player, new Vector2(0, yOffset));
 
             DrawPlayerStatusIcons(spriteBatch, player, secondaryFont, playerHudY);
 
@@ -209,6 +206,30 @@ namespace ProjectVagabond.Battle.UI
                     });
                 }
             }
+        }
+
+        private void DrawPlayerResourceBars(SpriteBatch spriteBatch, BattleCombatant player, Vector2 offset)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            const int barWidth = 60;
+            const int barPaddingX = 10;
+            const int hpBarY = DIVIDER_Y - 10;
+            const int manaBarY = hpBarY + 3;
+            float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth;
+
+            // HP Bar
+            float hpPercent = player.Stats.MaxHP > 0 ? Math.Clamp(player.VisualHP / player.Stats.MaxHP, 0f, 1f) : 0f;
+            var hpBgRect = new Rectangle((int)(startX + offset.X), (int)(hpBarY + offset.Y), barWidth, 2);
+            var hpFgRect = new Rectangle((int)(startX + offset.X), (int)(hpBarY + offset.Y), (int)(barWidth * hpPercent), 2);
+            spriteBatch.DrawSnapped(pixel, hpBgRect, _global.Palette_DarkGray);
+            spriteBatch.DrawSnapped(pixel, hpFgRect, _global.Palette_LightGreen);
+
+            // Mana Bar
+            float manaPercent = player.Stats.MaxMana > 0 ? Math.Clamp((float)player.Stats.CurrentMana / player.Stats.MaxMana, 0f, 1f) : 0f;
+            var manaBgRect = new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), barWidth, 1);
+            var manaFgRect = new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), (int)(barWidth * manaPercent), 1);
+            spriteBatch.DrawSnapped(pixel, manaBgRect, _global.Palette_DarkGray);
+            spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue);
         }
 
         private void DrawUITitle(SpriteBatch spriteBatch, BitmapFont secondaryFont, GameTime gameTime, BattleSubMenuState subMenuState)
@@ -272,8 +293,9 @@ namespace ProjectVagabond.Battle.UI
                         // Use right-pointing arrow, same as turn indicator
                         var arrowRect = arrowRects[4];
 
-                        // Use horizontal sway instead of vertical bob
-                        float swayOffset = (MathF.Sin(sharedBobbingTimer * 4f) > 0) ? 1f : 0f;
+                        // Use horizontal sway instead of vertical bob.
+                        // A smooth sine wave provides the sway effect.
+                        float swayOffset = MathF.Round(MathF.Sin(sharedBobbingTimer * 4f) * 1.5f);
 
                         // Positioning logic from DrawTurnIndicator
                         const int playerHudY = DIVIDER_Y - 10;
@@ -412,23 +434,25 @@ namespace ProjectVagabond.Battle.UI
             var arrowRects = _spriteManager.ArrowIconSourceRects;
             if (arrowSheet == null || arrowRects == null) return;
 
-            float bobOffset = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) > 0) ? 1f : 0f;
-
             if (currentActor.IsPlayerControlled)
             {
                 var arrowRect = arrowRects[4]; // Right arrow
+                // A smooth sine wave provides the sway effect.
+                float swayOffset = MathF.Round(MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) * 1.5f);
+
                 const int playerHudY = DIVIDER_Y - 10;
                 const int playerHudPaddingX = 10;
                 Vector2 nameSize = font.MeasureString(currentActor.Name);
                 Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7);
                 var arrowPos = new Vector2(
-                    namePos.X - arrowRect.Width - 4 + bobOffset,
+                    namePos.X - arrowRect.Width - 4 + swayOffset,
                     namePos.Y + (nameSize.Y - arrowRect.Height) / 2 - 1
                 );
                 spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
             }
             else // Enemy turn
             {
+                float bobOffset = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) > 0) ? 1f : 0f;
                 var arrowRect = arrowRects[6]; // Down arrow
                 var enemies = allCombatants.Where(c => !c.IsPlayerControlled).ToList();
                 int enemyIndex = enemies.FindIndex(e => e.CombatantID == currentActor.CombatantID);
@@ -642,9 +666,9 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = _core.SecondaryFont;
             const int playerHudY = DIVIDER_Y - 10;
             const int playerHudPaddingX = 10;
-            string hpText = $"HP: {((int)Math.Round(player.VisualHP))}/{player.Stats.MaxHP}";
-            Vector2 hpTextSize = secondaryFont.MeasureString(hpText);
-            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
+
+            const int barWidth = 60;
+            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth;
 
             const int iconSize = 5;
             const int iconPadding = 2;
@@ -680,20 +704,21 @@ namespace ProjectVagabond.Battle.UI
             return new Rectangle((int)left - padding, (int)top - padding, (int)width + padding * 2, (int)height + padding * 2);
         }
 
-        private Rectangle GetPlayerInteractionBounds(BitmapFont nameFont, BitmapFont statsFont, BattleCombatant player)
+        private Rectangle GetPlayerInteractionBounds(BitmapFont nameFont, BitmapFont secondaryFont, BattleCombatant player)
         {
             if (player == null) return Rectangle.Empty;
             const int playerHudY = DIVIDER_Y - 10;
             const int playerHudPaddingX = 10;
             Vector2 nameSize = nameFont.MeasureString(player.Name);
             Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - nameFont.LineHeight + 7);
-            string hpText = $"HP: {((int)Math.Round(player.VisualHP))}/{player.Stats.MaxHP}";
-            Vector2 hpTextSize = statsFont.MeasureString(hpText);
-            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
+
+            const int barWidth = 60;
+            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth;
+
             int left = (int)namePos.X;
-            int right = (int)(hpStartX + hpTextSize.X);
+            int right = (int)(hpStartX + barWidth);
             int top = (int)Math.Min(namePos.Y, playerHudY);
-            int bottom = (int)Math.Max(namePos.Y + nameSize.Y, playerHudY + hpTextSize.Y);
+            int bottom = (int)Math.Max(namePos.Y + nameSize.Y, playerHudY + 3); // 3 is height of bars
             const int padding = 2;
             return new Rectangle(left - padding, top - padding, (right - left) + padding * 2, (bottom - top) + padding * 2);
         }
@@ -706,11 +731,10 @@ namespace ProjectVagabond.Battle.UI
                 const int playerHudY = DIVIDER_Y - 10;
                 const int playerHudPaddingX = 10;
 
-                string hpText = $"HP: {((int)Math.Round(combatant.VisualHP))}/{combatant.Stats.MaxHP}";
-                Vector2 hpTextSize = secondaryFont.MeasureString(hpText);
-                float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - hpTextSize.X;
+                const int barWidth = 60;
+                float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth;
 
-                float centerX = hpStartX + hpTextSize.X / 2f;
+                float centerX = hpStartX + barWidth / 2f;
                 return new Vector2(centerX, playerHudY);
             }
             else

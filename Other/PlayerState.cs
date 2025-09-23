@@ -12,6 +12,7 @@ namespace ProjectVagabond
         // Persistent Stats
         public int Level { get; set; }
         public int MaxHP { get; set; }
+        public int MaxMana { get; set; } = 100;
         public int Strength { get; set; }
         public int Intelligence { get; set; }
         public int Tenacity { get; set; }

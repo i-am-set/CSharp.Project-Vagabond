@@ -11,6 +11,7 @@ namespace ProjectVagabond.Battle
         public int Level { get; set; }
         public int MinHP { get; set; }
         public int MaxHP { get; set; }
+        public int MaxMana { get; set; } = 100;
         public int MinStrength { get; set; }
         public int MaxStrength { get; set; }
         public int MinIntelligence { get; set; }

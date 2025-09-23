@@ -58,6 +58,21 @@ namespace ProjectVagabond.Battle
         }
 
         /// <summary>
+        /// Discards all cards currently in the hand into the discard pile.
+        /// </summary>
+        public void DiscardHand()
+        {
+            for (int i = 0; i < Hand.Length; i++)
+            {
+                if (Hand[i] != null)
+                {
+                    _discardPile.Add(Hand[i]);
+                    Hand[i] = null;
+                }
+            }
+        }
+
+        /// <summary>
         /// Fills any empty slots in the hand at the start of a turn.
         /// </summary>
         public void DrawToFillHand()

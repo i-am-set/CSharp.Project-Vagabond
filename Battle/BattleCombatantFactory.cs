@@ -48,6 +48,8 @@ namespace ProjectVagabond.Battle
                     Level = statsComponent.Level,
                     MaxHP = statsComponent.MaxHP,
                     CurrentHP = statsComponent.CurrentHP, // Use current health from component
+                    MaxMana = statsComponent.MaxMana,
+                    CurrentMana = statsComponent.CurrentMana, // Use current mana from component
                     Strength = statsComponent.Strength,
                     Intelligence = statsComponent.Intelligence,
                     Tenacity = statsComponent.Tenacity,

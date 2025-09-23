@@ -36,6 +36,7 @@ namespace ProjectVagabond.Battle
         private BattlePhase _currentPhase;
         public int RoundNumber { get; private set; }
         private bool _playerActionSubmitted;
+        private bool _playerUsedSpellThisTurn = false;
         private static readonly Random _random = new Random();
 
         // State for multi-hit moves
@@ -94,6 +95,12 @@ namespace ProjectVagabond.Battle
         public void SetPlayerAction(QueuedAction action)
         {
             if (_currentPhase != BattlePhase.ActionSelection || _playerActionSubmitted) return;
+
+            // Track if a spell was used to trigger hand cycling
+            if (action.SpellbookEntry != null)
+            {
+                _playerUsedSpellThisTurn = true;
+            }
 
             // Handle pre-action effects that might prevent the action from being queued normally.
             if (HandlePreActionEffects(action))
@@ -213,9 +220,14 @@ namespace ProjectVagabond.Battle
             {
                 if (!player.IsDefeated)
                 {
+                    if (_playerUsedSpellThisTurn)
+                    {
+                        player.DeckManager?.DiscardHand();
+                    }
                     player.DeckManager?.DrawToFillHand();
                 }
             }
+            _playerUsedSpellThisTurn = false; // Reset flag after handling
 
             _currentPhase = BattlePhase.ActionSelection;
             _playerActionSubmitted = IsPlayerTurnSkipped;
@@ -372,14 +384,21 @@ namespace ProjectVagabond.Battle
 
         private void ProcessMoveAction(QueuedAction action)
         {
-            if (action.Actor.IsPlayerControlled)
+            // Check for sufficient mana before proceeding
+            if (action.Actor.Stats.CurrentMana < action.ChosenMove.ManaCost)
             {
-                // Find the specific SpellbookEntry in the hand that corresponds to this move.
-                var spellbookEntry = action.Actor.Hand.FirstOrDefault(e => e != null && e.MoveID == action.ChosenMove.MoveID);
-                if (spellbookEntry != null)
-                {
-                    action.Actor.DeckManager?.CastMove(spellbookEntry);
-                }
+                EventBus.Publish(new GameEvents.ActionFailed { Actor = action.Actor, Reason = "not enough mana" });
+                CanAdvance = false;
+                _currentPhase = BattlePhase.CheckForDefeat; // Skip to the next phase
+                return;
+            }
+
+            // Consume mana
+            action.Actor.Stats.CurrentMana -= action.ChosenMove.ManaCost;
+
+            if (action.Actor.IsPlayerControlled && action.SpellbookEntry != null)
+            {
+                action.Actor.DeckManager?.CastMove(action.SpellbookEntry);
             }
 
             if (action.ChosenMove.Effects.TryGetValue("MultiHit", out var multiHitValue) && EffectParser.TryParseIntArray(multiHitValue, out int[] hitParams) && hitParams.Length == 2)

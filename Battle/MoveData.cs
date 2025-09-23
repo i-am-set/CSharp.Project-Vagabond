@@ -30,6 +30,11 @@ namespace ProjectVagabond.Battle
         public int Power { get; set; }
 
         /// <summary>
+        /// The amount of mana required to use this move. Defaults to 0 if not specified.
+        /// </summary>
+        public int ManaCost { get; set; } = 0;
+
+        /// <summary>
         /// The fundamental type of the move, distinguishing magical spells from physical actions.
         /// </summary>
         public MoveType MoveType { get; set; }

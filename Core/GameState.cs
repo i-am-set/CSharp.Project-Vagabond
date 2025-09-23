@@ -94,6 +94,7 @@ namespace ProjectVagabond
             {
                 PlayerState.Level = 1;
                 PlayerState.MaxHP = baseStats.MaxHP;
+                PlayerState.MaxMana = baseStats.MaxMana;
                 PlayerState.Strength = baseStats.Strength;
                 PlayerState.Intelligence = baseStats.Intelligence;
                 PlayerState.Tenacity = baseStats.Tenacity;
@@ -119,6 +120,8 @@ namespace ProjectVagabond
                 Level = PlayerState.Level,
                 MaxHP = PlayerState.MaxHP,
                 CurrentHP = PlayerState.MaxHP, // Start with full health
+                MaxMana = PlayerState.MaxMana,
+                CurrentMana = PlayerState.MaxMana, // Start with full mana
                 Strength = PlayerState.Strength,
                 Intelligence = PlayerState.Intelligence,
                 Tenacity = PlayerState.Tenacity,

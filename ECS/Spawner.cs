@@ -100,6 +100,8 @@ namespace ProjectVagabond
             liveStats.Level = profile.Level;
             liveStats.MaxHP = _random.Next(profile.MinHP, profile.MaxHP + 1);
             liveStats.CurrentHP = liveStats.MaxHP;
+            liveStats.MaxMana = profile.MaxMana;
+            liveStats.CurrentMana = profile.MaxMana;
             liveStats.Strength = _random.Next(profile.MinStrength, profile.MaxStrength + 1);
             liveStats.Intelligence = _random.Next(profile.MinIntelligence, profile.MaxIntelligence + 1);
             liveStats.Tenacity = _random.Next(profile.MinTenacity, profile.MaxTenacity + 1);

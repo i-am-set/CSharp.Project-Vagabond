@@ -9,6 +9,7 @@ namespace ProjectVagabond.Battle
     public class PlayerBaseStatsComponent : IComponent, ICloneableComponent
     {
         public int MaxHP { get; set; }
+        public int MaxMana { get; set; } = 100;
         public int Strength { get; set; }
         public int Intelligence { get; set; }
         public int Tenacity { get; set; }
