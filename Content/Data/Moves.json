@@ -608,7 +608,7 @@
   {
     "MoveID": "Stall",
     "MoveName": "Stall",
-    "Description": "The user takes a moment to assess the battlefield, preparing for their next move. Does nothing.",
+    "Description": "Does nothing for 1 turn.",
     "Power": 0,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -624,7 +624,7 @@
   {
     "MoveID": "Dodge",
     "MoveName": "Dodge",
-    "Description": "The user focuses on evasion, halving the accuracy of incoming attacks for one turn.",
+    "Description": "The user focuses on evasion, dodging incoming dodgable attacks for 1 turn.",
     "Power": 0,
     "ManaCost": 0,
     "MoveType": "Action",
