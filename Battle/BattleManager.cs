@@ -622,27 +622,39 @@ namespace ProjectVagabond.Battle
 
         private void HandleCheckForDefeat()
         {
-            var dyingCombatant = _allCombatants.FirstOrDefault(c => c.IsDying);
-            if (dyingCombatant != null)
+            // First, process any combatants that were dying and whose animations have now finished.
+            // We know the animation is finished because CanAdvance is true again.
+            var finishedDying = _allCombatants.Where(c => c.IsDying).ToList();
+            foreach (var combatant in finishedDying)
             {
-                dyingCombatant.IsDying = false;
-                dyingCombatant.IsRemovalProcessed = true;
-                if (_playerCombatants.All(c => c.IsDefeated))
-                {
-                    _currentPhase = BattlePhase.BattleOver;
-                    return;
-                }
+                combatant.IsDying = false;
+                combatant.IsRemovalProcessed = true;
             }
 
+            // Now, check for any newly defeated combatants that haven't started their death sequence.
             var newlyDefeated = _allCombatants.FirstOrDefault(c => c.IsDefeated && !c.IsDying && !c.IsRemovalProcessed);
             if (newlyDefeated != null)
             {
                 newlyDefeated.IsDying = true;
                 EventBus.Publish(new GameEvents.CombatantDefeated { DefeatedCombatant = newlyDefeated });
-                CanAdvance = false;
+                CanAdvance = false; // Halt the battle manager until the animation is over.
+                return; // IMPORTANT: Exit here to let the animation play before checking for win/loss.
+            }
+
+            // If we reach here, no death animations are pending. Now it's safe to check for win/loss.
+            if (_playerCombatants.All(c => c.IsDefeated))
+            {
+                _currentPhase = BattlePhase.BattleOver;
                 return;
             }
 
+            if (_enemyCombatants.All(c => c.IsDefeated))
+            {
+                _currentPhase = BattlePhase.BattleOver;
+                return;
+            }
+
+            // If no one won or lost, and no animations are playing, continue the turn.
             if (_actionQueue.Any() || _currentMultiHitAction != null || _actionToExecute != null)
             {
                 _currentPhase = BattlePhase.ActionResolution;
