@@ -1,7 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -717,7 +716,9 @@ namespace ProjectVagabond.Battle.UI
                             int shrinkingWidth = (int)(previewWidth * (1.0f - easedProgress));
                             var shrinkingRect = new Rectangle(previewRect.X, previewRect.Y, shrinkingWidth, previewRect.Height);
 
-                            Color shrinkColor = _global.Palette_White;
+                            Color shrinkColor = (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
+                                ? _global.Palette_Red
+                                : _global.Palette_White;
 
                             spriteBatch.DrawSnapped(pixel, shrinkingRect, shrinkColor);
                             break;
