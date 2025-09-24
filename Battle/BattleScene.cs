@@ -401,7 +401,7 @@ namespace ProjectVagabond.Scenes
             Vector2 roundTextPosition = new Vector2(5, 5);
             spriteBatch.DrawStringSnapped(font, roundText, roundTextPosition, ServiceLocator.Get<Global>().Palette_DarkGray);
 
-            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, _currentActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedHoverBobbingTimer);
+            _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, _currentActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer);
             _uiManager.Draw(spriteBatch, font, gameTime, transform);
             _animationManager.DrawDamageIndicators(spriteBatch, secondaryFont);
         }

@@ -700,15 +700,9 @@ namespace ProjectVagabond.Battle.UI
                     switch (anim.CurrentLossPhase)
                     {
                         case ResourceBarAnimationState.LossPhase.Preview:
-                            Color previewColor;
-                            if (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
-                            {
-                                previewColor = _global.Palette_Red;
-                            }
-                            else // Mana
-                            {
-                                previewColor = Color.White;
-                            }
+                            Color previewColor = (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
+                                ? _global.Palette_Red
+                                : Color.White;
                             spriteBatch.DrawSnapped(pixel, previewRect, previewColor);
                             break;
                         case ResourceBarAnimationState.LossPhase.FlashBlack:
@@ -723,9 +717,7 @@ namespace ProjectVagabond.Battle.UI
                             int shrinkingWidth = (int)(previewWidth * (1.0f - easedProgress));
                             var shrinkingRect = new Rectangle(previewRect.X, previewRect.Y, shrinkingWidth, previewRect.Height);
 
-                            Color shrinkColor = (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
-                                ? _global.Palette_Red
-                                : Color.White;
+                            Color shrinkColor = _global.Palette_White;
 
                             spriteBatch.DrawSnapped(pixel, shrinkingRect, shrinkColor);
                             break;
@@ -885,7 +877,7 @@ namespace ProjectVagabond.Battle.UI
                     pulseTargetColor = _global.Palette_Gray;
                 }
 
-                Color bgColor = Color.Lerp(_global.TerminalBg, pulseTargetColor, pulse); 
+                Color bgColor = Color.Lerp(_global.TerminalBg, pulseTargetColor, pulse);
                 Color outlineColor = Color.Black;
                 Color textColor = Color.White;
 

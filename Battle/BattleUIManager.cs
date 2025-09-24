@@ -47,7 +47,7 @@ namespace ProjectVagabond.Battle.UI
         private float _itemTargetingTextAnimTimer = 0f;
         private readonly Queue<Action> _narrationQueue = new Queue<Action>();
         public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
-        public float SharedHoverBobbingTimer => _actionMenu.SharedSwayTimer;
+        public float SharedPulseTimer { get; private set; } = 0f;
 
         public bool IsBusy => _battleNarrator.IsBusy || _narrationQueue.Any();
 
@@ -134,6 +134,7 @@ namespace ProjectVagabond.Battle.UI
 
         public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState)
         {
+            SharedPulseTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
             _battleNarrator.Update(gameTime);
             UpdateHoverHighlights(gameTime);
             UpdateControlPrompt(gameTime);

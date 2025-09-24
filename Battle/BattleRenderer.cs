@@ -132,7 +132,7 @@ namespace ProjectVagabond.Battle.UI
             DrawUITitle(spriteBatch, secondaryFont, gameTime, uiManager.SubMenuState);
 
             // --- Draw Highlights & Indicators ---
-            DrawHoverHighlights(spriteBatch, font, secondaryFont, allCombatants, uiManager.HoverHighlightState, sharedBobbingTimer);
+            DrawHoverHighlights(spriteBatch, font, secondaryFont, allCombatants, uiManager.HoverHighlightState, uiManager.SharedPulseTimer);
             DrawTurnIndicator(spriteBatch, font, gameTime, currentActor, allCombatants);
             DrawTargetingUI(spriteBatch, font, gameTime, uiManager, inputHandler);
 
@@ -214,7 +214,7 @@ namespace ProjectVagabond.Battle.UI
             var pixel = ServiceLocator.Get<Texture2D>();
             const int barWidth = 60;
             const int barPaddingX = 10;
-            const int hpBarY = DIVIDER_Y - 9; // Moved up 2 pixels
+            const int hpBarY = DIVIDER_Y - 9;
             const int manaBarY = hpBarY + 3; // Adjusted for 2px HP bar + 1px gap
             float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth;
 
@@ -240,6 +240,11 @@ namespace ProjectVagabond.Battle.UI
 
                 if (player.Stats.CurrentMana >= hoveredMove.ManaCost)
                 {
+                    // Animate color pulse
+                    const float PULSE_SPEED = 4f;
+                    float pulse = (MathF.Sin(uiManager.SharedPulseTimer * PULSE_SPEED) + 1f) / 2f; // Oscillates 0..1
+                    Color pulseColor = Color.Lerp(_global.Palette_Yellow, _global.Palette_BrightWhite, pulse);
+
                     // Draw yellow cost preview
                     float costPercent = (float)hoveredMove.ManaCost / player.Stats.MaxMana;
                     int costWidth = (int)(barWidth * costPercent);
@@ -251,7 +256,7 @@ namespace ProjectVagabond.Battle.UI
                         2
                     );
 
-                    spriteBatch.DrawSnapped(pixel, previewRect, _global.Palette_Yellow);
+                    spriteBatch.DrawSnapped(pixel, previewRect, pulseColor);
                 }
                 else
                 {
