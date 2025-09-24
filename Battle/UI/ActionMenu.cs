@@ -42,6 +42,7 @@ namespace ProjectVagabond.Battle.UI
         private bool _useSimpleTooltip;
         public MoveData HoveredMove { get; private set; }
         private SpellbookEntry _hoveredSpellbookEntry;
+        public Button? HoveredButton { get; private set; }
 
         private float _targetingTextAnimTimer = 0f;
         private bool _buttonsInitialized = false;
@@ -529,6 +530,8 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
+            HoveredButton = null; // Reset at the start of each frame
+
             switch (_currentState)
             {
                 case MenuState.Main:
@@ -539,6 +542,7 @@ namespace ProjectVagabond.Battle.UI
                         if (button.IsHovered)
                         {
                             isAnyActionHovered = true;
+                            HoveredButton = button;
                         }
                     }
 
@@ -562,17 +566,21 @@ namespace ProjectVagabond.Battle.UI
                         {
                             HoveredMove = button.Move;
                             _hoveredSpellbookEntry = button.Entry;
+                            HoveredButton = button;
                         }
                     }
                     foreach (var button in _secondaryActionButtons)
                     {
                         button.Update(currentMouseState);
+                        if (button.IsHovered) HoveredButton = button;
                     }
                     _backButton.Update(currentMouseState);
+                    if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
                 case MenuState.Targeting:
                     _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                     _backButton.Update(currentMouseState);
+                    if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
                 case MenuState.Tooltip:
                     UpdateTooltipScrolling(gameTime);
@@ -587,6 +595,7 @@ namespace ProjectVagabond.Battle.UI
                         }
                     }
                     _backButton.Update(currentMouseState);
+                    if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
             }
 
@@ -741,11 +750,11 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Draw the back button
-            int backButtonY = tooltipBounds.Bottom + 4;
+            int backButtonY = tooltipBounds.Bottom + 3;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
+                (Global.VIRTUAL_WIDTH - backWidth) / 2,
                 backButtonY,
                 backWidth,
                 13

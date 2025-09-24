@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -721,7 +722,12 @@ namespace ProjectVagabond.Battle.UI
                             float easedProgress = Easing.EaseOutCubic(progress);
                             int shrinkingWidth = (int)(previewWidth * (1.0f - easedProgress));
                             var shrinkingRect = new Rectangle(previewRect.X, previewRect.Y, shrinkingWidth, previewRect.Height);
-                            spriteBatch.DrawSnapped(pixel, shrinkingRect, _global.Palette_Red);
+
+                            Color shrinkColor = (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
+                                ? _global.Palette_Red
+                                : Color.White;
+
+                            spriteBatch.DrawSnapped(pixel, shrinkingRect, shrinkColor);
                             break;
                     }
                 }

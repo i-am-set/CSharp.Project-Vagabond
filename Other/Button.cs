@@ -48,6 +48,9 @@ namespace ProjectVagabond.UI
         public event Action? OnClick;
         public event Action? OnRightClick;
 
+        public bool HasLeftClickAction => OnClick != null;
+        public bool HasRightClickAction => OnRightClick != null;
+
         protected MouseState _previousMouseState;
         protected readonly HoverAnimator _hoverAnimator = new HoverAnimator();
         protected bool _isPressed = false;

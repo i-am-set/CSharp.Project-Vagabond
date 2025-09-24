@@ -39,6 +39,7 @@ namespace ProjectVagabond.Battle.UI
         private ConsumableItemData _itemForTooltip;
         private ConsumableItemData _itemForConfirmation;
         private List<BattleCombatant> _allCombatants;
+        public Button? HoveredButton { get; private set; }
 
         public ItemMenu()
         {
@@ -194,6 +195,8 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
+            HoveredButton = null; // Reset at the start of each frame
+
             if (_sortContextMenu.IsOpen)
             {
                 _sortContextMenu.Update(currentMouseState, _previousMouseState, virtualMousePos, secondaryFont);
@@ -240,6 +243,7 @@ namespace ProjectVagabond.Battle.UI
                     if (i >= startIndex && i < endIndex)
                     {
                         button.Update(currentMouseState);
+                        if (button.IsHovered) HoveredButton = button;
                     }
                     else
                     {
@@ -249,7 +253,10 @@ namespace ProjectVagabond.Battle.UI
             }
 
             _backButton.Update(currentMouseState);
+            if (_backButton.IsHovered) HoveredButton = _backButton;
+
             _sortButton.Update(currentMouseState);
+            if (_sortButton.IsHovered) HoveredButton = _sortButton;
         }
 
         private void UpdateTooltip(MouseState currentMouseState)
@@ -265,12 +272,16 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
             _backButton.Update(currentMouseState);
+            if (_backButton.IsHovered) HoveredButton = _backButton;
         }
 
         private void UpdateConfirm(MouseState currentMouseState)
         {
             _yesButton.Update(currentMouseState);
+            if (_yesButton.IsHovered) HoveredButton = _yesButton;
+
             _noButton.Update(currentMouseState);
+            if (_noButton.IsHovered) HoveredButton = _noButton;
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)

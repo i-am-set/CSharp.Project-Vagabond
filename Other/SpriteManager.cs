@@ -70,6 +70,7 @@ namespace ProjectVagabond
         public Texture2D MousePromptLeftClick { get; private set; }
         public Texture2D MousePromptRightClick { get; private set; }
         public Texture2D MousePromptMiddleClick { get; private set; }
+        public Texture2D MousePromptDisabled { get; private set; }
 
         public Texture2D LogoSprite => _logoSprite;
         public Texture2D WaterSprite => _waterSprite;
@@ -181,6 +182,9 @@ namespace ProjectVagabond
 
             try { MousePromptMiddleClick = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_middle_click"); }
             catch { MousePromptMiddleClick = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
+
+            try { MousePromptDisabled = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_disabled"); }
+            catch { MousePromptDisabled = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
 
 
             InitializeArrowSourceRects();

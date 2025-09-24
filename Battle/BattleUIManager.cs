@@ -51,6 +51,14 @@ namespace ProjectVagabond.Battle.UI
 
         public bool IsBusy => _battleNarrator.IsBusy || _narrationQueue.Any();
 
+        // Control Prompt State
+        private bool _isPromptVisible;
+        private readonly List<Texture2D> _promptTextures = new List<Texture2D>();
+        private int _promptTextureIndex;
+        private float _promptCycleTimer;
+        private const float PROMPT_CYCLE_INTERVAL = 1.0f;
+        private Button? _lastHoveredButton;
+
         public BattleUIManager()
         {
             var narratorBounds = new Rectangle(0, 105, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - 105);
@@ -128,6 +136,7 @@ namespace ProjectVagabond.Battle.UI
         {
             _battleNarrator.Update(gameTime);
             UpdateHoverHighlights(gameTime);
+            UpdateControlPrompt(gameTime);
 
             if (SubMenuState == BattleSubMenuState.ActionRoot || SubMenuState == BattleSubMenuState.ActionMoves)
             {
@@ -179,6 +188,93 @@ namespace ProjectVagabond.Battle.UI
             }
 
             _battleNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
+
+            DrawControlPrompt(spriteBatch);
+        }
+
+        private void UpdateControlPrompt(GameTime gameTime)
+        {
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+            Button? currentHoveredButton = null;
+
+            if (SubMenuState == BattleSubMenuState.ActionRoot || SubMenuState == BattleSubMenuState.ActionMoves)
+            {
+                currentHoveredButton = _actionMenu.HoveredButton;
+            }
+            else if (SubMenuState == BattleSubMenuState.Item)
+            {
+                currentHoveredButton = _itemMenu.HoveredButton;
+            }
+
+            _isPromptVisible = true; // The prompt is now always visible.
+
+            if (currentHoveredButton == null)
+            {
+                if (_lastHoveredButton != null) // Only update if the state changes from hovered to not-hovered
+                {
+                    _promptTextures.Clear();
+                    _promptTextures.Add(spriteManager.MousePromptDisabled);
+                    _promptTextureIndex = 0;
+                    _lastHoveredButton = null;
+                }
+                else if (!_promptTextures.Any()) // Initial setup for disabled state
+                {
+                    _promptTextures.Add(spriteManager.MousePromptDisabled);
+                }
+                return;
+            }
+
+            // Check if the hovered button has changed
+            if (currentHoveredButton != _lastHoveredButton)
+            {
+                _lastHoveredButton = currentHoveredButton;
+                _promptTextures.Clear();
+                _promptCycleTimer = 0f;
+                _promptTextureIndex = 0;
+
+                // Build the list of available actions, excluding the blank sprite
+                if (currentHoveredButton.HasLeftClickAction)
+                {
+                    _promptTextures.Add(spriteManager.MousePromptLeftClick);
+                }
+                if (currentHoveredButton.HasRightClickAction)
+                {
+                    _promptTextures.Add(spriteManager.MousePromptRightClick);
+                }
+            }
+
+            // Update the animation cycle only if there are multiple actions
+            if (_promptTextures.Count > 1)
+            {
+                _promptCycleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_promptCycleTimer >= PROMPT_CYCLE_INTERVAL)
+                {
+                    _promptCycleTimer -= PROMPT_CYCLE_INTERVAL;
+                    _promptTextureIndex = (_promptTextureIndex + 1) % _promptTextures.Count;
+                }
+            }
+            else
+            {
+                // If there's only one (or zero) actions, ensure we're showing the first one and not cycling.
+                _promptTextureIndex = 0;
+            }
+        }
+
+        private void DrawControlPrompt(SpriteBatch spriteBatch)
+        {
+            if (!_isPromptVisible || !_promptTextures.Any())
+            {
+                return;
+            }
+
+            var textureToDraw = _promptTextures[_promptTextureIndex];
+            const int padding = 2;
+            var position = new Vector2(
+                Global.VIRTUAL_WIDTH - textureToDraw.Width - padding,
+                Global.VIRTUAL_HEIGHT - textureToDraw.Height - padding
+            );
+
+            spriteBatch.DrawSnapped(textureToDraw, position, Color.White);
         }
 
         private void DrawItemTargetingOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)

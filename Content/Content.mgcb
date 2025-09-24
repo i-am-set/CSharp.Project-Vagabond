@@ -782,6 +782,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/KeyPrompts/mouse/ui_mouse_blank.png;Sprites/UI/KeyPrompts/mouse/ui_mouse_blank
 
+#begin Sprites/UI/KeyPrompts/mouse/ui_mouse_disabled.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/KeyPrompts/mouse/ui_mouse_disabled.png;Sprites/UI/KeyPrompts/mouse/ui_mouse_disabled
+
 #begin Sprites/UI/KeyPrompts/mouse/ui_mouse_left_click.png
 /importer:TextureImporter
 /processor:TextureProcessor
