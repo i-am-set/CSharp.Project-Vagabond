@@ -1,6 +1,11 @@
 ﻿#nullable enable
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -137,6 +142,24 @@ namespace ProjectVagabond
         {
             public string MoveID { get; set; }
             public MoveSetChangeType ChangeType { get; set; }
+        }
+
+        /// <summary>
+        /// Defines the type of change for a player's ability set.
+        /// </summary>
+        public enum AbilitySetChangeType
+        {
+            Learn,
+            Forget
+        }
+
+        /// <summary>
+        /// Published to request a change to the player's set of passive abilities.
+        /// </summary>
+        public struct PlayerAbilitySetChanged
+        {
+            public string AbilityID { get; set; }
+            public AbilitySetChangeType ChangeType { get; set; }
         }
 
         /// <summary>

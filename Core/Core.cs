@@ -69,6 +69,7 @@ namespace ProjectVagabond
         private GameState _gameState;
         private ActionExecutionSystem _actionExecutionSystem;
         private MoveLearningSystem _moveLearningSystem;
+        private AbilityLearningSystem _abilityLearningSystem;
         private SpriteManager _spriteManager;
         private DiceRollingSystem _diceRollingSystem;
         private BackgroundManager _backgroundManager;
@@ -88,6 +89,7 @@ namespace ProjectVagabond
         // Custom Resolution Save State
         private float _customResolutionSaveTimer = 0f;
         private bool _isCustomResolutionSavePending = false;
+        private readonly Random _random = new Random();
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
@@ -195,6 +197,9 @@ namespace ProjectVagabond
             _moveLearningSystem = new MoveLearningSystem();
             ServiceLocator.Register<MoveLearningSystem>(_moveLearningSystem);
 
+            _abilityLearningSystem = new AbilityLearningSystem();
+            ServiceLocator.Register<AbilityLearningSystem>(_abilityLearningSystem);
+
             var terminalRenderer = new TerminalRenderer();
             ServiceLocator.Register<TerminalRenderer>(terminalRenderer);
 
@@ -228,11 +233,13 @@ namespace ProjectVagabond
 
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
             _systemManager.RegisterSystem(_moveLearningSystem, 0f);
+            _systemManager.RegisterSystem(_abilityLearningSystem, 0f);
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene()); // Changed to GameMapScene
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
+            _sceneManager.AddScene(GameSceneState.ChoiceMenu, new ChoiceMenuScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
@@ -382,12 +389,12 @@ namespace ProjectVagabond
                 else _debugConsole.Show();
             }
 
-            if (currentKeyboardState.IsKeyDown(Keys.F1) && _previousKeyboardState.IsKeyUp(Keys.F1))
+            if (KeyPressed(Keys.F1, currentKeyboardState, _previousKeyboardState))
             {
                 _global.ShowDebugOverlays = !_global.ShowDebugOverlays;
                 _diceRollingSystem.DebugShowColliders = _global.ShowDebugOverlays;
             }
-            if (currentKeyboardState.IsKeyDown(Keys.F5) && _previousKeyboardState.IsKeyUp(Keys.F5))
+            if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState))
             {
                 if (_sceneManager.CurrentActiveScene?.GetType() != typeof(BattleScene))
                 {
@@ -395,17 +402,35 @@ namespace ProjectVagabond
                     _sceneManager.ChangeScene(GameSceneState.Battle);
                 }
             }
-            if (currentKeyboardState.IsKeyDown(Keys.F9) && _previousKeyboardState.IsKeyUp(Keys.F9))
+            if (KeyPressed(Keys.F6, currentKeyboardState, _previousKeyboardState))
+            {
+                var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
+                choiceMenu?.Show(ChoiceType.Spell, _random.Next(2, 4));
+                _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+            }
+            if (KeyPressed(Keys.F7, currentKeyboardState, _previousKeyboardState))
+            {
+                var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
+                choiceMenu?.Show(ChoiceType.Ability, _random.Next(2, 4));
+                _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+            }
+            if (KeyPressed(Keys.F8, currentKeyboardState, _previousKeyboardState))
+            {
+                var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
+                choiceMenu?.Show(ChoiceType.Item, _random.Next(2, 4));
+                _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+            }
+            if (KeyPressed(Keys.F9, currentKeyboardState, _previousKeyboardState))
             {
                 BattleDebugHelper.RunDamageCalculationTestSuite();
             }
-            if (currentKeyboardState.IsKeyDown(Keys.F12) && _previousKeyboardState.IsKeyUp(Keys.F12))
+            if (KeyPressed(Keys.F12, currentKeyboardState, _previousKeyboardState))
             {
                 _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
             }
 
             // Use F2 to trigger a sample grouped dice roll for demonstration.
-            if (currentKeyboardState.IsKeyDown(Keys.F2) && _previousKeyboardState.IsKeyUp(Keys.F2))
+            if (KeyPressed(Keys.F2, currentKeyboardState, _previousKeyboardState))
             {
                 // 1. Define the groups for the roll.
                 var rollRequest = new List<DiceGroup>
@@ -731,5 +756,7 @@ namespace ProjectVagabond
         }
 
         public void ExitApplication() => Exit();
+
+        private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
     }
 }
