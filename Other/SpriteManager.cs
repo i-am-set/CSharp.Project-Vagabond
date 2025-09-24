@@ -65,6 +65,12 @@ namespace ProjectVagabond
         public Texture2D ArrowIconSpriteSheet { get; private set; }
         public Rectangle[] ArrowIconSourceRects { get; private set; }
 
+        // Mouse Prompt Sprites
+        public Texture2D MousePromptBlank { get; private set; }
+        public Texture2D MousePromptLeftClick { get; private set; }
+        public Texture2D MousePromptRightClick { get; private set; }
+        public Texture2D MousePromptMiddleClick { get; private set; }
+
         public Texture2D LogoSprite => _logoSprite;
         public Texture2D WaterSprite => _waterSprite;
         public Texture2D FlatlandSprite => _flatlandSprite;
@@ -162,6 +168,19 @@ namespace ProjectVagabond
 
             try { ActionButtonUsesSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_uses_spritesheet"); }
             catch { ActionButtonUsesSpriteSheet = _textureFactory.CreateColoredTexture(471, 17, Color.Magenta); }
+
+            // Load Mouse Prompt Sprites
+            try { MousePromptBlank = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_blank"); }
+            catch { MousePromptBlank = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
+
+            try { MousePromptLeftClick = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_left_click"); }
+            catch { MousePromptLeftClick = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
+
+            try { MousePromptRightClick = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_right_click"); }
+            catch { MousePromptRightClick = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
+
+            try { MousePromptMiddleClick = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_middle_click"); }
+            catch { MousePromptMiddleClick = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
 
 
             InitializeArrowSourceRects();
