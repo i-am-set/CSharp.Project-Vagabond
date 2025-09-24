@@ -23,6 +23,31 @@ namespace ProjectVagabond.Battle.UI
         public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.1f; }
         public class HealFlashAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.5f; }
         public class PoisonEffectAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.5f; }
+        public class ResourceBarAnimationState
+        {
+            public enum BarResourceType { HP, Mana }
+            public enum BarAnimationType { Loss, Recovery }
+            public enum LossPhase { Preview, FlashBlack, FlashWhite, Shrink }
+
+            public string CombatantID;
+            public BarResourceType ResourceType;
+            public BarAnimationType AnimationType;
+            public LossPhase CurrentLossPhase;
+
+            public float ValueBefore; // e.g. 100 HP
+            public float ValueAfter;  // e.g. 80 HP
+
+            public float Timer;
+
+            // Loss Animation Tuning
+            public const float PREVIEW_DURATION = 0.5f;
+            public const float FLASH_BLACK_DURATION = 0.05f;
+            public const float FLASH_WHITE_DURATION = 0.05f;
+            public const float SHRINK_DURATION = 0.4f;
+
+            // Recovery Animation Tuning
+            public const float GHOST_FILL_DURATION = 0.5f;
+        }
         public class AbilityIndicatorState
         {
             public enum AnimationPhase { EasingIn, Flashing, Holding, EasingOut }
@@ -67,11 +92,12 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<PoisonEffectAnimationState> _activePoisonEffectAnimations = new List<PoisonEffectAnimationState>();
         private readonly List<DamageIndicatorState> _activeDamageIndicators = new List<DamageIndicatorState>();
         private readonly List<AbilityIndicatorState> _activeAbilityIndicators = new List<AbilityIndicatorState>();
+        private readonly List<ResourceBarAnimationState> _activeBarAnimations = new List<ResourceBarAnimationState>();
 
         private readonly Random _random = new Random();
         private readonly Global _global;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any();
 
         public BattleAnimationManager()
         {
@@ -88,6 +114,7 @@ namespace ProjectVagabond.Battle.UI
             _activePoisonEffectAnimations.Clear();
             _activeDamageIndicators.Clear();
             _activeAbilityIndicators.Clear();
+            _activeBarAnimations.Clear();
         }
 
         public void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)
@@ -101,6 +128,64 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 StartHP = hpBefore,
                 TargetHP = hpAfter,
+                Timer = 0f
+            });
+        }
+
+        public void StartHealthLossAnimation(string combatantId, float hpBefore, float hpAfter)
+        {
+            _activeBarAnimations.RemoveAll(a => a.CombatantID == combatantId && a.ResourceType == ResourceBarAnimationState.BarResourceType.HP);
+            _activeBarAnimations.Add(new ResourceBarAnimationState
+            {
+                CombatantID = combatantId,
+                ResourceType = ResourceBarAnimationState.BarResourceType.HP,
+                AnimationType = ResourceBarAnimationState.BarAnimationType.Loss,
+                CurrentLossPhase = ResourceBarAnimationState.LossPhase.Preview,
+                ValueBefore = hpBefore,
+                ValueAfter = hpAfter,
+                Timer = 0f
+            });
+        }
+
+        public void StartManaLossAnimation(string combatantId, float manaBefore, float manaAfter)
+        {
+            _activeBarAnimations.RemoveAll(a => a.CombatantID == combatantId && a.ResourceType == ResourceBarAnimationState.BarResourceType.Mana);
+            _activeBarAnimations.Add(new ResourceBarAnimationState
+            {
+                CombatantID = combatantId,
+                ResourceType = ResourceBarAnimationState.BarResourceType.Mana,
+                AnimationType = ResourceBarAnimationState.BarAnimationType.Loss,
+                CurrentLossPhase = ResourceBarAnimationState.LossPhase.Preview,
+                ValueBefore = manaBefore,
+                ValueAfter = manaAfter,
+                Timer = 0f
+            });
+        }
+
+        public void StartHealthRecoveryAnimation(string combatantId, float hpBefore, float hpAfter)
+        {
+            _activeBarAnimations.RemoveAll(a => a.CombatantID == combatantId && a.ResourceType == ResourceBarAnimationState.BarResourceType.HP);
+            _activeBarAnimations.Add(new ResourceBarAnimationState
+            {
+                CombatantID = combatantId,
+                ResourceType = ResourceBarAnimationState.BarResourceType.HP,
+                AnimationType = ResourceBarAnimationState.BarAnimationType.Recovery,
+                ValueBefore = hpBefore,
+                ValueAfter = hpAfter,
+                Timer = 0f
+            });
+        }
+
+        public void StartManaRecoveryAnimation(string combatantId, float manaBefore, float manaAfter)
+        {
+            _activeBarAnimations.RemoveAll(a => a.CombatantID == combatantId && a.ResourceType == ResourceBarAnimationState.BarResourceType.Mana);
+            _activeBarAnimations.Add(new ResourceBarAnimationState
+            {
+                CombatantID = combatantId,
+                ResourceType = ResourceBarAnimationState.BarResourceType.Mana,
+                AnimationType = ResourceBarAnimationState.BarAnimationType.Recovery,
+                ValueBefore = manaBefore,
+                ValueAfter = manaAfter,
                 Timer = 0f
             });
         }
@@ -271,6 +356,11 @@ namespace ProjectVagabond.Battle.UI
             _activeHealthAnimations.Clear();
         }
 
+        public void SkipAllBarAnimations()
+        {
+            _activeBarAnimations.Clear();
+        }
+
         public HitAnimationState GetHitAnimationState(string combatantId)
         {
             return _activeHitAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
@@ -300,6 +390,58 @@ namespace ProjectVagabond.Battle.UI
             UpdatePoisonEffectAnimations(gameTime);
             UpdateDamageIndicators(gameTime);
             UpdateAbilityIndicators(gameTime);
+            UpdateBarAnimations(gameTime);
+        }
+
+        private void UpdateBarAnimations(GameTime gameTime)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeBarAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeBarAnimations[i];
+                anim.Timer += deltaTime;
+
+                if (anim.AnimationType == ResourceBarAnimationState.BarAnimationType.Loss)
+                {
+                    switch (anim.CurrentLossPhase)
+                    {
+                        case ResourceBarAnimationState.LossPhase.Preview:
+                            if (anim.Timer >= ResourceBarAnimationState.PREVIEW_DURATION)
+                            {
+                                anim.Timer = 0;
+                                anim.CurrentLossPhase = ResourceBarAnimationState.LossPhase.FlashBlack;
+                            }
+                            break;
+                        case ResourceBarAnimationState.LossPhase.FlashBlack:
+                            if (anim.Timer >= ResourceBarAnimationState.FLASH_BLACK_DURATION)
+                            {
+                                anim.Timer = 0;
+                                anim.CurrentLossPhase = ResourceBarAnimationState.LossPhase.FlashWhite;
+                            }
+                            break;
+                        case ResourceBarAnimationState.LossPhase.FlashWhite:
+                            if (anim.Timer >= ResourceBarAnimationState.FLASH_WHITE_DURATION)
+                            {
+                                anim.Timer = 0;
+                                anim.CurrentLossPhase = ResourceBarAnimationState.LossPhase.Shrink;
+                            }
+                            break;
+                        case ResourceBarAnimationState.LossPhase.Shrink:
+                            if (anim.Timer >= ResourceBarAnimationState.SHRINK_DURATION)
+                            {
+                                _activeBarAnimations.RemoveAt(i);
+                            }
+                            break;
+                    }
+                }
+                else // Recovery
+                {
+                    if (anim.Timer >= ResourceBarAnimationState.GHOST_FILL_DURATION)
+                    {
+                        _activeBarAnimations.RemoveAt(i);
+                    }
+                }
+            }
         }
 
         private void UpdateHealthAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
@@ -487,6 +629,81 @@ namespace ProjectVagabond.Battle.UI
                 else if (indicator.Phase == AbilityIndicatorState.AnimationPhase.Holding && indicator.Timer >= AbilityIndicatorState.EASE_IN_DURATION + AbilityIndicatorState.FLASH_DURATION + AbilityIndicatorState.HOLD_DURATION)
                 {
                     indicator.Phase = AbilityIndicatorState.AnimationPhase.EasingOut;
+                }
+            }
+        }
+
+        public void DrawPlayerResourceBarAnimations(SpriteBatch spriteBatch, BattleCombatant player, Vector2 offset)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            var playerAnims = _activeBarAnimations.Where(a => a.CombatantID == player.CombatantID).ToList();
+            if (!playerAnims.Any()) return;
+
+            // --- Bar Layout Logic (mirrored from BattleRenderer) ---
+            const int barWidth = 60;
+            const int barPaddingX = 10;
+            const int hpBarY = 105 - 10;
+            const int manaBarY = hpBarY + 3;
+            float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth;
+
+            foreach (var anim in playerAnims)
+            {
+                bool isHp = anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP;
+                float maxResource = isHp ? player.Stats.MaxHP : player.Stats.MaxMana;
+                if (maxResource <= 0) continue;
+
+                Rectangle barRect = isHp
+                    ? new Rectangle((int)(startX + offset.X), (int)(hpBarY + offset.Y), barWidth, 2)
+                    : new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), barWidth, 1);
+
+                if (anim.AnimationType == ResourceBarAnimationState.BarAnimationType.Loss)
+                {
+                    float percentBefore = anim.ValueBefore / maxResource;
+                    float percentAfter = anim.ValueAfter / maxResource;
+
+                    int previewStartX = (int)(barRect.X + barWidth * percentAfter);
+                    int previewWidth = (int)(barWidth * (percentBefore - percentAfter));
+                    var previewRect = new Rectangle(previewStartX, barRect.Y, previewWidth, barRect.Height);
+
+                    switch (anim.CurrentLossPhase)
+                    {
+                        case ResourceBarAnimationState.LossPhase.Preview:
+                            Color previewColor = isHp ? _global.Palette_Red : _global.Palette_Red;
+                            spriteBatch.DrawSnapped(pixel, previewRect, previewColor);
+                            break;
+                        case ResourceBarAnimationState.LossPhase.FlashBlack:
+                            spriteBatch.DrawSnapped(pixel, previewRect, Color.Black);
+                            break;
+                        case ResourceBarAnimationState.LossPhase.FlashWhite:
+                            spriteBatch.DrawSnapped(pixel, previewRect, Color.White);
+                            break;
+                        case ResourceBarAnimationState.LossPhase.Shrink:
+                            float progress = anim.Timer / ResourceBarAnimationState.SHRINK_DURATION;
+                            float easedProgress = Easing.EaseOutCubic(progress);
+                            int shrinkingWidth = (int)(previewWidth * (1.0f - easedProgress));
+                            var shrinkingRect = new Rectangle(previewRect.X, previewRect.Y, shrinkingWidth, previewRect.Height);
+                            spriteBatch.DrawSnapped(pixel, shrinkingRect, _global.Palette_Red);
+                            break;
+                    }
+                }
+                else // Recovery
+                {
+                    float progress = anim.Timer / ResourceBarAnimationState.GHOST_FILL_DURATION;
+                    float easedProgress = Easing.EaseOutCubic(progress);
+
+                    float percentBefore = anim.ValueBefore / maxResource;
+                    float percentAfter = anim.ValueAfter / maxResource;
+
+                    float currentFillPercent = MathHelper.Lerp(percentBefore, percentAfter, easedProgress);
+
+                    int ghostStartX = (int)(barRect.X + barWidth * percentBefore);
+                    int ghostWidth = (int)(barWidth * (currentFillPercent - percentBefore));
+                    var ghostRect = new Rectangle(ghostStartX, barRect.Y, ghostWidth, barRect.Height);
+
+                    Color ghostColor = isHp ? _global.Palette_LightGreen : _global.Palette_LightBlue;
+                    float alpha = 1.0f - easedProgress; // Fade out as it fills
+
+                    spriteBatch.DrawSnapped(pixel, ghostRect, ghostColor * alpha * 0.75f);
                 }
             }
         }

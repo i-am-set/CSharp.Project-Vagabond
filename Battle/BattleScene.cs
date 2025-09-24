@@ -126,6 +126,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
             EventBus.Subscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
             EventBus.Subscribe<GameEvents.CombatantManaRestored>(OnCombatantManaRestored);
+            EventBus.Subscribe<GameEvents.CombatantManaConsumed>(OnCombatantManaConsumed);
             EventBus.Subscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
             EventBus.Subscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Subscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
@@ -148,6 +149,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.StatusEffectTriggered>(OnStatusEffectTriggered);
             EventBus.Unsubscribe<GameEvents.CombatantHealed>(OnCombatantHealed);
             EventBus.Unsubscribe<GameEvents.CombatantManaRestored>(OnCombatantManaRestored);
+            EventBus.Unsubscribe<GameEvents.CombatantManaConsumed>(OnCombatantManaConsumed);
             EventBus.Unsubscribe<GameEvents.MultiHitActionCompleted>(OnMultiHitActionCompleted);
             EventBus.Unsubscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Unsubscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
@@ -286,6 +288,7 @@ namespace ProjectVagabond.Scenes
             if (_animationManager.IsAnimating && (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed))
             {
                 _animationManager.SkipAllHealthAnimations(_battleManager.AllCombatants);
+                _animationManager.SkipAllBarAnimations();
                 UIInputManager.ConsumeMouseClick();
             }
 
@@ -532,6 +535,7 @@ namespace ProjectVagabond.Scenes
                         _core.TriggerFullscreenGlitch(duration: 0.2f);
                         _hapticsManager.TriggerShake(magnitude: 2.0f, duration: 0.3f);
                     }
+                    _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHitAnimation(target.CombatantID);
 
@@ -582,6 +586,7 @@ namespace ProjectVagabond.Scenes
             _uiManager.ShowNarration($"{e.Target.Name} recovered {e.HealAmount} HP!");
             _pendingAnimations.Enqueue(() =>
             {
+                _animationManager.StartHealthRecoveryAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
                 _animationManager.StartHealBounceAnimation(e.Target.CombatantID);
                 _animationManager.StartHealFlashAnimation(e.Target.CombatantID);
@@ -593,6 +598,17 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
         {
             _uiManager.ShowNarration($"{e.Target.Name} restored {e.AmountRestored} Mana!");
+            _pendingAnimations.Enqueue(() =>
+            {
+                _animationManager.StartManaRecoveryAnimation(e.Target.CombatantID, e.ManaBefore, e.ManaAfter);
+            });
+        }
+
+        private void OnCombatantManaConsumed(GameEvents.CombatantManaConsumed e)
+        {
+            // Trigger the animation immediately, without waiting for the narration queue.
+            // The visual representation of the cost should be concurrent with the action declaration.
+            _animationManager.StartManaLossAnimation(e.Actor.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 
         private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e)
@@ -608,6 +624,7 @@ namespace ProjectVagabond.Scenes
 
             _pendingAnimations.Enqueue(() =>
             {
+                _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Actor.CombatantID, (int)e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
                 _animationManager.StartHitAnimation(e.Actor.CombatantID);
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
@@ -642,6 +659,7 @@ namespace ProjectVagabond.Scenes
                 _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from {effectName}!");
                 _pendingAnimations.Enqueue(() =>
                 {
+                    _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                     _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                     if (e.EffectType == StatusEffectType.Poison)
                     {

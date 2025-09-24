@@ -394,7 +394,19 @@ namespace ProjectVagabond.Battle
             }
 
             // Consume mana
+            float manaBefore = action.Actor.Stats.CurrentMana;
             action.Actor.Stats.CurrentMana -= action.ChosenMove.ManaCost;
+            float manaAfter = action.Actor.Stats.CurrentMana;
+
+            if (manaBefore != manaAfter)
+            {
+                EventBus.Publish(new GameEvents.CombatantManaConsumed
+                {
+                    Actor = action.Actor,
+                    ManaBefore = manaBefore,
+                    ManaAfter = manaAfter
+                });
+            }
 
             if (action.Actor.IsPlayerControlled && action.SpellbookEntry != null)
             {

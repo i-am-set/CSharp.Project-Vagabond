@@ -211,6 +211,18 @@ namespace ProjectVagabond
         {
             public BattleCombatant Target { get; set; }
             public int AmountRestored { get; set; }
+            public float ManaBefore { get; set; }
+            public float ManaAfter { get; set; }
+        }
+
+        /// <summary>
+        /// Published whenever a combatant consumes mana to use a move.
+        /// </summary>
+        public struct CombatantManaConsumed
+        {
+            public BattleCombatant Actor { get; set; }
+            public float ManaBefore { get; set; }
+            public float ManaAfter { get; set; }
         }
 
         /// <summary>

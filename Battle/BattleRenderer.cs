@@ -191,7 +191,9 @@ namespace ProjectVagabond.Battle.UI
 
             spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7 + yOffset), Color.White);
 
-            DrawPlayerResourceBars(spriteBatch, player, new Vector2(0, yOffset), uiManager);
+            var offsetVector = new Vector2(0, yOffset);
+            DrawPlayerResourceBars(spriteBatch, player, offsetVector, uiManager);
+            animationManager.DrawPlayerResourceBarAnimations(spriteBatch, player, offsetVector);
 
             DrawPlayerStatusIcons(spriteBatch, player, secondaryFont, playerHudY);
 

@@ -416,7 +416,13 @@ namespace ProjectVagabond.Battle
 
                 if (actualRestored > 0)
                 {
-                    EventBus.Publish(new GameEvents.CombatantManaRestored { Target = target, AmountRestored = actualRestored });
+                    EventBus.Publish(new GameEvents.CombatantManaRestored
+                    {
+                        Target = target,
+                        AmountRestored = actualRestored,
+                        ManaBefore = manaBefore,
+                        ManaAfter = target.Stats.CurrentMana
+                    });
                 }
             }
         }
