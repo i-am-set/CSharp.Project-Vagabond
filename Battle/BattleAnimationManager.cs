@@ -885,7 +885,7 @@ namespace ProjectVagabond.Battle.UI
                     pulseTargetColor = _global.Palette_Gray;
                 }
 
-                Color bgColor = Color.Lerp(_global.TerminalBg, pulseTargetColor, pulse);
+                Color bgColor = Color.Lerp(_global.TerminalBg, pulseTargetColor, pulse); 
                 Color outlineColor = Color.Black;
                 Color textColor = Color.White;
 
