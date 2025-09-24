@@ -191,9 +191,8 @@ namespace ProjectVagabond.Battle.UI
 
             spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7 + yOffset), Color.White);
 
-            var offsetVector = new Vector2(0, yOffset);
+            var offsetVector = Vector2.Zero; // No bobbing for bars
             DrawPlayerResourceBars(spriteBatch, player, offsetVector, uiManager);
-            animationManager.DrawPlayerResourceBarAnimations(spriteBatch, player, offsetVector);
 
             DrawPlayerStatusIcons(spriteBatch, player, secondaryFont, playerHudY);
 
@@ -215,8 +214,8 @@ namespace ProjectVagabond.Battle.UI
             var pixel = ServiceLocator.Get<Texture2D>();
             const int barWidth = 60;
             const int barPaddingX = 10;
-            const int hpBarY = DIVIDER_Y - 10;
-            const int manaBarY = hpBarY + 3;
+            const int hpBarY = DIVIDER_Y - 9; // Moved up 2 pixels
+            const int manaBarY = hpBarY + 3; // Adjusted for 2px HP bar + 1px gap
             float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth;
 
             // HP Bar
@@ -228,8 +227,8 @@ namespace ProjectVagabond.Battle.UI
 
             // Mana Bar
             float manaPercent = player.Stats.MaxMana > 0 ? Math.Clamp((float)player.Stats.CurrentMana / player.Stats.MaxMana, 0f, 1f) : 0f;
-            var manaBgRect = new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), barWidth, 1);
-            var manaFgRect = new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), (int)(barWidth * manaPercent), 1);
+            var manaBgRect = new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), barWidth, 2);
+            var manaFgRect = new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), (int)(barWidth * manaPercent), 2);
             spriteBatch.DrawSnapped(pixel, manaBgRect, _global.Palette_DarkGray);
             spriteBatch.DrawSnapped(pixel, manaFgRect, _global.Palette_LightBlue);
 
@@ -249,7 +248,7 @@ namespace ProjectVagabond.Battle.UI
                         (int)(previewX + offset.X),
                         (int)(manaBarY + offset.Y),
                         costWidth,
-                        1
+                        2
                     );
 
                     spriteBatch.DrawSnapped(pixel, previewRect, _global.Palette_Yellow);
@@ -257,7 +256,7 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     // Draw red "not enough" indicator over the remaining mana
-                    var previewRect = new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), (int)currentManaWidth, 1);
+                    var previewRect = new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), (int)currentManaWidth, 2);
                     spriteBatch.DrawSnapped(pixel, previewRect, _global.Palette_Red);
                 }
             }
@@ -547,72 +546,26 @@ namespace ProjectVagabond.Battle.UI
             Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 8);
             spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, tintColor);
 
-            string hpText = $"HP: {((int)Math.Round(combatant.VisualHP))}/{combatant.Stats.MaxHP}";
-            Vector2 hpSize = statsFont.MeasureString(hpText);
-            Vector2 hpPos = new Vector2(centerPosition.X - hpSize.X / 2, centerPosition.Y + 2);
-
-            DrawHpLine(spriteBatch, statsFont, combatant, hpPos, combatant.VisualAlpha, animationManager);
+            DrawEnemyHealthBar(spriteBatch, combatant, centerPosition);
         }
 
-        private void DrawHpLine(SpriteBatch spriteBatch, BitmapFont statsFont, BattleCombatant combatant, Vector2 position, float alpha, BattleAnimationManager animationManager)
+        private void DrawEnemyHealthBar(SpriteBatch spriteBatch, BattleCombatant combatant, Vector2 centerPosition)
         {
-            Color labelColor = _global.Palette_LightGray * alpha;
-            Color numberColor = Color.White * alpha;
-            Vector2 drawPosition = position;
+            var pixel = ServiceLocator.Get<Texture2D>();
+            const int barWidth = 40;
+            const int barHeight = 2;
+            var barRect = new Rectangle(
+                (int)(centerPosition.X - barWidth / 2f),
+                (int)(centerPosition.Y + 2),
+                barWidth,
+                barHeight
+            );
 
-            var hitAnim = animationManager.GetHitAnimationState(combatant.CombatantID);
-            var healBounceAnim = animationManager.GetHealBounceAnimationState(combatant.CombatantID);
-            var healFlashAnim = animationManager.GetHealFlashAnimationState(combatant.CombatantID);
-            var poisonAnim = animationManager.GetPoisonEffectAnimationState(combatant.CombatantID);
+            float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
+            var hpFgRect = new Rectangle(barRect.X, barRect.Y, (int)(barRect.Width * hpPercent), barRect.Height);
 
-            if (hitAnim != null)
-            {
-                float progress = hitAnim.Timer / BattleAnimationManager.HitAnimationState.Duration;
-                float easeOutProgress = Easing.EaseOutCubic(progress);
-                float shakeMagnitude = 4.0f * (1.0f - easeOutProgress);
-                drawPosition.X += (float)(_random.NextDouble() * 2 - 1) * shakeMagnitude;
-                drawPosition.Y += (float)(_random.NextDouble() * 2 - 1) * shakeMagnitude;
-                Color flashColor = _global.Palette_Red;
-                labelColor = Color.Lerp(flashColor, _global.Palette_LightGray, easeOutProgress) * alpha;
-                numberColor = Color.Lerp(flashColor, Color.White, easeOutProgress) * alpha;
-            }
-            else if (poisonAnim != null)
-            {
-                float progress = poisonAnim.Timer / BattleAnimationManager.PoisonEffectAnimationState.Duration;
-                float easeOutProgress = Easing.EaseOutCubic(progress);
-                float shakeMagnitude = 4.0f * (1.0f - easeOutProgress);
-                drawPosition.X += MathF.Sin(poisonAnim.Timer * 20f) * shakeMagnitude;
-                Color flashColor = _global.Palette_LightPurple;
-                labelColor = Color.Lerp(flashColor, _global.Palette_LightGray, easeOutProgress) * alpha;
-                numberColor = Color.Lerp(flashColor, Color.White, easeOutProgress) * alpha;
-            }
-            else if (healFlashAnim != null)
-            {
-                float flashProgress = healFlashAnim.Timer / BattleAnimationManager.HealFlashAnimationState.Duration;
-                Color flashColor = _global.Palette_LightGreen;
-                labelColor = Color.Lerp(flashColor, _global.Palette_LightGray, Easing.EaseOutQuad(flashProgress)) * alpha;
-                numberColor = Color.Lerp(flashColor, Color.White, Easing.EaseOutQuad(flashProgress)) * alpha;
-            }
-
-            if (healBounceAnim != null)
-            {
-                float bounceProgress = healBounceAnim.Timer / BattleAnimationManager.HealBounceAnimationState.Duration;
-                float hopAmount = MathF.Sin(bounceProgress * MathHelper.Pi) * -3f; // Hop up
-                drawPosition.Y += hopAmount;
-            }
-
-            string hpLabel = "HP: ";
-            string currentHp = ((int)Math.Round(combatant.VisualHP)).ToString();
-            string separator = "/";
-            string maxHp = combatant.Stats.MaxHP.ToString();
-
-            spriteBatch.DrawStringSnapped(statsFont, hpLabel, drawPosition, labelColor);
-            float currentX = drawPosition.X + statsFont.MeasureString(hpLabel).Width;
-            spriteBatch.DrawStringSnapped(statsFont, currentHp, new Vector2(currentX, drawPosition.Y), numberColor);
-            currentX += statsFont.MeasureString(currentHp).Width;
-            spriteBatch.DrawStringSnapped(statsFont, separator, new Vector2(currentX, drawPosition.Y), labelColor);
-            currentX += statsFont.MeasureString(separator).Width;
-            spriteBatch.DrawStringSnapped(statsFont, maxHp, new Vector2(currentX, drawPosition.Y), numberColor);
+            spriteBatch.DrawSnapped(pixel, barRect, _global.Palette_DarkGray);
+            spriteBatch.DrawSnapped(pixel, hpFgRect, _global.Palette_LightGreen);
         }
 
         private void DrawPlayerStatusIcons(SpriteBatch spriteBatch, BattleCombatant player, BitmapFont font, int hudY)

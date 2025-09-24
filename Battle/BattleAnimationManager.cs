@@ -633,42 +633,81 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void DrawPlayerResourceBarAnimations(SpriteBatch spriteBatch, BattleCombatant player, Vector2 offset)
+        public void DrawResourceBarAnimations(SpriteBatch spriteBatch, IEnumerable<BattleCombatant> allCombatants)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            var playerAnims = _activeBarAnimations.Where(a => a.CombatantID == player.CombatantID).ToList();
-            if (!playerAnims.Any()) return;
 
-            // --- Bar Layout Logic (mirrored from BattleRenderer) ---
-            const int barWidth = 60;
-            const int barPaddingX = 10;
-            const int hpBarY = 105 - 10;
-            const int manaBarY = hpBarY + 3;
-            float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth;
-
-            foreach (var anim in playerAnims)
+            foreach (var anim in _activeBarAnimations)
             {
-                bool isHp = anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP;
-                float maxResource = isHp ? player.Stats.MaxHP : player.Stats.MaxMana;
+                var combatant = allCombatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant == null) continue;
+
+                Rectangle barRect;
+                float maxResource;
+
+                if (combatant.IsPlayerControlled)
+                {
+                    const int barWidth = 60;
+                    const int barPaddingX = 10;
+                    const int hpBarY = 105 - 9;
+                    const int manaBarY = hpBarY + 3;
+                    float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth;
+
+                    if (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
+                    {
+                        barRect = new Rectangle((int)startX, hpBarY, barWidth, 2);
+                        maxResource = combatant.Stats.MaxHP;
+                    }
+                    else // Mana
+                    {
+                        barRect = new Rectangle((int)startX, manaBarY, barWidth, 2);
+                        maxResource = combatant.Stats.MaxMana;
+                    }
+                }
+                else // Enemy
+                {
+                    if (anim.ResourceType != ResourceBarAnimationState.BarResourceType.HP) continue; // Enemies only have HP bars
+
+                    var enemies = allCombatants.Where(c => !c.IsPlayerControlled).ToList();
+                    int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
+                    if (enemyIndex == -1) continue;
+
+                    const int enemyAreaPadding = 20;
+                    const int enemyHudY = 80;
+                    int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
+                    int slotWidth = availableWidth / enemies.Count;
+                    var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
+
+                    const int barWidth = 40;
+                    const int barHeight = 2;
+                    barRect = new Rectangle((int)(centerPosition.X - barWidth / 2f), (int)(centerPosition.Y + 2), barWidth, barHeight);
+                    maxResource = combatant.Stats.MaxHP;
+                }
+
                 if (maxResource <= 0) continue;
 
-                Rectangle barRect = isHp
-                    ? new Rectangle((int)(startX + offset.X), (int)(hpBarY + offset.Y), barWidth, 2)
-                    : new Rectangle((int)(startX + offset.X), (int)(manaBarY + offset.Y), barWidth, 1);
-
+                // --- Shared Drawing Logic ---
                 if (anim.AnimationType == ResourceBarAnimationState.BarAnimationType.Loss)
                 {
                     float percentBefore = anim.ValueBefore / maxResource;
                     float percentAfter = anim.ValueAfter / maxResource;
 
-                    int previewStartX = (int)(barRect.X + barWidth * percentAfter);
-                    int previewWidth = (int)(barWidth * (percentBefore - percentAfter));
+                    int previewStartX = (int)(barRect.X + barRect.Width * percentAfter);
+                    int previewWidth = (int)(barRect.Width * (percentBefore - percentAfter));
                     var previewRect = new Rectangle(previewStartX, barRect.Y, previewWidth, barRect.Height);
 
                     switch (anim.CurrentLossPhase)
                     {
                         case ResourceBarAnimationState.LossPhase.Preview:
-                            Color previewColor = isHp ? _global.Palette_Red : _global.Palette_Red;
+                            Color previewColor;
+                            if (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
+                            {
+                                previewColor = _global.Palette_Red;
+                            }
+                            else // Mana
+                            {
+                                previewColor = Color.White;
+                            }
                             spriteBatch.DrawSnapped(pixel, previewRect, previewColor);
                             break;
                         case ResourceBarAnimationState.LossPhase.FlashBlack:
@@ -696,11 +735,11 @@ namespace ProjectVagabond.Battle.UI
 
                     float currentFillPercent = MathHelper.Lerp(percentBefore, percentAfter, easedProgress);
 
-                    int ghostStartX = (int)(barRect.X + barWidth * percentBefore);
-                    int ghostWidth = (int)(barWidth * (currentFillPercent - percentBefore));
+                    int ghostStartX = (int)(barRect.X + barRect.Width * percentBefore);
+                    int ghostWidth = (int)(barRect.Width * (currentFillPercent - percentBefore));
                     var ghostRect = new Rectangle(ghostStartX, barRect.Y, ghostWidth, barRect.Height);
 
-                    Color ghostColor = isHp ? _global.Palette_LightGreen : _global.Palette_LightBlue;
+                    Color ghostColor = (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP) ? _global.Palette_LightGreen : _global.Palette_LightBlue;
                     float alpha = 1.0f - easedProgress; // Fade out as it fills
 
                     spriteBatch.DrawSnapped(pixel, ghostRect, ghostColor * alpha * 0.75f);

@@ -380,6 +380,7 @@ namespace ProjectVagabond.Scenes
             _renderer.DrawOverlay(spriteBatch, font);
             _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
             _animationManager.DrawAbilityIndicators(spriteBatch, font);
+            _animationManager.DrawResourceBarAnimations(spriteBatch, _battleManager.AllCombatants);
             _alertManager.Draw(spriteBatch);
             spriteBatch.End();
         }
