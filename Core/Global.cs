@@ -54,14 +54,14 @@ namespace ProjectVagabond
                 { 1, Palette_White },      // Neutral
                 { 2, Palette_Red },        // Fire
                 { 3, Palette_LightBlue },  // Water
-                { 4, Palette_LightPurple },// Arcane
+                { 4, Palette_Pink },// Arcane
                 { 5, Palette_Orange },     // Earth
                 { 6, Palette_Gray },       // Metal
-                { 7, Palette_DarkGreen },  // Toxic
+                { 7, Palette_LightPurple },  // Toxic
                 { 8, Palette_Teal },       // Wind
                 { 9, Palette_DarkPurple }, // Void
-                { 10, Palette_Yellow },    // Light
-                { 11, Palette_LightYellow},// Electric
+                { 10, Palette_LightYellow },    // Light
+                { 11, Palette_Yellow},// Electric
                 { 12, Palette_LightBlue }, // Ice
                 { 13, Palette_LightGreen } // Nature
             };

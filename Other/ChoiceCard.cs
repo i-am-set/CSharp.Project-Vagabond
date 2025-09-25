@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -305,17 +306,22 @@ namespace ProjectVagabond.UI
 
             // Draw Decorative Accents
             const int accentSize = 3;
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + 1, Bounds.Top + 1, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + 1, Bounds.Top + 1, 1, accentSize), accentColor);
+            const int inset = 2;
+            // Top-Left
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + inset, Bounds.Top + inset, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + inset, Bounds.Top + inset, 1, accentSize), accentColor);
 
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 2 - accentSize, Bounds.Top + 1, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 2, Bounds.Top + 1, 1, accentSize), accentColor);
+            // Top-Right
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - inset - accentSize, Bounds.Top + inset, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 1 - inset, Bounds.Top + inset, 1, accentSize), accentColor);
 
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + 1, Bounds.Bottom - 2, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + 1, Bounds.Bottom - 2 - accentSize, 1, accentSize), accentColor);
+            // Bottom-Left
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + inset, Bounds.Bottom - 1 - inset, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + inset, Bounds.Bottom - inset - accentSize, 1, accentSize), accentColor);
 
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 2 - accentSize, Bounds.Bottom - 2, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 2, Bounds.Bottom - 2 - accentSize, 1, accentSize), accentColor);
+            // Bottom-Right
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - inset - accentSize, Bounds.Bottom - 1 - inset, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 1 - inset, Bounds.Bottom - inset - accentSize, 1, accentSize), accentColor);
         }
     }
 }
