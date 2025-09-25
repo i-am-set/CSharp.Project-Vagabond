@@ -69,12 +69,12 @@ namespace ProjectVagabond
             RarityColors = new Dictionary<int, Color>
             {
                 { -1, Palette_Gray },      // Basic/Action
-                { 0, Palette_White },      // Common
-                { 1, Palette_LightGreen }, // Uncommon
-                { 2, Palette_LightBlue },  // Rare
-                { 3, Palette_DarkPurple }, // Epic
-                { 4, Palette_Pink },       // Mythic
-                { 5, Palette_Orange }      // Legendary
+                { 0, Color.White },        // Common
+                { 1, Color.Lime },         // Uncommon
+                { 2, Color.DeepSkyBlue },  // Rare
+                { 3, Color.DarkOrchid },   // Epic
+                { 4, Color.Red },          // Mythic
+                { 5, Color.Yellow }        // Legendary
             };
         }
 

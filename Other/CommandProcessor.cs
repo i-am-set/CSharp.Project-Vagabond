@@ -5,6 +5,7 @@ using ProjectVagabond.Scenes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace ProjectVagabond
@@ -21,6 +22,11 @@ namespace ProjectVagabond
         private Dictionary<string, Command> _commands;
         public Dictionary<string, Command> Commands => _commands;
 
+        // Cache for reflected XNA colors to avoid repeated reflection calls.
+        private static List<PropertyInfo> _xnaColors;
+        private const int COLOR_PALETTE_GRID_WIDTH = 16;
+
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public CommandProcessor(PlayerInputSystem playerInputSystem)
@@ -30,6 +36,17 @@ namespace ProjectVagabond
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+        private void CacheXnaColors()
+        {
+            if (_xnaColors == null)
+            {
+                _xnaColors = typeof(Color).GetProperties(BindingFlags.Public | BindingFlags.Static)
+                    .Where(prop => prop.PropertyType == typeof(Color))
+                    .OrderBy(prop => prop.Name) // Order alphabetically for consistency
+                    .ToList();
+            }
+        }
 
         private void InitializeCommands()
         {
@@ -167,6 +184,41 @@ namespace ProjectVagabond
                 var core = ServiceLocator.Get<Core>();
                 core.ExitApplication();
             }, "exit - Exit the game.");
+
+            _commands["debug_colorpalette"] = new Command("debug_colorpalette", (args) =>
+            {
+                CacheXnaColors();
+                if (_xnaColors == null || !_xnaColors.Any())
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Could not reflect XNA colors." });
+                    return;
+                }
+
+                const int numColumns = 4;
+                int maxNameLength = _xnaColors.Max(c => c.Name.Length);
+                int columnWidth = maxNameLength + 4; // Add padding
+
+                var sb = new StringBuilder();
+                for (int i = 0; i < _xnaColors.Count; i++)
+                {
+                    string colorName = _xnaColors[i].Name;
+                    string coloredText = $"[{colorName}]{colorName}[/]";
+                    sb.Append(coloredText);
+
+                    // Calculate padding based on the visible length of the name, not the tagged string
+                    int padding = columnWidth - colorName.Length;
+                    if (padding > 0)
+                    {
+                        sb.Append(new string(' ', padding));
+                    }
+
+                    if ((i + 1) % numColumns == 0 || i == _xnaColors.Count - 1)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = sb.ToString() });
+                        sb.Clear();
+                    }
+                }
+            }, "debug_colorpalette - Displays a list of all available XNA colors.");
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- // 
