@@ -154,6 +154,7 @@ namespace ProjectVagabond.UI
             const float PULSE_SPEED = 5f;
             float pulse = isActivated ? (MathF.Sin(_hoverTimer * PULSE_SPEED) + 1f) / 2f : 0f; // Oscillates 0..1
             Color borderColor = Color.Lerp(baseBorderColor, Color.White, pulse);
+            borderColor *= 0.5f; // Apply 50% opacity
 
 
             // Draw Border and Background
@@ -163,14 +164,11 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left, Bounds.Top, 1, Bounds.Height), borderColor); // Left
             spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 1, Bounds.Top, 1, Bounds.Height), borderColor); // Right
 
-            const int paddingX = 8;
-            const int topPadding = 8;
-            float contentWidth = Bounds.Width - (paddingX * 2);
-            float currentY = Bounds.Y + topPadding;
-
-            // Draw Rarity Text
+            // Draw Rarity Text (OUTSIDE the card)
             if (!string.IsNullOrEmpty(_rarityText))
             {
+                float rarityY = Bounds.Y - secondaryFont.LineHeight - 1;
+
                 if (_rarity >= 2) // Animate for Rare and above
                 {
                     const float BOUNCE_DURATION = 0.1f;
@@ -201,7 +199,7 @@ namespace ProjectVagabond.UI
                             yOffset = -MathF.Round(MathF.Sin(bounceProgress * MathHelper.Pi) * WAVE_AMPLITUDE);
                         }
 
-                        var charPos = new Vector2(currentX, currentY + yOffset);
+                        var charPos = new Vector2(currentX, rarityY + yOffset);
                         spriteBatch.DrawStringSnapped(secondaryFont, charStr, charPos, rarityColor);
                         currentX += secondaryFont.MeasureString(charStr).Width + 1; // Add 1px gap
                     }
@@ -209,14 +207,23 @@ namespace ProjectVagabond.UI
                 else // Draw statically for Common/Uncommon
                 {
                     var rarityTextSize = secondaryFont.MeasureString(_rarityText);
-                    var rarityTextPos = new Vector2(Bounds.Center.X - rarityTextSize.Width / 2, currentY);
+                    var rarityTextPos = new Vector2(Bounds.Center.X - rarityTextSize.Width / 2, rarityY);
                     spriteBatch.DrawStringSnapped(secondaryFont, _rarityText, rarityTextPos, rarityColor);
                 }
-                currentY += secondaryFont.LineHeight + 2;
             }
 
-            // Draw Title (Word Wrapped)
+            // --- INTERNAL CONTENT ---
+            const int paddingX = 8;
+            const int topPadding = 4;
+            float contentWidth = Bounds.Width - (paddingX * 2);
+
+            // --- TITLE AREA ---
+            float titleAreaHeight = defaultFont.LineHeight * 2;
             var titleLines = WrapText(Title, contentWidth, defaultFont, isTitle: true);
+            float totalTitleTextHeight = titleLines.Count * defaultFont.LineHeight;
+            float titleStartY = Bounds.Y + topPadding + (titleAreaHeight - totalTitleTextHeight) / 2f; // Vertically center the text block
+
+            float currentY = titleStartY;
             foreach (var line in titleLines)
             {
                 var titleSize = defaultFont.MeasureString(line);
@@ -225,18 +232,15 @@ namespace ProjectVagabond.UI
                 currentY += defaultFont.LineHeight;
             }
 
-            float titleBottomY = currentY;
+            // --- DESCRIPTION AREA ---
+            float descriptionStartY = Bounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
 
-            // Calculate a fixed starting Y position for the description block.
-            float titleBlockHeight = (string.IsNullOrEmpty(_rarityText) ? 0 : secondaryFont.LineHeight + 2) + (defaultFont.LineHeight * 2);
-            float descriptionStartY = Bounds.Y + topPadding + titleBlockHeight + 10;
-
-            // Draw Element Icon for Spells
+            // Draw Element Icon for Spells, positioned a fixed distance above the description start line.
             if (_cardType == ChoiceType.Spell && spriteManager.ElementIconSourceRects.TryGetValue(_elementId, out var iconRect))
             {
                 const int iconSize = 9;
-                float gap = descriptionStartY - titleBottomY;
-                var iconPos = new Vector2(Bounds.Center.X - iconSize / 2f, titleBottomY + (gap - iconSize) / 2f);
+                const int iconDescGap = 4;
+                var iconPos = new Vector2(Bounds.Center.X - iconSize / 2f, descriptionStartY - iconDescGap - iconSize + 4);
                 spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White);
             }
 

@@ -39,8 +39,8 @@ namespace ProjectVagabond.Scenes
             // Layout calculation for vertical pillars
             const int cardWidth = 95;
             const int cardGap = 5;
-            const int startY = 1; // Add 1px margin at the top
-            const int cardHeight = Global.VIRTUAL_HEIGHT - 2; // Adjust height for top and bottom margin
+            const int startY = 9; // Card top is now lower
+            const int cardHeight = Global.VIRTUAL_HEIGHT - 2 - 8; // Card is now shorter
             int totalWidth = (cardWidth * count) + (cardGap * (count - 1));
             int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
 
