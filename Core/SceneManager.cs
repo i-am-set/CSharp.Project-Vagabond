@@ -330,7 +330,11 @@ namespace ProjectVagabond
 
         public void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            _currentScene?.DrawFullscreenUI(spriteBatch, font, gameTime, transform);
+            // Only draw the current scene's fullscreen UI if no modal is active.
+            if (!IsModalActive)
+            {
+                _currentScene?.DrawFullscreenUI(spriteBatch, font, gameTime, transform);
+            }
 
             if (IsModalActive)
             {

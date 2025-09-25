@@ -77,6 +77,7 @@ namespace ProjectVagabond.Battle
                 string movesJson = File.ReadAllText(movesPath);
                 var moveList = JsonSerializer.Deserialize<List<MoveData>>(movesJson, jsonOptions);
                 Moves = moveList.ToDictionary(m => m.MoveID, m => m);
+                ValidateWordLengths(Moves.Values.Select(m => m.MoveName), "Move");
                 Debug.WriteLine($"[BattleDataCache] Successfully loaded {Moves.Count} move definitions.");
             }
             catch (Exception ex)
@@ -91,6 +92,7 @@ namespace ProjectVagabond.Battle
                 string consumablesJson = File.ReadAllText(consumablesPath);
                 var consumableList = JsonSerializer.Deserialize<List<ConsumableItemData>>(consumablesJson, jsonOptions);
                 Consumables = consumableList.ToDictionary(c => c.ItemID, c => c);
+                ValidateWordLengths(Consumables.Values.Select(c => c.ItemName), "Consumable");
                 Debug.WriteLine($"[BattleDataCache] Successfully loaded {Consumables.Count} consumable item definitions.");
             }
             catch (Exception ex)
@@ -105,12 +107,29 @@ namespace ProjectVagabond.Battle
                 string abilitiesJson = File.ReadAllText(abilitiesPath);
                 var abilityList = JsonSerializer.Deserialize<List<AbilityData>>(abilitiesJson, jsonOptions);
                 Abilities = abilityList.ToDictionary(a => a.AbilityID, a => a);
+                ValidateWordLengths(Abilities.Values.Select(a => a.AbilityName), "Ability");
                 Debug.WriteLine($"[BattleDataCache] Successfully loaded {Abilities.Count} ability definitions.");
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load Abilities.json: {ex.Message}");
                 Abilities = new Dictionary<string, AbilityData>();
+            }
+        }
+
+        private static void ValidateWordLengths(IEnumerable<string> names, string dataType)
+        {
+            const int maxWordLength = 11;
+            foreach (var name in names)
+            {
+                var words = name.Split(' ');
+                foreach (var word in words)
+                {
+                    if (word.Length > maxWordLength)
+                    {
+                        Debug.WriteLine($"[BattleDataCache] [VALIDATION ERROR] {dataType} name '{name}' contains a word ('{word}') that is longer than the maximum of {maxWordLength} characters. This may cause UI overflow.");
+                    }
+                }
             }
         }
 

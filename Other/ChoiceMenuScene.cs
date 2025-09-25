@@ -36,13 +36,13 @@ namespace ProjectVagabond.Scenes
             var availableChoices = GetAvailableChoices(type);
             var selectedChoices = availableChoices.OrderBy(x => _random.Next()).Take(count).ToList();
 
-            // Layout calculation
-            const int cardWidth = 80;
-            const int cardHeight = 100;
-            const int cardGap = 10;
+            // Layout calculation for vertical pillars
+            const int cardWidth = 95;
+            const int cardGap = 5;
+            const int startY = 1; // Add 1px margin at the top
+            const int cardHeight = Global.VIRTUAL_HEIGHT - 2; // Adjust height for top and bottom margin
             int totalWidth = (cardWidth * count) + (cardGap * (count - 1));
             int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
-            int startY = (Global.VIRTUAL_HEIGHT - cardHeight) / 2;
 
             for (int i = 0; i < selectedChoices.Count; i++)
             {
