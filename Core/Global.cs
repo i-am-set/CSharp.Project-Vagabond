@@ -47,6 +47,35 @@ namespace ProjectVagabond
             ToolTipBorderColor = Palette_BrightWhite;
             TerminalDarkGray = Palette_DarkGray;
             InputCaratColor = Color.Khaki;
+
+            // Initialize Color Mappings
+            ElementColors = new Dictionary<int, Color>
+            {
+                { 1, Palette_White },      // Neutral
+                { 2, Palette_Red },        // Fire
+                { 3, Palette_LightBlue },  // Water
+                { 4, Palette_LightPurple },// Arcane
+                { 5, Palette_Orange },     // Earth
+                { 6, Palette_Gray },       // Metal
+                { 7, Palette_DarkGreen },  // Toxic
+                { 8, Palette_Teal },       // Wind
+                { 9, Palette_DarkPurple }, // Void
+                { 10, Palette_Yellow },    // Light
+                { 11, Palette_LightYellow},// Electric
+                { 12, Palette_LightBlue }, // Ice
+                { 13, Palette_LightGreen } // Nature
+            };
+
+            RarityColors = new Dictionary<int, Color>
+            {
+                { -1, Palette_Gray },      // Basic/Action
+                { 0, Palette_White },      // Common
+                { 1, Palette_LightGreen }, // Uncommon
+                { 2, Palette_LightBlue },  // Rare
+                { 3, Palette_DarkPurple }, // Epic
+                { 4, Palette_Orange },     // Legendary
+                { 5, Palette_Pink }        // Mythic
+            };
         }
 
         public static Global Instance => _instance;
@@ -170,6 +199,10 @@ namespace ProjectVagabond
         public Color ToolTipBorderColor { get; private set; }
         public Color TerminalDarkGray { get; set; }
         public Color InputCaratColor { get; set; }
+
+        // Data-driven Colors
+        public Dictionary<int, Color> ElementColors { get; private set; }
+        public Dictionary<int, Color> RarityColors { get; private set; }
 
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

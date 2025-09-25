@@ -104,7 +104,7 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             foreach (var card in _cards)
             {
-                card.Update(currentMouseState);
+                card.Update(currentMouseState, gameTime);
             }
         }
 

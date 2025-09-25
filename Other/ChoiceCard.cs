@@ -1,9 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -21,6 +21,11 @@ namespace ProjectVagabond.UI
         private readonly ChoiceType _cardType;
         private readonly List<(string Label, string Value)> _stats = new List<(string, string)>();
         private readonly List<string> _subTextLines = new List<string>();
+        private readonly int _rarity;
+        private readonly string _rarityText = "";
+        private readonly int _elementId;
+        private float _hoverTimer = 0f;
+        private float _rarityAnimTimer = 0f;
 
         public ChoiceCard(Rectangle bounds, MoveData move) : base(bounds, move.MoveName)
         {
@@ -28,6 +33,9 @@ namespace ProjectVagabond.UI
             _cardType = ChoiceType.Spell;
             Title = move.MoveName.ToUpper();
             Description = move.Description.ToUpper();
+            _rarity = move.Rarity;
+            _rarityText = GetRarityString(_rarity);
+            _elementId = move.OffensiveElementIDs.FirstOrDefault();
 
             string power = move.Power > 0 ? move.Power.ToString() : "---";
             string acc = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
@@ -42,6 +50,9 @@ namespace ProjectVagabond.UI
             _cardType = ChoiceType.Ability;
             Title = ability.AbilityName.ToUpper();
             Description = ability.Description.ToUpper();
+            _rarity = 0; // Abilities can be considered "Common" for now
+            _rarityText = GetRarityString(_rarity);
+            _elementId = 0;
             _subTextLines.Add("PASSIVE ABILITY");
         }
 
@@ -51,7 +62,34 @@ namespace ProjectVagabond.UI
             _cardType = ChoiceType.Item;
             Title = item.ItemName.ToUpper();
             Description = item.Description.ToUpper();
+            _rarity = 0; // Items can be considered "Common" for now
+            _rarityText = GetRarityString(_rarity);
+            _elementId = 0;
             _subTextLines.Add("CONSUMABLE ITEM");
+        }
+
+        public void Update(MouseState currentMouseState, GameTime gameTime)
+        {
+            base.Update(currentMouseState);
+            if (IsHovered)
+            {
+                _hoverTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+            _rarityAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+        }
+
+        private string GetRarityString(int rarity)
+        {
+            return rarity switch
+            {
+                0 => "COMMON",
+                1 => "UNCOMMON",
+                2 => "RARE",
+                3 => "EPIC",
+                4 => "LEGENDARY",
+                5 => "MYTHIC",
+                _ => ""
+            };
         }
 
         private List<string> WrapText(string text, float maxLineWidth, BitmapFont font, bool isTitle = false)
@@ -102,19 +140,79 @@ namespace ProjectVagabond.UI
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
             bool isActivated = IsEnabled && (IsHovered || forceHover);
+
+            // Determine colors based on state and data
+            Color rarityColor = _global.RarityColors.GetValueOrDefault(_rarity, _global.Palette_Gray);
+            Color titleColor = _global.ElementColors.GetValueOrDefault(_elementId, _global.Palette_BrightWhite);
+            Color accentColor = _global.Palette_White;
+            Color baseBorderColor = _cardType == ChoiceType.Spell ? titleColor : rarityColor;
+
+            // Hover Pulse Effect for Border
+            const float PULSE_SPEED = 5f;
+            float pulse = isActivated ? (MathF.Sin(_hoverTimer * PULSE_SPEED) + 1f) / 2f : 0f; // Oscillates 0..1
+            Color borderColor = Color.Lerp(baseBorderColor, Color.White, pulse);
+
 
             // Draw Border and Background
             spriteBatch.DrawSnapped(pixel, Bounds, isActivated ? _global.Palette_DarkGray : _global.Palette_Black);
-            spriteBatch.DrawLineSnapped(new Vector2(Bounds.Left, Bounds.Top), new Vector2(Bounds.Right, Bounds.Top), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(Bounds.Left, Bounds.Bottom), new Vector2(Bounds.Right, Bounds.Bottom), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(Bounds.Left, Bounds.Top), new Vector2(Bounds.Left, Bounds.Bottom), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(Bounds.Right, Bounds.Top), new Vector2(Bounds.Right, Bounds.Bottom), _global.Palette_White);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left, Bounds.Top, Bounds.Width, 1), borderColor); // Top
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left, Bounds.Bottom - 1, Bounds.Width, 1), borderColor); // Bottom
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left, Bounds.Top, 1, Bounds.Height), borderColor); // Left
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 1, Bounds.Top, 1, Bounds.Height), borderColor); // Right
 
             const int paddingX = 8;
-            const int titleStartY = 15;
+            const int topPadding = 8;
             float contentWidth = Bounds.Width - (paddingX * 2);
-            float currentY = Bounds.Y + titleStartY;
+            float currentY = Bounds.Y + topPadding;
+
+            // Draw Rarity Text
+            if (!string.IsNullOrEmpty(_rarityText))
+            {
+                if (_rarity >= 2) // Animate for Rare and above
+                {
+                    const float BOUNCE_DURATION = 0.1f;
+                    const float CYCLE_DELAY = 0.5f;
+                    const float WAVE_AMPLITUDE = 1f;
+
+                    float totalCycleDuration = (_rarityText.Length * BOUNCE_DURATION) + CYCLE_DELAY;
+                    float timeInCycle = _rarityAnimTimer % totalCycleDuration;
+
+                    int activeCharIndex = -1;
+                    if (timeInCycle < _rarityText.Length * BOUNCE_DURATION)
+                    {
+                        activeCharIndex = (int)(timeInCycle / BOUNCE_DURATION);
+                    }
+
+                    float totalWidthWithGaps = _rarityText.Sum(c => secondaryFont.MeasureString(c.ToString()).Width) + Math.Max(0, _rarityText.Length - 1);
+                    float currentX = MathF.Round(Bounds.Center.X - totalWidthWithGaps / 2f);
+
+                    for (int i = 0; i < _rarityText.Length; i++)
+                    {
+                        char c = _rarityText[i];
+                        string charStr = c.ToString();
+                        float yOffset = 0;
+
+                        if (i == activeCharIndex)
+                        {
+                            float bounceProgress = (timeInCycle % BOUNCE_DURATION) / BOUNCE_DURATION;
+                            yOffset = -MathF.Round(MathF.Sin(bounceProgress * MathHelper.Pi) * WAVE_AMPLITUDE);
+                        }
+
+                        var charPos = new Vector2(currentX, currentY + yOffset);
+                        spriteBatch.DrawStringSnapped(secondaryFont, charStr, charPos, rarityColor);
+                        currentX += secondaryFont.MeasureString(charStr).Width + 1; // Add 1px gap
+                    }
+                }
+                else // Draw statically for Common/Uncommon
+                {
+                    var rarityTextSize = secondaryFont.MeasureString(_rarityText);
+                    var rarityTextPos = new Vector2(Bounds.Center.X - rarityTextSize.Width / 2, currentY);
+                    spriteBatch.DrawStringSnapped(secondaryFont, _rarityText, rarityTextPos, rarityColor);
+                }
+                currentY += secondaryFont.LineHeight + 2;
+            }
 
             // Draw Title (Word Wrapped)
             var titleLines = WrapText(Title, contentWidth, defaultFont, isTitle: true);
@@ -122,13 +220,25 @@ namespace ProjectVagabond.UI
             {
                 var titleSize = defaultFont.MeasureString(line);
                 var titlePos = new Vector2(Bounds.Center.X - titleSize.Width / 2, currentY);
-                spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, isActivated ? _global.ButtonHoverColor : _global.Palette_BrightWhite);
+                spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, isActivated ? _global.ButtonHoverColor : titleColor);
                 currentY += defaultFont.LineHeight;
             }
 
+            float titleBottomY = currentY;
+
             // Calculate a fixed starting Y position for the description block.
-            // This is based on the maximum possible height of a 2-line title.
-            float descriptionStartY = Bounds.Y + titleStartY + (defaultFont.LineHeight * 2) + 10;
+            float titleBlockHeight = (string.IsNullOrEmpty(_rarityText) ? 0 : secondaryFont.LineHeight + 2) + (defaultFont.LineHeight * 2);
+            float descriptionStartY = Bounds.Y + topPadding + titleBlockHeight + 10;
+
+            // Draw Element Icon for Spells
+            if (_cardType == ChoiceType.Spell && spriteManager.ElementIconSourceRects.TryGetValue(_elementId, out var iconRect))
+            {
+                const int iconSize = 9;
+                float gap = descriptionStartY - titleBottomY;
+                var iconPos = new Vector2(Bounds.Center.X - iconSize / 2f, titleBottomY + (gap - iconSize) / 2f);
+                spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White);
+            }
+
             currentY = descriptionStartY;
 
             // Draw Description (Word Wrapped)
@@ -192,6 +302,20 @@ namespace ProjectVagabond.UI
                     spriteBatch.DrawStringSnapped(secondaryFont, subText, subTextPos, _global.Palette_Gray);
                 }
             }
+
+            // Draw Decorative Accents
+            const int accentSize = 3;
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + 1, Bounds.Top + 1, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + 1, Bounds.Top + 1, 1, accentSize), accentColor);
+
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 2 - accentSize, Bounds.Top + 1, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 2, Bounds.Top + 1, 1, accentSize), accentColor);
+
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + 1, Bounds.Bottom - 2, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + 1, Bounds.Bottom - 2 - accentSize, 1, accentSize), accentColor);
+
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 2 - accentSize, Bounds.Bottom - 2, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 2, Bounds.Bottom - 2 - accentSize, 1, accentSize), accentColor);
         }
     }
 }
