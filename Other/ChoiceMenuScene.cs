@@ -19,6 +19,17 @@ namespace ProjectVagabond.Scenes
         private readonly SceneManager _sceneManager;
         private readonly GameState _gameState;
 
+        private enum AnimationPhase { CardIntro, RarityIntro, Idle }
+        private AnimationPhase _currentPhase = AnimationPhase.CardIntro;
+
+        private Queue<ChoiceCard> _cardsToAnimate = new Queue<ChoiceCard>();
+        private float _animationStaggerTimer = 0f;
+        private const float ANIMATION_STAGGER_DELAY = 0.075f;
+
+        private Queue<ChoiceCard> _rarityToAnimate = new Queue<ChoiceCard>();
+        private float _rarityStaggerTimer = 0f;
+        private const float RARITY_STAGGER_DELAY = 0.1f;
+
         public ChoiceMenuScene()
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
@@ -30,9 +41,21 @@ namespace ProjectVagabond.Scenes
             return new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
         }
 
+        public override void Enter()
+        {
+            base.Enter();
+            // Animation queues are now managed by the Show() method to ensure correct initialization order.
+        }
+
         public void Show(ChoiceType type, int count)
         {
             _cards.Clear();
+            _cardsToAnimate.Clear();
+            _rarityToAnimate.Clear();
+            _animationStaggerTimer = 0f;
+            _rarityStaggerTimer = 0f;
+            _currentPhase = AnimationPhase.CardIntro;
+
             var availableChoices = GetAvailableChoices(type);
             var selectedChoices = availableChoices.OrderBy(x => _random.Next()).Take(count).ToList();
 
@@ -58,6 +81,7 @@ namespace ProjectVagabond.Scenes
                 {
                     card.OnClick += () => HandleChoice(choice);
                     _cards.Add(card);
+                    _cardsToAnimate.Enqueue(card);
                 }
             }
         }
@@ -99,12 +123,69 @@ namespace ProjectVagabond.Scenes
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
-            if (IsInputBlocked) return;
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            var currentMouseState = Mouse.GetState();
-            foreach (var card in _cards)
+            switch (_currentPhase)
             {
-                card.Update(currentMouseState, gameTime);
+                case AnimationPhase.CardIntro:
+                    if (_cardsToAnimate.Any())
+                    {
+                        _animationStaggerTimer += deltaTime;
+                        if (_animationStaggerTimer >= ANIMATION_STAGGER_DELAY)
+                        {
+                            _animationStaggerTimer = 0f;
+                            var card = _cardsToAnimate.Dequeue();
+                            card.StartIntroAnimation();
+                        }
+                    }
+                    else if (_cards.All(c => !c.IsIntroAnimating))
+                    {
+                        // All cards have finished sliding in, transition to next phase
+                        _currentPhase = AnimationPhase.RarityIntro;
+                        foreach (var card in _cards)
+                        {
+                            _rarityToAnimate.Enqueue(card);
+                        }
+                    }
+                    break;
+
+                case AnimationPhase.RarityIntro:
+                    if (_rarityToAnimate.Any())
+                    {
+                        _rarityStaggerTimer += deltaTime;
+                        if (_rarityStaggerTimer >= RARITY_STAGGER_DELAY)
+                        {
+                            _rarityStaggerTimer = 0f;
+                            var card = _rarityToAnimate.Dequeue();
+                            card.StartRarityAnimation();
+                        }
+                    }
+                    else
+                    {
+                        // Could add a check here to wait for rarity animations to finish,
+                        // but for now, we'll let input become active immediately.
+                        _currentPhase = AnimationPhase.Idle;
+                    }
+                    break;
+
+                case AnimationPhase.Idle:
+                    if (IsInputBlocked) return;
+                    var currentMouseState = Mouse.GetState();
+                    foreach (var card in _cards)
+                    {
+                        card.Update(currentMouseState, gameTime);
+                    }
+                    break;
+            }
+
+            // Always update cards for their internal animation timers
+            if (_currentPhase != AnimationPhase.Idle)
+            {
+                var currentMouseState = Mouse.GetState();
+                foreach (var card in _cards)
+                {
+                    card.Update(currentMouseState, gameTime);
+                }
             }
         }
 

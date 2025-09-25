@@ -185,6 +185,13 @@ namespace ProjectVagabond
             return 1 + c3 * (float)Math.Pow(x - 1, 3) + c1 * (float)Math.Pow(x - 1, 2);
         }
 
+        public static float EaseOutBackSlight(float x)
+        {
+            const float c1 = 1.0f; // Reduced from 1.70158f for less overshoot
+            const float c3 = c1 + 1;
+            return 1 + c3 * (float)Math.Pow(x - 1, 3) + c1 * (float)Math.Pow(x - 1, 2);
+        }
+
         public static float EaseInOutBack(float x)
         {
             const float c1 = 1.70158f;

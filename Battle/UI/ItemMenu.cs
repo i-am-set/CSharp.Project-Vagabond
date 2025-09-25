@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using ProjectVagabond.UI;
@@ -14,9 +15,9 @@ namespace ProjectVagabond.Battle.UI
 {
     public class ItemMenu
     {
-        public event Action OnBack;
-        public event Action<ConsumableItemData> OnItemConfirmed;
-        public event Action<ConsumableItemData> OnItemTargetingRequested;
+        public event Action? OnBack;
+        public event Action<ConsumableItemData>? OnItemConfirmed;
+        public event Action<ConsumableItemData>? OnItemTargetingRequested;
         private bool _isVisible;
         private readonly Global _global;
         private readonly List<IInventoryMenuItem> _displayItems = new List<IInventoryMenuItem>();
@@ -36,9 +37,9 @@ namespace ProjectVagabond.Battle.UI
         private enum MenuState { List, Tooltip, Confirm }
         private MenuState _currentState = MenuState.List;
 
-        private ConsumableItemData _itemForTooltip;
-        private ConsumableItemData _itemForConfirmation;
-        private List<BattleCombatant> _allCombatants;
+        private ConsumableItemData? _itemForTooltip;
+        private ConsumableItemData? _itemForConfirmation;
+        private List<BattleCombatant>? _allCombatants;
         public Button? HoveredButton { get; private set; }
 
         public ItemMenu()
@@ -117,6 +118,8 @@ namespace ProjectVagabond.Battle.UI
 
         private void HandleItemClick(ConsumableItemData item)
         {
+            if (_allCombatants == null) return;
+
             switch (item.Target)
             {
                 case TargetType.Single:
@@ -554,3 +557,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+#nullable restore

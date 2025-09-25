@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -27,6 +28,21 @@ namespace ProjectVagabond.UI
         private readonly int _elementId;
         private float _hoverTimer = 0f;
         private float _rarityAnimTimer = 0f;
+
+        // Animation State
+        private enum CardAnimationState { Hidden, AnimatingIn, Idle }
+        private CardAnimationState _cardAnimState = CardAnimationState.Hidden;
+        private float _cardAnimTimer = 0f;
+        private const float CARD_ANIM_DURATION = 0.4f;
+        private Vector2 _startPosition;
+        private Vector2 _targetPosition;
+
+        private enum RarityAnimationState { Hidden, AnimatingIn, Idle }
+        private RarityAnimationState _rarityAnimState = RarityAnimationState.Hidden;
+        private float _rarityPopInTimer = 0f;
+        private const float RARITY_ANIM_DURATION = 0.3f;
+
+        public bool IsIntroAnimating => _cardAnimState == CardAnimationState.AnimatingIn;
 
         public ChoiceCard(Rectangle bounds, MoveData move) : base(bounds, move.MoveName)
         {
@@ -69,14 +85,61 @@ namespace ProjectVagabond.UI
             _subTextLines.Add("CONSUMABLE ITEM");
         }
 
+        public void StartIntroAnimation()
+        {
+            _cardAnimState = CardAnimationState.AnimatingIn;
+            _cardAnimTimer = 0f;
+            _targetPosition = Bounds.Location.ToVector2();
+            _startPosition = new Vector2(_targetPosition.X, Global.VIRTUAL_HEIGHT);
+        }
+
+        public void StartRarityAnimation()
+        {
+            if (_rarityAnimState == RarityAnimationState.Hidden)
+            {
+                _rarityAnimState = RarityAnimationState.AnimatingIn;
+                _rarityPopInTimer = 0f;
+            }
+        }
+
         public void Update(MouseState currentMouseState, GameTime gameTime)
         {
-            base.Update(currentMouseState);
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (_cardAnimState == CardAnimationState.AnimatingIn)
+            {
+                _cardAnimTimer += deltaTime;
+                if (_cardAnimTimer >= CARD_ANIM_DURATION)
+                {
+                    _cardAnimTimer = CARD_ANIM_DURATION;
+                    _cardAnimState = CardAnimationState.Idle;
+                }
+            }
+
+            if (_rarityAnimState == RarityAnimationState.AnimatingIn)
+            {
+                _rarityPopInTimer += deltaTime;
+                if (_rarityPopInTimer >= RARITY_ANIM_DURATION)
+                {
+                    _rarityPopInTimer = RARITY_ANIM_DURATION;
+                    _rarityAnimState = RarityAnimationState.Idle;
+                }
+            }
+
+            if (_cardAnimState == CardAnimationState.Idle)
+            {
+                base.Update(currentMouseState);
+            }
+            else
+            {
+                IsHovered = false;
+            }
+
             if (IsHovered)
             {
-                _hoverTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _hoverTimer += deltaTime;
             }
-            _rarityAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _rarityAnimTimer += deltaTime;
         }
 
         private string GetRarityString(int rarity)
@@ -139,6 +202,19 @@ namespace ProjectVagabond.UI
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
         {
+            if (_cardAnimState == CardAnimationState.Hidden) return;
+
+            Vector2 currentPosition = _targetPosition;
+            if (_cardAnimState == CardAnimationState.AnimatingIn)
+            {
+                float progress = Math.Clamp(_cardAnimTimer / CARD_ANIM_DURATION, 0f, 1f);
+                float easedProgress = Easing.EaseOutBackSlight(progress);
+                currentPosition = Vector2.Lerp(_startPosition, _targetPosition, easedProgress);
+            }
+
+            var drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, Bounds.Width, Bounds.Height);
+
+
             var pixel = ServiceLocator.Get<Texture2D>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var spriteManager = ServiceLocator.Get<SpriteManager>();
@@ -158,18 +234,24 @@ namespace ProjectVagabond.UI
 
 
             // Draw Border and Background
-            spriteBatch.DrawSnapped(pixel, Bounds, isActivated ? _global.Palette_DarkGray : _global.Palette_Black);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left, Bounds.Top, Bounds.Width, 1), borderColor); // Top
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left, Bounds.Bottom - 1, Bounds.Width, 1), borderColor); // Bottom
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left, Bounds.Top, 1, Bounds.Height), borderColor); // Left
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 1, Bounds.Top, 1, Bounds.Height), borderColor); // Right
+            spriteBatch.DrawSnapped(pixel, drawBounds, isActivated ? _global.Palette_DarkGray : _global.Palette_Black);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left, drawBounds.Top, drawBounds.Width, 1), borderColor); // Top
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left, drawBounds.Bottom - 1, drawBounds.Width, 1), borderColor); // Bottom
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left, drawBounds.Top, 1, drawBounds.Height), borderColor); // Left
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1, drawBounds.Top, 1, drawBounds.Height), borderColor); // Right
 
             // Draw Rarity Text (OUTSIDE the card)
-            if (!string.IsNullOrEmpty(_rarityText))
+            if (!string.IsNullOrEmpty(_rarityText) && _rarityAnimState != RarityAnimationState.Hidden)
             {
-                float rarityY = Bounds.Y - secondaryFont.LineHeight - 1;
+                float rarityY = drawBounds.Y - secondaryFont.LineHeight - 1;
+                float scale = 1.0f;
+                if (_rarityAnimState == RarityAnimationState.AnimatingIn)
+                {
+                    float progress = Math.Clamp(_rarityPopInTimer / RARITY_ANIM_DURATION, 0f, 1f);
+                    scale = Easing.EaseOutBack(progress);
+                }
 
-                if (_rarity >= 2) // Animate for Rare and above
+                if (_rarity >= 2 && _rarityAnimState == RarityAnimationState.Idle) // Animate for Rare and above
                 {
                     const float BOUNCE_DURATION = 0.1f;
                     const float CYCLE_DELAY = 0.5f;
@@ -185,7 +267,7 @@ namespace ProjectVagabond.UI
                     }
 
                     float totalWidthWithGaps = _rarityText.Sum(c => secondaryFont.MeasureString(c.ToString()).Width) + Math.Max(0, _rarityText.Length - 1);
-                    float currentX = MathF.Round(Bounds.Center.X - totalWidthWithGaps / 2f);
+                    float currentX = MathF.Round(drawBounds.Center.X - totalWidthWithGaps / 2f);
 
                     for (int i = 0; i < _rarityText.Length; i++)
                     {
@@ -204,43 +286,44 @@ namespace ProjectVagabond.UI
                         currentX += secondaryFont.MeasureString(charStr).Width + 1; // Add 1px gap
                     }
                 }
-                else // Draw statically for Common/Uncommon
+                else // Draw statically or with pop-in animation
                 {
                     var rarityTextSize = secondaryFont.MeasureString(_rarityText);
-                    var rarityTextPos = new Vector2(Bounds.Center.X - rarityTextSize.Width / 2, rarityY);
-                    spriteBatch.DrawStringSnapped(secondaryFont, _rarityText, rarityTextPos, rarityColor);
+                    var rarityTextPos = new Vector2(drawBounds.Center.X, rarityY + rarityTextSize.Height / 2f);
+                    var origin = rarityTextSize / 2f;
+                    spriteBatch.DrawStringSnapped(secondaryFont, _rarityText, rarityTextPos, rarityColor, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
             }
 
             // --- INTERNAL CONTENT ---
             const int paddingX = 8;
             const int topPadding = 4;
-            float contentWidth = Bounds.Width - (paddingX * 2);
+            float contentWidth = drawBounds.Width - (paddingX * 2);
 
             // --- TITLE AREA ---
             float titleAreaHeight = defaultFont.LineHeight * 2;
             var titleLines = WrapText(Title, contentWidth, defaultFont, isTitle: true);
             float totalTitleTextHeight = titleLines.Count * defaultFont.LineHeight;
-            float titleStartY = Bounds.Y + topPadding + (titleAreaHeight - totalTitleTextHeight) / 2f; // Vertically center the text block
+            float titleStartY = drawBounds.Y + topPadding + (titleAreaHeight - totalTitleTextHeight) / 2f; // Vertically center the text block
 
             float currentY = titleStartY;
             foreach (var line in titleLines)
             {
                 var titleSize = defaultFont.MeasureString(line);
-                var titlePos = new Vector2(Bounds.Center.X - titleSize.Width / 2, currentY);
+                var titlePos = new Vector2(drawBounds.Center.X - titleSize.Width / 2, currentY);
                 spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, isActivated ? _global.ButtonHoverColor : titleColor);
                 currentY += defaultFont.LineHeight;
             }
 
             // --- DESCRIPTION AREA ---
-            float descriptionStartY = Bounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
+            float descriptionStartY = drawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
 
             // Draw Element Icon for Spells, positioned a fixed distance above the description start line.
             if (_cardType == ChoiceType.Spell && spriteManager.ElementIconSourceRects.TryGetValue(_elementId, out var iconRect))
             {
                 const int iconSize = 9;
                 const int iconDescGap = 4;
-                var iconPos = new Vector2(Bounds.Center.X - iconSize / 2f, descriptionStartY - iconDescGap - iconSize + 4);
+                var iconPos = new Vector2(drawBounds.Center.X - iconSize / 2f, descriptionStartY - iconDescGap - iconSize + 4);
                 spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White);
             }
 
@@ -251,14 +334,14 @@ namespace ProjectVagabond.UI
             foreach (var line in descLines)
             {
                 var descSize = secondaryFont.MeasureString(line);
-                var descPos = new Vector2(Bounds.Center.X - descSize.Width / 2, currentY);
+                var descPos = new Vector2(drawBounds.Center.X - descSize.Width / 2, currentY);
                 spriteBatch.DrawStringSnapped(secondaryFont, line, descPos, _global.Palette_White);
                 currentY += secondaryFont.LineHeight;
             }
 
             // Draw Stats at the bottom
             float statsBlockHeight = _stats.Count * secondaryFont.LineHeight;
-            float statsStartY = Bounds.Bottom - paddingX - statsBlockHeight;
+            float statsStartY = drawBounds.Bottom - paddingX - statsBlockHeight;
 
             if (_cardType == ChoiceType.Spell)
             {
@@ -272,7 +355,7 @@ namespace ProjectVagabond.UI
                 }
 
                 float totalStatWidth = maxLabelWidth + maxValueWidth + 2; // 2px gap
-                float statBlockStartX = Bounds.X + (Bounds.Width - totalStatWidth) / 2;
+                float statBlockStartX = drawBounds.X + (drawBounds.Width - totalStatWidth) / 2;
                 float statLabelX = statBlockStartX;
                 float statValueX = statLabelX + maxLabelWidth + 2;
 
@@ -303,7 +386,7 @@ namespace ProjectVagabond.UI
                 {
                     var subText = _subTextLines[0];
                     var subTextSize = secondaryFont.MeasureString(subText);
-                    var subTextPos = new Vector2(Bounds.Center.X - subTextSize.Width / 2, statsStartY);
+                    var subTextPos = new Vector2(drawBounds.Center.X - subTextSize.Width / 2, statsStartY);
                     spriteBatch.DrawStringSnapped(secondaryFont, subText, subTextPos, _global.Palette_Gray);
                 }
             }
@@ -312,20 +395,20 @@ namespace ProjectVagabond.UI
             const int accentSize = 3;
             const int inset = 2;
             // Top-Left
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + inset, Bounds.Top + inset, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + inset, Bounds.Top + inset, 1, accentSize), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, 1, accentSize), accentColor);
 
             // Top-Right
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - inset - accentSize, Bounds.Top + inset, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 1 - inset, Bounds.Top + inset, 1, accentSize), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Top + inset, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Top + inset, 1, accentSize), accentColor);
 
             // Bottom-Left
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + inset, Bounds.Bottom - 1 - inset, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Left + inset, Bounds.Bottom - inset - accentSize, 1, accentSize), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor);
 
             // Bottom-Right
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - inset - accentSize, Bounds.Bottom - 1 - inset, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(Bounds.Right - 1 - inset, Bounds.Bottom - inset - accentSize, 1, accentSize), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor);
         }
     }
 }

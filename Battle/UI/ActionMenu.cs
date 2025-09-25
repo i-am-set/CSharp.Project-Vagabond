@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -15,16 +16,16 @@ namespace ProjectVagabond.Battle.UI
 {
     public class ActionMenu
     {
-        public event Action<MoveData, SpellbookEntry, BattleCombatant> OnMoveSelected;
-        public event Action OnItemMenuRequested;
-        public event Action OnMovesMenuOpened;
-        public event Action OnMainMenuOpened;
-        public event Action OnFleeRequested;
+        public event Action<MoveData, SpellbookEntry, BattleCombatant>? OnMoveSelected;
+        public event Action? OnItemMenuRequested;
+        public event Action? OnMovesMenuOpened;
+        public event Action? OnMainMenuOpened;
+        public event Action? OnFleeRequested;
 
         private bool _isVisible;
-        private BattleCombatant _player;
-        private List<BattleCombatant> _allCombatants;
-        private List<BattleCombatant> _allTargets;
+        private BattleCombatant? _player;
+        private List<BattleCombatant>? _allCombatants;
+        private List<BattleCombatant>? _allTargets;
         private List<Button> _actionButtons = new List<Button>();
         private List<MoveButton> _moveButtons = new List<MoveButton>();
         private List<Button> _secondaryActionButtons = new List<Button>();
@@ -34,14 +35,14 @@ namespace ProjectVagabond.Battle.UI
         public enum MenuState { Main, Moves, Targeting, Tooltip }
         private MenuState _currentState;
         public MenuState CurrentMenuState => _currentState;
-        private MoveData _selectedMove;
-        private SpellbookEntry _selectedSpellbookEntry;
-        public MoveData SelectedMove => _selectedMove;
-        public SpellbookEntry SelectedSpellbookEntry => _selectedSpellbookEntry;
-        private MoveData _tooltipMove;
+        private MoveData? _selectedMove;
+        private SpellbookEntry? _selectedSpellbookEntry;
+        public MoveData? SelectedMove => _selectedMove;
+        public SpellbookEntry? SelectedSpellbookEntry => _selectedSpellbookEntry;
+        private MoveData? _tooltipMove;
         private bool _useSimpleTooltip;
-        public MoveData HoveredMove { get; private set; }
-        private SpellbookEntry _hoveredSpellbookEntry;
+        public MoveData? HoveredMove { get; private set; }
+        private SpellbookEntry? _hoveredSpellbookEntry;
         public Button? HoveredButton { get; private set; }
 
         private float _targetingTextAnimTimer = 0f;
@@ -63,7 +64,7 @@ namespace ProjectVagabond.Battle.UI
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
         // State for animation
-        private SpellbookEntry[] _previousHandState = new SpellbookEntry[4];
+        private SpellbookEntry?[] _previousHandState = new SpellbookEntry[4];
         private Queue<MoveButton> _buttonsToAnimate = new Queue<MoveButton>();
         private float _animationDelayTimer = 0f;
         private const float SEQUENTIAL_ANIMATION_DELAY = 0.05f;
@@ -315,7 +316,7 @@ namespace ProjectVagabond.Battle.UI
             var currentHand = _player.Hand;
             if (currentHand == null) return;
 
-            var newHand = new SpellbookEntry[4];
+            var newHand = new SpellbookEntry?[4];
             for (int i = 0; i < Math.Min(currentHand.Length, 4); i++)
             {
                 newHand[i] = currentHand[i];
@@ -326,7 +327,7 @@ namespace ProjectVagabond.Battle.UI
                 var entry = newHand[i];
                 if (entry == null || !BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move)) continue;
 
-                bool isNew = _previousHandState[i] == null || _previousHandState[i].MoveID != entry.MoveID;
+                bool isNew = _previousHandState[i] == null || _previousHandState[i]!.MoveID != entry.MoveID;
                 int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, move);
                 var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, isNew, false);
                 _moveButtons.Add(moveButton);
@@ -367,7 +368,7 @@ namespace ProjectVagabond.Battle.UI
             return moveButton;
         }
 
-        private void SelectMove(MoveData move, SpellbookEntry entry)
+        private void SelectMove(MoveData move, SpellbookEntry? entry)
         {
             _selectedMove = move;
             _selectedSpellbookEntry = entry;
@@ -375,7 +376,7 @@ namespace ProjectVagabond.Battle.UI
             // Mark the move as used if it's in the hand
             for (int i = 0; i < _previousHandState.Length; i++)
             {
-                if (_previousHandState[i] != null && _previousHandState[i].MoveID == move.MoveID)
+                if (_previousHandState[i] != null && _previousHandState[i]!.MoveID == move.MoveID)
                 {
                     _previousHandState[i] = null;
                     break;
@@ -992,3 +993,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+#nullable restore

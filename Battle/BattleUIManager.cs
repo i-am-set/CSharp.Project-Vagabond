@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -14,16 +15,16 @@ namespace ProjectVagabond.Battle.UI
 {
     public enum BattleUIState { Default, Targeting, ItemTargeting }
     public enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item }
-    public class HoverHighlightState { public MoveData CurrentMove; public List<BattleCombatant> Targets = new List<BattleCombatant>(); public float Timer = 0f; public const float SingleTargetFlashOnDuration = 0.4f; public const float SingleTargetFlashOffDuration = 0.2f; public const float MultiTargetFlashOnDuration = 0.4f; public const float MultiTargetFlashOffDuration = 0.4f; }
+    public class HoverHighlightState { public MoveData? CurrentMove; public List<BattleCombatant> Targets = new List<BattleCombatant>(); public float Timer = 0f; public const float SingleTargetFlashOnDuration = 0.4f; public const float SingleTargetFlashOffDuration = 0.2f; public const float MultiTargetFlashOnDuration = 0.4f; public const float MultiTargetFlashOffDuration = 0.4f; }
 
     /// <summary>
     /// Manages the state and interaction of all UI components in the battle scene, including menus and narration.
     /// </summary>
     public class BattleUIManager
     {
-        public event Action<MoveData, SpellbookEntry, BattleCombatant> OnMoveSelected;
-        public event Action<ConsumableItemData, BattleCombatant> OnItemSelected;
-        public event Action OnFleeRequested;
+        public event Action<MoveData, SpellbookEntry, BattleCombatant>? OnMoveSelected;
+        public event Action<ConsumableItemData, BattleCombatant>? OnItemSelected;
+        public event Action? OnFleeRequested;
 
         // UI Components
         private readonly BattleNarrator _battleNarrator;
@@ -34,14 +35,14 @@ namespace ProjectVagabond.Battle.UI
         // State
         public BattleUIState UIState { get; private set; } = BattleUIState.Default;
         public BattleSubMenuState SubMenuState { get; private set; } = BattleSubMenuState.None;
-        public MoveData MoveForTargeting { get; private set; }
-        public SpellbookEntry SpellForTargeting => _actionMenu.SelectedSpellbookEntry;
-        public ConsumableItemData ItemForTargeting { get; private set; }
+        public MoveData? MoveForTargeting { get; private set; }
+        public SpellbookEntry? SpellForTargeting => _actionMenu.SelectedSpellbookEntry;
+        public ConsumableItemData? ItemForTargeting { get; private set; }
         public TargetType? TargetTypeForSelection =>
             UIState == BattleUIState.Targeting ? MoveForTargeting?.Target :
             UIState == BattleUIState.ItemTargeting ? ItemForTargeting?.Target :
             null;
-        public MoveData HoveredMove => _actionMenu.HoveredMove;
+        public MoveData? HoveredMove => _actionMenu.HoveredMove;
 
 
         private float _itemTargetingTextAnimTimer = 0f;
@@ -382,3 +383,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+#nullable restore
