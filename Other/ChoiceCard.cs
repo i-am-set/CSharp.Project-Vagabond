@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -150,8 +149,8 @@ namespace ProjectVagabond.UI
                 1 => "UNCOMMON",
                 2 => "RARE",
                 3 => "EPIC",
-                4 => "LEGENDARY",
-                5 => "MYTHIC",
+                4 => "MYTHIC",
+                5 => "LEGENDARY",
                 _ => ""
             };
         }
