@@ -29,12 +29,16 @@ namespace ProjectVagabond.UI
         private float _rarityAnimTimer = 0f;
 
         // Animation State
-        private enum CardAnimationState { Hidden, AnimatingIn, Idle }
+        private enum CardAnimationState { Hidden, AnimatingIn, AnimatingOut, Idle }
         private CardAnimationState _cardAnimState = CardAnimationState.Hidden;
         private float _cardAnimTimer = 0f;
         private const float CARD_ANIM_DURATION = 0.4f;
+        private const float OUTRO_ANIM_DURATION = 0.3f;
         private Vector2 _startPosition;
         private Vector2 _targetPosition;
+        private bool _wasSelectedForOutro;
+        private Action _onOutroComplete;
+
 
         private enum RarityAnimationState { Hidden, AnimatingIn, Idle }
         private RarityAnimationState _rarityAnimState = RarityAnimationState.Hidden;
@@ -98,6 +102,14 @@ namespace ProjectVagabond.UI
             _startPosition = new Vector2(_targetPosition.X, Global.VIRTUAL_HEIGHT);
         }
 
+        public void StartOutroAnimation(bool wasSelected, Action onComplete = null)
+        {
+            _cardAnimState = CardAnimationState.AnimatingOut;
+            _cardAnimTimer = 0f;
+            _wasSelectedForOutro = wasSelected;
+            _onOutroComplete = onComplete;
+        }
+
         public void StartRarityAnimation()
         {
             if (_rarityAnimState == RarityAnimationState.Hidden)
@@ -118,6 +130,16 @@ namespace ProjectVagabond.UI
                 {
                     _cardAnimTimer = CARD_ANIM_DURATION;
                     _cardAnimState = CardAnimationState.Idle;
+                }
+            }
+            else if (_cardAnimState == CardAnimationState.AnimatingOut)
+            {
+                _cardAnimTimer += deltaTime;
+                if (_cardAnimTimer >= OUTRO_ANIM_DURATION)
+                {
+                    _cardAnimTimer = OUTRO_ANIM_DURATION;
+                    _cardAnimState = CardAnimationState.Hidden;
+                    _onOutroComplete?.Invoke();
                 }
             }
 
@@ -245,11 +267,37 @@ namespace ProjectVagabond.UI
             if (_cardAnimState == CardAnimationState.Hidden) return;
 
             Vector2 currentPosition = _targetPosition;
+            float alpha = 1.0f;
+
             if (_cardAnimState == CardAnimationState.AnimatingIn)
             {
                 float progress = Math.Clamp(_cardAnimTimer / CARD_ANIM_DURATION, 0f, 1f);
                 float easedProgress = Easing.EaseOutBackSlight(progress);
                 currentPosition = Vector2.Lerp(_startPosition, _targetPosition, easedProgress);
+            }
+            else if (_cardAnimState == CardAnimationState.AnimatingOut)
+            {
+                float progress = Math.Clamp(_cardAnimTimer / OUTRO_ANIM_DURATION, 0f, 1f);
+                if (_wasSelectedForOutro)
+                {
+                    // Selected card scales up and fades out
+                    float scale = MathHelper.Lerp(1.0f, 1.2f, Easing.EaseInQuad(progress));
+                    alpha = 1.0f - Easing.EaseInQuad(progress);
+                    currentPosition = new Vector2(
+                        _targetPosition.X + Bounds.Width / 2f - (Bounds.Width * scale) / 2f,
+                        _targetPosition.Y + Bounds.Height / 2f - (Bounds.Height * scale) / 2f
+                    );
+                    // We don't actually scale the bounds, just the drawing of elements.
+                    // For simplicity, we'll just fade it out.
+                    currentPosition = _targetPosition; // Keep position stable
+                }
+                else
+                {
+                    // Other cards fall down and fade out
+                    float yOffset = Easing.EaseInQuad(progress) * 50f;
+                    currentPosition.Y += yOffset;
+                    alpha = 1.0f - Easing.EaseInQuad(progress);
+                }
             }
 
             var drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, Bounds.Width, Bounds.Height);
@@ -276,19 +324,19 @@ namespace ProjectVagabond.UI
             if (_rarity >= 2)
             {
                 float pulseValue = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * AURA_PULSE_SPEED) + 1f) / 2f; // 0 to 1
-                float alpha = MathHelper.Lerp(MIN_AURA_ALPHA, MAX_AURA_ALPHA, pulseValue);
-                Color auraColor = rarityColor * alpha;
+                float auraAlpha = MathHelper.Lerp(MIN_AURA_ALPHA, MAX_AURA_ALPHA, pulseValue);
+                Color auraColor = rarityColor * auraAlpha;
                 var outerBorderRect = new Rectangle(drawBounds.X - 1, drawBounds.Y - 1, drawBounds.Width + 2, drawBounds.Height + 2);
-                spriteBatch.DrawSnapped(pixel, outerBorderRect, auraColor);
+                spriteBatch.DrawSnapped(pixel, outerBorderRect, auraColor * alpha);
             }
 
             // Draw the semi-transparent border frame first
-            spriteBatch.DrawSnapped(pixel, drawBounds, borderColor);
+            spriteBatch.DrawSnapped(pixel, drawBounds, borderColor * alpha);
 
             // Draw the opaque inner background on top, creating the hollow border effect
             var innerBgRect = new Rectangle(drawBounds.X + 1, drawBounds.Y + 1, drawBounds.Width - 2, drawBounds.Height - 2);
             Color bgColor = isActivated ? _global.Palette_DarkGray : _global.Palette_Black;
-            spriteBatch.DrawSnapped(pixel, innerBgRect, bgColor);
+            spriteBatch.DrawSnapped(pixel, innerBgRect, bgColor * alpha);
 
             // --- Animated Rarity Trail ---
             if (_rarity >= 3) // Zipping Trail for Epic and above
@@ -305,9 +353,9 @@ namespace ProjectVagabond.UI
                 {
                     // Common trail properties
                     float progress = (float)i / TRAIL_LENGTH;
-                    float alpha = 1.0f - MathF.Pow(progress, 1.0f - TRAIL_FADE_STRENGTH + 0.01f);
+                    float trailAlpha = 1.0f - MathF.Pow(progress, 1.0f - TRAIL_FADE_STRENGTH + 0.01f);
                     Color trailColor = Color.Lerp(rarityColor, Color.White, (float)i / (TRAIL_LENGTH * 2));
-                    Color finalColor = trailColor * alpha;
+                    Color finalColor = trailColor * trailAlpha * alpha;
 
                     // Draw first trail segment
                     float currentDistance1 = headDistance1 - i;
@@ -368,7 +416,7 @@ namespace ProjectVagabond.UI
                         }
 
                         var charPos = new Vector2(currentX, rarityY + yOffset);
-                        spriteBatch.DrawStringSnapped(secondaryFont, charStr, charPos, rarityColor);
+                        spriteBatch.DrawStringSnapped(secondaryFont, charStr, charPos, rarityColor * alpha);
                         currentX += secondaryFont.MeasureString(charStr).Width + 1; // Add 1px gap
                     }
                 }
@@ -377,7 +425,7 @@ namespace ProjectVagabond.UI
                     var rarityTextSize = secondaryFont.MeasureString(_rarityText);
                     var rarityTextPos = new Vector2(drawBounds.Center.X, rarityY + rarityTextSize.Height / 2f);
                     var origin = rarityTextSize / 2f;
-                    spriteBatch.DrawStringSnapped(secondaryFont, _rarityText, rarityTextPos, rarityColor, 0f, origin, scale, SpriteEffects.None, 0f);
+                    spriteBatch.DrawStringSnapped(secondaryFont, _rarityText, rarityTextPos, rarityColor * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
                 }
             }
 
@@ -397,7 +445,7 @@ namespace ProjectVagabond.UI
             {
                 var titleSize = defaultFont.MeasureString(line);
                 var titlePos = new Vector2(drawBounds.Center.X - titleSize.Width / 2, currentY);
-                spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, isActivated ? _global.ButtonHoverColor : titleColor);
+                spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, (isActivated ? _global.ButtonHoverColor : titleColor) * alpha);
                 currentY += defaultFont.LineHeight;
             }
 
@@ -410,7 +458,7 @@ namespace ProjectVagabond.UI
                 const int iconSize = 9;
                 const int iconDescGap = 4;
                 var iconPos = new Vector2(drawBounds.Center.X - iconSize / 2f, descriptionStartY - iconDescGap - iconSize + 4);
-                spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White);
+                spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White * alpha);
             }
 
             currentY = descriptionStartY;
@@ -421,7 +469,7 @@ namespace ProjectVagabond.UI
             {
                 var descSize = secondaryFont.MeasureString(line);
                 var descPos = new Vector2(drawBounds.Center.X - descSize.Width / 2, currentY);
-                spriteBatch.DrawStringSnapped(secondaryFont, line, descPos, _global.Palette_White);
+                spriteBatch.DrawStringSnapped(secondaryFont, line, descPos, _global.Palette_White * alpha);
                 currentY += secondaryFont.LineHeight;
             }
 
@@ -454,7 +502,7 @@ namespace ProjectVagabond.UI
 
                     // Draw label (right-aligned)
                     var labelPos = new Vector2(statLabelX + (maxLabelWidth - labelSize.Width), lineY);
-                    spriteBatch.DrawStringSnapped(secondaryFont, label, labelPos, _global.Palette_Gray);
+                    spriteBatch.DrawStringSnapped(secondaryFont, label, labelPos, _global.Palette_Gray * alpha);
 
                     // Draw value (right-aligned)
                     var valuePos = new Vector2(statValueX + (maxValueWidth - valueSize.Width), lineY);
@@ -462,7 +510,7 @@ namespace ProjectVagabond.UI
                     {
                         valuePos.X += 5;
                     }
-                    spriteBatch.DrawStringSnapped(secondaryFont, value, valuePos, _global.Palette_Gray);
+                    spriteBatch.DrawStringSnapped(secondaryFont, value, valuePos, _global.Palette_Gray * alpha);
                 }
             }
             else
@@ -473,7 +521,7 @@ namespace ProjectVagabond.UI
                     var subText = _subTextLines[0];
                     var subTextSize = secondaryFont.MeasureString(subText);
                     var subTextPos = new Vector2(drawBounds.Center.X - subTextSize.Width / 2, statsStartY);
-                    spriteBatch.DrawStringSnapped(secondaryFont, subText, subTextPos, _global.Palette_Gray);
+                    spriteBatch.DrawStringSnapped(secondaryFont, subText, subTextPos, _global.Palette_Gray * alpha);
                 }
             }
 
@@ -481,20 +529,20 @@ namespace ProjectVagabond.UI
             const int accentSize = 3;
             const int inset = 2;
             // Top-Left
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, 1, accentSize), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, accentSize, 1), accentColor * alpha);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, 1, accentSize), accentColor * alpha);
 
             // Top-Right
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Top + inset, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Top + inset, 1, accentSize), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Top + inset, accentSize, 1), accentColor * alpha);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Top + inset, 1, accentSize), accentColor * alpha);
 
             // Bottom-Left
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor * alpha);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor * alpha);
 
             // Bottom-Right
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor * alpha);
+            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor * alpha);
         }
     }
 }

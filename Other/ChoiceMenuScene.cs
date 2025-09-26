@@ -30,6 +30,8 @@ namespace ProjectVagabond.Scenes
         private float _rarityStaggerTimer = 0f;
         private const float RARITY_STAGGER_DELAY = 0.1f;
 
+        private bool _isExiting = false;
+
         public ChoiceMenuScene()
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
@@ -44,7 +46,7 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
-            // Animation queues are now managed by the Show() method to ensure correct initialization order.
+            _isExiting = false;
         }
 
         public void Show(ChoiceType type, int count)
@@ -55,6 +57,7 @@ namespace ProjectVagabond.Scenes
             _animationStaggerTimer = 0f;
             _rarityStaggerTimer = 0f;
             _currentPhase = AnimationPhase.CardIntro;
+            _isExiting = false;
 
             var availableChoices = GetAvailableChoices(type);
             var selectedChoices = availableChoices.OrderBy(x => _random.Next()).Take(count).ToList();
@@ -79,9 +82,26 @@ namespace ProjectVagabond.Scenes
 
                 if (card != null)
                 {
-                    card.OnClick += () => HandleChoice(choice);
+                    card.OnClick += () => { if (!_isExiting) OnCardSelected(card); };
                     _cards.Add(card);
                     _cardsToAnimate.Enqueue(card);
+                }
+            }
+        }
+
+        private void OnCardSelected(ChoiceCard selectedCard)
+        {
+            _isExiting = true;
+
+            foreach (var card in _cards)
+            {
+                if (card == selectedCard)
+                {
+                    card.StartOutroAnimation(true, () => HandleChoice(selectedCard.Data));
+                }
+                else
+                {
+                    card.StartOutroAnimation(false);
                 }
             }
         }
@@ -124,6 +144,17 @@ namespace ProjectVagabond.Scenes
         {
             base.Update(gameTime);
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (_isExiting)
+            {
+                // Only update cards for their outro animations
+                var currentMouseState = Mouse.GetState();
+                foreach (var card in _cards)
+                {
+                    card.Update(currentMouseState, gameTime);
+                }
+                return;
+            }
 
             switch (_currentPhase)
             {
