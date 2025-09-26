@@ -34,8 +34,11 @@ namespace ProjectVagabond.UI
         private CardAnimationState _cardAnimState = CardAnimationState.Hidden;
         private float _cardAnimTimer = 0f;
         private const float CARD_ANIM_DURATION = 0.4f;
-        private const float OUTRO_HANG_DURATION = 0.5f;
+        private const float OUTRO_FADE_DURATION = 0.2f;
+        private const float OUTRO_HANG_DURATION = 0.1f;
+        private const float OUTRO_PULL_DURATION = 0.15f;
         private const float OUTRO_SHRINK_DURATION = 0.3f;
+        private const float MAX_PULL_SCALE = 1.1f;
         private Vector2 _startPosition;
         private Vector2 _targetPosition;
         private bool _wasSelectedForOutro;
@@ -142,7 +145,7 @@ namespace ProjectVagabond.UI
             else if (_cardAnimState == CardAnimationState.AnimatingOut)
             {
                 _cardAnimTimer += deltaTime;
-                float totalDuration = _wasSelectedForOutro ? OUTRO_HANG_DURATION + OUTRO_SHRINK_DURATION : OUTRO_SHRINK_DURATION;
+                float totalDuration = _wasSelectedForOutro ? OUTRO_FADE_DURATION + OUTRO_HANG_DURATION + OUTRO_PULL_DURATION + OUTRO_SHRINK_DURATION : OUTRO_SHRINK_DURATION;
                 if (_cardAnimTimer >= totalDuration)
                 {
                     _cardAnimTimer = totalDuration;
@@ -280,6 +283,7 @@ namespace ProjectVagabond.UI
             Rectangle drawBounds;
             bool skipContent = false;
             float currentRotation = 0f;
+            float scale = 1.0f;
 
             if (_cardAnimState == CardAnimationState.AnimatingIn)
             {
@@ -292,33 +296,44 @@ namespace ProjectVagabond.UI
             {
                 if (_wasSelectedForOutro)
                 {
-                    if (_cardAnimTimer < OUTRO_HANG_DURATION)
+                    if (_cardAnimTimer < OUTRO_FADE_DURATION)
                     {
-                        // Hang phase: draw normally
-                        currentPosition = _targetPosition;
-                        drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, Bounds.Width, Bounds.Height);
+                        // Phase 1: Fade to white
+                        float progress = _cardAnimTimer / OUTRO_FADE_DURATION;
+                        whiteOverlayAlpha = Easing.EaseInQuad(progress);
+                    }
+                    else if (_cardAnimTimer < OUTRO_FADE_DURATION + OUTRO_HANG_DURATION)
+                    {
+                        // Phase 2: Hang as white
+                        whiteOverlayAlpha = 1.0f;
+                        skipContent = true;
+                    }
+                    else if (_cardAnimTimer < OUTRO_FADE_DURATION + OUTRO_HANG_DURATION + OUTRO_PULL_DURATION)
+                    {
+                        // Phase 3: Pull (get bigger)
+                        float progress = (_cardAnimTimer - (OUTRO_FADE_DURATION + OUTRO_HANG_DURATION)) / OUTRO_PULL_DURATION;
+                        scale = MathHelper.Lerp(1.0f, MAX_PULL_SCALE, Easing.EaseOutQuad(progress));
+                        whiteOverlayAlpha = 1.0f;
+                        skipContent = true;
                     }
                     else
                     {
-                        // Shrink phase
-                        float shrinkProgress = Math.Clamp((_cardAnimTimer - OUTRO_HANG_DURATION) / OUTRO_SHRINK_DURATION, 0f, 1f);
-                        float easedProgress = Easing.EaseInQuint(shrinkProgress);
-                        float scale = 1.0f - easedProgress;
-
-                        float newWidth = Bounds.Width * scale;
-                        float newHeight = Bounds.Height * scale;
-
-                        currentPosition = new Vector2(
-                            _targetPosition.X + (Bounds.Width - newWidth) / 2f,
-                            _targetPosition.Y + (Bounds.Height - newHeight) / 2f
-                        );
-
-                        drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, (int)newWidth, (int)newHeight);
-                        whiteOverlayAlpha = Easing.EaseInQuint(shrinkProgress);
-                        alpha = 1.0f;
-                        skipContent = true;
+                        // Phase 4: Release (shrink)
+                        float progress = (_cardAnimTimer - (OUTRO_FADE_DURATION + OUTRO_HANG_DURATION + OUTRO_PULL_DURATION)) / OUTRO_SHRINK_DURATION;
+                        float easedProgress = Easing.EaseInQuint(progress);
+                        scale = MathHelper.Lerp(MAX_PULL_SCALE, 0.0f, easedProgress);
                         currentRotation = MathHelper.Lerp(0, _outroRotation, easedProgress);
+                        whiteOverlayAlpha = 1.0f;
+                        skipContent = true;
                     }
+
+                    float newWidth = Bounds.Width * scale;
+                    float newHeight = Bounds.Height * scale;
+                    currentPosition = new Vector2(
+                        _targetPosition.X + (Bounds.Width - newWidth) / 2f,
+                        _targetPosition.Y + (Bounds.Height - newHeight) / 2f
+                    );
+                    drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, (int)newWidth, (int)newHeight);
                 }
                 else
                 {
@@ -414,11 +429,11 @@ namespace ProjectVagabond.UI
                 if (!string.IsNullOrEmpty(_rarityText) && _rarityAnimState != RarityAnimationState.Hidden)
                 {
                     float rarityY = drawBounds.Y - secondaryFont.LineHeight - 2;
-                    float scale = 1.0f;
+                    float textScale = 1.0f;
                     if (_rarityAnimState == RarityAnimationState.AnimatingIn)
                     {
                         float progress = Math.Clamp(_rarityPopInTimer / RARITY_ANIM_DURATION, 0f, 1f);
-                        scale = Easing.EaseOutBack(progress);
+                        textScale = Easing.EaseOutBack(progress);
                     }
 
                     if (_rarity >= 2 && _rarityAnimState == RarityAnimationState.Idle) // Animate for Rare and above
@@ -461,7 +476,7 @@ namespace ProjectVagabond.UI
                         var rarityTextSize = secondaryFont.MeasureString(_rarityText);
                         var rarityTextPos = new Vector2(drawBounds.Center.X, rarityY + rarityTextSize.Height / 2f);
                         var origin = rarityTextSize / 2f;
-                        spriteBatch.DrawStringSnapped(secondaryFont, _rarityText, rarityTextPos, rarityColor * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawStringSnapped(secondaryFont, _rarityText, rarityTextPos, rarityColor * alpha, 0f, origin, textScale, SpriteEffects.None, 0f);
                     }
                 }
 
@@ -584,8 +599,8 @@ namespace ProjectVagabond.UI
             if (whiteOverlayAlpha > 0.01f)
             {
                 Vector2 origin = new Vector2(0.5f); // Origin for a 1x1 texture is its center
-                Vector2 scale = new Vector2(drawBounds.Width, drawBounds.Height);
-                spriteBatch.DrawSnapped(pixel, drawBounds.Center.ToVector2(), null, Color.White * whiteOverlayAlpha, currentRotation, origin, scale, SpriteEffects.None, 0f);
+                Vector2 scaleVec = new Vector2(drawBounds.Width, drawBounds.Height);
+                spriteBatch.DrawSnapped(pixel, drawBounds.Center.ToVector2(), null, Color.White * whiteOverlayAlpha, currentRotation, origin, scaleVec, SpriteEffects.None, 0f);
             }
         }
     }
