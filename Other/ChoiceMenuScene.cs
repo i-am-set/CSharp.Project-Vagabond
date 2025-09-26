@@ -19,10 +19,10 @@ namespace ProjectVagabond.Scenes
         private readonly SceneManager _sceneManager;
         private readonly GameState _gameState;
 
-        private enum AnimationPhase { CardIntro, RarityIntro, Idle }
+        private enum AnimationPhase { CardIntro, RarityIntro, Idle, CardOutro }
         private AnimationPhase _currentPhase = AnimationPhase.CardIntro;
 
-        private Queue<ChoiceCard> _cardsToAnimate = new Queue<ChoiceCard>();
+        private Queue<ChoiceCard> _cardsToAnimateIn = new Queue<ChoiceCard>();
         private float _animationStaggerTimer = 0f;
         private const float ANIMATION_STAGGER_DELAY = 0.075f;
 
@@ -30,7 +30,7 @@ namespace ProjectVagabond.Scenes
         private float _rarityStaggerTimer = 0f;
         private const float RARITY_STAGGER_DELAY = 0.1f;
 
-        private bool _isExiting = false;
+        private List<(ChoiceCard card, float delay)> _cardsToAnimateOut = new List<(ChoiceCard, float)>();
 
         public ChoiceMenuScene()
         {
@@ -46,18 +46,17 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
-            _isExiting = false;
         }
 
         public void Show(ChoiceType type, int count)
         {
             _cards.Clear();
-            _cardsToAnimate.Clear();
+            _cardsToAnimateIn.Clear();
             _rarityToAnimate.Clear();
+            _cardsToAnimateOut.Clear();
             _animationStaggerTimer = 0f;
             _rarityStaggerTimer = 0f;
             _currentPhase = AnimationPhase.CardIntro;
-            _isExiting = false;
 
             var availableChoices = GetAvailableChoices(type);
             var selectedChoices = availableChoices.OrderBy(x => _random.Next()).Take(count).ToList();
@@ -82,26 +81,32 @@ namespace ProjectVagabond.Scenes
 
                 if (card != null)
                 {
-                    card.OnClick += () => { if (!_isExiting) OnCardSelected(card); };
+                    card.OnClick += () => { if (_currentPhase == AnimationPhase.Idle) OnCardSelected(card); };
                     _cards.Add(card);
-                    _cardsToAnimate.Enqueue(card);
+                    _cardsToAnimateIn.Enqueue(card);
                 }
             }
         }
 
         private void OnCardSelected(ChoiceCard selectedCard)
         {
-            _isExiting = true;
+            _currentPhase = AnimationPhase.CardOutro;
 
-            foreach (var card in _cards)
+            // The selected card starts its animation immediately.
+            // The game logic (HandleChoice) is passed as a callback to run when the animation finishes.
+            selectedCard.StartOutroAnimation(true, () => HandleChoice(selectedCard.Data));
+
+            // Queue up the other cards to animate out with a random stagger.
+            _cardsToAnimateOut.Clear();
+            if (_cards.Count > 1)
             {
-                if (card == selectedCard)
+                foreach (var card in _cards)
                 {
-                    card.StartOutroAnimation(true, () => HandleChoice(selectedCard.Data));
-                }
-                else
-                {
-                    card.StartOutroAnimation(false);
+                    if (card != selectedCard)
+                    {
+                        float delay = (float)(_random.NextDouble() * 0.2); // Random delay between 0 and 0.2 seconds
+                        _cardsToAnimateOut.Add((card, delay));
+                    }
                 }
             }
         }
@@ -145,27 +150,24 @@ namespace ProjectVagabond.Scenes
             base.Update(gameTime);
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if (_isExiting)
+            // Always update all cards so their internal animation timers can tick.
+            var currentMouseState = Mouse.GetState();
+            foreach (var card in _cards)
             {
-                // Only update cards for their outro animations
-                var currentMouseState = Mouse.GetState();
-                foreach (var card in _cards)
-                {
-                    card.Update(currentMouseState, gameTime);
-                }
-                return;
+                card.Update(currentMouseState, gameTime);
             }
 
+            // Handle the scene's animation orchestration
             switch (_currentPhase)
             {
                 case AnimationPhase.CardIntro:
-                    if (_cardsToAnimate.Any())
+                    if (_cardsToAnimateIn.Any())
                     {
                         _animationStaggerTimer += deltaTime;
                         if (_animationStaggerTimer >= ANIMATION_STAGGER_DELAY)
                         {
                             _animationStaggerTimer = 0f;
-                            var card = _cardsToAnimate.Dequeue();
+                            var card = _cardsToAnimateIn.Dequeue();
                             card.StartIntroAnimation();
                         }
                     }
@@ -193,30 +195,33 @@ namespace ProjectVagabond.Scenes
                     }
                     else
                     {
-                        // Could add a check here to wait for rarity animations to finish,
-                        // but for now, we'll let input become active immediately.
                         _currentPhase = AnimationPhase.Idle;
                     }
                     break;
 
-                case AnimationPhase.Idle:
-                    if (IsInputBlocked) return;
-                    var currentMouseState = Mouse.GetState();
-                    foreach (var card in _cards)
+                case AnimationPhase.CardOutro:
+                    // Stagger the start of the outro animations for unselected cards.
+                    for (int i = _cardsToAnimateOut.Count - 1; i >= 0; i--)
                     {
-                        card.Update(currentMouseState, gameTime);
+                        var entry = _cardsToAnimateOut[i];
+                        entry.delay -= deltaTime;
+                        if (entry.delay <= 0)
+                        {
+                            entry.card.StartOutroAnimation(false);
+                            _cardsToAnimateOut.RemoveAt(i);
+                        }
+                        else
+                        {
+                            _cardsToAnimateOut[i] = entry; // Update the struct in the list
+                        }
                     }
                     break;
-            }
 
-            // Always update cards for their internal animation timers
-            if (_currentPhase != AnimationPhase.Idle)
-            {
-                var currentMouseState = Mouse.GetState();
-                foreach (var card in _cards)
-                {
-                    card.Update(currentMouseState, gameTime);
-                }
+                case AnimationPhase.Idle:
+                    // Input is only processed when idle.
+                    if (IsInputBlocked) return;
+                    // The card's own Update method (called above) handles hover/click logic.
+                    break;
             }
         }
 

@@ -27,17 +27,20 @@ namespace ProjectVagabond.UI
         private readonly int _elementId;
         private float _hoverTimer = 0f;
         private float _rarityAnimTimer = 0f;
+        private static readonly Random _random = new Random();
 
         // Animation State
         private enum CardAnimationState { Hidden, AnimatingIn, AnimatingOut, Idle }
         private CardAnimationState _cardAnimState = CardAnimationState.Hidden;
         private float _cardAnimTimer = 0f;
         private const float CARD_ANIM_DURATION = 0.4f;
-        private const float OUTRO_ANIM_DURATION = 0.3f;
+        private const float OUTRO_HANG_DURATION = 0.5f;
+        private const float OUTRO_SHRINK_DURATION = 0.3f;
         private Vector2 _startPosition;
         private Vector2 _targetPosition;
         private bool _wasSelectedForOutro;
         private Action _onOutroComplete;
+        private float _outroRotation;
 
 
         private enum RarityAnimationState { Hidden, AnimatingIn, Idle }
@@ -108,6 +111,10 @@ namespace ProjectVagabond.UI
             _cardAnimTimer = 0f;
             _wasSelectedForOutro = wasSelected;
             _onOutroComplete = onComplete;
+            if (wasSelected)
+            {
+                _outroRotation = (float)(_random.NextDouble() * 2 - 1) * MathHelper.PiOver4; // Random rotation between -45 and +45 degrees.
+            }
         }
 
         public void StartRarityAnimation()
@@ -135,9 +142,10 @@ namespace ProjectVagabond.UI
             else if (_cardAnimState == CardAnimationState.AnimatingOut)
             {
                 _cardAnimTimer += deltaTime;
-                if (_cardAnimTimer >= OUTRO_ANIM_DURATION)
+                float totalDuration = _wasSelectedForOutro ? OUTRO_HANG_DURATION + OUTRO_SHRINK_DURATION : OUTRO_SHRINK_DURATION;
+                if (_cardAnimTimer >= totalDuration)
                 {
-                    _cardAnimTimer = OUTRO_ANIM_DURATION;
+                    _cardAnimTimer = totalDuration;
                     _cardAnimState = CardAnimationState.Hidden;
                     _onOutroComplete?.Invoke();
                 }
@@ -268,39 +276,64 @@ namespace ProjectVagabond.UI
 
             Vector2 currentPosition = _targetPosition;
             float alpha = 1.0f;
+            float whiteOverlayAlpha = 0f;
+            Rectangle drawBounds;
+            bool skipContent = false;
+            float currentRotation = 0f;
 
             if (_cardAnimState == CardAnimationState.AnimatingIn)
             {
                 float progress = Math.Clamp(_cardAnimTimer / CARD_ANIM_DURATION, 0f, 1f);
                 float easedProgress = Easing.EaseOutBackSlight(progress);
                 currentPosition = Vector2.Lerp(_startPosition, _targetPosition, easedProgress);
+                drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, Bounds.Width, Bounds.Height);
             }
             else if (_cardAnimState == CardAnimationState.AnimatingOut)
             {
-                float progress = Math.Clamp(_cardAnimTimer / OUTRO_ANIM_DURATION, 0f, 1f);
                 if (_wasSelectedForOutro)
                 {
-                    // Selected card scales up and fades out
-                    float scale = MathHelper.Lerp(1.0f, 1.2f, Easing.EaseInQuad(progress));
-                    alpha = 1.0f - Easing.EaseInQuad(progress);
-                    currentPosition = new Vector2(
-                        _targetPosition.X + Bounds.Width / 2f - (Bounds.Width * scale) / 2f,
-                        _targetPosition.Y + Bounds.Height / 2f - (Bounds.Height * scale) / 2f
-                    );
-                    // We don't actually scale the bounds, just the drawing of elements.
-                    // For simplicity, we'll just fade it out.
-                    currentPosition = _targetPosition; // Keep position stable
+                    if (_cardAnimTimer < OUTRO_HANG_DURATION)
+                    {
+                        // Hang phase: draw normally
+                        currentPosition = _targetPosition;
+                        drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, Bounds.Width, Bounds.Height);
+                    }
+                    else
+                    {
+                        // Shrink phase
+                        float shrinkProgress = Math.Clamp((_cardAnimTimer - OUTRO_HANG_DURATION) / OUTRO_SHRINK_DURATION, 0f, 1f);
+                        float easedProgress = Easing.EaseInQuint(shrinkProgress);
+                        float scale = 1.0f - easedProgress;
+
+                        float newWidth = Bounds.Width * scale;
+                        float newHeight = Bounds.Height * scale;
+
+                        currentPosition = new Vector2(
+                            _targetPosition.X + (Bounds.Width - newWidth) / 2f,
+                            _targetPosition.Y + (Bounds.Height - newHeight) / 2f
+                        );
+
+                        drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, (int)newWidth, (int)newHeight);
+                        whiteOverlayAlpha = Easing.EaseInQuint(shrinkProgress);
+                        alpha = 1.0f;
+                        skipContent = true;
+                        currentRotation = MathHelper.Lerp(0, _outroRotation, easedProgress);
+                    }
                 }
                 else
                 {
                     // Other cards fall down and fade out
+                    float progress = Math.Clamp(_cardAnimTimer / OUTRO_SHRINK_DURATION, 0f, 1f);
                     float yOffset = Easing.EaseInQuad(progress) * 50f;
-                    currentPosition.Y += yOffset;
+                    currentPosition = _targetPosition + new Vector2(0, yOffset);
                     alpha = 1.0f - Easing.EaseInQuad(progress);
+                    drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, Bounds.Width, Bounds.Height);
                 }
             }
-
-            var drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, Bounds.Width, Bounds.Height);
+            else
+            {
+                drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, Bounds.Width, Bounds.Height);
+            }
 
 
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -338,211 +371,222 @@ namespace ProjectVagabond.UI
             Color bgColor = isActivated ? _global.Palette_DarkGray : _global.Palette_Black;
             spriteBatch.DrawSnapped(pixel, innerBgRect, bgColor * alpha);
 
-            // --- Animated Rarity Trail ---
-            if (_rarity >= 3) // Zipping Trail for Epic and above
+            // --- Conditionally draw content ---
+            if (!skipContent)
             {
-                // Determine speed based on rarity
-                float currentSpeed = BORDER_ANIM_SPEED;
-                if (_rarity == 3) currentSpeed *= 0.6f;      // Epic speed
-                else if (_rarity == 4) currentSpeed *= 0.8f; // Mythic speed
-                // Legendary (_rarity == 5) uses the full BORDER_ANIM_SPEED
-
-                float perimeter = (drawBounds.Width + 1) * 2 + (drawBounds.Height + 1) * 2;
-                float headDistance1 = ((float)gameTime.TotalGameTime.TotalSeconds * currentSpeed) % perimeter;
-                for (int i = 0; i < TRAIL_LENGTH; i++)
+                // --- Animated Rarity Trail ---
+                if (_rarity >= 3) // Zipping Trail for Epic and above
                 {
-                    // Common trail properties
-                    float progress = (float)i / TRAIL_LENGTH;
-                    float trailAlpha = 1.0f - MathF.Pow(progress, 1.0f - TRAIL_FADE_STRENGTH + 0.01f);
-                    Color trailColor = Color.Lerp(rarityColor, Color.White, (float)i / (TRAIL_LENGTH * 2));
-                    Color finalColor = trailColor * trailAlpha * alpha;
+                    // Determine speed based on rarity
+                    float currentSpeed = BORDER_ANIM_SPEED;
+                    if (_rarity == 3) currentSpeed *= 0.6f;      // Epic speed
+                    else if (_rarity == 4) currentSpeed *= 0.8f; // Mythic speed
+                                                                 // Legendary (_rarity == 5) uses the full BORDER_ANIM_SPEED
 
-                    // Draw first trail segment
-                    float currentDistance1 = headDistance1 - i;
-                    Vector2 pos1 = GetPositionOnPerimeter(currentDistance1, drawBounds);
-                    spriteBatch.DrawSnapped(pixel, pos1, finalColor);
-
-                    // For Mythic and Legendary, draw a second, mirrored trail segment
-                    if (_rarity >= 4)
+                    float perimeter = (drawBounds.Width + 1) * 2 + (drawBounds.Height + 1) * 2;
+                    float headDistance1 = ((float)gameTime.TotalGameTime.TotalSeconds * currentSpeed) % perimeter;
+                    for (int i = 0; i < TRAIL_LENGTH; i++)
                     {
-                        float headDistance2 = (headDistance1 + perimeter / 2f);
-                        float currentDistance2 = headDistance2 - i;
-                        Vector2 pos2 = GetPositionOnPerimeter(currentDistance2, drawBounds);
-                        spriteBatch.DrawSnapped(pixel, pos2, finalColor);
-                    }
-                }
-            }
+                        // Common trail properties
+                        float progress = (float)i / TRAIL_LENGTH;
+                        float trailAlpha = 1.0f - MathF.Pow(progress, 1.0f - TRAIL_FADE_STRENGTH + 0.01f);
+                        Color trailColor = Color.Lerp(rarityColor, Color.White, (float)i / (TRAIL_LENGTH * 2));
+                        Color finalColor = trailColor * trailAlpha * alpha;
 
+                        // Draw first trail segment
+                        float currentDistance1 = headDistance1 - i;
+                        Vector2 pos1 = GetPositionOnPerimeter(currentDistance1, drawBounds);
+                        spriteBatch.DrawSnapped(pixel, pos1, finalColor);
 
-            // Draw Rarity Text (OUTSIDE the card)
-            if (!string.IsNullOrEmpty(_rarityText) && _rarityAnimState != RarityAnimationState.Hidden)
-            {
-                float rarityY = drawBounds.Y - secondaryFont.LineHeight - 2;
-                float scale = 1.0f;
-                if (_rarityAnimState == RarityAnimationState.AnimatingIn)
-                {
-                    float progress = Math.Clamp(_rarityPopInTimer / RARITY_ANIM_DURATION, 0f, 1f);
-                    scale = Easing.EaseOutBack(progress);
-                }
-
-                if (_rarity >= 2 && _rarityAnimState == RarityAnimationState.Idle) // Animate for Rare and above
-                {
-                    const float BOUNCE_DURATION = 0.1f;
-                    const float CYCLE_DELAY = 0.5f;
-                    const float WAVE_AMPLITUDE = 1f;
-
-                    float totalCycleDuration = (_rarityText.Length * BOUNCE_DURATION) + CYCLE_DELAY;
-                    float timeInCycle = _rarityAnimTimer % totalCycleDuration;
-
-                    int activeCharIndex = -1;
-                    if (timeInCycle < _rarityText.Length * BOUNCE_DURATION)
-                    {
-                        activeCharIndex = (int)(timeInCycle / BOUNCE_DURATION);
-                    }
-
-                    float totalWidthWithGaps = _rarityText.Sum(c => secondaryFont.MeasureString(c.ToString()).Width) + Math.Max(0, _rarityText.Length - 1);
-                    float currentX = MathF.Round(drawBounds.Center.X - totalWidthWithGaps / 2f);
-
-                    for (int i = 0; i < _rarityText.Length; i++)
-                    {
-                        char c = _rarityText[i];
-                        string charStr = c.ToString();
-                        float yOffset = 0;
-
-                        if (i == activeCharIndex)
+                        // For Mythic and Legendary, draw a second, mirrored trail segment
+                        if (_rarity >= 4)
                         {
-                            float bounceProgress = (timeInCycle % BOUNCE_DURATION) / BOUNCE_DURATION;
-                            yOffset = -MathF.Round(MathF.Sin(bounceProgress * MathHelper.Pi) * WAVE_AMPLITUDE);
+                            float headDistance2 = (headDistance1 + perimeter / 2f);
+                            float currentDistance2 = headDistance2 - i;
+                            Vector2 pos2 = GetPositionOnPerimeter(currentDistance2, drawBounds);
+                            spriteBatch.DrawSnapped(pixel, pos2, finalColor);
+                        }
+                    }
+                }
+
+
+                // Draw Rarity Text (OUTSIDE the card)
+                if (!string.IsNullOrEmpty(_rarityText) && _rarityAnimState != RarityAnimationState.Hidden)
+                {
+                    float rarityY = drawBounds.Y - secondaryFont.LineHeight - 2;
+                    float scale = 1.0f;
+                    if (_rarityAnimState == RarityAnimationState.AnimatingIn)
+                    {
+                        float progress = Math.Clamp(_rarityPopInTimer / RARITY_ANIM_DURATION, 0f, 1f);
+                        scale = Easing.EaseOutBack(progress);
+                    }
+
+                    if (_rarity >= 2 && _rarityAnimState == RarityAnimationState.Idle) // Animate for Rare and above
+                    {
+                        const float BOUNCE_DURATION = 0.1f;
+                        const float CYCLE_DELAY = 0.5f;
+                        const float WAVE_AMPLITUDE = 1f;
+
+                        float totalCycleDuration = (_rarityText.Length * BOUNCE_DURATION) + CYCLE_DELAY;
+                        float timeInCycle = _rarityAnimTimer % totalCycleDuration;
+
+                        int activeCharIndex = -1;
+                        if (timeInCycle < _rarityText.Length * BOUNCE_DURATION)
+                        {
+                            activeCharIndex = (int)(timeInCycle / BOUNCE_DURATION);
                         }
 
-                        var charPos = new Vector2(currentX, rarityY + yOffset);
-                        spriteBatch.DrawStringSnapped(secondaryFont, charStr, charPos, rarityColor * alpha);
-                        currentX += secondaryFont.MeasureString(charStr).Width + 1; // Add 1px gap
+                        float totalWidthWithGaps = _rarityText.Sum(c => secondaryFont.MeasureString(c.ToString()).Width) + Math.Max(0, _rarityText.Length - 1);
+                        float currentX = MathF.Round(drawBounds.Center.X - totalWidthWithGaps / 2f);
+
+                        for (int i = 0; i < _rarityText.Length; i++)
+                        {
+                            char c = _rarityText[i];
+                            string charStr = c.ToString();
+                            float yOffset = 0;
+
+                            if (i == activeCharIndex)
+                            {
+                                float bounceProgress = (timeInCycle % BOUNCE_DURATION) / BOUNCE_DURATION;
+                                yOffset = -MathF.Round(MathF.Sin(bounceProgress * MathHelper.Pi) * WAVE_AMPLITUDE);
+                            }
+
+                            var charPos = new Vector2(currentX, rarityY + yOffset);
+                            spriteBatch.DrawStringSnapped(secondaryFont, charStr, charPos, rarityColor * alpha);
+                            currentX += secondaryFont.MeasureString(charStr).Width + 1; // Add 1px gap
+                        }
                     }
-                }
-                else // Draw statically or with pop-in animation
-                {
-                    var rarityTextSize = secondaryFont.MeasureString(_rarityText);
-                    var rarityTextPos = new Vector2(drawBounds.Center.X, rarityY + rarityTextSize.Height / 2f);
-                    var origin = rarityTextSize / 2f;
-                    spriteBatch.DrawStringSnapped(secondaryFont, _rarityText, rarityTextPos, rarityColor * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
-                }
-            }
-
-            // --- INTERNAL CONTENT ---
-            const int paddingX = 8;
-            const int topPadding = 4;
-            float contentWidth = drawBounds.Width - (paddingX * 2);
-
-            // --- TITLE AREA ---
-            float titleAreaHeight = defaultFont.LineHeight * 2;
-            var titleLines = WrapText(Title, contentWidth, defaultFont, isTitle: true);
-            float totalTitleTextHeight = titleLines.Count * defaultFont.LineHeight;
-            float titleStartY = drawBounds.Y + topPadding + (titleAreaHeight - totalTitleTextHeight) / 2f; // Vertically center the text block
-
-            float currentY = titleStartY;
-            foreach (var line in titleLines)
-            {
-                var titleSize = defaultFont.MeasureString(line);
-                var titlePos = new Vector2(drawBounds.Center.X - titleSize.Width / 2, currentY);
-                spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, (isActivated ? _global.ButtonHoverColor : titleColor) * alpha);
-                currentY += defaultFont.LineHeight;
-            }
-
-            // --- DESCRIPTION AREA ---
-            float descriptionStartY = drawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
-
-            // Draw Element Icon for Spells, positioned a fixed distance above the description start line.
-            if (_cardType == ChoiceType.Spell && spriteManager.ElementIconSourceRects.TryGetValue(_elementId, out var iconRect))
-            {
-                const int iconSize = 9;
-                const int iconDescGap = 4;
-                var iconPos = new Vector2(drawBounds.Center.X - iconSize / 2f, descriptionStartY - iconDescGap - iconSize + 4);
-                spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White * alpha);
-            }
-
-            currentY = descriptionStartY;
-
-            // Draw Description (Word Wrapped)
-            var descLines = WrapText(Description, contentWidth, secondaryFont);
-            foreach (var line in descLines)
-            {
-                var descSize = secondaryFont.MeasureString(line);
-                var descPos = new Vector2(drawBounds.Center.X - descSize.Width / 2, currentY);
-                spriteBatch.DrawStringSnapped(secondaryFont, line, descPos, _global.Palette_White * alpha);
-                currentY += secondaryFont.LineHeight;
-            }
-
-            // Draw Stats at the bottom
-            float statsBlockHeight = _stats.Count * secondaryFont.LineHeight;
-            float statsStartY = drawBounds.Bottom - paddingX - statsBlockHeight;
-
-            if (_cardType == ChoiceType.Spell)
-            {
-                // Calculate max widths for alignment
-                float maxLabelWidth = 0f;
-                float maxValueWidth = 0f;
-                foreach (var (label, value) in _stats)
-                {
-                    maxLabelWidth = Math.Max(maxLabelWidth, secondaryFont.MeasureString(label).Width);
-                    maxValueWidth = Math.Max(maxValueWidth, secondaryFont.MeasureString(value).Width);
-                }
-
-                float totalStatWidth = maxLabelWidth + maxValueWidth + 2; // 2px gap
-                float statBlockStartX = drawBounds.X + (drawBounds.Width - totalStatWidth) / 2;
-                float statLabelX = statBlockStartX;
-                float statValueX = statLabelX + maxLabelWidth + 2;
-
-                for (int i = 0; i < _stats.Count; i++)
-                {
-                    var (label, value) = _stats[i];
-                    var labelSize = secondaryFont.MeasureString(label);
-                    var valueSize = secondaryFont.MeasureString(value);
-                    var lineY = statsStartY + i * secondaryFont.LineHeight;
-
-                    // Draw label (right-aligned)
-                    var labelPos = new Vector2(statLabelX + (maxLabelWidth - labelSize.Width), lineY);
-                    spriteBatch.DrawStringSnapped(secondaryFont, label, labelPos, _global.Palette_Gray * alpha);
-
-                    // Draw value (right-aligned)
-                    var valuePos = new Vector2(statValueX + (maxValueWidth - valueSize.Width), lineY);
-                    if (value.Contains("%"))
+                    else // Draw statically or with pop-in animation
                     {
-                        valuePos.X += 5;
+                        var rarityTextSize = secondaryFont.MeasureString(_rarityText);
+                        var rarityTextPos = new Vector2(drawBounds.Center.X, rarityY + rarityTextSize.Height / 2f);
+                        var origin = rarityTextSize / 2f;
+                        spriteBatch.DrawStringSnapped(secondaryFont, _rarityText, rarityTextPos, rarityColor * alpha, 0f, origin, scale, SpriteEffects.None, 0f);
                     }
-                    spriteBatch.DrawStringSnapped(secondaryFont, value, valuePos, _global.Palette_Gray * alpha);
                 }
-            }
-            else
-            {
-                // Centered subtext for abilities/items
-                if (_subTextLines.Any())
+
+                // --- INTERNAL CONTENT ---
+                const int paddingX = 8;
+                const int topPadding = 4;
+                float contentWidth = drawBounds.Width - (paddingX * 2);
+
+                // --- TITLE AREA ---
+                float titleAreaHeight = defaultFont.LineHeight * 2;
+                var titleLines = WrapText(Title, contentWidth, defaultFont, isTitle: true);
+                float totalTitleTextHeight = titleLines.Count * defaultFont.LineHeight;
+                float titleStartY = drawBounds.Y + topPadding + (titleAreaHeight - totalTitleTextHeight) / 2f; // Vertically center the text block
+
+                float currentY = titleStartY;
+                foreach (var line in titleLines)
                 {
-                    var subText = _subTextLines[0];
-                    var subTextSize = secondaryFont.MeasureString(subText);
-                    var subTextPos = new Vector2(drawBounds.Center.X - subTextSize.Width / 2, statsStartY);
-                    spriteBatch.DrawStringSnapped(secondaryFont, subText, subTextPos, _global.Palette_Gray * alpha);
+                    var titleSize = defaultFont.MeasureString(line);
+                    var titlePos = new Vector2(drawBounds.Center.X - titleSize.Width / 2, currentY);
+                    spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, (isActivated ? _global.ButtonHoverColor : titleColor) * alpha);
+                    currentY += defaultFont.LineHeight;
                 }
+
+                // --- DESCRIPTION AREA ---
+                float descriptionStartY = drawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
+
+                // Draw Element Icon for Spells, positioned a fixed distance above the description start line.
+                if (_cardType == ChoiceType.Spell && spriteManager.ElementIconSourceRects.TryGetValue(_elementId, out var iconRect))
+                {
+                    const int iconSize = 9;
+                    const int iconDescGap = 4;
+                    var iconPos = new Vector2(drawBounds.Center.X - iconSize / 2f, descriptionStartY - iconDescGap - iconSize + 4);
+                    spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White * alpha);
+                }
+
+                currentY = descriptionStartY;
+
+                // Draw Description (Word Wrapped)
+                var descLines = WrapText(Description, contentWidth, secondaryFont);
+                foreach (var line in descLines)
+                {
+                    var descSize = secondaryFont.MeasureString(line);
+                    var descPos = new Vector2(drawBounds.Center.X - descSize.Width / 2, currentY);
+                    spriteBatch.DrawStringSnapped(secondaryFont, line, descPos, _global.Palette_White * alpha);
+                    currentY += secondaryFont.LineHeight;
+                }
+
+                // Draw Stats at the bottom
+                float statsBlockHeight = _stats.Count * secondaryFont.LineHeight;
+                float statsStartY = drawBounds.Bottom - paddingX - statsBlockHeight;
+
+                if (_cardType == ChoiceType.Spell)
+                {
+                    // Calculate max widths for alignment
+                    float maxLabelWidth = 0f;
+                    float maxValueWidth = 0f;
+                    foreach (var (label, value) in _stats)
+                    {
+                        maxLabelWidth = Math.Max(maxLabelWidth, secondaryFont.MeasureString(label).Width);
+                        maxValueWidth = Math.Max(maxValueWidth, secondaryFont.MeasureString(value).Width);
+                    }
+
+                    float totalStatWidth = maxLabelWidth + maxValueWidth + 2; // 2px gap
+                    float statBlockStartX = drawBounds.X + (drawBounds.Width - totalStatWidth) / 2;
+                    float statLabelX = statBlockStartX;
+                    float statValueX = statLabelX + maxLabelWidth + 2;
+
+                    for (int i = 0; i < _stats.Count; i++)
+                    {
+                        var (label, value) = _stats[i];
+                        var labelSize = secondaryFont.MeasureString(label);
+                        var valueSize = secondaryFont.MeasureString(value);
+                        var lineY = statsStartY + i * secondaryFont.LineHeight;
+
+                        // Draw label (right-aligned)
+                        var labelPos = new Vector2(statLabelX + (maxLabelWidth - labelSize.Width), lineY);
+                        spriteBatch.DrawStringSnapped(secondaryFont, label, labelPos, _global.Palette_Gray * alpha);
+
+                        // Draw value (right-aligned)
+                        var valuePos = new Vector2(statValueX + (maxValueWidth - valueSize.Width), lineY);
+                        if (value.Contains("%"))
+                        {
+                            valuePos.X += 5;
+                        }
+                        spriteBatch.DrawStringSnapped(secondaryFont, value, valuePos, _global.Palette_Gray * alpha);
+                    }
+                }
+                else
+                {
+                    // Centered subtext for abilities/items
+                    if (_subTextLines.Any())
+                    {
+                        var subText = _subTextLines[0];
+                        var subTextSize = secondaryFont.MeasureString(subText);
+                        var subTextPos = new Vector2(drawBounds.Center.X - subTextSize.Width / 2, statsStartY);
+                        spriteBatch.DrawStringSnapped(secondaryFont, subText, subTextPos, _global.Palette_Gray * alpha);
+                    }
+                }
+
+                // Draw Decorative Accents
+                const int accentSize = 3;
+                const int inset = 2;
+                // Top-Left
+                spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, accentSize, 1), accentColor * alpha);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, 1, accentSize), accentColor * alpha);
+
+                // Top-Right
+                spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Top + inset, accentSize, 1), accentColor * alpha);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Top + inset, 1, accentSize), accentColor * alpha);
+
+                // Bottom-Left
+                spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor * alpha);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor * alpha);
+
+                // Bottom-Right
+                spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor * alpha);
+                spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor * alpha);
             }
 
-            // Draw Decorative Accents
-            const int accentSize = 3;
-            const int inset = 2;
-            // Top-Left
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, accentSize, 1), accentColor * alpha);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, 1, accentSize), accentColor * alpha);
-
-            // Top-Right
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Top + inset, accentSize, 1), accentColor * alpha);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Top + inset, 1, accentSize), accentColor * alpha);
-
-            // Bottom-Left
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor * alpha);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor * alpha);
-
-            // Bottom-Right
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor * alpha);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor * alpha);
+            if (whiteOverlayAlpha > 0.01f)
+            {
+                Vector2 origin = new Vector2(0.5f); // Origin for a 1x1 texture is its center
+                Vector2 scale = new Vector2(drawBounds.Width, drawBounds.Height);
+                spriteBatch.DrawSnapped(pixel, drawBounds.Center.ToVector2(), null, Color.White * whiteOverlayAlpha, currentRotation, origin, scale, SpriteEffects.None, 0f);
+            }
         }
     }
 }
