@@ -43,6 +43,9 @@ namespace ProjectVagabond.UI
         private const float BORDER_ANIM_SPEED = 250f; // pixels per second
         private const int TRAIL_LENGTH = 250;
         private const float TRAIL_FADE_STRENGTH = 0.45f; // 0.0 (long fade) to 1.0 (instant fade)
+        private const float AURA_PULSE_SPEED = 2f;
+        private const float MIN_AURA_ALPHA = 0.1f;
+        private const float MAX_AURA_ALPHA = 0.6f;
 
         public bool IsIntroAnimating => _cardAnimState == CardAnimationState.AnimatingIn;
 
@@ -269,34 +272,64 @@ namespace ProjectVagabond.UI
             Color borderColor = Color.Lerp(baseBorderColor, Color.White, pulse);
             borderColor *= 0.5f; // Apply 50% opacity
 
-
-            // Draw Border and Background
-            spriteBatch.DrawSnapped(pixel, drawBounds, isActivated ? _global.Palette_DarkGray : _global.Palette_Black);
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left, drawBounds.Top, drawBounds.Width, 1), borderColor); // Top
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left, drawBounds.Bottom - 1, drawBounds.Width, 1), borderColor); // Bottom
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left, drawBounds.Top, 1, drawBounds.Height), borderColor); // Left
-            spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1, drawBounds.Top, 1, drawBounds.Height), borderColor); // Right
-
-            // --- Animated Rarity Border ---
-            float headDistance = (float)gameTime.TotalGameTime.TotalSeconds * BORDER_ANIM_SPEED;
-            for (int i = 0; i < TRAIL_LENGTH; i++)
+            // --- Pulsing Aura for Rare and above (drawn first) ---
+            if (_rarity >= 2)
             {
-                float currentDistance = headDistance - i;
-                Vector2 pos = GetPositionOnPerimeter(currentDistance, drawBounds);
+                float pulseValue = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * AURA_PULSE_SPEED) + 1f) / 2f; // 0 to 1
+                float alpha = MathHelper.Lerp(MIN_AURA_ALPHA, MAX_AURA_ALPHA, pulseValue);
+                Color auraColor = rarityColor * alpha;
+                var outerBorderRect = new Rectangle(drawBounds.X - 1, drawBounds.Y - 1, drawBounds.Width + 2, drawBounds.Height + 2);
+                spriteBatch.DrawSnapped(pixel, outerBorderRect, auraColor);
+            }
 
-                float progress = (float)i / TRAIL_LENGTH;
-                float alpha = 1.0f - MathF.Pow(progress, 1.0f - TRAIL_FADE_STRENGTH + 0.01f);
+            // Draw the semi-transparent border frame first
+            spriteBatch.DrawSnapped(pixel, drawBounds, borderColor);
 
-                Color trailColor = Color.Lerp(rarityColor, Color.White, (float)i / (TRAIL_LENGTH * 2));
+            // Draw the opaque inner background on top, creating the hollow border effect
+            var innerBgRect = new Rectangle(drawBounds.X + 1, drawBounds.Y + 1, drawBounds.Width - 2, drawBounds.Height - 2);
+            Color bgColor = isActivated ? _global.Palette_DarkGray : _global.Palette_Black;
+            spriteBatch.DrawSnapped(pixel, innerBgRect, bgColor);
 
-                spriteBatch.DrawSnapped(pixel, pos, trailColor * alpha);
+            // --- Animated Rarity Trail ---
+            if (_rarity >= 3) // Zipping Trail for Epic and above
+            {
+                // Determine speed based on rarity
+                float currentSpeed = BORDER_ANIM_SPEED;
+                if (_rarity == 3) currentSpeed *= 0.6f;      // Epic speed
+                else if (_rarity == 4) currentSpeed *= 0.8f; // Mythic speed
+                // Legendary (_rarity == 5) uses the full BORDER_ANIM_SPEED
+
+                float perimeter = (drawBounds.Width + 1) * 2 + (drawBounds.Height + 1) * 2;
+                float headDistance1 = ((float)gameTime.TotalGameTime.TotalSeconds * currentSpeed) % perimeter;
+                for (int i = 0; i < TRAIL_LENGTH; i++)
+                {
+                    // Common trail properties
+                    float progress = (float)i / TRAIL_LENGTH;
+                    float alpha = 1.0f - MathF.Pow(progress, 1.0f - TRAIL_FADE_STRENGTH + 0.01f);
+                    Color trailColor = Color.Lerp(rarityColor, Color.White, (float)i / (TRAIL_LENGTH * 2));
+                    Color finalColor = trailColor * alpha;
+
+                    // Draw first trail segment
+                    float currentDistance1 = headDistance1 - i;
+                    Vector2 pos1 = GetPositionOnPerimeter(currentDistance1, drawBounds);
+                    spriteBatch.DrawSnapped(pixel, pos1, finalColor);
+
+                    // For Mythic and Legendary, draw a second, mirrored trail segment
+                    if (_rarity >= 4)
+                    {
+                        float headDistance2 = (headDistance1 + perimeter / 2f);
+                        float currentDistance2 = headDistance2 - i;
+                        Vector2 pos2 = GetPositionOnPerimeter(currentDistance2, drawBounds);
+                        spriteBatch.DrawSnapped(pixel, pos2, finalColor);
+                    }
+                }
             }
 
 
             // Draw Rarity Text (OUTSIDE the card)
             if (!string.IsNullOrEmpty(_rarityText) && _rarityAnimState != RarityAnimationState.Hidden)
             {
-                float rarityY = drawBounds.Y - secondaryFont.LineHeight - 1;
+                float rarityY = drawBounds.Y - secondaryFont.LineHeight - 2;
                 float scale = 1.0f;
                 if (_rarityAnimState == RarityAnimationState.AnimatingIn)
                 {
