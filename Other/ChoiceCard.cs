@@ -40,6 +40,9 @@ namespace ProjectVagabond.UI
         private RarityAnimationState _rarityAnimState = RarityAnimationState.Hidden;
         private float _rarityPopInTimer = 0f;
         private const float RARITY_ANIM_DURATION = 0.3f;
+        private const float BORDER_ANIM_SPEED = 250f; // pixels per second
+        private const int TRAIL_LENGTH = 250;
+        private const float TRAIL_FADE_STRENGTH = 0.45f; // 0.0 (long fade) to 1.0 (instant fade)
 
         public bool IsIntroAnimating => _cardAnimState == CardAnimationState.AnimatingIn;
 
@@ -199,6 +202,41 @@ namespace ProjectVagabond.UI
             return lines;
         }
 
+        private Vector2 GetPositionOnPerimeter(float distance, Rectangle bounds)
+        {
+            float perimeter = (bounds.Width + 1) * 2 + (bounds.Height + 1) * 2;
+            // Ensure distance is always positive and wraps around
+            distance = (distance % perimeter + perimeter) % perimeter;
+
+            float topEdgeLength = bounds.Width + 1;
+            float rightEdgeLength = bounds.Height + 1;
+            float bottomEdgeLength = bounds.Width + 1;
+
+            float x, y;
+
+            if (distance < topEdgeLength) // Top edge
+            {
+                x = bounds.X - 1 + distance;
+                y = bounds.Y - 1;
+            }
+            else if (distance < topEdgeLength + rightEdgeLength) // Right edge
+            {
+                x = bounds.Right;
+                y = bounds.Y - 1 + (distance - topEdgeLength);
+            }
+            else if (distance < topEdgeLength + rightEdgeLength + bottomEdgeLength) // Bottom edge
+            {
+                x = bounds.Right - (distance - (topEdgeLength + rightEdgeLength));
+                y = bounds.Bottom;
+            }
+            else // Left edge
+            {
+                x = bounds.X - 1;
+                y = bounds.Bottom - (distance - (topEdgeLength + rightEdgeLength + bottomEdgeLength));
+            }
+            return new Vector2(x, y);
+        }
+
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
         {
             if (_cardAnimState == CardAnimationState.Hidden) return;
@@ -238,6 +276,22 @@ namespace ProjectVagabond.UI
             spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left, drawBounds.Bottom - 1, drawBounds.Width, 1), borderColor); // Bottom
             spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left, drawBounds.Top, 1, drawBounds.Height), borderColor); // Left
             spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1, drawBounds.Top, 1, drawBounds.Height), borderColor); // Right
+
+            // --- Animated Rarity Border ---
+            float headDistance = (float)gameTime.TotalGameTime.TotalSeconds * BORDER_ANIM_SPEED;
+            for (int i = 0; i < TRAIL_LENGTH; i++)
+            {
+                float currentDistance = headDistance - i;
+                Vector2 pos = GetPositionOnPerimeter(currentDistance, drawBounds);
+
+                float progress = (float)i / TRAIL_LENGTH;
+                float alpha = 1.0f - MathF.Pow(progress, 1.0f - TRAIL_FADE_STRENGTH + 0.01f);
+
+                Color trailColor = Color.Lerp(rarityColor, Color.White, (float)i / (TRAIL_LENGTH * 2));
+
+                spriteBatch.DrawSnapped(pixel, pos, trailColor * alpha);
+            }
+
 
             // Draw Rarity Text (OUTSIDE the card)
             if (!string.IsNullOrEmpty(_rarityText) && _rarityAnimState != RarityAnimationState.Hidden)
