@@ -17,5 +17,14 @@
 
         // Parameterless constructor for serialization if needed in the future.
         public SpellbookEntry() { }
+
+        /// <summary>
+        /// Creates a shallow copy of the SpellbookEntry. This is sufficient because
+        /// its properties (string, int) are value types or immutable.
+        /// </summary>
+        public SpellbookEntry Clone()
+        {
+            return (SpellbookEntry)this.MemberwiseClone();
+        }
     }
 }

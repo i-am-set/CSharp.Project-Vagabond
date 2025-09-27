@@ -235,18 +235,9 @@ namespace ProjectVagabond.Scenes
 
         private void CleanupPlayerState()
         {
-            var gameState = ServiceLocator.Get<GameState>();
-            if (gameState.PlayerState == null) return;
-
-            // Iterate through the spellbook pages and set any exhausted spells to null.
-            for (int i = 0; i < gameState.PlayerState.SpellbookPages.Count; i++)
-            {
-                var entry = gameState.PlayerState.SpellbookPages[i];
-                if (entry != null && entry.TimesUsed <= 0)
-                {
-                    gameState.PlayerState.SpellbookPages[i] = null;
-                }
-            }
+            // This method is now intentionally left empty.
+            // The player's master spellbook state should not be modified upon exiting combat.
+            // It should only change through explicit learn/forget events.
         }
 
         public override void Update(GameTime gameTime)

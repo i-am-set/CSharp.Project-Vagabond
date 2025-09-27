@@ -215,15 +215,11 @@ namespace ProjectVagabond.Battle
 
             _actionQueue.InsertRange(0, startOfTurnActions);
 
-            // Player draws to fill hand
+            // Player draws to fill any empty slots in their hand.
             foreach (var player in _playerCombatants)
             {
                 if (!player.IsDefeated)
                 {
-                    if (_playerUsedSpellThisTurn)
-                    {
-                        player.DeckManager?.DiscardHand();
-                    }
                     player.DeckManager?.DrawToFillHand();
                 }
             }

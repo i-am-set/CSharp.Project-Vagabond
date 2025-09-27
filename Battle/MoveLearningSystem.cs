@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using System.Linq;
 
@@ -56,16 +57,8 @@ namespace ProjectVagabond
                 return;
             }
 
-            // 4. Find an empty spell page.
-            int emptyPageIndex = _gameState.PlayerState.SpellbookPages.FindIndex(p => p == null);
-            if (emptyPageIndex == -1)
-            {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Spellbook is full. Cannot learn new moves." });
-                return;
-            }
-
-            // 5. Add the move and provide feedback.
-            _gameState.PlayerState.SpellbookPages[emptyPageIndex] = new SpellbookEntry(moveId, 0);
+            // 4. Add the new spell to the end of the spellbook, creating a new page.
+            _gameState.PlayerState.SpellbookPages.Add(new SpellbookEntry(moveId, 0));
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Player learned {moveData.MoveName}!" });
         }
 

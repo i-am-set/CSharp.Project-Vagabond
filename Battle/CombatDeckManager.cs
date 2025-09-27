@@ -26,9 +26,10 @@ namespace ProjectVagabond.Battle
         /// <param name="spellbookPages">A list of all spellbook entries the combatant knows.</param>
         public void Initialize(List<SpellbookEntry> spellbookPages)
         {
-            _deck.Clear();
-            // Only add non-null entries from the spellbook to the battle deck.
-            _deck.AddRange(spellbookPages.Where(p => p != null));
+            // Create a new list of cloned SpellbookEntry objects for the battle deck.
+            // This is a critical architectural step to ensure that the in-combat deck is
+            // completely decoupled from the player's persistent spellbook state.
+            _deck = spellbookPages.Where(p => p != null).Select(p => p.Clone()).ToList();
 
             _discardPile.Clear();
             ShuffleDeckIntoDrawPile();
@@ -45,7 +46,7 @@ namespace ProjectVagabond.Battle
             {
                 if (Hand[i] == entry)
                 {
-                    // Increment the persistent usage counter.
+                    // Increment the usage counter on the combat-specific clone.
                     entry.TimesUsed++;
 
                     // Always add the spell to the discard pile.
