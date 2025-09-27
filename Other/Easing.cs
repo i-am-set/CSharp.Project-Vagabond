@@ -37,6 +37,8 @@ namespace ProjectVagabond
             { "EaseInOutCirc", EaseInOutCirc },
             { "EaseInBack", EaseInBack },
             { "EaseOutBack", EaseOutBack },
+            { "EaseOutBackSlight", EaseOutBackSlight },
+            { "EaseOutBackBig", EaseOutBackBig },
             { "EaseInOutBack", EaseInOutBack },
             { "EaseInElastic", EaseInElastic },
             { "EaseOutElastic", EaseOutElastic },
@@ -188,6 +190,13 @@ namespace ProjectVagabond
         public static float EaseOutBackSlight(float x)
         {
             const float c1 = 1.0f; // Reduced from 1.70158f for less overshoot
+            const float c3 = c1 + 1;
+            return 1 + c3 * (float)Math.Pow(x - 1, 3) + c1 * (float)Math.Pow(x - 1, 2);
+        }
+
+        public static float EaseOutBackBig(float x)
+        {
+            const float c1 = 2.7f; // Increased for a more dramatic overshoot
             const float c3 = c1 + 1;
             return 1 + c3 * (float)Math.Pow(x - 1, 3) + c1 * (float)Math.Pow(x - 1, 2);
         }

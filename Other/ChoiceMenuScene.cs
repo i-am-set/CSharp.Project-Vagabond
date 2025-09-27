@@ -3,7 +3,9 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +21,7 @@ namespace ProjectVagabond.Scenes
         private readonly SceneManager _sceneManager;
         private readonly GameState _gameState;
 
-        private enum AnimationPhase { CardIntro, RarityIntro, Idle, CardOutro }
+        private enum AnimationPhase { CardIntro, RarityIntro, Idle, CardOutro, SpellTransform_PopIn, SpellTransform_BookIntro, SpellTransform_MoveOut, SpellTransform_Absorb, SpellTransform_BookMoveOut }
         private AnimationPhase _currentPhase = AnimationPhase.CardIntro;
 
         private Queue<ChoiceCard> _cardsToAnimateIn = new Queue<ChoiceCard>();
@@ -31,6 +33,26 @@ namespace ProjectVagabond.Scenes
         private const float RARITY_STAGGER_DELAY = 0.1f;
 
         private List<(ChoiceCard card, float delay)> _cardsToAnimateOut = new List<(ChoiceCard, float)>();
+
+        // State for the final transform animation
+        private object _selectedChoiceData;
+        private Vector2 _transformAnimPosition;
+        private float _transformAnimTimer;
+        private const float TRANSFORM_POP_IN_DURATION = 0.5f;
+        private const float TRANSFORM_BOOK_INTRO_DURATION = 0.3f;
+        private const float TRANSFORM_MOVE_OUT_DURATION = 0.4f;
+        private const float TRANSFORM_ABSORB_PULSE_UP_DURATION = 0.1f;
+        private const float TRANSFORM_ABSORB_HANG_DURATION = 0.2f;
+        private const float TRANSFORM_ABSORB_PULSE_DOWN_DURATION = 0.2f;
+        private const float TOTAL_ABSORB_DURATION = TRANSFORM_ABSORB_PULSE_UP_DURATION + TRANSFORM_ABSORB_HANG_DURATION + TRANSFORM_ABSORB_PULSE_DOWN_DURATION;
+        private const float TRANSFORM_BOOK_MOVE_OUT_DURATION = 0.3f;
+        private const float ABSORB_PULSE_SCALE = 1.2f;
+        private const float ABSORB_SHAKE_MAGNITUDE = 4f;
+        private const float ABSORB_SHAKE_FREQUENCY = 40f;
+        private const float ABSORB_HOP_AMOUNT = 2f;
+        private Vector2 _spellbookAnimPosition;
+        private float _transformInitialRotation;
+
 
         public ChoiceMenuScene()
         {
@@ -91,10 +113,11 @@ namespace ProjectVagabond.Scenes
         private void OnCardSelected(ChoiceCard selectedCard)
         {
             _currentPhase = AnimationPhase.CardOutro;
+            _selectedChoiceData = selectedCard.Data;
+            _transformAnimPosition = selectedCard.Bounds.Center.ToVector2();
 
-            // The selected card starts its animation immediately.
-            // The game logic (HandleChoice) is passed as a callback to run when the animation finishes.
-            selectedCard.StartOutroAnimation(true, () => HandleChoice(selectedCard.Data));
+            // The selected card's onComplete will now trigger the next phase
+            selectedCard.StartOutroAnimation(true, OnSelectedCardOutroComplete);
 
             // Queue up the other cards to animate out with a random stagger.
             _cardsToAnimateOut.Clear();
@@ -108,6 +131,23 @@ namespace ProjectVagabond.Scenes
                         _cardsToAnimateOut.Add((card, delay));
                     }
                 }
+            }
+        }
+
+        private void OnSelectedCardOutroComplete()
+        {
+            if (_selectedChoiceData is MoveData)
+            {
+                _currentPhase = AnimationPhase.SpellTransform_PopIn;
+                _transformAnimTimer = 0f;
+                float initialTilt = (float)(_random.NextDouble() * Math.PI) - MathHelper.PiOver2; // -90 to +90 degrees
+                float spinDirection = (_random.Next(2) == 0) ? 1f : -1f;
+                _transformInitialRotation = initialTilt + (spinDirection * MathHelper.TwoPi);
+            }
+            else
+            {
+                // For abilities/items, just handle the choice immediately after the card disappears
+                HandleChoice(_selectedChoiceData);
             }
         }
 
@@ -217,6 +257,50 @@ namespace ProjectVagabond.Scenes
                     }
                     break;
 
+                case AnimationPhase.SpellTransform_PopIn:
+                    _transformAnimTimer += deltaTime;
+                    if (_transformAnimTimer >= TRANSFORM_POP_IN_DURATION)
+                    {
+                        _currentPhase = AnimationPhase.SpellTransform_BookIntro;
+                        _transformAnimTimer = 0f;
+                    }
+                    break;
+
+                case AnimationPhase.SpellTransform_BookIntro:
+                    _transformAnimTimer += deltaTime;
+                    if (_transformAnimTimer >= TRANSFORM_BOOK_INTRO_DURATION)
+                    {
+                        _currentPhase = AnimationPhase.SpellTransform_MoveOut;
+                        _transformAnimTimer = 0f;
+                    }
+                    break;
+
+                case AnimationPhase.SpellTransform_MoveOut:
+                    _transformAnimTimer += deltaTime;
+                    if (_transformAnimTimer >= TRANSFORM_MOVE_OUT_DURATION)
+                    {
+                        _currentPhase = AnimationPhase.SpellTransform_Absorb;
+                        _transformAnimTimer = 0f;
+                    }
+                    break;
+
+                case AnimationPhase.SpellTransform_Absorb:
+                    _transformAnimTimer += deltaTime;
+                    if (_transformAnimTimer >= TOTAL_ABSORB_DURATION)
+                    {
+                        _currentPhase = AnimationPhase.SpellTransform_BookMoveOut;
+                        _transformAnimTimer = 0f;
+                    }
+                    break;
+
+                case AnimationPhase.SpellTransform_BookMoveOut:
+                    _transformAnimTimer += deltaTime;
+                    if (_transformAnimTimer >= TRANSFORM_BOOK_MOVE_OUT_DURATION)
+                    {
+                        HandleChoice(_selectedChoiceData);
+                    }
+                    break;
+
                 case AnimationPhase.Idle:
                     // Input is only processed when idle.
                     if (IsInputBlocked) return;
@@ -230,6 +314,128 @@ namespace ProjectVagabond.Scenes
             foreach (var card in _cards)
             {
                 card.Draw(spriteBatch, font, gameTime, transform);
+            }
+
+            if (_currentPhase >= AnimationPhase.SpellTransform_PopIn)
+            {
+                var spriteManager = ServiceLocator.Get<SpriteManager>();
+                var pageSprite = spriteManager.SpellbookPageSprite;
+                var bookSprite = spriteManager.SpellbookClosedSprite;
+
+                if (pageSprite != null && bookSprite != null)
+                {
+                    // Default values
+                    float pageScale = 1f;
+                    float pageAlpha = 1f;
+                    Vector2 pagePos = _transformAnimPosition;
+                    var pageOrigin = pageSprite.Bounds.Center.ToVector2();
+                    float pageRotation = 0f;
+                    Color pageColor = Color.White;
+
+                    Vector2 bookPos = Vector2.Zero;
+                    var bookOrigin = new Vector2(MathF.Round(bookSprite.Width / 2f), bookSprite.Height);
+                    float bookScale = 1f;
+
+                    // State-based animation calculations
+                    if (_currentPhase == AnimationPhase.SpellTransform_PopIn)
+                    {
+                        float progress = Math.Clamp(_transformAnimTimer / TRANSFORM_POP_IN_DURATION, 0f, 1f);
+                        pageScale = Easing.EaseOutBackBig(progress);
+                        pageRotation = MathHelper.Lerp(_transformInitialRotation, 0f, Easing.EaseOutQuint(progress));
+                        pageColor = Color.Lerp(Color.White, new Color(255, 255, 255, 0), 1f - progress);
+                    }
+                    else if (_currentPhase == AnimationPhase.SpellTransform_BookIntro)
+                    {
+                        float progress = Math.Clamp(_transformAnimTimer / TRANSFORM_BOOK_INTRO_DURATION, 0f, 1f);
+                        float easedProgress = Easing.EaseOutCirc(progress);
+                        float bookStartY = Global.VIRTUAL_HEIGHT + bookSprite.Height;
+                        float bookEndY = Global.VIRTUAL_HEIGHT - 1;
+                        float bookY = MathHelper.Lerp(bookStartY, bookEndY, easedProgress);
+                        bookPos = new Vector2(_transformAnimPosition.X, bookY);
+                    }
+                    else if (_currentPhase == AnimationPhase.SpellTransform_MoveOut)
+                    {
+                        float progress = Math.Clamp(_transformAnimTimer / TRANSFORM_MOVE_OUT_DURATION, 0f, 1f);
+                        float easedProgress = Easing.EaseInQuint(progress);
+
+                        float pageEndY = Global.VIRTUAL_HEIGHT - bookSprite.Height + 10;
+                        pagePos.Y = MathHelper.Lerp(_transformAnimPosition.Y, pageEndY, easedProgress);
+
+                        bookPos = new Vector2(_transformAnimPosition.X, Global.VIRTUAL_HEIGHT - 1);
+                    }
+                    else if (_currentPhase == AnimationPhase.SpellTransform_Absorb)
+                    {
+                        pageAlpha = 0f; // Page is gone
+                        bookPos = new Vector2(_transformAnimPosition.X, Global.VIRTUAL_HEIGHT - 1);
+
+                        float timer = _transformAnimTimer;
+
+                        // --- Scale Animation ---
+                        if (timer < TRANSFORM_ABSORB_PULSE_UP_DURATION)
+                        {
+                            float pulseProgress = timer / TRANSFORM_ABSORB_PULSE_UP_DURATION;
+                            bookScale = MathHelper.Lerp(1.0f, ABSORB_PULSE_SCALE, Easing.EaseOutQuad(pulseProgress));
+                        }
+                        else if (timer < TRANSFORM_ABSORB_PULSE_UP_DURATION + TRANSFORM_ABSORB_HANG_DURATION)
+                        {
+                            bookScale = ABSORB_PULSE_SCALE;
+                        }
+                        else
+                        {
+                            float pulseProgress = (timer - (TRANSFORM_ABSORB_PULSE_UP_DURATION + TRANSFORM_ABSORB_HANG_DURATION)) / TRANSFORM_ABSORB_PULSE_DOWN_DURATION;
+                            bookScale = MathHelper.Lerp(ABSORB_PULSE_SCALE, 1.0f, Easing.EaseInQuad(pulseProgress));
+                        }
+
+                        // --- Hop & Shake (tied to the overall progress for a smooth decay) ---
+                        float progress = Math.Clamp(timer / TOTAL_ABSORB_DURATION, 0f, 1f);
+                        float hopPulseProgress = MathF.Sin(progress * MathHelper.Pi); // Simple pulse for hop is fine
+                        bookPos.Y -= ABSORB_HOP_AMOUNT * hopPulseProgress;
+
+                        float shakeDecay = 1.0f - Easing.EaseOutQuad(progress);
+                        float shakeOffset = MathF.Sin(progress * ABSORB_SHAKE_FREQUENCY) * ABSORB_SHAKE_MAGNITUDE * shakeDecay;
+                        bookPos.X += shakeOffset;
+                    }
+                    else if (_currentPhase == AnimationPhase.SpellTransform_BookMoveOut)
+                    {
+                        pageAlpha = 0f;
+                        float progress = Math.Clamp(_transformAnimTimer / TRANSFORM_BOOK_MOVE_OUT_DURATION, 0f, 1f);
+                        float easedProgress = Easing.EaseInQuad(progress);
+                        float bookStartY = Global.VIRTUAL_HEIGHT - 1;
+                        float bookEndY = Global.VIRTUAL_HEIGHT + bookSprite.Height;
+                        bookPos = new Vector2(_transformAnimPosition.X, MathHelper.Lerp(bookStartY, bookEndY, easedProgress));
+                    }
+
+                    // Draw the page first
+                    if (pageAlpha > 0)
+                    {
+                        spriteBatch.DrawSnapped(pageSprite, pagePos, null, Color.White * pageAlpha, pageRotation, pageOrigin, pageScale, SpriteEffects.None, 0f);
+                        if (_currentPhase == AnimationPhase.SpellTransform_PopIn)
+                        {
+                            spriteBatch.DrawSnapped(pageSprite, pagePos, null, pageColor, pageRotation, pageOrigin, pageScale, SpriteEffects.None, 0f);
+                        }
+                    }
+
+                    // Draw the spellbook on top so the page goes "behind" it
+                    if (_currentPhase >= AnimationPhase.SpellTransform_BookIntro)
+                    {
+                        Color bookColor = Color.White; // Default color
+
+                        if (_currentPhase == AnimationPhase.SpellTransform_Absorb)
+                        {
+                            float timer = _transformAnimTimer;
+                            if (timer < TRANSFORM_ABSORB_PULSE_UP_DURATION)
+                            {
+                                float pulseProgress = timer / TRANSFORM_ABSORB_PULSE_UP_DURATION;
+                                // A bright, slightly blue-white color for the flash
+                                Color flashStartColor = new Color(230, 230, 255);
+                                // Fade from the flash color back to the normal white color
+                                bookColor = Color.Lerp(flashStartColor, Color.White, Easing.EaseInQuad(pulseProgress));
+                            }
+                        }
+
+                        spriteBatch.DrawSnapped(bookSprite, bookPos, null, bookColor, 0f, bookOrigin, bookScale, SpriteEffects.None, 0f);
+                    }
+                }
             }
         }
 

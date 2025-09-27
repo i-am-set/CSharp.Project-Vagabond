@@ -34,16 +34,13 @@ namespace ProjectVagabond.UI
         private CardAnimationState _cardAnimState = CardAnimationState.Hidden;
         private float _cardAnimTimer = 0f;
         private const float CARD_ANIM_DURATION = 0.4f;
-        private const float OUTRO_FADE_DURATION = 0.2f;
-        private const float OUTRO_HANG_DURATION = 0.1f;
-        private const float OUTRO_PULL_DURATION = 0.15f;
         private const float OUTRO_SHRINK_DURATION = 0.3f;
-        private const float MAX_PULL_SCALE = 1.1f;
         private Vector2 _startPosition;
         private Vector2 _targetPosition;
         private bool _wasSelectedForOutro;
         private Action _onOutroComplete;
         private float _outroRotation;
+        private bool _outroCompleteCallbackFired;
 
 
         private enum RarityAnimationState { Hidden, AnimatingIn, Idle }
@@ -58,6 +55,7 @@ namespace ProjectVagabond.UI
         private const float MAX_AURA_ALPHA = 0.6f;
 
         public bool IsIntroAnimating => _cardAnimState == CardAnimationState.AnimatingIn;
+        public bool IsAnimatingOut => _cardAnimState == CardAnimationState.AnimatingOut;
 
         public ChoiceCard(Rectangle bounds, MoveData move) : base(bounds, move.MoveName)
         {
@@ -114,6 +112,7 @@ namespace ProjectVagabond.UI
             _cardAnimTimer = 0f;
             _wasSelectedForOutro = wasSelected;
             _onOutroComplete = onComplete;
+            _outroCompleteCallbackFired = false;
             if (wasSelected)
             {
                 _outroRotation = (float)(_random.NextDouble() * 2 - 1) * MathHelper.PiOver4; // Random rotation between -45 and +45 degrees.
@@ -145,12 +144,15 @@ namespace ProjectVagabond.UI
             else if (_cardAnimState == CardAnimationState.AnimatingOut)
             {
                 _cardAnimTimer += deltaTime;
-                float totalDuration = _wasSelectedForOutro ? OUTRO_FADE_DURATION + OUTRO_HANG_DURATION + OUTRO_PULL_DURATION + OUTRO_SHRINK_DURATION : OUTRO_SHRINK_DURATION;
-                if (_cardAnimTimer >= totalDuration)
+                if (_cardAnimTimer >= OUTRO_SHRINK_DURATION)
                 {
-                    _cardAnimTimer = totalDuration;
-                    _cardAnimState = CardAnimationState.Hidden;
-                    _onOutroComplete?.Invoke();
+                    _cardAnimTimer = OUTRO_SHRINK_DURATION;
+                    // The card is now fully shrunk/faded. Fire the callback if it hasn't been already.
+                    if (!_outroCompleteCallbackFired)
+                    {
+                        _onOutroComplete?.Invoke();
+                        _outroCompleteCallbackFired = true;
+                    }
                 }
             }
 
@@ -296,44 +298,24 @@ namespace ProjectVagabond.UI
             {
                 if (_wasSelectedForOutro)
                 {
-                    if (_cardAnimTimer < OUTRO_FADE_DURATION)
-                    {
-                        // Phase 1: Fade to white
-                        float progress = _cardAnimTimer / OUTRO_FADE_DURATION;
-                        whiteOverlayAlpha = Easing.EaseInQuad(progress);
-                    }
-                    else if (_cardAnimTimer < OUTRO_FADE_DURATION + OUTRO_HANG_DURATION)
-                    {
-                        // Phase 2: Hang as white
-                        whiteOverlayAlpha = 1.0f;
-                        skipContent = true;
-                    }
-                    else if (_cardAnimTimer < OUTRO_FADE_DURATION + OUTRO_HANG_DURATION + OUTRO_PULL_DURATION)
-                    {
-                        // Phase 3: Pull (get bigger)
-                        float progress = (_cardAnimTimer - (OUTRO_FADE_DURATION + OUTRO_HANG_DURATION)) / OUTRO_PULL_DURATION;
-                        scale = MathHelper.Lerp(1.0f, MAX_PULL_SCALE, Easing.EaseOutQuad(progress));
-                        whiteOverlayAlpha = 1.0f;
-                        skipContent = true;
-                    }
-                    else
-                    {
-                        // Phase 4: Release (shrink)
-                        float progress = (_cardAnimTimer - (OUTRO_FADE_DURATION + OUTRO_HANG_DURATION + OUTRO_PULL_DURATION)) / OUTRO_SHRINK_DURATION;
-                        float easedProgress = Easing.EaseInQuint(progress);
-                        scale = MathHelper.Lerp(MAX_PULL_SCALE, 0.0f, easedProgress);
-                        currentRotation = MathHelper.Lerp(0, _outroRotation, easedProgress);
-                        whiteOverlayAlpha = 1.0f;
-                        skipContent = true;
-                    }
+                    // Selected card shrinks and fades to white.
+                    float progress = Math.Clamp(_cardAnimTimer / OUTRO_SHRINK_DURATION, 0f, 1f);
+                    float easedProgress = Easing.EaseInQuint(progress);
+                    scale = 1.0f - easedProgress;
 
                     float newWidth = Bounds.Width * scale;
                     float newHeight = Bounds.Height * scale;
+
                     currentPosition = new Vector2(
                         _targetPosition.X + (Bounds.Width - newWidth) / 2f,
                         _targetPosition.Y + (Bounds.Height - newHeight) / 2f
                     );
+
                     drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, (int)newWidth, (int)newHeight);
+                    whiteOverlayAlpha = Easing.EaseInQuad(progress);
+                    alpha = 1.0f;
+                    skipContent = true;
+                    currentRotation = MathHelper.Lerp(0, _outroRotation, easedProgress);
                 }
                 else
                 {

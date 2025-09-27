@@ -64,6 +64,8 @@ namespace ProjectVagabond
         public Effect FireballParticleShaderEffect { get; private set; }
         public Texture2D ArrowIconSpriteSheet { get; private set; }
         public Rectangle[] ArrowIconSourceRects { get; private set; }
+        public Texture2D SpellbookPageSprite { get; private set; }
+        public Texture2D SpellbookClosedSprite { get; private set; }
 
         // Mouse Prompt Sprites
         public Texture2D MousePromptBlank { get; private set; }
@@ -185,6 +187,12 @@ namespace ProjectVagabond
 
             try { MousePromptDisabled = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_disabled"); }
             catch { MousePromptDisabled = _textureFactory.CreateColoredTexture(5, 7, Color.Magenta); }
+
+            try { SpellbookPageSprite = _core.Content.Load<Texture2D>("Sprites/SpellBook/spellbook_page"); }
+            catch { SpellbookPageSprite = _textureFactory.CreateColoredTexture(35, 35, Color.Magenta); }
+
+            try { SpellbookClosedSprite = _core.Content.Load<Texture2D>("Sprites/SpellBook/spellbook_closed"); }
+            catch { SpellbookClosedSprite = _textureFactory.CreateColoredTexture(64, 64, Color.Magenta); }
 
 
             InitializeArrowSourceRects();
