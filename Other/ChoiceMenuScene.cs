@@ -21,7 +21,7 @@ namespace ProjectVagabond.Scenes
         private readonly SceneManager _sceneManager;
         private readonly GameState _gameState;
 
-        private enum AnimationPhase { CardIntro, RarityIntro, Idle, CardOutro, SpellTransform_PopIn, SpellTransform_BookIntro, SpellTransform_MoveOut, SpellTransform_Absorb, SpellTransform_BookMoveOut }
+        private enum AnimationPhase { CardIntro, RarityIntro, Idle, CardOutro, SpellTransform_PopIn, SpellTransform_BookIntro, SpellTransform_MoveOut, SpellTransform_Absorb, SpellTransform_BookMoveOut, FadingOut }
         private AnimationPhase _currentPhase = AnimationPhase.CardIntro;
 
         private Queue<ChoiceCard> _cardsToAnimateIn = new Queue<ChoiceCard>();
@@ -41,7 +41,7 @@ namespace ProjectVagabond.Scenes
         private const float TRANSFORM_POP_IN_DURATION = 0.5f;
         private const float TRANSFORM_BOOK_INTRO_DURATION = 0.3f;
         private const float TRANSFORM_MOVE_OUT_DURATION = 0.4f;
-        private const float TRANSFORM_ABSORB_PULSE_UP_DURATION = 0.1f;
+        private const float TRANSFORM_ABSORB_PULSE_UP_DURATION = 0.25f;
         private const float TRANSFORM_ABSORB_HANG_DURATION = 0.2f;
         private const float TRANSFORM_ABSORB_PULSE_DOWN_DURATION = 0.2f;
         private const float TOTAL_ABSORB_DURATION = TRANSFORM_ABSORB_PULSE_UP_DURATION + TRANSFORM_ABSORB_HANG_DURATION + TRANSFORM_ABSORB_PULSE_DOWN_DURATION;
@@ -52,6 +52,10 @@ namespace ProjectVagabond.Scenes
         private const float ABSORB_HOP_AMOUNT = 2f;
         private Vector2 _spellbookAnimPosition;
         private float _transformInitialRotation;
+
+        // State for the final fade-out
+        private float _fadeOutTimer;
+        private const float FADE_OUT_DURATION = 0.25f;
 
 
         public ChoiceMenuScene()
@@ -182,7 +186,8 @@ namespace ProjectVagabond.Scenes
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {item.ItemName}!" });
             }
 
-            _sceneManager.HideModal();
+            _currentPhase = AnimationPhase.FadingOut;
+            _fadeOutTimer = 0f;
         }
 
         public override void Update(GameTime gameTime)
@@ -301,6 +306,14 @@ namespace ProjectVagabond.Scenes
                     }
                     break;
 
+                case AnimationPhase.FadingOut:
+                    _fadeOutTimer += deltaTime;
+                    if (_fadeOutTimer >= FADE_OUT_DURATION)
+                    {
+                        _sceneManager.HideModal();
+                    }
+                    break;
+
                 case AnimationPhase.Idle:
                     // Input is only processed when idle.
                     if (IsInputBlocked) return;
@@ -311,12 +324,16 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            foreach (var card in _cards)
+            // Only draw the cards if we are not in the final fade-out phase.
+            if (_currentPhase != AnimationPhase.FadingOut)
             {
-                card.Draw(spriteBatch, font, gameTime, transform);
+                foreach (var card in _cards)
+                {
+                    card.Draw(spriteBatch, font, gameTime, transform);
+                }
             }
 
-            if (_currentPhase >= AnimationPhase.SpellTransform_PopIn)
+            if (_currentPhase >= AnimationPhase.SpellTransform_PopIn && _currentPhase < AnimationPhase.FadingOut)
             {
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var pageSprite = spriteManager.SpellbookPageSprite;
@@ -335,6 +352,7 @@ namespace ProjectVagabond.Scenes
                     Vector2 bookPos = Vector2.Zero;
                     var bookOrigin = new Vector2(MathF.Round(bookSprite.Width / 2f), bookSprite.Height);
                     float bookScale = 1f;
+                    Color bookFlashColor = Color.Transparent;
 
                     // State-based animation calculations
                     if (_currentPhase == AnimationPhase.SpellTransform_PopIn)
@@ -375,6 +393,8 @@ namespace ProjectVagabond.Scenes
                         {
                             float pulseProgress = timer / TRANSFORM_ABSORB_PULSE_UP_DURATION;
                             bookScale = MathHelper.Lerp(1.0f, ABSORB_PULSE_SCALE, Easing.EaseOutQuad(pulseProgress));
+                            // Flash fades out during the inflation using an easing function for more impact.
+                            bookFlashColor = Color.White * (1.0f - Easing.EaseInQuint(pulseProgress));
                         }
                         else if (timer < TRANSFORM_ABSORB_PULSE_UP_DURATION + TRANSFORM_ABSORB_HANG_DURATION)
                         {
@@ -418,22 +438,19 @@ namespace ProjectVagabond.Scenes
                     // Draw the spellbook on top so the page goes "behind" it
                     if (_currentPhase >= AnimationPhase.SpellTransform_BookIntro)
                     {
-                        Color bookColor = Color.White; // Default color
-
-                        if (_currentPhase == AnimationPhase.SpellTransform_Absorb)
+                        spriteBatch.DrawSnapped(bookSprite, bookPos, null, Color.White, 0f, bookOrigin, bookScale, SpriteEffects.None, 0f);
+                        if (_currentPhase == AnimationPhase.SpellTransform_Absorb && bookFlashColor.A > 0)
                         {
-                            float timer = _transformAnimTimer;
-                            if (timer < TRANSFORM_ABSORB_PULSE_UP_DURATION)
-                            {
-                                float pulseProgress = timer / TRANSFORM_ABSORB_PULSE_UP_DURATION;
-                                // A bright, slightly blue-white color for the flash
-                                Color flashStartColor = new Color(230, 230, 255);
-                                // Fade from the flash color back to the normal white color
-                                bookColor = Color.Lerp(flashStartColor, Color.White, Easing.EaseInQuad(pulseProgress));
-                            }
-                        }
+                            // End the current AlphaBlend batch to draw the additive flash
+                            spriteBatch.End();
+                            spriteBatch.Begin(blendState: BlendState.Additive, samplerState: SamplerState.PointClamp, transformMatrix: transform);
 
-                        spriteBatch.DrawSnapped(bookSprite, bookPos, null, bookColor, 0f, bookOrigin, bookScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(bookSprite, bookPos, null, bookFlashColor, 0f, bookOrigin, bookScale, SpriteEffects.None, 0f);
+
+                            // End the additive batch and resume the original AlphaBlend batch
+                            spriteBatch.End();
+                            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+                        }
                     }
                 }
             }
@@ -441,10 +458,20 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), screenBounds, Color.Black * 0.7f);
-            spriteBatch.End();
+            float underlayAlpha = 0.7f;
+            if (_currentPhase == AnimationPhase.FadingOut)
+            {
+                float progress = Math.Clamp(_fadeOutTimer / FADE_OUT_DURATION, 0f, 1f);
+                underlayAlpha = MathHelper.Lerp(0.7f, 0f, Easing.EaseInQuad(progress));
+            }
+
+            if (underlayAlpha > 0.01f)
+            {
+                var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+                spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), screenBounds, Color.Black * underlayAlpha);
+                spriteBatch.End();
+            }
         }
     }
 }
