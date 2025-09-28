@@ -215,11 +215,15 @@ namespace ProjectVagabond.Battle
 
             _actionQueue.InsertRange(0, startOfTurnActions);
 
-            // Player draws to fill any empty slots in their hand.
+            // Player draws cards. If a spell was used, discard the whole hand and draw a new one.
             foreach (var player in _playerCombatants)
             {
                 if (!player.IsDefeated)
                 {
+                    if (_playerUsedSpellThisTurn)
+                    {
+                        player.DeckManager?.DiscardHand();
+                    }
                     player.DeckManager?.DrawToFillHand();
                 }
             }
