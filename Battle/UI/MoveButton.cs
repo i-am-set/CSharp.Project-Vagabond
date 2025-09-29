@@ -112,7 +112,7 @@ namespace ProjectVagabond.Battle.UI
         }
 
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_animState == AnimationState.Hidden) return;
 
@@ -156,39 +156,48 @@ namespace ProjectVagabond.Battle.UI
             int animatedWidth = (int)(Bounds.Width * scaleX);
             int animatedHeight = (int)(Bounds.Height * scaleY);
             var animatedBounds = new Rectangle(
-                Bounds.Center.X - animatedWidth / 2 + (int)hopOffset,
-                Bounds.Center.Y - animatedHeight / 2,
+                Bounds.Center.X - animatedWidth / 2 + (int)(hopOffset + (externalSwayOffset ?? 0f)),
+                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f),
                 animatedWidth,
                 animatedHeight
             );
 
-            // Draw background texture
-            Color tintColor = Color.White;
-            if (!canAfford) tintColor = _global.ButtonDisableColor * 0.5f;
-            else if (_isPressed) tintColor = Color.Gray;
-            else if (isActivated) tintColor = _global.ButtonHoverColor;
-
-            if (_isNew && _animState == AnimationState.Appearing)
+            // --- Determine Tint Color ---
+            Color finalTintColor;
+            if (tintColorOverride.HasValue)
             {
-                // Flash from pink to the normal tint color during the first part of the animation
-                const float flashRatio = 0.75f;
-                float flashDuration = APPEAR_DURATION * flashRatio;
-                if (_appearTimer < flashDuration)
+                finalTintColor = tintColorOverride.Value;
+            }
+            else
+            {
+                finalTintColor = Color.White;
+                if (!canAfford) finalTintColor = _global.ButtonDisableColor * 0.5f;
+                else if (_isPressed) finalTintColor = Color.Gray;
+                else if (isActivated) finalTintColor = _global.ButtonHoverColor;
+
+                if (_isNew && _animState == AnimationState.Appearing)
                 {
-                    float flashProgress = _appearTimer / flashDuration;
-                    tintColor = Color.Lerp(_global.Palette_Red, tintColor, Easing.EaseInQuad(flashProgress));
+                    const float flashRatio = 0.75f;
+                    float flashDuration = APPEAR_DURATION * flashRatio;
+                    if (_appearTimer < flashDuration)
+                    {
+                        float flashProgress = _appearTimer / flashDuration;
+                        finalTintColor = Color.Lerp(_global.Palette_Red, finalTintColor, Easing.EaseInQuad(flashProgress));
+                    }
                 }
             }
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             if (spriteManager.RarityBackgroundSourceRects.TryGetValue(Move.Rarity, out var bgSourceRect))
             {
-                spriteBatch.DrawSnapped(_backgroundSpriteSheet, animatedBounds, bgSourceRect, tintColor);
+                spriteBatch.DrawSnapped(_backgroundSpriteSheet, animatedBounds, bgSourceRect, finalTintColor);
             }
 
             // Only draw contents if the button is mostly visible to avoid squashed text/icons
             if (scaleX > 0.8f && scaleY > 0.8f)
             {
+                float contentAlpha = finalTintColor.A / 255f;
+
                 // --- Draw Icon/Placeholder ---
                 const int iconSize = 9;
                 const int iconPadding = 4;
@@ -201,11 +210,11 @@ namespace ProjectVagabond.Battle.UI
 
                 if (IconTexture != null && IconSourceRect.HasValue)
                 {
-                    spriteBatch.DrawSnapped(IconTexture, iconRect, IconSourceRect.Value, Color.White);
+                    spriteBatch.DrawSnapped(IconTexture, iconRect, IconSourceRect.Value, Color.White * contentAlpha);
                 }
                 else
                 {
-                    spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink); // Fallback
+                    spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink * contentAlpha); // Fallback
                 }
 
                 // --- Prepare for text drawing ---
@@ -266,7 +275,7 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.GraphicsDevice.ScissorRectangle = clipRect;
 
                     var scrollingTextPosition = new Vector2(textStartX - _scrollPosition, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2);
-                    spriteBatch.DrawStringSnapped(_moveFont, this.Text, scrollingTextPosition, textColor);
+                    spriteBatch.DrawStringSnapped(_moveFont, this.Text, scrollingTextPosition, textColor * contentAlpha);
 
                     spriteBatch.End();
                     spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
@@ -276,7 +285,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     _isScrollingInitialized = false;
                     var textPosition = new Vector2(textStartX, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2);
-                    spriteBatch.DrawStringSnapped(_moveFont, this.Text, textPosition, textColor);
+                    spriteBatch.DrawStringSnapped(_moveFont, this.Text, textPosition, textColor * contentAlpha);
                 }
 
                 // --- Draw Power & Accuracy ---
@@ -300,14 +309,14 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
-                spriteBatch.DrawStringSnapped(_moveFont, accuracyText, accuracyPosition, statsColor);
-                spriteBatch.DrawStringSnapped(_moveFont, powerText, powerPosition, powerTextColor);
+                spriteBatch.DrawStringSnapped(_moveFont, accuracyText, accuracyPosition, statsColor * contentAlpha);
+                spriteBatch.DrawStringSnapped(_moveFont, powerText, powerPosition, powerTextColor * contentAlpha);
 
                 if (!string.IsNullOrEmpty(powerIndicator))
                 {
                     var indicatorPosition = new Vector2(powerPosition.X + powerTextSize.Width + 1, powerPosition.Y);
                     Color indicatorColor = powerTextColor * 0.25f;
-                    spriteBatch.DrawStringSnapped(_moveFont, powerIndicator, indicatorPosition, indicatorColor);
+                    spriteBatch.DrawStringSnapped(_moveFont, powerIndicator, indicatorPosition, indicatorColor * contentAlpha);
                 }
 
 
@@ -333,7 +342,7 @@ namespace ProjectVagabond.Battle.UI
                         powerCenterX - indicatorSize.Width / 2,
                         powerPosition.Y - 7 + yOffset
                     );
-                    spriteBatch.DrawStringSnapped(_moveFont, targetIndicator, indicatorPosition, statsColor);
+                    spriteBatch.DrawStringSnapped(_moveFont, targetIndicator, indicatorPosition, statsColor * contentAlpha);
                 }
 
                 // --- Draw "NO MANA" overlay ---
@@ -345,7 +354,7 @@ namespace ProjectVagabond.Battle.UI
                         animatedBounds.Center.X - noManaSize.X / 2f,
                         animatedBounds.Center.Y - noManaSize.Y / 2f
                     );
-                    spriteBatch.DrawStringOutlinedSnapped(_moveFont, noManaText, noManaPos, _global.Palette_Red, Color.Black);
+                    spriteBatch.DrawStringOutlinedSnapped(_moveFont, noManaText, noManaPos, _global.Palette_Red * contentAlpha, Color.Black * contentAlpha);
                 }
             }
         }

@@ -53,7 +53,7 @@ namespace ProjectVagabond.UI
             _appearTimer = 0f;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_animState == AnimationState.Hidden) return;
 
@@ -79,7 +79,7 @@ namespace ProjectVagabond.UI
             int animatedHeight = (int)(Bounds.Height * verticalScale);
             var animatedBounds = new Rectangle(
                 Bounds.X + (int)hopOffset,
-                Bounds.Center.Y - animatedHeight / 2,
+                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f),
                 Bounds.Width,
                 animatedHeight
             );
@@ -89,29 +89,38 @@ namespace ProjectVagabond.UI
             Color textColor;
             Color iconColor;
 
-            if (!IsEnabled)
+            if (tintColorOverride.HasValue)
             {
-                backgroundTintColor = _global.ButtonDisableColor * 0.5f;
-                textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
-                iconColor = _global.ButtonDisableColor;
-            }
-            else if (_isPressed)
-            {
-                backgroundTintColor = Color.Gray;
-                textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
-                iconColor = _global.ButtonHoverColor;
-            }
-            else if (isActivated)
-            {
-                backgroundTintColor = _global.ButtonHoverColor;
-                textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
-                iconColor = _global.ButtonHoverColor;
+                backgroundTintColor = tintColorOverride.Value;
+                textColor = tintColorOverride.Value;
+                iconColor = tintColorOverride.Value;
             }
             else
             {
-                backgroundTintColor = Color.White;
-                textColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
-                iconColor = Color.White;
+                if (!IsEnabled)
+                {
+                    backgroundTintColor = _global.ButtonDisableColor * 0.5f;
+                    textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
+                    iconColor = _global.ButtonDisableColor;
+                }
+                else if (_isPressed)
+                {
+                    backgroundTintColor = Color.Gray;
+                    textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
+                    iconColor = _global.ButtonHoverColor;
+                }
+                else if (isActivated)
+                {
+                    backgroundTintColor = _global.ButtonHoverColor;
+                    textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
+                    iconColor = _global.ButtonHoverColor;
+                }
+                else
+                {
+                    backgroundTintColor = Color.White;
+                    textColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
+                    iconColor = Color.White;
+                }
             }
 
             // 3. Draw background with animation offset

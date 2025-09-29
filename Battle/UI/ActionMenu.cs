@@ -32,7 +32,7 @@ namespace ProjectVagabond.Battle.UI
         private Button _backButton;
         private readonly Global _global;
 
-        public enum MenuState { Main, Moves, Targeting, Tooltip }
+        public enum MenuState { Main, Moves, Targeting, Tooltip, AnimatingHandDiscard }
         private MenuState _currentState;
         public MenuState CurrentMenuState => _currentState;
         private MoveData? _selectedMove;
@@ -76,6 +76,16 @@ namespace ProjectVagabond.Battle.UI
         private const float NEW_TEXT_HOLD_DURATION = 0.2f;
         private const float NEW_TEXT_FADE_OUT_DURATION = 0.2f;
         private const float NEW_TEXT_TOTAL_DURATION = NEW_TEXT_FADE_IN_DURATION + NEW_TEXT_HOLD_DURATION + NEW_TEXT_FADE_OUT_DURATION;
+
+        // Hand Discard Animation
+        private float _handDiscardAnimTimer = 0f;
+        private MoveData? _deferredMove;
+        private SpellbookEntry? _deferredEntry;
+        private BattleCombatant? _deferredTarget;
+        private const float HAND_DISCARD_DURATION = 1.0f;
+        private const float SELECTED_CARD_TRAVEL_DISTANCE = 40f;
+        private const float SHAKE_FREQUENCY = 40f;
+        private const float SHAKE_MAGNITUDE = 2f;
 
 
         private Queue<ImageButton> _actionButtonsToAnimate = new Queue<ImageButton>();
@@ -376,7 +386,12 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    SelectMove(move, entry);
+                    // Defer the action and start the animation
+                    _deferredMove = move;
+                    _deferredEntry = entry;
+                    _deferredTarget = null; // Target will be determined after animation
+                    _handDiscardAnimTimer = 0f;
+                    SetState(MenuState.AnimatingHandDiscard);
                 }
             };
             moveButton.OnRightClick += () => {
@@ -389,10 +404,10 @@ namespace ProjectVagabond.Battle.UI
 
         private void SelectMove(MoveData move, SpellbookEntry? entry)
         {
+            // This is the original logic that is now deferred until after the animation.
             _selectedMove = move;
             _selectedSpellbookEntry = entry;
 
-            // If this move was considered "new", it no longer is once selected.
             if (entry != null)
             {
                 _newlyDrawnEntries.Remove(entry);
@@ -631,6 +646,23 @@ namespace ProjectVagabond.Battle.UI
                     _backButton.Update(currentMouseState);
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
+                case MenuState.AnimatingHandDiscard:
+                    _handDiscardAnimTimer += dt;
+                    if (_handDiscardAnimTimer >= HAND_DISCARD_DURATION)
+                    {
+                        var move = _deferredMove;
+                        var entry = _deferredEntry;
+                        _deferredMove = null;
+                        _deferredEntry = null;
+
+                        SelectMove(move!, entry);
+
+                        if (_currentState == MenuState.AnimatingHandDiscard)
+                        {
+                            SetState(MenuState.Moves);
+                        }
+                    }
+                    break;
                 case MenuState.Targeting:
                     _targetingTextAnimTimer += dt;
                     _backButton.Update(currentMouseState);
@@ -699,6 +731,7 @@ namespace ProjectVagabond.Battle.UI
                         break;
                     }
                 case MenuState.Moves:
+                case MenuState.AnimatingHandDiscard:
                     {
                         DrawMovesMenu(spriteBatch, font, gameTime, transform);
                         break;
@@ -979,7 +1012,30 @@ namespace ProjectVagabond.Battle.UI
                 );
                 button.Bounds = buttonBounds;
 
-                if (_buttonAnimationStates.TryGetValue(button, out var state))
+                if (_currentState == MenuState.AnimatingHandDiscard)
+                {
+                    float progress = Math.Clamp(_handDiscardAnimTimer / HAND_DISCARD_DURATION, 0f, 1f);
+                    float easedProgress = Easing.EaseOutQuint(progress);
+                    float verticalOffset = 0;
+                    float horizontalShake = 0;
+                    Color? tintOverride = null;
+                    float alpha = 1.0f - easedProgress;
+
+                    if (button.Move == _deferredMove)
+                    {
+                        verticalOffset = -easedProgress * SELECTED_CARD_TRAVEL_DISTANCE;
+                        tintOverride = Color.White * alpha;
+                    }
+                    else
+                    {
+                        float shakeProgress = Math.Clamp(_handDiscardAnimTimer / (HAND_DISCARD_DURATION * 0.8f), 0f, 1f);
+                        float currentShakeMagnitude = SHAKE_MAGNITUDE * (1f - shakeProgress);
+                        horizontalShake = MathF.Sin(_handDiscardAnimTimer * SHAKE_FREQUENCY) * currentShakeMagnitude;
+                        tintOverride = Color.Lerp(Color.White, _global.Palette_Red, easedProgress) * alpha;
+                    }
+                    button.Draw(spriteBatch, font, gameTime, transform, false, horizontalShake, verticalOffset, tintOverride);
+                }
+                else if (_buttonAnimationStates.TryGetValue(button, out var state))
                 {
                     if (state.phase == ButtonAnimationPhase.AnimatingNewText)
                     {

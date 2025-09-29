@@ -3,10 +3,14 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text;
 
 namespace ProjectVagabond.UI
 {
@@ -194,19 +198,19 @@ namespace ProjectVagabond.UI
             IsHovered = false;
         }
 
-        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
+        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_spriteSheet != null)
             {
-                DrawSprite(spriteBatch, gameTime, transform, forceHover);
+                DrawSprite(spriteBatch, gameTime, transform, forceHover, verticalOffset, tintColorOverride);
             }
             else
             {
-                DrawText(spriteBatch, defaultFont, gameTime, transform, forceHover);
+                DrawText(spriteBatch, defaultFont, gameTime, transform, forceHover, verticalOffset, tintColorOverride);
             }
         }
 
-        private void DrawSprite(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform, bool forceHover)
+        private void DrawSprite(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform, bool forceHover, float? verticalOffset, Color? tintColorOverride)
         {
             Rectangle? sourceRectToDraw = _defaultSourceRect;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
@@ -228,12 +232,12 @@ namespace ProjectVagabond.UI
                 shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_AMOUNT);
             }
 
-            var position = new Vector2(Bounds.Center.X, Bounds.Center.Y) + shakeOffset;
+            var position = new Vector2(Bounds.Center.X, Bounds.Center.Y + (verticalOffset ?? 0f)) + shakeOffset;
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
                 var origin = sourceRectToDraw.Value.Size.ToVector2() / 2f;
-                spriteBatch.DrawSnapped(_spriteSheet, position, sourceRectToDraw, Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_spriteSheet, position, sourceRectToDraw, tintColorOverride ?? Color.White, 0f, origin, scale, SpriteEffects.None, 0f);
             }
             else if (DebugColor.HasValue)
             {
@@ -242,14 +246,21 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private void DrawText(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false)
+        private void DrawText(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover, float? verticalOffset, Color? tintColorOverride)
         {
             BitmapFont font = this.Font ?? defaultFont;
             Color textColor;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
-            if (!IsEnabled) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
-            else textColor = isActivated ? (CustomHoverTextColor ?? _global.ButtonHoverColor) : (CustomDefaultTextColor ?? _global.Palette_BrightWhite);
+            if (tintColorOverride.HasValue)
+            {
+                textColor = tintColorOverride.Value;
+            }
+            else
+            {
+                if (!IsEnabled) textColor = CustomDisabledTextColor ?? _global.ButtonDisableColor;
+                else textColor = isActivated ? (CustomHoverTextColor ?? _global.ButtonHoverColor) : (CustomDefaultTextColor ?? _global.Palette_BrightWhite);
+            }
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_isPressed && !ClickOnPress) _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
@@ -290,6 +301,7 @@ namespace ProjectVagabond.UI
             }
 
             textPosition += TextRenderOffset + shakeOffset;
+            textPosition.Y += verticalOffset ?? 0f;
 
             spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, scale, SpriteEffects.None, 0f);
 

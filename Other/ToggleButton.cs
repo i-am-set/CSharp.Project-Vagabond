@@ -19,7 +19,7 @@ namespace ProjectVagabond.UI
             CustomToggledTextColor = customToggledTextColor;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             // This method now just determines the color and then calls the base Draw method.
             // The base Draw method handles all animation and rendering logic.
@@ -47,7 +47,7 @@ namespace ProjectVagabond.UI
             var originalColor = this.CustomDefaultTextColor;
             this.CustomDefaultTextColor = textColor;
 
-            base.Draw(spriteBatch, defaultFont, gameTime, transform, forceHover);
+            base.Draw(spriteBatch, defaultFont, gameTime, transform, forceHover, externalSwayOffset, verticalOffset, tintColorOverride);
 
             // Restore the original custom color
             this.CustomDefaultTextColor = originalColor;

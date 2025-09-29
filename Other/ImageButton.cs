@@ -16,7 +16,6 @@ namespace ProjectVagabond.UI
         private readonly Rectangle? _hoverSourceRect;
         private readonly Rectangle? _clickedSourceRect;
         private readonly Rectangle? _disabledSourceRect;
-
         private bool _isHeldDown;
 
         // Animation state
@@ -104,7 +103,7 @@ namespace ProjectVagabond.UI
             _shakeTimer = 0f;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_animState == AnimationState.Hidden) return;
 
@@ -166,7 +165,7 @@ namespace ProjectVagabond.UI
 
             var animatedBounds = new Rectangle(
                 Bounds.X + (int)MathF.Round(totalHorizontalOffset), // Apply the potentially scaled offset
-                Bounds.Center.Y - animatedHeight / 2, // Expand from the center
+                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f), // Expand from the center and apply offset
                 Bounds.Width,
                 animatedHeight
             );
@@ -186,9 +185,7 @@ namespace ProjectVagabond.UI
                 sourceRectToDraw = _hoverSourceRect;
             }
 
-            // Always use Color.White to render the sprite without any tint or opacity modification.
-            // The visual state is handled entirely by swapping the source rectangle.
-            Color drawColor = Color.White;
+            Color drawColor = tintColorOverride ?? Color.White;
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
@@ -201,4 +198,3 @@ namespace ProjectVagabond.UI
         }
     }
 }
-#nullable restore

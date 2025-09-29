@@ -275,7 +275,7 @@ namespace ProjectVagabond.UI
             return new Vector2(x, y);
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_cardAnimState == CardAnimationState.Hidden) return;
 

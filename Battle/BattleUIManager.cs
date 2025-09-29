@@ -50,7 +50,7 @@ namespace ProjectVagabond.Battle.UI
         public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
         public float SharedPulseTimer { get; private set; } = 0f;
 
-        public bool IsBusy => _battleNarrator.IsBusy || _narrationQueue.Any();
+        public bool IsBusy => _battleNarrator.IsBusy || _narrationQueue.Any() || _actionMenu.CurrentMenuState == ActionMenu.MenuState.AnimatingHandDiscard;
 
         // Control Prompt State
         private bool _isPromptVisible;

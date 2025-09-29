@@ -20,13 +20,13 @@ namespace ProjectVagabond.Battle.UI
             Quantity = quantity;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
-            var animatedBounds = new Rectangle(Bounds.X + (int)hopOffset, Bounds.Y, Bounds.Width, Bounds.Height);
+            var animatedBounds = new Rectangle(Bounds.X + (int)hopOffset, Bounds.Y + (int)(verticalOffset ?? 0f), Bounds.Width, Bounds.Height);
 
             if (isActivated)
             {
