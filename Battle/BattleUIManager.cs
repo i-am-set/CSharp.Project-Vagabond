@@ -196,6 +196,13 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateControlPrompt(GameTime gameTime)
         {
+            if (IsBusy)
+            {
+                _isPromptVisible = false;
+                _lastHoveredButton = null;
+                return;
+            }
+
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             Button? currentHoveredButton = null;
 
