@@ -270,6 +270,14 @@ namespace ProjectVagabond
             /// </summary>
             public string? NarrationText { get; set; }
         }
+
+        /// <summary>
+        /// Published when the player draws one or more cards into their hand.
+        /// </summary>
+        public struct PlayerHandDrawn
+        {
+            public IEnumerable<SpellbookEntry> DrawnEntries { get; set; }
+        }
     }
 }
 #nullable restore

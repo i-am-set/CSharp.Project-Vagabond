@@ -79,6 +79,19 @@ namespace ProjectVagabond.Battle
 
             // Process on-enter abilities
             HandleOnEnterAbilities();
+
+            // Announce the initial hand draw for the player.
+            foreach (var player in _playerCombatants)
+            {
+                if (player.Hand != null)
+                {
+                    var initialHand = player.Hand.Where(entry => entry != null).ToList();
+                    if (initialHand.Any())
+                    {
+                        EventBus.Publish(new GameEvents.PlayerHandDrawn { DrawnEntries = initialHand });
+                    }
+                }
+            }
         }
 
         private void OnSecondaryEffectComplete(GameEvents.SecondaryEffectComplete e)
@@ -224,7 +237,11 @@ namespace ProjectVagabond.Battle
                     {
                         player.DeckManager?.DiscardHand();
                     }
-                    player.DeckManager?.DrawToFillHand();
+                    var newlyDrawn = player.DeckManager?.DrawToFillHand();
+                    if (newlyDrawn != null && newlyDrawn.Any())
+                    {
+                        EventBus.Publish(new GameEvents.PlayerHandDrawn { DrawnEntries = newlyDrawn });
+                    }
                 }
             }
             _playerUsedSpellThisTurn = false; // Reset flag after handling

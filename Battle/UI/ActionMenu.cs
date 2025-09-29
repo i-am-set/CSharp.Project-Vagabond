@@ -64,10 +64,19 @@ namespace ProjectVagabond.Battle.UI
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
         // State for animation
-        private SpellbookEntry?[] _previousHandState = new SpellbookEntry[4];
-        private Queue<MoveButton> _buttonsToAnimate = new Queue<MoveButton>();
+        private readonly HashSet<SpellbookEntry> _newlyDrawnEntries = new HashSet<SpellbookEntry>();
+        private enum ButtonAnimationPhase { Hidden, AnimatingNewText, AnimatingButton, Idle }
+        private readonly Dictionary<MoveButton, (ButtonAnimationPhase phase, float timer)> _buttonAnimationStates = new();
+        private readonly Queue<MoveButton> _pendingButtonAnimations = new Queue<MoveButton>();
         private float _animationDelayTimer = 0f;
         private const float SEQUENTIAL_ANIMATION_DELAY = 0.05f;
+
+        // "NEW!" Text Animation Tuning
+        private const float NEW_TEXT_FADE_IN_DURATION = 0.15f;
+        private const float NEW_TEXT_HOLD_DURATION = 0.2f;
+        private const float NEW_TEXT_FADE_OUT_DURATION = 0.2f;
+        private const float NEW_TEXT_TOTAL_DURATION = NEW_TEXT_FADE_IN_DURATION + NEW_TEXT_HOLD_DURATION + NEW_TEXT_FADE_OUT_DURATION;
+
 
         private Queue<ImageButton> _actionButtonsToAnimate = new Queue<ImageButton>();
         private float _actionButtonAnimationDelayTimer = 0f;
@@ -103,6 +112,16 @@ namespace ProjectVagabond.Battle.UI
                 }
             };
             _previousMouseState = Mouse.GetState();
+            EventBus.Subscribe<GameEvents.PlayerHandDrawn>(OnPlayerHandDrawn);
+        }
+
+        private void OnPlayerHandDrawn(GameEvents.PlayerHandDrawn e)
+        {
+            _newlyDrawnEntries.Clear();
+            foreach (var entry in e.DrawnEntries)
+            {
+                _newlyDrawnEntries.Add(entry);
+            }
         }
 
         private void InitializeButtons()
@@ -239,7 +258,6 @@ namespace ProjectVagabond.Battle.UI
                 button.ResetAnimationState();
             }
             _backButton.ResetAnimationState();
-            Array.Clear(_previousHandState, 0, _previousHandState.Length);
         }
 
         public void Show(BattleCombatant player, List<BattleCombatant> allCombatants)
@@ -258,8 +276,15 @@ namespace ProjectVagabond.Battle.UI
 
         public void SetState(MenuState newState)
         {
+            var oldState = _currentState;
             _currentState = newState;
             HoveredMove = null;
+
+            // If we are leaving the moves menu, mark all newly drawn cards as "seen"
+            if (oldState == MenuState.Moves && newState != MenuState.Moves)
+            {
+                _newlyDrawnEntries.Clear();
+            }
 
             if (newState == MenuState.Main)
             {
@@ -278,7 +303,7 @@ namespace ProjectVagabond.Battle.UI
             else if (newState == MenuState.Moves)
             {
                 OnMovesMenuOpened?.Invoke();
-                PopulateAndAnimateMoveButtons();
+                PopulateMoveButtons();
 
                 _secondaryButtonsToAnimate.Clear();
                 _secondaryButtonAnimationDelayTimer = 0f;
@@ -304,38 +329,32 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void PopulateAndAnimateMoveButtons()
+        private void PopulateMoveButtons()
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var spriteManager = ServiceLocator.Get<SpriteManager>();
 
             _moveButtons.Clear();
-            _buttonsToAnimate.Clear();
+            _buttonAnimationStates.Clear();
+            _pendingButtonAnimations.Clear();
             _animationDelayTimer = 0f;
 
             var currentHand = _player.Hand;
             if (currentHand == null) return;
 
-            var newHand = new SpellbookEntry?[4];
             for (int i = 0; i < Math.Min(currentHand.Length, 4); i++)
             {
-                newHand[i] = currentHand[i];
-            }
-
-            for (int i = 0; i < 4; i++)
-            {
-                var entry = newHand[i];
+                var entry = currentHand[i];
                 if (entry == null || !BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move)) continue;
 
-                bool isNew = _previousHandState[i] == null || _previousHandState[i]!.MoveID != entry.MoveID;
+                bool isNewForAnimation = _newlyDrawnEntries.Contains(entry);
+
                 int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, move);
-                var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, isNew, false);
+                var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, isNewForAnimation, false);
                 _moveButtons.Add(moveButton);
-
-                _buttonsToAnimate.Enqueue(moveButton);
+                _buttonAnimationStates[moveButton] = (ButtonAnimationPhase.Hidden, 0f);
+                _pendingButtonAnimations.Enqueue(moveButton);
             }
-
-            Array.Copy(newHand, _previousHandState, newHand.Length);
         }
 
         private MoveButton CreateMoveButton(MoveData move, SpellbookEntry entry, int displayPower, BitmapFont font, Texture2D background, bool isNew, bool startVisible)
@@ -373,14 +392,10 @@ namespace ProjectVagabond.Battle.UI
             _selectedMove = move;
             _selectedSpellbookEntry = entry;
 
-            // Mark the move as used if it's in the hand
-            for (int i = 0; i < _previousHandState.Length; i++)
+            // If this move was considered "new", it no longer is once selected.
+            if (entry != null)
             {
-                if (_previousHandState[i] != null && _previousHandState[i]!.MoveID == move.MoveID)
-                {
-                    _previousHandState[i] = null;
-                    break;
-                }
+                _newlyDrawnEntries.Remove(entry);
             }
 
             switch (move.Target)
@@ -496,11 +511,13 @@ namespace ProjectVagabond.Battle.UI
             InitializeButtons();
             if (!_isVisible) return;
 
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
             UpdateSpamDetection(gameTime, currentMouseState);
 
             if (_actionButtonsToAnimate.Any())
             {
-                _actionButtonAnimationDelayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _actionButtonAnimationDelayTimer += dt;
                 if (_actionButtonAnimationDelayTimer >= ACTION_BUTTON_SEQUENTIAL_ANIMATION_DELAY)
                 {
                     _actionButtonAnimationDelayTimer = 0f;
@@ -509,20 +526,28 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            if (_buttonsToAnimate.Any())
+            if (_pendingButtonAnimations.Any())
             {
-                _animationDelayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _animationDelayTimer += dt;
                 if (_animationDelayTimer >= SEQUENTIAL_ANIMATION_DELAY)
                 {
                     _animationDelayTimer = 0f;
-                    var buttonToAnimate = _buttonsToAnimate.Dequeue();
-                    buttonToAnimate.TriggerAppearAnimation();
+                    var buttonToStart = _pendingButtonAnimations.Dequeue();
+                    if (buttonToStart.IsNew)
+                    {
+                        _buttonAnimationStates[buttonToStart] = (ButtonAnimationPhase.AnimatingNewText, 0f);
+                    }
+                    else
+                    {
+                        _buttonAnimationStates[buttonToStart] = (ButtonAnimationPhase.AnimatingButton, 0f);
+                        buttonToStart.TriggerAppearAnimation();
+                    }
                 }
             }
 
             if (_secondaryButtonsToAnimate.Any())
             {
-                _secondaryButtonAnimationDelayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _secondaryButtonAnimationDelayTimer += dt;
                 if (_secondaryButtonAnimationDelayTimer >= SEQUENTIAL_ANIMATION_DELAY)
                 {
                     _secondaryButtonAnimationDelayTimer = 0f;
@@ -549,7 +574,7 @@ namespace ProjectVagabond.Battle.UI
 
                     if (isAnyActionHovered)
                     {
-                        SharedSwayTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                        SharedSwayTimer += dt;
                     }
                     else if (_wasAnyActionHoveredLastFrame)
                     {
@@ -560,6 +585,34 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.Moves:
                     HoveredMove = null;
                     _hoveredSpellbookEntry = null;
+
+                    // Update button animation states
+                    foreach (var button in _moveButtons)
+                    {
+                        if (_buttonAnimationStates.TryGetValue(button, out var state))
+                        {
+                            if (state.phase == ButtonAnimationPhase.AnimatingNewText)
+                            {
+                                state.timer += dt;
+                                if (state.timer >= NEW_TEXT_TOTAL_DURATION)
+                                {
+                                    state.phase = ButtonAnimationPhase.AnimatingButton;
+                                    button.TriggerAppearAnimation();
+                                }
+                                _buttonAnimationStates[button] = state;
+                            }
+                            else if (state.phase == ButtonAnimationPhase.AnimatingButton)
+                            {
+                                if (!button.IsAnimating)
+                                {
+                                    state.phase = ButtonAnimationPhase.Idle;
+                                    _buttonAnimationStates[button] = state;
+                                }
+                            }
+                        }
+                    }
+
+
                     foreach (var button in _moveButtons)
                     {
                         button.Update(currentMouseState);
@@ -579,7 +632,7 @@ namespace ProjectVagabond.Battle.UI
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
                 case MenuState.Targeting:
-                    _targetingTextAnimTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    _targetingTextAnimTimer += dt;
                     _backButton.Update(currentMouseState);
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
@@ -898,6 +951,8 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawMovesMenu(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+
             // --- Main Moves (2x2 Grid) ---
             const int moveButtonWidth = 157;
             const int moveButtonHeight = 17;
@@ -916,13 +971,58 @@ namespace ProjectVagabond.Battle.UI
                 int row = i / moveColumns;
                 int col = i % moveColumns;
 
-                button.Bounds = new Rectangle(
+                var buttonBounds = new Rectangle(
                     moveGridStartX + col * (moveButtonWidth + moveColSpacing),
                     moveGridStartY + row * (moveButtonHeight + moveRowSpacing),
                     moveButtonWidth,
                     moveButtonHeight
                 );
-                button.Draw(spriteBatch, font, gameTime, transform);
+                button.Bounds = buttonBounds;
+
+                if (_buttonAnimationStates.TryGetValue(button, out var state))
+                {
+                    if (state.phase == ButtonAnimationPhase.AnimatingNewText)
+                    {
+                        float alpha = 0f;
+                        float scaleX = 0f;
+                        float scaleY = 1f;
+
+                        if (state.timer < NEW_TEXT_FADE_IN_DURATION)
+                        {
+                            float fadeInProgress = state.timer / NEW_TEXT_FADE_IN_DURATION;
+                            scaleX = Easing.EaseOutBack(fadeInProgress);
+                            alpha = fadeInProgress;
+                            const float popAmount = 0.3f;
+                            float popProgress = (float)Math.Sin(fadeInProgress * Math.PI);
+                            scaleY = 1.0f + popProgress * popAmount;
+                        }
+                        else if (state.timer < NEW_TEXT_FADE_IN_DURATION + NEW_TEXT_HOLD_DURATION)
+                        {
+                            alpha = 1f;
+                            scaleX = 1f;
+                            scaleY = 1f;
+                        }
+                        else
+                        {
+                            float fadeOutProgress = (state.timer - (NEW_TEXT_FADE_IN_DURATION + NEW_TEXT_HOLD_DURATION)) / NEW_TEXT_FADE_OUT_DURATION;
+                            float easedProgress = Easing.EaseInQuint(fadeOutProgress);
+                            alpha = 1f - easedProgress;
+                            scaleX = 1f - easedProgress;
+                            scaleY = 1f;
+                        }
+
+                        string newText = "NEW!";
+                        var newTextSize = secondaryFont.MeasureString(newText);
+                        var newTextOrigin = new Vector2(newTextSize.Width / 2f, newTextSize.Height / 2f);
+                        var newTextPos = button.Bounds.Center.ToVector2();
+
+                        spriteBatch.DrawStringOutlinedSnapped(secondaryFont, newText, newTextPos, _global.Palette_Yellow * alpha, Color.Black * alpha, 0f, newTextOrigin, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                    }
+                    else if (state.phase == ButtonAnimationPhase.AnimatingButton || state.phase == ButtonAnimationPhase.Idle)
+                    {
+                        button.Draw(spriteBatch, font, gameTime, transform);
+                    }
+                }
             }
 
             // --- Secondary Actions (1x4 Row) ---

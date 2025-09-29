@@ -16,6 +16,9 @@ namespace ProjectVagabond.Battle.UI
         private readonly BitmapFont _moveFont;
         private readonly Texture2D _backgroundSpriteSheet;
         private readonly bool _isNew;
+        public bool IsNew => _isNew;
+        public bool IsAnimating => _animState == AnimationState.Appearing;
+
 
         public Texture2D IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
@@ -123,14 +126,23 @@ namespace ProjectVagabond.Battle.UI
             _overlayFadeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // --- Animation Scaling ---
-            float verticalScale = 1.0f;
+            float scaleX = 1.0f;
+            float scaleY = 1.0f;
             if (_animState == AnimationState.Appearing)
             {
                 _appearTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 float progress = Math.Clamp(_appearTimer / APPEAR_DURATION, 0f, 1f);
 
-                // Apply overshoot bounce easing to the Y-scale
-                verticalScale = Easing.EaseOutBack(progress);
+                if (_isNew)
+                {
+                    // New card: Flip horizontally
+                    scaleX = Easing.EaseOutBack(progress);
+                }
+                else
+                {
+                    // Old card: Pop in vertically
+                    scaleY = Easing.EaseOutBack(progress);
+                }
 
                 if (progress >= 1.0f)
                 {
@@ -138,14 +150,15 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            if (verticalScale < 0.01f) return;
+            if (scaleX < 0.01f || scaleY < 0.01f) return;
 
             // --- Calculate Animated Bounds ---
-            int animatedHeight = (int)(Bounds.Height * verticalScale);
+            int animatedWidth = (int)(Bounds.Width * scaleX);
+            int animatedHeight = (int)(Bounds.Height * scaleY);
             var animatedBounds = new Rectangle(
-                Bounds.X + (int)hopOffset,
-                Bounds.Center.Y - animatedHeight / 2, // Expand from the center
-                Bounds.Width,
+                Bounds.Center.X - animatedWidth / 2 + (int)hopOffset,
+                Bounds.Center.Y - animatedHeight / 2,
+                animatedWidth,
                 animatedHeight
             );
 
@@ -174,7 +187,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Only draw contents if the button is mostly visible to avoid squashed text/icons
-            if (verticalScale > 0.8f)
+            if (scaleX > 0.8f && scaleY > 0.8f)
             {
                 // --- Draw Icon/Placeholder ---
                 const int iconSize = 9;

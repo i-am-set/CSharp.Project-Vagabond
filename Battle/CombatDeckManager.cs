@@ -76,8 +76,10 @@ namespace ProjectVagabond.Battle
         /// <summary>
         /// Fills any empty slots in the hand at the start of a turn.
         /// </summary>
-        public void DrawToFillHand()
+        /// <returns>A list of the specific SpellbookEntry objects that were drawn.</returns>
+        public List<SpellbookEntry> DrawToFillHand()
         {
+            var drawnCards = new List<SpellbookEntry>();
             for (int i = 0; i < Hand.Length; i++)
             {
                 if (Hand[i] == null)
@@ -95,10 +97,13 @@ namespace ProjectVagabond.Battle
 
                     if (_drawPile.Count > 0)
                     {
-                        Hand[i] = _drawPile.Dequeue();
+                        var newCard = _drawPile.Dequeue();
+                        Hand[i] = newCard;
+                        drawnCards.Add(newCard);
                     }
                 }
             }
+            return drawnCards;
         }
 
         private void DrawInitialHand()
