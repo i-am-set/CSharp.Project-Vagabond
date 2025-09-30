@@ -81,6 +81,7 @@ namespace ProjectVagabond.Scenes
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
                 var gameState = ServiceLocator.Get<GameState>();
+                var progressionManager = ServiceLocator.Get<ProgressionManager>();
 
                 var loadingTasks = new List<LoadingTask>
                 {
@@ -95,6 +96,7 @@ namespace ProjectVagabond.Scenes
 
                 Action onLoadingComplete = () => {
                     core.SetGameLoaded(true);
+                    // ProgressionManager is now started by GameMapScene.Enter()
                 };
 
                 _sceneManager.ChangeScene(GameSceneState.TerminalMap, loadingTasks, onLoadingComplete);

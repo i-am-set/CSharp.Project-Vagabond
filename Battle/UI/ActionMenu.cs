@@ -82,10 +82,10 @@ namespace ProjectVagabond.Battle.UI
         private MoveData? _deferredMove;
         private SpellbookEntry? _deferredEntry;
         private BattleCombatant? _deferredTarget;
-        private const float HAND_DISCARD_DURATION = 0.3f;
+        private const float HAND_DISCARD_DURATION = 0.15f;
         private const float UNSELECTED_CARD_FADE_DURATION = 0.3f;
-        private const float SELECTED_CARD_TRAVEL_DISTANCE = 7f;
-        private const float SHAKE_FREQUENCY = 90f;
+        private const float SELECTED_CARD_TRAVEL_DISTANCE = 3f;
+        private const float SHAKE_FREQUENCY = 100f;
         private const float SHAKE_MAGNITUDE = 8f;
 
 

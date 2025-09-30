@@ -268,7 +268,17 @@ namespace ProjectVagabond.Scenes
                     _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                     if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
                     {
-                        _sceneManager.ChangeScene(GameSceneState.TerminalMap);
+                        var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+                        if (player != null && !player.IsDefeated)
+                        {
+                            EventBus.Publish(new GameEvents.BattleWon());
+                            _sceneManager.ChangeScene(GameSceneState.TerminalMap);
+                        }
+                        else
+                        {
+                            // In a real game, you would handle loss (e.g., transition to a game over screen)
+                            _sceneManager.ChangeScene(GameSceneState.MainMenu);
+                        }
                     }
                 }
                 base.Update(gameTime);
