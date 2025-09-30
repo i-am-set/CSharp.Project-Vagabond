@@ -278,6 +278,15 @@ namespace ProjectVagabond
         {
             public IEnumerable<SpellbookEntry> DrawnEntries { get; set; }
         }
+
+        /// <summary>
+        /// Published to trigger the spell choice UI.
+        /// </summary>
+        public struct SpellChoiceRequested
+        {
+            public int GameStage { get; set; }
+            public int NumberOfChoices { get; set; }
+        }
     }
 }
 #nullable restore

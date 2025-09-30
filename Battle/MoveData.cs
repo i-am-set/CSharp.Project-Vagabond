@@ -75,6 +75,11 @@ namespace ProjectVagabond.Battle
         public int Rarity { get; set; } = -1;
 
         /// <summary>
+        /// The game stage at which this move becomes available as a potential reward.
+        /// </summary>
+        public int LevelRequirement { get; set; } = 0;
+
+        /// <summary>
         /// A list of element IDs associated with this move's attack type.
         /// </summary>
         public List<int> OffensiveElementIDs { get; set; } = new List<int>();

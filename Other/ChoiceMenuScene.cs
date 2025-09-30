@@ -20,6 +20,7 @@ namespace ProjectVagabond.Scenes
         private static readonly Random _random = new Random();
         private readonly SceneManager _sceneManager;
         private readonly GameState _gameState;
+        private readonly ChoiceGenerator _choiceGenerator;
 
         private enum AnimationPhase { CardIntro, RarityIntro, Idle, CardOutro, SpellTransform_PopIn, SpellTransform_BookIntro, SpellTransform_MoveOut, SpellTransform_Absorb, SpellTransform_BookMoveOut, FadingOut }
         private AnimationPhase _currentPhase = AnimationPhase.CardIntro;
@@ -62,6 +63,7 @@ namespace ProjectVagabond.Scenes
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _gameState = ServiceLocator.Get<GameState>();
+            _choiceGenerator = new ChoiceGenerator();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -84,8 +86,11 @@ namespace ProjectVagabond.Scenes
             _rarityStaggerTimer = 0f;
             _currentPhase = AnimationPhase.CardIntro;
 
-            var availableChoices = GetAvailableChoices(type);
-            var selectedChoices = availableChoices.OrderBy(x => _random.Next()).Take(count).ToList();
+            // Use the ChoiceGenerator to get a curated list of choices
+            // For now, we'll assume GameStage is 1 for testing purposes.
+            // In the final implementation, this value will come from the game's progression manager.
+            int currentGameStage = 1; // << This should be passed in or retrieved from a ProgressionManager
+            var selectedChoices = _choiceGenerator.GenerateSpellChoices(currentGameStage, count).Cast<object>().ToList();
 
             // Layout calculation for vertical pillars
             const int cardWidth = 95;
@@ -152,21 +157,6 @@ namespace ProjectVagabond.Scenes
             {
                 // For abilities/items, just handle the choice immediately after the card disappears
                 HandleChoice(_selectedChoiceData);
-            }
-        }
-
-        private List<object> GetAvailableChoices(ChoiceType type)
-        {
-            switch (type)
-            {
-                case ChoiceType.Spell:
-                    return BattleDataCache.Moves.Values.Where(m => m.MoveType == MoveType.Spell).Cast<object>().ToList();
-                case ChoiceType.Ability:
-                    return BattleDataCache.Abilities.Values.Cast<object>().ToList();
-                case ChoiceType.Item:
-                    return BattleDataCache.Consumables.Values.Cast<object>().ToList();
-                default:
-                    return new List<object>();
             }
         }
 
