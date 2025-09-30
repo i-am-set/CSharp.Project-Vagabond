@@ -72,9 +72,9 @@ namespace ProjectVagabond.Battle.UI
         private const float SEQUENTIAL_ANIMATION_DELAY = 0.05f;
 
         // "NEW!" Text Animation Tuning
-        private const float NEW_TEXT_FADE_IN_DURATION = 0.15f;
-        private const float NEW_TEXT_HOLD_DURATION = 0.2f;
-        private const float NEW_TEXT_FADE_OUT_DURATION = 0.2f;
+        private const float NEW_TEXT_FADE_IN_DURATION = 0.075f;
+        private const float NEW_TEXT_HOLD_DURATION = 0.1f;
+        private const float NEW_TEXT_FADE_OUT_DURATION = 0.1f;
         private const float NEW_TEXT_TOTAL_DURATION = NEW_TEXT_FADE_IN_DURATION + NEW_TEXT_HOLD_DURATION + NEW_TEXT_FADE_OUT_DURATION;
 
         // Hand Discard Animation
@@ -82,10 +82,11 @@ namespace ProjectVagabond.Battle.UI
         private MoveData? _deferredMove;
         private SpellbookEntry? _deferredEntry;
         private BattleCombatant? _deferredTarget;
-        private const float HAND_DISCARD_DURATION = 1.0f;
-        private const float SELECTED_CARD_TRAVEL_DISTANCE = 40f;
-        private const float SHAKE_FREQUENCY = 40f;
-        private const float SHAKE_MAGNITUDE = 2f;
+        private const float HAND_DISCARD_DURATION = 0.3f;
+        private const float UNSELECTED_CARD_FADE_DURATION = 0.3f;
+        private const float SELECTED_CARD_TRAVEL_DISTANCE = 7f;
+        private const float SHAKE_FREQUENCY = 90f;
+        private const float SHAKE_MAGNITUDE = 8f;
 
 
         private Queue<ImageButton> _actionButtonsToAnimate = new Queue<ImageButton>();
@@ -1028,10 +1029,12 @@ namespace ProjectVagabond.Battle.UI
                     }
                     else
                     {
-                        float shakeProgress = Math.Clamp(_handDiscardAnimTimer / (HAND_DISCARD_DURATION * 0.8f), 0f, 1f);
+                        float unselectedProgress = Math.Clamp(_handDiscardAnimTimer / UNSELECTED_CARD_FADE_DURATION, 0f, 1f);
+                        float unselectedEased = Easing.EaseOutCubic(unselectedProgress);
+                        float shakeProgress = Math.Clamp(_handDiscardAnimTimer / (UNSELECTED_CARD_FADE_DURATION * 0.8f), 0f, 1f);
                         float currentShakeMagnitude = SHAKE_MAGNITUDE * (1f - shakeProgress);
                         horizontalShake = MathF.Sin(_handDiscardAnimTimer * SHAKE_FREQUENCY) * currentShakeMagnitude;
-                        tintOverride = Color.Lerp(Color.White, _global.Palette_Red, easedProgress) * alpha;
+                        tintOverride = Color.Lerp(Color.White, _global.Palette_Red, unselectedEased) * (1f - unselectedEased);
                     }
                     button.Draw(spriteBatch, font, gameTime, transform, false, horizontalShake, verticalOffset, tintOverride);
                 }
