@@ -7,7 +7,6 @@ using MonoGame.Extended.BitmapFonts;
 using System;
 using System.Linq;
 using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 
 namespace ProjectVagabond
 {
@@ -59,11 +58,7 @@ namespace ProjectVagabond
         /// </summary>
         public InputDevice LastInputDevice { get; set; } = InputDevice.Mouse;
 
-        public SceneManager()
-        {
-            EventBus.Subscribe<GameEvents.NarrativeChoiceRequested>(OnNarrativeChoiceRequested);
-            EventBus.Subscribe<GameEvents.RewardChoiceRequested>(OnRewardChoiceRequested);
-        }
+        public SceneManager() { }
 
         /// <summary>
         /// Adds a scene to the manager and initializes it.
@@ -344,30 +339,6 @@ namespace ProjectVagabond
             if (IsModalActive)
             {
                 _modalScene?.DrawFullscreenUI(spriteBatch, font, gameTime, transform);
-            }
-        }
-
-        private void OnNarrativeChoiceRequested(GameEvents.NarrativeChoiceRequested e)
-        {
-            var narrativeScene = GetScene(GameSceneState.NarrativeChoice) as NarrativeChoiceScene;
-            if (narrativeScene != null)
-            {
-                narrativeScene.Show(e.Prompt, e.Choices);
-                ShowModal(GameSceneState.NarrativeChoice);
-            }
-        }
-
-        private void OnRewardChoiceRequested(GameEvents.RewardChoiceRequested e)
-        {
-            var choiceScene = GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-            if (choiceScene != null)
-            {
-                if (e.RewardType == "Spell")
-                {
-                    choiceScene.Show(ChoiceType.Spell, e.Count, e.GameStage);
-                    ShowModal(GameSceneState.ChoiceMenu);
-                }
-                // TODO: Handle other reward types like "Ability" and "Item".
             }
         }
     }

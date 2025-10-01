@@ -17,8 +17,7 @@ namespace ProjectVagabond.Scenes
         Transition,
         AnimationEditor,
         Battle,
-        ChoiceMenu,
-        NarrativeChoice
+        ChoiceMenu
     }
 
     /// <summary>

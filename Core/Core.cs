@@ -76,7 +76,6 @@ namespace ProjectVagabond
         private LoadingScreen _loadingScreen;
         private AnimationManager _animationManager;
         private DebugConsole _debugConsole;
-        private ProgressionManager _progressionManager;
 
         // Input State
         private KeyboardState _previousKeyboardState;
@@ -185,16 +184,9 @@ namespace ProjectVagabond
             _backgroundManager = new BackgroundManager();
             ServiceLocator.Register<BackgroundManager>(_backgroundManager);
 
-            // SceneManager must be registered before systems that depend on it (like ProgressionManager).
-            _sceneManager = new SceneManager();
-            ServiceLocator.Register<SceneManager>(_sceneManager);
-
             // GameState must be registered before systems that depend on it in their constructor.
             _gameState = new GameState(noiseManager, componentStore, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
-
-            _progressionManager = new ProgressionManager();
-            ServiceLocator.Register<ProgressionManager>(_progressionManager);
 
             var playerInputSystem = new PlayerInputSystem();
             ServiceLocator.Register<PlayerInputSystem>(playerInputSystem);
@@ -223,6 +215,10 @@ namespace ProjectVagabond
             var commandProcessor = new CommandProcessor(playerInputSystem);
             ServiceLocator.Register<CommandProcessor>(commandProcessor);
 
+            _sceneManager = new SceneManager();
+            ServiceLocator.Register<SceneManager>(_sceneManager);
+            _sceneManager.AddScene(GameSceneState.Transition, new TransitionScene());
+
             _debugConsole = new DebugConsole();
             ServiceLocator.Register<DebugConsole>(_debugConsole);
 
@@ -239,14 +235,11 @@ namespace ProjectVagabond
             _systemManager.RegisterSystem(_moveLearningSystem, 0f);
             _systemManager.RegisterSystem(_abilityLearningSystem, 0f);
 
-            _sceneManager.AddScene(GameSceneState.Transition, new TransitionScene());
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene()); // Changed to GameMapScene
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
             _sceneManager.AddScene(GameSceneState.ChoiceMenu, new ChoiceMenuScene());
-            _sceneManager.AddScene(GameSceneState.NarrativeChoice, new NarrativeChoiceScene());
-
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
@@ -309,7 +302,6 @@ namespace ProjectVagabond
 
             // Load data for battle system
             BattleDataCache.LoadData(Content);
-            _progressionManager.LoadAllSplits(Content);
 
             // Initialize core systems that require content but should always be available.
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
@@ -413,19 +405,19 @@ namespace ProjectVagabond
             if (KeyPressed(Keys.F6, currentKeyboardState, _previousKeyboardState))
             {
                 var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-                choiceMenu?.Show(ChoiceType.Spell, _random.Next(2, 4), 1);
+                choiceMenu?.Show(ChoiceType.Spell, _random.Next(2, 4));
                 _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
             }
             if (KeyPressed(Keys.F7, currentKeyboardState, _previousKeyboardState))
             {
                 var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-                choiceMenu?.Show(ChoiceType.Ability, _random.Next(2, 4), 1);
+                choiceMenu?.Show(ChoiceType.Ability, _random.Next(2, 4));
                 _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
             }
             if (KeyPressed(Keys.F8, currentKeyboardState, _previousKeyboardState))
             {
                 var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-                choiceMenu?.Show(ChoiceType.Item, _random.Next(2, 4), 1);
+                choiceMenu?.Show(ChoiceType.Item, _random.Next(2, 4));
                 _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
             }
             if (KeyPressed(Keys.F9, currentKeyboardState, _previousKeyboardState))

@@ -28,18 +28,6 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published when a message should be displayed by the main progression narrator.
-        /// </summary>
-        public struct ProgressionNarrated
-        {
-            public string Message { get; set; }
-            /// <summary>
-            /// If true, the narrator will immediately clear any currently displayed text before showing this message.
-            /// </summary>
-            public bool ClearPrevious { get; set; }
-        }
-
-        /// <summary>
         /// Published when a high-priority, short-duration message should be displayed to the user.
         /// </summary>
         public struct AlertPublished
@@ -292,33 +280,13 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published when the player wins a battle. Signals the ProgressionManager to advance.
+        /// Published to trigger the spell choice UI.
         /// </summary>
-        public struct BattleWon { }
-
-        /// <summary>
-        /// Published by the ProgressionManager to trigger a narrative choice modal.
-        /// </summary>
-        public struct NarrativeChoiceRequested
-        {
-            public string Prompt { get; set; }
-            public List<NarrativeChoice> Choices { get; set; }
-        }
-
-        /// <summary>
-        /// Published by the ProgressionManager to trigger a reward choice modal.
-        /// </summary>
-        public struct RewardChoiceRequested
+        public struct SpellChoiceRequested
         {
             public int GameStage { get; set; }
-            public string RewardType { get; set; }
-            public int Count { get; set; }
+            public int NumberOfChoices { get; set; }
         }
-
-        /// <summary>
-        /// Published by a reward choice scene after the player has made their selection.
-        /// </summary>
-        public struct RewardChoiceCompleted { }
     }
 }
 #nullable restore

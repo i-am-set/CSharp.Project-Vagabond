@@ -1,17 +1,7 @@
 ﻿using System.Collections.Generic;
-using ProjectVagabond.Battle;
 
 namespace ProjectVagabond
 {
-    /// <summary>
-    /// Holds a temporary buff granted by a narrative choice, which lasts for a set number of battles.
-    /// </summary>
-    public class TemporaryBuff
-    {
-        public StatusEffectType EffectType { get; set; }
-        public int DurationInBattles { get; set; }
-    }
-
     /// <summary>
     /// Holds all dynamic, persistent data for the player character.
     /// This acts as the single source of truth for the player's state,
@@ -40,11 +30,6 @@ namespace ProjectVagabond
         /// Represents the player's inventory, mapping an ItemID to its quantity.
         /// </summary>
         public Dictionary<string, int> Inventory { get; set; } = new Dictionary<string, int>();
-
-        /// <summary>
-        /// A list of temporary buffs that persist between battles.
-        /// </summary>
-        public List<TemporaryBuff> TemporaryBuffs { get; set; } = new List<TemporaryBuff>();
 
         /// <summary>
         /// Adds an item to the player's inventory.
@@ -77,22 +62,6 @@ namespace ProjectVagabond
                 return true;
             }
             return false;
-        }
-
-        /// <summary>
-        /// Decrements the duration of all temporary buffs and removes any that have expired.
-        /// This should be called after a battle is completed.
-        /// </summary>
-        public void DecrementBuffDurations()
-        {
-            for (int i = TemporaryBuffs.Count - 1; i >= 0; i--)
-            {
-                TemporaryBuffs[i].DurationInBattles--;
-                if (TemporaryBuffs[i].DurationInBattles <= 0)
-                {
-                    TemporaryBuffs.RemoveAt(i);
-                }
-            }
         }
     }
 }

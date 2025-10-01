@@ -76,7 +76,7 @@ namespace ProjectVagabond.Scenes
             base.Enter();
         }
 
-        public void Show(ChoiceType type, int count, int gameStage)
+        public void Show(ChoiceType type, int count)
         {
             _cards.Clear();
             _cardsToAnimateIn.Clear();
@@ -86,16 +86,11 @@ namespace ProjectVagabond.Scenes
             _rarityStaggerTimer = 0f;
             _currentPhase = AnimationPhase.CardIntro;
 
-            var selectedChoices = new List<object>();
-
-            switch (type)
-            {
-                case ChoiceType.Spell:
-                    selectedChoices = _choiceGenerator.GenerateSpellChoices(gameStage, count).Cast<object>().ToList();
-                    break;
-                    // TODO: Implement generators for Abilities and Items
-            }
-
+            // Use the ChoiceGenerator to get a curated list of choices
+            // For now, we'll assume GameStage is 1 for testing purposes.
+            // In the final implementation, this value will come from the game's progression manager.
+            int currentGameStage = 1; // << This should be passed in or retrieved from a ProgressionManager
+            var selectedChoices = _choiceGenerator.GenerateSpellChoices(currentGameStage, count).Cast<object>().ToList();
 
             // Layout calculation for vertical pillars
             const int cardWidth = 95;
@@ -180,9 +175,6 @@ namespace ProjectVagabond.Scenes
                 _gameState.PlayerState.AddItem(item.ItemID);
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {item.ItemName}!" });
             }
-
-            // Signal the ProgressionManager that the reward choice is complete.
-            EventBus.Publish(new GameEvents.RewardChoiceCompleted());
 
             _currentPhase = AnimationPhase.FadingOut;
             _fadeOutTimer = 0f;
@@ -467,7 +459,7 @@ namespace ProjectVagabond.Scenes
             {
                 var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
                 spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), screenBounds, Color.Black * 0.7f);
+                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), screenBounds, Color.Black * underlayAlpha);
                 spriteBatch.End();
             }
         }
