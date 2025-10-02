@@ -82,22 +82,14 @@ namespace ProjectVagabond.Scenes
                 var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
                 var gameState = ServiceLocator.Get<GameState>();
 
-                var loadingTasks = new List<LoadingTask>
-                {
-                    new GenericTask("Loading game sprites...", () => spriteManager.LoadGameContent()),
-                    new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Data/Archetypes")),
-                    new GenericTask("Generating world...", () => {
-                        gameState.InitializeWorld();
-                        gameState.InitializeRenderableEntities();
-                    }),
-                    new DiceWarmupTask()
-                };
+                // Simplified loading for progression system start
+                spriteManager.LoadGameContent();
+                archetypeManager.LoadArchetypes("Content/Data/Archetypes");
+                gameState.InitializeWorld();
+                gameState.InitializeRenderableEntities();
+                core.SetGameLoaded(true);
 
-                Action onLoadingComplete = () => {
-                    core.SetGameLoaded(true);
-                };
-
-                _sceneManager.ChangeScene(GameSceneState.TerminalMap, loadingTasks, onLoadingComplete);
+                _sceneManager.ChangeScene(GameSceneState.Split);
             };
             _buttons.Add(playButton);
             currentY += playHeight + buttonYSpacing;

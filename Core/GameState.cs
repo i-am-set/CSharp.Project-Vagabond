@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Progression;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -368,6 +369,40 @@ namespace ProjectVagabond
                 return true;
             }
             return false;
+        }
+
+        public void ApplyNarrativeOutcome(NarrativeOutcome outcome)
+        {
+            if (outcome == null) return;
+
+            switch (outcome.OutcomeType)
+            {
+                case "GiveItem":
+                    PlayerState.AddItem(outcome.Value);
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {outcome.Value}!" });
+                    break;
+                case "AddBuff":
+                    if (Enum.TryParse<StatusEffectType>(outcome.Value, true, out var effectType))
+                    {
+                        var buffsComp = _componentStore.GetComponent<TemporaryBuffsComponent>(PlayerEntityId);
+                        if (buffsComp == null)
+                        {
+                            buffsComp = new TemporaryBuffsComponent();
+                            _componentStore.AddComponent(PlayerEntityId, buffsComp);
+                        }
+                        var existingBuff = buffsComp.Buffs.FirstOrDefault(b => b.EffectType == effectType);
+                        if (existingBuff != null)
+                        {
+                            existingBuff.RemainingBattles += outcome.Duration;
+                        }
+                        else
+                        {
+                            buffsComp.Buffs.Add(new TemporaryBuff { EffectType = effectType, RemainingBattles = outcome.Duration });
+                        }
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Gained a temporary buff: {outcome.Value}!" });
+                    }
+                    break;
+            }
         }
 
         public MapData GetMapDataAt(int x, int y) => _noiseManager.GetMapData(x, y);

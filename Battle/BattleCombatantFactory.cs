@@ -84,6 +84,17 @@ namespace ProjectVagabond.Battle
                 combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
                 combatant.DeckManager = new CombatDeckManager();
                 combatant.DeckManager.Initialize(gameState.PlayerState.SpellbookPages);
+
+                // Apply temporary buffs from narrative choices
+                var tempBuffsComp = componentStore.GetComponent<TemporaryBuffsComponent>(entityId);
+                if (tempBuffsComp != null)
+                {
+                    foreach (var buff in tempBuffsComp.Buffs)
+                    {
+                        // Apply with a long duration; they are managed by battle count, not turns.
+                        combatant.AddStatusEffect(new StatusEffectInstance(buff.EffectType, 99));
+                    }
+                }
             }
             else
             {

@@ -8,6 +8,7 @@ using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -76,6 +77,7 @@ namespace ProjectVagabond
         private LoadingScreen _loadingScreen;
         private AnimationManager _animationManager;
         private DebugConsole _debugConsole;
+        private ProgressionManager _progressionManager;
 
         // Input State
         private KeyboardState _previousKeyboardState;
@@ -215,6 +217,9 @@ namespace ProjectVagabond
             var commandProcessor = new CommandProcessor(playerInputSystem);
             ServiceLocator.Register<CommandProcessor>(commandProcessor);
 
+            _progressionManager = new ProgressionManager();
+            ServiceLocator.Register<ProgressionManager>(_progressionManager);
+
             _sceneManager = new SceneManager();
             ServiceLocator.Register<SceneManager>(_sceneManager);
             _sceneManager.AddScene(GameSceneState.Transition, new TransitionScene());
@@ -240,6 +245,7 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
             _sceneManager.AddScene(GameSceneState.ChoiceMenu, new ChoiceMenuScene());
+            _sceneManager.AddScene(GameSceneState.Split, new SplitScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
@@ -302,6 +308,7 @@ namespace ProjectVagabond
 
             // Load data for battle system
             BattleDataCache.LoadData(Content);
+            _progressionManager.LoadSplits();
 
             // Initialize core systems that require content but should always be available.
             _diceRollingSystem.Initialize(GraphicsDevice, Content);

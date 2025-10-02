@@ -268,7 +268,12 @@ namespace ProjectVagabond.Scenes
                     _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                     if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
                     {
-                        _sceneManager.ChangeScene(GameSceneState.TerminalMap);
+                        var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+                        if (player != null && !player.IsDefeated)
+                        {
+                            DecrementTemporaryBuffs();
+                        }
+                        _sceneManager.ChangeScene(BattleSetup.ReturnSceneState);
                     }
                 }
                 base.Update(gameTime);
@@ -333,6 +338,22 @@ namespace ProjectVagabond.Scenes
             }
 
             base.Update(gameTime);
+        }
+
+        private void DecrementTemporaryBuffs()
+        {
+            var gameState = ServiceLocator.Get<GameState>();
+            var buffsComp = _componentStore.GetComponent<TemporaryBuffsComponent>(gameState.PlayerEntityId);
+            if (buffsComp == null) return;
+
+            for (int i = buffsComp.Buffs.Count - 1; i >= 0; i--)
+            {
+                buffsComp.Buffs[i].RemainingBattles--;
+                if (buffsComp.Buffs[i].RemainingBattles <= 0)
+                {
+                    buffsComp.Buffs.RemoveAt(i);
+                }
+            }
         }
 
         private void HandlePhaseChange(BattleManager.BattlePhase newPhase)

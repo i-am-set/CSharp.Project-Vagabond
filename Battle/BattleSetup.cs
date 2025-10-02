@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using ProjectVagabond.Scenes;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Battle
 {
@@ -13,5 +14,10 @@ namespace ProjectVagabond.Battle
         /// If null or empty, the BattleScene will use its default encounter.
         /// </summary>
         public static List<string> EnemyArchetypes { get; set; }
+
+        /// <summary>
+        /// The scene to return to after the battle concludes.
+        /// </summary>
+        public static GameSceneState ReturnSceneState { get; set; } = GameSceneState.TerminalMap;
     }
 }
