@@ -22,7 +22,7 @@ namespace ProjectVagabond.Scenes
         private readonly GameState _gameState;
         private readonly ChoiceGenerator _choiceGenerator;
 
-        private enum AnimationPhase { CardIntro, RarityIntro, Idle, CardOutro, SpellTransform_PopIn, SpellTransform_BookIntro, SpellTransform_MoveOut, SpellTransform_Absorb, SpellTransform_BookMoveOut, FadingOut }
+        private enum AnimationPhase { CardIntro, RarityIntro, Idle, CardOutro, SpellTransform_PopIn, SpellTransform_BookIntro, SpellTransform_MoveOut, SpellTransform_Absorb, SpellTransform_BookMoveOut }
         private AnimationPhase _currentPhase = AnimationPhase.CardIntro;
 
         private Queue<ChoiceCard> _cardsToAnimateIn = new Queue<ChoiceCard>();
@@ -53,10 +53,6 @@ namespace ProjectVagabond.Scenes
         private const float ABSORB_HOP_AMOUNT = 2f;
         private Vector2 _spellbookAnimPosition;
         private float _transformInitialRotation;
-
-        // State for the final fade-out
-        private float _fadeOutTimer;
-        private const float FADE_OUT_DURATION = 0.25f;
 
 
         public ChoiceMenuScene()
@@ -176,8 +172,7 @@ namespace ProjectVagabond.Scenes
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {item.ItemName}!" });
             }
 
-            _currentPhase = AnimationPhase.FadingOut;
-            _fadeOutTimer = 0f;
+            _sceneManager.HideModal();
         }
 
         public override void Update(GameTime gameTime)
@@ -296,14 +291,6 @@ namespace ProjectVagabond.Scenes
                     }
                     break;
 
-                case AnimationPhase.FadingOut:
-                    _fadeOutTimer += deltaTime;
-                    if (_fadeOutTimer >= FADE_OUT_DURATION)
-                    {
-                        _sceneManager.HideModal();
-                    }
-                    break;
-
                 case AnimationPhase.Idle:
                     // Input is only processed when idle.
                     if (IsInputBlocked) return;
@@ -314,16 +301,12 @@ namespace ProjectVagabond.Scenes
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // Only draw the cards if we are not in the final fade-out phase.
-            if (_currentPhase != AnimationPhase.FadingOut)
+            foreach (var card in _cards)
             {
-                foreach (var card in _cards)
-                {
-                    card.Draw(spriteBatch, font, gameTime, transform);
-                }
+                card.Draw(spriteBatch, font, gameTime, transform);
             }
 
-            if (_currentPhase >= AnimationPhase.SpellTransform_PopIn && _currentPhase < AnimationPhase.FadingOut)
+            if (_currentPhase >= AnimationPhase.SpellTransform_PopIn)
             {
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var pageSprite = spriteManager.SpellbookPageSprite;
@@ -449,19 +432,10 @@ namespace ProjectVagabond.Scenes
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             float underlayAlpha = 0.7f;
-            if (_currentPhase == AnimationPhase.FadingOut)
-            {
-                float progress = Math.Clamp(_fadeOutTimer / FADE_OUT_DURATION, 0f, 1f);
-                underlayAlpha = MathHelper.Lerp(0.7f, 0f, Easing.EaseInQuad(progress));
-            }
-
-            if (underlayAlpha > 0.01f)
-            {
-                var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-                spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), screenBounds, Color.Black * underlayAlpha);
-                spriteBatch.End();
-            }
+            var screenBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            spriteBatch.Draw(ServiceLocator.Get<Texture2D>(), screenBounds, Color.Black * underlayAlpha);
+            spriteBatch.End();
         }
     }
 }

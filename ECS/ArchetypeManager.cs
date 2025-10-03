@@ -43,6 +43,7 @@ namespace ProjectVagabond
                 new PlayerTagComponent(),
                 new HighImportanceComponent(),
                 new RenderableComponent { Color = ServiceLocator.Get<Global>().PlayerColor },
+                new TemporaryBuffsComponent()
             };
             _archetypes["player"] = new ArchetypeTemplate("player", "Player", playerComponents);
         }
@@ -99,9 +100,24 @@ namespace ProjectVagabond
                                 {
                                     templateComponents.Add(cloneableComponent);
                                 }
-                                else
+                                else if (componentInstance is IComponent)
                                 {
-                                    Console.WriteLine($"[WARNING] Component '{componentType.Name}' in archetype '{archetypeDto.Id}' does not implement ICloneableComponent and will not be added to the template.");
+                                    // For non-cloneable components, we still need to add them if they are part of the archetype.
+                                    // The Spawner will need to handle creating new instances for these.
+                                    // For now, we assume most stateful components are cloneable.
+                                    // A simple solution is to just add the instance, but this means all entities share it.
+                                    // A better solution is to store the Type and properties and reconstruct it in the spawner.
+                                    // For this project's scope, we will enforce ICloneableComponent for stateful components.
+                                    // Let's check if it's a simple marker component (no properties).
+                                    bool hasProperties = componentDef.ContainsKey("Properties");
+                                    if (!hasProperties)
+                                    {
+                                        templateComponents.Add((IComponent)componentInstance);
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"[WARNING] Stateful component '{componentType.Name}' in archetype '{archetypeDto.Id}' does not implement ICloneableComponent and will not be added to spawned entities correctly.");
+                                    }
                                 }
                             }
 

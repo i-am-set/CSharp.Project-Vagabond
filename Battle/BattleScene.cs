@@ -269,6 +269,9 @@ namespace ProjectVagabond.Scenes
                     if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
                     {
                         var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+                        // For now, treat loss as a win for progression.
+                        SplitScene.PlayerWonLastBattle = true; // player != null && !player.IsDefeated;
+
                         if (player != null && !player.IsDefeated)
                         {
                             DecrementTemporaryBuffs();

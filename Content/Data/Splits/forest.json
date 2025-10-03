@@ -24,18 +24,21 @@
             "OutcomeType": "AddBuff",
             "Value": "TenacityUp",
             "Duration": 1
-          }
+          },
+          "ResultText": "You drink from the spring. The water is cool and revitalizing."
         },
         {
           "Text": "Bottle some water for later",
           "Outcome": {
             "OutcomeType": "GiveItem",
             "Value": "HealthPotion"
-          }
+          },
+          "ResultText": "You carefully bottle some of the shimmering water."
         },
         {
           "Text": "Ignore it and move on",
-          "Outcome": null
+          "Outcome": null,
+          "ResultText": "You decide to leave the spring untouched and continue on your way."
         }
       ]
     },
@@ -47,11 +50,13 @@
           "Outcome": {
             "OutcomeType": "GiveItem",
             "Value": "StrengthTonic"
-          }
+          },
+          "ResultText": "You purchase the tonic from the merchant."
         },
         {
           "Text": "Decline his offer",
-          "Outcome": null
+          "Outcome": null,
+          "ResultText": "You politely decline the merchant's offer."
         }
       ]
     }

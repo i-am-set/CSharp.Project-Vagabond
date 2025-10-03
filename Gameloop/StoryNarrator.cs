@@ -44,6 +44,16 @@ namespace ProjectVagabond.UI
             _previousKeyboardState = Keyboard.GetState();
         }
 
+        public void Clear()
+        {
+            _messageQueue.Clear();
+            _currentMessage = "";
+            _charIndex = 0;
+            _displayLines.Clear();
+            _isWaitingForInput = false;
+            _typewriterTimer = 0f;
+        }
+
         public void Show(string message)
         {
             if (string.IsNullOrWhiteSpace(message))
@@ -78,6 +88,21 @@ namespace ProjectVagabond.UI
             }
         }
 
+        private void CheckForBlankMessageAndAdvance()
+        {
+            // If the message we just finished was effectively blank (only whitespace),
+            // don't wait for input, just process the next message immediately.
+            if (!_displayLines.Any(sb => sb.ToString().Trim().Length > 0))
+            {
+                ProcessNextMessage();
+            }
+            else
+            {
+                // The message had content, so wait for user input.
+                _isWaitingForInput = true;
+            }
+        }
+
         private void FinishCurrentMessageInstantly()
         {
             _displayLines.Clear();
@@ -98,7 +123,7 @@ namespace ProjectVagabond.UI
             }
 
             _charIndex = _currentMessage.Length;
-            _isWaitingForInput = true;
+            CheckForBlankMessageAndAdvance();
         }
 
         public void Update(GameTime gameTime)
@@ -162,7 +187,7 @@ namespace ProjectVagabond.UI
                     }
                     else
                     {
-                        _isWaitingForInput = true;
+                        CheckForBlankMessageAndAdvance();
                     }
                 }
             }

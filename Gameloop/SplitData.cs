@@ -22,6 +22,7 @@ namespace ProjectVagabond.Progression
     {
         public string Text { get; set; } = "";
         public NarrativeOutcome? Outcome { get; set; }
+        public string ResultText { get; set; } = "";
     }
 
     public class NarrativeOutcome
