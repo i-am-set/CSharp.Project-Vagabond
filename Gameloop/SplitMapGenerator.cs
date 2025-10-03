@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -42,12 +43,29 @@ namespace ProjectVagabond.Progression
 
             if (startNodeId == -1) return null;
 
-            // Generate render points for each path
+            // Generate render points and pixel points for each path
             foreach (var path in paths)
             {
                 var fromNode = allNodes.First(n => n.Id == path.FromNodeId);
                 var toNode = allNodes.First(n => n.Id == path.ToNodeId);
                 path.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, toNode.Position);
+
+                path.PixelPoints.Clear();
+                if (path.RenderPoints.Count < 2) continue;
+
+                for (int i = 0; i < path.RenderPoints.Count - 1; i++)
+                {
+                    var segmentPoints = SpriteBatchExtensions.GetBresenhamLinePoints(path.RenderPoints[i], path.RenderPoints[i + 1]);
+                    // Add all points from the first segment, then skip the first point of subsequent segments to avoid duplicates
+                    if (i == 0)
+                    {
+                        path.PixelPoints.AddRange(segmentPoints);
+                    }
+                    else if (segmentPoints.Count > 1)
+                    {
+                        path.PixelPoints.AddRange(segmentPoints.Skip(1));
+                    }
+                }
             }
 
             return new SplitMap(allNodes, paths, totalFloors, startNodeId, mapHeight);

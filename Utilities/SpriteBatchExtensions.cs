@@ -4,6 +4,7 @@ using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using MonoGame.Extended.Graphics;
 using System;
+using System.Collections.Generic;
 
 namespace ProjectVagabond.Utils
 {
@@ -137,7 +138,8 @@ namespace ProjectVagabond.Utils
             spriteBatch.DrawLine(RoundVector(point1), RoundVector(point2), color, thickness, layerDepth);
         }
 
-        // --- DrawBresenhamLineSnapped ---
+        // --- Bresenham Line Algorithms ---
+
         public static void DrawBresenhamLineSnapped(this SpriteBatch spriteBatch, Texture2D pixel, Vector2 start, Vector2 end, Color color)
         {
             int x0 = (int)MathF.Round(start.X);
@@ -167,6 +169,39 @@ namespace ProjectVagabond.Utils
                     y0 += sy;
                 }
             }
+        }
+
+        public static List<Point> GetBresenhamLinePoints(Vector2 start, Vector2 end)
+        {
+            var points = new List<Point>();
+            int x0 = (int)MathF.Round(start.X);
+            int y0 = (int)MathF.Round(start.Y);
+            int x1 = (int)MathF.Round(end.X);
+            int y1 = (int)MathF.Round(end.Y);
+
+            int dx = Math.Abs(x1 - x0);
+            int sx = x0 < x1 ? 1 : -1;
+            int dy = -Math.Abs(y1 - y0);
+            int sy = y0 < y1 ? 1 : -1;
+            int err = dx + dy;
+
+            while (true)
+            {
+                points.Add(new Point(x0, y0));
+                if (x0 == x1 && y0 == y1) break;
+                int e2 = 2 * err;
+                if (e2 >= dy)
+                {
+                    err += dy;
+                    x0 += sx;
+                }
+                if (e2 <= dx)
+                {
+                    err += dx;
+                    y0 += sy;
+                }
+            }
+            return points;
         }
     }
 }

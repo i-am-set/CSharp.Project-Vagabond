@@ -5,7 +5,6 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -41,7 +40,12 @@ namespace ProjectVagabond.Scenes
         private int _hoveredNodeId = -1;
         private int _pressedNodeId = -1;
         private readonly HashSet<int> _visitedNodeIds = new HashSet<int>();
-        private int _nodeToDrawPathsFrom = -1;
+        private int _nodeForPathReveal = -1;
+        private int _lastAnimatedNodeId = -1;
+
+        // Path animation state
+        private readonly Dictionary<int, float> _pathAnimationProgress = new();
+        private const float PATH_ANIMATION_DURATION = 3.0f; // Seconds for the path to draw
 
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
@@ -69,7 +73,9 @@ namespace ProjectVagabond.Scenes
                 _progressionManager.GenerateNewSplitMap();
                 _currentMap = _progressionManager.CurrentSplitMap;
                 _playerCurrentNodeId = _currentMap?.StartNodeId ?? -1;
-                _nodeToDrawPathsFrom = _playerCurrentNodeId;
+                _nodeForPathReveal = _playerCurrentNodeId;
+                _lastAnimatedNodeId = -1;
+                _pathAnimationProgress.Clear();
 
                 _visitedNodeIds.Clear();
                 _visitedNodeIds.Add(_playerCurrentNodeId);
@@ -143,8 +149,35 @@ namespace ProjectVagabond.Scenes
             if (!_isPlayerMoving && Math.Abs(_cameraYOffset - _targetCameraYOffset) < 0.1f)
             {
                 // Once camera is settled, reveal paths from the player's current logical position.
-                _nodeToDrawPathsFrom = _playerCurrentNodeId;
+                _nodeForPathReveal = _playerCurrentNodeId;
+
+                // Check if we need to start new animations
+                if (_nodeForPathReveal != _lastAnimatedNodeId)
+                {
+                    _lastAnimatedNodeId = _nodeForPathReveal;
+                    if (_currentMap != null && _currentMap.Nodes.TryGetValue(_nodeForPathReveal, out var currentNode))
+                    {
+                        foreach (var pathId in currentNode.OutgoingPathIds)
+                        {
+                            if (!_pathAnimationProgress.ContainsKey(pathId))
+                            {
+                                _pathAnimationProgress[pathId] = 0f;
+                            }
+                        }
+                    }
+                }
             }
+
+            // Update active path animations
+            var keys = _pathAnimationProgress.Keys.ToList();
+            foreach (var pathId in keys)
+            {
+                if (_pathAnimationProgress[pathId] < PATH_ANIMATION_DURATION)
+                {
+                    _pathAnimationProgress[pathId] += deltaTime;
+                }
+            }
+
 
             if (_isPlayerMoving)
             {
@@ -292,10 +325,12 @@ namespace ProjectVagabond.Scenes
                 var fromNode = _currentMap.Nodes[path.FromNodeId];
                 var toNode = _currentMap.Nodes[path.ToNodeId];
                 Color pathColor;
+                bool isAnimating = false;
 
-                if (fromNode.Id == _nodeToDrawPathsFrom)
+                if (fromNode.Id == _nodeForPathReveal)
                 {
                     pathColor = _global.Palette_DarkGray; // Active path
+                    isAnimating = true;
                 }
                 else if (_visitedNodeIds.Contains(fromNode.Id) && _visitedNodeIds.Contains(toNode.Id))
                 {
@@ -306,10 +341,28 @@ namespace ProjectVagabond.Scenes
                     continue; // Don't draw hidden paths
                 }
 
-                if (path.RenderPoints.Count < 2) continue;
-                for (int i = 0; i < path.RenderPoints.Count - 1; i++)
+                if (path.PixelPoints.Count < 2) continue;
+
+                if (isAnimating)
                 {
-                    spriteBatch.DrawBresenhamLineSnapped(pixel, path.RenderPoints[i], path.RenderPoints[i + 1], pathColor);
+                    float animationTimer = _pathAnimationProgress.GetValueOrDefault(path.Id, 0f);
+                    float linearProgress = Math.Clamp(animationTimer / PATH_ANIMATION_DURATION, 0f, 1f);
+                    if (linearProgress <= 0f) continue;
+
+                    float easedProgress = Easing.EaseOutCubic(linearProgress);
+                    int numPixelsToDraw = (int)(easedProgress * path.PixelPoints.Count);
+
+                    for (int i = 0; i < numPixelsToDraw; i++)
+                    {
+                        spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
+                    }
+                }
+                else // Draw the full path (for visited paths)
+                {
+                    foreach (var point in path.PixelPoints)
+                    {
+                        spriteBatch.Draw(pixel, point.ToVector2(), pathColor);
+                    }
                 }
             }
 
