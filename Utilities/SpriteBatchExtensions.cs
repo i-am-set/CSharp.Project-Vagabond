@@ -136,5 +136,37 @@ namespace ProjectVagabond.Utils
         {
             spriteBatch.DrawLine(RoundVector(point1), RoundVector(point2), color, thickness, layerDepth);
         }
+
+        // --- DrawBresenhamLineSnapped ---
+        public static void DrawBresenhamLineSnapped(this SpriteBatch spriteBatch, Texture2D pixel, Vector2 start, Vector2 end, Color color)
+        {
+            int x0 = (int)MathF.Round(start.X);
+            int y0 = (int)MathF.Round(start.Y);
+            int x1 = (int)MathF.Round(end.X);
+            int y1 = (int)MathF.Round(end.Y);
+
+            int dx = Math.Abs(x1 - x0);
+            int sx = x0 < x1 ? 1 : -1;
+            int dy = -Math.Abs(y1 - y0);
+            int sy = y0 < y1 ? 1 : -1;
+            int err = dx + dy;
+
+            while (true)
+            {
+                spriteBatch.Draw(pixel, new Vector2(x0, y0), color);
+                if (x0 == x1 && y0 == y1) break;
+                int e2 = 2 * err;
+                if (e2 >= dy)
+                {
+                    err += dy;
+                    x0 += sx;
+                }
+                if (e2 <= dx)
+                {
+                    err += dx;
+                    y0 += sy;
+                }
+            }
+        }
     }
 }

@@ -24,7 +24,6 @@ namespace ProjectVagabond.Scenes
 
         private SplitMap? _currentMap;
         private int _playerCurrentNodeId;
-        private readonly Dictionary<int, Button> _nodeButtons = new();
         private readonly PlayerMapIcon _playerIcon;
         private NarrativeDialog _narrativeDialog;
 
@@ -33,10 +32,16 @@ namespace ProjectVagabond.Scenes
 
         private bool _isPlayerMoving;
         private float _playerMoveTimer;
-        private const float PLAYER_MOVE_DURATION = 0.5f;
+        private const float PLAYER_MOVE_DURATION = 3.0f;
         private Vector2 _playerMoveStart;
         private Vector2 _playerMoveEnd;
         private int _playerMoveTargetNodeId;
+
+        // Node interaction state
+        private int _hoveredNodeId = -1;
+        private int _pressedNodeId = -1;
+        private readonly HashSet<int> _visitedNodeIds = new HashSet<int>();
+        private int _nodeToDrawPathsFrom = -1;
 
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
@@ -64,13 +69,17 @@ namespace ProjectVagabond.Scenes
                 _progressionManager.GenerateNewSplitMap();
                 _currentMap = _progressionManager.CurrentSplitMap;
                 _playerCurrentNodeId = _currentMap?.StartNodeId ?? -1;
+                _nodeToDrawPathsFrom = _playerCurrentNodeId;
+
+                _visitedNodeIds.Clear();
+                _visitedNodeIds.Add(_playerCurrentNodeId);
+
                 var startNode = _currentMap?.Nodes[_playerCurrentNodeId];
                 if (startNode != null)
                 {
                     _playerIcon.SetPosition(startNode.Position);
                     UpdateCameraTarget(startNode.Position, true);
                 }
-                CreateNodeButtons();
             }
             else
             {
@@ -86,29 +95,6 @@ namespace ProjectVagabond.Scenes
             UpdateReachableNodes();
         }
 
-        private void CreateNodeButtons()
-        {
-            _nodeButtons.Clear();
-            if (_currentMap == null) return;
-
-            foreach (var node in _currentMap.Nodes.Values)
-            {
-                var button = new ImageButton(node.GetBounds(), GetNodeTexture(node.NodeType))
-                {
-                    IsEnabled = false
-                };
-                int nodeId = node.Id; // Capture node Id for the lambda
-                button.OnClick += () =>
-                {
-                    if (!_isPlayerMoving)
-                    {
-                        StartPlayerMove(nodeId);
-                    }
-                };
-                _nodeButtons[node.Id] = button;
-            }
-        }
-
         private void UpdateReachableNodes()
         {
             if (_currentMap == null || !_currentMap.Nodes.TryGetValue(_playerCurrentNodeId, out var currentNode)) return;
@@ -122,9 +108,9 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            foreach (var (nodeId, button) in _nodeButtons)
+            foreach (var (nodeId, node) in _currentMap.Nodes)
             {
-                button.IsEnabled = reachableNodeIds.Contains(nodeId);
+                node.IsReachable = reachableNodeIds.Contains(nodeId);
             }
         }
 
@@ -137,53 +123,95 @@ namespace ProjectVagabond.Scenes
             _playerMoveStart = _playerIcon.Position;
             _playerMoveEnd = _currentMap.Nodes[targetNodeId].Position;
             _playerMoveTargetNodeId = targetNodeId;
-
-            // Disable all buttons during movement
-            foreach (var button in _nodeButtons.Values)
-            {
-                button.IsEnabled = false;
-            }
         }
 
         public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime);
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             if (_narrativeDialog.IsActive)
             {
                 _narrativeDialog.Update(gameTime);
+                base.Update(gameTime); // Still call base update to handle its timers and input state for the next frame
                 return;
             }
 
             // Smooth camera scrolling
             _cameraYOffset = MathHelper.Lerp(_cameraYOffset, _targetCameraYOffset, deltaTime * 5f);
 
+            // Update path visibility based on camera position
+            if (!_isPlayerMoving && Math.Abs(_cameraYOffset - _targetCameraYOffset) < 0.1f)
+            {
+                // Once camera is settled, reveal paths from the player's current logical position.
+                _nodeToDrawPathsFrom = _playerCurrentNodeId;
+            }
+
             if (_isPlayerMoving)
             {
                 _playerMoveTimer += deltaTime;
                 float progress = Math.Clamp(_playerMoveTimer / PLAYER_MOVE_DURATION, 0f, 1f);
-                _playerIcon.SetPosition(Vector2.Lerp(_playerMoveStart, _playerMoveEnd, Easing.EaseInOutQuad(progress)));
+                _playerIcon.SetPosition(Vector2.Lerp(_playerMoveStart, _playerMoveEnd, Easing.EaseInOutSine(progress)));
 
                 if (progress >= 1f)
                 {
                     _isPlayerMoving = false;
                     _playerCurrentNodeId = _playerMoveTargetNodeId;
+                    _visitedNodeIds.Add(_playerCurrentNodeId);
                     UpdateCameraTarget(_playerMoveEnd, false);
                     TriggerNodeEvent(_playerCurrentNodeId);
                 }
             }
             else
             {
-                var mouseState = Mouse.GetState();
-                foreach (var button in _nodeButtons.Values)
-                {
-                    button.Update(mouseState);
-                }
+                HandleNodeInput();
             }
 
             _playerIcon.Update(gameTime);
+
+            base.Update(gameTime); // Call base update at the end to correctly update previous input states for the next frame.
         }
+
+        private void HandleNodeInput()
+        {
+            var mouseState = Mouse.GetState();
+            var virtualMousePos = Core.TransformMouse(mouseState.Position);
+
+            var cameraTransform = Matrix.CreateTranslation(0, _cameraYOffset, 0);
+            Matrix.Invert(ref cameraTransform, out var inverseCameraTransform);
+            var mouseInMapSpace = Vector2.Transform(virtualMousePos, inverseCameraTransform);
+
+            bool leftClickPressed = mouseState.LeftButton == ButtonState.Pressed && base.previousMouseState.LeftButton == ButtonState.Released;
+            bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && base.previousMouseState.LeftButton == ButtonState.Pressed;
+
+            _hoveredNodeId = -1;
+            if (_currentMap != null)
+            {
+                foreach (var node in _currentMap.Nodes.Values)
+                {
+                    if (node.IsReachable && node.GetBounds().Contains(mouseInMapSpace))
+                    {
+                        _hoveredNodeId = node.Id;
+                        break;
+                    }
+                }
+            }
+
+            if (leftClickPressed && _hoveredNodeId != -1)
+            {
+                _pressedNodeId = _hoveredNodeId;
+            }
+
+            if (leftClickReleased)
+            {
+                if (_pressedNodeId != -1 && _pressedNodeId == _hoveredNodeId && UIInputManager.CanProcessMouseClick())
+                {
+                    StartPlayerMove(_pressedNodeId);
+                    UIInputManager.ConsumeMouseClick();
+                }
+                _pressedNodeId = -1;
+            }
+        }
+
 
         private void UpdateCameraTarget(Vector2 playerPosition, bool snap)
         {
@@ -255,19 +283,64 @@ namespace ProjectVagabond.Scenes
             spriteBatch.End(); // End the default batch
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
 
+            var pixel = ServiceLocator.Get<Texture2D>();
+            var visitedPathColor = new Color(_global.Palette_DarkGray, 100);
+
             // Draw Paths
             foreach (var path in _currentMap.Paths.Values)
             {
                 var fromNode = _currentMap.Nodes[path.FromNodeId];
                 var toNode = _currentMap.Nodes[path.ToNodeId];
-                spriteBatch.DrawLineSnapped(fromNode.Position, toNode.Position, _global.Palette_DarkGray, 2f);
+                Color pathColor;
+
+                if (fromNode.Id == _nodeToDrawPathsFrom)
+                {
+                    pathColor = _global.Palette_DarkGray; // Active path
+                }
+                else if (_visitedNodeIds.Contains(fromNode.Id) && _visitedNodeIds.Contains(toNode.Id))
+                {
+                    pathColor = visitedPathColor; // Traversed path
+                }
+                else
+                {
+                    continue; // Don't draw hidden paths
+                }
+
+                if (path.RenderPoints.Count < 2) continue;
+                for (int i = 0; i < path.RenderPoints.Count - 1; i++)
+                {
+                    spriteBatch.DrawBresenhamLineSnapped(pixel, path.RenderPoints[i], path.RenderPoints[i + 1], pathColor);
+                }
             }
 
-            // Draw Nodes (as buttons)
-            foreach (var button in _nodeButtons.Values)
+            // Draw Nodes
+            foreach (var node in _currentMap.Nodes.Values)
             {
-                button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                var texture = GetNodeTexture(node.NodeType);
+                var bounds = node.GetBounds();
+                var color = Color.White;
+                float scale = 1.0f;
+
+                if (!node.IsReachable)
+                {
+                    color = Color.Gray * 0.5f;
+                }
+                else if (node.Id == _pressedNodeId)
+                {
+                    scale = 0.9f;
+                    color = _global.ButtonHoverColor;
+                }
+                else if (node.Id == _hoveredNodeId)
+                {
+                    scale = 1.1f;
+                    color = _global.ButtonHoverColor;
+                }
+
+                var origin = new Vector2(texture.Width / 2f, texture.Height / 2f);
+                var position = bounds.Center.ToVector2();
+                spriteBatch.DrawSnapped(texture, position, null, color, 0f, origin, scale, SpriteEffects.None, 0.4f);
             }
+
 
             // Draw Player Icon
             _playerIcon.Draw(spriteBatch);

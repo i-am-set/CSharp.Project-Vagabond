@@ -22,6 +22,7 @@ namespace ProjectVagabond.Progression
         public object? EventData { get; set; } // List<string> for battles, NarrativeEvent for narrative
         public List<int> IncomingPathIds { get; } = new List<int>();
         public List<int> OutgoingPathIds { get; } = new List<int>();
+        public bool IsReachable { get; set; } = false;
 
         private static int _nextId = 0;
         private const int NODE_SIZE = 16;

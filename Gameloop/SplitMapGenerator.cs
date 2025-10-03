@@ -20,6 +20,8 @@ namespace ProjectVagabond.Progression
         private const int VERTICAL_PADDING = 50;
         private const float BATTLE_EVENT_WEIGHT = 0.7f; // 70% chance for a battle
         private const float NARRATIVE_EVENT_WEIGHT = 0.3f; // 30% chance for a narrative
+        private const float PATH_SEGMENT_LENGTH = 10f; // Smaller value = more wiggles
+        private const float PATH_MAX_OFFSET = 5f; // Max perpendicular deviation
 
         public static SplitMap? Generate(SplitData splitData)
         {
@@ -39,6 +41,14 @@ namespace ProjectVagabond.Progression
             int startNodeId = allNodes.FirstOrDefault(n => n.Floor == 0)?.Id ?? -1;
 
             if (startNodeId == -1) return null;
+
+            // Generate render points for each path
+            foreach (var path in paths)
+            {
+                var fromNode = allNodes.First(n => n.Id == path.FromNodeId);
+                var toNode = allNodes.First(n => n.Id == path.ToNodeId);
+                path.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, toNode.Position);
+            }
 
             return new SplitMap(allNodes, paths, totalFloors, startNodeId, mapHeight);
         }
@@ -141,6 +151,38 @@ namespace ProjectVagabond.Progression
                 }
             }
             return paths;
+        }
+
+        private static List<Vector2> GenerateWigglyPathPoints(Vector2 start, Vector2 end)
+        {
+            var points = new List<Vector2> { start };
+            var mainVector = end - start;
+            var totalDistance = mainVector.Length();
+
+            if (totalDistance < PATH_SEGMENT_LENGTH)
+            {
+                points.Add(end);
+                return points;
+            }
+
+            var direction = Vector2.Normalize(mainVector);
+            var perpendicular = new Vector2(-direction.Y, direction.X);
+            int numSegments = (int)(totalDistance / PATH_SEGMENT_LENGTH);
+
+            for (int i = 1; i < numSegments; i++)
+            {
+                float progress = (float)i / numSegments;
+                var pointOnLine = start + direction * progress * totalDistance;
+
+                float randomOffset = ((float)_random.NextDouble() * 2f - 1f) * PATH_MAX_OFFSET;
+                float taper = MathF.Sin(progress * MathF.PI); // Tapering factor (0 at start/end, 1 in middle)
+
+                var finalPoint = pointOnLine + perpendicular * randomOffset * taper;
+                points.Add(finalPoint);
+            }
+
+            points.Add(end);
+            return points;
         }
 
         private static void AssignEvents(List<SplitMapNode>[] nodesByFloor, SplitData splitData, int totalFloors)

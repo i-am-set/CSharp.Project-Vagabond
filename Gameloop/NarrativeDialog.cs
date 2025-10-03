@@ -29,6 +29,12 @@ namespace ProjectVagabond.UI
             _narrator.OnFinished += OnNarrationFinished;
         }
 
+        public override void Hide()
+        {
+            base.Hide();
+            _narrator.Clear(); // Ensure the narrator's state is reset when the dialog is hidden.
+        }
+
         public void Show(NarrativeEvent narrativeEvent, Action onComplete)
         {
             IsActive = true;
@@ -50,6 +56,8 @@ namespace ProjectVagabond.UI
                 {
                     ServiceLocator.Get<GameState>().ApplyNarrativeOutcome(choice.Outcome);
                     _choiceButtons.Clear();
+                    _narrator.Clear(); // Explicitly clear the narrator before showing the result.
+
                     if (!string.IsNullOrEmpty(choice.ResultText))
                     {
                         _state = DialogState.NarratingResult;
@@ -57,7 +65,10 @@ namespace ProjectVagabond.UI
                     }
                     else
                     {
-                        OnNarrationFinished(); // No result text, just finish
+                        // If there's no result text, the event is over.
+                        _state = DialogState.Finished;
+                        _onComplete?.Invoke();
+                        Hide();
                     }
                 };
                 _choiceButtons.Add(button);
@@ -92,7 +103,8 @@ namespace ProjectVagabond.UI
             if (_state == DialogState.AwaitingChoice)
             {
                 var mouseState = Mouse.GetState();
-                foreach (var button in _choiceButtons)
+                // Iterate over a copy of the list to prevent modification during enumeration.
+                foreach (var button in _choiceButtons.ToList())
                 {
                     button.Update(mouseState);
                 }

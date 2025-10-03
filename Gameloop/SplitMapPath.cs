@@ -1,4 +1,10 @@
 ﻿#nullable enable
+using Microsoft.Xna.Framework;
+using ProjectVagabond.Progression;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
 namespace ProjectVagabond.Progression
 {
     /// <summary>
@@ -9,6 +15,7 @@ namespace ProjectVagabond.Progression
         public int Id { get; }
         public int FromNodeId { get; }
         public int ToNodeId { get; }
+        public List<Vector2> RenderPoints { get; set; } = new List<Vector2>();
 
         private static int _nextId = 0;
 
@@ -22,3 +29,4 @@ namespace ProjectVagabond.Progression
     }
 }
 #nullable restore
+﻿
