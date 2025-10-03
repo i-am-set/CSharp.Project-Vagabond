@@ -4,13 +4,11 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace ProjectVagabond.Scenes
 {
@@ -28,6 +26,7 @@ namespace ProjectVagabond.Scenes
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
         private bool _isShowingResultNarration = false;
+        private NarrativeEvent? _currentNarrativeEvent;
 
         public SplitScene()
         {
@@ -128,10 +127,10 @@ namespace ProjectVagabond.Scenes
             switch (stepType.ToLowerInvariant())
             {
                 case "narrative":
-                    var narrative = _progressionManager.GetRandomNarrative();
-                    if (narrative != null)
+                    _currentNarrativeEvent = _progressionManager.GetRandomNarrative();
+                    if (_currentNarrativeEvent != null)
                     {
-                        _narrator.Show(narrative.Prompt);
+                        _narrator.Show(_currentNarrativeEvent.Prompt);
                     }
                     else
                     {
@@ -197,11 +196,18 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case "narrative":
-                    var narrative = _progressionManager.GetRandomNarrative();
-                    if (narrative != null)
+                    if (_currentNarrativeEvent != null)
                     {
-                        CreateChoiceButtons(narrative);
-                        _currentState = SplitState.AwaitingChoice;
+                        if (_currentNarrativeEvent.Choices.Any())
+                        {
+                            CreateChoiceButtons(_currentNarrativeEvent);
+                            _currentState = SplitState.AwaitingChoice;
+                        }
+                        else
+                        {
+                            _currentNarrativeEvent = null; // Clear the event since it's done
+                            AdvanceToNextStep();
+                        }
                     }
                     else
                     {
@@ -241,6 +247,7 @@ namespace ProjectVagabond.Scenes
                 {
                     _gameState.ApplyNarrativeOutcome(choice.Outcome);
                     _choiceButtons.Clear();
+                    _currentNarrativeEvent = null; // Clear the stored event
 
                     if (!string.IsNullOrEmpty(choice.ResultText))
                     {
