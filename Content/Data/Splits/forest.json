@@ -1,14 +1,8 @@
 {
   "Theme": "Forest",
-  "Structure": [
-    "Narrative",
-    "Battle",
-    "Narrative",
-    "Battle",
-    "Reward",
-    "Narrative",
-    "MajorBattle"
-  ],
+  "SplitLengthMin": 8,
+  "SplitLengthMax": 12,
+  "NumberOfRewardFloors": 2,
   "PossibleBattles": [
     [ "wanderer" ],
     [ "wanderer", "wanderer" ],

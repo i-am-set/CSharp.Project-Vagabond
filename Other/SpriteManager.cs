@@ -67,6 +67,14 @@ namespace ProjectVagabond
         public Texture2D SpellbookPageSprite { get; private set; }
         public Texture2D SpellbookClosedSprite { get; private set; }
 
+        // Split Map Node Sprites
+        public Texture2D SplitNodeStart { get; private set; }
+        public Texture2D SplitNodeBattle { get; private set; }
+        public Texture2D SplitNodeNarrative { get; private set; }
+        public Texture2D SplitNodeReward { get; private set; }
+        public Texture2D SplitNodeBoss { get; private set; }
+
+
         // Mouse Prompt Sprites
         public Texture2D MousePromptBlank { get; private set; }
         public Texture2D MousePromptLeftClick { get; private set; }
@@ -193,6 +201,18 @@ namespace ProjectVagabond
 
             try { SpellbookClosedSprite = _core.Content.Load<Texture2D>("Sprites/SpellBook/spellbook_closed"); }
             catch { SpellbookClosedSprite = _textureFactory.CreateColoredTexture(64, 64, Color.Magenta); }
+
+            // Load Split Map Node Sprites
+            try { SplitNodeStart = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/split_node_start"); }
+            catch { SplitNodeStart = _textureFactory.CreateColoredTexture(16, 16, Color.Green); }
+            try { SplitNodeBattle = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/split_node_battle"); }
+            catch { SplitNodeBattle = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
+            try { SplitNodeNarrative = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/split_node_narrative"); }
+            catch { SplitNodeNarrative = _textureFactory.CreateColoredTexture(16, 16, Color.Blue); }
+            try { SplitNodeReward = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/split_node_reward"); }
+            catch { SplitNodeReward = _textureFactory.CreateColoredTexture(16, 16, Color.Gold); }
+            try { SplitNodeBoss = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/split_node_boss"); }
+            catch { SplitNodeBoss = _textureFactory.CreateColoredTexture(16, 16, Color.Purple); }
 
 
             InitializeArrowSourceRects();

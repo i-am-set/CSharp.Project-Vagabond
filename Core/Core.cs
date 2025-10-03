@@ -245,7 +245,7 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
             _sceneManager.AddScene(GameSceneState.ChoiceMenu, new ChoiceMenuScene());
-            _sceneManager.AddScene(GameSceneState.Split, new SplitScene());
+            _sceneManager.AddScene(GameSceneState.Split, new SplitMapScene());
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);

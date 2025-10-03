@@ -6,7 +6,9 @@ namespace ProjectVagabond.Progression
     public class SplitData
     {
         public string Theme { get; set; } = "";
-        public List<string> Structure { get; set; } = new List<string>();
+        public int SplitLengthMin { get; set; }
+        public int SplitLengthMax { get; set; }
+        public int NumberOfRewardFloors { get; set; }
         public List<List<string>> PossibleBattles { get; set; } = new List<List<string>>();
         public List<NarrativeEvent> PossibleNarratives { get; set; } = new List<NarrativeEvent>();
         public List<List<string>> PossibleMajorBattles { get; set; } = new List<List<string>>();

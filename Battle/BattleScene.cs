@@ -270,7 +270,7 @@ namespace ProjectVagabond.Scenes
                     {
                         var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
                         // For now, treat loss as a win for progression.
-                        SplitScene.PlayerWonLastBattle = true; // player != null && !player.IsDefeated;
+                        SplitMapScene.PlayerWonLastBattle = true; // player != null && !player.IsDefeated;
 
                         if (player != null && !player.IsDefeated)
                         {

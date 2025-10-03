@@ -1,0 +1,45 @@
+﻿#nullable enable
+using Microsoft.Xna.Framework;
+using System.Collections.Generic;
+
+namespace ProjectVagabond.Progression
+{
+    public enum SplitNodeType
+    {
+        Start,
+        Battle,
+        Narrative,
+        Reward,
+        MajorBattle
+    }
+
+    public class SplitMapNode
+    {
+        public int Id { get; }
+        public int Floor { get; }
+        public Vector2 Position { get; } // Relative position within a virtual map area
+        public SplitNodeType NodeType { get; set; }
+        public object? EventData { get; set; } // List<string> for battles, NarrativeEvent for narrative
+        public List<int> IncomingPathIds { get; } = new List<int>();
+        public List<int> OutgoingPathIds { get; } = new List<int>();
+
+        private static int _nextId = 0;
+        private const int NODE_SIZE = 16;
+
+        public SplitMapNode(int floor, Vector2 position)
+        {
+            Id = _nextId++;
+            Floor = floor;
+            Position = position;
+            NodeType = SplitNodeType.Battle; // Default
+        }
+
+        public Rectangle GetBounds()
+        {
+            return new Rectangle((int)(Position.X - NODE_SIZE / 2), (int)(Position.Y - NODE_SIZE / 2), NODE_SIZE, NODE_SIZE);
+        }
+
+        public static void ResetIdCounter() => _nextId = 0;
+    }
+}
+#nullable restore

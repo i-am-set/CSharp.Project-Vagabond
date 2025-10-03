@@ -15,7 +15,7 @@ namespace ProjectVagabond.Progression
         private static readonly Random _random = new Random();
 
         public SplitData? CurrentSplit { get; private set; }
-        public int CurrentStepIndex { get; private set; } = -1;
+        public SplitMap? CurrentSplitMap { get; private set; }
 
         public void LoadSplits()
         {
@@ -54,35 +54,19 @@ namespace ProjectVagabond.Progression
             }
         }
 
-        public void StartNewSplit()
+        public void GenerateNewSplitMap()
         {
             if (!_splits.Any())
             {
-                Debug.WriteLine("[ProgressionManager] [ERROR] No splits loaded. Cannot start a new split.");
+                Debug.WriteLine("[ProgressionManager] [ERROR] No splits loaded. Cannot generate map.");
                 CurrentSplit = null;
+                CurrentSplitMap = null;
                 return;
             }
 
             CurrentSplit = _splits.Values.ElementAt(_random.Next(_splits.Count));
-            CurrentStepIndex = 0;
-            Debug.WriteLine($"[ProgressionManager] Starting new split: {CurrentSplit.Theme}");
-        }
-
-        public string? GetCurrentStepType()
-        {
-            if (CurrentSplit == null || CurrentStepIndex < 0 || CurrentStepIndex >= CurrentSplit.Structure.Count)
-            {
-                return null;
-            }
-            return CurrentSplit.Structure[CurrentStepIndex];
-        }
-
-        public bool AdvanceStep()
-        {
-            if (CurrentSplit == null) return false;
-
-            CurrentStepIndex++;
-            return CurrentStepIndex < CurrentSplit.Structure.Count;
+            CurrentSplitMap = SplitMapGenerator.Generate(CurrentSplit);
+            Debug.WriteLine($"[ProgressionManager] Generated new split map: {CurrentSplit.Theme} with {CurrentSplitMap.TotalFloors} floors.");
         }
 
         public List<string>? GetRandomBattle() => GetRandomEncounter(CurrentSplit?.PossibleBattles);
