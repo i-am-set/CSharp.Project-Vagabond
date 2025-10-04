@@ -31,7 +31,7 @@ namespace ProjectVagabond.Scenes
 
         private bool _isPlayerMoving;
         private float _playerMoveTimer;
-        private const float PLAYER_MOVE_DURATION = 3.0f;
+        private const float PLAYER_MOVE_DURATION = 5.0f;
         private int _playerMoveTargetNodeId;
         private SplitMapPath? _playerMovePath;
 
@@ -85,7 +85,7 @@ namespace ProjectVagabond.Scenes
                 _progressionManager.GenerateNewSplitMap();
                 _currentMap = _progressionManager.CurrentSplitMap;
                 _playerCurrentNodeId = _currentMap?.StartNodeId ?? -1;
-
+                _nodeForPathReveal = _playerCurrentNodeId;
                 _lastAnimatedNodeId = -1;
                 _pathAnimationProgress.Clear();
                 _pathRetractionProgress.Clear();
@@ -175,7 +175,6 @@ namespace ProjectVagabond.Scenes
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Handle modal dialogs first, as they pause the main scene logic
             if (_narrativeDialog.IsActive || _sceneManager.IsModalActive)
             {
                 if (_narrativeDialog.IsActive)
