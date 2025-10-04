@@ -9,16 +9,20 @@ namespace ProjectVagabond.UI
     {
         private Texture2D? _texture;
         private Vector2 _origin;
-        private float _bobTimer;
         private Vector2 _currentDirection = Vector2.UnitX;
         private bool _isMoving = false;
-        private float _waddleIntensity = 0f;
 
         // --- Tuning ---
-        private const float WADDLE_SPEED = 8f;
-        private const float WADDLE_AMOUNT_X = 1.5f;
-        private const float WADDLE_AMOUNT_Y = 1f;
-        private const float WADDLE_TRANSITION_SPEED = 8f;
+        private const float WADDLE_FRAME_DURATION = 0.2f; // Time each frame is displayed
+        private static readonly Vector2[] _waddleAnimationFrames = new Vector2[]
+        {
+            new Vector2(0, 0),
+            new Vector2(0, -1),
+        };
+
+        // Animation State
+        private float _waddleFrameTimer;
+        private int _waddleFrameIndex;
 
         public Vector2 Position { get; private set; }
 
@@ -59,11 +63,22 @@ namespace ProjectVagabond.UI
         public void Update(GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _bobTimer += deltaTime;
 
-            // Smoothly interpolate the waddle intensity towards its target
-            float targetIntensity = _isMoving ? 1.0f : 0.0f;
-            _waddleIntensity = MathHelper.Lerp(_waddleIntensity, targetIntensity, deltaTime * WADDLE_TRANSITION_SPEED);
+            if (_isMoving)
+            {
+                _waddleFrameTimer += deltaTime;
+                if (_waddleFrameTimer >= WADDLE_FRAME_DURATION)
+                {
+                    _waddleFrameTimer -= WADDLE_FRAME_DURATION;
+                    _waddleFrameIndex = (_waddleFrameIndex + 1) % _waddleAnimationFrames.Length;
+                }
+            }
+            else
+            {
+                // When not moving, reset to the base frame.
+                _waddleFrameIndex = 0;
+                _waddleFrameTimer = 0;
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch)
@@ -71,10 +86,9 @@ namespace ProjectVagabond.UI
             InitializeTexture(); // Ensure texture is loaded before drawing.
             if (_texture == null) return; // Don't draw if the texture is still null.
 
-            // Pillar 2: Secondary "Waddle" Motion with intensity
-            float xOffset = MathF.Cos(_bobTimer * WADDLE_SPEED) * WADDLE_AMOUNT_X * _waddleIntensity;
-            float yOffset = MathF.Sin(_bobTimer * WADDLE_SPEED * 2f) * WADDLE_AMOUNT_Y * _waddleIntensity; // Multiply by 2 for a faster up/down bob
-            var drawPosition = new Vector2(Position.X + xOffset, Position.Y + yOffset);
+            // Pillar 2: Keyframed "Waddle" Motion
+            Vector2 waddleOffset = _waddleAnimationFrames[_waddleFrameIndex];
+            var drawPosition = Position + waddleOffset;
 
             // Pillar 3: Orientation
             SpriteEffects effects = _currentDirection.X < 0 ? SpriteEffects.FlipHorizontally : SpriteEffects.None;

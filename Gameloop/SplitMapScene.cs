@@ -5,7 +5,6 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -50,6 +49,15 @@ namespace ProjectVagabond.Scenes
         private const float PATH_ANIMATION_DURATION = 3.0f; // Seconds for the path to draw
         private static readonly Random _random = new Random();
 
+        // Node pulse animation state
+        private bool _isPulsingNode = false;
+        private int _pulseNodeId = -1;
+        private float _pulseTimer = 0f;
+        private const float PULSE_DURATION = 0.4f;
+        private const float PULSE_AMOUNT = 0.3f;
+
+        private bool _wasModalActiveLastFrame = false;
+
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
 
@@ -77,7 +85,7 @@ namespace ProjectVagabond.Scenes
                 _progressionManager.GenerateNewSplitMap();
                 _currentMap = _progressionManager.CurrentSplitMap;
                 _playerCurrentNodeId = _currentMap?.StartNodeId ?? -1;
-                _nodeForPathReveal = _playerCurrentNodeId;
+
                 _lastAnimatedNodeId = -1;
                 _pathAnimationProgress.Clear();
                 _pathRetractionProgress.Clear();
@@ -91,6 +99,7 @@ namespace ProjectVagabond.Scenes
                 {
                     _playerIcon.SetPosition(startNode.Position);
                     UpdateCameraTarget(startNode.Position, true);
+                    StartPathRevealAnimation();
                 }
             }
             else
@@ -101,6 +110,16 @@ namespace ProjectVagabond.Scenes
                 {
                     WasMajorBattle = false;
                     TriggerReward();
+                }
+                else
+                {
+                    // On returning to the scene (e.g., from battle)
+                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                    if (currentNode != null)
+                    {
+                        UpdateCameraTarget(currentNode.Position, false);
+                        StartPathRevealAnimation();
+                    }
                 }
             }
 
@@ -156,41 +175,32 @@ namespace ProjectVagabond.Scenes
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if (_narrativeDialog.IsActive)
+            // Handle modal dialogs first, as they pause the main scene logic
+            if (_narrativeDialog.IsActive || _sceneManager.IsModalActive)
             {
-                _narrativeDialog.Update(gameTime);
-                base.Update(gameTime); // Still call base update to handle its timers and input state for the next frame
+                if (_narrativeDialog.IsActive)
+                {
+                    _narrativeDialog.Update(gameTime);
+                }
+                _wasModalActiveLastFrame = true;
+                base.Update(gameTime);
                 return;
+            }
+
+            // Check if a modal was just closed
+            if (_wasModalActiveLastFrame)
+            {
+                _wasModalActiveLastFrame = false;
+                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                if (currentNode != null)
+                {
+                    UpdateCameraTarget(currentNode.Position, false);
+                    StartPathRevealAnimation();
+                }
             }
 
             // Smooth camera scrolling
             _cameraYOffset = MathHelper.Lerp(_cameraYOffset, _targetCameraYOffset, deltaTime * 5f);
-
-            // Update path visibility based on camera position
-            if (!_isPlayerMoving && Math.Abs(_cameraYOffset - _targetCameraYOffset) < 0.1f)
-            {
-                // Once camera is settled, reveal paths from the player's current logical position.
-                _nodeForPathReveal = _playerCurrentNodeId;
-
-                // Check if we need to start new animations
-                if (_nodeForPathReveal != _lastAnimatedNodeId)
-                {
-                    _lastAnimatedNodeId = _nodeForPathReveal;
-                    if (_currentMap != null && _currentMap.Nodes.TryGetValue(_nodeForPathReveal, out var currentNode))
-                    {
-                        foreach (var pathId in currentNode.OutgoingPathIds)
-                        {
-                            if (!_pathAnimationProgress.ContainsKey(pathId))
-                            {
-                                _pathAnimationProgress[pathId] = 0f;
-                                // Assign a random duration for this path's animation
-                                float duration = PATH_ANIMATION_DURATION + (float)(_random.NextDouble() * 2.0 - 1.0);
-                                _pathAnimationDurations[pathId] = Math.Max(1.0f, duration);
-                            }
-                        }
-                    }
-                }
-            }
 
             // Update active path animations
             var appearingKeys = _pathAnimationProgress.Keys.ToList();
@@ -241,9 +251,22 @@ namespace ProjectVagabond.Scenes
                     if (_currentMap != null && _currentMap.Nodes.TryGetValue(_playerCurrentNodeId, out var endNode))
                     {
                         _playerIcon.SetPosition(endNode.Position); // Snap to final position
-                        UpdateCameraTarget(endNode.Position, false);
                     }
 
+                    // Start the pulse animation and enter the pulsing state
+                    _pulseNodeId = _playerCurrentNodeId;
+                    _pulseTimer = 0f;
+                    _isPulsingNode = true;
+                }
+            }
+            else if (_isPulsingNode)
+            {
+                _pulseTimer += deltaTime;
+                if (_pulseTimer >= PULSE_DURATION)
+                {
+                    _isPulsingNode = false;
+                    _pulseNodeId = -1; // Reset for drawing
+                    _pulseTimer = 0f;
                     TriggerNodeEvent(_playerCurrentNodeId);
                 }
             }
@@ -321,6 +344,30 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        private void StartPathRevealAnimation()
+        {
+            _nodeForPathReveal = _playerCurrentNodeId;
+
+            // Check if we need to start new animations for a new node
+            if (_nodeForPathReveal != _lastAnimatedNodeId)
+            {
+                _lastAnimatedNodeId = _nodeForPathReveal;
+                if (_currentMap != null && _currentMap.Nodes.TryGetValue(_nodeForPathReveal, out var currentNode))
+                {
+                    foreach (var pathId in currentNode.OutgoingPathIds)
+                    {
+                        if (!_pathAnimationProgress.ContainsKey(pathId))
+                        {
+                            _pathAnimationProgress[pathId] = 0f;
+                            // Assign a random duration for this path's animation
+                            float duration = PATH_ANIMATION_DURATION + (float)(_random.NextDouble() * 2.0 - 1.0);
+                            _pathAnimationDurations[pathId] = Math.Max(1.0f, duration);
+                        }
+                    }
+                }
+            }
+        }
+
         private void TriggerNodeEvent(int nodeId)
         {
             if (_currentMap == null || !_currentMap.Nodes.TryGetValue(nodeId, out var node)) return;
@@ -372,73 +419,24 @@ namespace ProjectVagabond.Scenes
             var pixel = ServiceLocator.Get<Texture2D>();
             var visitedPathColor = new Color(_global.Palette_DarkGray, 100);
 
-            // Draw Paths
+            // Find highlighted path before drawing
+            SplitMapPath? highlightedPath = null;
+            if (_hoveredNodeId != -1 && !_isPlayerMoving)
+            {
+                highlightedPath = _currentMap.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == _hoveredNodeId);
+            }
+
+            // Draw all non-highlighted paths first
             foreach (var path in _currentMap.Paths.Values)
             {
-                var fromNode = _currentMap.Nodes[path.FromNodeId];
-                var toNode = _currentMap.Nodes[path.ToNodeId];
-                Color pathColor;
-                bool isAnimatingAppearance = false;
-                bool isAnimatingRetraction = false;
+                if (path == highlightedPath) continue;
+                DrawPath(spriteBatch, pixel, path, visitedPathColor);
+            }
 
-                if (_pathRetractionProgress.ContainsKey(path.Id))
-                {
-                    isAnimatingRetraction = true;
-                    pathColor = _global.Palette_DarkGray;
-                }
-                else if (fromNode.Id == _nodeForPathReveal)
-                {
-                    isAnimatingAppearance = true;
-                    pathColor = _global.Palette_DarkGray; // Active path
-                }
-                else if (_visitedNodeIds.Contains(fromNode.Id) && _visitedNodeIds.Contains(toNode.Id))
-                {
-                    pathColor = visitedPathColor; // Traversed path
-                }
-                else
-                {
-                    continue; // Don't draw hidden paths
-                }
-
-                if (path.PixelPoints.Count < 2) continue;
-
-                if (isAnimatingAppearance)
-                {
-                    float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
-                    float animationTimer = _pathAnimationProgress.GetValueOrDefault(path.Id, 0f);
-                    float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
-                    if (linearProgress <= 0f) continue;
-
-                    float easedProgress = Easing.EaseOutCubic(linearProgress);
-                    int numPixelsToDraw = (int)(easedProgress * path.PixelPoints.Count);
-
-                    for (int i = 0; i < numPixelsToDraw; i++)
-                    {
-                        spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
-                    }
-                }
-                else if (isAnimatingRetraction)
-                {
-                    float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
-                    float animationTimer = _pathRetractionProgress.GetValueOrDefault(path.Id, 0f);
-                    float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
-                    if (linearProgress >= 1f) continue; // Fully retracted
-
-                    float easedProgress = Easing.EaseOutCubic(linearProgress);
-                    int numPixelsToDraw = (int)((1f - easedProgress) * path.PixelPoints.Count);
-
-                    for (int i = 0; i < numPixelsToDraw; i++)
-                    {
-                        spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
-                    }
-                }
-                else // Draw the full path (for visited paths)
-                {
-                    foreach (var point in path.PixelPoints)
-                    {
-                        spriteBatch.Draw(pixel, point.ToVector2(), pathColor);
-                    }
-                }
+            // Draw highlighted path on top
+            if (highlightedPath != null)
+            {
+                DrawPath(spriteBatch, pixel, highlightedPath, _global.Palette_Yellow);
             }
 
             // Draw Nodes
@@ -464,6 +462,13 @@ namespace ProjectVagabond.Scenes
                     color = _global.ButtonHoverColor;
                 }
 
+                if (node.Id == _pulseNodeId)
+                {
+                    float pulseProgress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f);
+                    float pulseWave = MathF.Sin(pulseProgress * MathF.PI); // Creates a 0 -> 1 -> 0 wave
+                    scale += pulseWave * PULSE_AMOUNT;
+                }
+
                 var origin = new Vector2(texture.Width / 2f, texture.Height / 2f);
                 var position = bounds.Center.ToVector2();
                 spriteBatch.DrawSnapped(texture, position, null, color, 0f, origin, scale, SpriteEffects.None, 0.4f);
@@ -481,6 +486,77 @@ namespace ProjectVagabond.Scenes
                 _narrativeDialog.DrawContent(spriteBatch, font, gameTime, transform);
             }
         }
+
+        private void DrawPath(SpriteBatch spriteBatch, Texture2D pixel, SplitMapPath path, Color defaultColor)
+        {
+            if (_currentMap == null) return;
+
+            var fromNode = _currentMap.Nodes[path.FromNodeId];
+            var toNode = _currentMap.Nodes[path.ToNodeId];
+            Color pathColor;
+            bool isAnimatingAppearance = false;
+            bool isAnimatingRetraction = false;
+
+            if (_pathRetractionProgress.ContainsKey(path.Id))
+            {
+                isAnimatingRetraction = true;
+                pathColor = defaultColor;
+            }
+            else if (fromNode.Id == _nodeForPathReveal)
+            {
+                isAnimatingAppearance = true;
+                pathColor = defaultColor;
+            }
+            else if (_visitedNodeIds.Contains(fromNode.Id) && _visitedNodeIds.Contains(toNode.Id))
+            {
+                pathColor = new Color(defaultColor, 100); // Visited path
+            }
+            else
+            {
+                return; // Don't draw hidden paths
+            }
+
+            if (path.PixelPoints.Count < 2) return;
+
+            if (isAnimatingAppearance)
+            {
+                float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
+                float animationTimer = _pathAnimationProgress.GetValueOrDefault(path.Id, 0f);
+                float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
+                if (linearProgress <= 0f) return;
+
+                float easedProgress = Easing.EaseOutCubic(linearProgress);
+                int numPixelsToDraw = (int)(easedProgress * path.PixelPoints.Count);
+
+                for (int i = 0; i < numPixelsToDraw; i++)
+                {
+                    spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
+                }
+            }
+            else if (isAnimatingRetraction)
+            {
+                float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
+                float animationTimer = _pathRetractionProgress.GetValueOrDefault(path.Id, 0f);
+                float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
+                if (linearProgress >= 1f) return; // Fully retracted
+
+                float easedProgress = Easing.EaseOutCubic(linearProgress);
+                int numPixelsToDraw = (int)((1f - easedProgress) * path.PixelPoints.Count);
+
+                for (int i = 0; i < numPixelsToDraw; i++)
+                {
+                    spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
+                }
+            }
+            else // Draw the full path (for visited paths)
+            {
+                foreach (var point in path.PixelPoints)
+                {
+                    spriteBatch.Draw(pixel, point.ToVector2(), pathColor);
+                }
+            }
+        }
+
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
