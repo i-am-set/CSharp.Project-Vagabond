@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -69,6 +70,7 @@ namespace ProjectVagabond.Scenes
         {
             base.Enter();
             _isPlayerMoving = false;
+            _playerIcon.SetIsMoving(false);
 
             if (_progressionManager.CurrentSplitMap == null)
             {
@@ -132,6 +134,7 @@ namespace ProjectVagabond.Scenes
             if (_playerMovePath == null) return;
 
             _isPlayerMoving = true;
+            _playerIcon.SetIsMoving(true);
             _playerMoveTimer = 0f;
             _playerMoveTargetNodeId = targetNodeId;
 
@@ -219,12 +222,11 @@ namespace ProjectVagabond.Scenes
             if (_isPlayerMoving)
             {
                 _playerMoveTimer += deltaTime;
-                float progress = Math.Clamp(_playerMoveTimer / PLAYER_MOVE_DURATION, 0f, 1f);
+                float progress = Math.Clamp(_playerMoveTimer / PLAYER_MOVE_DURATION, 0f, 1f); // Pillar 1: Linear progress
 
                 if (_playerMovePath != null && _playerMovePath.PixelPoints.Any())
                 {
-                    float easedProgress = Easing.EaseInOutSine(progress);
-                    int targetIndex = (int)Math.Clamp(easedProgress * (_playerMovePath.PixelPoints.Count - 1), 0, _playerMovePath.PixelPoints.Count - 1);
+                    int targetIndex = (int)Math.Clamp(progress * (_playerMovePath.PixelPoints.Count - 1), 0, _playerMovePath.PixelPoints.Count - 1);
                     Vector2 newPosition = _playerMovePath.PixelPoints[targetIndex].ToVector2();
                     _playerIcon.SetPosition(newPosition);
                 }
@@ -232,12 +234,13 @@ namespace ProjectVagabond.Scenes
                 if (progress >= 1f)
                 {
                     _isPlayerMoving = false;
+                    _playerIcon.SetIsMoving(false);
                     _playerCurrentNodeId = _playerMoveTargetNodeId;
                     _visitedNodeIds.Add(_playerCurrentNodeId);
 
                     if (_currentMap != null && _currentMap.Nodes.TryGetValue(_playerCurrentNodeId, out var endNode))
                     {
-                        _playerIcon.SetPosition(endNode.Position);
+                        _playerIcon.SetPosition(endNode.Position); // Snap to final position
                         UpdateCameraTarget(endNode.Position, false);
                     }
 
