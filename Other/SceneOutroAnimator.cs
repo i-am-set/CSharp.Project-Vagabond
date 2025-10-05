@@ -15,7 +15,7 @@ namespace ProjectVagabond.Scenes
         public event Action OnComplete;
 
         private float _timer;
-        private const float DURATION = 0.05f;
+        private const float DURATION = 0f;
 
         private Matrix _transform = Matrix.Identity;
 
