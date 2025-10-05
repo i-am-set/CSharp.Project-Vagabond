@@ -402,6 +402,29 @@ namespace ProjectVagabond
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Gained a temporary buff: {outcome.Value}!" });
                     }
                     break;
+                case "AddStat":
+                    var statsComp = _componentStore.GetComponent<CombatantStatsComponent>(PlayerEntityId);
+                    if (statsComp == null) return;
+
+                    var parts = outcome.Value.Split(',');
+                    if (parts.Length == 2 && int.TryParse(parts[1], out int amount))
+                    {
+                        string statName = parts[0].Trim().ToLowerInvariant();
+                        string feedback = "";
+                        switch (statName)
+                        {
+                            case "strength": statsComp.Strength += amount; feedback = $"Strength increased by {amount}!"; break;
+                            case "intelligence": statsComp.Intelligence += amount; feedback = $"Intelligence increased by {amount}!"; break;
+                            case "tenacity": statsComp.Tenacity += amount; feedback = $"Tenacity increased by {amount}!"; break;
+                            case "agility": statsComp.Agility += amount; feedback = $"Agility increased by {amount}!"; break;
+                            case "maxhp": statsComp.MaxHP += amount; statsComp.CurrentHP += amount; feedback = $"Max HP increased by {amount}!"; break;
+                        }
+                        if (!string.IsNullOrEmpty(feedback))
+                        {
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]{feedback}" });
+                        }
+                    }
+                    break;
             }
         }
 

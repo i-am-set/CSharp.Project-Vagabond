@@ -53,6 +53,760 @@
           "ResultText": "You politely decline the merchant's offer."
         }
       ]
+    },
+    {
+      "Prompt": "You find a mysterious, locked chest. It seems ancient.",
+      "Choices": [
+        {
+          "Text": "Try to pick the lock",
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "FireScroll"
+          },
+          "ResultText": "With a bit of effort, the lock clicks open! You find a scroll inside."
+        },
+        {
+          "Text": "Leave it alone",
+          "Outcome": null,
+          "ResultText": "You decide not to tamper with the chest."
+        }
+      ]
+    },
+    {
+      "Prompt": "An ancient tome rests on a pedestal, radiating a faint light.",
+      "Choices": [
+        {
+          "Text": "Read the tome",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Intelligence,1"
+          },
+          "ResultText": "You absorb the arcane knowledge. You feel your mind expand."
+        },
+        {
+          "Text": "Destroy the tome",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Strength,1"
+          },
+          "ResultText": "You shatter the pedestal and its tome. A surge of raw power fills you."
+        }
+      ]
+    },
+    {
+      "Prompt": "Among the roots of an ancient tree, you spot a discarded leather pouch.",
+      "Choices": [
+        {
+          "Text": "Open the pouch",
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "HealthPotion"
+          },
+          "ResultText": "You find a Health Potion inside. A welcome sight."
+        },
+        {
+          "Text": "Leave it",
+          "Outcome": null,
+          "ResultText": "You leave the pouch undisturbed, wary of its owner."
+        }
+      ]
+    },
+    {
+      "Prompt": "A cluster of glowing mushrooms illuminates a small alcove.",
+      "Choices": [
+        {
+          "Text": "Eat one of the mushrooms",
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "AgilityUp",
+            "Duration": 1
+          },
+          "ResultText": "A jolt of energy courses through you! You feel lighter on your feet."
+        },
+        {
+          "Text": "Crush them underfoot",
+          "Outcome": null,
+          "ResultText": "You stomp on the mushrooms, extinguishing their strange light."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a weathered training dummy and a dusty abacus on a stump.",
+      "Choices": [
+        {
+          "Text": "Practice your strikes",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Strength,1"
+          },
+          "ResultText": "You practice your forms against the dummy, feeling your muscles grow stronger."
+        },
+        {
+          "Text": "Solve the abacus puzzle",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Intelligence,1"
+          },
+          "ResultText": "You solve the intricate puzzle on the abacus, feeling your mind sharpen."
+        }
+      ]
+    },
+    {
+      "Prompt": "A sheer cliff face offers a challenging climb, but might be a shortcut.",
+      "Choices": [
+        {
+          "Text": "Attempt the climb",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "MaxHP,5"
+          },
+          "ResultText": "The climb is grueling, but you reach the top. The effort has made you hardier."
+        },
+        {
+          "Text": "Find a safer path",
+          "Outcome": null,
+          "ResultText": "You decide against the risk and look for an easier way around."
+        }
+      ]
+    },
+    {
+      "Prompt": "A wounded fox lies whimpering in a thicket, its leg caught in a crude trap.",
+      "Choices": [
+        {
+          "Text": "Free the fox",
+          "Outcome": null,
+          "ResultText": "You carefully release the trap. The fox gives you a grateful look before limping away into the undergrowth."
+        },
+        {
+          "Text": "Ignore it",
+          "Outcome": null,
+          "ResultText": "You harden your heart and walk away, leaving the creature to its fate."
+        }
+      ]
+    },
+    {
+      "Prompt": "You stumble upon a small, abandoned campsite with a still-smoldering fire.",
+      "Choices": [
+        {
+          "Text": "Scavenge for supplies",
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "HealthPotion"
+          },
+          "ResultText": "You find a hastily dropped Health Potion near the fire."
+        },
+        {
+          "Text": "Move on quickly",
+          "Outcome": null,
+          "ResultText": "Whoever was here might be back soon. You press onward."
+        }
+      ]
+    },
+    {
+      "Prompt": "A bubbling cauldron of thick, green liquid sits over a fire. It smells surprisingly sweet.",
+      "Choices": [
+        {
+          "Text": "Take a sip",
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "StrengthUp",
+            "Duration": 1
+          },
+          "ResultText": "The concoction is strange, but you feel a surge of raw power!"
+        },
+        {
+          "Text": "Tip it over",
+          "Outcome": null,
+          "ResultText": "You kick the cauldron over, spilling its contents into the fire with a hiss."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find an old archery target riddled with arrows.",
+      "Choices": [
+        {
+          "Text": "Practice your aim",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Agility,1"
+          },
+          "ResultText": "You spend some time practicing, and your movements feel more precise."
+        },
+        {
+          "Text": "Salvage the arrows",
+          "Outcome": null,
+          "ResultText": "The arrows are too brittle to be of any use."
+        }
+      ]
+    },
+    {
+      "Prompt": "A thick, unnatural fog rolls in, making it hard to see.",
+      "Choices": [
+        {
+          "Text": "Push through carefully",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Tenacity,1"
+          },
+          "ResultText": "You navigate the fog with caution, honing your senses and resolve."
+        },
+        {
+          "Text": "Wait for it to clear",
+          "Outcome": null,
+          "ResultText": "You find a sheltered spot and wait for the fog to dissipate."
+        }
+      ]
+    },
+    {
+      "Prompt": "A weathered signpost points in two directions. One path is well-trodden, the other overgrown.",
+      "Choices": [
+        {
+          "Text": "Take the safe path",
+          "Outcome": null,
+          "ResultText": "You follow the well-trodden path. The journey is uneventful."
+        },
+        {
+          "Text": "Take the overgrown path",
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "FireScroll"
+          },
+          "ResultText": "The overgrown path is difficult, but you find a lost scroll snagged on a thorn bush."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a small shrine with offerings of dried herbs.",
+      "Choices": [
+        {
+          "Text": "Take the herbs",
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "HealthPotion"
+          },
+          "ResultText": "You take the herbs. They look like they could be brewed into a potion."
+        },
+        {
+          "Text": "Leave your own offering",
+          "Outcome": null,
+          "ResultText": "You leave a small token of respect and move on."
+        }
+      ]
+    },
+    {
+      "Prompt": "A rushing stream is too wide to jump. A fallen log offers a precarious bridge.",
+      "Choices": [
+        {
+          "Text": "Cross the log bridge",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Agility,1"
+          },
+          "ResultText": "You carefully balance your way across the log, improving your agility."
+        },
+        {
+          "Text": "Wade through the stream",
+          "Outcome": null,
+          "ResultText": "You wade through the cold water. You are soaked but safely across."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a set of heavy stones, seemingly arranged for lifting.",
+      "Choices": [
+        {
+          "Text": "Test your strength",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Strength,1"
+          },
+          "ResultText": "You manage to lift the heaviest stone. You feel stronger for the effort."
+        },
+        {
+          "Text": "Ignore them",
+          "Outcome": null,
+          "ResultText": "You have no time for games and continue on your path."
+        }
+      ]
+    },
+    {
+      "Prompt": "A strange melody drifts on the wind from a nearby cave.",
+      "Choices": [
+        {
+          "Text": "Investigate the source",
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "IntelligenceUp",
+            "Duration": 1
+          },
+          "ResultText": "Inside, you find glowing runes that resonate with a strange power. Your mind feels energized."
+        },
+        {
+          "Text": "Cover your ears and hurry past",
+          "Outcome": null,
+          "ResultText": "Fearing a siren's call, you quickly move away from the sound."
+        }
+      ]
+    },
+    {
+      "Prompt": "A patch of thorny vines blocks the path. They seem unnaturally tough.",
+      "Choices": [
+        {
+          "Text": "Hack through them",
+          "Outcome": null,
+          "ResultText": "You clear the path, but your weapon is dulled in the process."
+        },
+        {
+          "Text": "Look for a way around",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Tenacity,1"
+          },
+          "ResultText": "The detour is long and arduous, but you persevere, strengthening your resolve."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a backpack snagged on a branch over a ravine.",
+      "Choices": [
+        {
+          "Text": "Carefully retrieve it",
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "StrengthTonic"
+          },
+          "ResultText": "You manage to snag the backpack. Inside, you find a Strength Tonic."
+        },
+        {
+          "Text": "It's not worth the risk",
+          "Outcome": null,
+          "ResultText": "You decide the risk of falling is too great and leave it be."
+        }
+      ]
+    },
+    {
+      "Prompt": "An old, gnarled tree seems to whisper your name.",
+      "Choices": [
+        {
+          "Text": "Listen to the tree",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Intelligence,1"
+          },
+          "ResultText": "You press your ear to the bark and hear ancient secrets, expanding your knowledge."
+        },
+        {
+          "Text": "It's just the wind",
+          "Outcome": null,
+          "ResultText": "You dismiss the sound as a trick of the wind and move on."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a small, intricate sundial, perfectly intact.",
+      "Choices": [
+        {
+          "Text": "Study its markings",
+          "Outcome": null,
+          "ResultText": "The markings are from a long-dead civilization. You learn nothing of use."
+        },
+        {
+          "Text": "Take it with you",
+          "Outcome": null,
+          "ResultText": "It's too heavy to carry. You leave it behind."
+        }
+      ]
+    },
+    {
+      "Prompt": "A swarm of non-hostile, glowing insects buzzes around you.",
+      "Choices": [
+        {
+          "Text": "Let them land on you",
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "TenacityUp",
+            "Duration": 1
+          },
+          "ResultText": "Their light seeps into your skin, leaving you feeling strangely resilient."
+        },
+        {
+          "Text": "Wave them away",
+          "Outcome": null,
+          "ResultText": "You shoo the insects away and they disperse into the forest."
+        }
+      ]
+    },
+    {
+      "Prompt": "You see a crude effigy made of sticks and twine. It feels ominous.",
+      "Choices": [
+        {
+          "Text": "Destroy it",
+          "Outcome": null,
+          "ResultText": "You tear the effigy apart. Nothing happens."
+        },
+        {
+          "Text": "Leave it be",
+          "Outcome": null,
+          "ResultText": "You give the strange object a wide berth."
+        }
+      ]
+    },
+    {
+      "Prompt": "A weathered gravestone reads: 'Bravery is not the absence of fear.'",
+      "Choices": [
+        {
+          "Text": "Ponder the words",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Tenacity,1"
+          },
+          "ResultText": "You reflect on the meaning and feel your resolve strengthen."
+        },
+        {
+          "Text": "Dismiss it as nonsense",
+          "Outcome": null,
+          "ResultText": "You have no time for riddles from the dead."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a small, perfectly ripe apple hanging from a lone branch.",
+      "Choices": [
+        {
+          "Text": "Eat the apple",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "MaxHP,5"
+          },
+          "ResultText": "The apple is delicious and nourishing. You feel healthier."
+        },
+        {
+          "Text": "Save it for later",
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "HealthPotion"
+          },
+          "ResultText": "You decide to save the apple, which you can use as a makeshift potion."
+        }
+      ]
+    },
+    {
+      "Prompt": "A rickety rope bridge spans a deep chasm.",
+      "Choices": [
+        {
+          "Text": "Run across quickly",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Agility,1"
+          },
+          "ResultText": "You dash across, your quick feet saving you from a fall. Your agility has improved."
+        },
+        {
+          "Text": "Cross slowly and carefully",
+          "Outcome": null,
+          "ResultText": "You make your way across the bridge with caution and reach the other side safely."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a discarded alchemist's kit with a single, unlabeled vial.",
+      "Choices": [
+        {
+          "Text": "Drink the vial",
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "StrengthUp",
+            "Duration": 1
+          },
+          "ResultText": "You drink the potion. It tastes awful, but you feel a surge of strength!"
+        },
+        {
+          "Text": "Leave it",
+          "Outcome": null,
+          "ResultText": "You decide against drinking a mystery potion."
+        }
+      ]
+    },
+    {
+      "Prompt": "A large, flat rock is covered in complex, geometric patterns.",
+      "Choices": [
+        {
+          "Text": "Trace the patterns",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Intelligence,1"
+          },
+          "ResultText": "As you trace the lines, you feel a deeper understanding of the world's hidden structures."
+        },
+        {
+          "Text": "Use it as a resting spot",
+          "Outcome": null,
+          "ResultText": "You sit on the rock for a moment to catch your breath."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a small, ornate birdcage. The door is open and the cage is empty.",
+      "Choices": [
+        {
+          "Text": "Look inside",
+          "Outcome": null,
+          "ResultText": "You find nothing but a single, black feather."
+        },
+        {
+          "Text": "Close the door",
+          "Outcome": null,
+          "ResultText": "You close the tiny door and continue on your way."
+        }
+      ]
+    },
+    {
+      "Prompt": "A set of wind chimes made of bone hang from a tree, clacking eerily.",
+      "Choices": [
+        {
+          "Text": "Listen to their song",
+          "Outcome": null,
+          "ResultText": "The sound is unsettling, but seems to have no other effect."
+        },
+        {
+          "Text": "Smash them",
+          "Outcome": null,
+          "ResultText": "You shatter the chimes, silencing their morbid tune."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a perfectly preserved skeleton of a warrior, still clutching a scroll.",
+      "Choices": [
+        {
+          "Text": "Take the scroll",
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "FireScroll"
+          },
+          "ResultText": "You pry the scroll from the skeleton's grasp."
+        },
+        {
+          "Text": "Bury the warrior",
+          "Outcome": null,
+          "ResultText": "You give the fallen warrior a proper burial."
+        }
+      ]
+    },
+    {
+      "Prompt": "A patch of sweet-smelling flowers grows in a clearing.",
+      "Choices": [
+        {
+          "Text": "Inhale the scent",
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "TenacityUp",
+            "Duration": 1
+          },
+          "ResultText": "The sweet aroma fills you with a sense of peace and resilience."
+        },
+        {
+          "Text": "Avoid the flowers",
+          "Outcome": null,
+          "ResultText": "Wary of pollen or poison, you steer clear of the flowers."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a heavy, iron shield leaning against a tree.",
+      "Choices": [
+        {
+          "Text": "Practice defensive stances",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Tenacity,1"
+          },
+          "ResultText": "You practice with the heavy shield, improving your defensive footing."
+        },
+        {
+          "Text": "Leave the shield",
+          "Outcome": null,
+          "ResultText": "The shield is too cumbersome to carry. You leave it behind."
+        }
+      ]
+    },
+    {
+      "Prompt": "A chessboard is set up on a mossy rock, mid-game.",
+      "Choices": [
+        {
+          "Text": "Study the board",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Intelligence,1"
+          },
+          "ResultText": "You analyze the complex position, sharpening your strategic mind."
+        },
+        {
+          "Text": "Knock the pieces over",
+          "Outcome": null,
+          "ResultText": "You scatter the pieces into the undergrowth."
+        }
+      ]
+    },
+    {
+      "Prompt": "A small totem is carved with the image of a lightning bolt.",
+      "Choices": [
+        {
+          "Text": "Touch the totem",
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "AgilityUp",
+            "Duration": 1
+          },
+          "ResultText": "A harmless spark jumps to your finger. You feel quick and energetic."
+        },
+        {
+          "Text": "Ignore the totem",
+          "Outcome": null,
+          "ResultText": "You decide not to meddle with strange carvings."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a whetstone and a pool of clear water.",
+      "Choices": [
+        {
+          "Text": "Sharpen your weapon",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Strength,1"
+          },
+          "ResultText": "You take a moment to sharpen your weapon, improving its killing edge."
+        },
+        {
+          "Text": "Rest and drink",
+          "Outcome": null,
+          "ResultText": "You rest for a moment and drink the cool water."
+        }
+      ]
+    },
+    {
+      "Prompt": "A single, perfect feather floats down from the canopy above.",
+      "Choices": [
+        {
+          "Text": "Catch the feather",
+          "Outcome": null,
+          "ResultText": "You catch the feather. It's beautiful, but otherwise unremarkable."
+        },
+        {
+          "Text": "Let it fall",
+          "Outcome": null,
+          "ResultText": "You watch the feather drift to the forest floor."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a small, abandoned lean-to shelter.",
+      "Choices": [
+        {
+          "Text": "Search it for supplies",
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "HealthPotion"
+          },
+          "ResultText": "Tucked away in a corner, you find a forgotten Health Potion."
+        },
+        {
+          "Text": "Rest for a moment",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "MaxHP,5"
+          },
+          "ResultText": "You take a short rest, feeling refreshed and more resilient."
+        }
+      ]
+    },
+    {
+      "Prompt": "A series of stepping stones cross a muddy bog.",
+      "Choices": [
+        {
+          "Text": "Leap across the stones",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Agility,1"
+          },
+          "ResultText": "You deftly hop from stone to stone, improving your balance and agility."
+        },
+        {
+          "Text": "Trudge through the mud",
+          "Outcome": null,
+          "ResultText": "You opt for the slower, messier route through the mud."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a book of poetry left open on a rock.",
+      "Choices": [
+        {
+          "Text": "Read a few verses",
+          "Outcome": null,
+          "ResultText": "The poetry is surprisingly moving, but offers no tangible benefit."
+        },
+        {
+          "Text": "Use the pages as tinder",
+          "Outcome": null,
+          "ResultText": "You tear out a few pages for later use as tinder."
+        }
+      ]
+    },
+    {
+      "Prompt": "A thick, sweet sap drips from an unusual tree.",
+      "Choices": [
+        {
+          "Text": "Taste the sap",
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "StrengthTonic"
+          },
+          "ResultText": "The sap is incredibly sweet and invigorating. You bottle some for later."
+        },
+        {
+          "Text": "Avoid the strange substance",
+          "Outcome": null,
+          "ResultText": "You decide it's best not to consume unknown forest substances."
+        }
+      ]
+    },
+    {
+      "Prompt": "You find a ring of scorched earth where a powerful spell was clearly cast.",
+      "Choices": [
+        {
+          "Text": "Study the residual magic",
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Intelligence,1"
+          },
+          "ResultText": "By studying the magical residue, you learn a new trick or two."
+        },
+        {
+          "Text": "Walk around it",
+          "Outcome": null,
+          "ResultText": "You steer clear of the area, not wanting to mess with such power."
+        }
+      ]
+    },
+    {
+      "Prompt": "A rope hangs down into a dark pit.",
+      "Choices": [
+        {
+          "Text": "Climb down the rope",
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "FireScroll"
+          },
+          "ResultText": "At the bottom of the pit, you find the remains of an unfortunate adventurer and a Fire Scroll."
+        },
+        {
+          "Text": "Stay on the path",
+          "Outcome": null,
+          "ResultText": "You decide not to risk whatever might be lurking in the darkness."
+        }
+      ]
     }
   ],
   "PossibleMajorBattles": [
