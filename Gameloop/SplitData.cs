@@ -23,6 +23,12 @@ namespace ProjectVagabond.Progression
     public class NarrativeChoice
     {
         public string Text { get; set; } = "";
+        public List<WeightedOutcome> Outcomes { get; set; } = new List<WeightedOutcome>();
+    }
+
+    public class WeightedOutcome
+    {
+        public int Weight { get; set; } = 1;
         public NarrativeOutcome? Outcome { get; set; }
         public string ResultText { get; set; } = "";
     }

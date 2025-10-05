@@ -21,6 +21,7 @@ namespace ProjectVagabond.UI
 
         private enum DialogState { NarratingPrompt, AwaitingChoice, NarratingResult, Finished }
         private DialogState _state;
+        private static readonly Random _random = new Random();
 
         public NarrativeDialog(GameScene currentGameScene) : base(currentGameScene)
         {
@@ -54,18 +55,54 @@ namespace ProjectVagabond.UI
                 button.Bounds = new Rectangle(40, (int)currentY, (int)textSize.Width + 10, (int)textSize.Height + 4);
                 button.OnClick += () =>
                 {
-                    ServiceLocator.Get<GameState>().ApplyNarrativeOutcome(choice.Outcome);
                     _choiceButtons.Clear();
                     _narrator.Clear(); // Explicitly clear the narrator before showing the result.
 
-                    if (!string.IsNullOrEmpty(choice.ResultText))
+                    // Perform weighted random selection
+                    WeightedOutcome? selectedOutcome = null;
+                    if (choice.Outcomes.Any())
                     {
-                        _state = DialogState.NarratingResult;
-                        _narrator.Show(choice.ResultText);
+                        int totalWeight = choice.Outcomes.Sum(o => o.Weight);
+                        if (totalWeight > 0)
+                        {
+                            int roll = _random.Next(totalWeight);
+                            foreach (var outcome in choice.Outcomes)
+                            {
+                                if (roll < outcome.Weight)
+                                {
+                                    selectedOutcome = outcome;
+                                    break;
+                                }
+                                roll -= outcome.Weight;
+                            }
+                        }
+                        else
+                        {
+                            // If all weights are 0, just pick the first one
+                            selectedOutcome = choice.Outcomes.FirstOrDefault();
+                        }
+                    }
+
+                    if (selectedOutcome != null)
+                    {
+                        ServiceLocator.Get<GameState>().ApplyNarrativeOutcome(selectedOutcome.Outcome);
+
+                        if (!string.IsNullOrEmpty(selectedOutcome.ResultText))
+                        {
+                            _state = DialogState.NarratingResult;
+                            _narrator.Show(selectedOutcome.ResultText);
+                        }
+                        else
+                        {
+                            // If there's no result text, the event is over.
+                            _state = DialogState.Finished;
+                            _onComplete?.Invoke();
+                            Hide();
+                        }
                     }
                     else
                     {
-                        // If there's no result text, the event is over.
+                        // No outcomes defined, just finish.
                         _state = DialogState.Finished;
                         _onComplete?.Invoke();
                         Hide();
