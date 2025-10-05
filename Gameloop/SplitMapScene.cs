@@ -31,7 +31,7 @@ namespace ProjectVagabond.Scenes
 
         private bool _isPlayerMoving;
         private float _playerMoveTimer;
-        private const float PLAYER_MOVE_DURATION = 5.0f;
+        private const float PLAYER_MOVE_DURATION = 3.0f;
         private int _playerMoveTargetNodeId;
         private SplitMapPath? _playerMovePath;
 
@@ -175,6 +175,7 @@ namespace ProjectVagabond.Scenes
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
+            // Handle modal dialogs first, as they pause the main scene logic
             if (_narrativeDialog.IsActive || _sceneManager.IsModalActive)
             {
                 if (_narrativeDialog.IsActive)
@@ -195,6 +196,7 @@ namespace ProjectVagabond.Scenes
                 {
                     UpdateCameraTarget(currentNode.Position, false);
                     StartPathRevealAnimation();
+                    UpdateReachableNodes();
                 }
             }
 
@@ -384,7 +386,8 @@ namespace ProjectVagabond.Scenes
                 case SplitNodeType.Narrative:
                     if (node.EventData is NarrativeEvent narrativeEvent)
                     {
-                        _narrativeDialog.Show(narrativeEvent, () => UpdateReachableNodes());
+                        _narrativeDialog.Show(narrativeEvent, null);
+                        _wasModalActiveLastFrame = true;
                     }
                     break;
 
@@ -399,10 +402,7 @@ namespace ProjectVagabond.Scenes
             var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
             choiceMenu?.Show(ChoiceType.Spell, 3);
             _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
-            // After the modal closes, we need to re-enable the next set of nodes.
-            // We can do this in the Update loop by checking if the modal is no longer active.
-            // For now, we'll just call it directly after a delay in a real game.
-            // For this implementation, we'll re-enable in Enter() when returning.
+            _wasModalActiveLastFrame = true;
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)

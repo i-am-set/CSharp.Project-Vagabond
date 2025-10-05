@@ -35,7 +35,7 @@ namespace ProjectVagabond.UI
             _narrator.Clear(); // Ensure the narrator's state is reset when the dialog is hidden.
         }
 
-        public void Show(NarrativeEvent narrativeEvent, Action onComplete)
+        public void Show(NarrativeEvent narrativeEvent, Action? onComplete)
         {
             IsActive = true;
             _onComplete = onComplete;
