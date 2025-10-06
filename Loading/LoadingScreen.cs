@@ -1,8 +1,8 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -177,7 +177,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BitmapFont font, Rectangle screenBounds)
+        public void Draw(SpriteBatch spriteBatch, BitmapFont font)
         {
             if (!IsActive || _silentMode) return;
 
@@ -188,17 +188,16 @@ namespace ProjectVagabond.Scenes
             const int BAR_HEIGHT = 3;
             const int TEXT_PADDING_ABOVE_BAR = 5;
 
-            // 1. Calculate positions
-            int barX = screenBounds.X + (screenBounds.Width - BAR_WIDTH) / 2;
-            int barY = screenBounds.Y + (screenBounds.Height - BAR_HEIGHT) / 2;
+            // 1. Calculate positions in virtual space
+            int barX = (Global.VIRTUAL_WIDTH - BAR_WIDTH) / 2;
+            int barY = (Global.VIRTUAL_HEIGHT - BAR_HEIGHT) / 2;
             int filledWidth = (int)(BAR_WIDTH * _visualProgress);
 
             // 2. Draw the background and filled portion of the loading bar
             var barBgRect = new Rectangle(barX, barY, BAR_WIDTH, BAR_HEIGHT);
             var barFillRect = new Rectangle(barX, barY, filledWidth, BAR_HEIGHT);
-            spriteBatch.Draw(pixel, barBgRect, _global.Palette_DarkGray);
-            spriteBatch.Draw(pixel, barFillRect, _global.Palette_White);
-
+            spriteBatch.DrawSnapped(pixel, barBgRect, _global.Palette_DarkGray);
+            spriteBatch.DrawSnapped(pixel, barFillRect, _global.Palette_Black);
 
             // 3. Get the current loading text
             string loadingText;
@@ -228,12 +227,13 @@ namespace ProjectVagabond.Scenes
             // 4. Calculate and draw the loading text, if any
             if (!string.IsNullOrEmpty(loadingText))
             {
+                loadingText = loadingText.ToUpper();
                 Vector2 textSize = font.MeasureString(loadingText);
                 Vector2 textPosition = new Vector2(
-                    screenBounds.X + (screenBounds.Width - textSize.X) / 2,
+                    (Global.VIRTUAL_WIDTH - textSize.X) / 2,
                     barY - textSize.Y - TEXT_PADDING_ABOVE_BAR
                 );
-                spriteBatch.DrawString(font, loadingText, textPosition, _global.Palette_White);
+                spriteBatch.DrawStringSnapped(font, loadingText, textPosition, _global.Palette_Black);
             }
         }
 

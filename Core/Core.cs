@@ -548,8 +548,19 @@ namespace ProjectVagabond
 
         protected override void Draw(GameTime gameTime)
         {
+            if (_loadingScreen.IsActive)
+            {
+                GraphicsDevice.Clear(Color.Black);
+                Matrix virtualToScreenTransform = Matrix.Invert(_mouseTransformMatrix);
+                _spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, null, null, virtualToScreenTransform);
+                _loadingScreen.Draw(_spriteBatch, _secondaryFont);
+                _spriteBatch.End();
+                base.Draw(gameTime);
+                return;
+            }
+
             // --- Phase 1: Render the letterboxed game world to its render target ---
-            if (_sceneManager.CurrentActiveScene?.GetType() != typeof(TransitionScene) && !_loadingScreen.IsActive)
+            if (_sceneManager.CurrentActiveScene?.GetType() != typeof(TransitionScene))
             {
                 GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
                 GraphicsDevice.Clear(Color.Transparent);
@@ -567,7 +578,7 @@ namespace ProjectVagabond
             GraphicsDevice.Clear(_global.GameBg);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-            if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack && !_loadingScreen.IsActive)
+            if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
             {
                 // Draw the main game scene first
                 _spriteBatch.Draw(_sceneRenderTarget, _finalRenderRectangle, Color.White);
