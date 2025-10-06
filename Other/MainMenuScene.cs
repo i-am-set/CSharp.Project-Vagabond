@@ -81,15 +81,37 @@ namespace ProjectVagabond.Scenes
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
                 var gameState = ServiceLocator.Get<GameState>();
+                var loadingScreen = ServiceLocator.Get<LoadingScreen>();
 
-                // Simplified loading for progression system start
-                spriteManager.LoadGameContent();
-                archetypeManager.LoadArchetypes("Content/Data/Archetypes");
-                gameState.InitializeWorld();
-                gameState.InitializeRenderableEntities();
-                core.SetGameLoaded(true);
+                // Create a list of loading tasks
+                var loadingTasks = new List<LoadingTask>
+                {
+                    new GenericTask("Loading game assets...", () => spriteManager.LoadGameContent()),
+                    new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Data/Archetypes")),
+                    new GenericTask("Initializing world...", () =>
+                    {
+                        gameState.InitializeWorld();
+                        gameState.InitializeRenderableEntities();
+                    }),
+                    new DiceWarmupTask() // This will run the hidden dice roll
+                };
 
-                _sceneManager.ChangeScene(GameSceneState.Split);
+                // Add tasks to the loading screen
+                loadingScreen.Clear();
+                foreach (var task in loadingTasks)
+                {
+                    loadingScreen.AddTask(task);
+                }
+
+                // Define what happens when loading is complete
+                loadingScreen.OnComplete += () =>
+                {
+                    core.SetGameLoaded(true);
+                    _sceneManager.ChangeScene(GameSceneState.Split);
+                };
+
+                // Start the loading process
+                loadingScreen.Start();
             };
             _buttons.Add(playButton);
             currentY += playHeight + buttonYSpacing;

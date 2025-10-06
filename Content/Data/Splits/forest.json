@@ -14,9 +14,11 @@
       "Choices": [
         {
           "Text": "Drink from the spring",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 3,
+              "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "TenacityUp",
@@ -26,6 +28,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
               "Outcome": null,
               "ResultText": "The water is refreshing, but has no lasting effect."
             }
@@ -61,9 +64,11 @@
       "Choices": [
         {
           "Text": "Purchase the tonic",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 4,
+              "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "StrengthTonic"
@@ -72,6 +77,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
               "Outcome": null,
               "ResultText": "You purchase the tonic, but upon inspection, it appears to be just colored water."
             }
@@ -94,9 +100,11 @@
       "Choices": [
         {
           "Text": "Try to pick the lock",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "FireScroll"
@@ -105,6 +113,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
               "Outcome": null,
               "ResultText": "The lock is rusted shut. You can't get it open."
             }
@@ -127,14 +136,26 @@
       "Choices": [
         {
           "Text": "Read the tome",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Intelligence,1"
               },
               "ResultText": "You absorb the arcane knowledge. You feel your mind expand."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
+              "Outcome": {
+                "OutcomeType": "AddBuff",
+                "Value": "IntelligenceDown",
+                "Duration": 1
+              },
+              "ResultText": "The script is maddening and incomprehensible. Your head spins."
             }
           ]
         },
@@ -158,9 +179,11 @@
       "Choices": [
         {
           "Text": "Open the pouch",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 3,
+              "Weight": 1,
+              "DifficultyClass": [ 2, 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "HealthPotion"
@@ -169,6 +192,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1 ],
               "Outcome": null,
               "ResultText": "The pouch is empty, save for a bit of dust."
             }
@@ -191,9 +215,11 @@
       "Choices": [
         {
           "Text": "Eat one of the mushrooms",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "AgilityUp",
@@ -203,6 +229,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "StrengthDown",
@@ -229,9 +256,11 @@
       "Choices": [
         {
           "Text": "Practice your strikes",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 3,
+              "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Strength,1"
@@ -240,6 +269,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
               "Outcome": null,
               "ResultText": "You swing too hard and the dummy topples over. You've learned little."
             }
@@ -265,9 +295,11 @@
       "Choices": [
         {
           "Text": "Attempt the climb",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "MaxHP,5"
@@ -276,6 +308,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "AgilityDown",
@@ -302,14 +335,17 @@
       "Choices": [
         {
           "Text": "Free the fox",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 3,
+              "Weight": 1,
+              "DifficultyClass": [ 2, 3, 4, 5, 6 ],
               "Outcome": null,
               "ResultText": "You carefully release the trap. The fox gives you a grateful look before limping away into the undergrowth."
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "Poison",
@@ -336,9 +372,11 @@
       "Choices": [
         {
           "Text": "Scavenge for supplies",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "HealthPotion"
@@ -347,6 +385,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
               "Outcome": null,
               "ResultText": "You search the camp but find nothing of value."
             }
@@ -369,9 +408,11 @@
       "Choices": [
         {
           "Text": "Take a sip",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "StrengthUp",
@@ -381,6 +422,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "TenacityDown",
@@ -407,14 +449,22 @@
       "Choices": [
         {
           "Text": "Practice your aim",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Agility,1"
               },
               "ResultText": "You spend some time practicing, and your movements feel more precise."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
+              "Outcome": null,
+              "ResultText": "You practice for a while but don't seem to improve."
             }
           ]
         },
@@ -435,14 +485,22 @@
       "Choices": [
         {
           "Text": "Push through carefully",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Tenacity,1"
               },
               "ResultText": "You navigate the fog with caution, honing your senses and resolve."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
+              "Outcome": null,
+              "ResultText": "You get turned around in the fog and end up back where you started, having wasted time."
             }
           ]
         },
@@ -473,9 +531,11 @@
         },
         {
           "Text": "Take the overgrown path",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 5, 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "FireScroll"
@@ -484,6 +544,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3, 4 ],
               "Outcome": null,
               "ResultText": "The overgrown path is difficult, and you find nothing for your troubles."
             }
@@ -496,9 +557,11 @@
       "Choices": [
         {
           "Text": "Take the herbs",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "HealthPotion"
@@ -507,6 +570,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "TenacityDown",
@@ -533,19 +597,32 @@
       "Choices": [
         {
           "Text": "Cross the log bridge",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 3,
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
+              "Outcome": {
+                "OutcomeType": "AddBuff",
+                "Value": "AgilityDown",
+                "Duration": 1
+              },
+              "ResultText": "You slip on the mossy log and fall into the stream. You're soaked and your ankle is twisted."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5 ],
+              "Outcome": null,
+              "ResultText": "You cross the log safely, your footing sure."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Agility,1"
               },
-              "ResultText": "You carefully balance your way across the log, improving your agility."
-            },
-            {
-              "Weight": 1,
-              "Outcome": null,
-              "ResultText": "You slip and fall into the cold water, but quickly scramble to the other side, soaked."
+              "ResultText": "You navigate the treacherous log with ease, improving your agility."
             }
           ]
         },
@@ -566,9 +643,11 @@
       "Choices": [
         {
           "Text": "Test your strength",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Strength,1"
@@ -577,6 +656,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "StrengthDown",
@@ -603,9 +683,11 @@
       "Choices": [
         {
           "Text": "Investigate the source",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "IntelligenceUp",
@@ -615,6 +697,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
               "Outcome": null,
               "ResultText": "You follow the sound to an empty cave. The melody stops as you enter."
             }
@@ -637,9 +720,11 @@
       "Choices": [
         {
           "Text": "Hack through them",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3, 4, 5, 6 ],
               "Outcome": null,
               "ResultText": "You clear the path, but your weapon is dulled in the process."
             }
@@ -665,9 +750,11 @@
       "Choices": [
         {
           "Text": "Carefully retrieve it",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 3,
+              "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "StrengthTonic"
@@ -676,6 +763,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
               "Outcome": null,
               "ResultText": "You try to reach it, but the backpack tears and its contents fall into the ravine."
             }
@@ -698,14 +786,22 @@
       "Choices": [
         {
           "Text": "Listen to the tree",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Intelligence,1"
               },
               "ResultText": "You press your ear to the bark and hear ancient secrets, expanding your knowledge."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3, 4 ],
+              "Outcome": null,
+              "ResultText": "The whispering is just the wind rustling through the leaves."
             }
           ]
         },
@@ -726,9 +822,20 @@
       "Choices": [
         {
           "Text": "Study its markings",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 6 ],
+              "Outcome": {
+                "OutcomeType": "AddStat",
+                "Value": "Intelligence,1"
+              },
+              "ResultText": "After a moment of study, you decipher a hidden pattern, increasing your knowledge."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3, 4, 5 ],
               "Outcome": null,
               "ResultText": "The markings are from a long-dead civilization. You learn nothing of use."
             }
@@ -751,15 +858,23 @@
       "Choices": [
         {
           "Text": "Let them land on you",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "TenacityUp",
                 "Duration": 1
               },
               "ResultText": "Their light seeps into your skin, leaving you feeling strangely resilient."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
+              "Outcome": null,
+              "ResultText": "The insects crawl over you for a moment before flying away. You feel a bit itchy."
             }
           ]
         },
@@ -780,14 +895,17 @@
       "Choices": [
         {
           "Text": "Listen to their song",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
               "Outcome": null,
               "ResultText": "The sound is unsettling, but seems to have no other effect."
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 4, 5 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "TenacityUp",
@@ -797,6 +915,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 6 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "StrengthDown",
@@ -823,14 +942,22 @@
       "Choices": [
         {
           "Text": "Ponder the words",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Tenacity,1"
               },
               "ResultText": "You reflect on the meaning and feel your resolve strengthen."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
+              "Outcome": null,
+              "ResultText": "The words offer no comfort or insight."
             }
           ]
         },
@@ -851,9 +978,11 @@
       "Choices": [
         {
           "Text": "Eat the apple",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "MaxHP,5"
@@ -862,6 +991,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3, 4 ],
               "Outcome": null,
               "ResultText": "The apple is crisp, but otherwise ordinary."
             }
@@ -887,14 +1017,22 @@
       "Choices": [
         {
           "Text": "Run across quickly",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Agility,1"
               },
               "ResultText": "You dash across, your quick feet saving you from a fall. Your agility has improved."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
+              "Outcome": null,
+              "ResultText": "You sprint across, the bridge swaying wildly. You make it, but it was close."
             }
           ]
         },
@@ -915,9 +1053,11 @@
       "Choices": [
         {
           "Text": "Drink the vial",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "StrengthUp",
@@ -927,6 +1067,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "Poison",
@@ -953,14 +1094,22 @@
       "Choices": [
         {
           "Text": "Trace the patterns",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Intelligence,1"
               },
               "ResultText": "As you trace the lines, you feel a deeper understanding of the world's hidden structures."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3, 4 ],
+              "Outcome": null,
+              "ResultText": "The patterns are mesmerizing but ultimately meaningless to you."
             }
           ]
         },
@@ -981,14 +1130,17 @@
       "Choices": [
         {
           "Text": "Look inside",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 3,
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3, 4, 5 ],
               "Outcome": null,
               "ResultText": "You find nothing but a single, black feather."
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "StrengthTonic"
@@ -1014,9 +1166,11 @@
       "Choices": [
         {
           "Text": "Take the scroll",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 3,
+              "Weight": 1,
+              "DifficultyClass": [ 2, 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "FireScroll"
@@ -1025,6 +1179,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1 ],
               "Outcome": null,
               "ResultText": "You take the scroll, but it crumbles to dust in your hands."
             }
@@ -1047,9 +1202,11 @@
       "Choices": [
         {
           "Text": "Inhale the scent",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "TenacityUp",
@@ -1059,6 +1216,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
               "Outcome": null,
               "ResultText": "You inhale deeply, but the scent just makes you sneeze."
             }
@@ -1081,14 +1239,22 @@
       "Choices": [
         {
           "Text": "Practice defensive stances",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Tenacity,1"
               },
               "ResultText": "You practice with the heavy shield, improving your defensive footing."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
+              "Outcome": null,
+              "ResultText": "The shield is heavier than it looks. You struggle with it for a bit before giving up."
             }
           ]
         },
@@ -1109,9 +1275,11 @@
       "Choices": [
         {
           "Text": "Study the board",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Intelligence,1"
@@ -1120,6 +1288,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3, 4 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "IntelligenceDown",
@@ -1146,15 +1315,23 @@
       "Choices": [
         {
           "Text": "Touch the totem",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "AgilityUp",
                 "Duration": 1
               },
               "ResultText": "A harmless spark jumps to your finger. You feel quick and energetic."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
+              "Outcome": null,
+              "ResultText": "You touch the totem, but nothing happens."
             }
           ]
         },
@@ -1175,9 +1352,11 @@
       "Choices": [
         {
           "Text": "Sharpen your weapon",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 3,
+              "Weight": 1,
+              "DifficultyClass": [ 2, 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Strength,1"
@@ -1186,6 +1365,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1 ],
               "Outcome": null,
               "ResultText": "The whetstone is old and crumbles to dust as you use it."
             }
@@ -1208,14 +1388,17 @@
       "Choices": [
         {
           "Text": "Catch the feather",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 3,
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3, 4 ],
               "Outcome": null,
               "ResultText": "You catch the feather. It's beautiful, but otherwise unremarkable."
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "AgilityUp",
@@ -1242,14 +1425,22 @@
       "Choices": [
         {
           "Text": "Search it for supplies",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "HealthPotion"
               },
               "ResultText": "Tucked away in a corner, you find a forgotten Health Potion."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
+              "Outcome": null,
+              "ResultText": "The shelter has already been picked clean."
             }
           ]
         },
@@ -1273,14 +1464,22 @@
       "Choices": [
         {
           "Text": "Leap across the stones",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 3, 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Agility,1"
               },
               "ResultText": "You deftly hop from stone to stone, improving your balance and agility."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2 ],
+              "Outcome": null,
+              "ResultText": "You slip on a stone and land in the mud, but are otherwise unharmed."
             }
           ]
         },
@@ -1301,9 +1500,20 @@
       "Choices": [
         {
           "Text": "Read a few verses",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 6 ],
+              "Outcome": {
+                "OutcomeType": "AddStat",
+                "Value": "Intelligence,1"
+              },
+              "ResultText": "The poetry inspires a moment of clarity, sharpening your thoughts."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3, 4, 5 ],
               "Outcome": null,
               "ResultText": "The poetry is surprisingly moving, but offers no tangible benefit."
             }
@@ -1326,14 +1536,22 @@
       "Choices": [
         {
           "Text": "Taste the sap",
+          "Dice": "1d6",
           "Outcomes": [
             {
               "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "StrengthTonic"
               },
               "ResultText": "The sap is incredibly sweet and invigorating. You bottle some for later."
+            },
+            {
+              "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
+              "Outcome": null,
+              "ResultText": "The sap is sticky and unpleasant. You spit it out."
             }
           ]
         },
@@ -1354,9 +1572,11 @@
       "Choices": [
         {
           "Text": "Study the residual magic",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 5, 6 ],
               "Outcome": {
                 "OutcomeType": "AddStat",
                 "Value": "Intelligence,1"
@@ -1365,6 +1585,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3, 4 ],
               "Outcome": null,
               "ResultText": "The magic is too wild and chaotic. You learn nothing before it fades."
             }
@@ -1387,9 +1608,11 @@
       "Choices": [
         {
           "Text": "Climb down the rope",
+          "Dice": "1d6",
           "Outcomes": [
             {
-              "Weight": 2,
+              "Weight": 1,
+              "DifficultyClass": [ 4, 5, 6 ],
               "Outcome": {
                 "OutcomeType": "GiveItem",
                 "Value": "FireScroll"
@@ -1398,6 +1621,7 @@
             },
             {
               "Weight": 1,
+              "DifficultyClass": [ 1, 2, 3 ],
               "Outcome": {
                 "OutcomeType": "AddBuff",
                 "Value": "AgilityDown",

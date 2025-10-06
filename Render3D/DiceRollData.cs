@@ -79,6 +79,16 @@ namespace ProjectVagabond.Dice
         /// A flat modifier to add to the final sum of this group. Defaults to 0.
         /// </summary>
         public int Modifier { get; set; } = 0;
+
+        /// <summary>
+        /// If true, the dice results will animate into a central sum. If false, they will appear over the dice and fade out.
+        /// </summary>
+        public bool AnimateSum { get; set; } = true;
+
+        /// <summary>
+        /// If true, the numerical result text will be displayed over the dice. If false, the dice will simply animate and disappear.
+        /// </summary>
+        public bool ShowResultText { get; set; } = true;
     }
 
     /// <summary>
@@ -94,3 +104,4 @@ namespace ProjectVagabond.Dice
         public Dictionary<string, List<int>> ResultsByGroup { get; set; } = new Dictionary<string, List<int>>();
     }
 }
+﻿

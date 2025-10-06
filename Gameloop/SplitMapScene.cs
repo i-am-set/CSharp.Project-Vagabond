@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -20,6 +21,9 @@ namespace ProjectVagabond.Scenes
         private readonly GameState _gameState;
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
+        private readonly DiceRollingSystem _diceRollingSystem;
+        private readonly StoryNarrator _resultNarrator;
+
 
         private SplitMap? _currentMap;
         private int _playerCurrentNodeId;
@@ -58,6 +62,12 @@ namespace ProjectVagabond.Scenes
 
         private bool _wasModalActiveLastFrame = false;
 
+        // Dice Roll State
+        private enum EventState { Idle, AwaitingDiceRoll, NarratingResult }
+        private EventState _eventState = EventState.Idle;
+        private NarrativeChoice? _pendingChoiceForDiceRoll;
+
+
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
 
@@ -68,8 +78,13 @@ namespace ProjectVagabond.Scenes
             _gameState = ServiceLocator.Get<GameState>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
+            _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _playerIcon = new PlayerMapIcon();
             _narrativeDialog = new NarrativeDialog(this);
+
+            var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 80, Global.VIRTUAL_WIDTH, 80);
+            _resultNarrator = new StoryNarrator(narratorBounds);
+            _resultNarrator.OnFinished += OnResultNarrationFinished;
         }
 
         public override Rectangle GetAnimatedBounds() => new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
@@ -79,6 +94,7 @@ namespace ProjectVagabond.Scenes
             base.Enter();
             _isPlayerMoving = false;
             _playerIcon.SetIsMoving(false);
+            _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
 
             if (_progressionManager.CurrentSplitMap == null)
             {
@@ -125,6 +141,13 @@ namespace ProjectVagabond.Scenes
 
             UpdateReachableNodes();
         }
+
+        public override void Exit()
+        {
+            base.Exit();
+            _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
+        }
+
 
         private void UpdateReachableNodes()
         {
@@ -200,6 +223,19 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
+            // Handle event states that pause map interaction
+            if (_eventState == EventState.AwaitingDiceRoll)
+            {
+                base.Update(gameTime);
+                return;
+            }
+            if (_eventState == EventState.NarratingResult)
+            {
+                _resultNarrator.Update(gameTime);
+                base.Update(gameTime);
+                return;
+            }
+
             // Smooth camera scrolling
             _cameraYOffset = MathHelper.Lerp(_cameraYOffset, _targetCameraYOffset, deltaTime * 5f);
 
@@ -271,7 +307,7 @@ namespace ProjectVagabond.Scenes
                     TriggerNodeEvent(_playerCurrentNodeId);
                 }
             }
-            else
+            else if (_eventState == EventState.Idle)
             {
                 HandleNodeInput();
             }
@@ -386,7 +422,7 @@ namespace ProjectVagabond.Scenes
                 case SplitNodeType.Narrative:
                     if (node.EventData is NarrativeEvent narrativeEvent)
                     {
-                        _narrativeDialog.Show(narrativeEvent, null);
+                        _narrativeDialog.Show(narrativeEvent, OnNarrativeChoiceSelected);
                         _wasModalActiveLastFrame = true;
                     }
                     break;
@@ -396,6 +432,118 @@ namespace ProjectVagabond.Scenes
                     break;
             }
         }
+
+        private void OnNarrativeChoiceSelected(NarrativeChoice choice)
+        {
+            if (string.IsNullOrEmpty(choice.Dice))
+            {
+                // No dice roll, resolve outcome immediately
+                ResolveNarrativeChoice(choice, -1);
+            }
+            else
+            {
+                // Dice roll required
+                _eventState = EventState.AwaitingDiceRoll;
+                _pendingChoiceForDiceRoll = choice;
+                var (numDice, numSides, modifier) = DiceParser.Parse(choice.Dice);
+                var dieType = numSides == 4 ? DieType.D4 : DieType.D6;
+
+                _diceRollingSystem.Roll(new List<DiceGroup>
+                {
+                    new DiceGroup
+                    {
+                        GroupId = "narrative_check",
+                        NumberOfDice = numDice,
+                        DieType = dieType,
+                        ResultProcessing = DiceResultProcessing.Sum,
+                        Modifier = modifier,
+                        Tint = _global.Palette_Red,
+                        AnimateSum = false,
+                        ShowResultText = false
+                    }
+                });
+            }
+        }
+
+        private void OnDiceRollCompleted(DiceRollResult result)
+        {
+            if (_eventState != EventState.AwaitingDiceRoll || _pendingChoiceForDiceRoll == null) return;
+
+            if (result.ResultsByGroup.TryGetValue("narrative_check", out var values) && values.Any())
+            {
+                int rollResult = values.First();
+                ResolveNarrativeChoice(_pendingChoiceForDiceRoll, rollResult);
+            }
+
+            _pendingChoiceForDiceRoll = null;
+        }
+
+        private void ResolveNarrativeChoice(NarrativeChoice choice, int diceRoll)
+        {
+            var possibleOutcomes = choice.Outcomes;
+
+            if (diceRoll != -1)
+            {
+                // Filter outcomes by the dice roll if a DC is present
+                possibleOutcomes = choice.Outcomes
+                    .Where(o => o.DifficultyClass == null || o.DifficultyClass.Contains(diceRoll))
+                    .ToList();
+            }
+
+            WeightedOutcome? selectedOutcome = null;
+            if (possibleOutcomes.Any())
+            {
+                int totalWeight = possibleOutcomes.Sum(o => o.Weight);
+                if (totalWeight > 0)
+                {
+                    int roll = _random.Next(totalWeight);
+                    foreach (var outcome in possibleOutcomes)
+                    {
+                        if (roll < outcome.Weight)
+                        {
+                            selectedOutcome = outcome;
+                            break;
+                        }
+                        roll -= outcome.Weight;
+                    }
+                }
+                else
+                {
+                    selectedOutcome = possibleOutcomes.FirstOrDefault();
+                }
+            }
+
+            if (selectedOutcome != null)
+            {
+                _gameState.ApplyNarrativeOutcome(selectedOutcome.Outcome);
+                if (!string.IsNullOrEmpty(selectedOutcome.ResultText))
+                {
+                    _eventState = EventState.NarratingResult;
+                    _resultNarrator.Show(selectedOutcome.ResultText);
+                }
+                else
+                {
+                    OnResultNarrationFinished();
+                }
+            }
+            else
+            {
+                OnResultNarrationFinished();
+            }
+        }
+
+        private void OnResultNarrationFinished()
+        {
+            _eventState = EventState.Idle;
+            var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+            if (currentNode != null)
+            {
+                UpdateCameraTarget(currentNode.Position, false);
+                StartPathRevealAnimation();
+                UpdateReachableNodes();
+            }
+        }
+
 
         private void TriggerReward()
         {
@@ -483,6 +631,11 @@ namespace ProjectVagabond.Scenes
             if (_narrativeDialog.IsActive)
             {
                 _narrativeDialog.DrawContent(spriteBatch, font, gameTime, transform);
+            }
+
+            if (_eventState == EventState.NarratingResult)
+            {
+                _resultNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
             }
         }
 

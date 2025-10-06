@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Dice;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -88,6 +89,8 @@ namespace ProjectVagabond.Dice
         private readonly List<FloatingResultText> _floatingResults = new List<FloatingResultText>();
         private readonly List<FloatingResultText> _groupSumResults = new List<FloatingResultText>();
         private readonly List<FloatingResultText> _activeModifiers = new List<FloatingResultText>();
+
+        private const float INDIVIDUAL_DIE_TEXT_SCALE = 1.0f;
 
         public bool IsComplete => _currentState == AnimationState.Complete;
         public event Action OnAnimationComplete;
@@ -226,7 +229,16 @@ namespace ProjectVagabond.Dice
                         float currentScale = result.Scale;
                         if (result.Type == FloatingResultText.TextType.IndividualDie)
                         {
-                            currentScale = MathHelper.Lerp(4.0f, 0.0f, Easing.EaseInCubic(result.ShrinkProgress));
+                            currentScale = MathHelper.Lerp(INDIVIDUAL_DIE_TEXT_SCALE, 0.0f, Easing.EaseInCubic(result.ShrinkProgress));
+                        }
+
+                        Color mainTextColor = result.TintColor != default ? result.TintColor : result.CurrentColor;
+
+                        if (result.IsFadingOut)
+                        {
+                            float easedProgress = Easing.EaseInQuint(result.FadeOutProgress);
+                            currentScale = MathHelper.Lerp(currentScale, 0f, easedProgress);
+                            mainTextColor *= (1f - easedProgress);
                         }
 
                         if (currentScale <= 0.01f) continue; // Don't draw if invisible
@@ -234,8 +246,7 @@ namespace ProjectVagabond.Dice
                         Vector2 drawPosition = result.CurrentPosition + result.ShakeOffset;
                         Vector2 textSize = font.MeasureString(result.Text) * currentScale;
                         Vector2 textOrigin = new Vector2(textSize.X / (2 * currentScale), textSize.Y / (2 * currentScale));
-                        Color outlineColor = Color.Black;
-                        Color mainTextColor = result.TintColor != default ? result.TintColor : result.CurrentColor;
+                        Color outlineColor = Color.Black * mainTextColor.A;
                         float rotation = result.Rotation;
                         int outlineOffset = 1;
 
@@ -296,33 +307,65 @@ namespace ProjectVagabond.Dice
                 _currentlyEnumeratingDie = item.die;
                 _currentGroupSum += item.value;
 
-                var renderer = ServiceLocator.Get<DiceSceneRenderer>();
-                var dieWorldPos = _currentlyEnumeratingDie.World.Translation;
-                var viewport = new Viewport(renderTarget.Bounds);
-                var dieScreenPos = viewport.Project(dieWorldPos, renderer.Projection, renderer.View, Matrix.Identity);
-                var dieScreenPos2D = new Vector2(dieScreenPos.X, dieScreenPos.Y);
-
-                _floatingResults.Add(new FloatingResultText
+                var group = _currentGroupsForDisplay.First(g => g.GroupId == item.die.GroupId);
+                if (group.ShowResultText)
                 {
-                    Text = item.value.ToString(),
-                    StartPosition = dieScreenPos2D,
-                    TargetPosition = dieScreenPos2D,
-                    CurrentPosition = dieScreenPos2D,
-                    Scale = 0.0f,
-                    Age = 0f,
-                    Lifetime = _global.DiceGatheringDuration,
-                    Type = FloatingResultText.TextType.IndividualDie,
-                    IsAnimatingScale = true,
-                    CurrentColor = Color.White,
-                    TintColor = item.die.Tint,
-                    IsVisible = true
-                });
+                    var renderer = ServiceLocator.Get<DiceSceneRenderer>();
+                    var dieWorldPos = _currentlyEnumeratingDie.World.Translation;
+                    var viewport = new Viewport(renderTarget.Bounds);
+                    var dieScreenPos = viewport.Project(dieWorldPos, renderer.Projection, renderer.View, Matrix.Identity);
+                    var dieScreenPos2D = new Vector2(dieScreenPos.X, dieScreenPos.Y);
+
+                    bool shouldAnimateSum = _currentGroupsForDisplay.Any(g => g.AnimateSum);
+                    float lifetime = shouldAnimateSum ? _global.DiceGatheringDuration : 1.5f;
+
+                    _floatingResults.Add(new FloatingResultText
+                    {
+                        Text = item.value.ToString(),
+                        StartPosition = dieScreenPos2D,
+                        TargetPosition = dieScreenPos2D,
+                        CurrentPosition = dieScreenPos2D,
+                        Scale = 0.0f,
+                        Age = 0f,
+                        Lifetime = lifetime,
+                        Type = FloatingResultText.TextType.IndividualDie,
+                        IsAnimatingScale = true,
+                        CurrentColor = Color.White,
+                        TintColor = item.die.Tint,
+                        IsVisible = true
+                    });
+                }
             }
             else
             {
                 _currentlyEnumeratingDie = null;
-                _currentState = AnimationState.PostEnumerationDelay;
-                _animationTimer = 0f;
+                bool shouldAnimateSum = _currentGroupsForDisplay.Any(g => g.AnimateSum);
+
+                if (shouldAnimateSum)
+                {
+                    _currentState = AnimationState.PostEnumerationDelay;
+                    _animationTimer = 0f;
+                }
+                else
+                {
+                    if (_displayGroupQueue.Any())
+                    {
+                        StartNextDisplayGroupEnumeration(renderTarget);
+                    }
+                    else
+                    {
+                        if (!_floatingResults.Any())
+                        {
+                            _currentState = AnimationState.Complete;
+                            OnAnimationComplete?.Invoke();
+                        }
+                        else
+                        {
+                            _currentState = AnimationState.FinalSumHold;
+                            _animationTimer = 0f;
+                        }
+                    }
+                }
             }
         }
 
@@ -336,7 +379,7 @@ namespace ProjectVagabond.Dice
                 float progress = Math.Clamp(_animationTimer / totalDuration, 0f, 1f);
                 const float popDuration = 0.15f, shrinkDuration = 0.10f;
                 float popPhaseEnd = popDuration / totalDuration, shrinkPhaseEnd = (popDuration + shrinkDuration) / totalDuration;
-                var resultText = _floatingResults.LastOrDefault();
+                var resultText = _floatingResults.LastOrDefault(fr => fr.IsAnimatingScale);
 
                 if (progress < popPhaseEnd)
                 {
@@ -354,8 +397,8 @@ namespace ProjectVagabond.Dice
                 }
                 else
                 {
-                    if (resultText != null && resultText.IsAnimatingScale)
-                        resultText.Scale = 4.0f * Easing.EaseOutBack((progress - shrinkPhaseEnd) / (1.0f - shrinkPhaseEnd));
+                    if (resultText != null)
+                        resultText.Scale = INDIVIDUAL_DIE_TEXT_SCALE * Easing.EaseOutBack((progress - shrinkPhaseEnd) / (1.0f - shrinkPhaseEnd));
                 }
             }
 
@@ -365,8 +408,8 @@ namespace ProjectVagabond.Dice
                 {
                     _currentlyEnumeratingDie.VisualScale = 0f;
                     _currentlyEnumeratingDie.IsDespawned = true;
-                    var resultText = _floatingResults.LastOrDefault();
-                    if (resultText != null) { resultText.Scale = 4.0f; resultText.IsAnimatingScale = false; }
+                    var resultText = _floatingResults.LastOrDefault(fr => fr.IsAnimatingScale);
+                    if (resultText != null) { resultText.Scale = INDIVIDUAL_DIE_TEXT_SCALE; resultText.IsAnimatingScale = false; }
                 }
                 _animationTimer = 0f;
                 ProcessNextEnumerationStep(renderTarget);
@@ -533,12 +576,26 @@ namespace ProjectVagabond.Dice
 
         private void UpdateFinalSumHoldState(float deltaTime)
         {
-            _animationTimer += deltaTime;
-            if (_animationTimer >= _global.DiceFinalSumLifetime)
+            // If there are group sums, we do the timed hold and then fade them.
+            if (_groupSumResults.Any())
             {
-                _currentState = AnimationState.SequentialFadeOut;
-                _animationTimer = 0f;
-                _fadingSumIndex = 0;
+                _animationTimer += deltaTime;
+                if (_animationTimer >= _global.DiceFinalSumLifetime)
+                {
+                    _currentState = AnimationState.SequentialFadeOut;
+                    _animationTimer = 0f;
+                    _fadingSumIndex = 0;
+                }
+            }
+            // If there are no group sums, it means we are in a "no-sum" animation.
+            // We just wait for all the individual floating results to fade out on their own.
+            else
+            {
+                if (!_floatingResults.Any(r => r.IsVisible))
+                {
+                    _currentState = AnimationState.Complete;
+                    OnAnimationComplete?.Invoke();
+                }
             }
         }
 
@@ -575,6 +632,21 @@ namespace ProjectVagabond.Dice
                 result.ShakeOffset = Vector2.Zero;
                 result.Rotation = 0f;
 
+                if (result.Lifetime > 0 && result.Age > result.Lifetime && !result.IsFadingOut)
+                {
+                    result.IsFadingOut = true;
+                    result.FadeOutProgress = 0f;
+                }
+
+                if (result.IsFadingOut)
+                {
+                    result.FadeOutProgress = Math.Clamp(result.FadeOutProgress + deltaTime / _global.DiceFinalSumFadeOutDuration, 0f, 1f);
+                    if (result.FadeOutProgress >= 1.0f)
+                    {
+                        result.IsVisible = false;
+                    }
+                }
+
                 if (result.Type == FloatingResultText.TextType.Multiplier && result.IsAnimating)
                 {
                     const float popInDuration = 0.3f, holdDuration = 0.5f;
@@ -590,13 +662,7 @@ namespace ProjectVagabond.Dice
                 }
                 else if (result.Type == FloatingResultText.TextType.GroupSum)
                 {
-                    if (result.IsFadingOut)
-                    {
-                        result.FadeOutProgress = Math.Clamp(result.FadeOutProgress + deltaTime / _global.DiceFinalSumFadeOutDuration, 0f, 1f);
-                        result.Scale = MathHelper.Lerp(3.5f, 0.0f, Easing.EaseInOutQuint(result.FadeOutProgress));
-                        if (result.FadeOutProgress >= 1.0f) { result.IsFadingOut = false; result.IsVisible = false; }
-                    }
-                    else if (result.IsColliding)
+                    if (result.IsColliding)
                     {
                         result.CollisionProgress = Math.Clamp(result.CollisionProgress + deltaTime / 0.4f, 0f, 1f);
                         float popProgress = result.CollisionProgress;
@@ -641,6 +707,11 @@ namespace ProjectVagabond.Dice
                     }
                 }
             }
+
+            // Cleanup invisible results
+            _floatingResults.RemoveAll(r => !r.IsVisible);
+            _groupSumResults.RemoveAll(r => !r.IsVisible);
+            _activeModifiers.RemoveAll(r => !r.IsVisible);
         }
     }
 }

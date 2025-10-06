@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
@@ -182,17 +183,24 @@ namespace ProjectVagabond.Scenes
 
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            // --- New Bar Style Parameters ---
+            // --- Bar Style Parameters ---
+            const int BAR_WIDTH = 100;
             const int BAR_HEIGHT = 3;
             const int TEXT_PADDING_ABOVE_BAR = 5;
 
-            // 1. Calculate and draw the loading bar
-            int barWidth = (int)(screenBounds.Width * _visualProgress);
-            int barY = screenBounds.Bottom - BAR_HEIGHT;
-            var barRect = new Rectangle(screenBounds.X, barY, barWidth, BAR_HEIGHT);
-            spriteBatch.Draw(pixel, barRect, _global.TerminalDarkGray);
+            // 1. Calculate positions
+            int barX = screenBounds.X + (screenBounds.Width - BAR_WIDTH) / 2;
+            int barY = screenBounds.Y + (screenBounds.Height - BAR_HEIGHT) / 2;
+            int filledWidth = (int)(BAR_WIDTH * _visualProgress);
 
-            // 2. Get the current loading text
+            // 2. Draw the background and filled portion of the loading bar
+            var barBgRect = new Rectangle(barX, barY, BAR_WIDTH, BAR_HEIGHT);
+            var barFillRect = new Rectangle(barX, barY, filledWidth, BAR_HEIGHT);
+            spriteBatch.Draw(pixel, barBgRect, _global.Palette_DarkGray);
+            spriteBatch.Draw(pixel, barFillRect, _global.Palette_White);
+
+
+            // 3. Get the current loading text
             string loadingText;
             if (_allTasksComplete)
             {
@@ -217,7 +225,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // 3. Calculate and draw the loading text, if any
+            // 4. Calculate and draw the loading text, if any
             if (!string.IsNullOrEmpty(loadingText))
             {
                 Vector2 textSize = font.MeasureString(loadingText);
@@ -225,7 +233,7 @@ namespace ProjectVagabond.Scenes
                     screenBounds.X + (screenBounds.Width - textSize.X) / 2,
                     barY - textSize.Y - TEXT_PADDING_ABOVE_BAR
                 );
-                spriteBatch.DrawString(font, loadingText, textPosition, _global.TerminalDarkGray);
+                spriteBatch.DrawString(font, loadingText, textPosition, _global.Palette_White);
             }
         }
 

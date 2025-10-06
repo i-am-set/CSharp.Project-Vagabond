@@ -3,8 +3,11 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -17,9 +20,9 @@ namespace ProjectVagabond.UI
     {
         private readonly StoryNarrator _narrator;
         private readonly List<Button> _choiceButtons = new();
-        private Action? _onComplete;
+        private Action<NarrativeChoice>? _onChoiceSelected;
 
-        private enum DialogState { NarratingPrompt, AwaitingChoice, NarratingResult, Finished }
+        private enum DialogState { NarratingPrompt, AwaitingChoice }
         private DialogState _state;
         private static readonly Random _random = new Random();
 
@@ -36,10 +39,10 @@ namespace ProjectVagabond.UI
             _narrator.Clear(); // Ensure the narrator's state is reset when the dialog is hidden.
         }
 
-        public void Show(NarrativeEvent narrativeEvent, Action? onComplete)
+        public void Show(NarrativeEvent narrativeEvent, Action<NarrativeChoice> onChoiceSelected)
         {
             IsActive = true;
-            _onComplete = onComplete;
+            _onChoiceSelected = onChoiceSelected;
             _choiceButtons.Clear();
 
             _narrator.Show(narrativeEvent.Prompt);
@@ -55,58 +58,8 @@ namespace ProjectVagabond.UI
                 button.Bounds = new Rectangle(40, (int)currentY, (int)textSize.Width + 10, (int)textSize.Height + 4);
                 button.OnClick += () =>
                 {
-                    _choiceButtons.Clear();
-                    _narrator.Clear(); // Explicitly clear the narrator before showing the result.
-
-                    // Perform weighted random selection
-                    WeightedOutcome? selectedOutcome = null;
-                    if (choice.Outcomes.Any())
-                    {
-                        int totalWeight = choice.Outcomes.Sum(o => o.Weight);
-                        if (totalWeight > 0)
-                        {
-                            int roll = _random.Next(totalWeight);
-                            foreach (var outcome in choice.Outcomes)
-                            {
-                                if (roll < outcome.Weight)
-                                {
-                                    selectedOutcome = outcome;
-                                    break;
-                                }
-                                roll -= outcome.Weight;
-                            }
-                        }
-                        else
-                        {
-                            // If all weights are 0, just pick the first one
-                            selectedOutcome = choice.Outcomes.FirstOrDefault();
-                        }
-                    }
-
-                    if (selectedOutcome != null)
-                    {
-                        ServiceLocator.Get<GameState>().ApplyNarrativeOutcome(selectedOutcome.Outcome);
-
-                        if (!string.IsNullOrEmpty(selectedOutcome.ResultText))
-                        {
-                            _state = DialogState.NarratingResult;
-                            _narrator.Show(selectedOutcome.ResultText);
-                        }
-                        else
-                        {
-                            // If there's no result text, the event is over.
-                            _state = DialogState.Finished;
-                            _onComplete?.Invoke();
-                            Hide();
-                        }
-                    }
-                    else
-                    {
-                        // No outcomes defined, just finish.
-                        _state = DialogState.Finished;
-                        _onComplete?.Invoke();
-                        Hide();
-                    }
+                    _onChoiceSelected?.Invoke(choice);
+                    Hide();
                 };
                 _choiceButtons.Add(button);
                 currentY += textSize.Height + 8;
@@ -122,12 +75,6 @@ namespace ProjectVagabond.UI
                 {
                     button.IsEnabled = true;
                 }
-            }
-            else if (_state == DialogState.NarratingResult)
-            {
-                _state = DialogState.Finished;
-                _onComplete?.Invoke();
-                Hide();
             }
         }
 
@@ -167,3 +114,4 @@ namespace ProjectVagabond.UI
     }
 }
 #nullable restore
+﻿
