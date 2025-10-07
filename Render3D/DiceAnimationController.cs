@@ -18,6 +18,7 @@ namespace ProjectVagabond.Dice
         private enum AnimationState
         {
             Idle,
+            PreEnumerationDelay,
             Enumerating,
             PostEnumerationDelay,
             ShiftingSums,
@@ -91,6 +92,7 @@ namespace ProjectVagabond.Dice
         private readonly List<FloatingResultText> _activeModifiers = new List<FloatingResultText>();
 
         private const float INDIVIDUAL_DIE_TEXT_SCALE = 1.0f;
+        private const float PRE_ENUMERATION_DELAY = 1.0f;
 
         public bool IsComplete => _currentState == AnimationState.Complete;
         public event Action OnAnimationComplete;
@@ -131,7 +133,8 @@ namespace ProjectVagabond.Dice
                 _displayGroupQueue.Enqueue(displayId);
             }
 
-            StartNextDisplayGroupEnumeration(renderTarget);
+            _currentState = AnimationState.PreEnumerationDelay;
+            _animationTimer = 0f;
         }
 
         public void Update(GameTime gameTime)
@@ -145,6 +148,13 @@ namespace ProjectVagabond.Dice
 
             switch (_currentState)
             {
+                case AnimationState.PreEnumerationDelay:
+                    _animationTimer += deltaTime;
+                    if (_animationTimer >= PRE_ENUMERATION_DELAY)
+                    {
+                        StartNextDisplayGroupEnumeration(renderTarget);
+                    }
+                    break;
                 case AnimationState.Enumerating: UpdateEnumeratingState(deltaTime, renderTarget); break;
                 case AnimationState.PostEnumerationDelay: UpdatePostEnumerationDelayState(deltaTime, renderTarget); break;
                 case AnimationState.ShiftingSums: UpdateShiftingSumsState(deltaTime); break;

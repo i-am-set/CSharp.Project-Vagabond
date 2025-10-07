@@ -143,11 +143,23 @@ namespace ProjectVagabond.Dice
                         effect.View = view;
                         effect.Projection = projection;
 
-                        // Enable default lighting to give the die a 3D appearance.
-                        effect.EnableDefaultLighting();
-
-                        // Enable texturing to see the die faces.
+                        // --- Manual Lighting Configuration ---
+                        effect.LightingEnabled = true;
                         effect.TextureEnabled = true;
+
+                        // Key Light (main light source)
+                        effect.DirectionalLight0.Enabled = true;
+                        effect.DirectionalLight0.Direction = Vector3.Normalize(new Vector3(-1f, -1.5f, 0f));
+                        effect.DirectionalLight0.DiffuseColor = Vector3.One; // White light
+                        effect.DirectionalLight0.SpecularColor = new Vector3(0.2f); // Soft gray highlight
+
+                        // Disable other default lights for a simpler setup
+                        effect.DirectionalLight1.Enabled = false;
+                        effect.DirectionalLight2.Enabled = false;
+
+                        // Ambient Light (fills in shadows)
+                        effect.AmbientLightColor = new Vector3(0.15f);
+
 
                         // Apply the tint color or highlight to the model's material.
                         if (IsHighlighted)

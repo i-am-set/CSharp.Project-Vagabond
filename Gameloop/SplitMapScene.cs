@@ -457,7 +457,7 @@ namespace ProjectVagabond.Scenes
                         DieType = dieType,
                         ResultProcessing = DiceResultProcessing.Sum,
                         Modifier = modifier,
-                        Tint = _global.Palette_Red,
+                        Tint = Color.White,
                         AnimateSum = false,
                         ShowResultText = false
                     }

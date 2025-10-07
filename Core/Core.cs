@@ -490,6 +490,19 @@ namespace ProjectVagabond
                 }
             }
 
+            // This ensures physics calculations are stable and not dependent on the frame rate.
+            // We multiply by the simulation speed to "fast forward" the physics time.
+            float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _physicsTimeAccumulator += elapsedSeconds * _global.DiceSimulationSpeedMultiplier;
+
+            while (_physicsTimeAccumulator >= Global.FIXED_PHYSICS_TIMESTEP)
+            {
+                // Run a single, fixed-step physics update for any relevant systems.
+                _diceRollingSystem.PhysicsStep(Global.FIXED_PHYSICS_TIMESTEP);
+
+                _physicsTimeAccumulator -= Global.FIXED_PHYSICS_TIMESTEP;
+            }
+
             // The loading screen now acts as a modal state that can be triggered at any time.
             if (_loadingScreen.IsActive)
             {
@@ -512,18 +525,6 @@ namespace ProjectVagabond
                 return; // Block all other game updates
             }
 
-            // This ensures physics calculations are stable and not dependent on the frame rate.
-            // We multiply by the simulation speed to "fast forward" the physics time.
-            float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            _physicsTimeAccumulator += elapsedSeconds * _global.DiceSimulationSpeedMultiplier;
-
-            while (_physicsTimeAccumulator >= Global.FIXED_PHYSICS_TIMESTEP)
-            {
-                // Run a single, fixed-step physics update for any relevant systems.
-                _diceRollingSystem.PhysicsStep(Global.FIXED_PHYSICS_TIMESTEP);
-
-                _physicsTimeAccumulator -= Global.FIXED_PHYSICS_TIMESTEP;
-            }
 
             // --- Frame-Rate Dependent Updates ---
             _sceneManager.Update(gameTime);
