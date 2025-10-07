@@ -535,6 +535,7 @@ namespace ProjectVagabond.Scenes
         private void OnResultNarrationFinished()
         {
             _eventState = EventState.Idle;
+            _resultNarrator.Clear();
             var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
             if (currentNode != null)
             {
