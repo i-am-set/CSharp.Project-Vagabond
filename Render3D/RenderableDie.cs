@@ -71,6 +71,12 @@ namespace ProjectVagabond.Dice
         public float VisualScale { get; set; } = 1.0f;
 
         /// <summary>
+        /// A temporary visual-only rotation applied to the die for wobble animations.
+        /// This does not affect the physics body.
+        /// </summary>
+        public float VisualWobbleRotation { get; set; } = 0f;
+
+        /// <summary>
         /// If true, this die has been "counted" and should no longer be rendered.
         /// </summary>
         public bool IsDespawned { get; set; } = false;
@@ -112,6 +118,7 @@ namespace ProjectVagabond.Dice
             IsDespawned = false;
             DieType = DieType.D6; // Reset to default
             CollisionCount = 0;
+            VisualWobbleRotation = 0f;
         }
 
         /// <summary>
@@ -126,8 +133,17 @@ namespace ProjectVagabond.Dice
                 return;
             }
 
-            // Apply the visual offset and scale for animations. Scale is applied first to scale around the object's origin.
-            Matrix finalWorld = Matrix.CreateScale(VisualScale * BaseScale) * Matrix.CreateTranslation(VisualOffset) * World;
+            // Apply the visual offset and scale for animations.
+            Matrix baseWorld = World;
+            if (VisualWobbleRotation != 0f)
+            {
+                // Decompose, apply wobble, and recompose to rotate around the object's center.
+                World.Decompose(out var scale, out var rot, out var trans);
+                rot *= Quaternion.CreateFromAxisAngle(Vector3.UnitZ, VisualWobbleRotation);
+                baseWorld = Matrix.CreateScale(scale) * Matrix.CreateFromQuaternion(rot) * Matrix.CreateTranslation(trans);
+            }
+
+            Matrix finalWorld = Matrix.CreateScale(VisualScale * BaseScale) * Matrix.CreateTranslation(VisualOffset) * baseWorld;
 
             // Iterate through each mesh in the model. A die model will likely have only one.
             foreach (var mesh in CurrentModel.Meshes)

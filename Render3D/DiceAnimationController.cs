@@ -86,6 +86,7 @@ namespace ProjectVagabond.Dice
         private List<DiceGroup> _currentGroupsForDisplay;
         private readonly Queue<(RenderableDie die, int value)> _enumerationQueue = new Queue<(RenderableDie, int)>();
         private RenderableDie _currentlyEnumeratingDie;
+        private int _currentlyEnumeratingDieValue;
         private int _currentGroupSum;
         private readonly List<FloatingResultText> _floatingResults = new List<FloatingResultText>();
         private readonly List<FloatingResultText> _groupSumResults = new List<FloatingResultText>();
@@ -93,6 +94,15 @@ namespace ProjectVagabond.Dice
 
         private const float INDIVIDUAL_DIE_TEXT_SCALE = 1.0f;
         private const float PRE_ENUMERATION_DELAY = 1.0f;
+
+        // --- Animation Tuning ---
+        private const float BAD_ROLL_ANIM_DURATION = 0.5f;
+        private const float GOOD_ROLL_ANIM_DURATION = 0.5f;
+        private const float NORMAL_ROLL_ANIM_DURATION = 0.25f;
+        private const float SHRINK_AND_TEXT_DURATION = 0.15f;
+        private const float GOOD_ROLL_WOBBLE_FREQUENCY = 40f;
+        private const float GOOD_ROLL_WOBBLE_MAGNITUDE = 0.15f; // Radians
+
 
         public bool IsComplete => _currentState == AnimationState.Complete;
         public event Action OnAnimationComplete;
@@ -315,6 +325,8 @@ namespace ProjectVagabond.Dice
             if (_enumerationQueue.TryDequeue(out var item))
             {
                 _currentlyEnumeratingDie = item.die;
+                _currentlyEnumeratingDieValue = item.value;
+                _currentlyEnumeratingDie.VisualOffset = Vector3.Zero; // Reset offset for the new die
                 _currentGroupSum += item.value;
 
                 var group = _currentGroupsForDisplay.First(g => g.GroupId == item.die.GroupId);
@@ -385,44 +397,142 @@ namespace ProjectVagabond.Dice
 
             if (_currentlyEnumeratingDie != null)
             {
-                float totalDuration = _global.DiceEnumerationStepDuration;
-                float progress = Math.Clamp(_animationTimer / totalDuration, 0f, 1f);
-                const float popDuration = 0.15f, shrinkDuration = 0.10f;
-                float popPhaseEnd = popDuration / totalDuration, shrinkPhaseEnd = (popDuration + shrinkDuration) / totalDuration;
+                // Determine animation properties based on roll quality
+                bool isNarrativeRoll = _currentlyEnumeratingDie.GroupId == "narrative_check" && _currentlyEnumeratingDie.DieType == DieType.D6;
+                float mainAnimDuration;
+                Color flashColor = Color.White;
+
+                if (isNarrativeRoll)
+                {
+                    if (_currentlyEnumeratingDieValue >= 5) // Good
+                    {
+                        mainAnimDuration = GOOD_ROLL_ANIM_DURATION;
+                        flashColor = _global.Palette_LightGreen;
+                    }
+                    else if (_currentlyEnumeratingDieValue <= 2) // Bad
+                    {
+                        mainAnimDuration = BAD_ROLL_ANIM_DURATION;
+                        flashColor = _global.Palette_Red;
+                    }
+                    else // Neutral
+                    {
+                        mainAnimDuration = NORMAL_ROLL_ANIM_DURATION;
+                        flashColor = _global.Palette_Yellow;
+                    }
+                }
+                else // Not a narrative roll
+                {
+                    mainAnimDuration = NORMAL_ROLL_ANIM_DURATION;
+                }
+
+                float totalStepDuration = mainAnimDuration + SHRINK_AND_TEXT_DURATION;
                 var resultText = _floatingResults.LastOrDefault(fr => fr.IsAnimatingScale);
 
-                if (progress < popPhaseEnd)
+                // --- Main Animation Phase (Pop, Shake, Pulse) ---
+                if (_animationTimer < mainAnimDuration)
                 {
-                    float popProgress = progress / popPhaseEnd;
-                    float scale = 1.0f + (_global.DiceEnumerationMaxScale - 1.0f) * (popProgress < 0.5f ? Easing.EaseOutCubic(popProgress * 2f) : (1 - Easing.EaseInCubic((popProgress - 0.5f) * 2f)));
-                    _currentlyEnumeratingDie.VisualScale = scale;
+                    float progress = _animationTimer / mainAnimDuration;
                     _currentlyEnumeratingDie.IsHighlighted = true;
-                    _currentlyEnumeratingDie.HighlightColor = _animationTimer < _global.DiceEnumerationFlashDuration ? Color.White : _currentlyEnumeratingDie.Tint;
+
+                    // Color decays over the main animation duration
+                    _currentlyEnumeratingDie.HighlightColor = Color.Lerp(flashColor, _currentlyEnumeratingDie.Tint, Easing.EaseInQuad(progress));
+
+                    // Reset visual modifiers before applying new ones for the current frame
+                    _currentlyEnumeratingDie.VisualWobbleRotation = 0f;
+                    _currentlyEnumeratingDie.VisualOffset = Vector3.Zero;
+
+                    if (isNarrativeRoll && _currentlyEnumeratingDieValue >= 5) // Good Roll
+                    {
+                        const float inflateDuration = 0.15f;
+                        const float holdDuration = 0.2f;
+                        const float deflateDuration = 0.15f;
+
+                        if (progress < inflateDuration / mainAnimDuration)
+                        {
+                            float phaseProgress = progress / (inflateDuration / mainAnimDuration);
+                            _currentlyEnumeratingDie.VisualScale = 1.0f + (_global.DiceEnumerationMaxScale - 1.0f) * Easing.EaseOutCubic(phaseProgress);
+                        }
+                        else if (progress < (inflateDuration + holdDuration) / mainAnimDuration)
+                        {
+                            _currentlyEnumeratingDie.VisualScale = _global.DiceEnumerationMaxScale;
+                            float phaseProgress = (progress - (inflateDuration / mainAnimDuration)) / (holdDuration / mainAnimDuration);
+                            float wobbleDecay = 1.0f - Easing.EaseInQuad(phaseProgress); // Wobble fades out during the hold
+                            _currentlyEnumeratingDie.VisualWobbleRotation = MathF.Sin(phaseProgress * GOOD_ROLL_WOBBLE_FREQUENCY) * GOOD_ROLL_WOBBLE_MAGNITUDE * wobbleDecay;
+                        }
+                        else
+                        {
+                            float phaseProgress = (progress - ((inflateDuration + holdDuration) / mainAnimDuration)) / (deflateDuration / mainAnimDuration);
+                            _currentlyEnumeratingDie.VisualScale = 1.0f + (_global.DiceEnumerationMaxScale - 1.0f) * (1.0f - Easing.EaseInCubic(phaseProgress));
+                        }
+                    }
+                    else if (isNarrativeRoll && _currentlyEnumeratingDieValue <= 2) // Bad Roll Shake
+                    {
+                        const float holdStart = 0.2f;
+                        const float holdEnd = 0.8f;
+                        const float shakeFrequency = 50f;
+                        const float shakeMagnitude = 0.1f;
+                        float scale;
+
+                        if (progress < holdStart) // Inflate
+                        {
+                            scale = 1.0f + (_global.DiceEnumerationMaxScale - 1.0f) * Easing.EaseOutCubic(progress / holdStart);
+                        }
+                        else if (progress < holdEnd) // Hold and Shake
+                        {
+                            scale = _global.DiceEnumerationMaxScale;
+                            float holdProgress = (progress - holdStart) / (holdEnd - holdStart);
+                            float currentShakeMagnitude = shakeMagnitude * (1.0f - Easing.EaseInQuad(holdProgress)); // Shake decays
+                            _currentlyEnumeratingDie.VisualOffset = new Vector3(
+                                (float)(_random.NextDouble() * 2 - 1) * currentShakeMagnitude,
+                                (float)(_random.NextDouble() * 2 - 1) * currentShakeMagnitude,
+                                0);
+                        }
+                        else // Deflate
+                        {
+                            scale = 1.0f + (_global.DiceEnumerationMaxScale - 1.0f) * (1.0f - Easing.EaseInCubic((progress - holdEnd) / (1.0f - holdEnd)));
+                        }
+                        _currentlyEnumeratingDie.VisualScale = scale;
+                    }
+                    else // Neutral / Normal Roll Pop
+                    {
+                        float scale = 1.0f + (_global.DiceEnumerationMaxScale - 1.0f) * (progress < 0.5f ? Easing.EaseOutCubic(progress * 2f) : (1 - Easing.EaseInCubic((progress - 0.5f) * 2f)));
+                        _currentlyEnumeratingDie.VisualScale = scale;
+                    }
                 }
-                else if (progress < shrinkPhaseEnd)
+                // --- Shrink & Text Appear Phase ---
+                else if (_animationTimer < totalStepDuration)
                 {
-                    float shrinkProgress = (progress - popPhaseEnd) / (shrinkPhaseEnd - popPhaseEnd);
                     _currentlyEnumeratingDie.IsHighlighted = false;
-                    _currentlyEnumeratingDie.VisualScale = 1.0f - Easing.EaseInQuint(shrinkProgress);
+                    _currentlyEnumeratingDie.VisualOffset = Vector3.Zero;
+                    _currentlyEnumeratingDie.VisualWobbleRotation = 0f;
+
+                    float outroProgress = (_animationTimer - mainAnimDuration) / SHRINK_AND_TEXT_DURATION;
+
+                    // Shrink die
+                    _currentlyEnumeratingDie.VisualScale = 1.0f - Easing.EaseInQuint(outroProgress);
+
+                    // Scale up text
+                    if (resultText != null)
+                    {
+                        resultText.Scale = INDIVIDUAL_DIE_TEXT_SCALE * Easing.EaseOutBack(outroProgress);
+                    }
                 }
+                // --- Step Complete ---
                 else
                 {
-                    if (resultText != null)
-                        resultText.Scale = INDIVIDUAL_DIE_TEXT_SCALE * Easing.EaseOutBack((progress - shrinkPhaseEnd) / (1.0f - shrinkPhaseEnd));
+                    if (_currentlyEnumeratingDie != null)
+                    {
+                        _currentlyEnumeratingDie.VisualScale = 0f;
+                        _currentlyEnumeratingDie.IsDespawned = true;
+                        if (resultText != null)
+                        {
+                            resultText.Scale = INDIVIDUAL_DIE_TEXT_SCALE;
+                            resultText.IsAnimatingScale = false;
+                        }
+                    }
+                    _animationTimer = 0f;
+                    ProcessNextEnumerationStep(renderTarget);
                 }
-            }
-
-            if (_animationTimer >= _global.DiceEnumerationStepDuration)
-            {
-                if (_currentlyEnumeratingDie != null)
-                {
-                    _currentlyEnumeratingDie.VisualScale = 0f;
-                    _currentlyEnumeratingDie.IsDespawned = true;
-                    var resultText = _floatingResults.LastOrDefault(fr => fr.IsAnimatingScale);
-                    if (resultText != null) { resultText.Scale = INDIVIDUAL_DIE_TEXT_SCALE; resultText.IsAnimatingScale = false; }
-                }
-                _animationTimer = 0f;
-                ProcessNextEnumerationStep(renderTarget);
             }
         }
 
