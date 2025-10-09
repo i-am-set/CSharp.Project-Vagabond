@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -17,12 +18,16 @@ namespace ProjectVagabond.Progression
         // --- Generation Tuning ---
         public const int MAP_WIDTH = 280;
         private const int FLOOR_HEIGHT = 80;
-        private const int HORIZONTAL_PADDING = 40;
+        private const int HORIZONTAL_PADDING = 80;
         private const int VERTICAL_PADDING = 50;
         private const float BATTLE_EVENT_WEIGHT = 0.7f; // 70% chance for a battle
         private const float NARRATIVE_EVENT_WEIGHT = 0.3f; // 30% chance for a narrative
         private const float PATH_SEGMENT_LENGTH = 10f; // Smaller value = more wiggles
         private const float PATH_MAX_OFFSET = 5f; // Max perpendicular deviation
+        private const float SECONDARY_PATH_CHANCE = 0.4f; // Chance for a node to have a second outgoing path
+        private const float NODE_HORIZONTAL_VARIANCE_FACTOR = 0.8f; // Node can move within 80% of its "lane"
+        private const float NODE_VERTICAL_VARIANCE_PIXELS = 8f;
+
 
         public static SplitMap? Generate(SplitData splitData)
         {
@@ -105,17 +110,32 @@ namespace ProjectVagabond.Progression
 
                 for (int i = 0; i < numNodes; i++)
                 {
-                    float x;
+                    float finalX;
+                    float finalY = y + ((float)_random.NextDouble() * 2f - 1f) * NODE_VERTICAL_VARIANCE_PIXELS;
+
                     if (numNodes == 1)
                     {
-                        x = (MAP_WIDTH / 2f) + mapHorizontalOffset;
+                        finalX = (MAP_WIDTH / 2f) + mapHorizontalOffset;
                     }
                     else
                     {
                         float spacing = (float)(MAP_WIDTH - HORIZONTAL_PADDING * 2) / (numNodes - 1);
-                        x = HORIZONTAL_PADDING + (i * spacing) + mapHorizontalOffset;
+                        float baseX = HORIZONTAL_PADDING + (i * spacing);
+
+                        // The "lane" for a node is half the spacing to the left and half to the right.
+                        // We use a factor to prevent it from touching the edges of its lane.
+                        float maxOffset = (spacing / 2f) * NODE_HORIZONTAL_VARIANCE_FACTOR;
+                        float random_x_offset = ((float)_random.NextDouble() * 2f - 1f) * maxOffset;
+
+                        float unclampedX = baseX + random_x_offset;
+
+                        // Clamp the position to stay within the padded area.
+                        float minX = HORIZONTAL_PADDING;
+                        float maxX = MAP_WIDTH - HORIZONTAL_PADDING;
+                        finalX = Math.Clamp(unclampedX, minX, maxX) + mapHorizontalOffset;
                     }
-                    nodesByFloor[floor].Add(new SplitMapNode(floor, new Vector2(x, y)));
+
+                    nodesByFloor[floor].Add(new SplitMapNode(floor, new Vector2(finalX, finalY)));
                 }
                 previousFloorNodeCount = numNodes;
             }
@@ -131,51 +151,90 @@ namespace ProjectVagabond.Progression
                 var lowerFloor = nodesByFloor[i];
                 var upperFloor = nodesByFloor[i + 1];
 
-                // Pass 1: Ensure every upper node is reachable from below.
-                foreach (var upperNode in upperFloor)
-                {
-                    var closestLower = lowerFloor.OrderBy(n => Vector2.DistanceSquared(n.Position, upperNode.Position)).First();
-                    var path = new SplitMapPath(closestLower.Id, upperNode.Id);
-                    paths.Add(path);
-                    closestLower.OutgoingPathIds.Add(path.Id);
-                    upperNode.IncomingPathIds.Add(path.Id);
-                }
-
-                // Pass 2: Ensure every lower node can reach the next floor.
+                // Pass 1: Ensure every lower node connects up to at least one upper node.
                 foreach (var lowerNode in lowerFloor)
                 {
-                    if (!lowerNode.OutgoingPathIds.Any())
+                    var weights = CalculateWeights(lowerNode, upperFloor);
+                    if (weights.Any())
                     {
-                        var closestUpper = upperFloor.OrderBy(n => Vector2.DistanceSquared(n.Position, lowerNode.Position)).First();
-                        var path = new SplitMapPath(lowerNode.Id, closestUpper.Id);
+                        var targetNode = WeightedRandomSelect(weights);
+                        var path = new SplitMapPath(lowerNode.Id, targetNode.Id);
                         paths.Add(path);
                         lowerNode.OutgoingPathIds.Add(path.Id);
-                        closestUpper.IncomingPathIds.Add(path.Id);
+                        targetNode.IncomingPathIds.Add(path.Id);
                     }
                 }
 
-                // Pass 3: Add secondary paths for more branching.
+                // Pass 2: Ensure every upper node is reachable.
+                foreach (var upperNode in upperFloor)
+                {
+                    if (!upperNode.IncomingPathIds.Any())
+                    {
+                        // Find the horizontally closest lower node and force a connection.
+                        var closestLower = lowerFloor.OrderBy(n => Math.Abs(n.Position.X - upperNode.Position.X)).First();
+                        var path = new SplitMapPath(closestLower.Id, upperNode.Id);
+                        paths.Add(path);
+                        closestLower.OutgoingPathIds.Add(path.Id);
+                        upperNode.IncomingPathIds.Add(path.Id);
+                    }
+                }
+
+                // Pass 3: Add optional secondary paths for more branching.
                 foreach (var lowerNode in lowerFloor)
                 {
-                    if (_random.NextDouble() < 0.75 && upperFloor.Count > 1)
+                    if (_random.NextDouble() < SECONDARY_PATH_CHANCE)
                     {
                         var connectedUpperNodeIds = lowerNode.OutgoingPathIds.Select(pId => paths.First(p => p.Id == pId).ToNodeId).ToHashSet();
-                        var secondClosest = upperFloor
-                            .Where(n => !connectedUpperNodeIds.Contains(n.Id))
-                            .OrderBy(n => Vector2.DistanceSquared(n.Position, lowerNode.Position))
-                            .FirstOrDefault();
+                        var availableTargets = upperFloor.Where(n => !connectedUpperNodeIds.Contains(n.Id)).ToList();
 
-                        if (secondClosest != null)
+                        if (availableTargets.Any())
                         {
-                            var path = new SplitMapPath(lowerNode.Id, secondClosest.Id);
-                            paths.Add(path);
-                            lowerNode.OutgoingPathIds.Add(path.Id);
-                            secondClosest.IncomingPathIds.Add(path.Id);
+                            var weights = CalculateWeights(lowerNode, availableTargets);
+                            if (weights.Any())
+                            {
+                                var targetNode = WeightedRandomSelect(weights);
+                                var path = new SplitMapPath(lowerNode.Id, targetNode.Id);
+                                paths.Add(path);
+                                lowerNode.OutgoingPathIds.Add(path.Id);
+                                targetNode.IncomingPathIds.Add(path.Id);
+                            }
                         }
                     }
                 }
             }
             return paths;
+        }
+
+        private static Dictionary<SplitMapNode, float> CalculateWeights(SplitMapNode lowerNode, List<SplitMapNode> potentialUpperNodes)
+        {
+            var weights = new Dictionary<SplitMapNode, float>();
+            if (!potentialUpperNodes.Any()) return weights;
+
+            foreach (var upperNode in potentialUpperNodes)
+            {
+                float horizontalDistance = Math.Abs(lowerNode.Position.X - upperNode.Position.X);
+                // The weight decreases exponentially as horizontal distance increases.
+                // The divisor (e.g., 20f) controls how strongly horizontal distance is penalized. A smaller number means a stronger penalty.
+                float weight = 1.0f / (1.0f + (horizontalDistance * 0.1f));
+                weights[upperNode] = weight;
+            }
+            return weights;
+        }
+
+        private static SplitMapNode WeightedRandomSelect(Dictionary<SplitMapNode, float> weights)
+        {
+            float totalWeight = weights.Values.Sum();
+            double randomValue = _random.NextDouble() * totalWeight;
+
+            foreach (var (node, weight) in weights)
+            {
+                if (randomValue < weight)
+                {
+                    return node;
+                }
+                randomValue -= weight;
+            }
+            return weights.Keys.Last(); // Fallback
         }
 
         private static List<Vector2> GenerateWigglyPathPoints(Vector2 start, Vector2 end)

@@ -51,6 +51,7 @@ namespace ProjectVagabond.Scenes
         private readonly Dictionary<int, float> _pathRetractionProgress = new();
         private readonly Dictionary<int, float> _pathAnimationDurations = new();
         private const float PATH_ANIMATION_DURATION = 3.0f; // Seconds for the path to draw
+        private const string PATH_DRAW_PATTERN = "1111110111010111111001110111110011111111110101100"; // 1 = draw, 0 = skip. Creates a dashed line effect.
         private static readonly Random _random = new Random();
 
         // Node pulse animation state
@@ -685,7 +686,11 @@ namespace ProjectVagabond.Scenes
 
                 for (int i = 0; i < numPixelsToDraw; i++)
                 {
-                    spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
+                    int patternIndex = (i + path.DrawPatternOffset) % PATH_DRAW_PATTERN.Length;
+                    if (PATH_DRAW_PATTERN[patternIndex] == '1')
+                    {
+                        spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
+                    }
                 }
             }
             else if (isAnimatingRetraction)
@@ -700,14 +705,22 @@ namespace ProjectVagabond.Scenes
 
                 for (int i = 0; i < numPixelsToDraw; i++)
                 {
-                    spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
+                    int patternIndex = (i + path.DrawPatternOffset) % PATH_DRAW_PATTERN.Length;
+                    if (PATH_DRAW_PATTERN[patternIndex] == '1')
+                    {
+                        spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
+                    }
                 }
             }
             else // Draw the full path (for visited paths)
             {
-                foreach (var point in path.PixelPoints)
+                for (int i = 0; i < path.PixelPoints.Count; i++)
                 {
-                    spriteBatch.Draw(pixel, point.ToVector2(), pathColor);
+                    int patternIndex = (i + path.DrawPatternOffset) % PATH_DRAW_PATTERN.Length;
+                    if (PATH_DRAW_PATTERN[patternIndex] == '1')
+                    {
+                        spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
+                    }
                 }
             }
         }
