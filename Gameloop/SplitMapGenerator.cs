@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
-using ProjectVagabond.Progression;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -18,15 +17,16 @@ namespace ProjectVagabond.Progression
         // --- Generation Tuning ---
         public const int MAP_WIDTH = 280;
         private const int FLOOR_HEIGHT = 80;
-        private const int HORIZONTAL_PADDING = 80;
+        private const int HORIZONTAL_PADDING = 8; // Minimal padding to keep nodes off the absolute edge
         private const int VERTICAL_PADDING = 50;
         private const float BATTLE_EVENT_WEIGHT = 0.7f; // 70% chance for a battle
         private const float NARRATIVE_EVENT_WEIGHT = 0.3f; // 30% chance for a narrative
         private const float PATH_SEGMENT_LENGTH = 10f; // Smaller value = more wiggles
         private const float PATH_MAX_OFFSET = 5f; // Max perpendicular deviation
         private const float SECONDARY_PATH_CHANCE = 0.4f; // Chance for a node to have a second outgoing path
-        private const float NODE_HORIZONTAL_VARIANCE_FACTOR = 0.8f; // Node can move within 80% of its "lane"
-        private const float NODE_VERTICAL_VARIANCE_PIXELS = 8f;
+        private const float NODE_HORIZONTAL_VARIANCE_FACTOR = 1.0f; // Node can move within 100% of its "lane"
+        private const float NODE_VERTICAL_VARIANCE_PIXELS = 24f;
+        private const float MAX_CONNECTION_DISTANCE = 120f; // Max distance for a path to be considered "close"
 
 
         public static SplitMap? Generate(SplitData splitData)
@@ -81,6 +81,7 @@ namespace ProjectVagabond.Progression
             var nodesByFloor = new List<SplitMapNode>[totalFloors];
             int previousFloorNodeCount = 0;
             float mapHorizontalOffset = (Global.VIRTUAL_WIDTH - MAP_WIDTH) / 2f;
+            const int nodeRadius = 8; // Half of the node's visual size (16x16)
 
             for (int floor = 0; floor < totalFloors; floor++)
             {
@@ -108,6 +109,9 @@ namespace ProjectVagabond.Progression
 
                 float y = mapHeight - VERTICAL_PADDING - (floor * FLOOR_HEIGHT);
 
+                float availableWidth = MAP_WIDTH - (HORIZONTAL_PADDING * 2);
+                float laneWidth = (numNodes > 0) ? availableWidth / numNodes : 0;
+
                 for (int i = 0; i < numNodes; i++)
                 {
                     float finalX;
@@ -119,20 +123,14 @@ namespace ProjectVagabond.Progression
                     }
                     else
                     {
-                        float spacing = (float)(MAP_WIDTH - HORIZONTAL_PADDING * 2) / (numNodes - 1);
-                        float baseX = HORIZONTAL_PADDING + (i * spacing);
+                        // Calculate the center of the node's "lane"
+                        float laneCenterX = HORIZONTAL_PADDING + (i * laneWidth) + (laneWidth / 2f);
 
-                        // The "lane" for a node is half the spacing to the left and half to the right.
-                        // We use a factor to prevent it from touching the edges of its lane.
-                        float maxOffset = (spacing / 2f) * NODE_HORIZONTAL_VARIANCE_FACTOR;
-                        float random_x_offset = ((float)_random.NextDouble() * 2f - 1f) * maxOffset;
+                        // The max offset is half the lane width, minus the node radius to prevent overlap.
+                        float maxOffset = (laneWidth / 2f - nodeRadius) * NODE_HORIZONTAL_VARIANCE_FACTOR;
+                        float randomXOffset = ((float)_random.NextDouble() * 2f - 1f) * maxOffset;
 
-                        float unclampedX = baseX + random_x_offset;
-
-                        // Clamp the position to stay within the padded area.
-                        float minX = HORIZONTAL_PADDING;
-                        float maxX = MAP_WIDTH - HORIZONTAL_PADDING;
-                        finalX = Math.Clamp(unclampedX, minX, maxX) + mapHorizontalOffset;
+                        finalX = laneCenterX + randomXOffset + mapHorizontalOffset;
                     }
 
                     nodesByFloor[floor].Add(new SplitMapNode(floor, new Vector2(finalX, finalY)));
@@ -154,15 +152,24 @@ namespace ProjectVagabond.Progression
                 // Pass 1: Ensure every lower node connects up to at least one upper node.
                 foreach (var lowerNode in lowerFloor)
                 {
-                    var weights = CalculateWeights(lowerNode, upperFloor);
-                    if (weights.Any())
+                    var closeNodes = upperFloor.Where(n => Vector2.Distance(n.Position, lowerNode.Position) <= MAX_CONNECTION_DISTANCE).ToList();
+
+                    SplitMapNode targetNode;
+                    if (closeNodes.Any())
                     {
-                        var targetNode = WeightedRandomSelect(weights);
-                        var path = new SplitMapPath(lowerNode.Id, targetNode.Id);
-                        paths.Add(path);
-                        lowerNode.OutgoingPathIds.Add(path.Id);
-                        targetNode.IncomingPathIds.Add(path.Id);
+                        var weights = CalculateWeights(lowerNode, closeNodes);
+                        targetNode = WeightedRandomSelect(weights);
                     }
+                    else
+                    {
+                        // Fallback: if no nodes are "close", connect to the absolute closest one.
+                        targetNode = upperFloor.OrderBy(n => Vector2.DistanceSquared(n.Position, lowerNode.Position)).First();
+                    }
+
+                    var path = new SplitMapPath(lowerNode.Id, targetNode.Id);
+                    paths.Add(path);
+                    lowerNode.OutgoingPathIds.Add(path.Id);
+                    targetNode.IncomingPathIds.Add(path.Id);
                 }
 
                 // Pass 2: Ensure every upper node is reachable.
@@ -171,7 +178,7 @@ namespace ProjectVagabond.Progression
                     if (!upperNode.IncomingPathIds.Any())
                     {
                         // Find the horizontally closest lower node and force a connection.
-                        var closestLower = lowerFloor.OrderBy(n => Math.Abs(n.Position.X - upperNode.Position.X)).First();
+                        var closestLower = lowerFloor.OrderBy(n => Vector2.DistanceSquared(n.Position, upperNode.Position)).First();
                         var path = new SplitMapPath(closestLower.Id, upperNode.Id);
                         paths.Add(path);
                         closestLower.OutgoingPathIds.Add(path.Id);
@@ -185,7 +192,9 @@ namespace ProjectVagabond.Progression
                     if (_random.NextDouble() < SECONDARY_PATH_CHANCE)
                     {
                         var connectedUpperNodeIds = lowerNode.OutgoingPathIds.Select(pId => paths.First(p => p.Id == pId).ToNodeId).ToHashSet();
-                        var availableTargets = upperFloor.Where(n => !connectedUpperNodeIds.Contains(n.Id)).ToList();
+                        var availableTargets = upperFloor
+                            .Where(n => !connectedUpperNodeIds.Contains(n.Id) && Vector2.Distance(n.Position, lowerNode.Position) <= MAX_CONNECTION_DISTANCE)
+                            .ToList();
 
                         if (availableTargets.Any())
                         {
