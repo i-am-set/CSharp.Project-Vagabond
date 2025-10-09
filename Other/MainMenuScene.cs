@@ -171,10 +171,6 @@ namespace ProjectVagabond.Scenes
                 button.ResetAnimationState();
             }
 
-            // Play a particle effect in the center of the screen to demonstrate the new system.
-            FXManager.Play("CreateMagicSwirl", new Vector2(Global.VIRTUAL_WIDTH / 2, Global.VIRTUAL_HEIGHT / 2));
-
-
             if (this.LastUsedInputForNav == InputDevice.Keyboard && !firstTimeOpened)
             {
                 _selectedButtonIndex = 0;
@@ -256,8 +252,8 @@ namespace ProjectVagabond.Scenes
 
             if (_currentInputDelay <= 0)
             {
-                bool upPressed = currentKeyboardState.IsKeyDown(Keys.Up) && !_previousKeyboardState.IsKeyDown(Keys.Up);
-                bool downPressed = currentKeyboardState.IsKeyDown(Keys.Down) && !_previousKeyboardState.IsKeyDown(Keys.Down);
+                bool upPressed = KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState);
+                bool downPressed = KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState);
 
                 if (upPressed || downPressed)
                 {
@@ -286,7 +282,7 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                if (currentKeyboardState.IsKeyDown(Keys.Enter) && !_previousKeyboardState.IsKeyDown(Keys.Enter))
+                if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
                 {
                     if (_selectedButtonIndex <= -1) _selectedButtonIndex = 0;
 
@@ -306,7 +302,7 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                if (currentKeyboardState.IsKeyDown(Keys.Escape))
+                if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
                 {
                     ConfirmExit();
                 }

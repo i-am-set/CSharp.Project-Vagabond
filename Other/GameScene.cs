@@ -199,5 +199,7 @@ namespace ProjectVagabond.Scenes
                 keyboardNavigatedLastFrame = true;
             }
         }
+
+        protected bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
     }
 }

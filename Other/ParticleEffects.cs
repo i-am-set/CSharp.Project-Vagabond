@@ -353,9 +353,9 @@ namespace ProjectVagabond.Particles
         }
 
         /// <summary>
-        /// A celebratory burst of particles for a good dice roll.
+        /// A puff of dark smoke for a bad dice roll.
         /// </summary>
-        public static ParticleEmitterSettings CreateGoodRollParticles()
+        public static ParticleEmitterSettings CreateBadRollParticles()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
@@ -364,19 +364,19 @@ namespace ProjectVagabond.Particles
             settings.EmissionRate = 0;
             settings.BurstCount = 100;
             settings.MaxParticles = 100;
-            settings.Duration = 1.2f;
+            settings.Duration = 2.2f;
 
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.6f, 1.0f);
-            settings.InitialVelocityX = new FloatRange(300f, 350f); // Speed
+            settings.InitialVelocityX = new FloatRange(70f, 150f); // Speed
             settings.InitialVelocityY = new FloatRange(0f); // Ignored
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 
-            settings.Gravity = new Vector2(0, 80f); // Add a bit of gravity for a nice arc
-            settings.Drag = 0.5f; // Low drag to let them fly far
-            settings.StartColor = Color.White;
+            settings.Gravity = new Vector2(0, 225f); // Add a bit of gravity for a nice arc
+            settings.Drag = 2.5f; // Sparks slow down
+            settings.StartColor = global.Palette_Red;
             settings.EndColor = global.Palette_Yellow;
             settings.StartAlpha = 1.0f;
             settings.EndAlpha = 0.0f;
@@ -425,9 +425,9 @@ namespace ProjectVagabond.Particles
         }
 
         /// <summary>
-        /// A puff of dark smoke for a bad dice roll.
+        /// A celebratory burst of particles for a good dice roll.
         /// </summary>
-        public static ParticleEmitterSettings CreateBadRollParticles()
+        public static ParticleEmitterSettings CreateGoodRollParticles()
         {
             var settings = ParticleEmitterSettings.CreateDefault();
             var global = ServiceLocator.Get<Global>();
@@ -447,7 +447,7 @@ namespace ProjectVagabond.Particles
 
             settings.Gravity = new Vector2(0, 20f); // Falls down
             settings.Drag = 1f;
-            settings.StartColor = global.Palette_Red;
+            settings.StartColor = global.Palette_LightGreen;
             settings.EndColor = global.Palette_DarkGray;
             settings.StartAlpha = 0.6f;
             settings.EndAlpha = 0.0f;
