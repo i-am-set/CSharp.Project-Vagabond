@@ -27,6 +27,10 @@ namespace ProjectVagabond.Progression
         private const float NODE_HORIZONTAL_VARIANCE_FACTOR = 1.0f; // Node can move within 100% of its "lane"
         private const float NODE_VERTICAL_VARIANCE_PIXELS = 24f;
         private const float MAX_CONNECTION_DISTANCE = 120f; // Max distance for a path to be considered "close"
+        private const float MERGE_CHANCE = 0.5f;
+        private const float MERGE_DISTANCE_THRESHOLD = 100f;
+        private const float PATH_SPLIT_POINT_MIN = 0.2f;
+        private const float PATH_SPLIT_POINT_MAX = 0.8f;
 
 
         public static SplitMap? Generate(SplitData splitData)
@@ -49,29 +53,8 @@ namespace ProjectVagabond.Progression
             if (startNodeId == -1) return null;
 
             // Generate render points and pixel points for each path
-            foreach (var path in paths)
-            {
-                var fromNode = allNodes.First(n => n.Id == path.FromNodeId);
-                var toNode = allNodes.First(n => n.Id == path.ToNodeId);
-                path.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, toNode.Position);
+            GeneratePathRenderPoints(paths, allNodes);
 
-                path.PixelPoints.Clear();
-                if (path.RenderPoints.Count < 2) continue;
-
-                for (int i = 0; i < path.RenderPoints.Count - 1; i++)
-                {
-                    var segmentPoints = SpriteBatchExtensions.GetBresenhamLinePoints(path.RenderPoints[i], path.RenderPoints[i + 1]);
-                    // Add all points from the first segment, then skip the first point of subsequent segments to avoid duplicates
-                    if (i == 0)
-                    {
-                        path.PixelPoints.AddRange(segmentPoints);
-                    }
-                    else if (segmentPoints.Count > 1)
-                    {
-                        path.PixelPoints.AddRange(segmentPoints.Skip(1));
-                    }
-                }
-            }
 
             return new SplitMap(allNodes, paths, totalFloors, startNodeId, mapHeight);
         }
@@ -245,6 +228,87 @@ namespace ProjectVagabond.Progression
             }
             return weights.Keys.Last(); // Fallback
         }
+
+        private static void GeneratePathRenderPoints(List<SplitMapPath> paths, List<SplitMapNode> allNodes)
+        {
+            var pathsByStartNode = paths.ToLookup(p => p.FromNodeId);
+            var processedPathIds = new HashSet<int>();
+
+            foreach (var group in pathsByStartNode)
+            {
+                var fromNode = allNodes.First(n => n.Id == group.Key);
+                var availablePaths = group.Where(p => !processedPathIds.Contains(p.Id)).ToList();
+
+                while (availablePaths.Count >= 2)
+                {
+                    var path1 = availablePaths[0];
+                    var toNode1 = allNodes.First(n => n.Id == path1.ToNodeId);
+
+                    // Find a suitable partner for path1 to merge with
+                    SplitMapPath? path2 = availablePaths
+                        .Skip(1)
+                        .Where(p2 => Vector2.Distance(toNode1.Position, allNodes.First(n => n.Id == p2.ToNodeId).Position) < MERGE_DISTANCE_THRESHOLD)
+                        .FirstOrDefault();
+
+                    if (path2 != null && _random.NextDouble() < MERGE_CHANCE)
+                    {
+                        var toNode2 = allNodes.First(n => n.Id == path2.ToNodeId);
+
+                        // Calculate split point
+                        var midPoint = Vector2.Lerp(toNode1.Position, toNode2.Position, 0.5f);
+                        float splitProgress = (float)_random.NextDouble() * (PATH_SPLIT_POINT_MAX - PATH_SPLIT_POINT_MIN) + PATH_SPLIT_POINT_MIN;
+                        var splitPoint = Vector2.Lerp(fromNode.Position, midPoint, splitProgress);
+
+                        // Generate trunk and branches
+                        var trunkPoints = GenerateWigglyPathPoints(fromNode.Position, splitPoint);
+                        var branch1Points = GenerateWigglyPathPoints(splitPoint, toNode1.Position);
+                        var branch2Points = GenerateWigglyPathPoints(splitPoint, toNode2.Position);
+
+                        // Assign points, skipping the first point of branches to avoid duplicates
+                        path1.RenderPoints = trunkPoints.Concat(branch1Points.Skip(1)).ToList();
+                        path2.RenderPoints = trunkPoints.Concat(branch2Points.Skip(1)).ToList();
+
+                        processedPathIds.Add(path1.Id);
+                        processedPathIds.Add(path2.Id);
+                        availablePaths.Remove(path1);
+                        availablePaths.Remove(path2);
+                    }
+                    else
+                    {
+                        // No merge found for path1, remove it from consideration for this group
+                        availablePaths.Remove(path1);
+                    }
+                }
+            }
+
+            // Generate points for any remaining unmerged paths
+            foreach (var path in paths)
+            {
+                if (!processedPathIds.Contains(path.Id))
+                {
+                    var fromNode = allNodes.First(n => n.Id == path.FromNodeId);
+                    var toNode = allNodes.First(n => n.Id == path.ToNodeId);
+                    path.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, toNode.Position);
+                }
+
+                // Generate pixel points for all paths (merged or not)
+                path.PixelPoints.Clear();
+                if (path.RenderPoints.Count < 2) continue;
+                for (int i = 0; i < path.RenderPoints.Count - 1; i++)
+                {
+                    var segmentPoints = SpriteBatchExtensions.GetBresenhamLinePoints(path.RenderPoints[i], path.RenderPoints[i + 1]);
+                    if (i == 0)
+                    {
+                        path.PixelPoints.AddRange(segmentPoints);
+                    }
+                    else if (segmentPoints.Count > 1)
+                    {
+                        path.PixelPoints.AddRange(segmentPoints.Skip(1));
+                    }
+                }
+            }
+        }
+
 
         private static List<Vector2> GenerateWigglyPathPoints(Vector2 start, Vector2 end)
         {

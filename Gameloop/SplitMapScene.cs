@@ -68,6 +68,9 @@ namespace ProjectVagabond.Scenes
         private EventState _eventState = EventState.Idle;
         private NarrativeChoice? _pendingChoiceForDiceRoll;
 
+        // Camera Tuning
+        private const float CAMERA_TOP_PADDING = 20f;
+
 
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
@@ -366,11 +369,36 @@ namespace ProjectVagabond.Scenes
             float mapHeight = _currentMap.MapHeight;
             float viewHeight = Global.VIRTUAL_HEIGHT;
 
-            // Target Y position for the player icon on screen (lower third)
-            float targetScreenY = viewHeight * 2 / 3f;
+            var currentNode = _currentMap.Nodes.GetValueOrDefault(_playerCurrentNodeId);
+            if (currentNode != null)
+            {
+                int nextFloor = currentNode.Floor + 1;
+                var allNextFloorNodes = _currentMap.Nodes.Values
+                    .Where(n => n.Floor == nextFloor)
+                    .ToList();
 
-            // Calculate the required camera offset to place the player at the target screen Y
-            _targetCameraYOffset = targetScreenY - playerPosition.Y;
+                if (allNextFloorNodes.Any())
+                {
+                    // Find the highest node (minimum Y value) among ALL nodes on the next floor.
+                    float highestNodeY = allNextFloorNodes.Min(n => n.Position.Y);
+
+                    // The target Y for the top of the screen is `highestNodeY - topPadding`.
+                    // The camera offset is the negative of this value.
+                    _targetCameraYOffset = -(highestNodeY - CAMERA_TOP_PADDING);
+                }
+                else
+                {
+                    // Fallback for the last node (boss) or any node with no outgoing paths.
+                    // Center the player in the lower third of the screen.
+                    float targetScreenY = viewHeight * 2 / 3f;
+                    _targetCameraYOffset = targetScreenY - playerPosition.Y;
+                }
+            }
+            else // Fallback if current node is somehow not found
+            {
+                float targetScreenY = viewHeight * 2 / 3f;
+                _targetCameraYOffset = targetScreenY - playerPosition.Y;
+            }
 
             // Clamp the camera offset so we don't see beyond the map's top or bottom
             float minOffset = viewHeight - mapHeight;
