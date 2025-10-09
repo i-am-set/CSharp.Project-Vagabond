@@ -3,6 +3,8 @@
     "AbilityID": "GreenThumb",
     "AbilityName": "Green Thumb",
     "Description": "Boosts Nature-type moves and grants the Nature defensive type.",
+    "Rarity": 1,
+    "LevelRequirement": 2,
     "Effects": {
       "AddDefensiveElement": "109",
       "DamageBonus": "13,20"
@@ -12,6 +14,8 @@
     "AbilityID": "Pyromancer",
     "AbilityName": "Pyromancer",
     "Description": "Increases the damage of all Fire spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "2,20"
     }
@@ -20,6 +24,8 @@
     "AbilityID": "Hydromancer",
     "AbilityName": "Hydromancer",
     "Description": "Increases the damage of all Water spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "3,20"
     }
@@ -28,6 +34,8 @@
     "AbilityID": "Thaumomancer",
     "AbilityName": "Thaumomancer",
     "Description": "Increases the damage of all Arcane spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "4,20"
     }
@@ -36,6 +44,8 @@
     "AbilityID": "Geomancer",
     "AbilityName": "Geomancer",
     "Description": "Increases the damage of all Earth spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "5,20"
     }
@@ -44,6 +54,8 @@
     "AbilityID": "Ferromancer",
     "AbilityName": "Ferromancer",
     "Description": "Increases the damage of all Metal spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "6,20"
     }
@@ -52,6 +64,8 @@
     "AbilityID": "Venommancer",
     "AbilityName": "Venommancer",
     "Description": "Increases the damage of all Toxic spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "7,20"
     }
@@ -60,6 +74,8 @@
     "AbilityID": "Aeromancer",
     "AbilityName": "Aeromancer",
     "Description": "Increases the damage of all Wind spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "8,20"
     }
@@ -68,6 +84,8 @@
     "AbilityID": "Umbramancer",
     "AbilityName": "Umbramancer",
     "Description": "Increases the damage of all Void spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "9,20"
     }
@@ -76,6 +94,8 @@
     "AbilityID": "Photomancer",
     "AbilityName": "Photomancer",
     "Description": "Increases the damage of all Light spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "10,20"
     }
@@ -84,6 +104,8 @@
     "AbilityID": "Electromancer",
     "AbilityName": "Electromancer",
     "Description": "Increases the damage of all Electric spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "11,20"
     }
@@ -92,6 +114,8 @@
     "AbilityID": "Cryomancer",
     "AbilityName": "Cryomancer",
     "Description": "Increases the damage of all Ice spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "12,20"
     }
@@ -100,6 +124,8 @@
     "AbilityID": "Floramancer",
     "AbilityName": "Floramancer",
     "Description": "Increases the damage of all Nature spells by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "DamageBonus": "13,20"
     }
@@ -108,6 +134,8 @@
     "AbilityID": "Venomous",
     "AbilityName": "Venomous",
     "Description": "Contact attacks have a 50% chance to inflict Poison for 4 turns.",
+    "Rarity": 1,
+    "LevelRequirement": 2,
     "Effects": {
       "ApplyStatusOnContact": "Poison,50,4"
     }
@@ -116,6 +144,8 @@
     "AbilityID": "ThickSkin",
     "AbilityName": "Thick Skin",
     "Description": "Reduces all incoming physical damage by 20%.",
+    "Rarity": 0,
+    "LevelRequirement": 0,
     "Effects": {
       "DamageReductionPhysical": "20"
     }
@@ -124,6 +154,8 @@
     "AbilityID": "Sniper",
     "AbilityName": "Sniper",
     "Description": "Increases critical hit chance by 10%.",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "CritChanceBonus": "10"
     }
@@ -132,6 +164,8 @@
     "AbilityID": "Regeneration",
     "AbilityName": "Regeneration",
     "Description": "Restores 5% of max HP at the end of each turn.",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "RegenEndOfTurn": "5"
     }
@@ -140,6 +174,8 @@
     "AbilityID": "Opportunist",
     "AbilityName": "Opportunist",
     "Description": "Deal 2x more damage to targets already afflicted with a status effect.",
+    "Rarity": 2,
+    "LevelRequirement": 4,
     "Effects": {
       "DamageBonusVsStatused": "100"
     }
@@ -148,6 +184,8 @@
     "AbilityID": "StaticCharge",
     "AbilityName": "Static Charge",
     "Description": "When the holder is hit by a contact move, there is a 30% chance the attacker becomes Stunned for 1 turn.",
+    "Rarity": 1,
+    "LevelRequirement": 2,
     "Effects": {
       "ApplyStatusOnBeingHitContact": "Stun,30,1"
     }
@@ -156,6 +194,8 @@
     "AbilityID": "AdrenalineRush",
     "AbilityName": "Adrenaline Rush",
     "Description": "Increases all damage dealt by 50% when the holder's HP is below 33%.",
+    "Rarity": 2,
+    "LevelRequirement": 4,
     "Effects": {
       "DamageBonusLowHP": "33,50"
     }
@@ -164,6 +204,8 @@
     "AbilityID": "Photosynthesis",
     "AbilityName": "Photosynthesis",
     "Description": "Grants immunity to the light element and restores 25% of max HP when hit by a move of that element.",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "ElementImmunityAndHeal": "10,25"
     }
@@ -172,6 +214,8 @@
     "AbilityID": "LastStand",
     "AbilityName": "Last Stand",
     "Description": "If the holder acts last in a round, their move's power is increased by 30%.",
+    "Rarity": 1,
+    "LevelRequirement": 2,
     "Effects": {
       "PowerBonusLastAct": "30"
     }
@@ -180,6 +224,8 @@
     "AbilityID": "LingeringCurse",
     "AbilityName": "Lingering Curse",
     "Description": "All non-damaging status effects (e.g., Stun, Blind) applied by the holder last one additional turn.",
+    "Rarity": 2,
+    "LevelRequirement": 4,
     "Effects": {
       "StatusDurationBonus": "1"
     }
@@ -188,6 +234,8 @@
     "AbilityID": "Grounding",
     "AbilityName": "Grounding",
     "Description": "Grants immunity to the Electric element.",
+    "Rarity": 1,
+    "LevelRequirement": 2,
     "Effects": {
       "ElementImmunity": "11"
     }
@@ -196,6 +244,8 @@
     "AbilityID": "ToxicAura",
     "AbilityName": "Toxic Aura",
     "Description": "At the end of each turn, has a 30% chance to inflict Poison on a random enemy for 2 turns.",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "AuraApplyStatusEndOfTurn": "Poison,30,2"
     }
@@ -204,6 +254,8 @@
     "AbilityID": "Unwavering",
     "AbilityName": "Unwavering",
     "Description": "Grants immunity to Stun and Fear status effects.",
+    "Rarity": 1,
+    "LevelRequirement": 2,
     "Effects": {
       "StatusImmunity": "Stun,Fear"
     }
@@ -212,6 +264,8 @@
     "AbilityID": "Bulwark",
     "AbilityName": "Bulwark",
     "Description": "Reduces incoming damage from critical hits by 30%.",
+    "Rarity": 1,
+    "LevelRequirement": 3,
     "Effects": {
       "CritDamageReduction": "30"
     }
@@ -220,6 +274,8 @@
     "AbilityID": "FirstBlood",
     "AbilityName": "First Blood",
     "Description": "The holder's first attack in a battle deals 50% more damage.",
+    "Rarity": 2,
+    "LevelRequirement": 1,
     "Effects": {
       "FirstAttackBonus": "50"
     }
@@ -228,6 +284,8 @@
     "AbilityID": "Intimidate",
     "AbilityName": "Intimidate",
     "Description": "Upon entering battle, lowers the Strength of all opponents for 3 turns.",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "IntimidateOnEnter": "3"
     }
@@ -236,6 +294,8 @@
     "AbilityID": "IronBarbs",
     "AbilityName": "Iron Barbs",
     "Description": "When hit by a contact move, the attacker takes damage equal to 1/8th of their maximum HP.",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "IronBarbsOnContact": "12.5"
     }
@@ -244,6 +304,8 @@
     "AbilityID": "FullPower",
     "AbilityName": "Full Power",
     "Description": "While the holder is at 100% HP, their moves deal 30% more damage.",
+    "Rarity": 1,
+    "LevelRequirement": 2,
     "Effects": {
       "DamageBonusFullHP": "30"
     }
@@ -252,6 +314,8 @@
     "AbilityID": "KeenEye",
     "AbilityName": "Keen Eye",
     "Description": "The holder's moves ignore the target's Dodging status effect.",
+    "Rarity": 1,
+    "LevelRequirement": 1,
     "Effects": {
       "IgnoreDodging": "true"
     }
@@ -260,6 +324,8 @@
     "AbilityID": "NimbleFeet",
     "AbilityName": "Nimble Feet",
     "Description": "When dodging, hits against you have a 50% chance of missing fully.",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "DodgeMissChance": "50"
     }
@@ -268,6 +334,8 @@
     "AbilityID": "GlassCannon",
     "AbilityName": "Glass Cannon",
     "Description": "Increases all damage dealt by 30%, but also increases all damage taken by 15%",
+    "Rarity": 2,
+    "LevelRequirement": 4,
     "Effects": {
       "GlassCannon": "30,15"
     }
@@ -276,6 +344,8 @@
     "AbilityID": "ChainReaction",
     "AbilityName": "Chain Reaction",
     "Description": "For multi-hit moves, each subsequent hit deals 5% more damage than the last",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "ChainReaction": "5"
     }
@@ -284,6 +354,8 @@
     "AbilityID": "RecklessAbandon",
     "AbilityName": "Reckless Abandon",
     "Description": "Increases the power of all contact moves by 30%, but lowers their accuracy by 10%",
+    "Rarity": 1,
+    "LevelRequirement": 2,
     "Effects": {
       "RecklessAbandon": "30,-10"
     }
@@ -292,6 +364,8 @@
     "AbilityID": "ArmorPiercer",
     "AbilityName": "Armor Piercer",
     "Description": "The holder's attacks ignore 25% of the target's Tenacity when calculating damage.",
+    "Rarity": 2,
+    "LevelRequirement": 4,
     "Effects": {
       "ArmorPiercer": "25"
     }
@@ -300,6 +374,8 @@
     "AbilityID": "SanguineThirst",
     "AbilityName": "Sanguine Thirst",
     "Description": "The holder heals for 10% of the damage they deal with contact moves.",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "SanguineThirst": "10"
     }
@@ -308,6 +384,8 @@
     "AbilityID": "Vigor",
     "AbilityName": "Vigor",
     "Description": "While the holder is above 75% HP, they take 20% less damage from all sources.",
+    "Rarity": 0,
+    "LevelRequirement": 0,
     "Effects": {
       "Vigor": "75,20"
     }
@@ -316,6 +394,8 @@
     "AbilityID": "CorneredAnimal",
     "AbilityName": "Cornered Animal",
     "Description": "The holder's Agility is increased by 50% when their HP is below 33% or there's 4+ living enemy combatants",
+    "Rarity": 1,
+    "LevelRequirement": 2,
     "Effects": {
       "CorneredAnimal": "33,4,50"
     }
@@ -324,6 +404,8 @@
     "AbilityID": "Contagion",
     "AbilityName": "Contagion",
     "Description": "When the holder inflicts any status effect on a target, there is a 100% chance for that effect to also apply to one other random enemy for 1 turn.",
+    "Rarity": 3,
+    "LevelRequirement": 5,
     "Effects": {
       "Contagion": "100,1"
     }
@@ -332,6 +414,8 @@
     "AbilityID": "AmbushPredator",
     "AbilityName": "Ambush Predator",
     "Description": "The holder's first move in a battle has its priority increased by 1, but its power is reduced by 20%.",
+    "Rarity": 1,
+    "LevelRequirement": 2,
     "Effects": {
       "AmbushPredator": "1,-20"
     }
@@ -340,6 +424,8 @@
     "AbilityID": "Sadist",
     "AbilityName": "Sadist",
     "Description": "Whenever the holder successfully applies a negative status effect to a target, the holder gets strength up for 2 turns.",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "Sadist": "2"
     }
@@ -348,6 +434,8 @@
     "AbilityID": "Bloodletter",
     "AbilityName": "Bloodletter",
     "Description": "The holder's void spells cost 5% of their maximum HP to cast, but their void spell's damage is increased by 30%.",
+    "Rarity": 3,
+    "LevelRequirement": 5,
     "Effects": {
       "Bloodletter": "5,30"
     }
@@ -356,6 +444,8 @@
     "AbilityID": "Spellweaver",
     "AbilityName": "Spellweaver",
     "Description": "After using a non-magical Action, the holder's next Spell deals 30% more damage.",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "Spellweaver": "30"
     }
@@ -364,6 +454,8 @@
     "AbilityID": "Momentum",
     "AbilityName": "Momentum",
     "Description": "If the holder defeats a target, their next attack in the battle deals 50% more damage.",
+    "Rarity": 3,
+    "LevelRequirement": 4,
     "Effects": {
       "Momentum": "50"
     }
@@ -372,6 +464,8 @@
     "AbilityID": "Escalation",
     "AbilityName": "Escalation",
     "Description": "At the start of each round, the holder gains a 5% damage boost for the rest of the battle (stacks up to 10 times for a total of 50%).",
+    "Rarity": 3,
+    "LevelRequirement": 5,
     "Effects": {
       "Escalation": "5,10"
     }
@@ -380,6 +474,8 @@
     "AbilityID": "PainFuel",
     "AbilityName": "Pain Fuel",
     "Description": "The holder channels agony into power. When hit by a critical hit, the holder gains the Strength Up and Intelligence up status effect for 2 turns.",
+    "Rarity": 2,
+    "LevelRequirement": 3,
     "Effects": {
       "PainFuel": "2"
     }
@@ -388,6 +484,8 @@
     "AbilityID": "CausticBlood",
     "AbilityName": "Caustic Blood",
     "Description": "When an opponent uses a Lifesteal effect on the holder, the opponent takes damage equal to the amount they would have healed.",
+    "Rarity": 2,
+    "LevelRequirement": 4,
     "Effects": {
       "CausticBlood": "true"
     }

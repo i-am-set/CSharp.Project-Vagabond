@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -80,7 +81,7 @@ namespace ProjectVagabond.UI
             _cardType = ChoiceType.Ability;
             Title = ability.AbilityName.ToUpper();
             Description = ability.Description.ToUpper();
-            _rarity = 0; // Abilities can be considered "Common" for now
+            _rarity = ability.Rarity;
             _rarityText = GetRarityString(_rarity);
             _elementId = 0;
             _subTextLines.Add("PASSIVE ABILITY");
@@ -340,7 +341,16 @@ namespace ProjectVagabond.UI
 
             // Determine colors based on state and data
             Color rarityColor = _global.RarityColors.GetValueOrDefault(_rarity, _global.Palette_Gray);
-            Color titleColor = _global.ElementColors.GetValueOrDefault(_elementId, _global.Palette_BrightWhite);
+            Color titleColor;
+            if (_cardType == ChoiceType.Spell)
+            {
+                titleColor = _global.ElementColors.GetValueOrDefault(_elementId, _global.Palette_BrightWhite);
+            }
+            else
+            {
+                titleColor = _global.Palette_BrightWhite; // Neutral color for non-spells
+            }
+
             Color accentColor = _global.Palette_White;
             Color baseBorderColor = _cardType == ChoiceType.Spell ? titleColor : rarityColor;
 
@@ -486,13 +496,20 @@ namespace ProjectVagabond.UI
                 float descriptionStartY = drawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
 
                 // Draw Element Icon for Spells, positioned a fixed distance above the description start line.
+                const int iconSize = 9;
+                const int iconDescGap = 4;
+                var iconPos = new Vector2(drawBounds.Center.X - iconSize / 2f, descriptionStartY - iconDescGap - iconSize + 4);
+
                 if (_cardType == ChoiceType.Spell && spriteManager.ElementIconSourceRects.TryGetValue(_elementId, out var iconRect))
                 {
-                    const int iconSize = 9;
-                    const int iconDescGap = 4;
-                    var iconPos = new Vector2(drawBounds.Center.X - iconSize / 2f, descriptionStartY - iconDescGap - iconSize + 4);
                     spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White * alpha);
                 }
+                else if (_cardType == ChoiceType.Ability)
+                {
+                    var iconBounds = new Rectangle((int)iconPos.X, (int)iconPos.Y, iconSize, iconSize);
+                    spriteBatch.DrawSnapped(pixel, iconBounds, Color.White * alpha);
+                }
+
 
                 currentY = descriptionStartY;
 

@@ -106,5 +106,78 @@ namespace ProjectVagabond.Utils
 
             return chosenSpells.ToList();
         }
+
+        /// <summary>
+        /// Generates a list of ability choices for the player.
+        /// </summary>
+        /// <param name="gameStage">The current progression tier of the game. Abilities with a LevelRequirement greater than this will be excluded.</param>
+        /// <param name="count">The number of ability choices to generate.</param>
+        /// <returns>A list of AbilityData objects representing the choices.</returns>
+        public List<AbilityData> GenerateAbilityChoices(int gameStage, int count)
+        {
+            var chosenAbilities = new HashSet<AbilityData>();
+
+            var availableAbilities = BattleDataCache.Abilities.Values
+                .Where(a => a.LevelRequirement <= gameStage)
+                .ToList();
+
+            if (!availableAbilities.Any())
+            {
+                return new List<AbilityData>();
+            }
+
+            var abilitiesByRarity = availableAbilities
+                .GroupBy(a => a.Rarity)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            var availableRarityWeights = _rarityWeights
+                .Where(kvp => abilitiesByRarity.ContainsKey(kvp.Key) && abilitiesByRarity[kvp.Key].Any())
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+
+            if (!availableRarityWeights.Any())
+            {
+                return new List<AbilityData>();
+            }
+
+            while (chosenAbilities.Count < count && chosenAbilities.Count < availableAbilities.Count)
+            {
+                int totalWeight = availableRarityWeights.Values.Sum();
+                int randomWeight = _random.Next(0, totalWeight);
+
+                int chosenRarity = -1;
+                foreach (var (rarity, weight) in availableRarityWeights.OrderBy(kvp => kvp.Key))
+                {
+                    if (randomWeight < weight)
+                    {
+                        chosenRarity = rarity;
+                        break;
+                    }
+                    randomWeight -= weight;
+                }
+
+                if (chosenRarity != -1 && abilitiesByRarity.TryGetValue(chosenRarity, out var potentialAbilities))
+                {
+                    var availableInRarity = potentialAbilities.Except(chosenAbilities).ToList();
+                    if (availableInRarity.Any())
+                    {
+                        var ability = availableInRarity[_random.Next(availableInRarity.Count)];
+                        chosenAbilities.Add(ability);
+                    }
+                }
+            }
+
+            if (chosenAbilities.Count == count && chosenAbilities.Select(a => a.Rarity).Distinct().Count() == 1)
+            {
+                var otherAbilities = availableAbilities.Except(chosenAbilities).ToList();
+                if (otherAbilities.Any())
+                {
+                    var abilityToReplace = chosenAbilities.First();
+                    chosenAbilities.Remove(abilityToReplace);
+                    chosenAbilities.Add(otherAbilities[_random.Next(otherAbilities.Count)]);
+                }
+            }
+
+            return chosenAbilities.ToList();
+        }
     }
 }

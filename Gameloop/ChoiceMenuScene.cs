@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -82,11 +83,24 @@ namespace ProjectVagabond.Scenes
             _rarityStaggerTimer = 0f;
             _currentPhase = AnimationPhase.CardIntro;
 
-            // Use the ChoiceGenerator to get a curated list of choices
             // For now, we'll assume GameStage is 1 for testing purposes.
             // In the final implementation, this value will come from the game's progression manager.
-            int currentGameStage = 1; // << This should be passed in or retrieved from a ProgressionManager
-            var selectedChoices = _choiceGenerator.GenerateSpellChoices(currentGameStage, count).Cast<object>().ToList();
+            int currentGameStage = 1;
+            List<object> selectedChoices = new List<object>();
+
+            switch (type)
+            {
+                case ChoiceType.Spell:
+                    selectedChoices = _choiceGenerator.GenerateSpellChoices(currentGameStage, count).Cast<object>().ToList();
+                    break;
+                case ChoiceType.Ability:
+                    selectedChoices = _choiceGenerator.GenerateAbilityChoices(currentGameStage, count).Cast<object>().ToList();
+                    break;
+                case ChoiceType.Item:
+                    // Placeholder for item generation
+                    break;
+            }
+
 
             // Layout calculation for vertical pillars
             const int cardWidth = 95;
