@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -330,14 +331,41 @@ namespace ProjectVagabond.Dice
                 _currentGroupSum += item.value;
 
                 var group = _currentGroupsForDisplay.First(g => g.GroupId == item.die.GroupId);
+
+                var renderer = ServiceLocator.Get<DiceSceneRenderer>();
+                var dieWorldPos = _currentlyEnumeratingDie.World.Translation;
+                var viewport = new Viewport(renderTarget.Bounds);
+                var dieScreenPos = viewport.Project(dieWorldPos, renderer.Projection, renderer.View, Matrix.Identity);
+                var dieScreenPos2D = new Vector2(dieScreenPos.X, dieScreenPos.Y);
+
+                // --- Trigger Particle Effect based on Roll Quality ---
+                bool isNarrativeRoll = _currentlyEnumeratingDie.GroupId == "narrative_check" && _currentlyEnumeratingDie.DieType == DieType.D6;
+                string effectToPlay;
+
+                if (isNarrativeRoll)
+                {
+                    if (_currentlyEnumeratingDieValue >= 5) // Good
+                    {
+                        effectToPlay = "CreateGoodRollParticles";
+                    }
+                    else if (_currentlyEnumeratingDieValue <= 2) // Bad
+                    {
+                        effectToPlay = "CreateBadRollParticles";
+                    }
+                    else // Neutral
+                    {
+                        effectToPlay = "CreateNeutralRollParticles";
+                    }
+                }
+                else // Default for non-narrative rolls
+                {
+                    effectToPlay = "CreateNeutralRollParticles";
+                }
+
+                FXManager.Play(effectToPlay, dieScreenPos2D);
+
                 if (group.ShowResultText)
                 {
-                    var renderer = ServiceLocator.Get<DiceSceneRenderer>();
-                    var dieWorldPos = _currentlyEnumeratingDie.World.Translation;
-                    var viewport = new Viewport(renderTarget.Bounds);
-                    var dieScreenPos = viewport.Project(dieWorldPos, renderer.Projection, renderer.View, Matrix.Identity);
-                    var dieScreenPos2D = new Vector2(dieScreenPos.X, dieScreenPos.Y);
-
                     bool shouldAnimateSum = _currentGroupsForDisplay.Any(g => g.AnimateSum);
                     float lifetime = shouldAnimateSum ? _global.DiceGatheringDuration : 1.5f;
 

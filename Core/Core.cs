@@ -499,6 +499,7 @@ namespace ProjectVagabond
             {
                 // Run a single, fixed-step physics update for any relevant systems.
                 _diceRollingSystem.PhysicsStep(Global.FIXED_PHYSICS_TIMESTEP);
+                _particleSystemManager.Update(Global.FIXED_PHYSICS_TIMESTEP);
 
                 _physicsTimeAccumulator -= Global.FIXED_PHYSICS_TIMESTEP;
             }
@@ -528,7 +529,6 @@ namespace ProjectVagabond
 
             // --- Frame-Rate Dependent Updates ---
             _sceneManager.Update(gameTime);
-            _particleSystemManager.Update(gameTime);
             _diceRollingSystem.Update(gameTime); // Update dice visuals and game logic every frame.
             _animationManager.Update(gameTime);
 

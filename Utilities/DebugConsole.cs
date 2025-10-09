@@ -34,6 +34,11 @@ namespace ProjectVagabond.Utils
         private KeyboardState _previousKeyboardState;
         private MouseState _previousMouseState;
 
+        // Backspace repeat handling
+        private float _backspaceTimer = 0f;
+        private const float BACKSPACE_INITIAL_DELAY = 0.4f;
+        private const float BACKSPACE_REPEAT_DELAY = 0.05f;
+
         public DebugConsole()
         {
             _gameState = ServiceLocator.Get<GameState>();
@@ -86,13 +91,13 @@ namespace ProjectVagabond.Utils
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
 
-            if (currentKeyboardState.IsKeyDown(Keys.Escape) && !_previousKeyboardState.IsKeyDown(Keys.Escape))
+            if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
             {
                 Hide();
                 return;
             }
 
-            HandleTextInput(currentKeyboardState);
+            HandleTextInput(currentKeyboardState, gameTime);
             HandleScrolling(currentMouseState);
 
             _previousKeyboardState = currentKeyboardState;
@@ -109,89 +114,155 @@ namespace ProjectVagabond.Utils
             }
         }
 
-        private void HandleTextInput(KeyboardState currentKeyboardState)
+        private void HandleTextInput(KeyboardState currentKeyboardState, GameTime gameTime)
         {
+            // Handle character typing
             foreach (Keys key in currentKeyboardState.GetPressedKeys())
             {
-                if (!_previousKeyboardState.IsKeyDown(key))
+                if (KeyPressed(key, currentKeyboardState, _previousKeyboardState))
                 {
-                    if (key == Keys.Enter)
+                    char? character = GetCharFromKey(key, currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift));
+                    if (character.HasValue)
                     {
-                        if (!string.IsNullOrWhiteSpace(_currentInput))
-                        {
-                            var commandLine = ParseColoredText($"> {_currentInput}", _global.Palette_BrightWhite);
-                            _history.Add(commandLine);
-
-                            if (!_commandHistory.Any() || _commandHistory.Last() != _currentInput)
-                            {
-                                _commandHistory.Add(_currentInput);
-                            }
-
-                            _commandProcessor.ProcessCommand(_currentInput);
-                            _currentInput = "";
-                            _scrollOffset = 0;
-                            _commandHistoryIndex = -1;
-                            _currentEditingCommand = "";
-                            _autoCompleteManager.HideSuggestions();
-                        }
-                    }
-                    else if (key == Keys.Tab)
-                    {
-                        if (_autoCompleteManager.ShowingAutoCompleteSuggestions && _autoCompleteManager.SelectedAutoCompleteSuggestionIndex != -1)
-                        {
-                            _currentInput = _autoCompleteManager.AutoCompleteSuggestions[_autoCompleteManager.SelectedAutoCompleteSuggestionIndex];
-                            _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
-                        }
-                    }
-                    else if (key == Keys.Up)
-                    {
-                        if (_autoCompleteManager.ShowingAutoCompleteSuggestions)
-                        {
-                            _autoCompleteManager.CycleSelection(-1);
-                        }
-                        else
-                        {
-                            NavigateCommandHistory(1);
-                        }
-                    }
-                    else if (key == Keys.Down)
-                    {
-                        if (_autoCompleteManager.ShowingAutoCompleteSuggestions)
-                        {
-                            _autoCompleteManager.CycleSelection(1);
-                        }
-                        else
-                        {
-                            NavigateCommandHistory(-1);
-                        }
-                    }
-                    else if (key == Keys.Back)
-                    {
-                        if (_currentInput.Length > 0)
-                        {
-                            _currentInput = _currentInput.Substring(0, _currentInput.Length - 1);
-                            _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
-                        }
-                    }
-                    else if (key == Keys.PageUp)
-                    {
-                        _scrollOffset = Math.Min(_scrollOffset + 5, _history.Count - 1);
-                    }
-                    else if (key == Keys.PageDown)
-                    {
-                        _scrollOffset = Math.Max(0, _scrollOffset - 5);
-                    }
-                    else
-                    {
-                        char? character = GetCharFromKey(key, currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift));
-                        if (character.HasValue)
-                        {
-                            _currentInput += character.Value;
-                            _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
-                        }
+                        _currentInput += character.Value;
+                        _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
                     }
                 }
             }
+
+            // Handle control keys (single press)
+            if (KeyPressed(Keys.Enter, currentKeyboardState, _previousKeyboardState))
+            {
+                if (!string.IsNullOrWhiteSpace(_currentInput))
+                {
+                    var commandLine = ParseColoredText($"> {_currentInput}", _global.Palette_BrightWhite);
+                    _history.Add(commandLine);
+
+                    if (!_commandHistory.Any() || _commandHistory.Last() != _currentInput)
+                    {
+                        _commandHistory.Add(_currentInput);
+                    }
+
+                    _commandProcessor.ProcessCommand(_currentInput);
+                    _currentInput = "";
+                    _scrollOffset = 0;
+                    _commandHistoryIndex = -1;
+                    _currentEditingCommand = "";
+                    _autoCompleteManager.HideSuggestions();
+                }
+            }
+            else if (KeyPressed(Keys.Tab, currentKeyboardState, _previousKeyboardState))
+            {
+                if (_autoCompleteManager.ShowingAutoCompleteSuggestions && _autoCompleteManager.SelectedAutoCompleteSuggestionIndex != -1)
+                {
+                    _currentInput = _autoCompleteManager.AutoCompleteSuggestions[_autoCompleteManager.SelectedAutoCompleteSuggestionIndex];
+                    _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
+                }
+            }
+            else if (KeyPressed(Keys.Up, currentKeyboardState, _previousKeyboardState))
+            {
+                if (_autoCompleteManager.ShowingAutoCompleteSuggestions)
+                {
+                    _autoCompleteManager.CycleSelection(-1);
+                }
+                else
+                {
+                    NavigateCommandHistory(1);
+                }
+            }
+            else if (KeyPressed(Keys.Down, currentKeyboardState, _previousKeyboardState))
+            {
+                if (_autoCompleteManager.ShowingAutoCompleteSuggestions)
+                {
+                    _autoCompleteManager.CycleSelection(1);
+                }
+                else
+                {
+                    NavigateCommandHistory(-1);
+                }
+            }
+            else if (KeyPressed(Keys.PageUp, currentKeyboardState, _previousKeyboardState))
+            {
+                _scrollOffset = Math.Min(_scrollOffset + 5, _history.Count - 1);
+            }
+            else if (KeyPressed(Keys.PageDown, currentKeyboardState, _previousKeyboardState))
+            {
+                _scrollOffset = Math.Max(0, _scrollOffset - 5);
+            }
+
+            // Handle Backspace (press, hold, and ctrl+backspace)
+            HandleBackspace(currentKeyboardState, (float)gameTime.ElapsedGameTime.TotalSeconds);
+        }
+
+        private void HandleBackspace(KeyboardState currentKeyboardState, float deltaTime)
+        {
+            if (currentKeyboardState.IsKeyDown(Keys.Back))
+            {
+                bool ctrlDown = currentKeyboardState.IsKeyDown(Keys.LeftControl) || currentKeyboardState.IsKeyDown(Keys.RightControl);
+
+                if (ctrlDown && KeyPressed(Keys.Back, currentKeyboardState, _previousKeyboardState))
+                {
+                    DeleteWord();
+                    _backspaceTimer = BACKSPACE_INITIAL_DELAY; // Prevent rapid-fire word deletion
+                }
+                else if (!ctrlDown)
+                {
+                    _backspaceTimer -= deltaTime;
+                    if (_backspaceTimer <= 0f)
+                    {
+                        DeleteChar();
+                        _backspaceTimer = KeyPressed(Keys.Back, currentKeyboardState, _previousKeyboardState)
+                            ? BACKSPACE_INITIAL_DELAY
+                            : BACKSPACE_REPEAT_DELAY;
+                    }
+                }
+            }
+            else
+            {
+                _backspaceTimer = 0f;
+            }
+        }
+
+        private void DeleteChar()
+        {
+            if (_currentInput.Length > 0)
+            {
+                _currentInput = _currentInput.Substring(0, _currentInput.Length - 1);
+                _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
+            }
+        }
+
+        private void DeleteWord()
+        {
+            if (string.IsNullOrEmpty(_currentInput)) return;
+
+            // Trim trailing spaces first, so we delete the word, not the spaces
+            int trimEndIndex = _currentInput.Length - 1;
+            while (trimEndIndex >= 0 && char.IsWhiteSpace(_currentInput[trimEndIndex]))
+            {
+                trimEndIndex--;
+            }
+            if (trimEndIndex < 0) // String was all whitespace
+            {
+                _currentInput = "";
+                _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
+                return;
+            }
+
+            // Find the start of the last word (the first space before it)
+            int lastSpace = _currentInput.LastIndexOf(' ', trimEndIndex);
+
+            if (lastSpace != -1)
+            {
+                // Keep everything up to and including the last space
+                _currentInput = _currentInput.Substring(0, lastSpace + 1);
+            }
+            else
+            {
+                // No spaces found, so it's a single word
+                _currentInput = "";
+            }
+            _autoCompleteManager.UpdateAutoCompleteSuggestions(_currentInput);
         }
 
         private void NavigateCommandHistory(int direction)
@@ -424,6 +495,8 @@ namespace ProjectVagabond.Utils
 
             return _global.Palette_BrightWhite;
         }
+
+        private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
 
         private char? GetCharFromKey(Keys key, bool shift)
         {

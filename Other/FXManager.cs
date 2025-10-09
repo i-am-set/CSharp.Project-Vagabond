@@ -20,7 +20,8 @@ namespace ProjectVagabond.Utils
         /// </summary>
         /// <param name="effectName">The name of the effect to play, corresponding to a method in ParticleEffects.</param>
         /// <param name="position">The world-space position to spawn the effect.</param>
-        public static void Play(string effectName, Vector2 position)
+        /// <param name="durationOverride">Optional. If provided, overrides the duration of the effect, making even continuous effects temporary.</param>
+        public static void Play(string effectName, Vector2 position, float? durationOverride = null)
         {
             _particleSystemManager ??= ServiceLocator.Get<ParticleSystemManager>();
 
@@ -37,6 +38,12 @@ namespace ProjectVagabond.Utils
 
             foreach (var settings in settingsList)
             {
+                // If an override is provided, apply it to the settings before creating the emitter.
+                if (durationOverride.HasValue)
+                {
+                    settings.Duration = durationOverride.Value;
+                }
+
                 var emitter = _particleSystemManager.CreateEmitter(settings);
                 emitter.Position = position;
 

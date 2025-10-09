@@ -221,21 +221,41 @@ namespace ProjectVagabond
                 }
             }, "debug_colorpalette - Displays a list of all available XNA colors.");
 
-            _commands["debug_randomparticle"] = new Command("debug_randomparticle", (args) =>
-            {
-                var effectNames = ParticleEffectRegistry.GetEffectNames();
-                if (effectNames.Any())
+            _commands["debug_particle"] = new Command(
+                "debug_particle",
+                (args) =>
                 {
-                    var random = new Random();
-                    string randomEffect = effectNames[random.Next(effectNames.Count)];
-                    FXManager.Play(randomEffect, new Vector2(Global.VIRTUAL_WIDTH / 2, Global.VIRTUAL_HEIGHT / 2));
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Played particle effect: {randomEffect}" });
-                }
-                else
+                    if (args.Length < 2)
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: debug_particle <EffectName>" });
+                        return;
+                    }
+                    string effectName = args[1];
+                    var effectNames = ParticleEffectRegistry.GetEffectNames();
+
+                    // Case-insensitive check if the effect exists
+                    if (effectNames.Any(name => name.Equals(effectName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        FXManager.Play(effectName, new Vector2(Global.VIRTUAL_WIDTH / 2, Global.VIRTUAL_HEIGHT / 2), 3.0f);
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Played particle effect: {effectName}" });
+                    }
+                    else
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Particle effect '{effectName}' not found." });
+                    }
+                },
+                "debug_particle <EffectName> - Emits a specific particle effect.",
+                (typedArgs) =>
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]No particle effects found in registry." });
+                    // We suggest arguments when the user is typing the first argument (typedArgs.Length == 0)
+                    if (typedArgs.Length == 0)
+                    {
+                        return ParticleEffectRegistry.GetEffectNames();
+                    }
+                    // No suggestions for subsequent arguments
+                    return new List<string>();
                 }
-            }, "debug_randomparticle - Emits a random particle effect in the center of the screen.");
+            );
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- // 

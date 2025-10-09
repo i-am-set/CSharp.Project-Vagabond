@@ -65,11 +65,10 @@ namespace ProjectVagabond.Particles
             settings.Duration = 0.3f; // Auto-destroy after particles fade
 
             // Initial Particle
+            settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.1f, 0.25f); // Slightly longer lifetime for visible trails
-            // Velocity is set manually in the handler for a radial burst.
-            // We set a speed range here that the handler can use.
-            settings.InitialVelocityX = new FloatRange(250f, 400f); // Represents higher speed
-            settings.InitialVelocityY = new FloatRange(0f);
+            settings.InitialVelocityX = new FloatRange(250f, 400f); // Represents speed
+            settings.InitialVelocityY = new FloatRange(0f); // Ignored
             settings.InitialSize = new FloatRange(1f, 2f); // This will now be the trail's thickness
             settings.InitialRotation = new FloatRange(0f);
             settings.InitialRotationSpeed = new FloatRange(0f);
@@ -109,9 +108,10 @@ namespace ProjectVagabond.Particles
             settings.Duration = 1.1f; // Auto-destroy after particles fade
 
             // Initial Particle
+            settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.5f, 1.0f);
-            settings.InitialVelocityX = new FloatRange(-50f, 50f); // Symmetrical radial explosion
-            settings.InitialVelocityY = new FloatRange(-50f, 50f); // Symmetrical radial explosion
+            settings.InitialVelocityX = new FloatRange(0f, 50f); // Speed
+            settings.InitialVelocityY = new FloatRange(0f); // Ignored
             settings.InitialSize = new FloatRange(0.1f, 2f);
             settings.EndSize = new FloatRange(5f, 8f);
             settings.InterpolateSize = true;
@@ -194,10 +194,10 @@ namespace ProjectVagabond.Particles
             settings.Duration = 0.5f; // Auto-destroy after particles fade
 
             // Initial Particle
+            settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.2f, 0.4f);
-            // Velocity is set manually for a radial burst. This is the speed.
-            settings.InitialVelocityX = new FloatRange(150f, 300f);
-            settings.InitialVelocityY = new FloatRange(0f);
+            settings.InitialVelocityX = new FloatRange(150f, 300f); // Speed
+            settings.InitialVelocityY = new FloatRange(0f); // Ignored
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.InitialRotation = new FloatRange(0f);
             settings.InitialRotationSpeed = new FloatRange(0f);
@@ -328,9 +328,10 @@ namespace ProjectVagabond.Particles
             settings.MaxParticles = 200;
             settings.Duration = 1.5f; // Emitter runs for 1.5s then stops, auto-cleans up
 
+            settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.8f, 1.2f);
             settings.InitialVelocityX = new FloatRange(80f); // Speed
-            settings.InitialVelocityY = new FloatRange(0f); // Unused
+            settings.InitialVelocityY = new FloatRange(0f); // Ignored
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
@@ -347,6 +348,116 @@ namespace ProjectVagabond.Particles
             settings.Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite;
             settings.BlendMode = BlendState.Additive;
             settings.LayerDepth = 0.7f;
+
+            return settings;
+        }
+
+        /// <summary>
+        /// A celebratory burst of particles for a good dice roll.
+        /// </summary>
+        public static ParticleEmitterSettings CreateGoodRollParticles()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            settings.Shape = EmitterShape.Point;
+            settings.EmissionRate = 0;
+            settings.BurstCount = 100;
+            settings.MaxParticles = 100;
+            settings.Duration = 1.2f;
+
+            settings.VelocityPattern = EmissionPattern.Radial;
+            settings.Lifetime = new FloatRange(0.6f, 1.0f);
+            settings.InitialVelocityX = new FloatRange(300f, 350f); // Speed
+            settings.InitialVelocityY = new FloatRange(0f); // Ignored
+            settings.InitialSize = new FloatRange(1f, 2f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+
+            settings.Gravity = new Vector2(0, 80f); // Add a bit of gravity for a nice arc
+            settings.Drag = 0.5f; // Low drag to let them fly far
+            settings.StartColor = Color.White;
+            settings.EndColor = global.Palette_Yellow;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
+
+            settings.Texture = ServiceLocator.Get<Texture2D>(); // 1x1 white pixel for sharp sparks
+            settings.BlendMode = BlendState.Additive; // Glow
+            settings.LayerDepth = 0.9f;
+
+            return settings;
+        }
+
+        /// <summary>
+        /// A subtle puff of particles for a neutral dice roll.
+        /// </summary>
+        public static ParticleEmitterSettings CreateNeutralRollParticles()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            settings.Shape = EmitterShape.Point;
+            settings.EmissionRate = 0;
+            settings.BurstCount = 10;
+            settings.MaxParticles = 10;
+            settings.Duration = 0.6f;
+
+            settings.VelocityPattern = EmissionPattern.Radial;
+            settings.Lifetime = new FloatRange(0.3f, 0.5f);
+            settings.InitialVelocityX = new FloatRange(0f, 40f); // Speed
+            settings.InitialVelocityY = new FloatRange(0f); // Ignored
+            settings.InitialSize = new FloatRange(1f, 2f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+
+            settings.Gravity = Vector2.Zero;
+            settings.Drag = 2f;
+            settings.StartColor = global.Palette_White;
+            settings.EndColor = global.Palette_LightGray;
+            settings.StartAlpha = 0.7f;
+            settings.EndAlpha = 0.0f;
+
+            settings.Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite;
+            settings.BlendMode = BlendState.AlphaBlend;
+            settings.LayerDepth = 0.8f;
+
+            return settings;
+        }
+
+        /// <summary>
+        /// A puff of dark smoke for a bad dice roll.
+        /// </summary>
+        public static ParticleEmitterSettings CreateBadRollParticles()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            settings.Shape = EmitterShape.Point;
+            settings.EmissionRate = 0;
+            settings.BurstCount = 15;
+            settings.MaxParticles = 15;
+            settings.Duration = 1.0f;
+
+            settings.Lifetime = new FloatRange(0.6f, 0.9f);
+            settings.InitialVelocityX = new FloatRange(-30f, 30f);
+            settings.InitialVelocityY = new FloatRange(-30f, -10f); // Slight downward drift
+            settings.InitialSize = new FloatRange(2f, 4f);
+            settings.EndSize = new FloatRange(0.5f);
+            settings.InterpolateSize = true;
+
+            settings.Gravity = new Vector2(0, 20f); // Falls down
+            settings.Drag = 1f;
+            settings.StartColor = global.Palette_Red;
+            settings.EndColor = global.Palette_DarkGray;
+            settings.StartAlpha = 0.6f;
+            settings.EndAlpha = 0.0f;
+
+            settings.InitialRotation = new FloatRange(0, MathHelper.TwoPi);
+            settings.InitialRotationSpeed = new FloatRange(-10f, 10f); // Random rotation speed and direction
+
+            settings.Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite;
+            settings.BlendMode = BlendState.AlphaBlend;
+            settings.LayerDepth = 0.8f;
 
             return settings;
         }

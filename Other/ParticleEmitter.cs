@@ -17,7 +17,9 @@ namespace ProjectVagabond.Particles
         private int _activeParticleCount = 0;
         private float _emissionTimer = 0f;
         public float BurstTimer { get; set; } = 0f;
-        private readonly Random _random;
+
+        // A single, shared Random instance for all emitters to prevent seed duplication issues.
+        private static readonly Random _random = new Random();
 
         // Auto-destruction state
         private float _durationTimer = 0f;
@@ -27,7 +29,6 @@ namespace ProjectVagabond.Particles
         {
             Settings = settings;
             _particles = new Particle[settings.MaxParticles];
-            _random = new Random();
         }
 
         /// <summary>
@@ -216,7 +217,17 @@ namespace ProjectVagabond.Particles
                     break;
             }
 
-            p.Velocity = new Vector2(Settings.InitialVelocityX.GetValue(_random), Settings.InitialVelocityY.GetValue(_random));
+            if (Settings.VelocityPattern == EmissionPattern.Radial)
+            {
+                float angle = (float)(_random.NextDouble() * MathHelper.TwoPi);
+                float speed = Settings.InitialVelocityX.GetValue(_random); // Use X range as speed
+                p.Velocity = new Vector2(MathF.Cos(angle), MathF.Sin(angle)) * speed;
+            }
+            else // Cartesian
+            {
+                p.Velocity = new Vector2(Settings.InitialVelocityX.GetValue(_random), Settings.InitialVelocityY.GetValue(_random));
+            }
+
             p.Acceleration = new Vector2(Settings.InitialAccelerationX.GetValue(_random), Settings.InitialAccelerationY.GetValue(_random));
             p.StartSize = Settings.InitialSize.GetValue(_random);
             p.EndSize = Settings.EndSize.GetValue(_random);

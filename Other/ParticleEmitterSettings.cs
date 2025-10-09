@@ -1,11 +1,15 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Utils;
 using System;
+using System.Diagnostics;
 
 namespace ProjectVagabond.Particles
 {
     public enum EmitterShape { Point, Circle, Rectangle }
     public enum EmissionSource { Center, Edge, Volume }
+    public enum EmissionPattern { Cartesian, Radial }
 
     public class ParticleEmitterSettings
     {
@@ -19,6 +23,7 @@ namespace ProjectVagabond.Particles
         public int MaxParticles { get; set; }
 
         // Initial Particle Properties
+        public EmissionPattern VelocityPattern { get; set; } = EmissionPattern.Cartesian;
         public FloatRange Lifetime { get; set; }
         public FloatRange InitialVelocityX { get; set; }
         public FloatRange InitialVelocityY { get; set; }
@@ -78,6 +83,7 @@ namespace ProjectVagabond.Particles
                 MaxParticles = 100,
 
                 // Initial Particle
+                VelocityPattern = EmissionPattern.Cartesian,
                 Lifetime = new FloatRange(1.0f, 2.0f),
                 InitialVelocityX = new FloatRange(-10f, 10f),
                 InitialVelocityY = new FloatRange(-10f, 10f),

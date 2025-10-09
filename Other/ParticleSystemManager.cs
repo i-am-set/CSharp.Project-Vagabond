@@ -42,10 +42,8 @@ namespace ProjectVagabond.Particles
             }
         }
 
-        public void Update(GameTime gameTime)
+        public void Update(float deltaTime)
         {
-            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
             // Update the vector field first, so all emitters in this frame use the same state.
             _vectorField.Update(deltaTime);
 
