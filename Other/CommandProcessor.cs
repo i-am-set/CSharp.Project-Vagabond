@@ -2,6 +2,7 @@
 using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -219,6 +220,22 @@ namespace ProjectVagabond
                     }
                 }
             }, "debug_colorpalette - Displays a list of all available XNA colors.");
+
+            _commands["debug_randomparticle"] = new Command("debug_randomparticle", (args) =>
+            {
+                var effectNames = ParticleEffectRegistry.GetEffectNames();
+                if (effectNames.Any())
+                {
+                    var random = new Random();
+                    string randomEffect = effectNames[random.Next(effectNames.Count)];
+                    FXManager.Play(randomEffect, new Vector2(Global.VIRTUAL_WIDTH / 2, Global.VIRTUAL_HEIGHT / 2));
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Played particle effect: {randomEffect}" });
+                }
+                else
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]No particle effects found in registry." });
+                }
+            }, "debug_randomparticle - Emits a random particle effect in the center of the screen.");
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- // 

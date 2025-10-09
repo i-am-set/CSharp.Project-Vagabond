@@ -19,6 +19,10 @@ namespace ProjectVagabond.Particles
         public float BurstTimer { get; set; } = 0f;
         private readonly Random _random;
 
+        // Auto-destruction state
+        private float _durationTimer = 0f;
+        public bool IsFinished { get; private set; }
+
         public ParticleEmitter(ParticleEmitterSettings settings)
         {
             Settings = settings;
@@ -38,12 +42,22 @@ namespace ProjectVagabond.Particles
 
         public void Update(float deltaTime, VectorField vectorField)
         {
-            if (!IsActive) return;
+            if (Settings.Duration != float.PositiveInfinity)
+            {
+                _durationTimer += deltaTime;
+            }
+
+            if (!IsActive)
+            {
+                // Even if inactive, we need to check if it's finished to allow cleanup.
+                IsFinished = (Settings.Duration != float.PositiveInfinity && _durationTimer >= Settings.Duration && _activeParticleCount == 0);
+                return;
+            }
 
             deltaTime *= Settings.TimeScale;
 
             // Handle continuous emission
-            if (Settings.EmissionRate > 0)
+            if (Settings.EmissionRate > 0 && (Settings.Duration == float.PositiveInfinity || _durationTimer < Settings.Duration))
             {
                 _emissionTimer += deltaTime;
                 float timePerParticle = 1.0f / (Settings.EmissionRate * EmissionStrength);
@@ -144,14 +158,19 @@ namespace ProjectVagabond.Particles
                     }
                 }
             }
+
+            // Check if the emitter is finished (finite duration, timer expired, all particles dead).
+            IsFinished = (Settings.Duration != float.PositiveInfinity && _durationTimer >= Settings.Duration && _activeParticleCount == 0);
         }
 
         public void EmitBurst(int count)
         {
+            Debug.WriteLine($"[Emitter] Emitting burst of {count} particles. Active before: {_activeParticleCount}.");
             for (int i = 0; i < count; i++)
             {
                 EmitParticle();
             }
+            Debug.WriteLine($"[Emitter] Burst finished. Active after: {_activeParticleCount}.");
         }
 
         /// <summary>
@@ -237,6 +256,11 @@ namespace ProjectVagabond.Particles
         public void Draw(SpriteBatch spriteBatch)
         {
             if (Settings.Texture == null) return;
+            if (_activeParticleCount > 0)
+            {
+                Debug.WriteLine($"[Emitter] Draw called. Drawing {_activeParticleCount} particles.");
+            }
+
 
             for (int i = 0; i < _activeParticleCount; i++)
             {

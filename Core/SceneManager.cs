@@ -7,6 +7,7 @@ using MonoGame.Extended.BitmapFonts;
 using System;
 using System.Linq;
 using ProjectVagabond.UI;
+using ProjectVagabond.Particles;
 
 namespace ProjectVagabond
 {
@@ -288,6 +289,10 @@ namespace ProjectVagabond
                 Matrix finalTransform = contentTransform * baseTransform;
 
                 _currentScene?.Draw(spriteBatch, font, gameTime, finalTransform);
+
+                // Draw particles on top of the scene, but within the same virtual space transform.
+                var particleSystemManager = ServiceLocator.Get<ParticleSystemManager>();
+                particleSystemManager.Draw(spriteBatch, finalTransform);
             }
 
             if (IsModalActive)

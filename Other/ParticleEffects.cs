@@ -21,6 +21,7 @@ namespace ProjectVagabond.Particles
             settings.EmitterSize = new Vector2(Global.GRID_CELL_SIZE / 2f, Global.GRID_CELL_SIZE / 2f);
             settings.EmissionRate = 0; // We will use bursts, not a continuous rate
             settings.MaxParticles = 100; // Increased for bursts
+            settings.Duration = 0.5f; // Auto-destroy after particles fade
 
             // Initial Particle
             settings.Lifetime = new FloatRange(0.1f, 0.4f);
@@ -59,7 +60,9 @@ namespace ProjectVagabond.Particles
             // Emitter
             settings.Shape = EmitterShape.Point;
             settings.EmissionRate = 0; // Burst only
+            settings.BurstCount = 20;
             settings.MaxParticles = 20;
+            settings.Duration = 0.3f; // Auto-destroy after particles fade
 
             // Initial Particle
             settings.Lifetime = new FloatRange(0.1f, 0.25f); // Slightly longer lifetime for visible trails
@@ -101,7 +104,9 @@ namespace ProjectVagabond.Particles
             settings.EmitFrom = EmissionSource.Volume;
             settings.EmitterSize = new Vector2(40f, 40f);
             settings.EmissionRate = 0; // Burst only
+            settings.BurstCount = 25;
             settings.MaxParticles = 25;
+            settings.Duration = 1.1f; // Auto-destroy after particles fade
 
             // Initial Particle
             settings.Lifetime = new FloatRange(0.5f, 1.0f);
@@ -144,6 +149,7 @@ namespace ProjectVagabond.Particles
             settings.EmitterSize = new Vector2(8f, 8f); // Default size, should be overridden
             settings.EmissionRate = 150f; // Continuous emission while active
             settings.MaxParticles = 100;
+            settings.Duration = 0.7f; // Auto-destroy after particles fade
 
             // Initial Particle
             settings.Lifetime = new FloatRange(0.3f, 0.6f);
@@ -183,7 +189,9 @@ namespace ProjectVagabond.Particles
             // Emitter
             settings.Shape = EmitterShape.Point;
             settings.EmissionRate = 0; // Burst only
+            settings.BurstCount = 50;
             settings.MaxParticles = 50;
+            settings.Duration = 0.5f; // Auto-destroy after particles fade
 
             // Initial Particle
             settings.Lifetime = new FloatRange(0.2f, 0.4f);
@@ -305,6 +313,42 @@ namespace ProjectVagabond.Particles
             layers.Add(yellowCore);
 
             return layers;
+        }
+
+        /// <summary>
+        /// A swirling magical effect.
+        /// </summary>
+        public static ParticleEmitterSettings CreateMagicSwirl()
+        {
+            var settings = ParticleEmitterSettings.CreateDefault();
+            var global = ServiceLocator.Get<Global>();
+
+            settings.Shape = EmitterShape.Point;
+            settings.EmissionRate = 200;
+            settings.MaxParticles = 200;
+            settings.Duration = 1.5f; // Emitter runs for 1.5s then stops, auto-cleans up
+
+            settings.Lifetime = new FloatRange(0.8f, 1.2f);
+            settings.InitialVelocityX = new FloatRange(80f); // Speed
+            settings.InitialVelocityY = new FloatRange(0f); // Unused
+            settings.InitialSize = new FloatRange(1f, 2f);
+            settings.EndSize = new FloatRange(0f);
+            settings.InterpolateSize = true;
+
+            settings.Gravity = Vector2.Zero;
+            settings.Drag = 0.5f;
+            settings.StartColor = global.Palette_LightPurple;
+            settings.EndColor = global.Palette_Teal;
+            settings.StartAlpha = 1.0f;
+            settings.EndAlpha = 0.0f;
+
+            settings.VectorFieldInfluence = 1.0f; // Strong influence from the vector field for swirling
+
+            settings.Texture = ServiceLocator.Get<SpriteManager>().SoftParticleSprite;
+            settings.BlendMode = BlendState.Additive;
+            settings.LayerDepth = 0.7f;
+
+            return settings;
         }
     }
 }

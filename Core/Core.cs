@@ -560,7 +560,7 @@ namespace ProjectVagabond
                 return;
             }
 
-            // --- Phase 1: Render the letterboxed game world to its render target ---
+            // --- Phase 1: Render the game world (scene, particles, etc.) to its render target ---
             if (_sceneManager.CurrentActiveScene?.GetType() != typeof(TransitionScene))
             {
                 GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
@@ -571,7 +571,7 @@ namespace ProjectVagabond
                 _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, virtualSpaceTransform);
             }
 
-            // --- Phase 1.5: Render the dice system to its own render target. This is done *before* compositing. ---
+            // --- Phase 1.5: Render the dice system to its own render target. ---
             var diceRenderTarget = _diceRollingSystem.Draw(_defaultFont);
 
             // --- Phase 2: Composite everything onto the full-screen render target ---

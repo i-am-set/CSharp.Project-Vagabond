@@ -30,9 +30,6 @@ namespace ProjectVagabond.Scenes
         private ConfirmationDialog _confirmationDialog;
         private bool _uiInitialized = false;
 
-        // --- DEBUG: Fireball Emitters ---
-        private readonly List<ParticleEmitter> _fireballEmitters = new List<ParticleEmitter>();
-
         public MainMenuScene()
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
@@ -174,13 +171,8 @@ namespace ProjectVagabond.Scenes
                 button.ResetAnimationState();
             }
 
-            // --- Create Fireball Effect ---
-            var fireballSettingsList = ParticleEffects.CreateLayeredFireball();
-            foreach (var setting in fireballSettingsList)
-            {
-                var emitter = _particleSystemManager.CreateEmitter(setting);
-                _fireballEmitters.Add(emitter);
-            }
+            // Play a particle effect in the center of the screen to demonstrate the new system.
+            FXManager.Play("CreateMagicSwirl", new Vector2(Global.VIRTUAL_WIDTH / 2, Global.VIRTUAL_HEIGHT / 2));
 
 
             if (this.LastUsedInputForNav == InputDevice.Keyboard && !firstTimeOpened)
@@ -212,12 +204,6 @@ namespace ProjectVagabond.Scenes
         public override void Exit()
         {
             base.Exit();
-            // --- Clean up Fireball Effect ---
-            foreach (var emitter in _fireballEmitters)
-            {
-                _particleSystemManager.DestroyEmitter(emitter);
-            }
-            _fireballEmitters.Clear();
         }
 
         protected override Rectangle? GetFirstSelectableElementBounds()
@@ -235,12 +221,6 @@ namespace ProjectVagabond.Scenes
 
             var currentMouseState = Mouse.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-
-            // Update the fireball emitter to follow the mouse cursor
-            foreach (var emitter in _fireballEmitters)
-            {
-                emitter.Position = virtualMousePos;
-            }
 
             if (IsInputBlocked)
             {
@@ -377,8 +357,7 @@ namespace ProjectVagabond.Scenes
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // The manager draws all active emitters, which will include our fireball.
-            _particleSystemManager.Draw(spriteBatch, transform);
+            // This scene no longer draws particles directly. The Core engine handles it.
         }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
