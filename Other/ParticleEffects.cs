@@ -364,7 +364,7 @@ namespace ProjectVagabond.Particles
             settings.EmissionRate = 0;
             settings.BurstCount = 100;
             settings.MaxParticles = 100;
-            settings.Duration = 2.2f;
+            settings.Duration = 1.2f;
 
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.6f, 1.0f);

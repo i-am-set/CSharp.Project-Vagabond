@@ -6,7 +6,7 @@ namespace ProjectVagabond.Progression
 {
     public enum SplitNodeType
     {
-        Start,
+        Origin,
         Battle,
         Narrative,
         Reward,

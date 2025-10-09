@@ -565,7 +565,7 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            var visitedPathColor = new Color(_global.Palette_DarkGray, 100);
+            var visitedPathColor = _global.Palette_DarkGray;
 
             // Find highlighted path before drawing
             SplitMapPath? highlightedPath = null;
@@ -590,6 +590,8 @@ namespace ProjectVagabond.Scenes
             // Draw Nodes
             foreach (var node in _currentMap.Nodes.Values)
             {
+                if (node.NodeType == SplitNodeType.Origin) continue; // Skip drawing the origin node
+
                 var texture = GetNodeTexture(node.NodeType);
                 var bounds = node.GetBounds();
                 var color = Color.White;
@@ -597,7 +599,7 @@ namespace ProjectVagabond.Scenes
 
                 if (!node.IsReachable)
                 {
-                    color = Color.Gray * 0.5f;
+                    color = _global.Palette_DarkGray;
                 }
                 else if (node.Id == _pressedNodeId)
                 {
@@ -662,7 +664,7 @@ namespace ProjectVagabond.Scenes
             }
             else if (_visitedNodeIds.Contains(fromNode.Id) && _visitedNodeIds.Contains(toNode.Id))
             {
-                pathColor = new Color(defaultColor, 100); // Visited path
+                pathColor = defaultColor; // Visited path
             }
             else
             {
@@ -723,7 +725,7 @@ namespace ProjectVagabond.Scenes
         {
             return type switch
             {
-                SplitNodeType.Start => _spriteManager.SplitNodeStart,
+                SplitNodeType.Origin => _spriteManager.SplitNodeStart,
                 SplitNodeType.Battle => _spriteManager.SplitNodeBattle,
                 SplitNodeType.Narrative => _spriteManager.SplitNodeNarrative,
                 SplitNodeType.Reward => _spriteManager.SplitNodeReward,

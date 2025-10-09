@@ -84,14 +84,21 @@ namespace ProjectVagabond.Progression
 
                 if (floor == 0 || floor == totalFloors - 1)
                 {
-                    numNodes = 1; // Start and Boss floors always have one node
+                    numNodes = 1; // Start and Boss floors always have one node.
                 }
-                else
+                else if (floor >= 2) // Floors past the second one (0-indexed) must have at least 2 nodes.
                 {
                     do
                     {
-                        numNodes = _random.Next(1, 5); // 1 to 4 nodes
-                    } while (numNodes == previousFloorNodeCount && totalFloors > 3); // Avoid same count as previous floor
+                        numNodes = _random.Next(2, 5); // 2, 3, or 4 nodes.
+                    } while (numNodes == previousFloorNodeCount && totalFloors > 3);
+                }
+                else // This only leaves floor 1 (the second floor).
+                {
+                    do
+                    {
+                        numNodes = _random.Next(1, 5); // 1, 2, 3, or 4 nodes.
+                    } while (numNodes == previousFloorNodeCount && totalFloors > 3);
                 }
 
                 float y = mapHeight - VERTICAL_PADDING - (floor * FLOOR_HEIGHT);
@@ -205,6 +212,10 @@ namespace ProjectVagabond.Progression
 
         private static void AssignEvents(List<SplitMapNode>[] nodesByFloor, SplitData splitData, int totalFloors)
         {
+            // Assign Origin
+            var startNode = nodesByFloor[0].First();
+            startNode.NodeType = SplitNodeType.Origin;
+
             // Assign Boss
             var bossNode = nodesByFloor[totalFloors - 1].First();
             bossNode.NodeType = SplitNodeType.MajorBattle;
