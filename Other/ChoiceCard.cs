@@ -590,12 +590,12 @@ namespace ProjectVagabond.UI
                         currentY += defaultFont.LineHeight;
                     }
 
-                    float descriptionStartY_animated = drawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
+                    float descriptionStartY_static = staticDrawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
                     if (_cardType == ChoiceType.Spell && spriteManager.ElementIconSourceRects.TryGetValue(_elementId, out var iconRect))
                     {
                         const int iconSize = 9;
                         const int iconDescGap = 4;
-                        var iconPos = new Vector2(drawBounds.Center.X - iconSize / 2f, descriptionStartY_animated - iconDescGap - iconSize + 4 + iconBobOffsetY);
+                        var iconPos = new Vector2(staticDrawBounds.Center.X - iconSize / 2f, descriptionStartY_static - iconDescGap - iconSize + 4 + iconBobOffsetY);
                         spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White * alpha);
                     }
                     currentY = staticDrawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
