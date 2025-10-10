@@ -40,6 +40,8 @@ namespace ProjectVagabond
         private readonly Dictionary<string, Texture2D> _enemySprites = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteTopPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
+        private readonly Dictionary<string, Texture2D> _relicSprites = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
+
 
         private Texture2D _logoSprite;
         private Texture2D _waterSprite;
@@ -339,6 +341,33 @@ namespace ProjectVagabond
             {
                 _enemySprites[archetypeId] = null;
                 return null;
+            }
+        }
+
+        public Texture2D GetRelicSprite(string imagePath)
+        {
+            if (string.IsNullOrEmpty(imagePath))
+            {
+                return _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
+            }
+
+            if (_relicSprites.TryGetValue(imagePath, out var cachedSprite))
+            {
+                return cachedSprite;
+            }
+
+            try
+            {
+                var sprite = _core.Content.Load<Texture2D>(imagePath);
+                _relicSprites[imagePath] = sprite;
+                return sprite;
+            }
+            catch
+            {
+                Debug.WriteLine($"[SpriteManager] [WARNING] Could not load relic sprite at '{imagePath}'. Using placeholder.");
+                var placeholder = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
+                _relicSprites[imagePath] = placeholder; // Cache the placeholder to avoid repeated load attempts
+                return placeholder;
             }
         }
 

@@ -2,6 +2,8 @@
   {
     "AbilityID": "GreenThumb",
     "AbilityName": "Green Thumb",
+    "RelicName": "Verdant Talisman",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Boosts Nature-type moves and grants the Nature defensive type.",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -13,6 +15,8 @@
   {
     "AbilityID": "Pyromancer",
     "AbilityName": "Pyromancer",
+    "RelicName": "Charred Effigy",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Fire spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -23,6 +27,8 @@
   {
     "AbilityID": "Hydromancer",
     "AbilityName": "Hydromancer",
+    "RelicName": "Tidal Stone",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Water spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -33,6 +39,8 @@
   {
     "AbilityID": "Thaumomancer",
     "AbilityName": "Thaumomancer",
+    "RelicName": "Arcanist's Lens",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Arcane spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -43,6 +51,8 @@
   {
     "AbilityID": "Geomancer",
     "AbilityName": "Geomancer",
+    "RelicName": "Earthen Core",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Earth spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -53,6 +63,8 @@
   {
     "AbilityID": "Ferromancer",
     "AbilityName": "Ferromancer",
+    "RelicName": "Lodestone",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Metal spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -63,6 +75,8 @@
   {
     "AbilityID": "Venommancer",
     "AbilityName": "Venommancer",
+    "RelicName": "Serpent's Fang",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Toxic spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -73,6 +87,8 @@
   {
     "AbilityID": "Aeromancer",
     "AbilityName": "Aeromancer",
+    "RelicName": "Zephyr Charm",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Wind spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -83,6 +99,8 @@
   {
     "AbilityID": "Umbramancer",
     "AbilityName": "Umbramancer",
+    "RelicName": "Voidheart Shard",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Void spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -93,6 +111,8 @@
   {
     "AbilityID": "Photomancer",
     "AbilityName": "Photomancer",
+    "RelicName": "Sunstone",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Light spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -103,6 +123,8 @@
   {
     "AbilityID": "Electromancer",
     "AbilityName": "Electromancer",
+    "RelicName": "Orb of the Stormcaller",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Electric spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -113,6 +135,8 @@
   {
     "AbilityID": "Cryomancer",
     "AbilityName": "Cryomancer",
+    "RelicName": "Hoarfrost Crystal",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Ice spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -123,6 +147,8 @@
   {
     "AbilityID": "Floramancer",
     "AbilityName": "Floramancer",
+    "RelicName": "Everblossom Seed",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the damage of all Nature spells by 20%.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -133,6 +159,8 @@
   {
     "AbilityID": "Venomous",
     "AbilityName": "Venomous",
+    "RelicName": "Viper's Kiss",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Contact attacks have a 50% chance to inflict Poison for 4 turns.",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -143,6 +171,8 @@
   {
     "AbilityID": "ThickSkin",
     "AbilityName": "Thick Skin",
+    "RelicName": "Trollhide Bracers",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Reduces all incoming physical damage by 20%.",
     "Rarity": 0,
     "LevelRequirement": 0,
@@ -153,6 +183,8 @@
   {
     "AbilityID": "Sniper",
     "AbilityName": "Sniper",
+    "RelicName": "Eagle-Eye Scope",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases critical hit chance by 10%.",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -163,6 +195,8 @@
   {
     "AbilityID": "Regeneration",
     "AbilityName": "Regeneration",
+    "RelicName": "Phoenix Ash",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Restores 5% of max HP at the end of each turn.",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -173,6 +207,8 @@
   {
     "AbilityID": "Opportunist",
     "AbilityName": "Opportunist",
+    "RelicName": "Vulture's Pendant",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Deal 2x more damage to targets already afflicted with a status effect.",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -183,6 +219,8 @@
   {
     "AbilityID": "StaticCharge",
     "AbilityName": "Static Charge",
+    "RelicName": "Voltaic Mantle",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "When the holder is hit by a contact move, there is a 30% chance the attacker becomes Stunned for 1 turn.",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -193,6 +231,8 @@
   {
     "AbilityID": "AdrenalineRush",
     "AbilityName": "Adrenaline Rush",
+    "RelicName": "Berserker's Heart",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases all damage dealt by 50% when the holder's HP is below 33%.",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -203,6 +243,8 @@
   {
     "AbilityID": "Photosynthesis",
     "AbilityName": "Photosynthesis",
+    "RelicName": "Sun-Blessed Leaf",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Grants immunity to the light element and restores 25% of max HP when hit by a move of that element.",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -213,6 +255,8 @@
   {
     "AbilityID": "LastStand",
     "AbilityName": "Last Stand",
+    "RelicName": "Anchor Charm",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "If the holder acts last in a round, their move's power is increased by 30%.",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -223,6 +267,8 @@
   {
     "AbilityID": "LingeringCurse",
     "AbilityName": "Lingering Curse",
+    "RelicName": "Hourglass of Decay",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "All non-damaging status effects (e.g., Stun, Blind) applied by the holder last one additional turn.",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -233,6 +279,8 @@
   {
     "AbilityID": "Grounding",
     "AbilityName": "Grounding",
+    "RelicName": "Rubber Soles",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Grants immunity to the Electric element.",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -243,6 +291,8 @@
   {
     "AbilityID": "ToxicAura",
     "AbilityName": "Toxic Aura",
+    "RelicName": "Idol of Disease",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "At the end of each turn, has a 30% chance to inflict Poison on a random enemy for 2 turns.",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -253,6 +303,8 @@
   {
     "AbilityID": "Unwavering",
     "AbilityName": "Unwavering",
+    "RelicName": "Crown of Serenity",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Grants immunity to Stun and Fear status effects.",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -263,6 +315,8 @@
   {
     "AbilityID": "Bulwark",
     "AbilityName": "Bulwark",
+    "RelicName": "Adamant Shield",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Reduces incoming damage from critical hits by 30%.",
     "Rarity": 1,
     "LevelRequirement": 3,
@@ -273,6 +327,8 @@
   {
     "AbilityID": "FirstBlood",
     "AbilityName": "First Blood",
+    "RelicName": "Assassin's Mark",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "The holder's first attack in a battle deals 50% more damage.",
     "Rarity": 2,
     "LevelRequirement": 1,
@@ -283,6 +339,8 @@
   {
     "AbilityID": "Intimidate",
     "AbilityName": "Intimidate",
+    "RelicName": "Gorgon's Gaze",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Upon entering battle, lowers the Strength of all opponents for 3 turns.",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -293,6 +351,8 @@
   {
     "AbilityID": "IronBarbs",
     "AbilityName": "Iron Barbs",
+    "RelicName": "Spiked Carapace",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "When hit by a contact move, the attacker takes damage equal to 1/8th of their maximum HP.",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -303,6 +363,8 @@
   {
     "AbilityID": "FullPower",
     "AbilityName": "Full Power",
+    "RelicName": "Pristine Gem",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "While the holder is at 100% HP, their moves deal 30% more damage.",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -313,6 +375,8 @@
   {
     "AbilityID": "KeenEye",
     "AbilityName": "Keen Eye",
+    "RelicName": "All-Seeing Eye",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "The holder's moves ignore the target's Dodging status effect.",
     "Rarity": 1,
     "LevelRequirement": 1,
@@ -323,6 +387,8 @@
   {
     "AbilityID": "NimbleFeet",
     "AbilityName": "Nimble Feet",
+    "RelicName": "Ghostly Slippers",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "When dodging, hits against you have a 50% chance of missing fully.",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -333,6 +399,8 @@
   {
     "AbilityID": "GlassCannon",
     "AbilityName": "Glass Cannon",
+    "RelicName": "Shattered Amulet",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases all damage dealt by 30%, but also increases all damage taken by 15%",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -343,6 +411,8 @@
   {
     "AbilityID": "ChainReaction",
     "AbilityName": "Chain Reaction",
+    "RelicName": "Domino Stone",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "For multi-hit moves, each subsequent hit deals 5% more damage than the last",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -353,6 +423,8 @@
   {
     "AbilityID": "RecklessAbandon",
     "AbilityName": "Reckless Abandon",
+    "RelicName": "Cracked Gauntlets",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Increases the power of all contact moves by 30%, but lowers their accuracy by 10%",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -363,6 +435,8 @@
   {
     "AbilityID": "ArmorPiercer",
     "AbilityName": "Armor Piercer",
+    "RelicName": "Scorpion's Stinger",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "The holder's attacks ignore 25% of the target's Tenacity when calculating damage.",
     "Rarity": 2,
     "LevelRequirement": 4,
@@ -373,6 +447,8 @@
   {
     "AbilityID": "SanguineThirst",
     "AbilityName": "Sanguine Thirst",
+    "RelicName": "Leech-Tooth Necklace",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "The holder heals for 10% of the damage they deal with contact moves.",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -383,6 +459,8 @@
   {
     "AbilityID": "Vigor",
     "AbilityName": "Vigor",
+    "RelicName": "Oaken Heart",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "While the holder is above 75% HP, they take 20% less damage from all sources.",
     "Rarity": 0,
     "LevelRequirement": 0,
@@ -393,6 +471,8 @@
   {
     "AbilityID": "CorneredAnimal",
     "AbilityName": "Cornered Animal",
+    "RelicName": "Rat's Whiskers",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "The holder's Agility is increased by 50% when their HP is below 33% or there's 4+ living enemy combatants",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -403,6 +483,8 @@
   {
     "AbilityID": "Contagion",
     "AbilityName": "Contagion",
+    "RelicName": "Miasma Vial",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "When the holder inflicts any status effect on a target, there is a 100% chance for that effect to also apply to one other random enemy for 1 turn.",
     "Rarity": 3,
     "LevelRequirement": 5,
@@ -413,6 +495,8 @@
   {
     "AbilityID": "AmbushPredator",
     "AbilityName": "Ambush Predator",
+    "RelicName": "Shadow Cloak",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "The holder's first move in a battle has its priority increased by 1, but its power is reduced by 20%.",
     "Rarity": 1,
     "LevelRequirement": 2,
@@ -423,6 +507,8 @@
   {
     "AbilityID": "Sadist",
     "AbilityName": "Sadist",
+    "RelicName": "Iron Maiden Fragment",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "Whenever the holder successfully applies a negative status effect to a target, the holder gets strength up for 2 turns.",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -433,6 +519,8 @@
   {
     "AbilityID": "Bloodletter",
     "AbilityName": "Bloodletter",
+    "RelicName": "Sacrificial Dagger",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "The holder's void spells cost 5% of their maximum HP to cast, but their void spell's damage is increased by 30%.",
     "Rarity": 3,
     "LevelRequirement": 5,
@@ -443,6 +531,8 @@
   {
     "AbilityID": "Spellweaver",
     "AbilityName": "Spellweaver",
+    "RelicName": "Runic Weave",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "After using a non-magical Action, the holder's next Spell deals 30% more damage.",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -453,6 +543,8 @@
   {
     "AbilityID": "Momentum",
     "AbilityName": "Momentum",
+    "RelicName": "Lead Helmet",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "If the holder defeats a target, their next attack in the battle deals 50% more damage.",
     "Rarity": 3,
     "LevelRequirement": 4,
@@ -463,6 +555,8 @@
   {
     "AbilityID": "Escalation",
     "AbilityName": "Escalation",
+    "RelicName": "Whetstone",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "At the start of each round, the holder gains a 5% damage boost for the rest of the battle (stacks up to 10 times for a total of 50%).",
     "Rarity": 3,
     "LevelRequirement": 5,
@@ -473,6 +567,8 @@
   {
     "AbilityID": "PainFuel",
     "AbilityName": "Pain Fuel",
+    "RelicName": "Masochist's Mail",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "The holder channels agony into power. When hit by a critical hit, the holder gains the Strength Up and Intelligence up status effect for 2 turns.",
     "Rarity": 2,
     "LevelRequirement": 3,
@@ -483,6 +579,8 @@
   {
     "AbilityID": "CausticBlood",
     "AbilityName": "Caustic Blood",
+    "RelicName": "Ichorous Heart",
+    "RelicImagePath": "Sprites/Relics/placeholder_relic",
     "Description": "When an opponent uses a Lifesteal effect on the holder, the opponent takes damage equal to the amount they would have healed.",
     "Rarity": 2,
     "LevelRequirement": 4,

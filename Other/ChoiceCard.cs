@@ -30,6 +30,10 @@ namespace ProjectVagabond.UI
         private float _rarityAnimTimer = 0f;
         private static readonly Random _random = new Random();
 
+        // Relic-specific data
+        private readonly string? _abilityName;
+        private readonly string? _relicImagePath;
+
         // Animation State
         private enum CardAnimationState { Hidden, AnimatingIn, AnimatingOut, Idle }
         private CardAnimationState _cardAnimState = CardAnimationState.Hidden;
@@ -75,16 +79,17 @@ namespace ProjectVagabond.UI
             _stats.Add(("MANA:", $"{move.ManaCost}%"));
         }
 
-        public ChoiceCard(Rectangle bounds, AbilityData ability) : base(bounds, ability.AbilityName)
+        public ChoiceCard(Rectangle bounds, AbilityData ability) : base(bounds, ability.RelicName)
         {
             Data = ability;
             _cardType = ChoiceType.Ability;
-            Title = ability.AbilityName.ToUpper();
+            Title = ability.RelicName.ToUpper();
+            _abilityName = ability.AbilityName.ToUpper();
+            _relicImagePath = ability.RelicImagePath;
             Description = ability.Description.ToUpper();
             _rarity = ability.Rarity;
             _rarityText = GetRarityString(_rarity);
-            _elementId = 0;
-            _subTextLines.Add("PASSIVE ABILITY");
+            _elementId = 0; // Abilities have no element
         }
 
         public ChoiceCard(Rectangle bounds, ConsumableItemData item) : base(bounds, item.ItemName)
@@ -476,42 +481,82 @@ namespace ProjectVagabond.UI
                 const int paddingX = 8;
                 const int topPadding = 4;
                 float contentWidth = drawBounds.Width - (paddingX * 2);
+                float currentY;
 
-                // --- TITLE AREA ---
-                float titleAreaHeight = defaultFont.LineHeight * 2;
-                var titleLines = WrapText(Title, contentWidth, defaultFont, isTitle: true);
-                float totalTitleTextHeight = titleLines.Count * defaultFont.LineHeight;
-                float titleStartY = drawBounds.Y + topPadding + (titleAreaHeight - totalTitleTextHeight) / 2f; // Vertically center the text block
-
-                float currentY = titleStartY;
-                foreach (var line in titleLines)
+                if (_cardType == ChoiceType.Ability)
                 {
-                    var titleSize = defaultFont.MeasureString(line);
-                    var titlePos = new Vector2(drawBounds.Center.X - titleSize.Width / 2, currentY);
-                    spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, (isActivated ? _global.ButtonHoverColor : titleColor) * alpha);
-                    currentY += defaultFont.LineHeight;
+                    currentY = drawBounds.Y + topPadding + 8;
+
+                    const int relicIconSize = 32;
+                    var relicIconPos = new Vector2(drawBounds.Center.X - relicIconSize / 2f, currentY);
+                    var relicTexture = spriteManager.GetRelicSprite(_relicImagePath);
+                    spriteBatch.DrawSnapped(relicTexture, new Rectangle((int)relicIconPos.X, (int)relicIconPos.Y, relicIconSize, relicIconSize), Color.White * alpha);
+
+                    float relicImageBottomY = relicIconPos.Y + relicIconSize;
+
+                    // Define the fixed space for the title. It should accommodate 3 lines.
+                    const int titleLineCountReservation = 3;
+                    float titleReservedHeight = defaultFont.LineHeight * titleLineCountReservation;
+                    float titleBlockStartY = relicImageBottomY + 4;
+
+                    // Calculate the actual height of the wrapped title text
+                    var titleLines = WrapText(Title, contentWidth, defaultFont, isTitle: true);
+                    float actualTitleHeight = titleLines.Count * defaultFont.LineHeight;
+
+                    // Calculate the starting Y position to vertically center the title within its reserved space
+                    float titleActualStartY = titleBlockStartY + (titleReservedHeight - actualTitleHeight) / 2f;
+
+                    // Draw the title lines
+                    float titleCurrentY = titleActualStartY;
+                    foreach (var line in titleLines)
+                    {
+                        var titleSize = defaultFont.MeasureString(line);
+                        var titlePos = new Vector2(drawBounds.Center.X - titleSize.Width / 2, titleCurrentY);
+                        spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, (isActivated ? _global.ButtonHoverColor : titleColor) * alpha);
+                        titleCurrentY += defaultFont.LineHeight;
+                    }
+
+                    // Now, calculate the fixed divider position based on the RESERVED space
+                    currentY = titleBlockStartY + titleReservedHeight + 6;
+
+                    var dividerStart = new Vector2(drawBounds.Left + paddingX, currentY);
+                    var dividerEnd = new Vector2(drawBounds.Right - paddingX, currentY);
+                    spriteBatch.DrawLineSnapped(dividerStart, dividerEnd, _global.Palette_Gray * alpha);
+                    currentY += 6;
+
+                    if (!string.IsNullOrEmpty(_abilityName))
+                    {
+                        var abilityNameSize = secondaryFont.MeasureString(_abilityName);
+                        var abilityNamePos = new Vector2(drawBounds.Center.X - abilityNameSize.Width / 2, currentY);
+                        spriteBatch.DrawStringSnapped(secondaryFont, _abilityName, abilityNamePos, _global.Palette_Gray * alpha);
+                        currentY += secondaryFont.LineHeight + 4;
+                    }
                 }
-
-                // --- DESCRIPTION AREA ---
-                float descriptionStartY = drawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
-
-                // Draw Element Icon for Spells, positioned a fixed distance above the description start line.
-                const int iconSize = 9;
-                const int iconDescGap = 4;
-                var iconPos = new Vector2(drawBounds.Center.X - iconSize / 2f, descriptionStartY - iconDescGap - iconSize + 4);
-
-                if (_cardType == ChoiceType.Spell && spriteManager.ElementIconSourceRects.TryGetValue(_elementId, out var iconRect))
+                else // Spell or Item
                 {
-                    spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White * alpha);
-                }
-                else if (_cardType == ChoiceType.Ability)
-                {
-                    var iconBounds = new Rectangle((int)iconPos.X, (int)iconPos.Y, iconSize, iconSize);
-                    spriteBatch.DrawSnapped(pixel, iconBounds, Color.White * alpha);
-                }
+                    float titleAreaHeight = defaultFont.LineHeight * 2;
+                    var titleLines = WrapText(Title, contentWidth, defaultFont, isTitle: true);
+                    float totalTitleTextHeight = titleLines.Count * defaultFont.LineHeight;
+                    float titleStartY = drawBounds.Y + topPadding + (titleAreaHeight - totalTitleTextHeight) / 2f;
+                    currentY = titleStartY;
+                    foreach (var line in titleLines)
+                    {
+                        var titleSize = defaultFont.MeasureString(line);
+                        var titlePos = new Vector2(drawBounds.Center.X - titleSize.Width / 2, currentY);
+                        spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, (isActivated ? _global.ButtonHoverColor : titleColor) * alpha);
+                        currentY += defaultFont.LineHeight;
+                    }
 
-
-                currentY = descriptionStartY;
+                    float descriptionStartY = drawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
+                    if (_cardType == ChoiceType.Spell && spriteManager.ElementIconSourceRects.TryGetValue(_elementId, out var iconRect))
+                    {
+                        const int iconSize = 9;
+                        const int iconDescGap = 4;
+                        var iconPos = new Vector2(drawBounds.Center.X - iconSize / 2f, descriptionStartY - iconDescGap - iconSize + 4);
+                        spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White * alpha);
+                    }
+                    currentY = descriptionStartY;
+                }
 
                 // Draw Description (Word Wrapped)
                 var descLines = WrapText(Description, contentWidth, secondaryFont);
@@ -520,7 +565,7 @@ namespace ProjectVagabond.UI
                     var descSize = secondaryFont.MeasureString(line);
                     var descPos = new Vector2(drawBounds.Center.X - descSize.Width / 2, currentY);
                     spriteBatch.DrawStringSnapped(secondaryFont, line, descPos, _global.Palette_White * alpha);
-                    currentY += secondaryFont.LineHeight;
+                    currentY += secondaryFont.LineHeight + 1;
                 }
 
                 // Draw Stats at the bottom
@@ -529,7 +574,6 @@ namespace ProjectVagabond.UI
 
                 if (_cardType == ChoiceType.Spell)
                 {
-                    // Calculate max widths for alignment
                     float maxLabelWidth = 0f;
                     float maxValueWidth = 0f;
                     foreach (var (label, value) in _stats)
@@ -538,7 +582,7 @@ namespace ProjectVagabond.UI
                         maxValueWidth = Math.Max(maxValueWidth, secondaryFont.MeasureString(value).Width);
                     }
 
-                    float totalStatWidth = maxLabelWidth + maxValueWidth + 2; // 2px gap
+                    float totalStatWidth = maxLabelWidth + maxValueWidth + 2;
                     float statBlockStartX = drawBounds.X + (drawBounds.Width - totalStatWidth) / 2;
                     float statLabelX = statBlockStartX;
                     float statValueX = statLabelX + maxLabelWidth + 2;
@@ -550,11 +594,9 @@ namespace ProjectVagabond.UI
                         var valueSize = secondaryFont.MeasureString(value);
                         var lineY = statsStartY + i * secondaryFont.LineHeight;
 
-                        // Draw label (right-aligned)
                         var labelPos = new Vector2(statLabelX + (maxLabelWidth - labelSize.Width), lineY);
                         spriteBatch.DrawStringSnapped(secondaryFont, label, labelPos, _global.Palette_Gray * alpha);
 
-                        // Draw value (right-aligned)
                         var valuePos = new Vector2(statValueX + (maxValueWidth - valueSize.Width), lineY);
                         if (value.Contains("%"))
                         {
@@ -563,9 +605,8 @@ namespace ProjectVagabond.UI
                         spriteBatch.DrawStringSnapped(secondaryFont, value, valuePos, _global.Palette_Gray * alpha);
                     }
                 }
-                else
+                else if (_cardType == ChoiceType.Item)
                 {
-                    // Centered subtext for abilities/items
                     if (_subTextLines.Any())
                     {
                         var subText = _subTextLines[0];
@@ -578,19 +619,12 @@ namespace ProjectVagabond.UI
                 // Draw Decorative Accents
                 const int accentSize = 3;
                 const int inset = 2;
-                // Top-Left
                 spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, accentSize, 1), accentColor * alpha);
                 spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, 1, accentSize), accentColor * alpha);
-
-                // Top-Right
                 spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Top + inset, accentSize, 1), accentColor * alpha);
                 spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Top + inset, 1, accentSize), accentColor * alpha);
-
-                // Bottom-Left
                 spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor * alpha);
                 spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor * alpha);
-
-                // Bottom-Right
                 spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - inset - accentSize, drawBounds.Bottom - 1 - inset, accentSize, 1), accentColor * alpha);
                 spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor * alpha);
             }

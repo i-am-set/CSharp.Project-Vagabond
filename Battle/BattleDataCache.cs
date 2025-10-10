@@ -77,7 +77,7 @@ namespace ProjectVagabond.Battle
                 string movesJson = File.ReadAllText(movesPath);
                 var moveList = JsonSerializer.Deserialize<List<MoveData>>(movesJson, jsonOptions);
                 Moves = moveList.ToDictionary(m => m.MoveID, m => m);
-                ValidateWordLengths(Moves.Values.Select(m => m.MoveName), "Move");
+                ValidateWordLengths(Moves.Values.Select(m => m.MoveName), "Move", 11);
                 Debug.WriteLine($"[BattleDataCache] Successfully loaded {Moves.Count} move definitions.");
             }
             catch (Exception ex)
@@ -92,7 +92,7 @@ namespace ProjectVagabond.Battle
                 string consumablesJson = File.ReadAllText(consumablesPath);
                 var consumableList = JsonSerializer.Deserialize<List<ConsumableItemData>>(consumablesJson, jsonOptions);
                 Consumables = consumableList.ToDictionary(c => c.ItemID, c => c);
-                ValidateWordLengths(Consumables.Values.Select(c => c.ItemName), "Consumable");
+                ValidateWordLengths(Consumables.Values.Select(c => c.ItemName), "Consumable", 11);
                 Debug.WriteLine($"[BattleDataCache] Successfully loaded {Consumables.Count} consumable item definitions.");
             }
             catch (Exception ex)
@@ -107,7 +107,8 @@ namespace ProjectVagabond.Battle
                 string abilitiesJson = File.ReadAllText(abilitiesPath);
                 var abilityList = JsonSerializer.Deserialize<List<AbilityData>>(abilitiesJson, jsonOptions);
                 Abilities = abilityList.ToDictionary(a => a.AbilityID, a => a);
-                ValidateWordLengths(Abilities.Values.Select(a => a.AbilityName), "Ability");
+                ValidateWordLengths(Abilities.Values.Select(a => a.RelicName), "Relic", 11);
+                ValidateWordLengths(Abilities.Values.Select(a => a.AbilityName), "Ability", 14);
                 Debug.WriteLine($"[BattleDataCache] Successfully loaded {Abilities.Count} ability definitions.");
             }
             catch (Exception ex)
@@ -117,11 +118,12 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private static void ValidateWordLengths(IEnumerable<string> names, string dataType)
+        private static void ValidateWordLengths(IEnumerable<string> names, string dataType, int maxWordLength)
         {
-            const int maxWordLength = 11;
             foreach (var name in names)
             {
+                if (string.IsNullOrEmpty(name)) continue;
+
                 var words = name.Split(' ');
                 foreach (var word in words)
                 {
