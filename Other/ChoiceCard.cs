@@ -59,6 +59,15 @@ namespace ProjectVagabond.UI
         private const float MIN_AURA_ALPHA = 0.1f;
         private const float MAX_AURA_ALPHA = 0.6f;
 
+        // Idle Animation
+        private float _bobTimer;
+        private const float CARD_BOB_SPEED = 0.8f;
+        private const float CARD_BOB_AMOUNT = 1.0f;
+        private const float ICON_BOB_CYCLE_DURATION = 1.0f; // Total time for one up-and-down cycle
+        private const float ICON_BOB_AMOUNT = 1.0f; // The pixel distance to bob
+        private const float RARITY_SWAY_SPEED = 1.2f;
+        private const float RARITY_SWAY_AMOUNT = 2.0f;
+
         public bool IsIntroAnimating => _cardAnimState == CardAnimationState.AnimatingIn;
         public bool IsAnimatingOut => _cardAnimState == CardAnimationState.AnimatingOut;
 
@@ -71,6 +80,7 @@ namespace ProjectVagabond.UI
             _rarity = move.Rarity;
             _rarityText = GetRarityString(_rarity);
             _elementId = move.OffensiveElementIDs.FirstOrDefault();
+            _bobTimer = (float)_random.NextDouble() * MathHelper.TwoPi;
 
             string power = move.Power > 0 ? move.Power.ToString() : "---";
             string acc = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
@@ -90,6 +100,7 @@ namespace ProjectVagabond.UI
             _rarity = ability.Rarity;
             _rarityText = GetRarityString(_rarity);
             _elementId = 0; // Abilities have no element
+            _bobTimer = (float)_random.NextDouble() * MathHelper.TwoPi;
         }
 
         public ChoiceCard(Rectangle bounds, ConsumableItemData item) : base(bounds, item.ItemName)
@@ -102,6 +113,7 @@ namespace ProjectVagabond.UI
             _rarityText = GetRarityString(_rarity);
             _elementId = 0;
             _subTextLines.Add("CONSUMABLE ITEM");
+            _bobTimer = (float)_random.NextDouble() * MathHelper.TwoPi;
         }
 
         public void StartIntroAnimation()
@@ -137,6 +149,7 @@ namespace ProjectVagabond.UI
         public void Update(MouseState currentMouseState, GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _bobTimer += deltaTime;
 
             if (_cardAnimState == CardAnimationState.AnimatingIn)
             {
@@ -293,6 +306,12 @@ namespace ProjectVagabond.UI
             float currentRotation = 0f;
             float scale = 1.0f;
 
+            float cardBobOffsetY = 0;
+            if (_cardAnimState == CardAnimationState.Idle)
+            {
+                cardBobOffsetY = MathF.Round(MathF.Sin(_bobTimer * CARD_BOB_SPEED) * CARD_BOB_AMOUNT);
+            }
+
             if (_cardAnimState == CardAnimationState.AnimatingIn)
             {
                 float progress = Math.Clamp(_cardAnimTimer / CARD_ANIM_DURATION, 0f, 1f);
@@ -335,8 +354,11 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                drawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, Bounds.Width, Bounds.Height);
+                // For idle state, apply bobbing
+                drawBounds = new Rectangle((int)currentPosition.X, (int)(currentPosition.Y + cardBobOffsetY), Bounds.Width, Bounds.Height);
             }
+
+            var staticDrawBounds = new Rectangle((int)currentPosition.X, (int)currentPosition.Y, Bounds.Width, Bounds.Height);
 
 
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -425,6 +447,12 @@ namespace ProjectVagabond.UI
                 // Draw Rarity Text (OUTSIDE the card)
                 if (!string.IsNullOrEmpty(_rarityText) && _rarityAnimState != RarityAnimationState.Hidden)
                 {
+                    float raritySwayOffsetX = 0;
+                    if (_cardAnimState == CardAnimationState.Idle)
+                    {
+                        raritySwayOffsetX = MathF.Round(MathF.Sin(_bobTimer * RARITY_SWAY_SPEED) * RARITY_SWAY_AMOUNT);
+                    }
+
                     float rarityY = drawBounds.Y - secondaryFont.LineHeight - 2;
                     float textScale = 1.0f;
                     if (_rarityAnimState == RarityAnimationState.AnimatingIn)
@@ -449,7 +477,7 @@ namespace ProjectVagabond.UI
                         }
 
                         float totalWidthWithGaps = _rarityText.Sum(c => secondaryFont.MeasureString(c.ToString()).Width) + Math.Max(0, _rarityText.Length - 1);
-                        float currentX = MathF.Round(drawBounds.Center.X - totalWidthWithGaps / 2f);
+                        float currentX = MathF.Round(drawBounds.Center.X - totalWidthWithGaps / 2f) + raritySwayOffsetX;
 
                         for (int i = 0; i < _rarityText.Length; i++)
                         {
@@ -471,7 +499,7 @@ namespace ProjectVagabond.UI
                     else // Draw statically or with pop-in animation
                     {
                         var rarityTextSize = secondaryFont.MeasureString(_rarityText);
-                        var rarityTextPos = new Vector2(drawBounds.Center.X, rarityY + rarityTextSize.Height / 2f);
+                        var rarityTextPos = new Vector2(drawBounds.Center.X + raritySwayOffsetX, rarityY + rarityTextSize.Height / 2f);
                         var origin = rarityTextSize / 2f;
                         spriteBatch.DrawStringSnapped(secondaryFont, _rarityText, rarityTextPos, rarityColor * alpha, 0f, origin, textScale, SpriteEffects.None, 0f);
                     }
@@ -480,54 +508,68 @@ namespace ProjectVagabond.UI
                 // --- INTERNAL CONTENT ---
                 const int paddingX = 8;
                 const int topPadding = 4;
-                float contentWidth = drawBounds.Width - (paddingX * 2);
+                float contentWidth = staticDrawBounds.Width - (paddingX * 2);
                 float currentY;
+                float iconBobOffsetY = 0;
+                if (_cardAnimState == CardAnimationState.Idle)
+                {
+                    float cycleProgress = (_bobTimer % ICON_BOB_CYCLE_DURATION) / ICON_BOB_CYCLE_DURATION;
+                    iconBobOffsetY = (cycleProgress < 0.5f) ? -ICON_BOB_AMOUNT : 0;
+                }
+
 
                 if (_cardType == ChoiceType.Ability)
                 {
-                    currentY = drawBounds.Y + topPadding + 8;
+                    currentY = staticDrawBounds.Y + 5; // Base Y position for content, relative to the static card position.
 
                     const int relicIconSize = 32;
-                    var relicIconPos = new Vector2(drawBounds.Center.X - relicIconSize / 2f, currentY);
+                    var relicIconPos = new Vector2(staticDrawBounds.Center.X - relicIconSize / 2f, currentY + iconBobOffsetY);
                     var relicTexture = spriteManager.GetRelicSprite(_relicImagePath);
-                    spriteBatch.DrawSnapped(relicTexture, new Rectangle((int)relicIconPos.X, (int)relicIconPos.Y, relicIconSize, relicIconSize), Color.White * alpha);
+                    var relicRect = new Rectangle((int)relicIconPos.X, (int)relicIconPos.Y, relicIconSize, relicIconSize);
 
-                    float relicImageBottomY = relicIconPos.Y + relicIconSize;
+                    if (isActivated)
+                    {
+                        var silhouetteTexture = spriteManager.GetRelicSpriteSilhouette(_relicImagePath);
+                        var outlineColor = Color.White;
+                        spriteBatch.DrawSnapped(silhouetteTexture, new Rectangle(relicRect.X - 1, relicRect.Y, relicRect.Width, relicRect.Height), outlineColor * alpha);
+                        spriteBatch.DrawSnapped(silhouetteTexture, new Rectangle(relicRect.X + 1, relicRect.Y, relicRect.Width, relicRect.Height), outlineColor * alpha);
+                        spriteBatch.DrawSnapped(silhouetteTexture, new Rectangle(relicRect.X, relicRect.Y - 1, relicRect.Width, relicRect.Height), outlineColor * alpha);
+                        spriteBatch.DrawSnapped(silhouetteTexture, new Rectangle(relicRect.X, relicRect.Y + 1, relicRect.Width, relicRect.Height), outlineColor * alpha);
+                    }
 
-                    // Define the fixed space for the title. It should accommodate 3 lines.
+                    spriteBatch.DrawSnapped(relicTexture, relicRect, Color.White * alpha);
+
+                    // All text content is now positioned relative to the static bounds
+                    float titleBlockStartY = staticDrawBounds.Y + 5 + relicIconSize - 4;
+
                     const int titleLineCountReservation = 3;
                     float titleReservedHeight = defaultFont.LineHeight * titleLineCountReservation;
-                    float titleBlockStartY = relicImageBottomY + 4;
 
-                    // Calculate the actual height of the wrapped title text
                     var titleLines = WrapText(Title, contentWidth, defaultFont, isTitle: true);
                     float actualTitleHeight = titleLines.Count * defaultFont.LineHeight;
 
-                    // Calculate the starting Y position to vertically center the title within its reserved space
                     float titleActualStartY = titleBlockStartY + (titleReservedHeight - actualTitleHeight) / 2f;
 
-                    // Draw the title lines
                     float titleCurrentY = titleActualStartY;
                     foreach (var line in titleLines)
                     {
                         var titleSize = defaultFont.MeasureString(line);
-                        var titlePos = new Vector2(drawBounds.Center.X - titleSize.Width / 2, titleCurrentY);
+                        var titlePos = new Vector2(staticDrawBounds.Center.X - titleSize.Width / 2, titleCurrentY);
                         spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, (isActivated ? _global.ButtonHoverColor : titleColor) * alpha);
                         titleCurrentY += defaultFont.LineHeight;
                     }
 
-                    // Now, calculate the fixed divider position based on the RESERVED space
                     currentY = titleBlockStartY + titleReservedHeight + 6;
 
-                    var dividerStart = new Vector2(drawBounds.Left + paddingX, currentY);
-                    var dividerEnd = new Vector2(drawBounds.Right - paddingX, currentY);
+                    var dividerStart = new Vector2(staticDrawBounds.Left + paddingX, currentY);
+                    var dividerEnd = new Vector2(staticDrawBounds.Right - paddingX, currentY);
                     spriteBatch.DrawLineSnapped(dividerStart, dividerEnd, _global.Palette_Gray * alpha);
                     currentY += 6;
 
                     if (!string.IsNullOrEmpty(_abilityName))
                     {
                         var abilityNameSize = secondaryFont.MeasureString(_abilityName);
-                        var abilityNamePos = new Vector2(drawBounds.Center.X - abilityNameSize.Width / 2, currentY);
+                        var abilityNamePos = new Vector2(staticDrawBounds.Center.X - abilityNameSize.Width / 2, currentY);
                         spriteBatch.DrawStringSnapped(secondaryFont, _abilityName, abilityNamePos, _global.Palette_Gray * alpha);
                         currentY += secondaryFont.LineHeight + 4;
                     }
@@ -537,40 +579,88 @@ namespace ProjectVagabond.UI
                     float titleAreaHeight = defaultFont.LineHeight * 2;
                     var titleLines = WrapText(Title, contentWidth, defaultFont, isTitle: true);
                     float totalTitleTextHeight = titleLines.Count * defaultFont.LineHeight;
-                    float titleStartY = drawBounds.Y + topPadding + (titleAreaHeight - totalTitleTextHeight) / 2f;
+                    float titleStartY = staticDrawBounds.Y + topPadding + (titleAreaHeight - totalTitleTextHeight) / 2f;
                     currentY = titleStartY;
                     foreach (var line in titleLines)
                     {
                         var titleSize = defaultFont.MeasureString(line);
-                        var titlePos = new Vector2(drawBounds.Center.X - titleSize.Width / 2, currentY);
+                        var titlePos = new Vector2(staticDrawBounds.Center.X - titleSize.Width / 2, currentY);
                         spriteBatch.DrawStringSnapped(defaultFont, line, titlePos, (isActivated ? _global.ButtonHoverColor : titleColor) * alpha);
                         currentY += defaultFont.LineHeight;
                     }
 
-                    float descriptionStartY = drawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
+                    float descriptionStartY_animated = drawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
                     if (_cardType == ChoiceType.Spell && spriteManager.ElementIconSourceRects.TryGetValue(_elementId, out var iconRect))
                     {
                         const int iconSize = 9;
                         const int iconDescGap = 4;
-                        var iconPos = new Vector2(drawBounds.Center.X - iconSize / 2f, descriptionStartY - iconDescGap - iconSize + 4);
+                        var iconPos = new Vector2(drawBounds.Center.X - iconSize / 2f, descriptionStartY_animated - iconDescGap - iconSize + 4 + iconBobOffsetY);
                         spriteBatch.DrawSnapped(spriteManager.ElementIconsSpriteSheet, iconPos, iconRect, Color.White * alpha);
                     }
-                    currentY = descriptionStartY;
+                    currentY = staticDrawBounds.Y + topPadding + titleAreaHeight + secondaryFont.LineHeight + 3;
                 }
 
-                // Draw Description (Word Wrapped)
+                // Draw Description (Word Wrapped) - relative to static bounds
                 var descLines = WrapText(Description, contentWidth, secondaryFont);
                 foreach (var line in descLines)
                 {
-                    var descSize = secondaryFont.MeasureString(line);
-                    var descPos = new Vector2(drawBounds.Center.X - descSize.Width / 2, currentY);
-                    spriteBatch.DrawStringSnapped(secondaryFont, line, descPos, _global.Palette_White * alpha);
+                    var lineSize = secondaryFont.MeasureString(line);
+                    float currentX = staticDrawBounds.Center.X - lineSize.Width / 2;
+
+                    var currentSegment = new StringBuilder();
+                    bool? currentSegmentIsNumeric = null;
+                    bool previousSegmentWasNumeric = false;
+
+                    Action drawSegment = () => {
+                        if (currentSegment.Length > 0)
+                        {
+                            string segmentStr = currentSegment.ToString();
+                            Color segmentColor = (currentSegmentIsNumeric ?? false) ? _global.Palette_Red : _global.Palette_White;
+
+                            float xPos = currentX;
+                            if (segmentStr == "." && previousSegmentWasNumeric)
+                            {
+                                xPos += 1;
+                            }
+
+                            spriteBatch.DrawStringSnapped(secondaryFont, segmentStr, new Vector2(xPos, currentY), segmentColor * alpha);
+                            currentX += secondaryFont.MeasureString(segmentStr).Width;
+
+                            if (segmentStr == "." && previousSegmentWasNumeric)
+                            {
+                                currentX += 1;
+                            }
+
+                            currentSegment.Clear();
+                            previousSegmentWasNumeric = currentSegmentIsNumeric ?? false;
+                        }
+                    };
+
+                    for (int i = 0; i < line.Length; i++)
+                    {
+                        char c = line[i];
+                        bool isNumericChar = char.IsDigit(c) || c == '%';
+
+                        if (currentSegmentIsNumeric == null)
+                        {
+                            currentSegmentIsNumeric = isNumericChar;
+                        }
+
+                        if (isNumericChar != currentSegmentIsNumeric)
+                        {
+                            drawSegment();
+                            currentSegmentIsNumeric = isNumericChar;
+                        }
+                        currentSegment.Append(c);
+                    }
+                    drawSegment(); // Draw the final segment of the line
+
                     currentY += secondaryFont.LineHeight + 1;
                 }
 
-                // Draw Stats at the bottom
+                // Draw Stats at the bottom - relative to static bounds
                 float statsBlockHeight = _stats.Count * secondaryFont.LineHeight;
-                float statsStartY = drawBounds.Bottom - paddingX - statsBlockHeight;
+                float statsStartY = staticDrawBounds.Bottom - paddingX - statsBlockHeight;
 
                 if (_cardType == ChoiceType.Spell)
                 {
@@ -583,7 +673,7 @@ namespace ProjectVagabond.UI
                     }
 
                     float totalStatWidth = maxLabelWidth + maxValueWidth + 2;
-                    float statBlockStartX = drawBounds.X + (drawBounds.Width - totalStatWidth) / 2;
+                    float statBlockStartX = staticDrawBounds.X + (staticDrawBounds.Width - totalStatWidth) / 2;
                     float statLabelX = statBlockStartX;
                     float statValueX = statLabelX + maxLabelWidth + 2;
 
@@ -611,12 +701,12 @@ namespace ProjectVagabond.UI
                     {
                         var subText = _subTextLines[0];
                         var subTextSize = secondaryFont.MeasureString(subText);
-                        var subTextPos = new Vector2(drawBounds.Center.X - subTextSize.Width / 2, statsStartY);
+                        var subTextPos = new Vector2(staticDrawBounds.Center.X - subTextSize.Width / 2, statsStartY);
                         spriteBatch.DrawStringSnapped(secondaryFont, subText, subTextPos, _global.Palette_Gray * alpha);
                     }
                 }
 
-                // Draw Decorative Accents
+                // Draw Decorative Accents - relative to animated bounds
                 const int accentSize = 3;
                 const int inset = 2;
                 spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, accentSize, 1), accentColor * alpha);

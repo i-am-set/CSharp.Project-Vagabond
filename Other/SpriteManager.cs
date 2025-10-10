@@ -40,7 +40,7 @@ namespace ProjectVagabond
         private readonly Dictionary<string, Texture2D> _enemySprites = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteTopPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
-        private readonly Dictionary<string, Texture2D> _relicSprites = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _relicSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
 
 
         private Texture2D _logoSprite;
@@ -348,28 +348,85 @@ namespace ProjectVagabond
         {
             if (string.IsNullOrEmpty(imagePath))
             {
-                return _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
+                LoadAndCacheRelic("placeholder", null);
+                return _relicSprites["placeholder"].Original;
             }
 
             if (_relicSprites.TryGetValue(imagePath, out var cachedSprite))
             {
-                return cachedSprite;
+                return cachedSprite.Original;
             }
 
+            return LoadAndCacheRelic(imagePath, imagePath).Original;
+        }
+
+        public Texture2D GetRelicSpriteSilhouette(string imagePath)
+        {
+            if (string.IsNullOrEmpty(imagePath))
+            {
+                LoadAndCacheRelic("placeholder", null);
+                return _relicSprites["placeholder"].Silhouette;
+            }
+
+            if (_relicSprites.TryGetValue(imagePath, out var cachedSprite))
+            {
+                return cachedSprite.Silhouette;
+            }
+
+            return LoadAndCacheRelic(imagePath, imagePath).Silhouette;
+        }
+
+        private (Texture2D Original, Texture2D Silhouette) LoadAndCacheRelic(string cacheKey, string? imagePath)
+        {
+            // If it's already cached, return immediately.
+            if (_relicSprites.TryGetValue(cacheKey, out var cachedTuple))
+            {
+                return cachedTuple;
+            }
+
+            Texture2D originalTexture;
             try
             {
-                var sprite = _core.Content.Load<Texture2D>(imagePath);
-                _relicSprites[imagePath] = sprite;
-                return sprite;
+                if (imagePath != null)
+                {
+                    originalTexture = _core.Content.Load<Texture2D>(imagePath);
+                }
+                else // This is the placeholder case
+                {
+                    originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.White);
+                }
             }
             catch
             {
-                Debug.WriteLine($"[SpriteManager] [WARNING] Could not load relic sprite at '{imagePath}'. Using placeholder.");
-                var placeholder = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
-                _relicSprites[imagePath] = placeholder; // Cache the placeholder to avoid repeated load attempts
-                return placeholder;
+                Debug.WriteLine($"[SpriteManager] [WARNING] Could not load relic sprite at '{imagePath}'. Using white placeholder.");
+                originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.White);
             }
+
+            // Generate silhouette
+            var originalData = new Color[originalTexture.Width * originalTexture.Height];
+            originalTexture.GetData(originalData);
+
+            var silhouetteData = new Color[originalData.Length];
+            for (int i = 0; i < originalData.Length; i++)
+            {
+                if (originalData[i].A > 0)
+                {
+                    silhouetteData[i] = Color.White;
+                }
+                else
+                {
+                    silhouetteData[i] = Color.Transparent;
+                }
+            }
+
+            var silhouetteTexture = new Texture2D(_core.GraphicsDevice, originalTexture.Width, originalTexture.Height);
+            silhouetteTexture.SetData(silhouetteData);
+
+            var tuple = (originalTexture, silhouetteTexture);
+            _relicSprites[cacheKey] = tuple;
+            return tuple;
         }
+
 
         public int[] GetEnemySpriteTopPixelOffsets(string archetypeId)
         {
