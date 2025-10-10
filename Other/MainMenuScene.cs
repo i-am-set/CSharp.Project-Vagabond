@@ -332,16 +332,13 @@ namespace ProjectVagabond.Scenes
                     var fontToUse = selectedButton.Font ?? secondaryFont;
 
                     string leftArrow = ">";
-                    string rightArrow = "<";
                     var arrowSize = fontToUse.MeasureString(leftArrow);
 
                     float pressOffset = selectedButton.IsPressed ? 2f : 0f;
 
                     var leftPos = new Vector2(bounds.Left - arrowSize.Width - 4 + pressOffset, bounds.Center.Y - arrowSize.Height / 2f + selectedButton.TextRenderOffset.Y);
-                    var rightPos = new Vector2(bounds.Right - pressOffset, bounds.Center.Y - arrowSize.Height / 2f + selectedButton.TextRenderOffset.Y);
 
                     spriteBatch.DrawStringSnapped(fontToUse, leftArrow, leftPos, color);
-                    spriteBatch.DrawStringSnapped(fontToUse, rightArrow, rightPos, color);
                 }
             }
 

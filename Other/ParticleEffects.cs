@@ -368,13 +368,13 @@ namespace ProjectVagabond.Particles
 
             settings.VelocityPattern = EmissionPattern.Radial;
             settings.Lifetime = new FloatRange(0.6f, 1.0f);
-            settings.InitialVelocityX = new FloatRange(70f, 150f); // Speed
+            settings.InitialVelocityX = new FloatRange(30f, 100f); // Speed
             settings.InitialVelocityY = new FloatRange(0f); // Ignored
             settings.InitialSize = new FloatRange(1f, 2f);
             settings.EndSize = new FloatRange(0f);
             settings.InterpolateSize = true;
 
-            settings.Gravity = new Vector2(0, 225f); // Add a bit of gravity for a nice arc
+            settings.Gravity = new Vector2(0, 155f); // Add a bit of gravity for a nice arc
             settings.Drag = 2.5f; // Sparks slow down
             settings.StartColor = global.Palette_Red;
             settings.EndColor = global.Palette_Yellow;
