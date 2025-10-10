@@ -378,6 +378,7 @@ namespace ProjectVagabond.UI
                 titleColor = _global.Palette_BrightWhite; // Neutral color for non-spells
             }
 
+            Color numericColor = (_rarity == 0) ? _global.Palette_Red : rarityColor;
             Color accentColor = _global.Palette_White;
             Color baseBorderColor = _cardType == ChoiceType.Spell ? titleColor : rarityColor;
 
@@ -615,7 +616,7 @@ namespace ProjectVagabond.UI
                         if (currentSegment.Length > 0)
                         {
                             string segmentStr = currentSegment.ToString();
-                            Color segmentColor = (currentSegmentIsNumeric ?? false) ? _global.Palette_Red : _global.Palette_White;
+                            Color segmentColor = (currentSegmentIsNumeric ?? false) ? numericColor : _global.Palette_White;
 
                             float xPos = currentX;
                             if (segmentStr == "." && previousSegmentWasNumeric)
