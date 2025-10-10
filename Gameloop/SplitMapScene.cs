@@ -714,10 +714,11 @@ namespace ProjectVagabond.Scenes
 
                 for (int i = 0; i < numPixelsToDraw; i++)
                 {
-                    int patternIndex = (i + path.DrawPatternOffset) % PATH_DRAW_PATTERN.Length;
+                    var point = path.PixelPoints[i];
+                    int patternIndex = Math.Abs(point.X * 7 + point.Y * 13) % PATH_DRAW_PATTERN.Length;
                     if (PATH_DRAW_PATTERN[patternIndex] == '1')
                     {
-                        spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
+                        spriteBatch.Draw(pixel, point.ToVector2(), pathColor);
                     }
                 }
             }
@@ -733,10 +734,11 @@ namespace ProjectVagabond.Scenes
 
                 for (int i = 0; i < numPixelsToDraw; i++)
                 {
-                    int patternIndex = (i + path.DrawPatternOffset) % PATH_DRAW_PATTERN.Length;
+                    var point = path.PixelPoints[i];
+                    int patternIndex = Math.Abs(point.X * 7 + point.Y * 13) % PATH_DRAW_PATTERN.Length;
                     if (PATH_DRAW_PATTERN[patternIndex] == '1')
                     {
-                        spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
+                        spriteBatch.Draw(pixel, point.ToVector2(), pathColor);
                     }
                 }
             }
@@ -744,10 +746,11 @@ namespace ProjectVagabond.Scenes
             {
                 for (int i = 0; i < path.PixelPoints.Count; i++)
                 {
-                    int patternIndex = (i + path.DrawPatternOffset) % PATH_DRAW_PATTERN.Length;
+                    var point = path.PixelPoints[i];
+                    int patternIndex = Math.Abs(point.X * 7 + point.Y * 13) % PATH_DRAW_PATTERN.Length;
                     if (PATH_DRAW_PATTERN[patternIndex] == '1')
                     {
-                        spriteBatch.Draw(pixel, path.PixelPoints[i].ToVector2(), pathColor);
+                        spriteBatch.Draw(pixel, point.ToVector2(), pathColor);
                     }
                 }
             }

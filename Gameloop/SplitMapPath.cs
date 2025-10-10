@@ -1,5 +1,13 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
 
@@ -15,17 +23,14 @@ namespace ProjectVagabond.Progression
         public int ToNodeId { get; }
         public List<Vector2> RenderPoints { get; set; } = new List<Vector2>();
         public List<Point> PixelPoints { get; set; } = new List<Point>();
-        public int DrawPatternOffset { get; }
 
         private static int _nextId = 0;
-        private static readonly Random _random = new Random();
 
         public SplitMapPath(int fromNodeId, int toNodeId)
         {
             Id = _nextId++;
             FromNodeId = fromNodeId;
             ToNodeId = toNodeId;
-            DrawPatternOffset = _random.Next(1000); // Assign a large random offset for visual variety
         }
         public static void ResetIdCounter() => _nextId = 0;
     }
