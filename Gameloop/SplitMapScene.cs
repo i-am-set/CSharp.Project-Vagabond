@@ -44,7 +44,7 @@ namespace ProjectVagabond.Scenes
         private int _pressedNodeId = -1;
         private readonly HashSet<int> _visitedNodeIds = new HashSet<int>();
         private int _nodeForPathReveal = -1;
-        private int _lastAnimatedNodeId = -1;
+        private int _lastAnimatedFloor = -1;
 
         // Path animation state
         private readonly Dictionary<int, float> _pathAnimationProgress = new();
@@ -70,6 +70,11 @@ namespace ProjectVagabond.Scenes
 
         // Camera Tuning
         private const float CAMERA_TOP_PADDING = 20f;
+
+        // Floor Reveal Animation
+        private bool _isFadingInNextFloor = false;
+        private float _floorFadeInTimer = 0f;
+        private const float FLOOR_FADE_IN_DURATION = 0.5f;
 
 
         public static bool PlayerWonLastBattle { get; set; } = true;
@@ -106,7 +111,7 @@ namespace ProjectVagabond.Scenes
                 _currentMap = _progressionManager.CurrentSplitMap;
                 _playerCurrentNodeId = _currentMap?.StartNodeId ?? -1;
                 _nodeForPathReveal = _playerCurrentNodeId;
-                _lastAnimatedNodeId = -1;
+                _lastAnimatedFloor = -1;
                 _pathAnimationProgress.Clear();
                 _pathRetractionProgress.Clear();
                 _pathAnimationDurations.Clear();
@@ -242,6 +247,17 @@ namespace ProjectVagabond.Scenes
 
             // Smooth camera scrolling
             _cameraYOffset = MathHelper.Lerp(_cameraYOffset, _targetCameraYOffset, deltaTime * 5f);
+
+            // Update floor fade-in animation
+            if (_isFadingInNextFloor)
+            {
+                _floorFadeInTimer += deltaTime;
+                if (_floorFadeInTimer >= FLOOR_FADE_IN_DURATION)
+                {
+                    _floorFadeInTimer = FLOOR_FADE_IN_DURATION;
+                    _isFadingInNextFloor = false;
+                }
+            }
 
             // Update active path animations
             var appearingKeys = _pathAnimationProgress.Keys.ToList();
@@ -413,14 +429,19 @@ namespace ProjectVagabond.Scenes
         private void StartPathRevealAnimation()
         {
             _nodeForPathReveal = _playerCurrentNodeId;
+            var currentNode = _currentMap?.Nodes[_nodeForPathReveal];
+            if (currentNode == null) return;
 
-            // Check if we need to start new animations for a new node
-            if (_nodeForPathReveal != _lastAnimatedNodeId)
+            // Check if we need to start new animations for a new node/floor
+            if (currentNode.Floor != _lastAnimatedFloor)
             {
-                _lastAnimatedNodeId = _nodeForPathReveal;
-                if (_currentMap != null && _currentMap.Nodes.TryGetValue(_nodeForPathReveal, out var currentNode))
+                _isFadingInNextFloor = true;
+                _floorFadeInTimer = 0f;
+
+                _lastAnimatedFloor = currentNode.Floor;
+                if (_currentMap != null && _currentMap.Nodes.TryGetValue(_nodeForPathReveal, out var nodeForPaths))
                 {
-                    foreach (var pathId in currentNode.OutgoingPathIds)
+                    foreach (var pathId in nodeForPaths.OutgoingPathIds)
                     {
                         if (!_pathAnimationProgress.ContainsKey(pathId))
                         {
@@ -617,9 +638,33 @@ namespace ProjectVagabond.Scenes
             }
 
             // Draw Nodes
+            int currentPlayerFloor = _currentMap.Nodes[_playerCurrentNodeId].Floor;
             foreach (var node in _currentMap.Nodes.Values)
             {
                 if (node.NodeType == SplitNodeType.Origin) continue; // Skip drawing the origin node
+
+                float nodeAlpha = 0f;
+                bool isNextFloor = node.Floor == currentPlayerFloor + 1;
+
+                if (node.Floor <= currentPlayerFloor || _visitedNodeIds.Contains(node.Id))
+                {
+                    nodeAlpha = 1.0f;
+                }
+                else if (isNextFloor)
+                {
+                    if (_isFadingInNextFloor)
+                    {
+                        float progress = Math.Clamp(_floorFadeInTimer / FLOOR_FADE_IN_DURATION, 0f, 1f);
+                        nodeAlpha = Easing.EaseOutQuad(progress);
+                    }
+                    else if (_lastAnimatedFloor == currentPlayerFloor)
+                    {
+                        // If the fade-in is complete for this floor, it should be fully visible.
+                        nodeAlpha = 1.0f;
+                    }
+                }
+
+                if (nodeAlpha <= 0.01f) continue;
 
                 var texture = GetNodeTexture(node.NodeType);
                 var bounds = node.GetBounds();
@@ -650,7 +695,7 @@ namespace ProjectVagabond.Scenes
 
                 var origin = new Vector2(texture.Width / 2f, texture.Height / 2f);
                 var position = bounds.Center.ToVector2();
-                spriteBatch.DrawSnapped(texture, position, null, color, 0f, origin, scale, SpriteEffects.None, 0.4f);
+                spriteBatch.DrawSnapped(texture, position, null, color * nodeAlpha, 0f, origin, scale, SpriteEffects.None, 0.4f);
             }
 
 
