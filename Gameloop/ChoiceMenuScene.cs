@@ -21,7 +21,7 @@ namespace ProjectVagabond.Scenes
         private static readonly Random _random = new Random();
         private readonly SceneManager _sceneManager;
         private readonly GameState _gameState;
-        private readonly ChoiceGenerator _choiceGenerator;
+        private Action? _onChoiceMade;
 
         private enum AnimationPhase { CardIntro, RarityIntro, Idle, CardOutro, SpellTransform_PopIn, SpellTransform_BookIntro, SpellTransform_MoveOut, SpellTransform_Absorb, SpellTransform_BookMoveOut }
         private AnimationPhase _currentPhase = AnimationPhase.CardIntro;
@@ -37,7 +37,7 @@ namespace ProjectVagabond.Scenes
         private List<(ChoiceCard card, float delay)> _cardsToAnimateOut = new List<(ChoiceCard, float)>();
 
         // State for the final transform animation
-        private object _selectedChoiceData;
+        private object? _selectedChoiceData;
         private Vector2 _transformAnimPosition;
         private float _transformAnimTimer;
         private const float TRANSFORM_POP_IN_DURATION = 0.5f;
@@ -60,7 +60,6 @@ namespace ProjectVagabond.Scenes
         {
             _sceneManager = ServiceLocator.Get<SceneManager>();
             _gameState = ServiceLocator.Get<GameState>();
-            _choiceGenerator = new ChoiceGenerator();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -73,7 +72,7 @@ namespace ProjectVagabond.Scenes
             base.Enter();
         }
 
-        public void Show(ChoiceType type, int count)
+        public void Show(List<object> choices, Action? onChoiceMade = null)
         {
             _cards.Clear();
             _cardsToAnimateIn.Clear();
@@ -82,39 +81,21 @@ namespace ProjectVagabond.Scenes
             _animationStaggerTimer = 0f;
             _rarityStaggerTimer = 0f;
             _currentPhase = AnimationPhase.CardIntro;
-
-            // For now, we'll assume GameStage is 1 for testing purposes.
-            // In the final implementation, this value will come from the game's progression manager.
-            int currentGameStage = 1;
-            List<object> selectedChoices = new List<object>();
-
-            switch (type)
-            {
-                case ChoiceType.Spell:
-                    selectedChoices = _choiceGenerator.GenerateSpellChoices(currentGameStage, count).Cast<object>().ToList();
-                    break;
-                case ChoiceType.Ability:
-                    selectedChoices = _choiceGenerator.GenerateAbilityChoices(currentGameStage, count).Cast<object>().ToList();
-                    break;
-                case ChoiceType.Item:
-                    // Placeholder for item generation
-                    break;
-            }
-
+            _onChoiceMade = onChoiceMade;
 
             // Layout calculation for vertical pillars
             const int cardWidth = 95;
             const int cardGap = 5;
             const int startY = 9; // Card top is now lower
             const int cardHeight = Global.VIRTUAL_HEIGHT - 2 - 8; // Card is now shorter
-            int totalWidth = (cardWidth * count) + (cardGap * (count - 1));
+            int totalWidth = (cardWidth * choices.Count) + (cardGap * (choices.Count - 1));
             int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
 
-            for (int i = 0; i < selectedChoices.Count; i++)
+            for (int i = 0; i < choices.Count; i++)
             {
-                var choice = selectedChoices[i];
+                var choice = choices[i];
                 var bounds = new Rectangle(startX + i * (cardWidth + cardGap), startY, cardWidth, cardHeight);
-                ChoiceCard card = null;
+                ChoiceCard? card = null;
 
                 if (choice is MoveData move) card = new ChoiceCard(bounds, move);
                 else if (choice is AbilityData ability) card = new ChoiceCard(bounds, ability);
@@ -170,7 +151,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void HandleChoice(object choiceData)
+        private void HandleChoice(object? choiceData)
         {
             if (choiceData is MoveData move)
             {
@@ -186,7 +167,14 @@ namespace ProjectVagabond.Scenes
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {item.ItemName}!" });
             }
 
-            _sceneManager.HideModal();
+            if (_onChoiceMade != null)
+            {
+                _onChoiceMade.Invoke();
+            }
+            else
+            {
+                _sceneManager.HideModal();
+            }
         }
 
         public override void Update(GameTime gameTime)

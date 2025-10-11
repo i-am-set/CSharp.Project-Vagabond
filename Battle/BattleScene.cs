@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -32,6 +33,7 @@ namespace ProjectVagabond.Scenes
         private BattleAnimationManager _animationManager;
         private BattleInputHandler _inputHandler;
         private AlertManager _alertManager;
+        private readonly ChoiceGenerator _choiceGenerator;
 
         // Scene-level UI & Services
         private ImageButton _settingsButton;
@@ -51,6 +53,7 @@ namespace ProjectVagabond.Scenes
         private bool _isWaitingForMultiHitDelay = false;
         private float _multiHitDelayTimer = 0f;
         private readonly Queue<Action> _pendingAnimations = new Queue<Action>();
+        private bool _rewardScreenShown = false;
 
 
         public BattleAnimationManager AnimationManager => _animationManager;
@@ -62,6 +65,7 @@ namespace ProjectVagabond.Scenes
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
+            _choiceGenerator = new ChoiceGenerator();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -97,6 +101,7 @@ namespace ProjectVagabond.Scenes
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
             _pendingAnimations.Clear();
+            _rewardScreenShown = false;
 
             // Subscribe to events
             SubscribeToEvents();
@@ -265,18 +270,25 @@ namespace ProjectVagabond.Scenes
             {
                 if (!_uiManager.IsBusy && !_animationManager.IsAnimating)
                 {
-                    _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
-                    {
-                        var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
-                        // For now, treat loss as a win for progression.
-                        SplitMapScene.PlayerWonLastBattle = true; // player != null && !player.IsDefeated;
+                    var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+                    bool playerWon = player != null && !player.IsDefeated;
 
-                        if (player != null && !player.IsDefeated)
+                    if (playerWon)
+                    {
+                        if (!_rewardScreenShown)
                         {
-                            DecrementTemporaryBuffs();
+                            _rewardScreenShown = true;
+                            ShowRewardScreen();
                         }
-                        _sceneManager.ChangeScene(BattleSetup.ReturnSceneState);
+                    }
+                    else // Player lost or fled
+                    {
+                        _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                        if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
+                        {
+                            SplitMapScene.PlayerWonLastBattle = false;
+                            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState);
+                        }
                     }
                 }
                 base.Update(gameTime);
@@ -341,6 +353,40 @@ namespace ProjectVagabond.Scenes
             }
 
             base.Update(gameTime);
+        }
+
+        private void ShowRewardScreen()
+        {
+            var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
+            if (choiceMenu == null)
+            {
+                FinalizeVictory();
+                return;
+            }
+
+            // Generate one spell and one ability
+            var spellChoices = _choiceGenerator.GenerateSpellChoices(1, 1); // TODO: Use actual game stage
+            var abilityChoices = _choiceGenerator.GenerateAbilityChoices(1, 1); // TODO: Use actual game stage
+
+            var choices = new List<object>();
+            if (spellChoices.Any()) choices.Add(spellChoices.First());
+            if (abilityChoices.Any()) choices.Add(abilityChoices.First());
+
+            if (!choices.Any())
+            {
+                FinalizeVictory();
+                return;
+            }
+
+            choiceMenu.Show(choices, FinalizeVictory);
+            _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+        }
+
+        private void FinalizeVictory()
+        {
+            SplitMapScene.PlayerWonLastBattle = true;
+            DecrementTemporaryBuffs();
+            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState);
         }
 
         private void DecrementTemporaryBuffs()

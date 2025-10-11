@@ -23,6 +23,7 @@ namespace ProjectVagabond.Scenes
         private readonly Global _global;
         private readonly DiceRollingSystem _diceRollingSystem;
         private readonly StoryNarrator _resultNarrator;
+        private readonly ChoiceGenerator _choiceGenerator;
 
 
         private SplitMap? _currentMap;
@@ -90,6 +91,7 @@ namespace ProjectVagabond.Scenes
             _diceRollingSystem = ServiceLocator.Get<DiceRollingSystem>();
             _playerIcon = new PlayerMapIcon();
             _narrativeDialog = new NarrativeDialog(this);
+            _choiceGenerator = new ChoiceGenerator();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 80, Global.VIRTUAL_WIDTH, 80);
             _resultNarrator = new StoryNarrator(narratorBounds);
@@ -603,7 +605,16 @@ namespace ProjectVagabond.Scenes
         private void TriggerReward()
         {
             var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-            choiceMenu?.Show(ChoiceType.Spell, 3);
+            if (choiceMenu == null) return;
+
+            // Generate choices
+            var choices = _choiceGenerator.GenerateSpellChoices(1, 3).Cast<object>().ToList(); // TODO: Use real game stage
+
+            // Define the action to take after a choice is made
+            Action onChoiceMade = () => _sceneManager.HideModal();
+
+            // Show the menu
+            choiceMenu.Show(choices, onChoiceMade);
             _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
             _wasModalActiveLastFrame = true;
         }

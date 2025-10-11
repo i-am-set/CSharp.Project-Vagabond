@@ -412,20 +412,41 @@ namespace ProjectVagabond
             if (KeyPressed(Keys.F6, currentKeyboardState, _previousKeyboardState))
             {
                 var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-                choiceMenu?.Show(ChoiceType.Spell, _random.Next(2, 4));
-                _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+                if (choiceMenu != null)
+                {
+                    var choiceGenerator = new ChoiceGenerator();
+                    var choices = choiceGenerator.GenerateSpellChoices(1, _random.Next(2, 4)).Cast<object>().ToList();
+                    choiceMenu.Show(choices, () => _sceneManager.HideModal());
+                    _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+                }
             }
             if (KeyPressed(Keys.F7, currentKeyboardState, _previousKeyboardState))
             {
                 var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-                choiceMenu?.Show(ChoiceType.Ability, _random.Next(2, 4));
-                _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+                if (choiceMenu != null)
+                {
+                    var choiceGenerator = new ChoiceGenerator();
+                    var choices = choiceGenerator.GenerateAbilityChoices(1, _random.Next(2, 4)).Cast<object>().ToList();
+                    choiceMenu.Show(choices, () => _sceneManager.HideModal());
+                    _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+                }
             }
             if (KeyPressed(Keys.F8, currentKeyboardState, _previousKeyboardState))
             {
                 var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-                choiceMenu?.Show(ChoiceType.Item, _random.Next(2, 4));
-                _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+                if (choiceMenu != null)
+                {
+                    var itemChoices = new List<object>();
+                    var allItems = BattleDataCache.Consumables.Values.ToList();
+                    if (allItems.Any())
+                    {
+                        int count = Math.Min(_random.Next(2, 4), allItems.Count);
+                        var randomItems = allItems.OrderBy(x => _random.Next()).Take(count);
+                        itemChoices.AddRange(randomItems);
+                    }
+                    choiceMenu.Show(itemChoices, () => _sceneManager.HideModal());
+                    _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+                }
             }
             if (KeyPressed(Keys.F9, currentKeyboardState, _previousKeyboardState))
             {
