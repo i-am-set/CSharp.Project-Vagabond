@@ -1,0 +1,31 @@
+{
+  "EventID": "thorny_vines",
+  "Prompt": "A patch of thorny vines blocks the path. They seem unnaturally tough.",
+  "Choices": [
+    {
+      "Text": "Hack through them",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2, 3, 4, 5, 6 ],
+          "Outcome": null,
+          "ResultText": "You clear the path, but your weapon is dulled in the process."
+        }
+      ]
+    },
+    {
+      "Text": "Look for a way around",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Tenacity,1"
+          },
+          "ResultText": "The detour is long and arduous, but you persevere, strengthening your resolve."
+        }
+      ]
+    }
+  ]
+}

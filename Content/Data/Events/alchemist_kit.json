@@ -1,0 +1,42 @@
+{
+  "EventID": "alchemist_kit",
+  "Prompt": "You find a discarded alchemist's kit with a single, unlabeled vial.",
+  "Choices": [
+    {
+      "Text": "Drink the vial",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 4, 5, 6 ],
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "StrengthUp",
+            "Duration": 1
+          },
+          "ResultText": "You drink the potion. It tastes awful, but you feel a surge of strength!"
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2, 3 ],
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "Poison",
+            "Duration": 1
+          },
+          "ResultText": "You drink the potion. A burning pain spreads from your stomach."
+        }
+      ]
+    },
+    {
+      "Text": "Leave it",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": null,
+          "ResultText": "You decide against drinking a mystery potion."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "EventID": "rope_pit",
+  "Prompt": "A rope hangs down into a dark pit.",
+  "Choices": [
+    {
+      "Text": "Climb down the rope",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 4, 5, 6 ],
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "FireScroll"
+          },
+          "ResultText": "At the bottom of the pit, you find the remains of an unfortunate adventurer and a Fire Scroll."
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2, 3 ],
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "AgilityDown",
+            "Duration": 1
+          },
+          "ResultText": "The rope snaps as you near the bottom! You land hard, twisting your ankle."
+        }
+      ]
+    },
+    {
+      "Text": "Stay on the path",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": null,
+          "ResultText": "You decide not to risk whatever might be lurking in the darkness."
+        }
+      ]
+    }
+  ]
+}

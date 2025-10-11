@@ -10,12 +10,13 @@ namespace ProjectVagabond.Progression
         public int SplitLengthMax { get; set; }
         public int NumberOfRewardFloors { get; set; }
         public List<List<string>> PossibleBattles { get; set; } = new List<List<string>>();
-        public List<NarrativeEvent> PossibleNarratives { get; set; } = new List<NarrativeEvent>();
+        public List<string> PossibleNarrativeEventIDs { get; set; } = new List<string>();
         public List<List<string>> PossibleMajorBattles { get; set; } = new List<List<string>>();
     }
 
     public class NarrativeEvent
     {
+        public string EventID { get; set; } = "";
         public string Prompt { get; set; } = "";
         public List<NarrativeChoice> Choices { get; set; } = new List<NarrativeChoice>();
     }

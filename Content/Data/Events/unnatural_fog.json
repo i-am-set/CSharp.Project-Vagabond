@@ -1,0 +1,37 @@
+{
+  "EventID": "unnatural_fog",
+  "Prompt": "A thick, unnatural fog rolls in, making it hard to see.",
+  "Choices": [
+    {
+      "Text": "Push through carefully",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 3, 4, 5, 6 ],
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Tenacity,1"
+          },
+          "ResultText": "You navigate the fog with caution, honing your senses and resolve."
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2 ],
+          "Outcome": null,
+          "ResultText": "You get turned around in the fog and end up back where you started, having wasted time."
+        }
+      ]
+    },
+    {
+      "Text": "Wait for it to clear",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": null,
+          "ResultText": "You find a sheltered spot and wait for the fog to dissipate."
+        }
+      ]
+    }
+  ]
+}

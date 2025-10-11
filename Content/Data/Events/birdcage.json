@@ -1,0 +1,37 @@
+{
+  "EventID": "birdcage",
+  "Prompt": "You find a small, ornate birdcage. The door is open and the cage is empty.",
+  "Choices": [
+    {
+      "Text": "Look inside",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2, 3, 4, 5 ],
+          "Outcome": null,
+          "ResultText": "You find nothing but a single, black feather."
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 6 ],
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "StrengthTonic"
+          },
+          "ResultText": "Tucked under a false bottom, you find a small vial."
+        }
+      ]
+    },
+    {
+      "Text": "Close the door",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": null,
+          "ResultText": "You close the tiny door and continue on your way."
+        }
+      ]
+    }
+  ]
+}

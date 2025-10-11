@@ -1,0 +1,40 @@
+{
+  "EventID": "perfect_apple",
+  "Prompt": "You find a small, perfectly ripe apple hanging from a lone branch.",
+  "Choices": [
+    {
+      "Text": "Eat the apple",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 5, 6 ],
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "MaxHP,5"
+          },
+          "ResultText": "The apple is delicious and nourishing. You feel healthier."
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2, 3, 4 ],
+          "Outcome": null,
+          "ResultText": "The apple is crisp, but otherwise ordinary."
+        }
+      ]
+    },
+    {
+      "Text": "Save it for later",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "HealthPotion"
+          },
+          "ResultText": "You decide to save the apple, which you can use as a makeshift potion."
+        }
+      ]
+    }
+  ]
+}

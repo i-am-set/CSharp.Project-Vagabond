@@ -1,0 +1,37 @@
+{
+  "EventID": "sundial",
+  "Prompt": "You find a small, perfectly intact sundial.",
+  "Choices": [
+    {
+      "Text": "Study its markings",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 6 ],
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Intelligence,1"
+          },
+          "ResultText": "After a moment of study, you decipher a hidden pattern, increasing your knowledge."
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2, 3, 4, 5 ],
+          "Outcome": null,
+          "ResultText": "The markings are from a long-dead civilization. You learn nothing of use."
+        }
+      ]
+    },
+    {
+      "Text": "Take it with you",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": null,
+          "ResultText": "It's too heavy to carry. You leave it behind."
+        }
+      ]
+    }
+  ]
+}

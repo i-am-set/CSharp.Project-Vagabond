@@ -1,0 +1,37 @@
+{
+  "EventID": "rope_bridge",
+  "Prompt": "A rickety rope bridge spans a deep chasm.",
+  "Choices": [
+    {
+      "Text": "Run across quickly",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 4, 5, 6 ],
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Agility,1"
+          },
+          "ResultText": "You dash across, your quick feet saving you from a fall. Your agility has improved."
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2, 3 ],
+          "Outcome": null,
+          "ResultText": "You sprint across, the bridge swaying wildly. You make it, but it was close."
+        }
+      ]
+    },
+    {
+      "Text": "Cross slowly and carefully",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": null,
+          "ResultText": "You make your way across the bridge with caution and reach the other side safely."
+        }
+      ]
+    }
+  ]
+}

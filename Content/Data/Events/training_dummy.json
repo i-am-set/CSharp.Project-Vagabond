@@ -1,0 +1,40 @@
+{
+  "EventID": "training_dummy",
+  "Prompt": "You find a weathered training dummy and a dusty abacus on a stump.",
+  "Choices": [
+    {
+      "Text": "Practice your strikes",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 3, 4, 5, 6 ],
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Strength,1"
+          },
+          "ResultText": "You practice your forms against the dummy, feeling your muscles grow stronger."
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2 ],
+          "Outcome": null,
+          "ResultText": "You swing too hard and the dummy topples over. You've learned little."
+        }
+      ]
+    },
+    {
+      "Text": "Solve the abacus puzzle",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Intelligence,1"
+          },
+          "ResultText": "You solve the intricate puzzle on the abacus, feeling your mind sharpen."
+        }
+      ]
+    }
+  ]
+}

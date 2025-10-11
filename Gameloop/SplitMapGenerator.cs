@@ -391,10 +391,10 @@ namespace ProjectVagabond.Progression
                             node.NodeType = SplitNodeType.Battle;
                             node.EventData = splitData.PossibleBattles[_random.Next(splitData.PossibleBattles.Count)];
                         }
-                        else if (splitData.PossibleNarratives.Any())
+                        else if (splitData.PossibleNarrativeEventIDs.Any())
                         {
                             node.NodeType = SplitNodeType.Narrative;
-                            node.EventData = splitData.PossibleNarratives[_random.Next(splitData.PossibleNarratives.Count)];
+                            node.EventData = splitData.PossibleNarrativeEventIDs[_random.Next(splitData.PossibleNarrativeEventIDs.Count)];
                         }
                         else // Fallback to battle if no narratives are available
                         {

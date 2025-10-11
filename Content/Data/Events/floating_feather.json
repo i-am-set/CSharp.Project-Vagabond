@@ -1,0 +1,38 @@
+{
+  "EventID": "floating_feather",
+  "Prompt": "A single, perfect feather floats down from the canopy above.",
+  "Choices": [
+    {
+      "Text": "Catch the feather",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2, 3, 4 ],
+          "Outcome": null,
+          "ResultText": "You catch the feather. It's beautiful, but otherwise unremarkable."
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 5, 6 ],
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "AgilityUp",
+            "Duration": 1
+          },
+          "ResultText": "As you catch it, the feather dissolves into light, making you feel swift."
+        }
+      ]
+    },
+    {
+      "Text": "Let it fall",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": null,
+          "ResultText": "You watch the feather drift to the forest floor."
+        }
+      ]
+    }
+  ]
+}

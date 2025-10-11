@@ -1,0 +1,37 @@
+{
+  "EventID": "geometric_patterns",
+  "Prompt": "A large, flat rock is covered in complex, geometric patterns.",
+  "Choices": [
+    {
+      "Text": "Trace the patterns",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 5, 6 ],
+          "Outcome": {
+            "OutcomeType": "AddStat",
+            "Value": "Intelligence,1"
+          },
+          "ResultText": "As you trace the lines, you feel a deeper understanding of the world's hidden structures."
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2, 3, 4 ],
+          "Outcome": null,
+          "ResultText": "The patterns are mesmerizing but ultimately meaningless to you."
+        }
+      ]
+    },
+    {
+      "Text": "Use it as a resting spot",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": null,
+          "ResultText": "You sit on the rock for a moment to catch your breath."
+        }
+      ]
+    }
+  ]
+}

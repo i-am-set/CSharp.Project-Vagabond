@@ -1,0 +1,41 @@
+{
+  "EventID": "small_shrine",
+  "Prompt": "You find a small shrine with offerings of dried herbs.",
+  "Choices": [
+    {
+      "Text": "Take the herbs",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 3, 4, 5, 6 ],
+          "Outcome": {
+            "OutcomeType": "GiveItem",
+            "Value": "HealthPotion"
+          },
+          "ResultText": "You take the herbs. They look like they could be brewed into a potion."
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2 ],
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "TenacityDown",
+            "Duration": 2
+          },
+          "ResultText": "As you take the herbs, you feel a chill run down your spine. You feel cursed."
+        }
+      ]
+    },
+    {
+      "Text": "Leave your own offering",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": null,
+          "ResultText": "You leave a small token of respect and move on."
+        }
+      ]
+    }
+  ]
+}

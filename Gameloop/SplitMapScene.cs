@@ -470,10 +470,14 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case SplitNodeType.Narrative:
-                    if (node.EventData is NarrativeEvent narrativeEvent)
+                    if (node.EventData is string narrativeEventId)
                     {
-                        _narrativeDialog.Show(narrativeEvent, OnNarrativeChoiceSelected);
-                        _wasModalActiveLastFrame = true;
+                        var narrativeEvent = _progressionManager.GetNarrativeEvent(narrativeEventId);
+                        if (narrativeEvent != null)
+                        {
+                            _narrativeDialog.Show(narrativeEvent, OnNarrativeChoiceSelected);
+                            _wasModalActiveLastFrame = true;
+                        }
                     }
                     break;
 

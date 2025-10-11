@@ -1,0 +1,38 @@
+{
+  "EventID": "sweet_flowers",
+  "Prompt": "A patch of sweet-smelling flowers grows in a clearing.",
+  "Choices": [
+    {
+      "Text": "Inhale the scent",
+      "Dice": "1d6",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 4, 5, 6 ],
+          "Outcome": {
+            "OutcomeType": "AddBuff",
+            "Value": "TenacityUp",
+            "Duration": 1
+          },
+          "ResultText": "The sweet aroma fills you with a sense of peace and resilience."
+        },
+        {
+          "Weight": 1,
+          "DifficultyClass": [ 1, 2, 3 ],
+          "Outcome": null,
+          "ResultText": "You inhale deeply, but the scent just makes you sneeze."
+        }
+      ]
+    },
+    {
+      "Text": "Avoid the flowers",
+      "Outcomes": [
+        {
+          "Weight": 1,
+          "Outcome": null,
+          "ResultText": "Wary of pollen or poison, you steer clear of the flowers."
+        }
+      ]
+    }
+  ]
+}
