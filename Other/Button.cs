@@ -15,6 +15,21 @@ using System.Text;
 namespace ProjectVagabond.UI
 {
     /// <summary>
+    /// Defines the type of animation to play when a button is hovered.
+    /// </summary>
+    public enum HoverAnimationType
+    {
+        /// <summary>
+        /// A quick "hop" to the right and back.
+        /// </summary>
+        Hop,
+        /// <summary>
+        /// Slides to the right and holds the position until unhovered.
+        /// </summary>
+        SlideAndHold
+    }
+
+    /// <summary>
     /// Defines the reason a button might have a strikethrough.
     /// </summary>
     public enum StrikethroughType
@@ -48,6 +63,8 @@ namespace ProjectVagabond.UI
         public BitmapFont? Font { get; set; }
         public Vector2 TextRenderOffset { get; set; } = Vector2.Zero;
         public Color? DebugColor { get; set; }
+        public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Hop;
+
 
         public event Action? OnClick;
         public event Action? OnRightClick;
@@ -73,6 +90,11 @@ namespace ProjectVagabond.UI
         private const float SHAKE_AMOUNT = 1f;
         private static readonly Random _random = new Random();
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
+
+        // Slide and Hold animation state
+        private float _slideOffset = 0f;
+        private const float SLIDE_TARGET_OFFSET = -1f;
+        private const float SLIDE_SPEED = 80f;
 
         // Text-based constructor
         public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, bool clickOnPress = false, BitmapFont? font = null)
@@ -196,6 +218,7 @@ namespace ProjectVagabond.UI
             _isPressed = false;
             _squashAnimationTimer = 0f;
             IsHovered = false;
+            _slideOffset = 0f;
         }
 
         public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
@@ -266,8 +289,20 @@ namespace ProjectVagabond.UI
             if (_isPressed && !ClickOnPress) _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
             else _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
 
-            float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
-            float totalXOffset = hopOffset;
+            float totalXOffset = 0f;
+            if (EnableHoverSway)
+            {
+                if (HoverAnimation == HoverAnimationType.Hop)
+                {
+                    totalXOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+                }
+                else // SlideAndHold
+                {
+                    float targetOffset = isActivated ? SLIDE_TARGET_OFFSET : 0f;
+                    _slideOffset = MathHelper.Lerp(_slideOffset, targetOffset, SLIDE_SPEED * deltaTime);
+                    totalXOffset = _slideOffset;
+                }
+            }
 
             Vector2 textSize = font.MeasureString(Text);
 

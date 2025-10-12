@@ -71,7 +71,10 @@ namespace ProjectVagabond.Scenes
                 playText,
                 font: secondaryFont
             )
-            { TextRenderOffset = new Vector2(0, -1) };
+            {
+                TextRenderOffset = new Vector2(0, -1),
+                HoverAnimation = HoverAnimationType.SlideAndHold
+            };
             playButton.OnClick += () =>
             {
                 var core = ServiceLocator.Get<Core>();
@@ -123,7 +126,10 @@ namespace ProjectVagabond.Scenes
                 settingsText,
                 font: secondaryFont
             )
-            { TextRenderOffset = new Vector2(0, -1) };
+            {
+                TextRenderOffset = new Vector2(0, -1),
+                HoverAnimation = HoverAnimationType.SlideAndHold
+            };
             settingsButton.OnClick += () => _sceneManager.ShowModal(GameSceneState.Settings);
             _buttons.Add(settingsButton);
             currentY += settingsHeight + buttonYSpacing;
@@ -138,7 +144,10 @@ namespace ProjectVagabond.Scenes
                 exitText,
                 font: secondaryFont
             )
-            { TextRenderOffset = new Vector2(0, -1) };
+            {
+                TextRenderOffset = new Vector2(0, -1),
+                HoverAnimation = HoverAnimationType.SlideAndHold
+            };
             exitButton.OnClick += ConfirmExit;
             _buttons.Add(exitButton);
 

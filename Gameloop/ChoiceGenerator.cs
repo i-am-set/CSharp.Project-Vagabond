@@ -30,15 +30,22 @@ namespace ProjectVagabond.Utils
         /// </summary>
         /// <param name="gameStage">The current progression tier of the game. Spells with a LevelRequirement greater than this will be excluded.</param>
         /// <param name="count">The number of spell choices to generate.</param>
+        /// <param name="excludeIds">An optional set of MoveIDs to exclude from the selection pool.</param>
         /// <returns>A list of MoveData objects representing the choices.</returns>
-        public List<MoveData> GenerateSpellChoices(int gameStage, int count)
+        public List<MoveData> GenerateSpellChoices(int gameStage, int count, HashSet<string>? excludeIds = null)
         {
             var chosenSpells = new HashSet<MoveData>();
 
-            // 1. Filter the master spell list based on the current game stage.
-            var availableSpells = BattleDataCache.Moves.Values
-                .Where(m => m.MoveType == MoveType.Spell && m.LevelRequirement <= gameStage)
-                .ToList();
+            // 1. Filter the master spell list based on the current game stage and exclusions.
+            var availableSpellsQuery = BattleDataCache.Moves.Values
+                .Where(m => m.MoveType == MoveType.Spell && m.LevelRequirement <= gameStage);
+
+            if (excludeIds != null)
+            {
+                availableSpellsQuery = availableSpellsQuery.Where(m => !excludeIds.Contains(m.MoveID));
+            }
+
+            var availableSpells = availableSpellsQuery.ToList();
 
             if (!availableSpells.Any())
             {
@@ -112,14 +119,21 @@ namespace ProjectVagabond.Utils
         /// </summary>
         /// <param name="gameStage">The current progression tier of the game. Abilities with a LevelRequirement greater than this will be excluded.</param>
         /// <param name="count">The number of ability choices to generate.</param>
+        /// <param name="excludeIds">An optional set of AbilityIDs to exclude from the selection pool.</param>
         /// <returns>A list of AbilityData objects representing the choices.</returns>
-        public List<AbilityData> GenerateAbilityChoices(int gameStage, int count)
+        public List<AbilityData> GenerateAbilityChoices(int gameStage, int count, HashSet<string>? excludeIds = null)
         {
             var chosenAbilities = new HashSet<AbilityData>();
 
-            var availableAbilities = BattleDataCache.Abilities.Values
-                .Where(a => a.LevelRequirement <= gameStage)
-                .ToList();
+            var availableAbilitiesQuery = BattleDataCache.Abilities.Values
+                .Where(a => a.LevelRequirement <= gameStage);
+
+            if (excludeIds != null)
+            {
+                availableAbilitiesQuery = availableAbilitiesQuery.Where(a => !excludeIds.Contains(a.AbilityID));
+            }
+
+            var availableAbilities = availableAbilitiesQuery.ToList();
 
             if (!availableAbilities.Any())
             {

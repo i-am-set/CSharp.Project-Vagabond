@@ -54,6 +54,7 @@ namespace ProjectVagabond.Scenes
         private float _multiHitDelayTimer = 0f;
         private readonly Queue<Action> _pendingAnimations = new Queue<Action>();
         private bool _rewardScreenShown = false;
+        private readonly Random _random = new Random();
 
 
         public BattleAnimationManager AnimationManager => _animationManager;
@@ -364,13 +365,60 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // Generate one spell and one ability
-            var spellChoices = _choiceGenerator.GenerateSpellChoices(1, 1); // TODO: Use actual game stage
-            var abilityChoices = _choiceGenerator.GenerateAbilityChoices(1, 1); // TODO: Use actual game stage
-
             var choices = new List<object>();
-            if (spellChoices.Any()) choices.Add(spellChoices.First());
-            if (abilityChoices.Any()) choices.Add(abilityChoices.First());
+            var usedSpellIds = new HashSet<string>();
+            var usedAbilityIds = new HashSet<string>();
+            const int numberOfChoices = 3;
+            int gameStage = 1; // TODO: Use actual game stage from ProgressionManager
+
+            for (int i = 0; i < numberOfChoices; i++)
+            {
+                bool isSpell = _random.NextDouble() < 0.5;
+
+                if (isSpell)
+                {
+                    var spellChoices = _choiceGenerator.GenerateSpellChoices(gameStage, 1, usedSpellIds);
+                    if (spellChoices.Any())
+                    {
+                        var spell = spellChoices.First();
+                        choices.Add(spell);
+                        usedSpellIds.Add(spell.MoveID);
+                    }
+                    else
+                    {
+                        // Fallback: if we can't get a unique spell, try for an ability.
+                        var abilityChoices = _choiceGenerator.GenerateAbilityChoices(gameStage, 1, usedAbilityIds);
+                        if (abilityChoices.Any())
+                        {
+                            var ability = abilityChoices.First();
+                            choices.Add(ability);
+                            usedAbilityIds.Add(ability.AbilityID);
+                        }
+                    }
+                }
+                else // Is Ability
+                {
+                    var abilityChoices = _choiceGenerator.GenerateAbilityChoices(gameStage, 1, usedAbilityIds);
+                    if (abilityChoices.Any())
+                    {
+                        var ability = abilityChoices.First();
+                        choices.Add(ability);
+                        usedAbilityIds.Add(ability.AbilityID);
+                    }
+                    else
+                    {
+                        // Fallback: if we can't get a unique ability, try for a spell.
+                        var spellChoices = _choiceGenerator.GenerateSpellChoices(gameStage, 1, usedSpellIds);
+                        if (spellChoices.Any())
+                        {
+                            var spell = spellChoices.First();
+                            choices.Add(spell);
+                            usedSpellIds.Add(spell.MoveID);
+                        }
+                    }
+                }
+            }
+
 
             if (!choices.Any())
             {

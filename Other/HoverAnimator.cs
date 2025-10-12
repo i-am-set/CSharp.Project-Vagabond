@@ -13,8 +13,8 @@ namespace ProjectVagabond.UI
         private float _animationTimer = 0f;
         private bool _wasActivatedLastFrame = false;
 
-        private const float AnimationDuration = 0.04f; // How long the entire hop takes
-        private const float HopDistance = 3f;         // The maximum distance it hops to the right
+        private const float AnimationDuration = 0.2f; // How long the entire hop takes
+        private const float HopDistance = 2f;         // The maximum distance it hops
 
         public float CurrentOffset { get; private set; }
 
@@ -57,14 +57,16 @@ namespace ProjectVagabond.UI
                 else
                 {
                     float progress = _animationTimer / AnimationDuration;
-                    // Use Math.Sin(progress * PI) to create a single hump (0 -> 1 -> 0), ensuring no negative (leftward) movement.
+                    // Use Math.Sin to create the 0 -> 1 -> 0 arc of the animation
                     float wave = (float)Math.Sin(progress * Math.PI);
-                    float decay = 1.0f - progress;
-                    CurrentOffset = HopDistance * wave * decay;
+                    // Apply an easing function to the arc itself to change its feel.
+                    // EaseOutCubic makes it pop up quickly and settle gently at the peak.
+                    float easedWave = Easing.EaseOutCubic(wave);
+                    CurrentOffset = HopDistance * easedWave;
                 }
             }
 
-            // 3. Store the activation state for the next frame.
+            // Store the activation state for the next frame.
             _wasActivatedLastFrame = isActivated;
 
             return CurrentOffset;
