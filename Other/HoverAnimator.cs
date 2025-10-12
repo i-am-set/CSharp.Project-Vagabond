@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
+using ProjectVagabond.UI;
 using System;
 
 namespace ProjectVagabond.UI
@@ -9,12 +10,15 @@ namespace ProjectVagabond.UI
     /// </summary>
     public class HoverAnimator
     {
-        private bool _isAnimating = false;
-        private float _animationTimer = 0f;
-        private bool _wasActivatedLastFrame = false;
+        private bool _isAnimating;
+        private float _animationTimer;
+        private bool _wasActivatedLastFrame;
 
-        private const float AnimationDuration = 0.2f; // How long the entire hop takes
-        private const float HopDistance = 2f;         // The maximum distance it hops
+        private float _startOffset;
+        private float _targetOffset;
+
+        private const float LIFT_DISTANCE = -1f; // The maximum distance to lift up
+        private const float ANIMATION_DURATION = 0f; // How long the animation takes
 
         public float CurrentOffset { get; private set; }
 
@@ -27,46 +31,51 @@ namespace ProjectVagabond.UI
             _animationTimer = 0f;
             _wasActivatedLastFrame = false;
             CurrentOffset = 0f;
+            _startOffset = 0f;
+            _targetOffset = 0f;
         }
 
         /// <summary>
-        /// Updates the animation state and returns the current horizontal offset.
+        /// Updates the animation state and returns the current vertical offset.
         /// </summary>
         /// <param name="gameTime">The current game time.</param>
         /// <param name="isActivated">Whether the animation should be active (e.g., the element is hovered).</param>
-        /// <returns>The calculated horizontal offset for drawing.</returns>
+        /// <returns>The calculated vertical offset for drawing.</returns>
         public float UpdateAndGetOffset(GameTime gameTime, bool isActivated)
         {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Check for a change in hover state to trigger an animation
             if (isActivated && !_wasActivatedLastFrame)
             {
                 _isAnimating = true;
                 _animationTimer = 0f;
+                _startOffset = CurrentOffset;
+                _targetOffset = LIFT_DISTANCE;
             }
-
-            CurrentOffset = 0f;
+            else if (!isActivated && _wasActivatedLastFrame)
+            {
+                _isAnimating = true;
+                _animationTimer = 0f;
+                _startOffset = CurrentOffset;
+                _targetOffset = 0f;
+            }
 
             if (_isAnimating)
             {
-                _animationTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _animationTimer += deltaTime;
+                float progress = Math.Clamp(_animationTimer / ANIMATION_DURATION, 0f, 1f);
+                float easedProgress = Easing.EaseOutCubic(progress);
 
-                if (_animationTimer >= AnimationDuration)
+                CurrentOffset = MathHelper.Lerp(_startOffset, _targetOffset, easedProgress);
+
+                if (progress >= 1.0f)
                 {
                     _isAnimating = false;
-                    CurrentOffset = 0f;
-                }
-                else
-                {
-                    float progress = _animationTimer / AnimationDuration;
-                    // Use Math.Sin to create the 0 -> 1 -> 0 arc of the animation
-                    float wave = (float)Math.Sin(progress * Math.PI);
-                    // Apply an easing function to the arc itself to change its feel.
-                    // EaseOutCubic makes it pop up quickly and settle gently at the peak.
-                    float easedWave = Easing.EaseOutCubic(wave);
-                    CurrentOffset = HopDistance * easedWave;
+                    CurrentOffset = _targetOffset; // Snap to final value
                 }
             }
 
-            // Store the activation state for the next frame.
             _wasActivatedLastFrame = isActivated;
 
             return CurrentOffset;

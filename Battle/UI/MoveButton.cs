@@ -112,7 +112,7 @@ namespace ProjectVagabond.Battle.UI
         }
 
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_animState == AnimationState.Hidden) return;
 
@@ -122,7 +122,7 @@ namespace ProjectVagabond.Battle.UI
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
-            float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            float yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             _overlayFadeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // --- Animation Scaling ---
@@ -156,8 +156,8 @@ namespace ProjectVagabond.Battle.UI
             int animatedWidth = (int)(Bounds.Width * scaleX);
             int animatedHeight = (int)(Bounds.Height * scaleY);
             var animatedBounds = new Rectangle(
-                Bounds.Center.X - animatedWidth / 2 + (int)(hopOffset + (externalSwayOffset ?? 0f)),
-                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f),
+                Bounds.Center.X - animatedWidth / 2 + (int)(horizontalOffset ?? 0f),
+                Bounds.Center.Y - animatedHeight / 2 + (int)(yOffset + (verticalOffset ?? 0f)),
                 animatedWidth,
                 animatedHeight
             );
@@ -337,10 +337,10 @@ namespace ProjectVagabond.Battle.UI
                     // Center the indicator horizontally over the power text.
                     float powerCenterX = powerPosition.X + powerTextSize.Width / 2;
                     // Add a 1px downward offset specifically for the 'Self' target indicator.
-                    float yOffset = (Move.Target == TargetType.Self) ? 1f : 0f;
+                    float yOffsetIndicator = (Move.Target == TargetType.Self) ? 1f : 0f;
                     var indicatorPosition = new Vector2(
                         powerCenterX - indicatorSize.Width / 2,
-                        powerPosition.Y - 7 + yOffset
+                        powerPosition.Y - 7 + yOffsetIndicator
                     );
                     spriteBatch.DrawStringSnapped(_moveFont, targetIndicator, indicatorPosition, statsColor * contentAlpha);
                 }

@@ -62,7 +62,7 @@ namespace ProjectVagabond.UI
         // Idle & Hover Animation
         private float _bobTimer;
         private float _hoverLiftAmount = 0f;
-        private const float HOVER_LIFT_TARGET = 2f;
+        private const float HOVER_LIFT_TARGET = 1f;
         private const float HOVER_LIFT_SPEED = 25f;
         private const float CARD_BOB_SPEED = 0.8f;
         private const float CARD_BOB_AMOUNT = 1.0f;
@@ -309,7 +309,7 @@ namespace ProjectVagabond.UI
             return new Vector2(x, y);
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_cardAnimState == CardAnimationState.Hidden) return;
 

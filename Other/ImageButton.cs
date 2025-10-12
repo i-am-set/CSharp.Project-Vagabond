@@ -24,12 +24,6 @@ namespace ProjectVagabond.UI
         private float _appearTimer = 0f;
         private const float APPEAR_DURATION = 0.25f;
 
-        // Sway animation state
-        private float _swayTimer = 0f;
-        private bool _wasHoveredLastFrame = false;
-        private const float SWAY_SPEED = 2.5f;
-        private const float SWAY_AMPLITUDE = 1.0f;
-
         // Shake animation state
         private float _shakeTimer = 0f;
         private const float SHAKE_DURATION = 0.3f;
@@ -78,13 +72,6 @@ namespace ProjectVagabond.UI
 
             base.Update(currentMouseState);
 
-            // Reset sway timer when hover begins
-            if (IsHovered && !_wasHoveredLastFrame)
-            {
-                _swayTimer = 0f;
-            }
-            _wasHoveredLastFrame = IsHovered;
-
             if (!IsEnabled)
             {
                 _isHeldDown = false;
@@ -98,32 +85,18 @@ namespace ProjectVagabond.UI
         public override void ResetAnimationState()
         {
             base.ResetAnimationState();
-            _swayTimer = 0f;
-            _wasHoveredLastFrame = false;
             _shakeTimer = 0f;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_animState == AnimationState.Hidden) return;
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- Sway Animation ---
-            float swayOffset = 0f;
-            if (isActivated && EnableHoverSway)
-            {
-                if (externalSwayOffset.HasValue)
-                {
-                    swayOffset = externalSwayOffset.Value;
-                }
-                else
-                {
-                    _swayTimer += dt;
-                    swayOffset = MathF.Round(MathF.Sin(_swayTimer * SWAY_SPEED) * SWAY_AMPLITUDE);
-                }
-            }
+            // --- Hover Animation ---
+            float hoverYOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
 
             // --- Shake Animation ---
             float shakeOffset = 0f;
@@ -135,7 +108,7 @@ namespace ProjectVagabond.UI
                 shakeOffset = MathF.Sin(_shakeTimer * SHAKE_FREQUENCY) * magnitude;
             }
 
-            float totalHorizontalOffset = swayOffset + shakeOffset;
+            float totalHorizontalOffset = (horizontalOffset ?? 0f) + shakeOffset;
 
 
             // --- Animation Scaling ---
@@ -156,16 +129,14 @@ namespace ProjectVagabond.UI
             // --- Calculate Animated Bounds ---
             int animatedHeight = (int)(Bounds.Height * verticalScale);
 
-            // If the button uses screen coordinates, we must scale the virtual hop offset
-            // to match the screen's pixel grid.
             if (UseScreenCoordinates)
             {
                 totalHorizontalOffset *= ServiceLocator.Get<Core>().FinalScale;
             }
 
             var animatedBounds = new Rectangle(
-                Bounds.X + (int)MathF.Round(totalHorizontalOffset), // Apply the potentially scaled offset
-                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f), // Expand from the center and apply offset
+                Bounds.X + (int)MathF.Round(totalHorizontalOffset),
+                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f) + (int)hoverYOffset,
                 Bounds.Width,
                 animatedHeight
             );

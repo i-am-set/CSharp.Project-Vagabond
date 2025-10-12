@@ -53,7 +53,7 @@ namespace ProjectVagabond.UI
             _appearTimer = 0f;
         }
 
-        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_animState == AnimationState.Hidden) return;
 
@@ -75,11 +75,11 @@ namespace ProjectVagabond.UI
             if (verticalScale < 0.01f) return;
 
             // 1. Calculate animation offset
-            float hopOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            float yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             int animatedHeight = (int)(Bounds.Height * verticalScale);
             var animatedBounds = new Rectangle(
-                Bounds.X + (int)hopOffset,
-                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f),
+                Bounds.X + (int)(horizontalOffset ?? 0f),
+                Bounds.Center.Y - animatedHeight / 2 + (int)yOffset + (int)(verticalOffset ?? 0f),
                 Bounds.Width,
                 animatedHeight
             );

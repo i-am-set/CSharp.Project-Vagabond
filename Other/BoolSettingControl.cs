@@ -127,8 +127,8 @@ namespace ProjectVagabond.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, Vector2 position, bool isSelected, GameTime gameTime)
         {
-            float xOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
-            Vector2 animatedPosition = new Vector2(position.X + xOffset, position.Y);
+            float yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isSelected && IsEnabled);
+            Vector2 animatedPosition = new Vector2(position.X, position.Y + yOffset);
 
             Color labelColor = isSelected && IsEnabled ? _global.ButtonHoverColor : (IsEnabled ? _global.Palette_BrightWhite : _global.ButtonDisableColor);
             spriteBatch.DrawStringSnapped(font, Label, animatedPosition, labelColor);

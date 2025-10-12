@@ -221,19 +221,19 @@ namespace ProjectVagabond.UI
             _slideOffset = 0f;
         }
 
-        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? externalSwayOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
+        public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_spriteSheet != null)
             {
-                DrawSprite(spriteBatch, gameTime, transform, forceHover, verticalOffset, tintColorOverride);
+                DrawSprite(spriteBatch, gameTime, transform, forceHover, horizontalOffset, verticalOffset, tintColorOverride);
             }
             else
             {
-                DrawText(spriteBatch, defaultFont, gameTime, transform, forceHover, verticalOffset, tintColorOverride);
+                DrawText(spriteBatch, defaultFont, gameTime, transform, forceHover, horizontalOffset, verticalOffset, tintColorOverride);
             }
         }
 
-        private void DrawSprite(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform, bool forceHover, float? verticalOffset, Color? tintColorOverride)
+        private void DrawSprite(SpriteBatch spriteBatch, GameTime gameTime, Matrix transform, bool forceHover, float? horizontalOffset, float? verticalOffset, Color? tintColorOverride)
         {
             Rectangle? sourceRectToDraw = _defaultSourceRect;
             bool isActivated = IsEnabled && (IsHovered || forceHover);
@@ -255,7 +255,7 @@ namespace ProjectVagabond.UI
                 shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_AMOUNT);
             }
 
-            var position = new Vector2(Bounds.Center.X, Bounds.Center.Y + (verticalOffset ?? 0f)) + shakeOffset;
+            var position = new Vector2(Bounds.Center.X + (horizontalOffset ?? 0f), Bounds.Center.Y + (verticalOffset ?? 0f)) + shakeOffset;
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
@@ -269,7 +269,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private void DrawText(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover, float? verticalOffset, Color? tintColorOverride)
+        private void DrawText(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover, float? horizontalOffset, float? verticalOffset, Color? tintColorOverride)
         {
             BitmapFont font = this.Font ?? defaultFont;
             Color textColor;
@@ -289,20 +289,24 @@ namespace ProjectVagabond.UI
             if (_isPressed && !ClickOnPress) _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
             else _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
 
-            float totalXOffset = 0f;
+            float xHoverOffset = 0f;
+            float yHoverOffset = 0f;
             if (EnableHoverSway)
             {
                 if (HoverAnimation == HoverAnimationType.Hop)
                 {
-                    totalXOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+                    yHoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
                 }
                 else // SlideAndHold
                 {
                     float targetOffset = isActivated ? SLIDE_TARGET_OFFSET : 0f;
                     _slideOffset = MathHelper.Lerp(_slideOffset, targetOffset, SLIDE_SPEED * deltaTime);
-                    totalXOffset = _slideOffset;
+                    xHoverOffset = _slideOffset;
                 }
             }
+
+            float totalXOffset = xHoverOffset + (horizontalOffset ?? 0f);
+            float totalYOffset = yHoverOffset + (verticalOffset ?? 0f);
 
             Vector2 textSize = font.MeasureString(Text);
 
@@ -328,15 +332,14 @@ namespace ProjectVagabond.UI
             if (AlignLeft)
             {
                 textOrigin.X = 0;
-                textPosition = new Vector2(Bounds.Left + totalXOffset + LEFT_ALIGN_PADDING, Bounds.Center.Y);
+                textPosition = new Vector2(Bounds.Left + totalXOffset + LEFT_ALIGN_PADDING, Bounds.Center.Y + totalYOffset);
             }
             else
             {
-                textPosition = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y);
+                textPosition = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y + totalYOffset);
             }
 
             textPosition += TextRenderOffset + shakeOffset;
-            textPosition.Y += verticalOffset ?? 0f;
 
             spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, scale, SpriteEffects.None, 0f);
 
@@ -347,3 +350,4 @@ namespace ProjectVagabond.UI
     }
 }
 #nullable restore
+﻿
