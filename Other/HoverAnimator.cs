@@ -1,5 +1,4 @@
 ﻿using Microsoft.Xna.Framework;
-using ProjectVagabond.UI;
 using System;
 
 namespace ProjectVagabond.UI
@@ -43,6 +42,15 @@ namespace ProjectVagabond.UI
         /// <returns>The calculated vertical offset for drawing.</returns>
         public float UpdateAndGetOffset(GameTime gameTime, bool isActivated)
         {
+            // If the duration is zero (or less), the animation is instant.
+            // We can bypass all the timer and interpolation logic to "snap" to the target position.
+            if (ANIMATION_DURATION <= 0f)
+            {
+                CurrentOffset = isActivated ? LIFT_DISTANCE : 0f;
+                _wasActivatedLastFrame = isActivated;
+                return CurrentOffset;
+            }
+
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // Check for a change in hover state to trigger an animation
