@@ -23,7 +23,7 @@ namespace ProjectVagabond.Scenes
         private readonly GameState _gameState;
         private Action? _onChoiceMade;
 
-        private enum AnimationPhase { CardIntro, RarityIntro, Idle, SequentialOutro, SpellTransform_PopIn, SpellTransform_BookIntro, SpellTransform_MoveOut, SpellTransform_Absorb, SpellTransform_BookMoveOut }
+        private enum AnimationPhase { CardIntro, RarityIntro, Idle, AnimatingOutro, SpellTransform_PopIn, SpellTransform_BookIntro, SpellTransform_MoveOut, SpellTransform_Absorb, SpellTransform_BookMoveOut }
         private AnimationPhase _currentPhase = AnimationPhase.CardIntro;
 
         private Queue<ChoiceCard> _cardsToAnimateIn = new Queue<ChoiceCard>();
@@ -34,9 +34,7 @@ namespace ProjectVagabond.Scenes
         private float _rarityStaggerTimer = 0f;
         private const float RARITY_STAGGER_DELAY = 0.1f;
 
-        // Sequential Outro State
-        private Queue<ChoiceCard> _unselectedCardsToAnimateOut = new Queue<ChoiceCard>();
-        private ChoiceCard? _currentlyAnimatingOutCard;
+        // Outro State
         private ChoiceCard? _selectedCard;
 
         // State for the final transform animation
@@ -80,12 +78,10 @@ namespace ProjectVagabond.Scenes
             _cards.Clear();
             _cardsToAnimateIn.Clear();
             _rarityToAnimate.Clear();
-            _unselectedCardsToAnimateOut.Clear();
             _animationStaggerTimer = 0f;
             _rarityStaggerTimer = 0f;
             _currentPhase = AnimationPhase.CardIntro;
             _onChoiceMade = onChoiceMade;
-            _currentlyAnimatingOutCard = null;
             _selectedCard = null;
 
             // Layout calculation for vertical pillars
@@ -117,7 +113,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnCardSelected(ChoiceCard selectedCard)
         {
-            _currentPhase = AnimationPhase.SequentialOutro;
+            _currentPhase = AnimationPhase.AnimatingOutro;
             _selectedCard = selectedCard;
             _selectedChoiceData = selectedCard.Data;
             _transformAnimPosition = selectedCard.Bounds.Center.ToVector2();
@@ -126,22 +122,15 @@ namespace ProjectVagabond.Scenes
 
             if (otherCards.Any())
             {
-                // Shuffle and queue up the other cards
-                var shuffled = otherCards.OrderBy(c => _random.Next()).ToList();
-                _unselectedCardsToAnimateOut.Clear();
-                foreach (var card in shuffled)
+                // Trigger all non-selected card animations at once.
+                foreach (var card in otherCards)
                 {
-                    _unselectedCardsToAnimateOut.Enqueue(card);
+                    card.StartOutroAnimation(false);
                 }
-
-                // Start the first one
-                _currentlyAnimatingOutCard = _unselectedCardsToAnimateOut.Dequeue();
-                _currentlyAnimatingOutCard.StartOutroAnimation(false);
             }
             else
             {
-                // Only one card was shown, so just animate it out as selected
-                _currentlyAnimatingOutCard = null;
+                // If there are no other cards, we can immediately start the selected card's animation.
                 selectedCard.StartOutroAnimation(true, OnSelectedCardOutroComplete);
             }
         }
@@ -243,21 +232,18 @@ namespace ProjectVagabond.Scenes
                     }
                     break;
 
-                case AnimationPhase.SequentialOutro:
-                    if (_currentlyAnimatingOutCard != null && !_currentlyAnimatingOutCard.IsAnimatingOut)
+                case AnimationPhase.AnimatingOutro:
+                    var unselectedCards = _cards.Where(c => c != _selectedCard).ToList();
+
+                    // Check if all unselected cards have finished their outro animation.
+                    bool allUnselectedAreDone = unselectedCards.All(c => !c.IsAnimatingOut);
+
+                    if (allUnselectedAreDone)
                     {
-                        // The current card has finished its animation.
-                        if (_unselectedCardsToAnimateOut.Any())
+                        // All non-selected cards are gone. Animate the selected one, but only trigger it once.
+                        if (_selectedCard != null && !_selectedCard.IsAnimatingOut)
                         {
-                            // There are more cards to animate out.
-                            _currentlyAnimatingOutCard = _unselectedCardsToAnimateOut.Dequeue();
-                            _currentlyAnimatingOutCard.StartOutroAnimation(false);
-                        }
-                        else
-                        {
-                            // All unselected cards are gone. Animate the selected one.
-                            _currentlyAnimatingOutCard = null; // We're done with the queue.
-                            _selectedCard?.StartOutroAnimation(true, OnSelectedCardOutroComplete);
+                            _selectedCard.StartOutroAnimation(true, OnSelectedCardOutroComplete);
                         }
                     }
                     break;

@@ -39,10 +39,8 @@ namespace ProjectVagabond.Battle.UI
         private Dictionary<string, float[]> _enemyAnimationIntervals = new Dictionary<string, float[]>();
         private readonly Random _random = new Random();
         private const int ENEMY_SPRITE_PART_SIZE = 64;
-
-        // Enemy Sprite Animation Tuning
-        private const float ENEMY_ANIM_MIN_INTERVAL = 0.25f; // Minimum time a limb stays in one position (seconds)
-        private const float ENEMY_ANIM_MAX_INTERVAL = 0.35f; // Maximum time a limb stays in one position (seconds)
+        private const float ENEMY_ANIM_MIN_INTERVAL = 0.25f;
+        private const float ENEMY_ANIM_MAX_INTERVAL = 0.35f;
 
         // Layout Constants
         private const int DIVIDER_Y = 105;

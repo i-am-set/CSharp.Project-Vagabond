@@ -72,7 +72,7 @@ namespace ProjectVagabond.UI
         private const float RARITY_SWAY_AMOUNT = 2.0f;
 
         public bool IsIntroAnimating => _cardAnimState == CardAnimationState.AnimatingIn;
-        public bool IsAnimatingOut => _cardAnimState == CardAnimationState.AnimatingOut;
+        public bool IsAnimatingOut => _cardAnimState == CardAnimationState.AnimatingOut && _cardAnimTimer < OUTRO_SHRINK_DURATION;
 
         public ChoiceCard(Rectangle bounds, MoveData move) : base(bounds, move.MoveName)
         {
@@ -781,7 +781,7 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Right - 1 - inset, drawBounds.Bottom - inset - accentSize, 1, accentSize), accentColor * alpha);
             }
 
-            if (whiteOverlayAlpha > 0.01f)
+            if (whiteOverlayAlpha > 0)
             {
                 Vector2 origin = new Vector2(0.5f); // Origin for a 1x1 texture is its center
                 Vector2 scaleVec = new Vector2(drawBounds.Width, drawBounds.Height);
@@ -790,3 +790,4 @@ namespace ProjectVagabond.UI
         }
     }
 }
+#nullable restore
