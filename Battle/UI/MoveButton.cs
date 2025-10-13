@@ -18,16 +18,22 @@ namespace ProjectVagabond.Battle.UI
         private readonly bool _isNew;
         public bool IsNew => _isNew;
         public bool IsAnimating => _animState == AnimationState.Appearing;
+        public bool IsAnimatingDiscard => _animState == AnimationState.Discarding;
+        public bool IsFadeToWhiteComplete { get; private set; }
 
 
         public Texture2D IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
 
         // Animation State
-        private enum AnimationState { Hidden, Idle, Appearing }
+        private enum AnimationState { Hidden, Idle, Appearing, Discarding }
         private AnimationState _animState = AnimationState.Idle;
         private float _appearTimer = 0f;
         private const float APPEAR_DURATION = 0.25f; // Duration of the appear animation
+        private float _discardTimer = 0f;
+        private const float FADE_TO_WHITE_DURATION = 0.1f;
+        private const float COLLAPSE_DURATION = 0.15f;
+        private const float DISCARD_DURATION = FADE_TO_WHITE_DURATION + COLLAPSE_DURATION;
 
         // Scrolling Text State
         private bool _isScrollingInitialized = false;
@@ -72,6 +78,22 @@ namespace ProjectVagabond.Battle.UI
                 _animState = AnimationState.Appearing;
                 _appearTimer = 0f;
             }
+        }
+
+        public void TriggerDiscardAnimation()
+        {
+            if (_animState != AnimationState.Hidden)
+            {
+                _animState = AnimationState.Discarding;
+                _discardTimer = 0f;
+                IsFadeToWhiteComplete = false;
+            }
+        }
+
+        public override void ResetAnimationState()
+        {
+            base.ResetAnimationState();
+            IsFadeToWhiteComplete = false;
         }
 
         private void UpdateScrolling(GameTime gameTime)
@@ -128,6 +150,8 @@ namespace ProjectVagabond.Battle.UI
             // --- Animation Scaling ---
             float scaleX = 1.0f;
             float scaleY = 1.0f;
+            float contentAlphaMultiplier = 1.0f;
+            float whiteOverlayAlpha = 0f;
             if (_animState == AnimationState.Appearing)
             {
                 _appearTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -147,6 +171,38 @@ namespace ProjectVagabond.Battle.UI
                 if (progress >= 1.0f)
                 {
                     _animState = AnimationState.Idle;
+                }
+            }
+            else if (_animState == AnimationState.Discarding)
+            {
+                _discardTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+                if (_discardTimer < FADE_TO_WHITE_DURATION)
+                {
+                    // Phase 1: Fading to white
+                    float progress = _discardTimer / FADE_TO_WHITE_DURATION;
+                    float easedProgress = Easing.EaseInQuint(progress);
+
+                    scaleX = 1.0f; // No collapse yet
+                    contentAlphaMultiplier = 1.0f - easedProgress; // Content fades out
+                    whiteOverlayAlpha = easedProgress; // White overlay fades in
+                }
+                else
+                {
+                    IsFadeToWhiteComplete = true;
+                    // Phase 2: Collapsing
+                    float progress = (_discardTimer - FADE_TO_WHITE_DURATION) / COLLAPSE_DURATION;
+                    progress = Math.Clamp(progress, 0f, 1f);
+                    float easedProgress = Easing.EaseInQuint(progress);
+
+                    scaleX = 1.0f - easedProgress; // Collapse happens now
+                    contentAlphaMultiplier = 0.0f; // Content is fully faded
+                    whiteOverlayAlpha = 1.0f; // White overlay is fully opaque
+                }
+
+                if (_discardTimer >= DISCARD_DURATION)
+                {
+                    _animState = AnimationState.Hidden;
                 }
             }
 
@@ -186,6 +242,7 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
             }
+            finalTintColor *= contentAlphaMultiplier;
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             if (spriteManager.RarityBackgroundSourceRects.TryGetValue(Move.Rarity, out var bgSourceRect))
@@ -193,8 +250,14 @@ namespace ProjectVagabond.Battle.UI
                 spriteBatch.DrawSnapped(_backgroundSpriteSheet, animatedBounds, bgSourceRect, finalTintColor);
             }
 
+            // Draw the white overlay during discard animation
+            if (whiteOverlayAlpha > 0f)
+            {
+                spriteBatch.DrawSnapped(pixel, animatedBounds, Color.White * whiteOverlayAlpha);
+            }
+
             // Only draw contents if the button is mostly visible to avoid squashed text/icons
-            if (scaleX > 0.8f && scaleY > 0.8f)
+            if (scaleX > 0.1f && scaleY > 0.1f)
             {
                 float contentAlpha = finalTintColor.A / 255f;
 
