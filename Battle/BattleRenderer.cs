@@ -40,6 +40,10 @@ namespace ProjectVagabond.Battle.UI
         private readonly Random _random = new Random();
         private const int ENEMY_SPRITE_PART_SIZE = 64;
 
+        // Enemy Sprite Animation Tuning
+        private const float ENEMY_ANIM_MIN_INTERVAL = 0.25f; // Minimum time a limb stays in one position (seconds)
+        private const float ENEMY_ANIM_MAX_INTERVAL = 0.35f; // Maximum time a limb stays in one position (seconds)
+
         // Layout Constants
         private const int DIVIDER_Y = 105;
         private const int MAX_ENEMIES = 5;
@@ -524,7 +528,7 @@ namespace ProjectVagabond.Battle.UI
                     _enemySpritePartOffsets[combatant.CombatantID] = new Vector2[numParts];
                     _enemyAnimationTimers[combatant.CombatantID] = new float[numParts];
                     var intervals = new float[numParts];
-                    for (int i = 0; i < numParts; i++) { intervals[i] = (float)(_random.NextDouble() * (0.5f - 0.1f) + 0.1f); }
+                    for (int i = 0; i < numParts; i++) { intervals[i] = (float)(_random.NextDouble() * (ENEMY_ANIM_MAX_INTERVAL - ENEMY_ANIM_MIN_INTERVAL) + ENEMY_ANIM_MIN_INTERVAL); }
                     _enemyAnimationIntervals[combatant.CombatantID] = intervals;
                 }
 
@@ -639,7 +643,7 @@ namespace ProjectVagabond.Battle.UI
                     if (timers[i] >= intervals[i])
                     {
                         timers[i] = 0f;
-                        intervals[i] = (float)(_random.NextDouble() * 5);
+                        intervals[i] = (float)(_random.NextDouble() * (ENEMY_ANIM_MAX_INTERVAL - ENEMY_ANIM_MIN_INTERVAL) + ENEMY_ANIM_MIN_INTERVAL);
                         offsets[i] = new Vector2(_random.Next(-1, 1), _random.Next(-1, 1));
                     }
                 }

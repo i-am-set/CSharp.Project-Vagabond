@@ -100,8 +100,6 @@ namespace ProjectVagabond.Battle.UI
         private MoveData? _deferredMove;
         private SpellbookEntry? _deferredSpellbookEntry;
         private MoveButton? _selectedMoveButton;
-        private readonly Queue<MoveButton> _discardAnimationQueue = new Queue<MoveButton>();
-        private readonly List<MoveButton> _buttonsBeingDiscarded = new List<MoveButton>();
         private static readonly Random _random = new Random();
 
 
@@ -337,18 +335,7 @@ namespace ProjectVagabond.Battle.UI
             }
             else if (newState == MenuState.AnimatingHandDiscard)
             {
-                _discardAnimationQueue.Clear();
-                _buttonsBeingDiscarded.Clear();
-
-                var buttonsToDiscard = _moveButtons
-                    .Where(b => b != _selectedMoveButton)
-                    .OrderBy(b => _random.Next()) // Randomize the order
-                    .ToList();
-
-                foreach (var button in buttonsToDiscard)
-                {
-                    _discardAnimationQueue.Enqueue(button);
-                }
+                _selectedMoveButton?.TriggerDiscardAnimation();
             }
         }
 
@@ -686,70 +673,26 @@ namespace ProjectVagabond.Battle.UI
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
                 case MenuState.AnimatingHandDiscard:
-                    // The selected button can still be hovered
-                    _selectedMoveButton?.Update(currentMouseState);
-                    if (_selectedMoveButton?.IsHovered ?? false)
+                    // Input is blocked during this animation.
+                    // We only need to check for the animation's completion.
+                    if (_selectedMoveButton != null && !_selectedMoveButton.IsAnimatingDiscard)
                     {
-                        HoveredMove = _selectedMoveButton.Move;
-                        HoveredButton = _selectedMoveButton;
-                    }
+                        // Animation is complete, execute the deferred action
+                        if (_deferredMove != null)
+                        {
+                            // Store locally before clearing, as SelectMove might trigger events that depend on a clean state.
+                            var move = _deferredMove;
+                            var entry = _deferredSpellbookEntry;
 
-                    // Check if we can start the next animation in the sequence
-                    if (_discardAnimationQueue.Any())
-                    {
-                        bool canStartNext = false;
-                        if (!_buttonsBeingDiscarded.Any())
-                        {
-                            // This is the very first button, start it immediately.
-                            canStartNext = true;
-                        }
-                        else
-                        {
-                            // Check if the last-started button has finished its fade-to-white phase.
-                            var lastStartedButton = _buttonsBeingDiscarded.Last();
-                            if (lastStartedButton.IsFadeToWhiteComplete)
+                            _deferredMove = null;
+                            _deferredSpellbookEntry = null;
+                            _selectedMoveButton = null;
+
+                            SelectMove(move, entry);
+
+                            if (_currentState == MenuState.AnimatingHandDiscard)
                             {
-                                canStartNext = true;
-                            }
-                        }
-
-                        if (canStartNext)
-                        {
-                            var nextButton = _discardAnimationQueue.Dequeue();
-                            nextButton.TriggerDiscardAnimation();
-                            _buttonsBeingDiscarded.Add(nextButton);
-                        }
-                    }
-                    else
-                    {
-                        // The queue is empty, which means all discard animations have been started.
-                        // Now we wait for all of them to finish completely.
-                        bool allAnimationsFinished = _buttonsBeingDiscarded.All(b => !b.IsAnimatingDiscard);
-
-                        if (allAnimationsFinished)
-                        {
-                            // All animations are complete, execute the deferred action
-                            if (_deferredMove != null)
-                            {
-                                // Store locally before clearing, as SelectMove might trigger events that depend on a clean state.
-                                var move = _deferredMove;
-                                var entry = _deferredSpellbookEntry;
-
-                                _deferredMove = null;
-                                _deferredSpellbookEntry = null;
-                                _selectedMoveButton = null;
-
-                                // This call will either invoke OnMoveSelected (which doesn't change state here)
-                                // or call SetState(MenuState.Targeting).
-                                SelectMove(move, entry);
-
-                                // CRITICAL FIX: If SelectMove resulted in an action being submitted (and not a state change to Targeting),
-                                // the state will still be AnimatingHandDiscard. We must manually transition out of it to un-busy the UI manager.
-                                if (_currentState == MenuState.AnimatingHandDiscard)
-                                {
-                                    // We can transition to Moves. The BattleManager will hide the menu shortly anyway when the action resolves.
-                                    SetState(MenuState.Moves);
-                                }
+                                SetState(MenuState.Moves);
                             }
                         }
                     }
@@ -1068,6 +1011,12 @@ namespace ProjectVagabond.Battle.UI
             for (int i = 0; i < _moveButtons.Count; i++)
             {
                 var button = _moveButtons[i];
+
+                if (_currentState == MenuState.AnimatingHandDiscard && button != _selectedMoveButton)
+                {
+                    continue; // Skip drawing non-selected buttons
+                }
+
                 int row = i / moveColumns;
                 int col = i % moveColumns;
 
@@ -1123,6 +1072,11 @@ namespace ProjectVagabond.Battle.UI
                         button.Draw(spriteBatch, font, gameTime, transform);
                     }
                 }
+            }
+
+            if (_currentState == MenuState.AnimatingHandDiscard)
+            {
+                return;
             }
 
             // --- Secondary Actions (1x4 Row) ---
