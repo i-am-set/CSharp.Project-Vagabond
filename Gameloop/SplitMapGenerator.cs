@@ -389,6 +389,7 @@ namespace ProjectVagabond.Progression
                         if (roll < BATTLE_EVENT_WEIGHT && splitData.PossibleBattles.Any())
                         {
                             node.NodeType = SplitNodeType.Battle;
+                            node.Difficulty = (BattleDifficulty)_random.Next(3); // 0=Easy, 1=Normal, 2=Hard
                             node.EventData = splitData.PossibleBattles[_random.Next(splitData.PossibleBattles.Count)];
                         }
                         else if (splitData.PossibleNarrativeEventIDs.Any())
@@ -399,6 +400,7 @@ namespace ProjectVagabond.Progression
                         else // Fallback to battle if no narratives are available
                         {
                             node.NodeType = SplitNodeType.Battle;
+                            node.Difficulty = (BattleDifficulty)_random.Next(3);
                             if (splitData.PossibleBattles.Any())
                                 node.EventData = splitData.PossibleBattles[_random.Next(splitData.PossibleBattles.Count)];
                         }

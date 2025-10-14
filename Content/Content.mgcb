@@ -326,6 +326,54 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/map_marker.png
 
+#begin Sprites/MapNodes/Combat_Node_Player.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/Combat_Node_Player.png;Sprites/MapNodes/Combat_Node_Player
+
+#begin Sprites/MapNodes/CombatNode_Easy.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/CombatNode_Easy.png;Sprites/MapNodes/CombatNode_Easy
+
+#begin Sprites/MapNodes/CombatNode_Hard.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/CombatNode_Hard.png;Sprites/MapNodes/CombatNode_Hard
+
+#begin Sprites/MapNodes/CombatNode_Normal.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/CombatNode_Normal.png;Sprites/MapNodes/CombatNode_Normal
+
 #begin Sprites/mountain.png
 /importer:TextureImporter
 /processor:TextureProcessor

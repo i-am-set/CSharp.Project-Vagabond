@@ -23,7 +23,7 @@ namespace ProjectVagabond.Scenes
         private readonly GameState _gameState;
         private Action? _onChoiceMade;
 
-        private enum AnimationPhase { CardIntro, RarityIntro, Idle, AnimatingOutro, SpellTransform_PopIn, SpellTransform_BookIntro, SpellTransform_MoveOut, SpellTransform_Absorb, SpellTransform_BookMoveOut }
+        private enum AnimationPhase { CardIntro, RarityIntro, Idle, AnimatingOutro, SpellTransform_PopIn, SpellTransform_BookIntro, SpellTransform_MoveOut, SpellTransform_Absorb, SpellTransform_BookMoveOut, RelicTransform_PopIn, RelicTransform_MoveOut }
         private AnimationPhase _currentPhase = AnimationPhase.CardIntro;
 
         private Queue<ChoiceCard> _cardsToAnimateIn = new Queue<ChoiceCard>();
@@ -142,6 +142,14 @@ namespace ProjectVagabond.Scenes
                 _currentPhase = AnimationPhase.SpellTransform_PopIn;
                 _transformAnimTimer = 0f;
                 float initialTilt = (float)(_random.NextDouble() * Math.PI) - MathHelper.PiOver2; // -90 to +90 degrees
+                float spinDirection = (_random.Next(2) == 0) ? 1f : -1f;
+                _transformInitialRotation = initialTilt + (spinDirection * MathHelper.TwoPi);
+            }
+            else if (_selectedChoiceData is AbilityData)
+            {
+                _currentPhase = AnimationPhase.RelicTransform_PopIn;
+                _transformAnimTimer = 0f;
+                float initialTilt = (float)(_random.NextDouble() * Math.PI) - MathHelper.PiOver2;
                 float spinDirection = (_random.Next(2) == 0) ? 1f : -1f;
                 _transformInitialRotation = initialTilt + (spinDirection * MathHelper.TwoPi);
             }
@@ -292,6 +300,23 @@ namespace ProjectVagabond.Scenes
                     }
                     break;
 
+                case AnimationPhase.RelicTransform_PopIn:
+                    _transformAnimTimer += deltaTime;
+                    if (_transformAnimTimer >= TRANSFORM_POP_IN_DURATION)
+                    {
+                        _currentPhase = AnimationPhase.RelicTransform_MoveOut;
+                        _transformAnimTimer = 0f;
+                    }
+                    break;
+
+                case AnimationPhase.RelicTransform_MoveOut:
+                    _transformAnimTimer += deltaTime;
+                    if (_transformAnimTimer >= TRANSFORM_MOVE_OUT_DURATION)
+                    {
+                        HandleChoice(_selectedChoiceData);
+                    }
+                    break;
+
                 case AnimationPhase.Idle:
                     // Input is only processed when idle.
                     if (IsInputBlocked) return;
@@ -307,7 +332,7 @@ namespace ProjectVagabond.Scenes
                 card.Draw(spriteBatch, font, gameTime, transform);
             }
 
-            if (_currentPhase >= AnimationPhase.SpellTransform_PopIn)
+            if (_currentPhase >= AnimationPhase.SpellTransform_PopIn && _currentPhase <= AnimationPhase.SpellTransform_BookMoveOut)
             {
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 var pageSprite = spriteManager.SpellbookPageSprite;
@@ -425,6 +450,40 @@ namespace ProjectVagabond.Scenes
                             spriteBatch.End();
                             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
                         }
+                    }
+                }
+            }
+            else if (_currentPhase >= AnimationPhase.RelicTransform_PopIn && _currentPhase <= AnimationPhase.RelicTransform_MoveOut)
+            {
+                var spriteManager = ServiceLocator.Get<SpriteManager>();
+                if (_selectedChoiceData is AbilityData abilityData)
+                {
+                    var relicSprite = spriteManager.GetRelicSprite(abilityData.RelicImagePath);
+                    if (relicSprite != null)
+                    {
+                        float relicScale = 1f;
+                        float relicAlpha = 1f;
+                        Vector2 relicPos = _transformAnimPosition;
+                        var relicOrigin = relicSprite.Bounds.Center.ToVector2();
+                        float relicRotation = 0f;
+
+                        if (_currentPhase == AnimationPhase.RelicTransform_PopIn)
+                        {
+                            float progress = Math.Clamp(_transformAnimTimer / TRANSFORM_POP_IN_DURATION, 0f, 1f);
+                            relicScale = Easing.EaseOutBackBig(progress);
+                            relicRotation = MathHelper.Lerp(_transformInitialRotation, 0f, Easing.EaseOutQuint(progress));
+                        }
+                        else // RelicTransform_MoveOut
+                        {
+                            float progress = Math.Clamp(_transformAnimTimer / TRANSFORM_MOVE_OUT_DURATION, 0f, 1f);
+                            float easedProgress = Easing.EaseInQuint(progress);
+
+                            float relicEndY = Global.VIRTUAL_HEIGHT + relicSprite.Height; // Move off bottom of screen
+                            relicPos.Y = MathHelper.Lerp(_transformAnimPosition.Y, relicEndY, easedProgress);
+                            relicAlpha = 1.0f - easedProgress;
+                        }
+
+                        spriteBatch.DrawSnapped(relicSprite, relicPos, null, Color.White * relicAlpha, relicRotation, relicOrigin, relicScale, SpriteEffects.None, 0f);
                     }
                 }
             }

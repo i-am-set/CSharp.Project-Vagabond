@@ -9,20 +9,14 @@ namespace ProjectVagabond.UI
     {
         private Texture2D? _texture;
         private Vector2 _origin;
-        private Vector2 _currentDirection = Vector2.UnitX;
         private bool _isMoving = false;
 
         // --- Tuning ---
-        private const float WADDLE_FRAME_DURATION = 0.2f; // Time each frame is displayed
-        private static readonly Vector2[] _waddleAnimationFrames = new Vector2[]
-        {
-            new Vector2(0, 0),
-            new Vector2(0, -1),
-        };
+        private const float FRAME_DURATION = 1f; // Time each frame is displayed
 
         // Animation State
-        private float _waddleFrameTimer;
-        private int _waddleFrameIndex;
+        private float _frameTimer;
+        private int _frameIndex;
 
         public Vector2 Position { get; private set; }
 
@@ -36,22 +30,17 @@ namespace ProjectVagabond.UI
             // Lazy initialization: Get the texture only when it's first needed for drawing.
             if (_texture == null)
             {
-                _texture = ServiceLocator.Get<SpriteManager>().PlayerSprite;
+                _texture = ServiceLocator.Get<SpriteManager>().CombatNodePlayerSprite;
                 if (_texture != null)
                 {
-                    _origin = new Vector2(_texture.Width / 2f, _texture.Height / 2f);
+                    // The origin is the center of a single 32x32 frame.
+                    _origin = new Vector2(16, 16);
                 }
             }
         }
 
         public void SetPosition(Vector2 newPosition)
         {
-            Vector2 direction = newPosition - this.Position;
-            // Use a small epsilon to avoid flipping from floating point noise when standing still
-            if (Math.Abs(direction.X) > 0.01f)
-            {
-                _currentDirection = direction;
-            }
             this.Position = newPosition;
         }
 
@@ -64,20 +53,12 @@ namespace ProjectVagabond.UI
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            if (_isMoving)
+            // Animate constantly, regardless of movement state.
+            _frameTimer += deltaTime;
+            if (_frameTimer >= FRAME_DURATION)
             {
-                _waddleFrameTimer += deltaTime;
-                if (_waddleFrameTimer >= WADDLE_FRAME_DURATION)
-                {
-                    _waddleFrameTimer -= WADDLE_FRAME_DURATION;
-                    _waddleFrameIndex = (_waddleFrameIndex + 1) % _waddleAnimationFrames.Length;
-                }
-            }
-            else
-            {
-                // When not moving, reset to the base frame.
-                _waddleFrameIndex = 0;
-                _waddleFrameTimer = 0;
+                _frameTimer -= FRAME_DURATION;
+                _frameIndex = (_frameIndex + 1) % 2; // Cycle between frame 0 and 1
             }
         }
 
@@ -86,14 +67,10 @@ namespace ProjectVagabond.UI
             InitializeTexture(); // Ensure texture is loaded before drawing.
             if (_texture == null) return; // Don't draw if the texture is still null.
 
-            // Pillar 2: Keyframed "Waddle" Motion
-            Vector2 waddleOffset = _waddleAnimationFrames[_waddleFrameIndex];
-            var drawPosition = Position + waddleOffset;
+            // Calculate the source rectangle for the current animation frame.
+            var sourceRectangle = new Rectangle(_frameIndex * 32, 0, 32, 32);
 
-            // Pillar 3: Orientation
-            SpriteEffects effects = _currentDirection.X < 0 ? SpriteEffects.FlipHorizontally : SpriteEffects.None;
-
-            spriteBatch.DrawSnapped(_texture, drawPosition, null, Color.White, 0f, _origin, 1f, effects, 0.5f);
+            spriteBatch.DrawSnapped(_texture, Position, sourceRectangle, Color.White, 0f, _origin, 1f, SpriteEffects.None, 0.5f);
         }
     }
 }

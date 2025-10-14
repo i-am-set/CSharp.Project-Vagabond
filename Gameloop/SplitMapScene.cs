@@ -55,6 +55,12 @@ namespace ProjectVagabond.Scenes
         private const string PATH_DRAW_PATTERN = "1111110111010111111001110111110011111111110101100"; // 1 = draw, 0 = skip. Creates a dashed line effect.
         private static readonly Random _random = new Random();
 
+        // Path Color Variation Tuning
+        private const float PATH_COLOR_VARIATION_MIN = 0.1f;
+        private const float PATH_COLOR_VARIATION_MAX = 1.0f;
+        private const float PATH_COLOR_NOISE_SCALE = 0.3f;
+
+
         // Node pulse animation state
         private bool _isPulsingNode = false;
         private int _pulseNodeId = -1;
@@ -76,6 +82,9 @@ namespace ProjectVagabond.Scenes
         private bool _isFadingInNextFloor = false;
         private float _floorFadeInTimer = 0f;
         private const float FLOOR_FADE_IN_DURATION = 0.5f;
+
+        // Node Animation
+        private const float NODE_FRAME_DURATION = 0.5f;
 
 
         public static bool PlayerWonLastBattle { get; set; } = true;
@@ -615,7 +624,6 @@ namespace ProjectVagabond.Scenes
 
             // Show the menu
             choiceMenu.Show(choices, onChoiceMade);
-            _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
             _wasModalActiveLastFrame = true;
         }
 
@@ -630,7 +638,8 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            var visitedPathColor = _global.Palette_DarkGray;
+            var visitedPathFillColor = _global.Palette_Gray;
+            var highlightedPathFillColor = _global.Palette_Yellow;
 
             // Find highlighted path before drawing
             SplitMapPath? highlightedPath = null;
@@ -643,13 +652,13 @@ namespace ProjectVagabond.Scenes
             foreach (var path in _currentMap.Paths.Values)
             {
                 if (path == highlightedPath) continue;
-                DrawPath(spriteBatch, pixel, path, visitedPathColor);
+                DrawPath(spriteBatch, pixel, path, visitedPathFillColor);
             }
 
             // Draw highlighted path on top
             if (highlightedPath != null)
             {
-                DrawPath(spriteBatch, pixel, highlightedPath, _global.Palette_Yellow);
+                DrawPath(spriteBatch, pixel, highlightedPath, highlightedPathFillColor);
             }
 
             // Draw Nodes
@@ -681,10 +690,11 @@ namespace ProjectVagabond.Scenes
 
                 if (nodeAlpha <= 0.01f) continue;
 
-                var texture = GetNodeTexture(node.NodeType);
+                var (texture, sourceRect, origin) = GetNodeDrawData(node, gameTime);
                 var bounds = node.GetBounds();
                 var color = Color.White;
                 float scale = 1.0f;
+                Vector2 hoverOffset = Vector2.Zero;
 
                 if (!node.IsReachable)
                 {
@@ -697,7 +707,7 @@ namespace ProjectVagabond.Scenes
                 }
                 else if (node.Id == _hoveredNodeId)
                 {
-                    scale = 1.1f;
+                    hoverOffset.Y = -1f;
                     color = _global.ButtonHoverColor;
                 }
 
@@ -708,9 +718,8 @@ namespace ProjectVagabond.Scenes
                     scale += pulseWave * PULSE_AMOUNT;
                 }
 
-                var origin = new Vector2(texture.Width / 2f, texture.Height / 2f);
-                var position = bounds.Center.ToVector2();
-                spriteBatch.DrawSnapped(texture, position, null, color * nodeAlpha, 0f, origin, scale, SpriteEffects.None, 0.4f);
+                var position = bounds.Center.ToVector2() + hoverOffset;
+                spriteBatch.DrawSnapped(texture, position, sourceRect, color * nodeAlpha, 0f, origin, scale, SpriteEffects.None, 0.4f);
             }
 
 
@@ -731,86 +740,70 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void DrawPath(SpriteBatch spriteBatch, Texture2D pixel, SplitMapPath path, Color defaultColor)
+        private void DrawPath(SpriteBatch spriteBatch, Texture2D pixel, SplitMapPath path, Color fillColor)
         {
-            if (_currentMap == null) return;
+            if (_currentMap == null || path.PixelPoints.Count < 2) return;
 
             var fromNode = _currentMap.Nodes[path.FromNodeId];
             var toNode = _currentMap.Nodes[path.ToNodeId];
-            Color pathColor;
-            bool isAnimatingAppearance = false;
-            bool isAnimatingRetraction = false;
+
+            const int exclusionSize = 20;
+            var fromExclusionBounds = new Rectangle(
+                (int)(fromNode.Position.X - exclusionSize / 2f),
+                (int)(fromNode.Position.Y - exclusionSize / 2f),
+                exclusionSize,
+                exclusionSize
+            );
+            var toExclusionBounds = new Rectangle(
+                (int)(toNode.Position.X - exclusionSize / 2f),
+                (int)(toNode.Position.Y - exclusionSize / 2f),
+                exclusionSize,
+                exclusionSize
+            );
+            int numPixelsToDraw;
 
             if (_pathRetractionProgress.ContainsKey(path.Id))
             {
-                isAnimatingRetraction = true;
-                pathColor = defaultColor;
+                float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
+                float animationTimer = _pathRetractionProgress.GetValueOrDefault(path.Id, 0f);
+                float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
+                if (linearProgress >= 1f) return;
+                float easedProgress = Easing.EaseOutCubic(linearProgress);
+                numPixelsToDraw = (int)((1f - easedProgress) * path.PixelPoints.Count);
             }
             else if (fromNode.Id == _nodeForPathReveal)
             {
-                isAnimatingAppearance = true;
-                pathColor = defaultColor;
+                float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
+                float animationTimer = _pathAnimationProgress.GetValueOrDefault(path.Id, 0f);
+                float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
+                if (linearProgress <= 0f) return;
+                float easedProgress = Easing.EaseOutCubic(linearProgress);
+                numPixelsToDraw = (int)(easedProgress * path.PixelPoints.Count);
             }
-            else if (_visitedNodeIds.Contains(fromNode.Id) && _visitedNodeIds.Contains(toNode.Id))
+            else if (_visitedNodeIds.Contains(fromNode.Id) && _visitedNodeIds.Contains(path.ToNodeId))
             {
-                pathColor = defaultColor; // Visited path
+                numPixelsToDraw = path.PixelPoints.Count;
             }
             else
             {
                 return; // Don't draw hidden paths
             }
 
-            if (path.PixelPoints.Count < 2) return;
+            if (numPixelsToDraw <= 0) return;
 
-            if (isAnimatingAppearance)
+            // Draw Fill
+            for (int i = 0; i < numPixelsToDraw; i++)
             {
-                float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
-                float animationTimer = _pathAnimationProgress.GetValueOrDefault(path.Id, 0f);
-                float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
-                if (linearProgress <= 0f) return;
-
-                float easedProgress = Easing.EaseOutCubic(linearProgress);
-                int numPixelsToDraw = (int)(easedProgress * path.PixelPoints.Count);
-
-                for (int i = 0; i < numPixelsToDraw; i++)
+                var point = path.PixelPoints[i];
+                int patternIndex = Math.Abs(point.X * 7 + point.Y * 13) % PATH_DRAW_PATTERN.Length;
+                if (PATH_DRAW_PATTERN[patternIndex] == '1')
                 {
-                    var point = path.PixelPoints[i];
-                    int patternIndex = Math.Abs(point.X * 7 + point.Y * 13) % PATH_DRAW_PATTERN.Length;
-                    if (PATH_DRAW_PATTERN[patternIndex] == '1')
+                    if (!fromExclusionBounds.Contains(point) && !toExclusionBounds.Contains(point))
                     {
-                        spriteBatch.Draw(pixel, point.ToVector2(), pathColor);
-                    }
-                }
-            }
-            else if (isAnimatingRetraction)
-            {
-                float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
-                float animationTimer = _pathRetractionProgress.GetValueOrDefault(path.Id, 0f);
-                float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
-                if (linearProgress >= 1f) return; // Fully retracted
-
-                float easedProgress = Easing.EaseOutCubic(linearProgress);
-                int numPixelsToDraw = (int)((1f - easedProgress) * path.PixelPoints.Count);
-
-                for (int i = 0; i < numPixelsToDraw; i++)
-                {
-                    var point = path.PixelPoints[i];
-                    int patternIndex = Math.Abs(point.X * 7 + point.Y * 13) % PATH_DRAW_PATTERN.Length;
-                    if (PATH_DRAW_PATTERN[patternIndex] == '1')
-                    {
-                        spriteBatch.Draw(pixel, point.ToVector2(), pathColor);
-                    }
-                }
-            }
-            else // Draw the full path (for visited paths)
-            {
-                for (int i = 0; i < path.PixelPoints.Count; i++)
-                {
-                    var point = path.PixelPoints[i];
-                    int patternIndex = Math.Abs(point.X * 7 + point.Y * 13) % PATH_DRAW_PATTERN.Length;
-                    if (PATH_DRAW_PATTERN[patternIndex] == '1')
-                    {
-                        spriteBatch.Draw(pixel, point.ToVector2(), pathColor);
+                        float noise = _gameState.NoiseManager.GetNoiseValue(NoiseMapType.Resources, point.X * PATH_COLOR_NOISE_SCALE, point.Y * PATH_COLOR_NOISE_SCALE);
+                        float multiplier = MathHelper.Lerp(PATH_COLOR_VARIATION_MIN, PATH_COLOR_VARIATION_MAX, noise);
+                        Color pixelColor = new Color(fillColor.ToVector3() * multiplier);
+                        spriteBatch.Draw(pixel, point.ToVector2(), pixelColor);
                     }
                 }
             }
@@ -825,17 +818,46 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private Texture2D GetNodeTexture(SplitNodeType type)
+        private (Texture2D texture, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode node, GameTime gameTime)
         {
-            return type switch
+            Texture2D texture;
+            Rectangle? sourceRect = null;
+            Vector2 origin;
+
+            if (node.NodeType == SplitNodeType.Battle)
             {
-                SplitNodeType.Origin => _spriteManager.SplitNodeStart,
-                SplitNodeType.Battle => _spriteManager.SplitNodeBattle,
-                SplitNodeType.Narrative => _spriteManager.SplitNodeNarrative,
-                SplitNodeType.Reward => _spriteManager.SplitNodeReward,
-                SplitNodeType.MajorBattle => _spriteManager.SplitNodeBoss,
-                _ => _spriteManager.SplitNodeBattle,
-            };
+                texture = node.Difficulty switch
+                {
+                    BattleDifficulty.Easy => _spriteManager.CombatNodeEasySprite,
+                    BattleDifficulty.Hard => _spriteManager.CombatNodeHardSprite,
+                    _ => _spriteManager.CombatNodeNormalSprite,
+                };
+
+                float totalTime = (float)gameTime.TotalGameTime.TotalSeconds;
+                int frameIndex = (int)((totalTime + node.AnimationOffset) / NODE_FRAME_DURATION) % 2;
+
+                sourceRect = new Rectangle(frameIndex * 32, 0, 32, 32);
+                origin = new Vector2(16, 16);
+            }
+            else if (node.NodeType == SplitNodeType.MajorBattle)
+            {
+                texture = _spriteManager.SplitNodeBoss;
+                sourceRect = null;
+                origin = new Vector2(texture.Width / 2f, texture.Height / 2f);
+            }
+            else
+            {
+                texture = node.NodeType switch
+                {
+                    SplitNodeType.Origin => _spriteManager.SplitNodeStart,
+                    SplitNodeType.Narrative => _spriteManager.SplitNodeNarrative,
+                    SplitNodeType.Reward => _spriteManager.SplitNodeReward,
+                    _ => _spriteManager.SplitNodeBattle, // Fallback
+                };
+                origin = new Vector2(texture.Width / 2f, texture.Height / 2f);
+            }
+
+            return (texture, sourceRect, origin);
         }
     }
 }

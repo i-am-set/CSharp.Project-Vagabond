@@ -75,6 +75,10 @@ namespace ProjectVagabond
         public Texture2D SplitNodeNarrative { get; private set; }
         public Texture2D SplitNodeReward { get; private set; }
         public Texture2D SplitNodeBoss { get; private set; }
+        public Texture2D CombatNodeNormalSprite { get; private set; }
+        public Texture2D CombatNodePlayerSprite { get; private set; }
+        public Texture2D CombatNodeEasySprite { get; private set; }
+        public Texture2D CombatNodeHardSprite { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -215,6 +219,18 @@ namespace ProjectVagabond
             catch { SplitNodeReward = _textureFactory.CreateColoredTexture(16, 16, Color.Gold); }
             try { SplitNodeBoss = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/split_node_boss"); }
             catch { SplitNodeBoss = _textureFactory.CreateColoredTexture(16, 16, Color.Purple); }
+
+            try { CombatNodeNormalSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/CombatNode_Normal"); }
+            catch { CombatNodeNormalSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Gray); }
+
+            try { CombatNodePlayerSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/Combat_Node_Player"); }
+            catch { CombatNodePlayerSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Cyan); }
+
+            try { CombatNodeEasySprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/CombatNode_Easy"); }
+            catch { CombatNodeEasySprite = _textureFactory.CreateColoredTexture(64, 32, Color.Green); }
+
+            try { CombatNodeHardSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/CombatNode_Hard"); }
+            catch { CombatNodeHardSprite = _textureFactory.CreateColoredTexture(64, 32, Color.DarkRed); }
 
 
             InitializeArrowSourceRects();
