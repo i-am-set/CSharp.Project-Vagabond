@@ -31,6 +31,8 @@ namespace ProjectVagabond.Progression
         private const float MERGE_DISTANCE_THRESHOLD = 100f;
         private const float PATH_SPLIT_POINT_MIN = 0.2f;
         private const float PATH_SPLIT_POINT_MAX = 0.8f;
+        private const float NODE_REPULSION_RADIUS = 30f;
+        private const float NODE_REPULSION_STRENGTH = 15f;
 
 
         public static SplitMap? Generate(SplitData splitData)
@@ -260,9 +262,9 @@ namespace ProjectVagabond.Progression
                         var splitPoint = Vector2.Lerp(fromNode.Position, midPoint, splitProgress);
 
                         // Generate trunk and branches
-                        var trunkPoints = GenerateWigglyPathPoints(fromNode.Position, splitPoint);
-                        var branch1Points = GenerateWigglyPathPoints(splitPoint, toNode1.Position);
-                        var branch2Points = GenerateWigglyPathPoints(splitPoint, toNode2.Position);
+                        var trunkPoints = GenerateWigglyPathPoints(fromNode.Position, splitPoint, new List<int> { fromNode.Id, toNode1.Id, toNode2.Id }, allNodes);
+                        var branch1Points = GenerateWigglyPathPoints(splitPoint, toNode1.Position, new List<int> { fromNode.Id, toNode1.Id }, allNodes);
+                        var branch2Points = GenerateWigglyPathPoints(splitPoint, toNode2.Position, new List<int> { fromNode.Id, toNode2.Id }, allNodes);
 
                         // Assign points, skipping the first point of branches to avoid duplicates
                         path1.RenderPoints = trunkPoints.Concat(branch1Points.Skip(1)).ToList();
@@ -288,7 +290,7 @@ namespace ProjectVagabond.Progression
                 {
                     var fromNode = allNodes.First(n => n.Id == path.FromNodeId);
                     var toNode = allNodes.First(n => n.Id == path.ToNodeId);
-                    path.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, toNode.Position);
+                    path.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, toNode.Position, new List<int> { fromNode.Id, toNode.Id }, allNodes);
                 }
 
                 // Generate pixel points for all paths (merged or not)
@@ -310,7 +312,7 @@ namespace ProjectVagabond.Progression
         }
 
 
-        private static List<Vector2> GenerateWigglyPathPoints(Vector2 start, Vector2 end)
+        private static List<Vector2> GenerateWigglyPathPoints(Vector2 start, Vector2 end, List<int> ignoreNodeIds, List<SplitMapNode> allNodes)
         {
             var points = new List<Vector2> { start };
             var mainVector = end - start;
@@ -334,7 +336,32 @@ namespace ProjectVagabond.Progression
                 float randomOffset = ((float)_random.NextDouble() * 2f - 1f) * PATH_MAX_OFFSET;
                 float taper = MathF.Sin(progress * MathF.PI); // Tapering factor (0 at start/end, 1 in middle)
 
-                var finalPoint = pointOnLine + perpendicular * randomOffset * taper;
+                // --- Node Repulsion Logic ---
+                Vector2 totalRepulsion = Vector2.Zero;
+                foreach (var otherNode in allNodes)
+                {
+                    if (ignoreNodeIds.Contains(otherNode.Id))
+                    {
+                        continue;
+                    }
+
+                    float distanceToNode = Vector2.Distance(pointOnLine, otherNode.Position);
+
+                    if (distanceToNode < NODE_REPULSION_RADIUS)
+                    {
+                        Vector2 repulsionVector = pointOnLine - otherNode.Position;
+                        if (repulsionVector.LengthSquared() > 0)
+                        {
+                            repulsionVector.Normalize();
+                            float falloff = 1.0f - (distanceToNode / NODE_REPULSION_RADIUS);
+                            float strength = NODE_REPULSION_STRENGTH * Easing.EaseOutQuad(falloff);
+                            totalRepulsion += repulsionVector * strength;
+                        }
+                    }
+                }
+                // --- End Repulsion Logic ---
+
+                var finalPoint = pointOnLine + perpendicular * randomOffset * taper + totalRepulsion;
                 points.Add(finalPoint);
             }
 
