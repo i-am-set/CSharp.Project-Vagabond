@@ -36,7 +36,8 @@ namespace ProjectVagabond.Scenes
 
         private bool _isPlayerMoving;
         private float _playerMoveTimer;
-        private const float PLAYER_MOVE_DURATION = 3.0f;
+        private float _playerMoveDuration;
+        private const float PLAYER_MOVE_SPEED = 15f; // Pixels per second
         private int _playerMoveTargetNodeId;
         private SplitMapPath? _playerMovePath;
 
@@ -59,6 +60,8 @@ namespace ProjectVagabond.Scenes
         private const float PATH_COLOR_VARIATION_MIN = 0.1f;
         private const float PATH_COLOR_VARIATION_MAX = 1.0f;
         private const float PATH_COLOR_NOISE_SCALE = 0.3f;
+        private const float PATH_EXCLUSION_RADIUS = 5f; // Half of a 20x20 exclusion zone
+        private const float PATH_FADE_DISTANCE = 12f;
 
 
         // Node pulse animation state
@@ -195,6 +198,16 @@ namespace ProjectVagabond.Scenes
             _playerMovePath = _currentMap.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == targetNodeId);
             if (_playerMovePath == null) return;
 
+            float pathLength = 0f;
+            if (_playerMovePath.PixelPoints.Count > 1)
+            {
+                for (int i = 0; i < _playerMovePath.PixelPoints.Count - 1; i++)
+                {
+                    pathLength += Vector2.Distance(_playerMovePath.PixelPoints[i].ToVector2(), _playerMovePath.PixelPoints[i + 1].ToVector2());
+                }
+            }
+            _playerMoveDuration = (pathLength > 0) ? pathLength / PLAYER_MOVE_SPEED : 0f;
+
             _isPlayerMoving = true;
             _playerIcon.SetIsMoving(true);
             _playerMoveTimer = 0f;
@@ -300,7 +313,11 @@ namespace ProjectVagabond.Scenes
             if (_isPlayerMoving)
             {
                 _playerMoveTimer += deltaTime;
-                float progress = Math.Clamp(_playerMoveTimer / PLAYER_MOVE_DURATION, 0f, 1f); // Pillar 1: Linear progress
+                float progress = 1f;
+                if (_playerMoveDuration > 0)
+                {
+                    progress = Math.Clamp(_playerMoveTimer / _playerMoveDuration, 0f, 1f);
+                }
 
                 if (_playerMovePath != null && _playerMovePath.PixelPoints.Any())
                 {
@@ -747,19 +764,6 @@ namespace ProjectVagabond.Scenes
             var fromNode = _currentMap.Nodes[path.FromNodeId];
             var toNode = _currentMap.Nodes[path.ToNodeId];
 
-            const int exclusionSize = 20;
-            var fromExclusionBounds = new Rectangle(
-                (int)(fromNode.Position.X - exclusionSize / 2f),
-                (int)(fromNode.Position.Y - exclusionSize / 2f),
-                exclusionSize,
-                exclusionSize
-            );
-            var toExclusionBounds = new Rectangle(
-                (int)(toNode.Position.X - exclusionSize / 2f),
-                (int)(toNode.Position.Y - exclusionSize / 2f),
-                exclusionSize,
-                exclusionSize
-            );
             int numPixelsToDraw;
 
             if (_pathRetractionProgress.ContainsKey(path.Id))
@@ -798,12 +802,33 @@ namespace ProjectVagabond.Scenes
                 int patternIndex = Math.Abs(point.X * 7 + point.Y * 13) % PATH_DRAW_PATTERN.Length;
                 if (PATH_DRAW_PATTERN[patternIndex] == '1')
                 {
-                    if (!fromExclusionBounds.Contains(point) && !toExclusionBounds.Contains(point))
+                    var pointVec = point.ToVector2();
+                    float distFrom = Vector2.Distance(pointVec, fromNode.Position);
+                    float distTo = Vector2.Distance(pointVec, toNode.Position);
+
+                    float alpha = 1.0f;
+                    float fadeStartDistance = PATH_EXCLUSION_RADIUS + PATH_FADE_DISTANCE;
+
+                    // Check against the 'from' node
+                    if (distFrom < fadeStartDistance)
+                    {
+                        if (distFrom <= PATH_EXCLUSION_RADIUS) alpha = 0f;
+                        else alpha = Math.Min(alpha, (distFrom - PATH_EXCLUSION_RADIUS) / PATH_FADE_DISTANCE);
+                    }
+
+                    // Check against the 'to' node
+                    if (distTo < fadeStartDistance)
+                    {
+                        if (distTo <= PATH_EXCLUSION_RADIUS) alpha = 0f;
+                        else alpha = Math.Min(alpha, (distTo - PATH_EXCLUSION_RADIUS) / PATH_FADE_DISTANCE);
+                    }
+
+                    if (alpha > 0.01f)
                     {
                         float noise = _gameState.NoiseManager.GetNoiseValue(NoiseMapType.Resources, point.X * PATH_COLOR_NOISE_SCALE, point.Y * PATH_COLOR_NOISE_SCALE);
                         float multiplier = MathHelper.Lerp(PATH_COLOR_VARIATION_MIN, PATH_COLOR_VARIATION_MAX, noise);
                         Color pixelColor = new Color(fillColor.ToVector3() * multiplier);
-                        spriteBatch.Draw(pixel, point.ToVector2(), pixelColor);
+                        spriteBatch.Draw(pixel, point.ToVector2(), pixelColor * alpha);
                     }
                 }
             }
@@ -833,8 +858,12 @@ namespace ProjectVagabond.Scenes
                     _ => _spriteManager.CombatNodeNormalSprite,
                 };
 
-                float totalTime = (float)gameTime.TotalGameTime.TotalSeconds;
-                int frameIndex = (int)((totalTime + node.AnimationOffset) / NODE_FRAME_DURATION) % 2;
+                int frameIndex = 0;
+                if (node.IsReachable)
+                {
+                    float totalTime = (float)gameTime.TotalGameTime.TotalSeconds;
+                    frameIndex = (int)((totalTime + node.AnimationOffset) / NODE_FRAME_DURATION) % 2;
+                }
 
                 sourceRect = new Rectangle(frameIndex * 32, 0, 32, 32);
                 origin = new Vector2(16, 16);
