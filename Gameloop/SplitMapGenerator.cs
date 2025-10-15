@@ -1,13 +1,5 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Dice;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -24,7 +16,7 @@ namespace ProjectVagabond.Progression
 
         // --- Generation Tuning ---
         public const int MAP_WIDTH = 280;
-        private const int FLOOR_HEIGHT = 80;
+        private const int FLOOR_HEIGHT = 100;
         private const int HORIZONTAL_PADDING = 8; // Minimal padding to keep nodes off the absolute edge
         private const int VERTICAL_PADDING = 50;
         private const float BATTLE_EVENT_WEIGHT = 0.7f; // 70% chance for a battle
@@ -87,15 +79,15 @@ namespace ProjectVagabond.Progression
                 {
                     do
                     {
-                        numNodes = _random.Next(2, 5); // 2, 3, or 4 nodes.
-                    } while (numNodes == previousFloorNodeCount && totalFloors > 3);
+                        numNodes = _random.Next(2, 6); // 2, 3, 4, or 5 nodes.
+                    } while (numNodes == previousFloorNodeCount);
                 }
                 else // This only leaves floor 1 (the second floor).
                 {
                     do
                     {
-                        numNodes = _random.Next(1, 5); // 1, 2, 3, or 4 nodes.
-                    } while (numNodes == previousFloorNodeCount && totalFloors > 3);
+                        numNodes = _random.Next(1, 6); // 1, 2, 3, 4, or 5 nodes.
+                    } while (numNodes == previousFloorNodeCount);
                 }
 
                 float y = mapHeight - VERTICAL_PADDING - (floor * FLOOR_HEIGHT);
