@@ -88,6 +88,7 @@ namespace ProjectVagabond.Scenes
 
         // Node Animation
         private const float NODE_FRAME_DURATION = 0.5f;
+        private float _nodeHoverTextBobTimer = 0f;
 
 
         public static bool PlayerWonLastBattle { get; set; } = true;
@@ -230,6 +231,11 @@ namespace ProjectVagabond.Scenes
         public override void Update(GameTime gameTime)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            if (_hoveredNodeId != -1)
+            {
+                _nodeHoverTextBobTimer += deltaTime;
+            }
 
             // Handle modal dialogs first, as they pause the main scene logic
             if (_narrativeDialog.IsActive || _sceneManager.IsModalActive)
@@ -745,6 +751,52 @@ namespace ProjectVagabond.Scenes
 
             spriteBatch.End(); // End the camera-transformed batch
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform); // Re-begin the original batch
+
+            // Draw Node Hover Text
+            if (_hoveredNodeId != -1 && !_isPlayerMoving && !_narrativeDialog.IsActive && _eventState == EventState.Idle)
+            {
+                if (_currentMap.Nodes.TryGetValue(_hoveredNodeId, out var hoveredNode) && hoveredNode.IsReachable)
+                {
+                    string nodeText = "";
+                    switch (hoveredNode.NodeType)
+                    {
+                        case SplitNodeType.Battle:
+                            nodeText = hoveredNode.Difficulty switch
+                            {
+                                BattleDifficulty.Easy => "EASY COMBAT",
+                                BattleDifficulty.Hard => "HARD COMBAT",
+                                _ => "COMBAT",
+                            };
+                            break;
+                        case SplitNodeType.Narrative:
+                            nodeText = "EVENT";
+                            break;
+                        case SplitNodeType.Reward:
+                            nodeText = "REWARD";
+                            break;
+                        case SplitNodeType.MajorBattle:
+                            nodeText = "MAJOR BATTLE";
+                            break;
+                    }
+
+                    if (!string.IsNullOrEmpty(nodeText))
+                    {
+                        var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+                        var textSize = secondaryFont.MeasureString(nodeText);
+
+                        // Bobbing animation
+                        const float bobSpeed = 4f;
+                        float yOffset = (MathF.Sin(_nodeHoverTextBobTimer * bobSpeed) > 0) ? -1f : 0f;
+
+                        var textPosition = new Vector2(
+                            (Global.VIRTUAL_WIDTH - textSize.Width) / 2f,
+                            Global.VIRTUAL_HEIGHT - textSize.Height - 3 + yOffset
+                        );
+
+                        spriteBatch.DrawStringSnapped(secondaryFont, nodeText, textPosition, _global.Palette_Yellow);
+                    }
+                }
+            }
 
             if (_narrativeDialog.IsActive)
             {

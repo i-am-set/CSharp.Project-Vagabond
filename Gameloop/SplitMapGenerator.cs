@@ -33,7 +33,7 @@ namespace ProjectVagabond.Progression
         private const float PATH_MAX_OFFSET = 5f; // Max perpendicular deviation
         private const float SECONDARY_PATH_CHANCE = 0.4f; // Chance for a node to have a second outgoing path
         private const float NODE_HORIZONTAL_VARIANCE_FACTOR = 1.0f; // Node can move within 100% of its "lane"
-        private const float NODE_VERTICAL_VARIANCE_PIXELS = 24f;
+        private const float NODE_VERTICAL_VARIANCE_PIXELS = 30f;
         private const float MAX_CONNECTION_DISTANCE = 120f; // Max distance for a path to be considered "close"
         private const float MERGE_CHANCE = 0.5f;
         private const float MERGE_DISTANCE_THRESHOLD = 100f;
