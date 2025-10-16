@@ -4,11 +4,7 @@
   "SplitLengthMax": 12,
   "NumberOfRewardFloors": 2,
   "PossibleBattles": [
-    [ "snake" ],
-    [ "snake", "snake" ],
-    [ "spider", "snake" ],
-    [ "toad" ],
-    [ "wolf", "spider" ]
+    [ "snake", "boar", "spider", "wolf" ]
   ],
   "PossibleNarrativeEventIDs": [
     "shimmering_spring",
@@ -56,8 +52,13 @@
     "rope_pit"
   ],
   "PossibleMajorBattles": [
-    [ "boar" ],
-    [ "wolf", "spider", "wolf" ],
-    [ "boar", "snake", "snake" ]
+    [ "wolf", "wolf", "spider", "spider" ],
+    [ "wolf", "spider", "spider", "snake" ],
+    [ "wolf", "boar", "spider", "snake" ],
+    [ "boar", "boar", "spider", "spider" ],
+    [ "wolf", "wolf", "boar", "spider" ],
+    [ "wolf", "wolf", "boar", "boar" ],
+    [ "wolf", "wolf", "wolf", "snake" ]
+
   ]
 }

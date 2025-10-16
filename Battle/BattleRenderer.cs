@@ -39,8 +39,8 @@ namespace ProjectVagabond.Battle.UI
         private Dictionary<string, float[]> _enemyAnimationIntervals = new Dictionary<string, float[]>();
         private readonly Random _random = new Random();
         private const int ENEMY_SPRITE_PART_SIZE = 64;
-        private const float ENEMY_ANIM_MIN_INTERVAL = 0.5f;
-        private const float ENEMY_ANIM_MAX_INTERVAL = 1.0f;
+        private const float ENEMY_ANIM_MIN_INTERVAL = 0.4f;
+        private const float ENEMY_ANIM_MAX_INTERVAL = 0.6f;
 
         // Layout Constants
         private const int DIVIDER_Y = 105;
@@ -544,10 +544,10 @@ namespace ProjectVagabond.Battle.UI
                             var partOffset = offsets[i];
                             var baseDrawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y);
 
+                            // Draw shifted silhouettes for left, right, and top
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X - 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X + 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X, (int)baseDrawPosition.Y - 1, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X, (int)baseDrawPosition.Y + 1, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
                         }
                     }
 
