@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
@@ -518,6 +519,8 @@ namespace ProjectVagabond.Battle.UI
             Color tintColor = Color.White * combatant.VisualAlpha;
 
             Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
+            Texture2D enemySilhouette = _spriteManager.GetEnemySpriteSilhouette(combatant.ArchetypeId);
+
             if (enemySprite != null)
             {
                 int numParts = enemySprite.Width / ENEMY_SPRITE_PART_SIZE;
@@ -532,6 +535,24 @@ namespace ProjectVagabond.Battle.UI
 
                 if (_enemySpritePartOffsets.TryGetValue(combatant.CombatantID, out var offsets))
                 {
+                    // --- Outline Pass ---
+                    Color outlineColor = _global.Palette_DarkGray * combatant.VisualAlpha;
+                    if (enemySilhouette != null)
+                    {
+                        for (int i = 0; i < numParts; i++)
+                        {
+                            var sourceRect = new Rectangle(i * ENEMY_SPRITE_PART_SIZE, 0, ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
+                            var partOffset = offsets[i];
+                            var baseDrawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y);
+
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X - 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X + 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X, (int)baseDrawPosition.Y - 1, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X, (int)baseDrawPosition.Y + 1, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
+                        }
+                    }
+
+                    // --- Fill Pass ---
                     for (int i = 0; i < numParts; i++)
                     {
                         var sourceRect = new Rectangle(i * ENEMY_SPRITE_PART_SIZE, 0, ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);

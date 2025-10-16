@@ -37,7 +37,7 @@ namespace ProjectVagabond
 
 
         // Enemy Sprite Cache
-        private readonly Dictionary<string, Texture2D> _enemySprites = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _enemySprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteTopPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _relicSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
@@ -343,21 +343,65 @@ namespace ProjectVagabond
 
             if (_enemySprites.TryGetValue(archetypeId, out var cachedSprite))
             {
-                return cachedSprite;
+                return cachedSprite.Original;
             }
 
             try
             {
                 var sprite = _core.Content.Load<Texture2D>($"Sprites/Enemies/{archetypeId.ToLower()}");
-                _enemySprites[archetypeId] = sprite;
-                PreCalculateTopPixelOffsets(sprite, archetypeId); // Pre-calculate on first load
+                var silhouette = CreateSilhouette(sprite);
+                _enemySprites[archetypeId] = (sprite, silhouette);
+                PreCalculateTopPixelOffsets(sprite, archetypeId);
                 return sprite;
             }
             catch
             {
-                _enemySprites[archetypeId] = null;
+                _enemySprites[archetypeId] = (null, null);
                 return null;
             }
+        }
+
+        public Texture2D GetEnemySpriteSilhouette(string archetypeId)
+        {
+            if (string.IsNullOrEmpty(archetypeId)) return null;
+
+            if (_enemySprites.TryGetValue(archetypeId, out var cachedSprite))
+            {
+                return cachedSprite.Silhouette;
+            }
+
+            GetEnemySprite(archetypeId);
+
+            if (_enemySprites.TryGetValue(archetypeId, out var newlyCachedSprite))
+            {
+                return newlyCachedSprite.Silhouette;
+            }
+
+            return null;
+        }
+
+        private Texture2D CreateSilhouette(Texture2D source)
+        {
+            var graphicsDevice = _core.GraphicsDevice;
+            var data = new Color[source.Width * source.Height];
+            source.GetData(data);
+
+            var silhouetteData = new Color[data.Length];
+            for (int i = 0; i < data.Length; i++)
+            {
+                if (data[i].A > 0)
+                {
+                    silhouetteData[i] = Color.White;
+                }
+                else
+                {
+                    silhouetteData[i] = Color.Transparent;
+                }
+            }
+
+            var silhouetteTexture = new Texture2D(graphicsDevice, source.Width, source.Height);
+            silhouetteTexture.SetData(silhouetteData);
+            return silhouetteTexture;
         }
 
         public Texture2D GetRelicSprite(string imagePath)
