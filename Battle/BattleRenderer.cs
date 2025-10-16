@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
@@ -316,7 +317,7 @@ namespace ProjectVagabond.Battle.UI
             bool areAllFlashing = (state.Timer % cycleDuration) < HoverHighlightState.MultiTargetFlashOnDuration;
             Color flashColor = areAllFlashing ? _global.Palette_Red : Color.White;
 
-            float bobOffset = (MathF.Sin(sharedBobbingTimer * 4f) > 0) ? 1f : 0f;
+            float bobOffset = 0f;
 
             switch (move.Target)
             {
@@ -397,7 +398,7 @@ namespace ProjectVagabond.Battle.UI
                 var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
 
                 var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
-                float highestPointY = GetEnemySpriteTopY(combatant, spriteRect.Y);
+                float highestPointY = GetEnemySpriteStaticTopY(combatant, spriteRect.Y);
 
                 arrowPos = new Vector2(spriteRect.Center.X - sourceRect.Width / 2f, highestPointY - sourceRect.Height - 1 + bobOffset);
             }
@@ -441,7 +442,7 @@ namespace ProjectVagabond.Battle.UI
                 var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
 
                 var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
-                float highestPointY = GetEnemySpriteTopY(combatant, spriteRect.Y);
+                float highestPointY = GetEnemySpriteStaticTopY(combatant, spriteRect.Y);
 
                 groupCenterPos = new Vector2(spriteRect.Center.X, highestPointY - sourceRect.Height - 1);
             }
@@ -489,7 +490,7 @@ namespace ProjectVagabond.Battle.UI
             }
             else // Enemy turn
             {
-                float bobOffset = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) > 0) ? 1f : 0f;
+                float bobOffset = 0f;
                 var arrowRect = arrowRects[6]; // Down arrow
                 var enemies = allCombatants.Where(c => !c.IsPlayerControlled).ToList();
                 int enemyIndex = enemies.FindIndex(e => e.CombatantID == currentActor.CombatantID);
@@ -504,7 +505,7 @@ namespace ProjectVagabond.Battle.UI
                 var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
 
                 // Calculate the highest point of the sprite for this frame
-                float highestPointY = GetEnemySpriteTopY(currentActor, spriteRect.Y);
+                float highestPointY = GetEnemySpriteStaticTopY(currentActor, spriteRect.Y);
 
                 var arrowPos = new Vector2(spriteRect.Center.X - arrowRect.Width / 2, highestPointY - arrowRect.Height - 1 + bobOffset);
                 spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
@@ -762,10 +763,10 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private float GetEnemySpriteTopY(BattleCombatant enemy, float spriteRectTopY)
+        private float GetEnemySpriteStaticTopY(BattleCombatant enemy, float spriteRectTopY)
         {
             var staticOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(enemy.ArchetypeId);
-            if (staticOffsets == null || !_enemySpritePartOffsets.TryGetValue(enemy.CombatantID, out var animOffsets))
+            if (staticOffsets == null)
             {
                 return spriteRectTopY; // Fallback to the top of the bounding box
             }
@@ -775,7 +776,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 if (staticOffsets[i] == int.MaxValue) continue; // Skip empty parts
 
-                float currentPartTopY = staticOffsets[i] + (animOffsets.Length > i ? animOffsets[i].Y : 0);
+                float currentPartTopY = staticOffsets[i]; // Only use the static offset
                 minTopY = Math.Min(minTopY, currentPartTopY);
             }
 
