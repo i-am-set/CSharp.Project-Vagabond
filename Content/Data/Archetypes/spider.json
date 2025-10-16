@@ -1,0 +1,28 @@
+{
+  "Id": "spider",
+  "Name": "Spider",
+  "Components": [
+    { "Type": "ProjectVagabond.PositionComponent" },
+    { "Type": "ProjectVagabond.RenderableComponent" },
+    {
+      "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
+      "Properties": {
+        "Level": 5,
+        "MinHP": 20,
+        "MaxHP": 25,
+        "MinStrength": 8,
+        "MaxStrength": 10,
+        "MinIntelligence": 10,
+        "MaxIntelligence": 12,
+        "MinTenacity": 7,
+        "MaxTenacity": 9,
+        "MinAgility": 12,
+        "MaxAgility": 15,
+        "DefensiveElementIDs": [ 101 ],
+        "MoveLearnset": [ "VenomJab", "ToxicSting" ],
+        "MinNumberOfMoves": 1,
+        "MaxNumberOfMoves": 2
+      }
+    }
+  ]
+}

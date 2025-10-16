@@ -37,7 +37,7 @@ namespace ProjectVagabond.Scenes
         private bool _isPlayerMoving;
         private float _playerMoveTimer;
         private float _playerMoveDuration;
-        private const float PLAYER_MOVE_SPEED = 15f; // Pixels per second
+        private const float PLAYER_MOVE_SPEED = 32f; // Pixels per second
         private int _playerMoveTargetNodeId;
         private SplitMapPath? _playerMovePath;
 
@@ -822,7 +822,7 @@ namespace ProjectVagabond.Scenes
             {
                 float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
                 float animationTimer = _pathRetractionProgress.GetValueOrDefault(path.Id, 0f);
-                float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
+                float linearProgress = Math.Clamp((animationTimer * 3f) / duration, 0f, 1f);
                 if (linearProgress >= 1f) return;
                 float easedProgress = Easing.EaseOutCubic(linearProgress);
                 numPixelsToDraw = (int)((1f - easedProgress) * path.PixelPoints.Count);
@@ -831,7 +831,7 @@ namespace ProjectVagabond.Scenes
             {
                 float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
                 float animationTimer = _pathAnimationProgress.GetValueOrDefault(path.Id, 0f);
-                float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
+                float linearProgress = Math.Clamp((animationTimer * 2f) / duration, 0f, 1f);
                 if (linearProgress <= 0f) return;
                 float easedProgress = Easing.EaseOutCubic(linearProgress);
                 numPixelsToDraw = (int)(easedProgress * path.PixelPoints.Count);

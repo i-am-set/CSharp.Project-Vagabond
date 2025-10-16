@@ -1,0 +1,28 @@
+{
+  "Id": "snake",
+  "Name": "Snake",
+  "Components": [
+    { "Type": "ProjectVagabond.PositionComponent" },
+    { "Type": "ProjectVagabond.RenderableComponent" },
+    {
+      "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
+      "Properties": {
+        "Level": 6,
+        "MinHP": 22,
+        "MaxHP": 28,
+        "MinStrength": 11,
+        "MaxStrength": 14,
+        "MinIntelligence": 6,
+        "MaxIntelligence": 8,
+        "MinTenacity": 6,
+        "MaxTenacity": 8,
+        "MinAgility": 16,
+        "MaxAgility": 20,
+        "DefensiveElementIDs": [ 101 ],
+        "MoveLearnset": [ "VenomJab", "SwiftStrike" ],
+        "MinNumberOfMoves": 2,
+        "MaxNumberOfMoves": 2
+      }
+    }
+  ]
+}

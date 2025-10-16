@@ -4,9 +4,11 @@
   "SplitLengthMax": 12,
   "NumberOfRewardFloors": 2,
   "PossibleBattles": [
-    [ "wanderer" ],
-    [ "wanderer", "wanderer" ],
-    [ "scarab" ]
+    [ "snake" ],
+    [ "snake", "snake" ],
+    [ "spider", "snake" ],
+    [ "toad" ],
+    [ "wolf", "spider" ]
   ],
   "PossibleNarrativeEventIDs": [
     "shimmering_spring",
@@ -54,7 +56,8 @@
     "rope_pit"
   ],
   "PossibleMajorBattles": [
-    [ "scarab", "wanderer" ],
-    [ "scarab", "scarab" ]
+    [ "boar" ],
+    [ "wolf", "spider", "wolf" ],
+    [ "boar", "snake", "snake" ]
   ]
 }

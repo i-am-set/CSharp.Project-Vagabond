@@ -162,6 +162,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Cards/card_base.png
 
+#begin Sprites/Enemies/boar.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Enemies/boar.png;Sprites/Enemies/boar
+
 #begin Sprites/Enemies/scarab.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -174,6 +186,42 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Enemies/scarab.png;Sprites/Enemies/scarab
 
+#begin Sprites/Enemies/snake.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Enemies/snake.png;Sprites/Enemies/snake
+
+#begin Sprites/Enemies/spider.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Enemies/spider.png;Sprites/Enemies/spider
+
+#begin Sprites/Enemies/toad.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Enemies/toad.png;Sprites/Enemies/toad
+
 #begin Sprites/Enemies/wanderer.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -185,6 +233,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/Enemies/wanderer.png;Sprites/Enemies/wanderer
+
+#begin Sprites/Enemies/wolf.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Enemies/wolf.png;Sprites/Enemies/wolf
 
 #begin Sprites/flatland.png
 /importer:TextureImporter

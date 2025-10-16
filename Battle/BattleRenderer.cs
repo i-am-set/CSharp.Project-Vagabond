@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
@@ -40,8 +39,8 @@ namespace ProjectVagabond.Battle.UI
         private Dictionary<string, float[]> _enemyAnimationIntervals = new Dictionary<string, float[]>();
         private readonly Random _random = new Random();
         private const int ENEMY_SPRITE_PART_SIZE = 64;
-        private const float ENEMY_ANIM_MIN_INTERVAL = 0.25f;
-        private const float ENEMY_ANIM_MAX_INTERVAL = 0.35f;
+        private const float ENEMY_ANIM_MIN_INTERVAL = 0.5f;
+        private const float ENEMY_ANIM_MAX_INTERVAL = 1.0f;
 
         // Layout Constants
         private const int DIVIDER_Y = 105;

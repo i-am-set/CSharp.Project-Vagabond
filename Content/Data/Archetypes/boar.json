@@ -1,0 +1,28 @@
+{
+  "Id": "boar",
+  "Name": "Boar",
+  "Components": [
+    { "Type": "ProjectVagabond.PositionComponent" },
+    { "Type": "ProjectVagabond.RenderableComponent" },
+    {
+      "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
+      "Properties": {
+        "Level": 8,
+        "MinHP": 45,
+        "MaxHP": 55,
+        "MinStrength": 18,
+        "MaxStrength": 22,
+        "MinIntelligence": 3,
+        "MaxIntelligence": 5,
+        "MinTenacity": 15,
+        "MaxTenacity": 18,
+        "MinAgility": 5,
+        "MaxAgility": 7,
+        "DefensiveElementIDs": [ 101 ],
+        "MoveLearnset": [ "ShoulderBash", "Rampage" ],
+        "MinNumberOfMoves": 1,
+        "MaxNumberOfMoves": 2
+      }
+    }
+  ]
+}
