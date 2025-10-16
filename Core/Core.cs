@@ -365,6 +365,12 @@ namespace ProjectVagabond
 
         protected override void Update(GameTime gameTime)
         {
+            // Pause the entire game update loop if the window is not focused.
+            if (!IsActive)
+            {
+                return;
+            }
+
             if (_settings.IsFrameLimiterEnabled)
             {
                 IsFixedTimeStep = true;

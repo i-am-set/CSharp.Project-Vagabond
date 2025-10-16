@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -372,6 +373,8 @@ namespace ProjectVagabond.Progression
 
         private static void AssignEvents(List<SplitMapNode>[] nodesByFloor, SplitData splitData, int totalFloors)
         {
+            var progressionManager = ServiceLocator.Get<ProgressionManager>();
+
             // Assign Origin
             var startNode = nodesByFloor[0].First();
             startNode.NodeType = SplitNodeType.Origin;
@@ -402,7 +405,7 @@ namespace ProjectVagabond.Progression
                         {
                             node.NodeType = SplitNodeType.Battle;
                             node.Difficulty = (BattleDifficulty)_random.Next(3); // 0=Easy, 1=Normal, 2=Hard
-                            node.EventData = splitData.PossibleBattles[_random.Next(splitData.PossibleBattles.Count)];
+                            node.EventData = progressionManager.GetRandomBattle(node.Difficulty);
                         }
                     }
                     else if (splitData.PossibleNarrativeEventIDs.Any())
@@ -422,8 +425,7 @@ namespace ProjectVagabond.Progression
                         {
                             node.NodeType = SplitNodeType.Battle;
                             node.Difficulty = (BattleDifficulty)_random.Next(3);
-                            if (splitData.PossibleBattles.Any())
-                                node.EventData = splitData.PossibleBattles[_random.Next(splitData.PossibleBattles.Count)];
+                            node.EventData = progressionManager.GetRandomBattle(node.Difficulty);
                         }
                     }
                 }

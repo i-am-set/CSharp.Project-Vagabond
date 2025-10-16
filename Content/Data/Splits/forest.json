@@ -2,7 +2,6 @@
   "Theme": "Forest",
   "SplitLengthMin": 8,
   "SplitLengthMax": 12,
-  "NumberOfRewardFloors": 2,
   "PossibleBattles": [
     [ "snake" ],
     [ "snake", "snake" ],
@@ -94,13 +93,8 @@
     "rope_pit"
   ],
   "PossibleMajorBattles": [
-    [ "wolf", "wolf", "spider", "spider" ],
-    [ "wolf", "spider", "spider", "snake" ],
-    [ "wolf", "boar", "spider", "snake" ],
-    [ "boar", "boar", "spider", "spider" ],
-    [ "wolf", "wolf", "boar", "spider" ],
-    [ "wolf", "wolf", "boar", "boar" ],
-    [ "wolf", "wolf", "wolf", "snake" ]
-
+    [ "boar" ],
+    [ "wolf", "spider", "wolf" ],
+    [ "boar", "snake", "snake" ]
   ]
 }

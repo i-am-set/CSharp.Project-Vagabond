@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
@@ -126,10 +125,10 @@ namespace ProjectVagabond.Battle.UI
             var player = allCombatants.FirstOrDefault(c => c.IsPlayerControlled);
 
             // --- Draw Enemy HUDs ---
-            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, uiManager.TargetTypeForSelection, animationManager);
+            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, uiManager.TargetTypeForSelection, animationManager, uiManager.HoverHighlightState);
 
             // --- Draw Player HUD ---
-            DrawPlayerHud(spriteBatch, font, secondaryFont, player, gameTime, animationManager, uiManager);
+            DrawPlayerHud(spriteBatch, font, secondaryFont, player, gameTime, animationManager, uiManager, uiManager.HoverHighlightState);
 
             // --- Draw UI Title ---
             DrawUITitle(spriteBatch, secondaryFont, gameTime, uiManager.SubMenuState);
@@ -149,7 +148,7 @@ namespace ProjectVagabond.Battle.UI
             // in the BattleScene's final draw pass. This method is now empty.
         }
 
-        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, TargetType? currentTargetType, BattleAnimationManager animationManager)
+        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, TargetType? currentTargetType, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState)
         {
             if (!enemies.Any()) return;
 
@@ -162,7 +161,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 var enemy = enemies[i];
                 var centerPosition = new Vector2(enemyAreaPadding + (i * slotWidth) + (slotWidth / 2), enemyHudY);
-                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, centerPosition, animationManager);
+                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, centerPosition, animationManager, hoverHighlightState);
 
                 if (!enemy.IsDefeated && currentTargetType.HasValue)
                 {
@@ -179,7 +178,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, GameTime gameTime, BattleAnimationManager animationManager, BattleUIManager uiManager)
+        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, GameTime gameTime, BattleAnimationManager animationManager, BattleUIManager uiManager, HoverHighlightState hoverHighlightState)
         {
             if (player == null) return;
 
@@ -192,7 +191,12 @@ namespace ProjectVagabond.Battle.UI
                 yOffset = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * PLAYER_INDICATOR_BOB_SPEED * MathF.PI) > 0) ? -1f : 0f;
             }
 
-            spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7 + yOffset), Color.White);
+            Color nameColor = Color.White;
+            if (hoverHighlightState.Targets.Contains(player))
+            {
+                nameColor = _global.Palette_Yellow;
+            }
+            spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7 + yOffset), nameColor);
 
             var offsetVector = Vector2.Zero; // No bobbing for bars
             DrawPlayerResourceBars(spriteBatch, player, offsetVector, uiManager);
@@ -317,7 +321,7 @@ namespace ProjectVagabond.Battle.UI
             bool areAllFlashing = (state.Timer % cycleDuration) < HoverHighlightState.MultiTargetFlashOnDuration;
             Color flashColor = areAllFlashing ? _global.Palette_Red : Color.White;
 
-            float bobOffset = 0f;
+            float bobOffset = (MathF.Sin(sharedBobbingTimer * 4f) > 0) ? -1f : 0f;
 
             switch (move.Target)
             {
@@ -512,7 +516,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 centerPosition, BattleAnimationManager animationManager)
+        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 centerPosition, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
@@ -572,7 +576,13 @@ namespace ProjectVagabond.Battle.UI
 
             Vector2 nameSize = nameFont.MeasureString(combatant.Name);
             Vector2 namePos = new Vector2(centerPosition.X - nameSize.X / 2, centerPosition.Y - 8);
-            spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, tintColor);
+
+            Color nameColor = tintColor;
+            if (hoverHighlightState.Targets.Contains(combatant))
+            {
+                nameColor = _global.Palette_Yellow * combatant.VisualAlpha;
+            }
+            spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, nameColor);
 
             DrawEnemyHealthBar(spriteBatch, combatant, centerPosition);
         }

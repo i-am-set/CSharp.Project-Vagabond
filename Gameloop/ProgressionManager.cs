@@ -1,4 +1,5 @@
 ﻿using ProjectVagabond.Battle;
+using ProjectVagabond.Progression;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -17,6 +18,8 @@ namespace ProjectVagabond.Progression
 
         public SplitData? CurrentSplit { get; private set; }
         public SplitMap? CurrentSplitMap { get; private set; }
+
+        private readonly Dictionary<BattleDifficulty, List<List<string>>> _categorizedBattles = new();
 
         public void LoadSplits()
         {
@@ -107,11 +110,88 @@ namespace ProjectVagabond.Progression
             }
 
             CurrentSplit = _splits.Values.ElementAt(_random.Next(_splits.Count));
+            CategorizeBattles(CurrentSplit);
             CurrentSplitMap = SplitMapGenerator.Generate(CurrentSplit);
             Debug.WriteLine($"[ProgressionManager] Generated new split map: {CurrentSplit.Theme} with {CurrentSplitMap.TotalFloors} floors.");
         }
 
-        public List<string>? GetRandomBattle() => GetRandomEncounter(CurrentSplit?.PossibleBattles);
+        private void CategorizeBattles(SplitData splitData)
+        {
+            _categorizedBattles.Clear();
+            _categorizedBattles[BattleDifficulty.Easy] = new List<List<string>>();
+            _categorizedBattles[BattleDifficulty.Normal] = new List<List<string>>();
+            _categorizedBattles[BattleDifficulty.Hard] = new List<List<string>>();
+
+            if (splitData.PossibleBattles == null || !splitData.PossibleBattles.Any())
+            {
+                return;
+            }
+
+            var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
+            var encountersWithLevels = new List<(List<string> Encounter, int TotalLevel)>();
+
+            foreach (var encounter in splitData.PossibleBattles)
+            {
+                int totalLevel = 0;
+                foreach (var archetypeId in encounter)
+                {
+                    var template = archetypeManager.GetArchetypeTemplate(archetypeId);
+                    if (template != null)
+                    {
+                        var statProfile = template.TemplateComponents.OfType<EnemyStatProfileComponent>().FirstOrDefault();
+                        if (statProfile != null)
+                        {
+                            totalLevel += statProfile.Level;
+                        }
+                    }
+                }
+                encountersWithLevels.Add((encounter, totalLevel));
+            }
+
+            var sortedEncounters = encountersWithLevels.OrderBy(e => e.TotalLevel).ToList();
+
+            int totalCount = sortedEncounters.Count;
+            if (totalCount == 0) return;
+
+            int easyCount = totalCount / 3;
+            int normalCount = totalCount / 3;
+            
+            _categorizedBattles[BattleDifficulty.Easy].AddRange(sortedEncounters.Take(easyCount).Select(e => e.Encounter));
+            _categorizedBattles[BattleDifficulty.Normal].AddRange(sortedEncounters.Skip(easyCount).Take(normalCount).Select(e => e.Encounter));
+            _categorizedBattles[BattleDifficulty.Hard].AddRange(sortedEncounters.Skip(easyCount + normalCount).Select(e => e.Encounter));
+
+            // Handle cases where a category might be empty due to small numbers (e.g., totalCount < 3)
+            if (!_categorizedBattles[BattleDifficulty.Easy].Any() && _categorizedBattles[BattleDifficulty.Normal].Any())
+            {
+                _categorizedBattles[BattleDifficulty.Easy].Add(_categorizedBattles[BattleDifficulty.Normal].First());
+                _categorizedBattles[BattleDifficulty.Normal].RemoveAt(0);
+            }
+            if (!_categorizedBattles[BattleDifficulty.Normal].Any() && _categorizedBattles[BattleDifficulty.Hard].Any())
+            {
+                _categorizedBattles[BattleDifficulty.Normal].Add(_categorizedBattles[BattleDifficulty.Hard].First());
+                _categorizedBattles[BattleDifficulty.Hard].RemoveAt(0);
+            }
+            
+            var fallbackEncounter = sortedEncounters.FirstOrDefault().Encounter;
+            if (fallbackEncounter != null)
+            {
+                if (!_categorizedBattles[BattleDifficulty.Easy].Any()) _categorizedBattles[BattleDifficulty.Easy].Add(fallbackEncounter);
+                if (!_categorizedBattles[BattleDifficulty.Normal].Any()) _categorizedBattles[BattleDifficulty.Normal].Add(fallbackEncounter);
+                if (!_categorizedBattles[BattleDifficulty.Hard].Any()) _categorizedBattles[BattleDifficulty.Hard].Add(fallbackEncounter);
+            }
+        }
+
+        public List<string>? GetRandomBattle(BattleDifficulty difficulty)
+        {
+            if (_categorizedBattles.TryGetValue(difficulty, out var encounterList) && encounterList.Any())
+            {
+                return encounterList[_random.Next(encounterList.Count)];
+            }
+            // Fallback if a category is empty for some reason
+            Debug.WriteLine($"[ProgressionManager] [WARNING] No battles found for difficulty '{difficulty}'. Using first available battle as fallback.");
+            return CurrentSplit?.PossibleBattles?.FirstOrDefault();
+        }
+
         public List<string>? GetRandomMajorBattle() => GetRandomEncounter(CurrentSplit?.PossibleMajorBattles);
         public NarrativeEvent? GetRandomNarrative()
         {
