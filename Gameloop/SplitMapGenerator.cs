@@ -33,6 +33,7 @@ namespace ProjectVagabond.Progression
         private const float PATH_SPLIT_POINT_MAX = 0.8f;
         private const float NODE_REPULSION_RADIUS = 30f;
         private const float NODE_REPULSION_STRENGTH = 15f;
+        private const float REWARD_NODE_CHANCE = 0.05f;
 
 
         public static SplitMap? Generate(SplitData splitData)
@@ -383,48 +384,41 @@ namespace ProjectVagabond.Progression
                 bossNode.EventData = splitData.PossibleMajorBattles[_random.Next(splitData.PossibleMajorBattles.Count)];
             }
 
-            // Determine Reward Floors
-            var rewardFloorIndices = new HashSet<int>();
-            if (splitData.NumberOfRewardFloors > 0)
-            {
-                float interval = (float)(totalFloors - 1) / (splitData.NumberOfRewardFloors + 1);
-                for (int i = 1; i <= splitData.NumberOfRewardFloors; i++)
-                {
-                    int floorIndex = (int)Math.Round(i * interval);
-                    if (floorIndex > 0 && floorIndex < totalFloors - 1) // Ensure rewards are not on start/boss floors
-                    {
-                        rewardFloorIndices.Add(floorIndex);
-                    }
-                }
-            }
-
             // Assign events to all other nodes
             for (int floor = 1; floor < totalFloors - 1; floor++)
             {
-                if (rewardFloorIndices.Contains(floor))
+                foreach (var node in nodesByFloor[floor])
                 {
-                    foreach (var node in nodesByFloor[floor])
+                    float roll = (float)_random.NextDouble();
+                    if (roll < BATTLE_EVENT_WEIGHT && splitData.PossibleBattles.Any())
                     {
-                        node.NodeType = SplitNodeType.Reward;
-                    }
-                }
-                else
-                {
-                    foreach (var node in nodesByFloor[floor])
-                    {
-                        float roll = (float)_random.NextDouble();
-                        if (roll < BATTLE_EVENT_WEIGHT && splitData.PossibleBattles.Any())
+                        // This node is slated to be a battle. Now check if it should be a reward instead.
+                        if (_random.NextDouble() < REWARD_NODE_CHANCE)
+                        {
+                            node.NodeType = SplitNodeType.Reward;
+                            node.EventData = null; // Rewards don't need battle data
+                        }
+                        else
                         {
                             node.NodeType = SplitNodeType.Battle;
                             node.Difficulty = (BattleDifficulty)_random.Next(3); // 0=Easy, 1=Normal, 2=Hard
                             node.EventData = splitData.PossibleBattles[_random.Next(splitData.PossibleBattles.Count)];
                         }
-                        else if (splitData.PossibleNarrativeEventIDs.Any())
+                    }
+                    else if (splitData.PossibleNarrativeEventIDs.Any())
+                    {
+                        node.NodeType = SplitNodeType.Narrative;
+                        node.EventData = splitData.PossibleNarrativeEventIDs[_random.Next(splitData.PossibleNarrativeEventIDs.Count)];
+                    }
+                    else // Fallback to battle if no narratives are available
+                    {
+                        // Also apply reward chance here
+                        if (_random.NextDouble() < REWARD_NODE_CHANCE)
                         {
-                            node.NodeType = SplitNodeType.Narrative;
-                            node.EventData = splitData.PossibleNarrativeEventIDs[_random.Next(splitData.PossibleNarrativeEventIDs.Count)];
+                            node.NodeType = SplitNodeType.Reward;
+                            node.EventData = null;
                         }
-                        else // Fallback to battle if no narratives are available
+                        else
                         {
                             node.NodeType = SplitNodeType.Battle;
                             node.Difficulty = (BattleDifficulty)_random.Next(3);
