@@ -72,9 +72,9 @@ namespace ProjectVagabond.Battle.UI
         private const float SEQUENTIAL_ANIMATION_DELAY = 0.05f;
 
         // "NEW!" Text Animation Tuning
-        private const float NEW_TEXT_FADE_IN_DURATION = 0.075f;
-        private const float NEW_TEXT_HOLD_DURATION = 0.1f;
-        private const float NEW_TEXT_FADE_OUT_DURATION = 0.1f;
+        private const float NEW_TEXT_FADE_IN_DURATION = 0.0375f;
+        private const float NEW_TEXT_HOLD_DURATION = 0.05f;
+        private const float NEW_TEXT_FADE_OUT_DURATION = 0.05f;
         private const float NEW_TEXT_TOTAL_DURATION = NEW_TEXT_FADE_IN_DURATION + NEW_TEXT_HOLD_DURATION + NEW_TEXT_FADE_OUT_DURATION;
 
         private Queue<ImageButton> _actionButtonsToAnimate = new Queue<ImageButton>();
@@ -100,6 +100,7 @@ namespace ProjectVagabond.Battle.UI
         private MoveData? _deferredMove;
         private SpellbookEntry? _deferredSpellbookEntry;
         private MoveButton? _selectedMoveButton;
+        private readonly List<MoveButton> _buttonsBeingDiscarded = new List<MoveButton>();
         private static readonly Random _random = new Random();
 
 

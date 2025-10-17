@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -17,7 +18,7 @@ namespace ProjectVagabond.Progression
 
         // --- Generation Tuning ---
         public const int MAP_WIDTH = 280;
-        private const int FLOOR_HEIGHT = 100;
+        private const int FLOOR_HEIGHT = 90;
         private const int HORIZONTAL_PADDING = 8; // Minimal padding to keep nodes off the absolute edge
         private const int VERTICAL_PADDING = 50;
         private const float BATTLE_EVENT_WEIGHT = 0.7f; // 70% chance for a battle
