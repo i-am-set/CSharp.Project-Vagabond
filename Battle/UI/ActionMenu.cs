@@ -103,6 +103,13 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<MoveButton> _buttonsBeingDiscarded = new List<MoveButton>();
         private static readonly Random _random = new Random();
 
+        // Hover Box Animation
+        private MoveButton? _hoveredMoveButton;
+        private MoveButton? _lastHoveredMoveButton;
+        private float _hoverBoxAnimTimer = 0f;
+        private const float HOVER_BOX_ANIM_DURATION = 0.15f;
+        private const float HOVER_BOX_FADE_DURATION = 0.6f;
+
 
         public ActionMenu()
         {
@@ -607,6 +614,8 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.Moves:
                     HoveredMove = null;
                     _hoveredSpellbookEntry = null;
+                    _lastHoveredMoveButton = _hoveredMoveButton;
+                    _hoveredMoveButton = null;
 
                     // Update button animation states
                     foreach (var button in _moveButtons)
@@ -643,8 +652,20 @@ namespace ProjectVagabond.Battle.UI
                             HoveredMove = button.Move;
                             _hoveredSpellbookEntry = button.Entry;
                             HoveredButton = button;
+                            _hoveredMoveButton = button;
                         }
                     }
+
+                    if (_hoveredMoveButton != _lastHoveredMoveButton)
+                    {
+                        _hoverBoxAnimTimer = 0f;
+                    }
+
+                    if (_hoveredMoveButton != null)
+                    {
+                        _hoverBoxAnimTimer += dt;
+                    }
+
                     foreach (var button in _secondaryActionButtons)
                     {
                         button.Update(currentMouseState);
@@ -750,7 +771,7 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.Targeting:
                     {
                         const int backButtonPadding = 8;
-                        const int backButtonHeight = 13;
+                        const int backButtonHeight = 5;
                         const int backButtonTopMargin = 1;
                         const int dividerY = 120;
                         const int horizontalPadding = 10;
@@ -777,7 +798,7 @@ namespace ProjectVagabond.Battle.UI
                         int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
                             horizontalPadding + (availableWidth - backButtonWidth) / 2,
-                            gridStartY + gridAreaHeight + backButtonTopMargin,
+                            gridStartY + gridAreaHeight + backButtonTopMargin + 2, // Added 2 pixels
                             backButtonWidth,
                             backButtonHeight
                         );
@@ -848,14 +869,14 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Draw the back button
-            int backButtonY = tooltipBounds.Bottom + 3;
+            int backButtonY = tooltipBounds.Bottom + 3 + 2; // Added 2 pixels
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
                 (Global.VIRTUAL_WIDTH - backWidth) / 2,
                 backButtonY,
                 backWidth,
-                13
+                5
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }
@@ -981,14 +1002,14 @@ namespace ProjectVagabond.Battle.UI
 
             // Draw the back button
             const int backButtonTopMargin = 0; // Vertical spacing from the tooltip panel.
-            int backButtonY = gridStartY + gridHeight + backButtonTopMargin;
+            int backButtonY = gridStartY + gridHeight + backButtonTopMargin + 2; // Added 2 pixels
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
                 (Global.VIRTUAL_WIDTH - backWidth) / 2,
                 backButtonY,
                 backWidth,
-                13
+                5
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }
@@ -996,18 +1017,41 @@ namespace ProjectVagabond.Battle.UI
         private void DrawMovesMenu(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var pixel = ServiceLocator.Get<Texture2D>();
 
-            // --- Main Moves (2x2 Grid) ---
-            const int moveButtonWidth = 157;
-            const int moveButtonHeight = 17;
-            const int moveColumns = 2;
-            const int moveRows = 2;
+            // --- Secondary Actions (1x4 Row) ---
+            const int secButtonWidth = 60;
+            const int secButtonHeight = 17;
+            const int secButtonSpacing = 0;
+            int totalSecGridWidth = (secButtonWidth * _secondaryActionButtons.Count) + (secButtonSpacing * (_secondaryActionButtons.Count - 1));
+            int secGridStartX = (Global.VIRTUAL_WIDTH - totalSecGridWidth) / 2 + 27;
+
+            // --- Main Moves (1x4 Stack) ---
+            const int moveButtonWidth = 128;
+            const int moveButtonHeight = 9;
+            const int moveColumns = 1;
+            const int moveRows = 4;
             const int moveColSpacing = 0;
             const int moveRowSpacing = 0;
 
             int totalMoveGridWidth = (moveButtonWidth * moveColumns) + moveColSpacing;
-            int moveGridStartX = (Global.VIRTUAL_WIDTH - totalMoveGridWidth) / 2;
+            int moveGridStartX = (Global.VIRTUAL_WIDTH - totalMoveGridWidth) / 2 - 62;
             int moveGridStartY = 117;
+
+            // --- Draw the border ---
+            const int borderWidth = 182;
+            const int borderHeight = 38;
+            int buttonBlockCenterX = moveGridStartX + moveButtonWidth / 2;
+            int buttonBlockCenterY = moveGridStartY + (moveButtonHeight * moveRows) / 2;
+            int borderX = buttonBlockCenterX - borderWidth / 2;
+            int borderY = buttonBlockCenterY - borderHeight / 2;
+            var borderRect = new Rectangle(borderX, borderY, borderWidth, borderHeight);
+
+            spriteBatch.DrawLineSnapped(new Vector2(borderRect.Left, borderRect.Top), new Vector2(borderRect.Right, borderRect.Top), Color.White);
+            spriteBatch.DrawLineSnapped(new Vector2(borderRect.Left, borderRect.Bottom), new Vector2(borderRect.Right, borderRect.Bottom), Color.White);
+            spriteBatch.DrawLineSnapped(new Vector2(borderRect.Left, borderRect.Top), new Vector2(borderRect.Left, borderRect.Bottom), Color.White);
+            spriteBatch.DrawLineSnapped(new Vector2(borderRect.Right, borderRect.Top), new Vector2(borderRect.Right, borderRect.Bottom), Color.White);
+
 
             for (int i = 0; i < _moveButtons.Count; i++)
             {
@@ -1028,6 +1072,20 @@ namespace ProjectVagabond.Battle.UI
                     moveButtonHeight
                 );
                 button.Bounds = buttonBounds;
+
+                if (button == _hoveredMoveButton && button.IsEnabled)
+                {
+                    float widthProgress = Math.Clamp(_hoverBoxAnimTimer / HOVER_BOX_ANIM_DURATION, 0f, 1f);
+                    float easedWidthProgress = Easing.EaseInOutQuart(widthProgress);
+                    int animatedWidth = (int)(button.Bounds.Width * easedWidthProgress);
+
+                    float fadeProgress = Math.Clamp(_hoverBoxAnimTimer / HOVER_BOX_FADE_DURATION, 0f, 1f);
+                    float easedFadeProgress = Easing.EaseInOutQuart(fadeProgress);
+                    float alpha = 1.0f - easedFadeProgress;
+
+                    var hoverRect = new Rectangle(button.Bounds.X, button.Bounds.Y, animatedWidth, button.Bounds.Height);
+                    spriteBatch.DrawSnapped(pixel, hoverRect, _global.Palette_DarkGray * alpha);
+                }
 
                 if (_buttonAnimationStates.TryGetValue(button, out var state))
                 {
@@ -1080,14 +1138,7 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
-            // --- Secondary Actions (1x4 Row) ---
-            const int secButtonWidth = 60;
-            const int secButtonHeight = 17;
-            const int secButtonSpacing = 0;
             int secRowY = moveGridStartY + (moveButtonHeight * moveRows) + (moveRowSpacing * (moveRows - 1));
-
-            int totalSecGridWidth = (secButtonWidth * _secondaryActionButtons.Count) + (secButtonSpacing * (_secondaryActionButtons.Count - 1));
-            int secGridStartX = (Global.VIRTUAL_WIDTH - totalSecGridWidth) / 2;
 
             for (int i = 0; i < _secondaryActionButtons.Count; i++)
             {
@@ -1104,14 +1155,14 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // --- Back Button ---
-            int backButtonY = secRowY + secButtonHeight - 1;
+            int backButtonY = secRowY + secButtonHeight - 1 + 2; // Added 2 pixels
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
                 (Global.VIRTUAL_WIDTH - backWidth) / 2,
                 backButtonY,
                 backWidth,
-                13
+                5
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }

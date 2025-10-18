@@ -320,12 +320,6 @@ namespace ProjectVagabond.UI
                 shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_AMOUNT);
             }
 
-            var originalRasterizerState = spriteBatch.GraphicsDevice.RasterizerState;
-            var originalScissorRect = spriteBatch.GraphicsDevice.ScissorRectangle;
-            spriteBatch.End();
-            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, rasterizerState: _clipRasterizerState, transformMatrix: transform);
-            spriteBatch.GraphicsDevice.ScissorRectangle = Bounds;
-
             Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
             Vector2 textPosition;
 
@@ -342,12 +336,7 @@ namespace ProjectVagabond.UI
             textPosition += TextRenderOffset + shakeOffset;
 
             spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, scale, SpriteEffects.None, 0f);
-
-            spriteBatch.End();
-            spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
-            spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, rasterizerState: originalRasterizerState, transformMatrix: transform);
         }
     }
 }
 #nullable restore
-﻿

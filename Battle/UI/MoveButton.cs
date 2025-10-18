@@ -39,14 +39,14 @@ namespace ProjectVagabond.Battle.UI
         private bool _isScrollingInitialized = false;
         private float _scrollPosition = 0f;
         private float _scrollWaitTimer = 0f;
-        private float _maxScrollToShowEnd = 0f;
-        private enum ScrollState { PausedAtStart, ScrollingToEnd, PausedAtEnd }
+        private float _loopWidth = 0f;
+        private enum ScrollState { PausedAtStart, Scrolling, PausedAtLoopPoint }
         private ScrollState _scrollState = ScrollState.PausedAtStart;
 
         // Scrolling Tuning
         private const float SCROLL_SPEED = 25f; // pixels per second
         private const float SCROLL_PAUSE_DURATION = 1.5f; // seconds
-        private const int EXTRA_SCROLL_SPACES = 1; // Number of extra space widths to scroll past the end
+        private const int SCROLL_GAP_SPACES = 3; // Number of space characters to use as a gap
 
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
@@ -106,28 +106,28 @@ namespace ProjectVagabond.Battle.UI
                     _scrollWaitTimer -= dt;
                     if (_scrollWaitTimer <= 0)
                     {
-                        _scrollState = ScrollState.ScrollingToEnd;
+                        _scrollState = ScrollState.Scrolling;
                     }
                     break;
 
-                case ScrollState.ScrollingToEnd:
+                case ScrollState.Scrolling:
                     _scrollPosition += SCROLL_SPEED * dt;
-                    if (_scrollPosition >= _maxScrollToShowEnd)
+                    if (_scrollPosition >= _loopWidth)
                     {
-                        _scrollPosition = _maxScrollToShowEnd;
-                        _scrollState = ScrollState.PausedAtEnd;
-                        _scrollWaitTimer = SCROLL_PAUSE_DURATION;
+                        _scrollPosition = _loopWidth; // Clamp to the exact loop point
+                        _scrollState = ScrollState.PausedAtLoopPoint;
+                        _scrollWaitTimer = 1.0f; // The requested 1-second pause
                     }
                     break;
 
-                case ScrollState.PausedAtEnd:
+                case ScrollState.PausedAtLoopPoint:
                     _scrollWaitTimer -= dt;
                     if (_scrollWaitTimer <= 0)
                     {
-                        // Snap back to the start and pause again
-                        _scrollPosition = 0;
-                        _scrollState = ScrollState.PausedAtStart;
-                        _scrollWaitTimer = SCROLL_PAUSE_DURATION;
+                        // This is the key part. After the pause, we wrap the position
+                        // and immediately continue scrolling in the same frame.
+                        _scrollPosition -= _loopWidth;
+                        _scrollState = ScrollState.Scrolling;
                     }
                     break;
             }
@@ -144,7 +144,7 @@ namespace ProjectVagabond.Battle.UI
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
-            float yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            float hoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             _overlayFadeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // --- Animation Scaling ---
@@ -212,8 +212,8 @@ namespace ProjectVagabond.Battle.UI
             int animatedWidth = (int)(Bounds.Width * scaleX);
             int animatedHeight = (int)(Bounds.Height * scaleY);
             var animatedBounds = new Rectangle(
-                Bounds.Center.X - animatedWidth / 2 + (int)(horizontalOffset ?? 0f),
-                Bounds.Center.Y - animatedHeight / 2 + (int)(yOffset + (verticalOffset ?? 0f)),
+                Bounds.Center.X - animatedWidth / 2 + (int)(horizontalOffset ?? 0f) - (int)hoverOffset,
+                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f),
                 animatedWidth,
                 animatedHeight
             );
@@ -243,12 +243,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
             finalTintColor *= contentAlphaMultiplier;
-
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
-            if (spriteManager.RarityBackgroundSourceRects.TryGetValue(Move.Rarity, out var bgSourceRect))
-            {
-                spriteBatch.DrawSnapped(_backgroundSpriteSheet, animatedBounds, bgSourceRect, finalTintColor);
-            }
 
             // Draw the white overlay during discard animation
             if (whiteOverlayAlpha > 0f)
@@ -286,31 +280,11 @@ namespace ProjectVagabond.Battle.UI
                 {
                     textColor = _global.ButtonDisableColor;
                 }
-                var statsColor = isActivated && canAfford ? _global.ButtonHoverColor * 0.9f : _global.Palette_White;
-                if (!canAfford)
-                {
-                    statsColor = _global.ButtonDisableColor;
-                }
-
-                // --- Calculate text and stats layout ---
-                string powerText = DisplayPower > 0 ? DisplayPower.ToString() : "---";
-                string accuracyText = Move.Accuracy >= 0 ? $"{Move.Accuracy}%" : "---";
-                var powerTextSize = _moveFont.MeasureString(powerText);
-                var accuracyTextSize = _moveFont.MeasureString(accuracyText);
-                var maxAccuracyTextSize = _moveFont.MeasureString("100%");
-                const int rightPadding = 6;
-                const int statPadding = 2;
-                const int verticalContentPadding = 3;
-                float contentTopY = animatedBounds.Y + verticalContentPadding;
-                float contentBottomY = animatedBounds.Bottom - verticalContentPadding;
-                var accuracyPosition = new Vector2(animatedBounds.Right - rightPadding - accuracyTextSize.Width, contentTopY);
-                float powerTextRightEdge = animatedBounds.Right - rightPadding - maxAccuracyTextSize.Width - statPadding;
-                var powerPosition = new Vector2(powerTextRightEdge - powerTextSize.Width, contentBottomY - powerTextSize.Height - 1);
 
                 // --- Calculate available space for move name ---
                 float textStartX = iconRect.Right + iconPadding;
                 const int textRightMargin = 4;
-                float textAvailableWidth = powerTextRightEdge - powerTextSize.Width - textStartX - textRightMargin;
+                float textAvailableWidth = animatedBounds.Right - textStartX - textRightMargin;
                 var moveNameTextSize = _moveFont.MeasureString(this.Text);
                 bool needsScrolling = moveNameTextSize.Width > textAvailableWidth;
 
@@ -320,8 +294,8 @@ namespace ProjectVagabond.Battle.UI
                     if (!_isScrollingInitialized)
                     {
                         _isScrollingInitialized = true;
-                        float spaceWidth = _moveFont.MeasureString(" ").Width;
-                        _maxScrollToShowEnd = moveNameTextSize.Width - textAvailableWidth + (spaceWidth * EXTRA_SCROLL_SPACES);
+                        float gapWidth = _moveFont.MeasureString(new string(' ', SCROLL_GAP_SPACES)).Width;
+                        _loopWidth = moveNameTextSize.Width + gapWidth;
                         _scrollWaitTimer = SCROLL_PAUSE_DURATION;
                         _scrollState = ScrollState.PausedAtStart;
                         _scrollPosition = 0;
@@ -339,6 +313,8 @@ namespace ProjectVagabond.Battle.UI
 
                     var scrollingTextPosition = new Vector2(textStartX - _scrollPosition, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2);
                     spriteBatch.DrawStringSnapped(_moveFont, this.Text, scrollingTextPosition, textColor * contentAlpha);
+                    spriteBatch.DrawStringSnapped(_moveFont, this.Text, scrollingTextPosition + new Vector2(_loopWidth, 0), textColor * contentAlpha);
+
 
                     spriteBatch.End();
                     spriteBatch.GraphicsDevice.ScissorRectangle = originalScissorRect;
@@ -349,63 +325,6 @@ namespace ProjectVagabond.Battle.UI
                     _isScrollingInitialized = false;
                     var textPosition = new Vector2(textStartX, animatedBounds.Y + (animatedBounds.Height - _moveFont.LineHeight) / 2);
                     spriteBatch.DrawStringSnapped(_moveFont, this.Text, textPosition, textColor * contentAlpha);
-                }
-
-                // --- Draw Power & Accuracy ---
-                Color powerTextColor = statsColor;
-                string powerIndicator = "";
-
-                if (Move.Power > 0 && DisplayPower != Move.Power)
-                {
-                    if (DisplayPower > Move.Power)
-                    {
-                        powerIndicator = "+";
-                        float increaseRatio = (float)(DisplayPower - Move.Power) / Move.Power;
-                        float lerpAmount = Math.Clamp(increaseRatio, 0f, 1f);
-                        powerTextColor = Color.Lerp(statsColor, Color.DeepPink, lerpAmount);
-                    }
-                    else // DisplayPower < Move.Power
-                    {
-                        powerIndicator = "-";
-                        // Use a dim red for reduced power to indicate a penalty.
-                        powerTextColor = Color.Lerp(statsColor, _global.Palette_Red, 0.75f);
-                    }
-                }
-
-                spriteBatch.DrawStringSnapped(_moveFont, accuracyText, accuracyPosition, statsColor * contentAlpha);
-                spriteBatch.DrawStringSnapped(_moveFont, powerText, powerPosition, powerTextColor * contentAlpha);
-
-                if (!string.IsNullOrEmpty(powerIndicator))
-                {
-                    var indicatorPosition = new Vector2(powerPosition.X + powerTextSize.Width + 1, powerPosition.Y);
-                    Color indicatorColor = powerTextColor * 0.25f;
-                    spriteBatch.DrawStringSnapped(_moveFont, powerIndicator, indicatorPosition, indicatorColor * contentAlpha);
-                }
-
-
-                // --- Draw Target Type Indicator ---
-                string targetIndicator = Move.Target switch
-                {
-                    TargetType.Single => ".",
-                    TargetType.Every => "...",
-                    TargetType.Self => "+",
-                    TargetType.SingleAll => "*",
-                    TargetType.EveryAll => "***",
-                    _ => ""
-                };
-
-                if (!string.IsNullOrEmpty(targetIndicator))
-                {
-                    var indicatorSize = _moveFont.MeasureString(targetIndicator);
-                    // Center the indicator horizontally over the power text.
-                    float powerCenterX = powerPosition.X + powerTextSize.Width / 2;
-                    // Add a 1px downward offset specifically for the 'Self' target indicator.
-                    float yOffsetIndicator = (Move.Target == TargetType.Self) ? 1f : 0f;
-                    var indicatorPosition = new Vector2(
-                        powerCenterX - indicatorSize.Width / 2,
-                        powerPosition.Y - 7 + yOffsetIndicator
-                    );
-                    spriteBatch.DrawStringSnapped(_moveFont, targetIndicator, indicatorPosition, statsColor * contentAlpha);
                 }
 
                 // --- Draw "NO MANA" overlay ---
