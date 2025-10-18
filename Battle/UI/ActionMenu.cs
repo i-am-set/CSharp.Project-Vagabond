@@ -1038,21 +1038,6 @@ namespace ProjectVagabond.Battle.UI
             int moveGridStartX = (Global.VIRTUAL_WIDTH - totalMoveGridWidth) / 2 - 62;
             int moveGridStartY = 117;
 
-            // --- Draw the border ---
-            const int borderWidth = 182;
-            const int borderHeight = 38;
-            int buttonBlockCenterX = moveGridStartX + moveButtonWidth / 2;
-            int buttonBlockCenterY = moveGridStartY + (moveButtonHeight * moveRows) / 2;
-            int borderX = buttonBlockCenterX - borderWidth / 2;
-            int borderY = buttonBlockCenterY - borderHeight / 2;
-            var borderRect = new Rectangle(borderX, borderY, borderWidth, borderHeight);
-
-            spriteBatch.DrawLineSnapped(new Vector2(borderRect.Left, borderRect.Top), new Vector2(borderRect.Right, borderRect.Top), Color.White);
-            spriteBatch.DrawLineSnapped(new Vector2(borderRect.Left, borderRect.Bottom), new Vector2(borderRect.Right, borderRect.Bottom), Color.White);
-            spriteBatch.DrawLineSnapped(new Vector2(borderRect.Left, borderRect.Top), new Vector2(borderRect.Left, borderRect.Bottom), Color.White);
-            spriteBatch.DrawLineSnapped(new Vector2(borderRect.Right, borderRect.Top), new Vector2(borderRect.Right, borderRect.Bottom), Color.White);
-
-
             for (int i = 0; i < _moveButtons.Count; i++)
             {
                 var button = _moveButtons[i];
