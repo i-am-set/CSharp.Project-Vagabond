@@ -43,7 +43,7 @@ namespace ProjectVagabond.Battle.UI
         private const float ENEMY_ANIM_MAX_INTERVAL = 0.6f;
 
         // Layout Constants
-        private const int DIVIDER_Y = 105;
+        private const int DIVIDER_Y = 123;
         private const int MAX_ENEMIES = 5;
         private const float PLAYER_INDICATOR_BOB_SPEED = 1.5f;
         private const float TITLE_INDICATOR_BOB_SPEED = PLAYER_INDICATOR_BOB_SPEED / 2f;
@@ -277,8 +277,7 @@ namespace ProjectVagabond.Battle.UI
         private void DrawUITitle(SpriteBatch spriteBatch, BitmapFont secondaryFont, GameTime gameTime, BattleSubMenuState subMenuState)
         {
             string title = "";
-            if (subMenuState == BattleSubMenuState.ActionMoves) title = "ACTIONS";
-            else if (subMenuState == BattleSubMenuState.Item) title = "ITEMS";
+            if (subMenuState == BattleSubMenuState.Item) title = "ITEMS";
 
             if (!string.IsNullOrEmpty(title))
             {

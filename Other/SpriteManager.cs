@@ -157,7 +157,7 @@ namespace ProjectVagabond
             catch { ActionButtonTemplateSpriteSheet = _textureFactory.CreateColoredTexture(1099, 17, Color.Magenta); }
 
             try { ActionButtonTemplateSecondarySprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_template_secondary"); }
-            catch { ActionButtonTemplateSecondarySprite = _textureFactory.CreateColoredTexture(104, 17, Color.Magenta); }
+            catch { ActionButtonTemplateSecondarySprite = _textureFactory.CreateColoredTexture(60, 13, Color.Magenta); }
 
             try
             {

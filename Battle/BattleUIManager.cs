@@ -291,7 +291,7 @@ namespace ProjectVagabond.Battle.UI
             const int backButtonPadding = 8;
             const int backButtonHeight = 13;
             const int backButtonTopMargin = 1;
-            const int dividerY = 120;
+            const int dividerY = 123;
             const int horizontalPadding = 10;
             const int verticalPadding = 2;
             int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
