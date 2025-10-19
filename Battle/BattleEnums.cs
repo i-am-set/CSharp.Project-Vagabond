@@ -8,7 +8,8 @@ namespace ProjectVagabond.Battle
     public enum ImpactType
     {
         Physical,
-        Magical
+        Magical,
+        Status
     }
 
     /// <summary>
