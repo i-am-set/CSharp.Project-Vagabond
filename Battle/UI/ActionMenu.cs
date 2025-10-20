@@ -157,9 +157,9 @@ namespace ProjectVagabond.Battle.UI
             var actionIconRects = spriteManager.ActionIconSourceRects;
 
             // Main Menu Buttons
-            var actButton = new ImageButton(Rectangle.Empty, actionSheet, rects[0], rects[1], rects[2], function: "Act", startVisible: false, debugColor: new Color(100, 0, 0, 150));
-            var itemButton = new ImageButton(Rectangle.Empty, actionSheet, rects[3], rects[4], rects[5], function: "Item", startVisible: false, debugColor: new Color(0, 100, 0, 150));
-            var fleeButton = new ImageButton(Rectangle.Empty, actionSheet, rects[6], rects[7], rects[8], function: "Flee", startVisible: false, debugColor: new Color(0, 0, 100, 150));
+            var actButton = new ImageButton(Rectangle.Empty, actionSheet, rects[0], rects[1], null, function: "Act", startVisible: false, debugColor: new Color(100, 0, 0, 150));
+            var itemButton = new ImageButton(Rectangle.Empty, actionSheet, rects[2], rects[3], null, function: "Item", startVisible: false, debugColor: new Color(0, 100, 0, 150));
+            var fleeButton = new ImageButton(Rectangle.Empty, actionSheet, rects[4], rects[5], null, function: "Flee", startVisible: false, debugColor: new Color(0, 0, 100, 150));
 
             actButton.OnClick += () => {
                 if (_isSpamming) { actButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
@@ -774,18 +774,17 @@ namespace ProjectVagabond.Battle.UI
             {
                 case MenuState.Main:
                     {
-                        const int horizontalPadding = 10;
+                        const int buttonWidth = 96;
+                        const int buttonHeight = 43;
                         const int buttonSpacing = 5;
                         const int dividerY = 123;
 
-                        int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
+                        int totalWidth = (buttonWidth * _actionButtons.Count) + (buttonSpacing * (_actionButtons.Count - 1));
+                        int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
+
+                        // Center the buttons vertically in the space below the divider
                         int availableHeight = Global.VIRTUAL_HEIGHT - dividerY;
-
-                        int buttonWidth = (availableWidth - (buttonSpacing * (_actionButtons.Count - 1))) / _actionButtons.Count;
-                        int buttonHeight = availableHeight;
-
-                        int startY = dividerY - 9;
-                        int startX = horizontalPadding;
+                        int startY = dividerY + (availableHeight - buttonHeight) / 2 - 4;
 
                         int currentX = startX;
                         foreach (var button in _actionButtons)

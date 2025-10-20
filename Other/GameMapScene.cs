@@ -64,7 +64,7 @@ namespace ProjectVagabond.Scenes
                 var settingsIcon = _spriteManager.SettingsIconSprite;
                 var buttonSize = 16;
                 if (settingsIcon != null) buttonSize = Math.Max(settingsIcon.Width, settingsIcon.Height);
-                _settingsButton = new ImageButton(new Rectangle(0, 0, buttonSize, buttonSize), settingsIcon)
+                _settingsButton = new ImageButton(new Rectangle(0, 0, buttonSize, buttonSize), settingsIcon, enableHoverSway: true)
                 {
                     UseScreenCoordinates = true // This button operates in screen space, not virtual space.
                 };

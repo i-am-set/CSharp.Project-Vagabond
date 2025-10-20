@@ -29,7 +29,7 @@ namespace ProjectVagabond
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
 
         // Source Rectangles for UI elements
-        public Rectangle[] ActionButtonSourceRects { get; private set; } // 0-2: Act, 3-5: Item, 6-8: Flee (Normal, Hover, Clicked)
+        public Rectangle[] ActionButtonSourceRects { get; private set; } // 0-1: Act, 2-3: Item, 4-5: Flee (Normal, Hover)
         public Dictionary<int, Rectangle> ElementIconSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Rectangle[] ActionIconSourceRects { get; private set; } // 0: Strike, 1: Dodge, 2: Stall
         public Dictionary<int, Rectangle> RarityBackgroundSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
@@ -151,7 +151,7 @@ namespace ProjectVagabond
             catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[ERROR] Could not load shader 'Shaders/FireballParticleShader'. Please ensure it's in the Content project. {ex.Message}"); }
 
             try { ActionButtonsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_buttons_icon_spritesheet"); }
-            catch { ActionButtonsSpriteSheet = _textureFactory.CreateColoredTexture(288, 150, Color.Magenta); }
+            catch { ActionButtonsSpriteSheet = _textureFactory.CreateColoredTexture(192, 129, Color.Magenta); }
 
             try { ActionButtonTemplateSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_template_spritesheet"); }
             catch { ActionButtonTemplateSpriteSheet = _textureFactory.CreateColoredTexture(1099, 17, Color.Magenta); }
@@ -302,14 +302,18 @@ namespace ProjectVagabond
 
         private void InitializeActionButtonsSourceRects()
         {
-            ActionButtonSourceRects = new Rectangle[9];
-            int spriteWidth = ActionButtonsSpriteSheet.Width / 3;
-            int spriteHeight = ActionButtonsSpriteSheet.Height / 3;
-            for (int i = 0; i < 9; i++)
+            // The new sheet is a 2x3 grid (2 columns: Normal, Hover; 3 rows: Act, Item, Run)
+            // Each sprite is 96x43 pixels.
+            ActionButtonSourceRects = new Rectangle[6];
+            int spriteWidth = 192 / 2;
+            int spriteHeight = 129 / 3;
+
+            for (int i = 0; i < 3; i++) // 3 rows for Act, Item, Run
             {
-                int row = i / 3;
-                int col = i % 3;
-                ActionButtonSourceRects[i] = new Rectangle(col * spriteWidth, row * spriteHeight, spriteWidth, spriteHeight);
+                // Normal state (column 0)
+                ActionButtonSourceRects[i * 2] = new Rectangle(0, i * spriteHeight, spriteWidth, spriteHeight);
+                // Hover state (column 1)
+                ActionButtonSourceRects[i * 2 + 1] = new Rectangle(spriteWidth, i * spriteHeight, spriteWidth, spriteHeight);
             }
         }
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -356,7 +357,8 @@ namespace ProjectVagabond.Battle.UI
                     foreach (var target in targets)
                     {
                         Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
-                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor, bobOffset);
+                        float finalBobOffset = target.IsPlayerControlled ? bobOffset : 0f;
+                        DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor, finalBobOffset);
                     }
                     break;
 
@@ -365,7 +367,8 @@ namespace ProjectVagabond.Battle.UI
                     foreach (var target in targets)
                     {
                         Rectangle sourceRect = target.IsPlayerControlled ? arrowRects[2] : arrowRects[6]; // Up for player, Down for enemy
-                        DrawMultiArrowIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor, bobOffset);
+                        float finalBobOffset = target.IsPlayerControlled ? bobOffset : 0f;
+                        DrawMultiArrowIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor, finalBobOffset);
                     }
                     break;
             }
@@ -385,7 +388,7 @@ namespace ProjectVagabond.Battle.UI
                 var playerBounds = GetPlayerInteractionBounds(font, secondaryFont, combatant);
                 arrowPos = new Vector2(
                     playerBounds.Center.X - sourceRect.Width / 2f,
-                    playerBounds.Bottom + 2 + bobOffset
+                    playerBounds.Bottom - 1 + bobOffset
                 );
             }
             else
@@ -403,7 +406,7 @@ namespace ProjectVagabond.Battle.UI
                 var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
                 float highestPointY = GetEnemySpriteStaticTopY(combatant, spriteRect.Y);
 
-                arrowPos = new Vector2(spriteRect.Center.X - sourceRect.Width / 2f, highestPointY - sourceRect.Height - 1 + bobOffset);
+                arrowPos = new Vector2(spriteRect.Center.X - sourceRect.Width / 2f, highestPointY - sourceRect.Height - 4 + bobOffset);
             }
 
             if (color == _global.Palette_Red)
@@ -429,7 +432,7 @@ namespace ProjectVagabond.Battle.UI
                 var playerBounds = GetPlayerInteractionBounds(font, secondaryFont, combatant);
                 groupCenterPos = new Vector2(
                     playerBounds.Center.X,
-                    playerBounds.Bottom + 2
+                    playerBounds.Bottom - 1
                 );
             }
             else
@@ -447,7 +450,7 @@ namespace ProjectVagabond.Battle.UI
                 var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
                 float highestPointY = GetEnemySpriteStaticTopY(combatant, spriteRect.Y);
 
-                groupCenterPos = new Vector2(spriteRect.Center.X, highestPointY - sourceRect.Height - 1);
+                groupCenterPos = new Vector2(spriteRect.Center.X, highestPointY - sourceRect.Height - 4);
             }
 
             float startX = groupCenterPos.X - (totalWidth / 2f);
@@ -493,7 +496,6 @@ namespace ProjectVagabond.Battle.UI
             }
             else // Enemy turn
             {
-                float bobOffset = 0f;
                 var arrowRect = arrowRects[6]; // Down arrow
                 var enemies = allCombatants.Where(c => !c.IsPlayerControlled).ToList();
                 int enemyIndex = enemies.FindIndex(e => e.CombatantID == currentActor.CombatantID);
@@ -510,7 +512,7 @@ namespace ProjectVagabond.Battle.UI
                 // Calculate the highest point of the sprite for this frame
                 float highestPointY = GetEnemySpriteStaticTopY(currentActor, spriteRect.Y);
 
-                var arrowPos = new Vector2(spriteRect.Center.X - arrowRect.Width / 2, highestPointY - arrowRect.Height - 1 + bobOffset);
+                var arrowPos = new Vector2(spriteRect.Center.X - arrowRect.Width / 2, highestPointY - arrowRect.Height - 1);
                 spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
             }
         }

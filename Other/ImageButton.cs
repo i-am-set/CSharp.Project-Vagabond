@@ -3,6 +3,8 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -30,7 +32,7 @@ namespace ProjectVagabond.UI
         private const float SHAKE_MAGNITUDE = 4f;
         private const float SHAKE_FREQUENCY = 30f;
 
-        public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null)
+        public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = false, bool zoomHapticOnClick = true, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null)
             : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, font)
         {
             _spriteSheet = spriteSheet;
@@ -96,7 +98,16 @@ namespace ProjectVagabond.UI
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // --- Hover Animation ---
-            float hoverYOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            float hoverYOffset = 0f;
+            if (EnableHoverSway)
+            {
+                hoverYOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            }
+            else
+            {
+                // Still update the animator to reset its state when not hovered, but don't use the offset.
+                _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            }
 
             // --- Shake Animation ---
             float shakeOffset = 0f;
