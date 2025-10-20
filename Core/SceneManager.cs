@@ -201,6 +201,7 @@ namespace ProjectVagabond
 
         public void Update(GameTime gameTime)
         {
+            UIInputManager.Update(gameTime); // Update the global input buffer timer.
             UIInputManager.ResetFrameState();
 
             // If a modal is active, it gets exclusive update priority.

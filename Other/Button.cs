@@ -59,7 +59,6 @@ namespace ProjectVagabond.UI
         public float OverflowScrollSpeed { get; set; } = 0f;
         public StrikethroughType Strikethrough { get; set; } = StrikethroughType.None;
         public bool EnableHoverSway { get; set; } = true;
-        public bool ClickOnPress { get; set; } = false;
         public BitmapFont? Font { get; set; }
         public Vector2 TextRenderOffset { get; set; } = Vector2.Zero;
         public Color? DebugColor { get; set; }
@@ -97,7 +96,7 @@ namespace ProjectVagabond.UI
         private const float SLIDE_SPEED = 80f;
 
         // Text-based constructor
-        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, bool clickOnPress = false, BitmapFont? font = null)
+        public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, BitmapFont? font = null)
         {
             _global = ServiceLocator.Get<Global>();
             if (function == null) function = text;
@@ -111,19 +110,17 @@ namespace ProjectVagabond.UI
             AlignLeft = alignLeft;
             OverflowScrollSpeed = overflowScrollSpeed;
             EnableHoverSway = enableHoverSway;
-            ClickOnPress = clickOnPress;
             Font = font;
         }
 
         // Sprite-based constructor
-        public Button(Rectangle bounds, Texture2D? spriteSheet, Rectangle? defaultSourceRect, Rectangle? hoverSourceRect, Rectangle? clickedSourceRect, Rectangle? disabledSourceRect, string? function = null, bool enableHoverSway = true, bool clickOnPress = false, Color? debugColor = null)
+        public Button(Rectangle bounds, Texture2D? spriteSheet, Rectangle? defaultSourceRect, Rectangle? hoverSourceRect, Rectangle? clickedSourceRect, Rectangle? disabledSourceRect, string? function = null, bool enableHoverSway = true, Color? debugColor = null)
         {
             _global = ServiceLocator.Get<Global>();
             Bounds = bounds;
             Text = "";
             Function = function ?? "";
             EnableHoverSway = enableHoverSway;
-            ClickOnPress = clickOnPress;
             _spriteSheet = spriteSheet;
             _defaultSourceRect = defaultSourceRect;
             _hoverSourceRect = hoverSourceRect;
@@ -148,38 +145,18 @@ namespace ProjectVagabond.UI
 
             UpdateHoverState(virtualMousePos);
 
-            if (ClickOnPress)
+            bool mousePressedThisFrame = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
+            bool mouseIsDown = currentMouseState.LeftButton == ButtonState.Pressed;
+
+            // Click-on-press is now the only behavior.
+            if (UIInputManager.CanProcessMouseClick() && IsHovered && mousePressedThisFrame)
             {
-                if (UIInputManager.CanProcessMouseClick() && IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released)
-                {
-                    TriggerClick();
-                    UIInputManager.ConsumeMouseClick();
-                }
+                TriggerClick();
+                UIInputManager.ConsumeMouseClick();
             }
-            else
-            {
-                bool mousePressedOverButton = IsHovered && currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
-                bool mouseReleasedOverButton = IsHovered && currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
 
-                if (mousePressedOverButton)
-                {
-                    _isPressed = true;
-                }
-
-                if (mouseReleasedOverButton && _isPressed)
-                {
-                    if (UIInputManager.CanProcessMouseClick())
-                    {
-                        TriggerClick();
-                        UIInputManager.ConsumeMouseClick();
-                    }
-                }
-
-                if (currentMouseState.LeftButton == ButtonState.Released)
-                {
-                    _isPressed = false;
-                }
-            }
+            // Visual pressed state is active as long as mouse is down over the button.
+            _isPressed = IsHovered && mouseIsDown;
 
             bool rightMouseReleasedOverButton = IsHovered && currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
             if (rightMouseReleasedOverButton)
@@ -243,7 +220,7 @@ namespace ProjectVagabond.UI
             else if (isActivated && _hoverSourceRect.HasValue) sourceRectToDraw = _hoverSourceRect;
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_isPressed && !ClickOnPress) _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
+            if (_isPressed) _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
             else _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
 
             Vector2 scale = Vector2.One;
@@ -286,7 +263,7 @@ namespace ProjectVagabond.UI
             }
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_isPressed && !ClickOnPress) _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
+            if (_isPressed) _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
             else _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
 
             float xHoverOffset = 0f;

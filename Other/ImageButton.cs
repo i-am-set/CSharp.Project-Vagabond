@@ -30,8 +30,8 @@ namespace ProjectVagabond.UI
         private const float SHAKE_MAGNITUDE = 4f;
         private const float SHAKE_FREQUENCY = 30f;
 
-        public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool clickOnPress = false, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null)
-            : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, clickOnPress, font)
+        public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = true, bool zoomHapticOnClick = true, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null)
+            : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, font)
         {
             _spriteSheet = spriteSheet;
             _defaultSourceRect = defaultSourceRect ?? spriteSheet?.Bounds; // If no default is given, use the whole sheet.
