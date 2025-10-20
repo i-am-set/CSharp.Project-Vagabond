@@ -120,7 +120,7 @@ namespace ProjectVagabond.Battle.UI
         public ActionMenu()
         {
             _global = ServiceLocator.Get<Global>();
-            _backButton = new Button(Rectangle.Empty, "BACK");
+            _backButton = new Button(Rectangle.Empty, "BACK") { CustomDefaultTextColor = _global.Palette_Gray };
             _backButton.OnClick += () => {
                 if (_currentState == MenuState.Targeting || _currentState == MenuState.Tooltip)
                 {
@@ -179,53 +179,29 @@ namespace ProjectVagabond.Battle.UI
             _actionButtons.Add(fleeButton);
 
             // Secondary Action Buttons
-            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0]);
+            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0]) { HasRightClickHint = true };
             strikeButton.OnClick += () => {
                 if (_player != null && !string.IsNullOrEmpty(_player.DefaultStrikeMoveID) && BattleDataCache.Moves.TryGetValue(_player.DefaultStrikeMoveID, out var strikeMove))
                 {
                     SelectMove(strikeMove, null);
                 }
             };
-            strikeButton.OnRightClick += () => {
-                if (_player != null && !string.IsNullOrEmpty(_player.DefaultStrikeMoveID) && BattleDataCache.Moves.TryGetValue(_player.DefaultStrikeMoveID, out var strikeMove))
-                {
-                    _tooltipMove = strikeMove;
-                    _useSimpleTooltip = false;
-                    SetState(MenuState.Tooltip);
-                }
-            };
             _secondaryActionButtons.Add(strikeButton);
 
-            var dodgeButton = new TextOverImageButton(Rectangle.Empty, "DODGE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[1]);
+            var dodgeButton = new TextOverImageButton(Rectangle.Empty, "DODGE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[1]) { HasRightClickHint = true };
             dodgeButton.OnClick += () => {
                 if (BattleDataCache.Moves.TryGetValue("Dodge", out var dodgeMove))
                 {
                     SelectMove(dodgeMove, null);
                 }
             };
-            dodgeButton.OnRightClick += () => {
-                if (BattleDataCache.Moves.TryGetValue("Dodge", out var dodgeMove))
-                {
-                    _tooltipMove = dodgeMove;
-                    _useSimpleTooltip = true;
-                    SetState(MenuState.Tooltip);
-                }
-            };
             _secondaryActionButtons.Add(dodgeButton);
 
-            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2]);
+            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2]) { HasRightClickHint = true };
             stallButton.OnClick += () => {
                 if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
                 {
                     SelectMove(stallMove, null);
-                }
-            };
-            stallButton.OnRightClick += () => {
-                if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
-                {
-                    _tooltipMove = stallMove;
-                    _useSimpleTooltip = true;
-                    SetState(MenuState.Tooltip);
                 }
             };
             _secondaryActionButtons.Add(stallButton);
@@ -374,13 +350,8 @@ namespace ProjectVagabond.Battle.UI
                 sourceRect = rect;
             }
 
-            var moveButton = new MoveButton(move, entry, displayPower, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, isNew, startVisible);
+            var moveButton = new MoveButton(move, entry, displayPower, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, isNew, startVisible) { HasRightClickHint = true };
             moveButton.OnClick += () => HandleMoveButtonClick(move, entry, moveButton);
-            moveButton.OnRightClick += () => {
-                _tooltipMove = move;
-                _useSimpleTooltip = false;
-                SetState(MenuState.Tooltip);
-            };
             return moveButton;
         }
 
@@ -669,7 +640,11 @@ namespace ProjectVagabond.Battle.UI
                         }
                     }
 
+                    bool rightClickHeldOnAButton = false;
+                    MoveData? moveForTooltip = null;
+                    bool simpleTooltip = false;
 
+                    // Update buttons and check for hover/right-click
                     foreach (var button in _moveButtons)
                     {
                         button.Update(currentMouseState);
@@ -679,6 +654,13 @@ namespace ProjectVagabond.Battle.UI
                             _hoveredSpellbookEntry = button.Entry;
                             HoveredButton = button;
                             _hoveredMoveButton = button;
+
+                            if (currentMouseState.RightButton == ButtonState.Pressed)
+                            {
+                                rightClickHeldOnAButton = true;
+                                moveForTooltip = button.Move;
+                                simpleTooltip = false;
+                            }
                         }
                     }
 
@@ -700,8 +682,22 @@ namespace ProjectVagabond.Battle.UI
                             {
                                 HoveredMove = move;
                                 _hoveredSpellbookEntry = null;
+
+                                if (currentMouseState.RightButton == ButtonState.Pressed)
+                                {
+                                    rightClickHeldOnAButton = true;
+                                    moveForTooltip = move;
+                                    simpleTooltip = (move.MoveID == "Dodge" || move.MoveID == "Stall");
+                                }
                             }
                         }
+                    }
+
+                    if (rightClickHeldOnAButton)
+                    {
+                        _tooltipMove = moveForTooltip;
+                        _useSimpleTooltip = simpleTooltip;
+                        SetState(MenuState.Tooltip);
                     }
 
                     if (HoveredMove != _lastHoveredMoveForScrolling)
@@ -721,17 +717,11 @@ namespace ProjectVagabond.Battle.UI
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
                 case MenuState.Tooltip:
-                    UpdateTooltipScrolling(gameTime);
-                    bool leftClick = currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
-                    bool rightClick = currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
-                    if (leftClick || rightClick)
+                    if (currentMouseState.RightButton == ButtonState.Released)
                     {
-                        if (UIInputManager.CanProcessMouseClick())
-                        {
-                            SetState(MenuState.Moves);
-                            UIInputManager.ConsumeMouseClick();
-                        }
+                        SetState(MenuState.Moves);
                     }
+                    UpdateTooltipScrolling(gameTime);
                     _backButton.Update(currentMouseState);
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
@@ -911,7 +901,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Draw the back button
-            int backButtonY = tooltipBounds.Bottom + 3 + 2; // Added 2 pixels
+            int backButtonY = tooltipBounds.Bottom + 12;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
@@ -926,19 +916,16 @@ namespace ProjectVagabond.Battle.UI
         private void DrawComplexTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            // Define the area for the tooltip content, matching the moves menu area.
+            // Define the area for the tooltip content
             const int dividerY = 114;
             const int moveButtonWidth = 157;
-            const int moveButtonHeight = 17;
             const int columns = 2;
-            const int rows = 3;
             const int columnSpacing = 0;
-            const int rowSpacing = 0;
 
             int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
-            int gridHeight = (moveButtonHeight * rows) + (rowSpacing * (rows - 1));
+            const int gridHeight = 40;
             int gridStartX = (Global.VIRTUAL_WIDTH - totalGridWidth) / 2;
-            int gridStartY = dividerY + 2;
+            int gridStartY = dividerY + 2 + 12;
 
             // Draw the background sprite for the tooltip area
             var spriteManager = ServiceLocator.Get<SpriteManager>();
@@ -953,7 +940,7 @@ namespace ProjectVagabond.Battle.UI
 
             // Draw the back button
             const int backButtonTopMargin = 0; // Vertical spacing from the tooltip panel.
-            int backButtonY = gridStartY + gridHeight + backButtonTopMargin + 2; // Added 2 pixels
+            int backButtonY = gridStartY + gridHeight + backButtonTopMargin + 4;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
@@ -1116,7 +1103,7 @@ namespace ProjectVagabond.Battle.UI
 
             // --- Back Button ---
             int layoutBottomY = Math.Max(borderRect.Bottom, moveGridStartY + moveBlockHeight);
-            int backButtonY = layoutBottomY + 3;
+            int backButtonY = layoutBottomY + 7;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
