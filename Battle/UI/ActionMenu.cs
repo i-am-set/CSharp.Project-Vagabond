@@ -115,10 +115,6 @@ namespace ProjectVagabond.Battle.UI
 
         // Hover Box Animation
         private MoveButton? _hoveredMoveButton;
-        private MoveButton? _lastHoveredMoveButton;
-        private float _hoverBoxAnimTimer = 0f;
-        private const float HOVER_BOX_ANIM_DURATION = 0.15f;
-        private const float HOVER_BOX_FADE_DURATION = 1f;
 
 
         public ActionMenu()
@@ -645,7 +641,6 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.Moves:
                     HoveredMove = null;
                     _hoveredSpellbookEntry = null;
-                    _lastHoveredMoveButton = _hoveredMoveButton;
                     _hoveredMoveButton = null;
 
                     // Update button animation states
@@ -716,17 +711,6 @@ namespace ProjectVagabond.Battle.UI
                     }
 
                     UpdateHoverInfoScrolling(gameTime);
-
-
-                    if (_hoveredMoveButton != _lastHoveredMoveButton)
-                    {
-                        _hoverBoxAnimTimer = 0f;
-                    }
-
-                    if (_hoveredMoveButton != null)
-                    {
-                        _hoverBoxAnimTimer += dt;
-                    }
 
                     _backButton.Update(currentMouseState);
                     if (_backButton.IsHovered) HoveredButton = _backButton;
@@ -1061,65 +1045,7 @@ namespace ProjectVagabond.Battle.UI
 
                 if (button == _hoveredMoveButton && button.IsEnabled)
                 {
-                    // --- Dithered Hover Effect ---
-                    float widthProgress = Math.Clamp(_hoverBoxAnimTimer / HOVER_BOX_ANIM_DURATION, 0f, 1f);
-                    float easedWidthProgress = Easing.EaseInOutQuart(widthProgress);
-                    int animatedWidth = (int)(button.Bounds.Width * easedWidthProgress);
-
-                    float fadeProgress = Math.Clamp(_hoverBoxAnimTimer / HOVER_BOX_FADE_DURATION, 0f, 1f);
-                    float easedFadeProgress = Easing.EaseInOutQuart(fadeProgress);
-                    float alpha = 1.0f - easedFadeProgress;
-
-                    const int ditherWidth = 16;
-                    var hoverRectBase = new Rectangle(button.Bounds.X, button.Bounds.Y, animatedWidth, button.Bounds.Height);
-                    Color hoverColor = _global.Palette_DarkGray * alpha;
-
-                    // Draw solid center part first for performance.
-                    int solidStartX = hoverRectBase.X + ditherWidth;
-                    int solidWidth = Math.Max(0, animatedWidth - ditherWidth * 2);
-                    if (solidWidth > 0)
-                    {
-                        var solidRect = new Rectangle(solidStartX, hoverRectBase.Y, solidWidth, hoverRectBase.Height);
-                        spriteBatch.DrawSnapped(pixel, solidRect, hoverColor);
-                    }
-
-                    // Draw dithered edges pixel by pixel. This provides a noisy fade-out effect.
-                    for (int y = hoverRectBase.Y; y < hoverRectBase.Bottom; y++)
-                    {
-                        // Left dithered edge
-                        int leftDitherEnd = Math.Min(ditherWidth, animatedWidth);
-                        for (int x = 0; x < leftDitherEnd; x++)
-                        {
-                            // Progress is 0.0 at the outer edge (x=0) and fades to 1.0 at the inner edge.
-                            float progress = (float)x / (ditherWidth - 1);
-                            // A simple hash function to get a pseudo-random but stable value for each pixel.
-                            uint hash = (uint)(((y * 1664525) + (hoverRectBase.X + x) * 1013904223));
-                            float randomValue = (hash % 100) / 99f;
-
-                            if (randomValue < progress)
-                            {
-                                spriteBatch.DrawSnapped(pixel, new Vector2(hoverRectBase.X + x, y), hoverColor);
-                            }
-                        }
-
-                        // Right dithered edge
-                        int rightDitherStartInAnimated = animatedWidth - ditherWidth;
-                        // Ensure we don't overlap with the left dither zone on very small widths.
-                        int rightDitherStart = Math.Max(leftDitherEnd, rightDitherStartInAnimated);
-                        for (int x = rightDitherStart; x < animatedWidth; x++)
-                        {
-                            // Progress is 1.0 at the inner edge and fades to 0.0 at the outer edge.
-                            float progress = 1.0f - ((float)(x - rightDitherStartInAnimated) / (ditherWidth - 1));
-
-                            uint hash = (uint)(((y * 1664525) + (hoverRectBase.X + x) * 1013904223));
-                            float randomValue = (hash % 100) / 99f;
-
-                            if (randomValue < progress)
-                            {
-                                spriteBatch.DrawSnapped(pixel, new Vector2(hoverRectBase.X + x, y), hoverColor);
-                            }
-                        }
-                    }
+                    spriteBatch.DrawSnapped(pixel, button.Bounds, _global.Palette_DarkGray);
                 }
 
                 if (_buttonAnimationStates.TryGetValue(button, out var state))
@@ -1241,7 +1167,14 @@ namespace ProjectVagabond.Battle.UI
                 currentX += accSize.Width;
                 spriteBatch.DrawStringSnapped(secondaryFont, separator, new Vector2(currentX, statsY), _global.Palette_DarkGray);
                 currentX += separatorSize.Width;
-                spriteBatch.DrawStringSnapped(secondaryFont, moveTypeText, new Vector2(currentX, statsY), _global.Palette_White);
+
+                Color moveTypeColor = move.MoveType switch
+                {
+                    MoveType.Spell => _global.Palette_LightBlue,
+                    MoveType.Action => _global.Palette_Orange,
+                    _ => _global.Palette_White
+                };
+                spriteBatch.DrawStringSnapped(secondaryFont, moveTypeText, new Vector2(currentX, statsY), moveTypeColor);
 
                 // Draw Name (with scrolling)
                 float textAvailableWidth = statsStartX - namePos.X - 4;
@@ -1317,7 +1250,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     powerValue = move.Power > 0 ? move.Power.ToString() : "---";
                     accValue = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
-                    manaValue = $"{move.ManaCost}%";
+                    manaValue = move.ManaCost > 0 ? $"{move.ManaCost}%" : "---";
                     impactValue = move.ImpactType.ToString().ToUpper();
                     moveTypeValue = move.MoveType.ToString().ToUpper();
                 }
@@ -1330,13 +1263,17 @@ namespace ProjectVagabond.Battle.UI
                 // Draw Top Row (POW & ACC)
                 spriteBatch.DrawStringSnapped(secondaryFont, powerLabel, new Vector2(bounds.X + horizontalPadding, statsY), labelColor);
                 var powerValueSize = secondaryFont.MeasureString(powerValue);
-                var powerValuePos = new Vector2(bounds.Center.X - 2 - powerValueSize.Width, statsY);
+                var powerValuePos = new Vector2(bounds.Center.X - 9 - powerValueSize.Width, statsY);
                 spriteBatch.DrawStringSnapped(secondaryFont, powerValue, powerValuePos, valueColor);
 
                 var accLabelPos = new Vector2(bounds.Center.X + 2, statsY);
                 spriteBatch.DrawStringSnapped(secondaryFont, accLabel, accLabelPos, labelColor);
                 var accValueSize = secondaryFont.MeasureString(accValue);
                 var accValuePos = new Vector2(bounds.Right - horizontalPadding - accValueSize.Width, statsY);
+                if (!accValue.Contains("%"))
+                {
+                    accValuePos.X -= 5;
+                }
                 spriteBatch.DrawStringSnapped(secondaryFont, accValue, accValuePos, valueColor);
 
                 currentY += secondaryFont.LineHeight + 2;
@@ -1345,8 +1282,28 @@ namespace ProjectVagabond.Battle.UI
                 var manaLabelPos = new Vector2(bounds.X + horizontalPadding, currentY);
                 spriteBatch.DrawStringSnapped(secondaryFont, manaLabel, manaLabelPos, labelColor);
                 var manaValueSize = secondaryFont.MeasureString(manaValue);
-                var manaValuePos = new Vector2(bounds.Center.X - 2 - manaValueSize.Width, currentY);
+                var manaValuePos = new Vector2(bounds.Center.X - 3 - manaValueSize.Width, currentY);
+                if (!manaValue.Contains("%"))
+                {
+                    manaValuePos.X -= 6;
+                }
                 spriteBatch.DrawStringSnapped(secondaryFont, manaValue, manaValuePos, valueColor);
+
+                // --- NEW TARGETING TEXT ---
+                string targetValue = "";
+                if (move != null)
+                {
+                    targetValue = move.Target switch
+                    {
+                        TargetType.Single => "SINGLE",
+                        TargetType.Every => "MULTI",
+                        TargetType.SingleAll => "ANY",
+                        TargetType.EveryAll => "ALL",
+                        TargetType.Self => "SELF",
+                        TargetType.None => "NONE",
+                        _ => ""
+                    };
+                }
 
                 // Draw Bottom Row (IMPACT & TYPE)
                 var impactSize = secondaryFont.MeasureString(impactValue);
@@ -1355,14 +1312,51 @@ namespace ProjectVagabond.Battle.UI
                 float typeY = bounds.Bottom - verticalPadding - secondaryFont.LineHeight;
                 float gapCenter = bounds.Center.X + 5;
 
+                // Now draw the target text vertically centered between MANA and the bottom row
+                if (!string.IsNullOrEmpty(targetValue))
+                {
+                    var targetValueSize = secondaryFont.MeasureString(targetValue);
+                    float yAfterMana = currentY + secondaryFont.LineHeight;
+                    float availableSpace = typeY - yAfterMana;
+                    var targetValuePos = new Vector2(
+                        bounds.X + (bounds.Width - targetValueSize.Width) / 2f,
+                        yAfterMana + (availableSpace - targetValueSize.Height) / 2f
+                    );
+                    spriteBatch.DrawStringSnapped(secondaryFont, targetValue, targetValuePos, _global.Palette_DarkGray);
+                }
+
                 float impactX = gapCenter - (typeGap / 2f) - impactSize.Width;
                 var impactPos = new Vector2(impactX, typeY);
 
                 float moveTypeX = gapCenter + (typeGap / 2f);
                 var moveTypePos = new Vector2(moveTypeX, typeY);
 
-                spriteBatch.DrawStringSnapped(secondaryFont, impactValue, impactPos, valueColor);
-                spriteBatch.DrawStringSnapped(secondaryFont, moveTypeValue, moveTypePos, valueColor);
+                Color impactColor = valueColor;
+                Color moveTypeColor = valueColor;
+                if (move != null)
+                {
+                    switch (move.ImpactType)
+                    {
+                        case ImpactType.Physical:
+                            impactColor = _global.Palette_Orange;
+                            break;
+                        case ImpactType.Magical:
+                            impactColor = _global.Palette_LightBlue;
+                            break;
+                    }
+                    switch (move.MoveType)
+                    {
+                        case MoveType.Spell:
+                            moveTypeColor = _global.Palette_LightBlue;
+                            break;
+                        case MoveType.Action:
+                            moveTypeColor = _global.Palette_Orange;
+                            break;
+                    }
+                }
+
+                spriteBatch.DrawStringSnapped(secondaryFont, impactValue, impactPos, impactColor);
+                spriteBatch.DrawStringSnapped(secondaryFont, moveTypeValue, moveTypePos, moveTypeColor);
             }
         }
 
