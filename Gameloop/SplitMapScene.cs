@@ -6,7 +6,6 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -773,8 +772,6 @@ namespace ProjectVagabond.Scenes
             int currentPlayerFloor = _currentMap.Nodes[_playerCurrentNodeId].Floor;
             foreach (var node in _currentMap.Nodes.Values)
             {
-                if (node.NodeType == SplitNodeType.Origin) continue; // Skip drawing the origin node
-
                 float nodeAlpha = 0f;
                 bool isNextFloor = node.Floor == currentPlayerFloor + 1;
 
@@ -804,18 +801,16 @@ namespace ProjectVagabond.Scenes
                 float scale = 1.0f;
                 Vector2 hoverOffset = Vector2.Zero;
 
-                if (!node.IsReachable)
+                if (!node.IsReachable && node.NodeType != SplitNodeType.Origin)
                 {
                     color = _global.Palette_DarkGray;
                 }
                 else if (node.Id == _pressedNodeId)
                 {
-                    scale = 0.9f;
                     color = _global.ButtonHoverColor;
                 }
                 else if (node.Id == _hoveredNodeId)
                 {
-                    hoverOffset.Y = -1f;
                     color = _global.ButtonHoverColor;
                 }
 
@@ -983,46 +978,45 @@ namespace ProjectVagabond.Scenes
         private (Texture2D texture, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode node, GameTime gameTime)
         {
             Texture2D texture;
-            Rectangle? sourceRect = null;
-            Vector2 origin;
 
-            if (node.NodeType == SplitNodeType.Battle)
+            switch (node.NodeType)
             {
-                texture = node.Difficulty switch
-                {
-                    BattleDifficulty.Easy => _spriteManager.CombatNodeEasySprite,
-                    BattleDifficulty.Hard => _spriteManager.CombatNodeHardSprite,
-                    _ => _spriteManager.CombatNodeNormalSprite,
-                };
-
-                int frameIndex = 0;
-                if (node.IsReachable)
-                {
-                    float totalTime = (float)gameTime.TotalGameTime.TotalSeconds;
-                    frameIndex = (int)((totalTime + node.AnimationOffset) / NODE_FRAME_DURATION) % 2;
-                }
-
-                sourceRect = new Rectangle(frameIndex * 32, 0, 32, 32);
-                origin = new Vector2(16, 16);
-            }
-            else if (node.NodeType == SplitNodeType.MajorBattle)
-            {
-                texture = _spriteManager.SplitNodeBoss;
-                sourceRect = null;
-                origin = new Vector2(texture.Width / 2f, texture.Height / 2f);
-            }
-            else
-            {
-                texture = node.NodeType switch
-                {
-                    SplitNodeType.Origin => _spriteManager.SplitNodeStart,
-                    SplitNodeType.Narrative => _spriteManager.SplitNodeNarrative,
-                    SplitNodeType.Reward => _spriteManager.SplitNodeReward,
-                    _ => _spriteManager.SplitNodeBattle, // Fallback
-                };
-                origin = new Vector2(texture.Width / 2f, texture.Height / 2f);
+                case SplitNodeType.Origin:
+                    texture = _spriteManager.SplitNodeStart;
+                    break;
+                case SplitNodeType.Battle:
+                    texture = node.Difficulty switch
+                    {
+                        BattleDifficulty.Easy => _spriteManager.CombatNodeEasySprite,
+                        BattleDifficulty.Hard => _spriteManager.CombatNodeHardSprite,
+                        _ => _spriteManager.CombatNodeNormalSprite,
+                    };
+                    break;
+                case SplitNodeType.Narrative:
+                    texture = _spriteManager.SplitNodeNarrative;
+                    break;
+                case SplitNodeType.Reward:
+                    texture = _spriteManager.SplitNodeReward;
+                    break;
+                case SplitNodeType.MajorBattle:
+                    texture = _spriteManager.SplitNodeBoss;
+                    break;
+                default:
+                    texture = _spriteManager.CombatNodeNormalSprite; // Fallback
+                    break;
             }
 
+            int frameIndex = 0;
+            // Only animate reachable nodes to reduce visual noise. The origin is always "reachable" in a sense.
+            if (node.IsReachable || node.NodeType == SplitNodeType.Origin)
+            {
+                float totalTime = (float)gameTime.TotalGameTime.TotalSeconds;
+                frameIndex = (int)((totalTime + node.AnimationOffset) / NODE_FRAME_DURATION) % 2;
+            }
+
+            // All node sprites are now assumed to be 64x32 sprite sheets with two 32x32 frames.
+            var sourceRect = new Rectangle(frameIndex * 32, 0, 32, 32);
+            var origin = new Vector2(16, 16); // Origin is center of a 32x32 frame
             return (texture, sourceRect, origin);
         }
     }

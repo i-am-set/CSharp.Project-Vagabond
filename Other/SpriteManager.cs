@@ -71,7 +71,6 @@ namespace ProjectVagabond
 
         // Split Map Node Sprites
         public Texture2D SplitNodeStart { get; private set; }
-        public Texture2D SplitNodeBattle { get; private set; }
         public Texture2D SplitNodeNarrative { get; private set; }
         public Texture2D SplitNodeReward { get; private set; }
         public Texture2D SplitNodeBoss { get; private set; }
@@ -209,26 +208,20 @@ namespace ProjectVagabond
             catch { SpellbookClosedSprite = _textureFactory.CreateColoredTexture(64, 64, Color.Magenta); }
 
             // Load Split Map Node Sprites
-            try { SplitNodeStart = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/split_node_start"); }
-            catch { SplitNodeStart = _textureFactory.CreateColoredTexture(16, 16, Color.Green); }
-            try { SplitNodeBattle = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/split_node_battle"); }
-            catch { SplitNodeBattle = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
-            try { SplitNodeNarrative = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/split_node_narrative"); }
-            catch { SplitNodeNarrative = _textureFactory.CreateColoredTexture(16, 16, Color.Blue); }
-            try { SplitNodeReward = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/split_node_reward"); }
-            catch { SplitNodeReward = _textureFactory.CreateColoredTexture(16, 16, Color.Gold); }
-            try { SplitNodeBoss = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/split_node_boss"); }
-            catch { SplitNodeBoss = _textureFactory.CreateColoredTexture(16, 16, Color.Purple); }
-
+            try { SplitNodeStart = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Start"); }
+            catch { SplitNodeStart = _textureFactory.CreateColoredTexture(64, 32, Color.Green); }
+            try { SplitNodeNarrative = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Event"); }
+            catch { SplitNodeNarrative = _textureFactory.CreateColoredTexture(64, 32, Color.Blue); }
+            try { SplitNodeReward = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Treasure"); }
+            catch { SplitNodeReward = _textureFactory.CreateColoredTexture(64, 32, Color.Gold); }
+            try { SplitNodeBoss = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Boss"); }
+            catch { SplitNodeBoss = _textureFactory.CreateColoredTexture(64, 32, Color.Purple); }
             try { CombatNodeNormalSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/CombatNode_Normal"); }
             catch { CombatNodeNormalSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Gray); }
-
             try { CombatNodePlayerSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/Combat_Node_Player"); }
             catch { CombatNodePlayerSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Cyan); }
-
             try { CombatNodeEasySprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/CombatNode_Easy"); }
             catch { CombatNodeEasySprite = _textureFactory.CreateColoredTexture(64, 32, Color.Green); }
-
             try { CombatNodeHardSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/CombatNode_Hard"); }
             catch { CombatNodeHardSprite = _textureFactory.CreateColoredTexture(64, 32, Color.DarkRed); }
 

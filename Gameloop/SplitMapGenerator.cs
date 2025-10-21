@@ -19,7 +19,7 @@ namespace ProjectVagabond.Progression
         // --- Generation Tuning ---
         public const int MAP_WIDTH = 280;
         private const int FLOOR_HEIGHT = 60;
-        private const int HORIZONTAL_PADDING = 8; // Minimal padding to keep nodes off the absolute edge
+        private const int HORIZONTAL_PADDING = 40; // Minimal padding to keep nodes off the absolute edge
         private const int VERTICAL_PADDING = 50;
         private const float BATTLE_EVENT_WEIGHT = 0.7f; // 70% chance for a battle
         private const float NARRATIVE_EVENT_WEIGHT = 0.3f; // 30% chance for a narrative
@@ -388,46 +388,85 @@ namespace ProjectVagabond.Progression
                 bossNode.EventData = splitData.PossibleMajorBattles[_random.Next(splitData.PossibleMajorBattles.Count)];
             }
 
-            // Assign events to all other nodes
+            // Define the possible choices and their weights for random assignment.
+            var baseChoices = new List<(SplitNodeType type, float weight)>();
+            if (splitData.PossibleBattles != null && splitData.PossibleBattles.Any())
+            {
+                // The chance of a battle is the battle weight MINUS the chance of a reward.
+                baseChoices.Add((SplitNodeType.Battle, BATTLE_EVENT_WEIGHT * (1.0f - REWARD_NODE_CHANCE)));
+                baseChoices.Add((SplitNodeType.Reward, BATTLE_EVENT_WEIGHT * REWARD_NODE_CHANCE));
+            }
+            if (splitData.PossibleNarrativeEventIDs != null && splitData.PossibleNarrativeEventIDs.Any())
+            {
+                baseChoices.Add((SplitNodeType.Narrative, NARRATIVE_EVENT_WEIGHT));
+            }
+
+            // If no choices are possible (e.g., no battles or narratives defined), we can't proceed.
+            if (!baseChoices.Any())
+            {
+                // Fallback: make everything a battle if possible.
+                if (splitData.PossibleBattles != null && splitData.PossibleBattles.Any())
+                {
+                    baseChoices.Add((SplitNodeType.Battle, 1.0f));
+                }
+                else
+                {
+                    return; // No events can be assigned.
+                }
+            }
+
+            // Assign events to all other nodes, floor by floor.
             for (int floor = 1; floor < totalFloors - 1; floor++)
             {
-                foreach (var node in nodesByFloor[floor])
+                var currentFloorNodes = nodesByFloor[floor];
+                for (int i = 0; i < currentFloorNodes.Count; i++)
                 {
-                    float roll = (float)_random.NextDouble();
-                    if (roll < BATTLE_EVENT_WEIGHT && splitData.PossibleBattles.Any())
+                    var node = currentFloorNodes[i];
+                    // Get the type of the node to the left on the same floor, if it exists.
+                    SplitNodeType? previousNodeType = (i > 0) ? currentFloorNodes[i - 1].NodeType : (SplitNodeType?)null;
+
+                    // Filter choices to exclude the previous node's type to encourage variety.
+                    var availableChoices = baseChoices;
+                    if (previousNodeType.HasValue)
                     {
-                        // This node is slated to be a battle. Now check if it should be a reward instead.
-                        if (_random.NextDouble() < REWARD_NODE_CHANCE)
+                        availableChoices = baseChoices.Where(c => c.type != previousNodeType.Value).ToList();
+                        // If filtering leaves no choices (e.g., only one type is possible and it was the previous one),
+                        // then we must allow duplicates, so we revert to the full list.
+                        if (!availableChoices.Any())
                         {
-                            node.NodeType = SplitNodeType.Reward;
-                            node.EventData = null; // Rewards don't need battle data
+                            availableChoices = baseChoices;
                         }
-                        else
+                    }
+
+                    // Perform weighted random selection from the available choices.
+                    float totalWeight = availableChoices.Sum(c => c.weight);
+                    double randomRoll = _random.NextDouble() * totalWeight;
+                    SplitNodeType chosenType = availableChoices.Last().type; // Fallback to the last available choice.
+
+                    foreach (var choice in availableChoices)
+                    {
+                        if (randomRoll < choice.weight)
                         {
-                            node.NodeType = SplitNodeType.Battle;
+                            chosenType = choice.type;
+                            break;
+                        }
+                        randomRoll -= choice.weight;
+                    }
+
+                    // Assign the chosen type and its corresponding data to the node.
+                    node.NodeType = chosenType;
+                    switch (chosenType)
+                    {
+                        case SplitNodeType.Battle:
                             node.Difficulty = (BattleDifficulty)_random.Next(3); // 0=Easy, 1=Normal, 2=Hard
                             node.EventData = progressionManager.GetRandomBattle(node.Difficulty);
-                        }
-                    }
-                    else if (splitData.PossibleNarrativeEventIDs.Any())
-                    {
-                        node.NodeType = SplitNodeType.Narrative;
-                        node.EventData = splitData.PossibleNarrativeEventIDs[_random.Next(splitData.PossibleNarrativeEventIDs.Count)];
-                    }
-                    else // Fallback to battle if no narratives are available
-                    {
-                        // Also apply reward chance here
-                        if (_random.NextDouble() < REWARD_NODE_CHANCE)
-                        {
-                            node.NodeType = SplitNodeType.Reward;
+                            break;
+                        case SplitNodeType.Narrative:
+                            node.EventData = progressionManager.GetRandomNarrative()?.EventID;
+                            break;
+                        case SplitNodeType.Reward:
                             node.EventData = null;
-                        }
-                        else
-                        {
-                            node.NodeType = SplitNodeType.Battle;
-                            node.Difficulty = (BattleDifficulty)_random.Next(3);
-                            node.EventData = progressionManager.GetRandomBattle(node.Difficulty);
-                        }
+                            break;
                     }
                 }
             }

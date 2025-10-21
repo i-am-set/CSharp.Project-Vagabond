@@ -422,6 +422,42 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MapNodes/CombatNode_Normal.png;Sprites/MapNodes/CombatNode_Normal
 
+#begin Sprites/MapNodes/MapNode_Event.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Event.png;Sprites/MapNodes/MapNode_Event
+
+#begin Sprites/MapNodes/MapNode_Start.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Start.png;Sprites/MapNodes/MapNode_Start
+
+#begin Sprites/MapNodes/MapNode_Treasure.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Treasure.png;Sprites/MapNodes/MapNode_Treasure
+
 #begin Sprites/mountain.png
 /importer:TextureImporter
 /processor:TextureProcessor
