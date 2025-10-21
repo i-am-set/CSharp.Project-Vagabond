@@ -6,6 +6,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -24,6 +25,7 @@ namespace ProjectVagabond.Scenes
         private readonly DiceRollingSystem _diceRollingSystem;
         private readonly StoryNarrator _resultNarrator;
         private readonly ChoiceGenerator _choiceGenerator;
+        private readonly ComponentStore _componentStore;
 
 
         private SplitMap? _currentMap;
@@ -105,6 +107,7 @@ namespace ProjectVagabond.Scenes
             _playerIcon = new PlayerMapIcon();
             _narrativeDialog = new NarrativeDialog(this);
             _choiceGenerator = new ChoiceGenerator();
+            _componentStore = ServiceLocator.Get<ComponentStore>();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 80, Global.VIRTUAL_WIDTH, 80);
             _resultNarrator = new StoryNarrator(narratorBounds);
@@ -637,17 +640,99 @@ namespace ProjectVagabond.Scenes
         private void TriggerReward()
         {
             var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-            if (choiceMenu == null) return;
+            if (choiceMenu == null)
+            {
+                FinalizeVictory();
+                return;
+            }
 
             // Generate choices
-            var choices = _choiceGenerator.GenerateSpellChoices(1, 3).Cast<object>().ToList(); // TODO: Use real game stage
+            var choices = new List<object>();
+            var usedSpellIds = new HashSet<string>();
+            var usedAbilityIds = new HashSet<string>();
+            const int numberOfChoices = 3;
+            int gameStage = 1; // TODO: Use actual game stage from ProgressionManager
 
-            // Define the action to take after a choice is made
-            Action onChoiceMade = () => _sceneManager.HideModal();
+            for (int i = 0; i < numberOfChoices; i++)
+            {
+                bool isSpell = _random.NextDouble() < 0.5;
 
-            // Show the menu
-            choiceMenu.Show(choices, onChoiceMade);
-            _wasModalActiveLastFrame = true;
+                if (isSpell)
+                {
+                    var spellChoices = _choiceGenerator.GenerateSpellChoices(gameStage, 1, usedSpellIds);
+                    if (spellChoices.Any())
+                    {
+                        var spell = spellChoices.First();
+                        choices.Add(spell);
+                        usedSpellIds.Add(spell.MoveID);
+                    }
+                    else
+                    {
+                        // Fallback: if we can't get a unique spell, try for an ability.
+                        var abilityChoices = _choiceGenerator.GenerateAbilityChoices(gameStage, 1, usedAbilityIds);
+                        if (abilityChoices.Any())
+                        {
+                            var ability = abilityChoices.First();
+                            choices.Add(ability);
+                            usedAbilityIds.Add(ability.AbilityID);
+                        }
+                    }
+                }
+                else // Is Ability
+                {
+                    var abilityChoices = _choiceGenerator.GenerateAbilityChoices(gameStage, 1, usedAbilityIds);
+                    if (abilityChoices.Any())
+                    {
+                        var ability = abilityChoices.First();
+                        choices.Add(ability);
+                        usedAbilityIds.Add(ability.AbilityID);
+                    }
+                    else
+                    {
+                        // Fallback: if we can't get a unique ability, try for a spell.
+                        var spellChoices = _choiceGenerator.GenerateSpellChoices(gameStage, 1, usedSpellIds);
+                        if (spellChoices.Any())
+                        {
+                            var spell = spellChoices.First();
+                            choices.Add(spell);
+                            usedSpellIds.Add(spell.MoveID);
+                        }
+                    }
+                }
+            }
+
+
+            if (!choices.Any())
+            {
+                FinalizeVictory();
+                return;
+            }
+
+            choiceMenu.Show(choices, FinalizeVictory);
+            _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+        }
+
+        private void FinalizeVictory()
+        {
+            SplitMapScene.PlayerWonLastBattle = true;
+            DecrementTemporaryBuffs();
+            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState);
+        }
+
+        private void DecrementTemporaryBuffs()
+        {
+            var gameState = ServiceLocator.Get<GameState>();
+            var buffsComp = _componentStore.GetComponent<TemporaryBuffsComponent>(gameState.PlayerEntityId);
+            if (buffsComp == null) return;
+
+            for (int i = buffsComp.Buffs.Count - 1; i >= 0; i--)
+            {
+                buffsComp.Buffs[i].RemainingBattles--;
+                if (buffsComp.Buffs[i].RemainingBattles <= 0)
+                {
+                    buffsComp.Buffs.RemoveAt(i);
+                }
+            }
         }
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -661,7 +746,7 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            var visitedPathFillColor = _global.Palette_Gray;
+            var visitedPathFillColor = _global.Palette_White;
             var highlightedPathFillColor = _global.Palette_Yellow;
 
             // Find highlighted path before drawing
