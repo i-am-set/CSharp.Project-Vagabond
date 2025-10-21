@@ -57,7 +57,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<Texture2D> _promptTextures = new List<Texture2D>();
         private int _promptTextureIndex;
         private float _promptCycleTimer;
-        private const float PROMPT_CYCLE_INTERVAL = 1.0f;
+        private const float PROMPT_CYCLE_INTERVAL = 0.5f;
         private Button? _lastHoveredButton;
 
         public BattleUIManager()
