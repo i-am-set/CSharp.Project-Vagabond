@@ -3,6 +3,9 @@
   "SplitLengthMin": 8,
   "SplitLengthMax": 12,
   "PossibleBattles": [
+    [ "sapling" ],
+    [ "sapling", "sapling" ],
+    [ "sapling", "snake" ],
     [ "snake" ],
     [ "snake", "snake" ],
     [ "snake", "snake", "snake" ],

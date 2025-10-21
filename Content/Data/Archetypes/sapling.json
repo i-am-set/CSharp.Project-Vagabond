@@ -1,0 +1,28 @@
+{
+  "Id": "sapling",
+  "Name": "Sapling",
+  "Components": [
+    { "Type": "ProjectVagabond.PositionComponent" },
+    { "Type": "ProjectVagabond.RenderableComponent" },
+    {
+      "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
+      "Properties": {
+        "Level": 4,
+        "MinHP": 15,
+        "MaxHP": 20,
+        "MinStrength": 5,
+        "MaxStrength": 7,
+        "MinIntelligence": 8,
+        "MaxIntelligence": 10,
+        "MinTenacity": 8,
+        "MaxTenacity": 10,
+        "MinAgility": 4,
+        "MaxAgility": 6,
+        "DefensiveElementIDs": [ 109 ],
+        "MoveLearnset": [ "BriarLash", "ToxicSting" ],
+        "MinNumberOfMoves": 1,
+        "MaxNumberOfMoves": 2
+      }
+    }
+  ]
+}
