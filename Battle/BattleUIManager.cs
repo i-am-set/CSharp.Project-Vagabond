@@ -62,7 +62,12 @@ namespace ProjectVagabond.Battle.UI
 
         public BattleUIManager()
         {
-            var narratorBounds = new Rectangle(0, 105, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - 105);
+            const int narratorWidth = 314;
+            const int narratorHeight = 50;
+            int narratorX = (Global.VIRTUAL_WIDTH - narratorWidth) / 2;
+            const int narratorY = 123;
+            var narratorBounds = new Rectangle(narratorX, narratorY, narratorWidth, narratorHeight);
+
             _battleNarrator = new BattleNarrator(narratorBounds);
             _actionMenu = new ActionMenu();
             _itemMenu = new ItemMenu();

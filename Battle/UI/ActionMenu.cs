@@ -335,8 +335,19 @@ namespace ProjectVagabond.Battle.UI
                 int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, move);
                 var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, isNewForAnimation, false);
                 _moveButtons.Add(moveButton);
-                _buttonAnimationStates[moveButton] = (ButtonAnimationPhase.Hidden, 0f);
-                _pendingButtonAnimations.Enqueue(moveButton);
+
+                if (isNewForAnimation)
+                {
+                    // If it's new, queue it for the "NEW!" animation sequence.
+                    _buttonAnimationStates[moveButton] = (ButtonAnimationPhase.Hidden, 0f);
+                    _pendingButtonAnimations.Enqueue(moveButton);
+                }
+                else
+                {
+                    // If it's not new, make it appear instantly.
+                    moveButton.ShowInstantly();
+                    _buttonAnimationStates[moveButton] = (ButtonAnimationPhase.Idle, 0f);
+                }
             }
         }
 
@@ -564,11 +575,6 @@ namespace ProjectVagabond.Battle.UI
                     {
                         _buttonAnimationStates[buttonToStart] = (ButtonAnimationPhase.AnimatingNewText, 0f);
                     }
-                    else
-                    {
-                        _buttonAnimationStates[buttonToStart] = (ButtonAnimationPhase.AnimatingButton, 0f);
-                        buttonToStart.TriggerAppearAnimation();
-                    }
                 }
             }
 
@@ -624,18 +630,10 @@ namespace ProjectVagabond.Battle.UI
                                 state.timer += dt;
                                 if (state.timer >= NEW_TEXT_TOTAL_DURATION)
                                 {
-                                    state.phase = ButtonAnimationPhase.AnimatingButton;
-                                    button.TriggerAppearAnimation();
+                                    state.phase = ButtonAnimationPhase.Idle;
+                                    button.ShowInstantly();
                                 }
                                 _buttonAnimationStates[button] = state;
-                            }
-                            else if (state.phase == ButtonAnimationPhase.AnimatingButton)
-                            {
-                                if (!button.IsAnimating)
-                                {
-                                    state.phase = ButtonAnimationPhase.Idle;
-                                    _buttonAnimationStates[button] = state;
-                                }
                             }
                         }
                     }
@@ -901,7 +899,7 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Draw the back button
-            int backButtonY = tooltipBounds.Bottom + 12;
+            int backButtonY = tooltipBounds.Bottom + 7;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
@@ -1039,31 +1037,25 @@ namespace ProjectVagabond.Battle.UI
                     if (state.phase == ButtonAnimationPhase.AnimatingNewText)
                     {
                         float alpha = 0f;
-                        float scaleX = 0f;
-                        float scaleY = 1f;
+                        float scale = 0f;
 
                         if (state.timer < NEW_TEXT_FADE_IN_DURATION)
                         {
                             float fadeInProgress = state.timer / NEW_TEXT_FADE_IN_DURATION;
-                            scaleX = Easing.EaseOutBack(fadeInProgress);
+                            scale = Easing.EaseOutBack(fadeInProgress);
                             alpha = fadeInProgress;
-                            const float popAmount = 0.3f;
-                            float popProgress = (float)Math.Sin(fadeInProgress * Math.PI);
-                            scaleY = 1.0f + popProgress * popAmount;
                         }
                         else if (state.timer < NEW_TEXT_FADE_IN_DURATION + NEW_TEXT_HOLD_DURATION)
                         {
                             alpha = 1f;
-                            scaleX = 1f;
-                            scaleY = 1f;
+                            scale = 1f;
                         }
                         else
                         {
                             float fadeOutProgress = (state.timer - (NEW_TEXT_FADE_IN_DURATION + NEW_TEXT_HOLD_DURATION)) / NEW_TEXT_FADE_OUT_DURATION;
                             float easedProgress = Easing.EaseInQuint(fadeOutProgress);
                             alpha = 1f - easedProgress;
-                            scaleX = 1f - easedProgress;
-                            scaleY = 1f;
+                            scale = 1f - easedProgress;
                         }
 
                         string newText = "NEW!";
@@ -1071,7 +1063,7 @@ namespace ProjectVagabond.Battle.UI
                         var newTextOrigin = new Vector2(newTextSize.Width / 2f, newTextSize.Height / 2f);
                         var newTextPos = button.Bounds.Center.ToVector2();
 
-                        spriteBatch.DrawStringOutlinedSnapped(secondaryFont, newText, newTextPos, _global.Palette_Yellow * alpha, Color.Black * alpha, 0f, newTextOrigin, new Vector2(scaleX, scaleY), SpriteEffects.None, 0f);
+                        spriteBatch.DrawStringOutlinedSnapped(secondaryFont, newText, newTextPos, _global.Palette_Yellow * alpha, Color.Black * alpha, 0f, newTextOrigin, scale, SpriteEffects.None, 0f);
                     }
                     else if (state.phase == ButtonAnimationPhase.AnimatingButton || state.phase == ButtonAnimationPhase.Idle)
                     {

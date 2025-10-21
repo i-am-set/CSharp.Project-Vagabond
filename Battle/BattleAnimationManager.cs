@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Utils;
@@ -96,6 +97,9 @@ namespace ProjectVagabond.Battle.UI
 
         private readonly Random _random = new Random();
         private readonly Global _global;
+
+        // Layout Constants mirrored from BattleRenderer for pixel-perfect alignment
+        private const int DIVIDER_Y = 123;
 
         public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any();
 
@@ -649,7 +653,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     const int barWidth = 60;
                     const int barPaddingX = 10;
-                    const int hpBarY = 105 - 9;
+                    const int hpBarY = DIVIDER_Y - 9;
                     const int manaBarY = hpBarY + 3;
                     float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth;
 
@@ -928,3 +932,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+#nullable restore

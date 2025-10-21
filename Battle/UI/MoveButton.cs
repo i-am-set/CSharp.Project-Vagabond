@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
@@ -69,6 +70,7 @@ namespace ProjectVagabond.Battle.UI
             _isNew = isNew;
             _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
             _overlayFadeTimer = (float)(_random.NextDouble() * Math.PI * 2.0); // Random start phase for desynchronization
+            HasRightClickHint = true;
         }
 
         public void TriggerAppearAnimation()
@@ -78,6 +80,11 @@ namespace ProjectVagabond.Battle.UI
                 _animState = AnimationState.Appearing;
                 _appearTimer = 0f;
             }
+        }
+
+        public void ShowInstantly()
+        {
+            _animState = AnimationState.Idle;
         }
 
         public void TriggerDiscardAnimation()
@@ -342,3 +349,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+#nullable restore
