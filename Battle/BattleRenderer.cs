@@ -39,7 +39,6 @@ namespace ProjectVagabond.Battle.UI
         private Dictionary<string, float[]> _enemyAnimationTimers = new Dictionary<string, float[]>();
         private Dictionary<string, float[]> _enemyAnimationIntervals = new Dictionary<string, float[]>();
         private readonly Random _random = new Random();
-        private const int ENEMY_SPRITE_PART_SIZE = 64;
         private const float ENEMY_ANIM_MIN_INTERVAL = 0.4f;
         private const float ENEMY_ANIM_MAX_INTERVAL = 0.6f;
 
@@ -48,6 +47,7 @@ namespace ProjectVagabond.Battle.UI
         private const int MAX_ENEMIES = 5;
         private const float PLAYER_INDICATOR_BOB_SPEED = 1.5f;
         private const float TITLE_INDICATOR_BOB_SPEED = PLAYER_INDICATOR_BOB_SPEED / 2f;
+        private const int ENEMY_HUD_Y = 100;
 
         public BattleRenderer()
         {
@@ -154,14 +154,13 @@ namespace ProjectVagabond.Battle.UI
             if (!enemies.Any()) return;
 
             const int enemyAreaPadding = 20;
-            const int enemyHudY = 80;
             int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
             int slotWidth = availableWidth / enemies.Count;
 
             for (int i = 0; i < enemies.Count; i++)
             {
                 var enemy = enemies[i];
-                var centerPosition = new Vector2(enemyAreaPadding + (i * slotWidth) + (slotWidth / 2), enemyHudY);
+                var centerPosition = new Vector2(enemyAreaPadding + (i * slotWidth) + (slotWidth / 2), ENEMY_HUD_Y);
                 DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, centerPosition, animationManager, hoverHighlightState);
 
                 if (!enemy.IsDefeated && currentTargetType.HasValue)
@@ -397,13 +396,15 @@ namespace ProjectVagabond.Battle.UI
                 int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
                 if (enemyIndex == -1) return;
 
+                bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
+                int spritePartSize = isMajor ? 96 : 64;
+
                 const int enemyAreaPadding = 20;
-                const int enemyHudY = 80;
                 int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                 int slotWidth = availableWidth / enemies.Count;
-                var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
+                var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), ENEMY_HUD_Y);
 
-                var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
+                var spriteRect = new Rectangle((int)(centerPosition.X - spritePartSize / 2f), (int)(centerPosition.Y - spritePartSize - 10), spritePartSize, spritePartSize);
                 float highestPointY = GetEnemySpriteStaticTopY(combatant, spriteRect.Y);
 
                 arrowPos = new Vector2(spriteRect.Center.X - sourceRect.Width / 2f, highestPointY - sourceRect.Height - 4 + bobOffset);
@@ -441,13 +442,15 @@ namespace ProjectVagabond.Battle.UI
                 int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
                 if (enemyIndex == -1) return;
 
+                bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
+                int spritePartSize = isMajor ? 96 : 64;
+
                 const int enemyAreaPadding = 20;
-                const int enemyHudY = 80;
                 int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                 int slotWidth = availableWidth / enemies.Count;
-                var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
+                var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), ENEMY_HUD_Y);
 
-                var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
+                var spriteRect = new Rectangle((int)(centerPosition.X - spritePartSize / 2f), (int)(centerPosition.Y - spritePartSize - 10), spritePartSize, spritePartSize);
                 float highestPointY = GetEnemySpriteStaticTopY(combatant, spriteRect.Y);
 
                 groupCenterPos = new Vector2(spriteRect.Center.X, highestPointY - sourceRect.Height - 4);
@@ -501,13 +504,15 @@ namespace ProjectVagabond.Battle.UI
                 int enemyIndex = enemies.FindIndex(e => e.CombatantID == currentActor.CombatantID);
                 if (enemyIndex == -1) return;
 
+                bool isMajor = _spriteManager.IsMajorEnemySprite(currentActor.ArchetypeId);
+                int spritePartSize = isMajor ? 96 : 64;
+
                 const int enemyAreaPadding = 20;
-                const int enemyHudY = 80;
                 int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                 int slotWidth = availableWidth / enemies.Count;
-                var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
+                var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), ENEMY_HUD_Y);
 
-                var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
+                var spriteRect = new Rectangle((int)(centerPosition.X - spritePartSize / 2f), (int)(centerPosition.Y - spritePartSize - 10), spritePartSize, spritePartSize);
 
                 // Calculate the highest point of the sprite for this frame
                 float highestPointY = GetEnemySpriteStaticTopY(currentActor, spriteRect.Y);
@@ -520,7 +525,10 @@ namespace ProjectVagabond.Battle.UI
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 centerPosition, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
-            var spriteRect = new Rectangle((int)(centerPosition.X - ENEMY_SPRITE_PART_SIZE / 2), (int)(centerPosition.Y - ENEMY_SPRITE_PART_SIZE - 10), ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
+            bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
+            int spritePartSize = isMajor ? 96 : 64;
+
+            var spriteRect = new Rectangle((int)(centerPosition.X - spritePartSize / 2f), (int)(centerPosition.Y - spritePartSize - 10), spritePartSize, spritePartSize);
             Color tintColor = Color.White * combatant.VisualAlpha;
 
             Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
@@ -528,7 +536,7 @@ namespace ProjectVagabond.Battle.UI
 
             if (enemySprite != null)
             {
-                int numParts = enemySprite.Width / ENEMY_SPRITE_PART_SIZE;
+                int numParts = enemySprite.Width / spritePartSize;
                 if (!_enemySpritePartOffsets.ContainsKey(combatant.CombatantID) || _enemySpritePartOffsets[combatant.CombatantID].Length != numParts)
                 {
                     _enemySpritePartOffsets[combatant.CombatantID] = new Vector2[numParts];
@@ -546,7 +554,7 @@ namespace ProjectVagabond.Battle.UI
                     {
                         for (int i = 0; i < numParts; i++)
                         {
-                            var sourceRect = new Rectangle(i * ENEMY_SPRITE_PART_SIZE, 0, ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
+                            var sourceRect = new Rectangle(i * spritePartSize, 0, spritePartSize, spritePartSize);
                             var partOffset = offsets[i];
                             var baseDrawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y);
 
@@ -560,7 +568,7 @@ namespace ProjectVagabond.Battle.UI
                     // --- Fill Pass ---
                     for (int i = 0; i < numParts; i++)
                     {
-                        var sourceRect = new Rectangle(i * ENEMY_SPRITE_PART_SIZE, 0, ENEMY_SPRITE_PART_SIZE, ENEMY_SPRITE_PART_SIZE);
+                        var sourceRect = new Rectangle(i * spritePartSize, 0, spritePartSize, spritePartSize);
                         var partOffset = offsets[i];
                         var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y);
                         var drawRect = new Rectangle((int)drawPosition.X, (int)drawPosition.Y, spriteRect.Width, spriteRect.Height);
@@ -709,7 +717,9 @@ namespace ProjectVagabond.Battle.UI
 
         private Rectangle GetCombatantInteractionBounds(BattleCombatant combatant, Vector2 centerPosition, BitmapFont nameFont, BitmapFont statsFont)
         {
-            const int spriteSize = 64;
+            bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
+            int spriteSize = isMajor ? 96 : 64;
+
             float spriteTop = centerPosition.Y - spriteSize - 10;
             Vector2 nameSize = nameFont.MeasureString(combatant.Name);
             float nameY = centerPosition.Y - 8;
@@ -767,10 +777,9 @@ namespace ProjectVagabond.Battle.UI
                 if (enemyIndex == -1) return Vector2.Zero;
 
                 const int enemyAreaPadding = 20;
-                const int enemyHudY = 80;
                 int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                 int slotWidth = availableWidth / enemies.Count;
-                return new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
+                return new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), ENEMY_HUD_Y);
             }
         }
 

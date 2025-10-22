@@ -37,7 +37,7 @@ namespace ProjectVagabond
 
 
         // Enemy Sprite Cache
-        private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _enemySprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette, bool IsMajor)> _enemySprites = new Dictionary<string, (Texture2D, Texture2D, bool IsMajor)>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteTopPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _relicSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
@@ -343,19 +343,36 @@ namespace ProjectVagabond
                 return cachedSprite.Original;
             }
 
+            Texture2D sprite = null;
+            bool isMajor = false;
+
+            // Try loading major sprite first
             try
             {
-                var sprite = _core.Content.Load<Texture2D>($"Sprites/Enemies/{archetypeId.ToLower()}");
-                var silhouette = CreateSilhouette(sprite);
-                _enemySprites[archetypeId] = (sprite, silhouette);
-                PreCalculateTopPixelOffsets(sprite, archetypeId);
-                return sprite;
+                sprite = _core.Content.Load<Texture2D>($"Sprites/Enemies/Major/{archetypeId.ToLower()}");
+                isMajor = true;
             }
             catch
             {
-                _enemySprites[archetypeId] = (null, null);
-                return null;
+                // Major sprite not found, fall back to normal
+                try
+                {
+                    sprite = _core.Content.Load<Texture2D>($"Sprites/Enemies/{archetypeId.ToLower()}");
+                    isMajor = false;
+                }
+                catch
+                {
+                    // Neither found, cache null
+                    _enemySprites[archetypeId] = (null, null, false);
+                    return null;
+                }
             }
+
+            // If a sprite was loaded (either major or normal)
+            var silhouette = CreateSilhouette(sprite);
+            _enemySprites[archetypeId] = (sprite, silhouette, isMajor);
+            PreCalculateTopPixelOffsets(sprite, archetypeId);
+            return sprite;
         }
 
         public Texture2D GetEnemySpriteSilhouette(string archetypeId)
@@ -367,6 +384,7 @@ namespace ProjectVagabond
                 return cachedSprite.Silhouette;
             }
 
+            // This will load and cache both original and silhouette
             GetEnemySprite(archetypeId);
 
             if (_enemySprites.TryGetValue(archetypeId, out var newlyCachedSprite))
@@ -375,6 +393,18 @@ namespace ProjectVagabond
             }
 
             return null;
+        }
+
+        public bool IsMajorEnemySprite(string archetypeId)
+        {
+            if (string.IsNullOrEmpty(archetypeId)) return false;
+            // Ensure it's loaded if not already
+            GetEnemySprite(archetypeId);
+            if (_enemySprites.TryGetValue(archetypeId, out var cachedSprite))
+            {
+                return cachedSprite.IsMajor;
+            }
+            return false;
         }
 
         private Texture2D CreateSilhouette(Texture2D source)
@@ -493,7 +523,9 @@ namespace ProjectVagabond
 
         private void PreCalculateTopPixelOffsets(Texture2D sprite, string archetypeId)
         {
-            const int partSize = 64;
+            bool isMajor = _enemySprites[archetypeId].IsMajor;
+            int partSize = isMajor ? 96 : 64;
+
             int numParts = sprite.Width / partSize;
             var offsets = new int[numParts];
             var pixelData = new Color[sprite.Width * sprite.Height];

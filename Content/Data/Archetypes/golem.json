@@ -7,23 +7,21 @@
     {
       "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
       "Properties": {
-        "IsMajorEnemy": true,
-        "SpritePartSize": 128,
         "Level": 10,
-        "MinHP": 200,
-        "MaxHP": 220,
+        "MinHP": 100,
+        "MaxHP": 120,
         "MinStrength": 25,
         "MaxStrength": 30,
-        "MinIntelligence": 5,
-        "MaxIntelligence": 8,
-        "MinTenacity": 28,
-        "MaxTenacity": 32,
-        "MinAgility": 3,
-        "MaxAgility": 5,
+        "MinIntelligence": 1,
+        "MaxIntelligence": 3,
+        "MinTenacity": 30,
+        "MaxTenacity": 35,
+        "MinAgility": 1,
+        "MaxAgility": 2,
         "DefensiveElementIDs": [ 102 ],
-        "MoveLearnset": [ "TitanSlam", "Faultbreak", "StoneHurl" ],
+        "MoveLearnset": [ "TitanSlam", "Faultbreak" ],
         "MinNumberOfMoves": 2,
-        "MaxNumberOfMoves": 3
+        "MaxNumberOfMoves": 2
       }
     }
   ]

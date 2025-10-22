@@ -96,8 +96,6 @@
     "rope_pit"
   ],
   "PossibleMajorBattles": [
-    [ "boar" ],
-    [ "wolf", "spider", "wolf" ],
-    [ "boar", "snake", "snake" ]
+    [ "golem" ]
   ]
 }

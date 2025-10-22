@@ -174,7 +174,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Enemies/boar.png;Sprites/Enemies/boar
 
-#begin Sprites/Enemies/golem.png
+#begin Sprites/Enemies/Major/golem.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -184,7 +184,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/Enemies/golem.png;Sprites/Enemies/golem
+/build:Sprites/Enemies/Major/golem.png;Sprites/Enemies/Major/golem
 
 #begin Sprites/Enemies/sapling.png
 /importer:TextureImporter

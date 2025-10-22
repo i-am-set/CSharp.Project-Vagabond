@@ -677,7 +677,7 @@ namespace ProjectVagabond.Battle.UI
                     if (enemyIndex == -1) continue;
 
                     const int enemyAreaPadding = 20;
-                    const int enemyHudY = 80;
+                    const int enemyHudY = 100;
                     int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                     int slotWidth = availableWidth / enemies.Count;
                     var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
