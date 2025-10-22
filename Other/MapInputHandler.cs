@@ -126,7 +126,7 @@ namespace ProjectVagabond
             if (hoveredGridPos.HasValue)
             {
                 var targetPos = hoveredGridPos.Value;
-                if (leftClickPressed)
+                if (leftClickPressed && UIInputManager.CanProcessMouseClick())
                 {
                     if (_mapRenderer.IsCameraDetached || _mapRenderer.IsZoomedOut)
                     {
@@ -144,6 +144,7 @@ namespace ProjectVagabond
                     HandlePathUpdate(targetPos, keyboardState);
                     _pathUpdateTimer = 0f;
                     _lastPathTargetPosition = targetPos;
+                    UIInputManager.ConsumeMouseClick();
                 }
                 else if (leftClickHeld && _isDraggingPath)
                 {

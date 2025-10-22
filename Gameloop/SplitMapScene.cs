@@ -383,7 +383,6 @@ namespace ProjectVagabond.Scenes
             var mouseInMapSpace = Vector2.Transform(virtualMousePos, inverseCameraTransform);
 
             bool leftClickPressed = mouseState.LeftButton == ButtonState.Pressed && base.previousMouseState.LeftButton == ButtonState.Released;
-            bool leftClickReleased = mouseState.LeftButton == ButtonState.Released && base.previousMouseState.LeftButton == ButtonState.Pressed;
 
             _hoveredNodeId = -1;
             if (_currentMap != null)
@@ -398,19 +397,10 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (leftClickPressed && _hoveredNodeId != -1)
+            if (leftClickPressed && _hoveredNodeId != -1 && UIInputManager.CanProcessMouseClick())
             {
-                _pressedNodeId = _hoveredNodeId;
-            }
-
-            if (leftClickReleased)
-            {
-                if (_pressedNodeId != -1 && _pressedNodeId == _hoveredNodeId && UIInputManager.CanProcessMouseClick())
-                {
-                    StartPlayerMove(_pressedNodeId);
-                    UIInputManager.ConsumeMouseClick();
-                }
-                _pressedNodeId = -1;
+                StartPlayerMove(_hoveredNodeId);
+                UIInputManager.ConsumeMouseClick();
             }
         }
 
@@ -639,76 +629,28 @@ namespace ProjectVagabond.Scenes
         private void TriggerReward()
         {
             var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-            if (choiceMenu == null)
-            {
-                FinalizeVictory();
-                return;
-            }
+            if (choiceMenu == null) return;
 
-            // Generate choices
+            // Generate choices - Reward nodes now only give relics (abilities).
             var choices = new List<object>();
-            var usedSpellIds = new HashSet<string>();
-            var usedAbilityIds = new HashSet<string>();
             const int numberOfChoices = 3;
             int gameStage = 1; // TODO: Use actual game stage from ProgressionManager
 
-            for (int i = 0; i < numberOfChoices; i++)
-            {
-                bool isSpell = _random.NextDouble() < 0.5;
-
-                if (isSpell)
-                {
-                    var spellChoices = _choiceGenerator.GenerateSpellChoices(gameStage, 1, usedSpellIds);
-                    if (spellChoices.Any())
-                    {
-                        var spell = spellChoices.First();
-                        choices.Add(spell);
-                        usedSpellIds.Add(spell.MoveID);
-                    }
-                    else
-                    {
-                        // Fallback: if we can't get a unique spell, try for an ability.
-                        var abilityChoices = _choiceGenerator.GenerateAbilityChoices(gameStage, 1, usedAbilityIds);
-                        if (abilityChoices.Any())
-                        {
-                            var ability = abilityChoices.First();
-                            choices.Add(ability);
-                            usedAbilityIds.Add(ability.AbilityID);
-                        }
-                    }
-                }
-                else // Is Ability
-                {
-                    var abilityChoices = _choiceGenerator.GenerateAbilityChoices(gameStage, 1, usedAbilityIds);
-                    if (abilityChoices.Any())
-                    {
-                        var ability = abilityChoices.First();
-                        choices.Add(ability);
-                        usedAbilityIds.Add(ability.AbilityID);
-                    }
-                    else
-                    {
-                        // Fallback: if we can't get a unique ability, try for a spell.
-                        var spellChoices = _choiceGenerator.GenerateSpellChoices(gameStage, 1, usedSpellIds);
-                        if (spellChoices.Any())
-                        {
-                            var spell = spellChoices.First();
-                            choices.Add(spell);
-                            usedSpellIds.Add(spell.MoveID);
-                        }
-                    }
-                }
-            }
-
+            var playerAbilities = _componentStore.GetComponent<PassiveAbilitiesComponent>(_gameState.PlayerEntityId)?.AbilityIDs;
+            var excludeIds = playerAbilities != null ? new HashSet<string>(playerAbilities) : null;
+            choices.AddRange(_choiceGenerator.GenerateAbilityChoices(gameStage, numberOfChoices, excludeIds));
 
             if (!choices.Any())
             {
-                FinalizeVictory();
+                // If no choices could be generated, do nothing.
                 return;
             }
 
-            choiceMenu.Show(choices, FinalizeVictory);
-            _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
+            // The action to take after a choice is made is simply to hide the modal.
+            Action onChoiceMade = () => _sceneManager.HideModal();
+
+            choiceMenu.Show(choices, onChoiceMade);
+            _wasModalActiveLastFrame = true;
         }
 
         private void FinalizeVictory()

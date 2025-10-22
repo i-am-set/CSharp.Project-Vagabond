@@ -91,6 +91,11 @@ namespace ProjectVagabond.Battle
         public Dictionary<string, string> Effects { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
+        /// A list of tags for categorizing the move for reward generation and other systems.
+        /// </summary>
+        public List<string> Tags { get; set; } = new List<string>();
+
+        /// <summary>
         /// Creates a shallow copy of the MoveData object.
         /// </summary>
         public MoveData Clone()

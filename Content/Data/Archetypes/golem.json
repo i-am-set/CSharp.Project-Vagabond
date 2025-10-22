@@ -1,0 +1,30 @@
+{
+  "Id": "golem",
+  "Name": "Golem",
+  "Components": [
+    { "Type": "ProjectVagabond.PositionComponent" },
+    { "Type": "ProjectVagabond.RenderableComponent" },
+    {
+      "Type": "ProjectVagabond.Battle.EnemyStatProfileComponent",
+      "Properties": {
+        "IsMajorEnemy": true,
+        "SpritePartSize": 128,
+        "Level": 10,
+        "MinHP": 200,
+        "MaxHP": 220,
+        "MinStrength": 25,
+        "MaxStrength": 30,
+        "MinIntelligence": 5,
+        "MaxIntelligence": 8,
+        "MinTenacity": 28,
+        "MaxTenacity": 32,
+        "MinAgility": 3,
+        "MaxAgility": 5,
+        "DefensiveElementIDs": [ 102 ],
+        "MoveLearnset": [ "TitanSlam", "Faultbreak", "StoneHurl" ],
+        "MinNumberOfMoves": 2,
+        "MaxNumberOfMoves": 3
+      }
+    }
+  ]
+}

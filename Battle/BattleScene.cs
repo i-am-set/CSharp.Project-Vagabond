@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -42,6 +43,7 @@ namespace ProjectVagabond.Scenes
         private SpriteManager _spriteManager;
         private HapticsManager _hapticsManager;
         private TooltipManager _tooltipManager;
+        private GameState _gameState;
 
         // State Tracking
         private List<int> _enemyEntityIds = new List<int>();
@@ -67,6 +69,7 @@ namespace ProjectVagabond.Scenes
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
             _choiceGenerator = new ChoiceGenerator();
+            _gameState = ServiceLocator.Get<GameState>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -177,7 +180,7 @@ namespace ProjectVagabond.Scenes
                 var settingsIcon = _spriteManager.SettingsIconSprite;
                 var buttonSize = 16;
                 if (settingsIcon != null) buttonSize = Math.Max(settingsIcon.Width, settingsIcon.Height);
-                _settingsButton = new ImageButton(new Rectangle(0, 0, buttonSize, buttonSize), settingsIcon)
+                _settingsButton = new ImageButton(new Rectangle(0, 0, buttonSize, buttonSize), settingsIcon, enableHoverSway: true)
                 {
                     UseScreenCoordinates = true
                 };
@@ -366,59 +369,23 @@ namespace ProjectVagabond.Scenes
             }
 
             var choices = new List<object>();
-            var usedSpellIds = new HashSet<string>();
-            var usedAbilityIds = new HashSet<string>();
             const int numberOfChoices = 3;
             int gameStage = 1; // TODO: Use actual game stage from ProgressionManager
 
-            for (int i = 0; i < numberOfChoices; i++)
+            if (SplitMapScene.WasMajorBattle)
             {
-                bool isSpell = _random.NextDouble() < 0.5;
-
-                if (isSpell)
-                {
-                    var spellChoices = _choiceGenerator.GenerateSpellChoices(gameStage, 1, usedSpellIds);
-                    if (spellChoices.Any())
-                    {
-                        var spell = spellChoices.First();
-                        choices.Add(spell);
-                        usedSpellIds.Add(spell.MoveID);
-                    }
-                    else
-                    {
-                        // Fallback: if we can't get a unique spell, try for an ability.
-                        var abilityChoices = _choiceGenerator.GenerateAbilityChoices(gameStage, 1, usedAbilityIds);
-                        if (abilityChoices.Any())
-                        {
-                            var ability = abilityChoices.First();
-                            choices.Add(ability);
-                            usedAbilityIds.Add(ability.AbilityID);
-                        }
-                    }
-                }
-                else // Is Ability
-                {
-                    var abilityChoices = _choiceGenerator.GenerateAbilityChoices(gameStage, 1, usedAbilityIds);
-                    if (abilityChoices.Any())
-                    {
-                        var ability = abilityChoices.First();
-                        choices.Add(ability);
-                        usedAbilityIds.Add(ability.AbilityID);
-                    }
-                    else
-                    {
-                        // Fallback: if we can't get a unique ability, try for a spell.
-                        var spellChoices = _choiceGenerator.GenerateSpellChoices(gameStage, 1, usedSpellIds);
-                        if (spellChoices.Any())
-                        {
-                            var spell = spellChoices.First();
-                            choices.Add(spell);
-                            usedSpellIds.Add(spell.MoveID);
-                        }
-                    }
-                }
+                // Boss battle rewards relics (abilities)
+                var playerAbilities = _componentStore.GetComponent<PassiveAbilitiesComponent>(_gameState.PlayerEntityId)?.AbilityIDs;
+                var excludeIds = playerAbilities != null ? new HashSet<string>(playerAbilities) : null;
+                choices.AddRange(_choiceGenerator.GenerateAbilityChoices(gameStage, numberOfChoices, excludeIds));
             }
-
+            else
+            {
+                // Normal battle rewards spells
+                var playerSpells = _gameState.PlayerState?.SpellbookPages.Where(p => p != null).Select(p => p.MoveID);
+                var excludeIds = playerSpells != null ? new HashSet<string>(playerSpells) : null;
+                choices.AddRange(_choiceGenerator.GenerateSpellChoices(gameStage, numberOfChoices, excludeIds));
+            }
 
             if (!choices.Any())
             {

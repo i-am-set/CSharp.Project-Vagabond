@@ -15,7 +15,8 @@
     "Priority": 0,
     "Rarity": -1,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 1 ]
+    "OffensiveElementIDs": [ 1 ],
+    "Tags": []
   },
   {
     "MoveID": "ClawRake",
@@ -32,7 +33,8 @@
     "Priority": 0,
     "Rarity": -1,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 1 ]
+    "OffensiveElementIDs": [ 1 ],
+    "Tags": []
   },
   {
     "MoveID": "Bonecrusher",
@@ -49,7 +51,8 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 1 ]
+    "OffensiveElementIDs": [ 1 ],
+    "Tags": []
   },
   {
     "MoveID": "SwiftStrike",
@@ -66,7 +69,8 @@
     "Priority": 1,
     "Rarity": 1,
     "LevelRequirement": 1,
-    "OffensiveElementIDs": [ 1 ]
+    "OffensiveElementIDs": [ 1 ],
+    "Tags": [ "Priority" ]
   },
   // --- Fire ---
   {
@@ -84,7 +88,8 @@
     "Priority": 0,
     "Rarity": 0,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 2 ]
+    "OffensiveElementIDs": [ 2 ],
+    "Tags": [ "Fire" ]
   },
   {
     "MoveID": "Pyrosphere",
@@ -101,7 +106,8 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 2 ]
+    "OffensiveElementIDs": [ 2 ],
+    "Tags": [ "Fire" ]
   },
   {
     "MoveID": "InfernoSurge",
@@ -118,7 +124,8 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 4,
-    "OffensiveElementIDs": [ 2 ]
+    "OffensiveElementIDs": [ 2 ],
+    "Tags": [ "Fire" ]
   },
   {
     "MoveID": "Scorchbrand",
@@ -135,7 +142,8 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 2 ]
+    "OffensiveElementIDs": [ 2 ],
+    "Tags": [ "Fire" ]
   },
   // --- Water ---
   {
@@ -153,7 +161,8 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 3 ]
+    "OffensiveElementIDs": [ 3 ],
+    "Tags": [ "Water" ]
   },
   {
     "MoveID": "TorrentDash",
@@ -170,7 +179,8 @@
     "Priority": 1,
     "Rarity": 1,
     "LevelRequirement": 1,
-    "OffensiveElementIDs": [ 3 ]
+    "OffensiveElementIDs": [ 3 ],
+    "Tags": [ "Water", "Priority" ]
   },
   {
     "MoveID": "Maelstrom",
@@ -187,7 +197,8 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 3 ]
+    "OffensiveElementIDs": [ 3 ],
+    "Tags": [ "Water" ]
   },
   // --- Arcane ---
   {
@@ -205,7 +216,8 @@
     "Priority": 0,
     "Rarity": 0,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 4 ]
+    "OffensiveElementIDs": [ 4 ],
+    "Tags": [ "Arcane" ]
   },
   {
     "MoveID": "Riftburst",
@@ -222,7 +234,8 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 4 ]
+    "OffensiveElementIDs": [ 4 ],
+    "Tags": [ "Arcane" ]
   },
   {
     "MoveID": "Nullwave",
@@ -239,7 +252,8 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 1,
-    "OffensiveElementIDs": [ 4 ]
+    "OffensiveElementIDs": [ 4 ],
+    "Tags": [ "Arcane" ]
   },
   // --- Earth ---
   {
@@ -257,7 +271,8 @@
     "Priority": 0,
     "Rarity": 0,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 5 ]
+    "OffensiveElementIDs": [ 5 ],
+    "Tags": [ "Earth" ]
   },
   {
     "MoveID": "Faultbreak",
@@ -274,7 +289,8 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 4,
-    "OffensiveElementIDs": [ 5 ]
+    "OffensiveElementIDs": [ 5 ],
+    "Tags": [ "Earth" ]
   },
   {
     "MoveID": "MireSplash",
@@ -291,7 +307,8 @@
     "Priority": 0,
     "Rarity": 0,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 5 ]
+    "OffensiveElementIDs": [ 5 ],
+    "Tags": [ "Earth" ]
   },
   // --- Metal ---
   {
@@ -309,7 +326,8 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 6 ]
+    "OffensiveElementIDs": [ 6 ],
+    "Tags": [ "Metal" ]
   },
   {
     "MoveID": "TitanSlam",
@@ -326,7 +344,8 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 4,
-    "OffensiveElementIDs": [ 6 ]
+    "OffensiveElementIDs": [ 6 ],
+    "Tags": [ "Metal" ]
   },
   {
     "MoveID": "MoonforgedEdge",
@@ -343,7 +362,8 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 6 ]
+    "OffensiveElementIDs": [ 6 ],
+    "Tags": [ "Metal" ]
   },
   // --- Toxic ---
   {
@@ -361,7 +381,8 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 1,
-    "OffensiveElementIDs": [ 7 ]
+    "OffensiveElementIDs": [ 7 ],
+    "Tags": [ "Toxic" ]
   },
   {
     "MoveID": "CorrosiveSpittle",
@@ -378,7 +399,8 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 1,
-    "OffensiveElementIDs": [ 7 ]
+    "OffensiveElementIDs": [ 7 ],
+    "Tags": [ "Toxic" ]
   },
   // --- Wind ---
   {
@@ -396,7 +418,8 @@
     "Priority": 0,
     "Rarity": 0,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 8 ]
+    "OffensiveElementIDs": [ 8 ],
+    "Tags": [ "Wind" ]
   },
   {
     "MoveID": "CycloneSpiral",
@@ -413,7 +436,8 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 8 ]
+    "OffensiveElementIDs": [ 8 ],
+    "Tags": [ "Wind" ]
   },
   // --- Decay ---
   {
@@ -431,7 +455,8 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 9 ]
+    "OffensiveElementIDs": [ 9 ],
+    "Tags": [ "Void", "Lifesteal" ]
   },
   {
     "MoveID": "SoulRot",
@@ -448,7 +473,8 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 3,
-    "OffensiveElementIDs": [ 9 ]
+    "OffensiveElementIDs": [ 9 ],
+    "Tags": [ "Void" ]
   },
   // --- Light ---
   {
@@ -466,7 +492,8 @@
     "Priority": 0,
     "Rarity": 2,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 10 ]
+    "OffensiveElementIDs": [ 10 ],
+    "Tags": [ "Light" ]
   },
   {
     "MoveID": "LuminousSpark",
@@ -483,7 +510,8 @@
     "Priority": 0,
     "Rarity": 0,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 10 ]
+    "OffensiveElementIDs": [ 10 ],
+    "Tags": [ "Light" ]
   },
   // --- Electric ---
   {
@@ -501,7 +529,8 @@
     "Priority": 0,
     "Rarity": 0,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 11 ]
+    "OffensiveElementIDs": [ 11 ],
+    "Tags": [ "Electric" ]
   },
   {
     "MoveID": "VoltLash",
@@ -518,7 +547,8 @@
     "Priority": 0,
     "Rarity": 0,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 11 ]
+    "OffensiveElementIDs": [ 11 ],
+    "Tags": [ "Electric" ]
   },
   {
     "MoveID": "Stormspear",
@@ -535,7 +565,8 @@
     "Priority": 0,
     "Rarity": 3,
     "LevelRequirement": 5,
-    "OffensiveElementIDs": [ 11 ]
+    "OffensiveElementIDs": [ 11 ],
+    "Tags": [ "Electric" ]
   },
   // --- Ice ---
   {
@@ -553,7 +584,8 @@
     "Priority": 1,
     "Rarity": 1,
     "LevelRequirement": 1,
-    "OffensiveElementIDs": [ 12 ]
+    "OffensiveElementIDs": [ 12 ],
+    "Tags": [ "Ice", "Priority" ]
   },
   {
     "MoveID": "WintersGrasp",
@@ -570,7 +602,8 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
-    "OffensiveElementIDs": [ 12 ]
+    "OffensiveElementIDs": [ 12 ],
+    "Tags": [ "Ice" ]
   },
   {
     "MoveID": "WhiteoutTempest",
@@ -587,7 +620,8 @@
     "Priority": 0,
     "Rarity": 3,
     "LevelRequirement": 5,
-    "OffensiveElementIDs": [ 12 ]
+    "OffensiveElementIDs": [ 12 ],
+    "Tags": [ "Ice" ]
   },
   // --- Nature ---
   {
@@ -605,7 +639,8 @@
     "Priority": 0,
     "Rarity": 0,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 13 ]
+    "OffensiveElementIDs": [ 13 ],
+    "Tags": [ "Nature" ]
   },
   {
     "MoveID": "Needlestorm",
@@ -622,7 +657,8 @@
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 1,
-    "OffensiveElementIDs": [ 13 ]
+    "OffensiveElementIDs": [ 13 ],
+    "Tags": [ "Nature" ]
   },
   {
     "MoveID": "Sunlance",
@@ -639,7 +675,8 @@
     "Priority": 0,
     "Rarity": 3,
     "LevelRequirement": 5,
-    "OffensiveElementIDs": [ 13 ]
+    "OffensiveElementIDs": [ 13 ],
+    "Tags": [ "Nature", "Light" ]
   },
   // --- Special ---
   {
@@ -657,7 +694,8 @@
     "Priority": 0,
     "Rarity": -1,
     "LevelRequirement": 0,
-    "OffensiveElementIDs": [ 1 ]
+    "OffensiveElementIDs": [ 1 ],
+    "Tags": []
   },
   {
     "MoveID": "Dodge",
@@ -677,7 +715,8 @@
     "OffensiveElementIDs": [],
     "Effects": {
       "ApplyStatus": "Dodging,100,1"
-    }
+    },
+    "Tags": [ "Defense" ]
   },
   {
     "MoveID": "Attune",
@@ -697,7 +736,8 @@
     "OffensiveElementIDs": [],
     "Effects": {
       "RestoreMana": "100"
-    }
+    },
+    "Tags": []
   },
   // --- NEW SPECIAL EFFECT MOVES ---
   {
@@ -716,7 +756,8 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 1 ],
-    "Effects": { "MultiHit": "2,5" }
+    "Effects": { "MultiHit": "2,5" },
+    "Tags": [ "MultiHit" ]
   },
   {
     "MoveID": "VampiricBite",
@@ -734,7 +775,8 @@
     "Rarity": 2,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 9 ],
-    "Effects": { "Lifesteal": "50" }
+    "Effects": { "Lifesteal": "50" },
+    "Tags": [ "Void", "Lifesteal" ]
   },
   {
     "MoveID": "FinishingBlow",
@@ -752,7 +794,8 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 6 ],
-    "Effects": { "Execute": "25,3.0" }
+    "Effects": { "Execute": "25,3.0" },
+    "Tags": [ "Metal" ]
   },
   {
     "MoveID": "SonicBoom",
@@ -770,7 +813,8 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 8 ],
-    "Effects": { "FixedDamage": "40" }
+    "Effects": { "FixedDamage": "40" },
+    "Tags": [ "Wind" ]
   },
   {
     "MoveID": "FocusEnergy",
@@ -788,7 +832,8 @@
     "Rarity": 3,
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 4 ],
-    "Effects": { "RampUp": "30,120" }
+    "Effects": { "RampUp": "30,120" },
+    "Tags": [ "Arcane" ]
   },
   {
     "MoveID": "DrillPeck",
@@ -806,7 +851,8 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 1 ],
-    "Effects": { "ArmorPierce": "50" }
+    "Effects": { "ArmorPierce": "50" },
+    "Tags": []
   },
   {
     "MoveID": "ToxicSting",
@@ -824,7 +870,8 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 7 ],
-    "Effects": { "ApplyStatus": "Poison,100,3" }
+    "Effects": { "ApplyStatus": "Poison,100,3" },
+    "Tags": [ "Toxic", "StatusEffect" ]
   },
   {
     "MoveID": "SearingCoals",
@@ -844,7 +891,8 @@
     "OffensiveElementIDs": [ 2 ],
     "Effects": {
       "ApplyStatus": "Burn,100,3"
-    }
+    },
+    "Tags": [ "Fire", "StatusEffect" ]
   },
   {
     "MoveID": "Immolate",
@@ -862,7 +910,8 @@
     "Rarity": 3,
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 2 ],
-    "Effects": { "DetonateStatus": "Burn,3" }
+    "Effects": { "DetonateStatus": "Burn,3" },
+    "Tags": [ "Fire", "StatusEffect" ]
   },
   {
     "MoveID": "PurifyingLight",
@@ -880,7 +929,8 @@
     "Rarity": 2,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 10 ],
-    "Effects": { "Cleanse": "Self,All" }
+    "Effects": { "Cleanse": "Self,All" },
+    "Tags": [ "Light", "Healing" ]
   },
   {
     "MoveID": "SiphonPower",
@@ -898,7 +948,8 @@
     "Rarity": 3,
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 4 ],
-    "Effects": { "StealBuff": "75" }
+    "Effects": { "StealBuff": "75" },
+    "Tags": [ "Arcane", "Buff" ]
   },
   {
     "MoveID": "SolarBeam",
@@ -916,7 +967,8 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 10, 13 ],
-    "Effects": { "Charge": "1" }
+    "Effects": { "Charge": "1" },
+    "Tags": [ "Light", "Nature", "Charge" ]
   },
   {
     "MoveID": "TimeBomb",
@@ -934,7 +986,8 @@
     "Rarity": 3,
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 2 ],
-    "Effects": { "DelayedAttack": "2" }
+    "Effects": { "DelayedAttack": "2" },
+    "Tags": [ "Fire" ]
   },
   {
     "MoveID": "Rampage",
@@ -952,7 +1005,8 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 1 ],
-    "Effects": { "ExecuteOnKill": "ApplyStatus(StrengthUp,100,3)" }
+    "Effects": { "ExecuteOnKill": "ApplyStatus(StrengthUp,100,3)" },
+    "Tags": [ "Buff" ]
   },
   {
     "MoveID": "WildCharge",
@@ -970,7 +1024,8 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 11 ],
-    "Effects": { "Recoil": "25" }
+    "Effects": { "Recoil": "25" },
+    "Tags": [ "Electric" ]
   },
   {
     "MoveID": "BloodMagic",
@@ -988,7 +1043,8 @@
     "Rarity": 3,
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 9 ],
-    "Effects": { "HPCost": "20" }
+    "Effects": { "HPCost": "20" },
+    "Tags": [ "Void", "HPCost" ]
   },
   {
     "MoveID": "Overload",
@@ -1006,7 +1062,8 @@
     "Rarity": 4,
     "LevelRequirement": 6,
     "OffensiveElementIDs": [ 11 ],
-    "Effects": { "SelfDebuff": "Stun,100,1" }
+    "Effects": { "SelfDebuff": "Stun,100,1" },
+    "Tags": [ "Electric" ]
   },
   {
     "MoveID": "Misfire",
@@ -1024,6 +1081,7 @@
     "Rarity": 4,
     "LevelRequirement": 6,
     "OffensiveElementIDs": [ 4 ],
-    "Effects": { "Gamble": "50,SelfDamage(50)" }
+    "Effects": { "Gamble": "50,SelfDamage(50)" },
+    "Tags": [ "Arcane" ]
   }
 ]
