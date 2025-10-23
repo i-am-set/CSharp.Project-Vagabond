@@ -57,6 +57,7 @@ namespace ProjectVagabond.Scenes
         private readonly Queue<Action> _pendingAnimations = new Queue<Action>();
         private bool _rewardScreenShown = false;
         private readonly Random _random = new Random();
+        private bool _actionJustDeclared = false;
 
 
         public BattleAnimationManager AnimationManager => _animationManager;
@@ -106,6 +107,7 @@ namespace ProjectVagabond.Scenes
             _multiHitDelayTimer = 0f;
             _pendingAnimations.Clear();
             _rewardScreenShown = false;
+            _actionJustDeclared = false;
 
             // Subscribe to events
             SubscribeToEvents();
@@ -182,10 +184,13 @@ namespace ProjectVagabond.Scenes
                 if (settingsIcon != null) buttonSize = Math.Max(settingsIcon.Width, settingsIcon.Height);
                 _settingsButton = new ImageButton(new Rectangle(0, 0, buttonSize, buttonSize), settingsIcon, enableHoverSway: true)
                 {
-                    UseScreenCoordinates = true
+                    UseScreenCoordinates = true // This button operates in screen space, not virtual space.
                 };
             }
+            // The event is unsubscribed in Exit(), so it must be re-subscribed every time the scene is entered.
             _settingsButton.OnClick += OpenSettings;
+
+            // Reset animation states
             _settingsButton.ResetAnimationState();
         }
 
@@ -338,6 +343,12 @@ namespace ProjectVagabond.Scenes
 
             _battleManager.CanAdvance = canAdvance;
             _battleManager.Update();
+
+            if (_actionJustDeclared)
+            {
+                _actionJustDeclared = false;
+                _battleManager.ExecuteDeclaredAction();
+            }
 
             // Handle Phase Changes
             var currentPhase = _battleManager.CurrentPhase;
@@ -546,6 +557,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnActionDeclared(GameEvents.ActionDeclared e)
         {
+            _actionJustDeclared = true;
             _currentActor = e.Actor;
             string actionName = e.Item != null ? e.Item.ItemName : e.Move.MoveName;
             var targetType = e.Item?.Target ?? e.Move?.Target ?? TargetType.None;

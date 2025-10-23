@@ -314,40 +314,15 @@ namespace ProjectVagabond.Battle
         }
 
         /// <summary>
-        /// Processes one action from the queue at a time until the queue is empty.
-        /// This method acts as a state machine for handling single-hit and multi-hit moves.
+        /// Declares the next action in the queue and then pauses, waiting for the BattleScene to call ExecuteDeclaredAction.
         /// </summary>
         private void HandleActionResolution()
         {
-            // State 1: We are in the middle of a multi-hit move.
-            if (_currentMultiHitAction != null)
+            if (_currentMultiHitAction != null || _actionToExecute != null)
             {
-                ProcessHit();
                 return;
             }
 
-            // State 2: We have an action that has been announced and is ready for execution.
-            if (_actionToExecute != null)
-            {
-                var action = _actionToExecute;
-                _actionToExecute = null; // Consume it.
-
-                // This is where the action's effects begin.
-                if (action.ChosenItem != null)
-                {
-                    ProcessItemAction(action);
-                    _currentPhase = BattlePhase.SecondaryEffectResolution;
-                    CanAdvance = false;
-                }
-                else if (action.ChosenMove != null)
-                {
-                    // This will either fully process a single-hit move, or set up the multi-hit state machine.
-                    ProcessMoveAction(action);
-                }
-                return;
-            }
-
-            // State 3: We need to start a new action from the queue.
             if (!_actionQueue.Any())
             {
                 _currentPhase = BattlePhase.EndOfTurn;
@@ -357,38 +332,56 @@ namespace ProjectVagabond.Battle
             var nextAction = _actionQueue[0];
             _actionQueue.RemoveAt(0);
 
-            // Handle special types that don't need narration/execution split
             if (nextAction.Type == QueuedActionType.Charging)
             {
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = $"charging {nextAction.ChosenMove.MoveName}" });
                 CanAdvance = false;
-                return; // Done with this action, next Update will process next in queue
+                return;
             }
 
-            // --- Pre-action checks ---
             if (nextAction.Actor.IsDefeated)
             {
-                return; // Actor was defeated before their turn, just skip.
+                return; // Skip this action, the loop will continue on the next frame.
             }
             if (nextAction.Actor.HasStatusEffect(StatusEffectType.Stun))
             {
                 EventBus.Publish(new GameEvents.ActionFailed { Actor = nextAction.Actor, Reason = "stunned" });
                 nextAction.Actor.ActiveStatusEffects.RemoveAll(e => e.EffectType == StatusEffectType.Stun);
-                CanAdvance = false;
+                CanAdvance = false; // Wait for narration of "stunned"
                 return;
             }
 
-            // Handle pre-resolution effects like HP cost or gamble
-            if (!ProcessPreResolutionEffects(nextAction))
-            {
-                CanAdvance = false;
-                return; // Effect failed (e.g. gamble), so stop the action.
-            }
-
-            // If the action is valid, announce it and wait.
             _actionToExecute = nextAction;
             EventBus.Publish(new GameEvents.ActionDeclared { Actor = _actionToExecute.Actor, Move = _actionToExecute.ChosenMove, Item = _actionToExecute.ChosenItem });
             CanAdvance = false;
+        }
+
+        /// <summary>
+        /// Executes the action that was previously declared. Called by BattleScene.
+        /// </summary>
+        public void ExecuteDeclaredAction()
+        {
+            if (_actionToExecute == null) return;
+
+            var action = _actionToExecute;
+            _actionToExecute = null; // Consume the declared action.
+
+            if (!ProcessPreResolutionEffects(action))
+            {
+                CanAdvance = false; // Effect failed (e.g., gamble), stop and wait for narration.
+                return;
+            }
+
+            if (action.ChosenItem != null)
+            {
+                ProcessItemAction(action);
+                _currentPhase = BattlePhase.SecondaryEffectResolution;
+                CanAdvance = false;
+            }
+            else if (action.ChosenMove != null)
+            {
+                ProcessMoveAction(action);
+            }
         }
 
         private void HandleSecondaryEffectResolution()
