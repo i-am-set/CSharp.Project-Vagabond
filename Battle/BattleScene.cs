@@ -614,7 +614,10 @@ namespace ProjectVagabond.Scenes
                     }
                     _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
-                    _animationManager.StartHitAnimation(target.CombatantID);
+                    if (!target.IsPlayerControlled)
+                    {
+                        _animationManager.StartHitFlashAnimation(target.CombatantID);
+                    }
 
                     int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
                     if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0))
@@ -703,7 +706,10 @@ namespace ProjectVagabond.Scenes
             {
                 _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Actor.CombatantID, (int)e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
-                _animationManager.StartHitAnimation(e.Actor.CombatantID);
+                if (!e.Actor.IsPlayerControlled)
+                {
+                    _animationManager.StartHitFlashAnimation(e.Actor.CombatantID);
+                }
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
                 _animationManager.StartDamageNumberIndicator(e.Actor.CombatantID, e.RecoilDamage, hudPosition);
             });
@@ -744,7 +750,10 @@ namespace ProjectVagabond.Scenes
                     }
                     else if (e.EffectType == StatusEffectType.Burn)
                     {
-                        _animationManager.StartHitAnimation(e.Combatant.CombatantID);
+                        if (!e.Combatant.IsPlayerControlled)
+                        {
+                            _animationManager.StartHitFlashAnimation(e.Combatant.CombatantID);
+                        }
                     }
                     Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
                     _animationManager.StartDamageNumberIndicator(e.Combatant.CombatantID, e.Damage, hudPosition);

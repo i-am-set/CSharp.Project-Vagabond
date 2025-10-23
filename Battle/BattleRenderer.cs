@@ -548,6 +548,10 @@ namespace ProjectVagabond.Battle.UI
 
                 if (_enemySpritePartOffsets.TryGetValue(combatant.CombatantID, out var offsets))
                 {
+                    var hitFlashState = animationManager.GetHitFlashState(combatant.CombatantID);
+                    bool isFlashingWhite = hitFlashState != null && hitFlashState.IsCurrentlyWhite;
+                    Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
+
                     // --- Outline Pass ---
                     Color outlineColor = _global.Palette_DarkGray * combatant.VisualAlpha;
                     if (enemySilhouette != null)
@@ -556,7 +560,7 @@ namespace ProjectVagabond.Battle.UI
                         {
                             var sourceRect = new Rectangle(i * spritePartSize, 0, spritePartSize, spritePartSize);
                             var partOffset = offsets[i];
-                            var baseDrawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y);
+                            var baseDrawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
 
                             // Draw shifted silhouettes for left, right, and top
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X - 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
@@ -570,9 +574,14 @@ namespace ProjectVagabond.Battle.UI
                     {
                         var sourceRect = new Rectangle(i * spritePartSize, 0, spritePartSize, spritePartSize);
                         var partOffset = offsets[i];
-                        var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y);
+                        var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
                         var drawRect = new Rectangle((int)drawPosition.X, (int)drawPosition.Y, spriteRect.Width, spriteRect.Height);
                         spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
+
+                        if (isFlashingWhite && enemySilhouette != null)
+                        {
+                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, Color.White * 0.8f);
+                        }
                     }
                 }
             }

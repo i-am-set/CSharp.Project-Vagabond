@@ -20,7 +20,28 @@ namespace ProjectVagabond.Battle.UI
         // Internal animation state structs
         public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; }
         public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.167f; }
-        public class HitAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.0f; }
+        public class HitFlashAnimationState
+        {
+            public string CombatantID;
+            public float Timer;
+            public int FlashesRemaining;
+            public bool IsCurrentlyWhite;
+            public Vector2 ShakeOffset;
+            public float ShakeTimer;
+
+            // Flash Tuning
+            public const int TOTAL_FLASHES = 4;
+            public const float FLASH_ON_DURATION = 0.05f;
+            public const float FLASH_OFF_DURATION = 0.05f;
+            public const float TOTAL_FLASH_CYCLE_DURATION = FLASH_ON_DURATION + FLASH_OFF_DURATION;
+
+            // Shake Tuning
+            public const float SHAKE_LEFT_DURATION = 0.05f;
+            public const float SHAKE_RIGHT_DURATION = 0.05f;
+            public const float SHAKE_SETTLE_DURATION = 0.05f;
+            public const float TOTAL_SHAKE_DURATION = SHAKE_LEFT_DURATION + SHAKE_RIGHT_DURATION + SHAKE_SETTLE_DURATION;
+            public const float SHAKE_MAGNITUDE = 2f;
+        }
         public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.1f; }
         public class HealFlashAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.5f; }
         public class PoisonEffectAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.5f; }
@@ -87,7 +108,7 @@ namespace ProjectVagabond.Battle.UI
 
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
-        private readonly List<HitAnimationState> _activeHitAnimations = new List<HitAnimationState>();
+        private readonly List<HitFlashAnimationState> _activeHitFlashAnimations = new List<HitFlashAnimationState>();
         private readonly List<HealBounceAnimationState> _activeHealBounceAnimations = new List<HealBounceAnimationState>();
         private readonly List<HealFlashAnimationState> _activeHealFlashAnimations = new List<HealFlashAnimationState>();
         private readonly List<PoisonEffectAnimationState> _activePoisonEffectAnimations = new List<PoisonEffectAnimationState>();
@@ -101,7 +122,7 @@ namespace ProjectVagabond.Battle.UI
         // Layout Constants mirrored from BattleRenderer for pixel-perfect alignment
         private const int DIVIDER_Y = 123;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any();
 
         public BattleAnimationManager()
         {
@@ -112,7 +133,7 @@ namespace ProjectVagabond.Battle.UI
         {
             _activeHealthAnimations.Clear();
             _activeAlphaAnimations.Clear();
-            _activeHitAnimations.Clear();
+            _activeHitFlashAnimations.Clear();
             _activeHealBounceAnimations.Clear();
             _activeHealFlashAnimations.Clear();
             _activePoisonEffectAnimations.Clear();
@@ -205,13 +226,17 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
-        public void StartHitAnimation(string combatantId)
+        public void StartHitFlashAnimation(string combatantId)
         {
-            _activeHitAnimations.RemoveAll(a => a.CombatantID == combatantId);
-            _activeHitAnimations.Add(new HitAnimationState
+            _activeHitFlashAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeHitFlashAnimations.Add(new HitFlashAnimationState
             {
                 CombatantID = combatantId,
-                Timer = 0f
+                Timer = 0f,
+                FlashesRemaining = HitFlashAnimationState.TOTAL_FLASHES,
+                IsCurrentlyWhite = true,
+                ShakeTimer = 0f,
+                ShakeOffset = Vector2.Zero
             });
         }
 
@@ -365,9 +390,9 @@ namespace ProjectVagabond.Battle.UI
             _activeBarAnimations.Clear();
         }
 
-        public HitAnimationState GetHitAnimationState(string combatantId)
+        public HitFlashAnimationState GetHitFlashState(string combatantId)
         {
-            return _activeHitAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
+            return _activeHitFlashAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
         public HealBounceAnimationState GetHealBounceAnimationState(string combatantId)
@@ -389,7 +414,7 @@ namespace ProjectVagabond.Battle.UI
         {
             UpdateHealthAnimations(gameTime, combatants);
             UpdateAlphaAnimations(gameTime, combatants);
-            UpdateHitAnimations(gameTime);
+            UpdateHitFlashAnimations(gameTime);
             UpdateHealAnimations(gameTime);
             UpdatePoisonEffectAnimations(gameTime);
             UpdateDamageIndicators(gameTime);
@@ -500,16 +525,53 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void UpdateHitAnimations(GameTime gameTime)
+        private void UpdateHitFlashAnimations(GameTime gameTime)
         {
-            for (int i = _activeHitAnimations.Count - 1; i >= 0; i--)
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeHitFlashAnimations.Count - 1; i >= 0; i--)
             {
-                var anim = _activeHitAnimations[i];
-                anim.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (anim.Timer >= HitAnimationState.Duration)
+                var anim = _activeHitFlashAnimations[i];
+                anim.Timer += deltaTime;
+                anim.ShakeTimer += deltaTime;
+
+                // --- Shake Logic (one-shot at the beginning) ---
+                if (anim.ShakeTimer < HitFlashAnimationState.TOTAL_SHAKE_DURATION)
                 {
-                    _activeHitAnimations.RemoveAt(i);
+                    if (anim.ShakeTimer < HitFlashAnimationState.SHAKE_LEFT_DURATION)
+                    {
+                        float progress = anim.ShakeTimer / HitFlashAnimationState.SHAKE_LEFT_DURATION;
+                        anim.ShakeOffset.X = MathHelper.Lerp(0, -HitFlashAnimationState.SHAKE_MAGNITUDE, Easing.EaseOutQuad(progress));
+                    }
+                    else if (anim.ShakeTimer < HitFlashAnimationState.SHAKE_LEFT_DURATION + HitFlashAnimationState.SHAKE_RIGHT_DURATION)
+                    {
+                        float phaseTimer = anim.ShakeTimer - HitFlashAnimationState.SHAKE_LEFT_DURATION;
+                        float progress = phaseTimer / HitFlashAnimationState.SHAKE_RIGHT_DURATION;
+                        anim.ShakeOffset.X = MathHelper.Lerp(-HitFlashAnimationState.SHAKE_MAGNITUDE, HitFlashAnimationState.SHAKE_MAGNITUDE, Easing.EaseInOutQuad(progress));
+                    }
+                    else
+                    {
+                        float phaseTimer = anim.ShakeTimer - (HitFlashAnimationState.SHAKE_LEFT_DURATION + HitFlashAnimationState.SHAKE_RIGHT_DURATION);
+                        float progress = phaseTimer / HitFlashAnimationState.SHAKE_SETTLE_DURATION;
+                        anim.ShakeOffset.X = MathHelper.Lerp(HitFlashAnimationState.SHAKE_MAGNITUDE, 0, Easing.EaseInQuad(progress));
+                    }
                 }
+                else
+                {
+                    anim.ShakeOffset = Vector2.Zero;
+                }
+
+                // --- Flash Logic (repeating) ---
+                if (anim.Timer >= HitFlashAnimationState.TOTAL_FLASH_CYCLE_DURATION)
+                {
+                    anim.Timer -= HitFlashAnimationState.TOTAL_FLASH_CYCLE_DURATION;
+                    anim.FlashesRemaining--;
+                    if (anim.FlashesRemaining <= 0)
+                    {
+                        _activeHitFlashAnimations.RemoveAt(i);
+                        continue;
+                    }
+                }
+                anim.IsCurrentlyWhite = anim.Timer < HitFlashAnimationState.FLASH_ON_DURATION;
             }
         }
 
