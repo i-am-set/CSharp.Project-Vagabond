@@ -50,7 +50,7 @@ namespace ProjectVagabond.Battle.UI
         public readonly HoverHighlightState HoverHighlightState = new HoverHighlightState();
         public float SharedPulseTimer { get; private set; } = 0f;
 
-        public bool IsBusy => _battleNarrator.IsBusy || _narrationQueue.Any() || _actionMenu.CurrentMenuState == ActionMenu.MenuState.AnimatingHandDiscard;
+        public bool IsBusy => _battleNarrator.IsBusy || _narrationQueue.Any();
 
         // Control Prompt State
         private bool _isPromptVisible;
@@ -145,11 +145,10 @@ namespace ProjectVagabond.Battle.UI
             UpdateHoverHighlights(gameTime);
             UpdateControlPrompt(gameTime);
 
-            if (SubMenuState == BattleSubMenuState.ActionRoot || SubMenuState == BattleSubMenuState.ActionMoves)
-            {
-                _actionMenu.Update(currentMouseState, gameTime);
-            }
-            else if (SubMenuState == BattleSubMenuState.Item)
+            // Always update the action menu to handle background animations like card discards.
+            _actionMenu.Update(currentMouseState, gameTime);
+
+            if (SubMenuState == BattleSubMenuState.Item)
             {
                 _itemMenu.Update(currentMouseState, gameTime);
             }
@@ -186,6 +185,8 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
+                // The main action menu content is only drawn when its submenu is active.
+                // The Draw method in ActionMenu already checks for visibility.
                 _actionMenu.Draw(spriteBatch, font, gameTime, transform);
             }
 
@@ -195,6 +196,12 @@ namespace ProjectVagabond.Battle.UI
             }
 
             _battleNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
+
+            // Draw discarding cards on top of everything, including the narrator.
+            foreach (var button in _actionMenu.ButtonsBeingDiscarded)
+            {
+                button.Draw(spriteBatch, font, gameTime, transform);
+            }
 
             DrawControlPrompt(spriteBatch);
         }

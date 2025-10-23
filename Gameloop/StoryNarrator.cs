@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -32,7 +33,7 @@ namespace ProjectVagabond.UI
         private MouseState _previousMouseState;
         private KeyboardState _previousKeyboardState;
 
-        private const float TYPEWRITER_SPEED = 0.02f;
+        private const float TYPEWRITER_SPEED = 0.01f;
 
         public bool IsBusy => _messageQueue.Count > 0 || !string.IsNullOrEmpty(_currentMessage);
 

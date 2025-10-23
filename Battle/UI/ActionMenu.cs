@@ -32,7 +32,7 @@ namespace ProjectVagabond.Battle.UI
         private Button _backButton;
         private readonly Global _global;
 
-        public enum MenuState { Main, Moves, Targeting, Tooltip, AnimatingHandDiscard }
+        public enum MenuState { Main, Moves, Targeting, Tooltip }
         private MenuState _currentState;
         public MenuState CurrentMenuState => _currentState;
         private MoveData? _selectedMove;
@@ -107,10 +107,8 @@ namespace ProjectVagabond.Battle.UI
         private bool _wasAnyActionHoveredLastFrame = false;
 
         // Discard Animation State
-        private MoveData? _deferredMove;
-        private SpellbookEntry? _deferredSpellbookEntry;
-        private MoveButton? _selectedMoveButton;
-        private readonly List<MoveButton> _buttonsBeingDiscarded = new List<MoveButton>();
+        public readonly List<MoveButton> ButtonsBeingDiscarded = new List<MoveButton>();
+        public bool IsAnimatingDiscard => ButtonsBeingDiscarded.Any();
         private static readonly Random _random = new Random();
 
         // Hover Box Animation
@@ -306,10 +304,6 @@ namespace ProjectVagabond.Battle.UI
                 _tooltipScrollState = TooltipScrollState.PausedAtStart;
                 _tooltipScrollWaitTimer = SCROLL_PAUSE_DURATION;
             }
-            else if (newState == MenuState.AnimatingHandDiscard)
-            {
-                _selectedMoveButton?.TriggerDiscardAnimation();
-            }
         }
 
         private void PopulateMoveButtons()
@@ -377,10 +371,13 @@ namespace ProjectVagabond.Battle.UI
             // Only trigger discard animation for spells from the hand
             if (move.MoveType == MoveType.Spell && entry != null)
             {
-                _deferredMove = move;
-                _deferredSpellbookEntry = entry;
-                _selectedMoveButton = button;
-                SetState(MenuState.AnimatingHandDiscard);
+                // Add to the discard list and trigger its animation.
+                // The button will now be drawn independently until its animation is finished.
+                ButtonsBeingDiscarded.Add(button);
+                button.TriggerDiscardAnimation();
+
+                // Immediately proceed with selecting the move.
+                SelectMove(move, entry);
             }
             else
             {
@@ -547,9 +544,26 @@ namespace ProjectVagabond.Battle.UI
         public void Update(MouseState currentMouseState, GameTime gameTime)
         {
             InitializeButtons();
-            if (!_isVisible) return;
-
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Update and clean up any buttons that are currently animating their discard.
+            // This happens independently of the current menu state.
+            for (int i = ButtonsBeingDiscarded.Count - 1; i >= 0; i--)
+            {
+                var button = ButtonsBeingDiscarded[i];
+                // The animation timer is updated within the button's Draw method.
+                // We just need to check if it's finished to remove it.
+                if (!button.IsAnimatingDiscard)
+                {
+                    ButtonsBeingDiscarded.RemoveAt(i);
+                }
+            }
+
+            if (!_isVisible)
+            {
+                _previousMouseState = currentMouseState;
+                return;
+            }
 
             UpdateSpamDetection(gameTime, currentMouseState);
 
@@ -723,31 +737,6 @@ namespace ProjectVagabond.Battle.UI
                     _backButton.Update(currentMouseState);
                     if (_backButton.IsHovered) HoveredButton = _backButton;
                     break;
-                case MenuState.AnimatingHandDiscard:
-                    // Input is blocked during this animation.
-                    // We only need to check for the animation's completion.
-                    if (_selectedMoveButton != null && !_selectedMoveButton.IsAnimatingDiscard)
-                    {
-                        // Animation is complete, execute the deferred action
-                        if (_deferredMove != null)
-                        {
-                            // Store locally before clearing, as SelectMove might trigger events that depend on a clean state.
-                            var move = _deferredMove;
-                            var entry = _deferredSpellbookEntry;
-
-                            _deferredMove = null;
-                            _deferredSpellbookEntry = null;
-                            _selectedMoveButton = null;
-
-                            SelectMove(move, entry);
-
-                            if (_currentState == MenuState.AnimatingHandDiscard)
-                            {
-                                SetState(MenuState.Moves);
-                            }
-                        }
-                    }
-                    break;
             }
 
             _previousMouseState = currentMouseState;
@@ -756,6 +745,10 @@ namespace ProjectVagabond.Battle.UI
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             InitializeButtons();
+
+            // The drawing of discarding buttons is now handled by the BattleUIManager
+            // to ensure they are rendered on top of all other UI elements.
+
             if (!_isVisible) return;
 
             switch (_currentState)
@@ -791,7 +784,6 @@ namespace ProjectVagabond.Battle.UI
                         break;
                     }
                 case MenuState.Moves:
-                case MenuState.AnimatingHandDiscard:
                     {
                         DrawMovesMenu(spriteBatch, font, gameTime, transform);
                         break;
@@ -1012,9 +1004,11 @@ namespace ProjectVagabond.Battle.UI
             {
                 var button = _moveButtons[i];
 
-                if (_currentState == MenuState.AnimatingHandDiscard && button != _selectedMoveButton)
+                // Skip drawing the button here if it's currently being discarded.
+                // It will be drawn separately in the main Draw method.
+                if (ButtonsBeingDiscarded.Contains(button))
                 {
-                    continue; // Skip drawing non-selected buttons
+                    continue;
                 }
 
                 int row = i; // Single column
@@ -1070,11 +1064,6 @@ namespace ProjectVagabond.Battle.UI
                         button.Draw(spriteBatch, font, gameTime, transform);
                     }
                 }
-            }
-
-            if (_currentState == MenuState.AnimatingHandDiscard)
-            {
-                return;
             }
 
             // --- Draw Secondary Action Buttons (Vertical Stack) ---

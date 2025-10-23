@@ -32,8 +32,8 @@ namespace ProjectVagabond.Battle.UI
         private float _appearTimer = 0f;
         private const float APPEAR_DURATION = 0.25f; // Duration of the appear animation
         private float _discardTimer = 0f;
-        private const float FADE_TO_WHITE_DURATION = 0.1f;
-        private const float COLLAPSE_DURATION = 0.15f;
+        private const float FADE_TO_WHITE_DURATION = 0.0f;
+        private const float COLLAPSE_DURATION = 0.125f;
         private const float DISCARD_DURATION = FADE_TO_WHITE_DURATION + COLLAPSE_DURATION;
 
         // Scrolling Text State
@@ -184,28 +184,17 @@ namespace ProjectVagabond.Battle.UI
             {
                 _discardTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-                if (_discardTimer < FADE_TO_WHITE_DURATION)
-                {
-                    // Phase 1: Fading to white
-                    float progress = _discardTimer / FADE_TO_WHITE_DURATION;
-                    float easedProgress = Easing.EaseInQuint(progress);
+                // Content is instantly hidden, and the overlay is instantly opaque.
+                contentAlphaMultiplier = 0.0f;
+                whiteOverlayAlpha = 1.0f;
+                IsFadeToWhiteComplete = true;
 
-                    scaleX = 1.0f; // No collapse yet
-                    contentAlphaMultiplier = 1.0f - easedProgress; // Content fades out
-                    whiteOverlayAlpha = easedProgress; // White overlay fades in
-                }
-                else
-                {
-                    IsFadeToWhiteComplete = true;
-                    // Phase 2: Collapsing
-                    float progress = (_discardTimer - FADE_TO_WHITE_DURATION) / COLLAPSE_DURATION;
-                    progress = Math.Clamp(progress, 0f, 1f);
-                    float easedProgress = Easing.EaseInQuint(progress);
+                // The entire animation duration is now used for the collapse.
+                float progress = Math.Clamp(_discardTimer / DISCARD_DURATION, 0f, 1f);
+                float easedProgress = Easing.EaseInQuint(progress);
 
-                    scaleX = 1.0f - easedProgress; // Collapse happens now
-                    contentAlphaMultiplier = 0.0f; // Content is fully faded
-                    whiteOverlayAlpha = 1.0f; // White overlay is fully opaque
-                }
+                scaleX = 1.0f - easedProgress; // Collapse horizontally.
+                scaleY = 1.0f;
 
                 if (_discardTimer >= DISCARD_DURATION)
                 {

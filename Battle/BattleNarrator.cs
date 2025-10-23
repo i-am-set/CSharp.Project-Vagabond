@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -36,7 +37,7 @@ namespace ProjectVagabond.Battle.UI
         private KeyboardState _previousKeyboardState;
 
         // Tuning constants
-        private const float TYPEWRITER_SPEED = 0.02f; // Seconds per character
+        private const float TYPEWRITER_SPEED = 0.01f; // Seconds per character
         private const float AUTO_ADVANCE_SECONDS = 5.0f; // Seconds to wait for input
 
         public bool IsBusy => _messageQueue.Count > 0 || !string.IsNullOrEmpty(_currentSegment);
