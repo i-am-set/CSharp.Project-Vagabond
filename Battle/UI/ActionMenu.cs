@@ -819,14 +819,14 @@ namespace ProjectVagabond.Battle.UI
 
                         Vector2 textPos = new Vector2(
                             horizontalPadding + (availableWidth - textSize.X) / 2,
-                            gridStartY + (gridAreaHeight - textSize.Y) / 2
+                            gridStartY + (gridAreaHeight - textSize.Y) / 2 - 10
                         ) + animOffset;
                         spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
 
                         int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
                             horizontalPadding + (availableWidth - backButtonWidth) / 2,
-                            gridStartY + gridAreaHeight + backButtonTopMargin + 2, // Added 2 pixels
+                            gridStartY + gridAreaHeight + backButtonTopMargin - 5,
                             backButtonWidth,
                             backButtonHeight
                         );
