@@ -60,6 +60,10 @@ namespace ProjectVagabond.Scenes
         private readonly Random _random = new Random();
         private bool _actionJustDeclared = false;
 
+        // Failsafe State
+        private float _softLockFailsafeTimer = 0f;
+        private const float SOFT_LOCK_TIMEOUT = 3.0f;
+
 
         public BattleAnimationManager AnimationManager => _animationManager;
 
@@ -110,6 +114,7 @@ namespace ProjectVagabond.Scenes
             _pendingAnimations.Clear();
             _rewardScreenShown = false;
             _actionJustDeclared = false;
+            _softLockFailsafeTimer = 0f;
 
             // Subscribe to events
             SubscribeToEvents();
@@ -341,6 +346,31 @@ namespace ProjectVagabond.Scenes
                 {
                     _multiHitDelayTimer = 0f;
                 }
+            }
+
+            // --- Soft-Lock Failsafe ---
+            // If the battle manager can't advance, but no UI or animations are busy,
+            // it indicates a potential soft-lock. We start a timer.
+            if (!canAdvance && !_uiManager.IsBusy && !_animationManager.IsAnimating)
+            {
+                _softLockFailsafeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+            else
+            {
+                // If we can advance or something is busy, reset the timer.
+                _softLockFailsafeTimer = 0f;
+            }
+
+            // If the timer exceeds the timeout, force the battle to advance.
+            if (_softLockFailsafeTimer > SOFT_LOCK_TIMEOUT)
+            {
+                Debug.WriteLine("[BATTLESCENE] [FAILSAFE TRIGGERED] A soft-lock was detected. Forcing battle to advance.");
+                Debug.WriteLine($" -> Current Phase: {_battleManager.CurrentPhase}");
+                Debug.WriteLine($" -> UI Busy: {_uiManager.IsBusy}, Animating: {_animationManager.IsAnimating}, Pending Anims: {_pendingAnimations.Any()}");
+
+                canAdvance = true; // Force advancement
+                _pendingAnimations.Clear(); // Clear any potentially stuck animation requests
+                _softLockFailsafeTimer = 0f; // Reset the timer
             }
 
             _battleManager.CanAdvance = canAdvance;

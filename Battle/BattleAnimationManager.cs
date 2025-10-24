@@ -758,9 +758,16 @@ namespace ProjectVagabond.Battle.UI
                     float percentBefore = anim.ValueBefore / maxResource;
                     float percentAfter = anim.ValueAfter / maxResource;
 
-                    int previewStartX = (int)(barRect.X + barRect.Width * percentAfter);
-                    int previewWidth = (int)(barRect.Width * (percentBefore - percentAfter));
+                    // Calculate pixel widths and positions using truncation (casting to int) to perfectly match
+                    // the way the main health bar is rendered in BattleRenderer. This prevents 1-pixel gaps
+                    // caused by rounding inconsistencies between the two drawing routines.
+                    int widthBefore = (int)(barRect.Width * percentBefore);
+                    int widthAfter = (int)(barRect.Width * percentAfter);
+
+                    int previewStartX = barRect.X + widthAfter;
+                    int previewWidth = widthBefore - widthAfter;
                     var previewRect = new Rectangle(previewStartX, barRect.Y, previewWidth, barRect.Height);
+
 
                     switch (anim.CurrentLossPhase)
                     {
