@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
@@ -296,7 +297,6 @@ namespace ProjectVagabond.Battle.UI
                 // --- Alpha Pulse Calculation ---
                 const float minAlpha = 0.15f;
                 const float maxAlpha = 0.75f;
-                // A full sine wave cycle (2 * PI) over 1 second.
                 float pulse = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * MathHelper.TwoPi) + 1f) / 2f; // Oscillates 0..1
                 float alpha = MathHelper.Lerp(minAlpha, maxAlpha, pulse);
 
@@ -304,16 +304,56 @@ namespace ProjectVagabond.Battle.UI
                 for (int i = 0; i < _currentTargets.Count; i++)
                 {
                     Color baseColor = i == inputHandler.HoveredTargetIndex ? Color.Red : Color.Yellow;
-                    Color boxColor = baseColor * alpha; // Apply the calculated alpha
+                    Color boxColor = baseColor * alpha;
                     var bounds = _currentTargets[i].Bounds;
 
-                    // Draw the border as four 1px rectangles, adjusted to not overlap at the corners.
-                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Left, bounds.Top, bounds.Width, 1), boxColor); // Top
-                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Left, bounds.Bottom - 1, bounds.Width, 1), boxColor); // Bottom
-                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Left, bounds.Top + 1, 1, bounds.Height - 2), boxColor); // Left
-                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Right - 1, bounds.Top + 1, 1, bounds.Height - 2), boxColor); // Right
+                    const int dotGap = 3; // Draw a pixel, skip two pixels.
+                    int timeOffset = (int)(gameTime.TotalGameTime.TotalSeconds * 5) % dotGap;
+
+                    int perimeter = (bounds.Width - 1) * 2 + (bounds.Height - 1) * 2;
+                    if (perimeter <= 0) continue;
+
+                    for (int p = 0; p < perimeter; p++)
+                    {
+                        if ((p + timeOffset) % dotGap == 0)
+                        {
+                            Vector2 position = GetPixelPositionOnPerimeter(p, bounds);
+                            spriteBatch.DrawSnapped(pixel, position, boxColor);
+                        }
+                    }
                 }
             }
+        }
+
+        private Vector2 GetPixelPositionOnPerimeter(int distance, Rectangle bounds)
+        {
+            int topEdgeLength = bounds.Width - 1;
+            int rightEdgeLength = bounds.Height - 1;
+            int bottomEdgeLength = bounds.Width - 1;
+
+            float x, y;
+
+            if (distance < topEdgeLength) // Top edge
+            {
+                x = bounds.Left + distance;
+                y = bounds.Top;
+            }
+            else if (distance < topEdgeLength + rightEdgeLength) // Right edge
+            {
+                x = bounds.Right - 1;
+                y = bounds.Top + (distance - topEdgeLength);
+            }
+            else if (distance < topEdgeLength + rightEdgeLength + bottomEdgeLength) // Bottom edge
+            {
+                x = (bounds.Right - 1) - (distance - (topEdgeLength + rightEdgeLength));
+                y = bounds.Bottom - 1;
+            }
+            else // Left edge
+            {
+                x = bounds.Left;
+                y = (bounds.Bottom - 1) - (distance - (topEdgeLength + rightEdgeLength + bottomEdgeLength));
+            }
+            return new Vector2(x, y);
         }
 
         private void DrawHoverHighlights(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, IEnumerable<BattleCombatant> allCombatants, HoverHighlightState hoverHighlightState, float sharedBobbingTimer)
@@ -751,20 +791,56 @@ namespace ProjectVagabond.Battle.UI
 
             // --- Width Calculation ---
             float nameWidth = nameFont.MeasureString(combatant.Name).Width;
-            float maxWidth = Math.Max(spriteSize, nameWidth);
+            const float healthBarWidth = 40;
+            float maxAllowedWidth = Math.Max((float)spriteSize, nameWidth);
+
+            var leftOffsets = _spriteManager.GetEnemySpriteLeftPixelOffsets(combatant.ArchetypeId);
+            var rightOffsets = _spriteManager.GetEnemySpriteRightPixelOffsets(combatant.ArchetypeId);
+            float globalMinX = float.MaxValue;
+            float globalMaxX = float.MinValue;
+
+            if (leftOffsets != null && rightOffsets != null)
+            {
+                int numParts = leftOffsets.Length;
+                float spritePartBaseX = centerPosition.X - spriteSize / 2f;
+
+                for (int i = 0; i < numParts; i++)
+                {
+                    if (leftOffsets[i] != int.MaxValue && rightOffsets[i] != -1)
+                    {
+                        float partMinX = spritePartBaseX + leftOffsets[i];
+                        float partMaxX = spritePartBaseX + rightOffsets[i];
+                        globalMinX = Math.Min(globalMinX, partMinX);
+                        globalMaxX = Math.Max(globalMaxX, partMaxX);
+                    }
+                }
+            }
+
+            float finalWidth;
+            if (globalMinX != float.MaxValue)
+            {
+                float visibleSpriteWidth = globalMaxX - globalMinX;
+                finalWidth = Math.Clamp(visibleSpriteWidth, healthBarWidth, maxAllowedWidth);
+            }
+            else
+            {
+                finalWidth = Math.Max(healthBarWidth, nameWidth);
+            }
+
+            // Add the 3-pixel buffer on each side
+            finalWidth += 6;
 
             // --- Final Rectangle Assembly ---
-            float top = spriteTop - 8; // Move top up by 8 pixels
+            float top = spriteTop - 8;
             float bottom = hudBottom;
-            float left = centerPosition.X - maxWidth / 2;
-            float width = maxWidth;
+            float left = centerPosition.X - finalWidth / 2;
             float height = bottom - top;
             const int padding = 2;
 
             return new Rectangle(
                 (int)Math.Round(left - padding),
                 (int)Math.Round(top - padding),
-                (int)Math.Round(width + padding * 2),
+                (int)Math.Round(finalWidth + padding * 2),
                 (int)Math.Round(height + padding * 2)
             );
         }
