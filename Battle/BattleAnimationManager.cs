@@ -62,7 +62,7 @@ namespace ProjectVagabond.Battle.UI
             public float Timer;
 
             // Loss Animation Tuning
-            public const float PREVIEW_DURATION = 0.5f;
+            public const float PREVIEW_DURATION = 0.15f;
             public const float FLASH_BLACK_DURATION = 0.05f;
             public const float FLASH_WHITE_DURATION = 0.05f;
             public const float SHRINK_DURATION = 0.4f;
