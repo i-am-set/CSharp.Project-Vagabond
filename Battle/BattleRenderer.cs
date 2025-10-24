@@ -3,7 +3,6 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
@@ -294,17 +293,25 @@ namespace ProjectVagabond.Battle.UI
         {
             if (uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting)
             {
+                // --- Alpha Pulse Calculation ---
+                const float minAlpha = 0.15f;
+                const float maxAlpha = 0.75f;
+                // A full sine wave cycle (2 * PI) over 1 second.
+                float pulse = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * MathHelper.TwoPi) + 1f) / 2f; // Oscillates 0..1
+                float alpha = MathHelper.Lerp(minAlpha, maxAlpha, pulse);
+
                 var pixel = ServiceLocator.Get<Texture2D>();
                 for (int i = 0; i < _currentTargets.Count; i++)
                 {
-                    Color boxColor = i == inputHandler.HoveredTargetIndex ? Color.Red : Color.Yellow;
+                    Color baseColor = i == inputHandler.HoveredTargetIndex ? Color.Red : Color.Yellow;
+                    Color boxColor = baseColor * alpha; // Apply the calculated alpha
                     var bounds = _currentTargets[i].Bounds;
 
-                    // Draw the border as four 1px rectangles to ensure perfect corners
+                    // Draw the border as four 1px rectangles, adjusted to not overlap at the corners.
                     spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Left, bounds.Top, bounds.Width, 1), boxColor); // Top
                     spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Left, bounds.Bottom - 1, bounds.Width, 1), boxColor); // Bottom
-                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Left, bounds.Top, 1, bounds.Height), boxColor); // Left
-                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Right - 1, bounds.Top, 1, bounds.Height), boxColor); // Right
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Left, bounds.Top + 1, 1, bounds.Height - 2), boxColor); // Left
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Right - 1, bounds.Top + 1, 1, bounds.Height - 2), boxColor); // Right
                 }
             }
         }
