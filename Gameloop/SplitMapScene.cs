@@ -108,7 +108,7 @@ namespace ProjectVagabond.Scenes
             _choiceGenerator = new ChoiceGenerator();
             _componentStore = ServiceLocator.Get<ComponentStore>();
 
-            var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 80, Global.VIRTUAL_WIDTH, 80);
+            var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
             _resultNarrator = new StoryNarrator(narratorBounds);
             _resultNarrator.OnFinished += OnResultNarrationFinished;
         }

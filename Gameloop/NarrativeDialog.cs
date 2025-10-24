@@ -28,7 +28,7 @@ namespace ProjectVagabond.UI
 
         public NarrativeDialog(GameScene currentGameScene) : base(currentGameScene)
         {
-            var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 80, Global.VIRTUAL_WIDTH, 80);
+            var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
             _narrator = new StoryNarrator(narratorBounds);
             _narrator.OnFinished += OnNarrationFinished;
         }
@@ -114,4 +114,3 @@ namespace ProjectVagabond.UI
     }
 }
 #nullable restore
-﻿
