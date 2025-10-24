@@ -278,7 +278,7 @@ namespace ProjectVagabond.Battle.UI
         private void DrawUITitle(SpriteBatch spriteBatch, BitmapFont secondaryFont, GameTime gameTime, BattleSubMenuState subMenuState)
         {
             string title = "";
-            if (subMenuState == BattleSubMenuState.Item) title = "ITEMS";
+            // if (subMenuState == BattleSubMenuState.Item) title = "ITEMS";
 
             if (!string.IsNullOrEmpty(title))
             {
@@ -942,3 +942,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+#nullable restore

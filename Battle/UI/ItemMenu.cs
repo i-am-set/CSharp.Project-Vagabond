@@ -46,7 +46,7 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
             _sortContextMenu = new ContextMenu();
-            _backButton = new Button(Rectangle.Empty, "BACK", function: "Back");
+            _backButton = new Button(Rectangle.Empty, "BACK", function: "Back") { CustomDefaultTextColor = _global.Palette_Gray };
             _backButton.OnClick += HandleBack;
             _sortButton = new Button(Rectangle.Empty, "SORT", function: "Sort");
             _sortButton.OnClick += OpenSortMenu;
@@ -313,9 +313,9 @@ namespace ProjectVagabond.Battle.UI
 
             // --- Layout Constants ---
             const int horizontalPadding = 10;
-            const int dividerY = 114;
+            const int dividerY = 122; // Was 114
             const int menuVerticalOffset = 4;
-            const int itemListHeight = 45;
+            const int itemListHeight = 37;
             const int bottomBarTopPadding = 5;
             const int bottomBarHeight = 13;
             const int itemWidth = 145;
@@ -327,7 +327,8 @@ namespace ProjectVagabond.Battle.UI
             int gridStartX = horizontalPadding + (Global.VIRTUAL_WIDTH - (horizontalPadding * 2) - totalGridWidth) / 2;
 
             var bgSprite = spriteManager.ActionMovesBackgroundSprite;
-            var bgRect = new Rectangle(gridStartX - 1, dividerY + menuVerticalOffset - 1, 294, 47);
+            // The background rectangle height is now derived from itemListHeight to maintain the border.
+            var bgRect = new Rectangle(gridStartX - 1, dividerY + menuVerticalOffset - 1, 294, itemListHeight + 2);
             spriteBatch.DrawSnapped(bgSprite, bgRect, Color.White);
 
             int gridStartY = dividerY + menuVerticalOffset;
@@ -413,7 +414,7 @@ namespace ProjectVagabond.Battle.UI
             // --- Layout Constants from Screenshot ---
             const int boxWidth = 294;
             const int boxHeight = 47;
-            const int boxY = 117;
+            const int boxY = 125; // Was 117
             int boxX = (Global.VIRTUAL_WIDTH - boxWidth) / 2;
 
             var tooltipBounds = new Rectangle(boxX, boxY, boxWidth, boxHeight);
@@ -469,7 +470,7 @@ namespace ProjectVagabond.Battle.UI
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             const int horizontalPadding = 10;
-            const int dividerY = 114;
+            const int dividerY = 122; // Was 114
             const int menuVerticalOffset = 4;
             const int bottomBarTopPadding = 5;
             const int itemWidth = 145;
