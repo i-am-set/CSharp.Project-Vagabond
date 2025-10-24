@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using System;
 
 namespace ProjectVagabond
@@ -31,10 +31,10 @@ namespace ProjectVagabond
             StopAll();
         }
 
-        public void TriggerShake(float magnitude, float duration, bool isDecayed = true)
+        public void TriggerShake(float magnitude, float duration, bool isDecayed = true, float frequency = 0f)
         {
             System.Diagnostics.Debug.WriteLine($"[DEBUG CHECK 2] STATE: HapticsManager received shake trigger. Duration: {duration}, Magnitude: {magnitude}");
-            _shake.Trigger(magnitude, duration, decayed: isDecayed);
+            _shake.Trigger(magnitude, duration, decayed: isDecayed, frequency: frequency);
         }
 
         public void TriggerHop(float intensity, float duration)
@@ -204,16 +204,23 @@ namespace ProjectVagabond
                             float currentMagnitude = _intensity;
                             if (_decayed)
                             {
-                                // MODIFIED: Use a stable decay based on progress, not remaining time.
                                 currentMagnitude = _initialIntensity * (1.0f - Easing.EaseOutQuad(progress));
                             }
 
-                            float offsetX = (float)(random.NextDouble() * 2 - 1) * currentMagnitude;
-                            float offsetY = (float)(random.NextDouble() * 2 - 1) * currentMagnitude;
-                            _offset = new Vector2(offsetX, offsetY);
-
-                            float maxRotation = currentMagnitude * 0.005f;
-                            _rotation = (float)(random.NextDouble() * 2 - 1) * maxRotation;
+                            if (_frequency > 0)
+                            {
+                                float time = (float)gameTime.TotalGameTime.TotalSeconds;
+                                float offsetX = (float)Math.Sin(time * _frequency) * currentMagnitude;
+                                float offsetY = (float)Math.Cos(time * _frequency * 1.2f) * currentMagnitude;
+                                _offset = new Vector2(offsetX, offsetY);
+                            }
+                            else
+                            {
+                                float offsetX = (float)(random.NextDouble() * 2 - 1) * currentMagnitude;
+                                float offsetY = (float)(random.NextDouble() * 2 - 1) * currentMagnitude;
+                                _offset = new Vector2(offsetX, offsetY);
+                            }
+                            _rotation = 0f;
                         }
                         break;
                     case HapticType.Hop:

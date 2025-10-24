@@ -44,6 +44,7 @@ namespace ProjectVagabond.Scenes
         private HapticsManager _hapticsManager;
         private TooltipManager _tooltipManager;
         private GameState _gameState;
+        private readonly Global _global;
 
         // State Tracking
         private List<int> _enemyEntityIds = new List<int>();
@@ -71,6 +72,7 @@ namespace ProjectVagabond.Scenes
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
             _choiceGenerator = new ChoiceGenerator();
             _gameState = ServiceLocator.Get<GameState>();
+            _global = ServiceLocator.Get<Global>();
         }
 
         public override Rectangle GetAnimatedBounds()
@@ -184,7 +186,7 @@ namespace ProjectVagabond.Scenes
                 if (settingsIcon != null) buttonSize = Math.Max(settingsIcon.Width, settingsIcon.Height);
                 _settingsButton = new ImageButton(new Rectangle(0, 0, buttonSize, buttonSize), settingsIcon, enableHoverSway: true)
                 {
-                    UseScreenCoordinates = true // This button operates in screen space, not virtual space.
+                    UseScreenCoordinates = true
                 };
             }
             // The event is unsubscribed in Exit(), so it must be re-subscribed every time the scene is entered.
@@ -620,9 +622,8 @@ namespace ProjectVagabond.Scenes
                 {
                     if (target.IsPlayerControlled)
                     {
-                        _core.TriggerFullscreenFlash(ServiceLocator.Get<Global>().Palette_Red, 0.15f);
-                        _core.TriggerFullscreenGlitch(duration: 0.2f);
-                        _hapticsManager.TriggerShake(magnitude: 2.0f, duration: 0.3f);
+                        _core.TriggerScreenFlashSequence(_global.Palette_Red);
+                        _hapticsManager.TriggerShake(magnitude: 10.0f, duration: 0.75f, frequency: 120f);
                     }
                     _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
@@ -676,24 +677,18 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantHealed(GameEvents.CombatantHealed e)
         {
             _uiManager.ShowNarration($"{e.Target.Name} recovered {e.HealAmount} HP!");
-            _pendingAnimations.Enqueue(() =>
-            {
-                _animationManager.StartHealthRecoveryAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
-                _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
-                _animationManager.StartHealBounceAnimation(e.Target.CombatantID);
-                _animationManager.StartHealFlashAnimation(e.Target.CombatantID);
-                Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
-                _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
-            });
+            _animationManager.StartHealthRecoveryAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
+            _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
+            _animationManager.StartHealBounceAnimation(e.Target.CombatantID);
+            _animationManager.StartHealFlashAnimation(e.Target.CombatantID);
+            Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
+            _animationManager.StartHealNumberIndicator(e.Target.CombatantID, e.HealAmount, hudPosition);
         }
 
         private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
         {
             _uiManager.ShowNarration($"{e.Target.Name} restored {e.AmountRestored} Mana!");
-            _pendingAnimations.Enqueue(() =>
-            {
-                _animationManager.StartManaRecoveryAnimation(e.Target.CombatantID, e.ManaBefore, e.ManaAfter);
-            });
+            _animationManager.StartManaRecoveryAnimation(e.Target.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 
         private void OnCombatantManaConsumed(GameEvents.CombatantManaConsumed e)
@@ -705,6 +700,12 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantRecoiled(GameEvents.CombatantRecoiled e)
         {
+            if (e.Actor.IsPlayerControlled)
+            {
+                _core.TriggerScreenFlashSequence(_global.Palette_Red);
+                _hapticsManager.TriggerShake(magnitude: 10.0f, duration: 0.75f, frequency: 120f);
+            }
+
             if (e.SourceAbility != null)
             {
                 _uiManager.ShowNarration($"{e.Actor.Name} was hurt by {e.SourceAbility.AbilityName}!");
@@ -714,17 +715,14 @@ namespace ProjectVagabond.Scenes
                 _uiManager.ShowNarration($"{e.Actor.Name} is damaged by recoil!");
             }
 
-            _pendingAnimations.Enqueue(() =>
+            _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
+            _animationManager.StartHealthAnimation(e.Actor.CombatantID, (int)e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
+            if (!e.Actor.IsPlayerControlled)
             {
-                _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
-                _animationManager.StartHealthAnimation(e.Actor.CombatantID, (int)e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
-                if (!e.Actor.IsPlayerControlled)
-                {
-                    _animationManager.StartHitFlashAnimation(e.Actor.CombatantID);
-                }
-                Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
-                _animationManager.StartDamageNumberIndicator(e.Actor.CombatantID, e.RecoilDamage, hudPosition);
-            });
+                _animationManager.StartHitFlashAnimation(e.Actor.CombatantID);
+            }
+            Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
+            _animationManager.StartDamageNumberIndicator(e.Actor.CombatantID, e.RecoilDamage, hudPosition);
         }
 
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
@@ -750,26 +748,30 @@ namespace ProjectVagabond.Scenes
         {
             if (e.Damage > 0)
             {
+                if (e.Combatant.IsPlayerControlled)
+                {
+                    _core.TriggerScreenFlashSequence(_global.Palette_Red);
+                    _hapticsManager.TriggerShake(magnitude: 10.0f, duration: 0.75f, frequency: 120f);
+                }
+
                 string effectName = e.EffectType == StatusEffectType.Burn ? "the burn" : e.EffectType.ToString();
                 _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from {effectName}!");
-                _pendingAnimations.Enqueue(() =>
+
+                _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
+                _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
+                if (e.EffectType == StatusEffectType.Poison)
                 {
-                    _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
-                    _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
-                    if (e.EffectType == StatusEffectType.Poison)
+                    _animationManager.StartPoisonEffectAnimation(e.Combatant.CombatantID);
+                }
+                else if (e.EffectType == StatusEffectType.Burn)
+                {
+                    if (!e.Combatant.IsPlayerControlled)
                     {
-                        _animationManager.StartPoisonEffectAnimation(e.Combatant.CombatantID);
+                        _animationManager.StartHitFlashAnimation(e.Combatant.CombatantID);
                     }
-                    else if (e.EffectType == StatusEffectType.Burn)
-                    {
-                        if (!e.Combatant.IsPlayerControlled)
-                        {
-                            _animationManager.StartHitFlashAnimation(e.Combatant.CombatantID);
-                        }
-                    }
-                    Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
-                    _animationManager.StartDamageNumberIndicator(e.Combatant.CombatantID, e.Damage, hudPosition);
-                });
+                }
+                Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
+                _animationManager.StartDamageNumberIndicator(e.Combatant.CombatantID, e.Damage, hudPosition);
             }
         }
 

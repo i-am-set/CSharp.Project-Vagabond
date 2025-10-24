@@ -54,6 +54,20 @@ namespace ProjectVagabond
         private float _glitchTimer;
         private float _glitchDuration;
 
+        private class ScreenFlashState
+        {
+            public float Timer;
+            public int FlashesRemaining;
+            public bool IsCurrentlyWhite;
+            public Color FlashColor;
+
+            public const int TOTAL_FLASHES = 2;
+            public const float FLASH_ON_DURATION = 0.05f;
+            public const float FLASH_OFF_DURATION = 0.05f;
+            public const float TOTAL_FLASH_CYCLE_DURATION = FLASH_ON_DURATION + FLASH_OFF_DURATION;
+        }
+        private ScreenFlashState _screenFlashState;
+
 
         public Matrix MouseTransformMatrix => _mouseTransformMatrix;
         public BitmapFont SecondaryFont => _secondaryFont;
@@ -338,6 +352,20 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Triggers a sequence of full-screen color flashes.
+        /// </summary>
+        public void TriggerScreenFlashSequence(Color color)
+        {
+            _screenFlashState = new ScreenFlashState
+            {
+                Timer = 0f,
+                FlashesRemaining = ScreenFlashState.TOTAL_FLASHES,
+                IsCurrentlyWhite = true,
+                FlashColor = color
+            };
+        }
+
+        /// <summary>
         /// Triggers a full-screen glitch effect that fades out over the specified duration.
         /// </summary>
         public void TriggerFullscreenGlitch(float duration)
@@ -390,6 +418,24 @@ namespace ProjectVagabond
             if (_glitchTimer > 0)
             {
                 _glitchTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+            if (_screenFlashState != null)
+            {
+                _screenFlashState.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_screenFlashState.Timer >= ScreenFlashState.TOTAL_FLASH_CYCLE_DURATION)
+                {
+                    _screenFlashState.Timer -= ScreenFlashState.TOTAL_FLASH_CYCLE_DURATION;
+                    _screenFlashState.FlashesRemaining--;
+                    if (_screenFlashState.FlashesRemaining <= 0)
+                    {
+                        _screenFlashState = null;
+                    }
+                }
+
+                if (_screenFlashState != null)
+                {
+                    _screenFlashState.IsCurrentlyWhite = _screenFlashState.Timer < ScreenFlashState.FLASH_ON_DURATION;
+                }
             }
 
             // Handle debug input
@@ -639,15 +685,22 @@ namespace ProjectVagabond
                 _crtEffect.Parameters["ScreenResolution"]?.SetValue(new Vector2(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));
                 _crtEffect.Parameters["Gamma"]?.SetValue(_settings.Gamma);
 
-                // Calculate flash intensity (fades from 1 to 0)
                 float flashIntensity = 0f;
-                if (_flashTimer > 0 && _flashDuration > 0)
+                Color flashColor = Color.Transparent;
+
+                if (_screenFlashState != null && _screenFlashState.IsCurrentlyWhite)
+                {
+                    flashIntensity = 1.0f;
+                    flashColor = _screenFlashState.FlashColor;
+                }
+                else if (_flashTimer > 0 && _flashDuration > 0)
                 {
                     flashIntensity = Easing.EaseOutCubic(_flashTimer / _flashDuration);
+                    flashColor = _flashColor;
                 }
-                // MODIFIED: Reduce the maximum intensity to make the flash semi-transparent.
-                float maxFlashOpacity = 0.4f;
-                _crtEffect.Parameters["FlashColor"]?.SetValue(_flashColor.ToVector3());
+
+                float maxFlashOpacity = 0.25f;
+                _crtEffect.Parameters["FlashColor"]?.SetValue(flashColor.ToVector3());
                 _crtEffect.Parameters["FlashIntensity"]?.SetValue(flashIntensity * maxFlashOpacity);
 
                 // Calculate glitch intensity (fades from 1 to 0)
