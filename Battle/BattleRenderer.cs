@@ -3,6 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.Utils;
 using System;
@@ -293,14 +294,17 @@ namespace ProjectVagabond.Battle.UI
         {
             if (uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting)
             {
+                var pixel = ServiceLocator.Get<Texture2D>();
                 for (int i = 0; i < _currentTargets.Count; i++)
                 {
                     Color boxColor = i == inputHandler.HoveredTargetIndex ? Color.Red : Color.Yellow;
                     var bounds = _currentTargets[i].Bounds;
-                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Top), new Vector2(bounds.Right, bounds.Top), boxColor);
-                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Bottom), new Vector2(bounds.Right, bounds.Bottom), boxColor);
-                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Left, bounds.Top), new Vector2(bounds.Left, bounds.Bottom), boxColor);
-                    spriteBatch.DrawLineSnapped(new Vector2(bounds.Right, bounds.Top), new Vector2(bounds.Right, bounds.Bottom), boxColor);
+
+                    // Draw the border as four 1px rectangles to ensure perfect corners
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Left, bounds.Top, bounds.Width, 1), boxColor); // Top
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Left, bounds.Bottom - 1, bounds.Width, 1), boxColor); // Bottom
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Left, bounds.Top, 1, bounds.Height), boxColor); // Left
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(bounds.Right - 1, bounds.Top, 1, bounds.Height), boxColor); // Right
                 }
             }
         }
@@ -729,21 +733,33 @@ namespace ProjectVagabond.Battle.UI
             bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
             int spriteSize = isMajor ? 96 : 64;
 
-            float spriteTop = centerPosition.Y - spriteSize - 10;
-            Vector2 nameSize = nameFont.MeasureString(combatant.Name);
-            float nameY = centerPosition.Y - 8;
-            string hpText = $"HP: {((int)Math.Round(combatant.VisualHP))}/{combatant.Stats.MaxHP}";
-            Vector2 hpSize = statsFont.MeasureString(hpText);
-            float hpY = centerPosition.Y + 2;
-            float hpBottom = hpY + statsFont.LineHeight;
-            float top = spriteTop;
-            float bottom = hpBottom;
-            float maxWidth = Math.Max(spriteSize, Math.Max(nameSize.X, hpSize.X));
+            // --- Top Calculation ---
+            float spriteRectBaseY = centerPosition.Y - spriteSize - 10;
+            float spriteTop = GetEnemySpriteStaticTopY(combatant, spriteRectBaseY);
+
+            // --- Bottom Calculation ---
+            const int barHeight = 2;
+            float barY = centerPosition.Y + 2;
+            float hudBottom = barY + barHeight;
+
+            // --- Width Calculation ---
+            float nameWidth = nameFont.MeasureString(combatant.Name).Width;
+            float maxWidth = Math.Max(spriteSize, nameWidth);
+
+            // --- Final Rectangle Assembly ---
+            float top = spriteTop - 8; // Move top up by 8 pixels
+            float bottom = hudBottom;
             float left = centerPosition.X - maxWidth / 2;
             float width = maxWidth;
             float height = bottom - top;
             const int padding = 2;
-            return new Rectangle((int)left - padding, (int)top - padding, (int)width + padding * 2, (int)height + padding * 2);
+
+            return new Rectangle(
+                (int)Math.Round(left - padding),
+                (int)Math.Round(top - padding),
+                (int)Math.Round(width + padding * 2),
+                (int)Math.Round(height + padding * 2)
+            );
         }
 
         private Rectangle GetPlayerInteractionBounds(BitmapFont nameFont, BitmapFont secondaryFont, BattleCombatant player)
