@@ -227,41 +227,22 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // 3. Generate new, unique, snapped paths using a weighted system
+            // 3. Generate new, unique, snapped paths
             int newPathsToGenerate = 3 - _currentChoices.Count;
             if (newPathsToGenerate > 0)
             {
-                var angleWeights = new Dictionary<float, float>();
+                var availableAngles = new List<float>();
                 for (int i = 0; i < 8; i++)
                 {
-                    float angle = i * MathHelper.PiOver4;
-                    angleWeights[angle] = CalculateAngleWeight(angle, arrivalAngle, usedAngles);
+                    availableAngles.Add(i * MathHelper.PiOver4);
                 }
 
-                for (int i = 0; i < newPathsToGenerate; i++)
+                var validAngles = availableAngles.Where(angle => !IsAngleTooClose(angle, usedAngles, arrivalAngle)).ToList();
+                var shuffledAngles = validAngles.OrderBy(a => _random.Next()).ToList();
+
+                foreach (var angle in shuffledAngles.Take(newPathsToGenerate))
                 {
-                    float totalWeight = angleWeights.Values.Sum();
-                    if (totalWeight <= 0) break; // No more valid angles to choose from
-
-                    double roll = _random.NextDouble() * totalWeight;
-                    float chosenAngle = -1f;
-
-                    foreach (var (angle, weight) in angleWeights)
-                    {
-                        if (roll < weight)
-                        {
-                            chosenAngle = angle;
-                            break;
-                        }
-                        roll -= weight;
-                    }
-
-                    if (chosenAngle != -1f)
-                    {
-                        _currentChoices.Add(new PathChoice(chosenAngle, _currentNode.Position));
-                        usedAngles.Add(SnapAngle(chosenAngle)); // Add to used angles for the next iteration
-                        angleWeights[chosenAngle] = 0f; // Prevent re-selection
-                    }
+                    _currentChoices.Add(new PathChoice(angle, _currentNode.Position));
                 }
             }
         }
@@ -271,35 +252,28 @@ namespace ProjectVagabond.Scenes
             return MathF.Round(angle / MathHelper.PiOver4) * MathHelper.PiOver4;
         }
 
-        private float CalculateAngleWeight(float newAngle, float? arrivalAngle, HashSet<float> usedAngles)
+        private bool IsAngleTooClose(float newAngle, HashSet<float> usedAngles, float? arrivalAngle)
         {
-            // Rule 1: If angle is already taken by an existing path, it's invalid.
-            if (usedAngles.Contains(SnapAngle(newAngle)))
+            const float ANGLE_EPSILON = 0.01f; // Small tolerance for float comparison
+            const float ARRIVAL_REPULSION_CONE = MathHelper.Pi / 3f; // 60 degrees
+
+            foreach (var usedAngle in usedAngles)
             {
-                return 0f;
+                if (Math.Abs(MathHelper.WrapAngle(newAngle - usedAngle)) < ANGLE_EPSILON)
+                {
+                    return true;
+                }
             }
 
-            // Rule 2: If there's no arrival angle (i.e., we are at the starting node), all angles are equal.
-            if (!arrivalAngle.HasValue)
+            if (arrivalAngle.HasValue)
             {
-                return 100f; // Base weight
+                if (Math.Abs(MathHelper.WrapAngle(newAngle - arrivalAngle.Value)) < ARRIVAL_REPULSION_CONE)
+                {
+                    return true;
+                }
             }
 
-            // Rule 3: Calculate weight based on difference from arrival angle.
-            float delta = Math.Abs(MathHelper.WrapAngle(newAngle - arrivalAngle.Value));
-
-            // delta is in radians. Let's convert to a 0-4 scale where 0 is same direction, 4 is opposite.
-            int proximity = (int)Math.Round(delta / MathHelper.PiOver4);
-
-            switch (proximity)
-            {
-                case 0: return 1f;   // Directly behind (backtracking direction) - Very low weight
-                case 1: return 50f;  // 45 degrees away - Medium-high weight
-                case 2: return 100f; // 90 degrees away (adjacent) - Highest weight
-                case 3: return 75f;  // 135 degrees away - High weight
-                case 4: return 90f;  // 180 degrees away (directly forward) - Very high weight
-                default: return 10f; // Should not happen
-            }
+            return false;
         }
 
 
@@ -741,7 +715,7 @@ namespace ProjectVagabond.Scenes
             if (_sceneState == SceneState.Settling)
             {
                 float progress = Math.Clamp(_nodeRevealTimer / NODE_SETTLE_DURATION, 0f, 1f);
-                float easedProgress = Easing.EaseInOutCubic(progress); // Use a smoother curve
+                float easedProgress = Easing.EaseInOutCubic(progress);
                 yOffset = MathHelper.Lerp(-NODE_LIFT_AMOUNT, 0, easedProgress);
                 nodeTypeToDraw = _currentNode.NodeType;
             }
