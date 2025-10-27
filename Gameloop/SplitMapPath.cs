@@ -10,7 +10,6 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond.Progression
 {
@@ -24,7 +23,6 @@ namespace ProjectVagabond.Progression
         public int ToNodeId { get; }
         public List<Vector2> RenderPoints { get; set; } = new List<Vector2>();
         public List<Point> PixelPoints { get; set; } = new List<Point>();
-        public float Length { get; private set; }
 
         private static int _nextId = 0;
 
@@ -35,16 +33,6 @@ namespace ProjectVagabond.Progression
             ToNodeId = toNodeId;
         }
         public static void ResetIdCounter() => _nextId = 0;
-
-        public void CalculateLength()
-        {
-            Length = 0f;
-            if (RenderPoints.Count < 2) return;
-            for (int i = 0; i < RenderPoints.Count - 1; i++)
-            {
-                Length += Vector2.Distance(RenderPoints[i], RenderPoints[i + 1]);
-            }
-        }
     }
 }
 #nullable restore

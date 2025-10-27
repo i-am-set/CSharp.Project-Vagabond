@@ -1,6 +1,5 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
-using ProjectVagabond.Progression;
 using System;
 using System.Collections.Generic;
 
@@ -34,7 +33,6 @@ namespace ProjectVagabond.Progression
         public List<int> OutgoingPathIds { get; } = new List<int>();
         public bool IsReachable { get; set; } = false;
         public float AnimationOffset { get; }
-        public bool IsVisible { get; set; } = true;
 
         private static int _nextId = 0;
         private const int NODE_SIZE = 16;
