@@ -12,7 +12,8 @@ namespace ProjectVagabond.Progression
         Battle,
         Narrative,
         Reward,
-        MajorBattle
+        MajorBattle,
+        Hidden
     }
 
     public enum BattleDifficulty

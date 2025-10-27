@@ -351,7 +351,6 @@ namespace ProjectVagabond.Scenes
                     _cameraTargetPosition = _currentNode.Position;
                     _targetNode = null;
                     _activePath = null;
-                    _visitedNodeIds.Add(_currentNode.Id);
                     _sceneState = SceneState.NodeTypeReveal;
                     _nodeRevealTimer = 0f;
                     break;
@@ -359,6 +358,7 @@ namespace ProjectVagabond.Scenes
                     _nodeRevealTimer += deltaTime;
                     if (_nodeRevealTimer >= NODE_LIFT_DURATION + NODE_SHRINK_DURATION + NODE_EXPAND_DURATION + NODE_REVEAL_HOLD_DURATION + NODE_SETTLE_DURATION)
                     {
+                        _visitedNodeIds.Add(_currentNode.Id);
                         TriggerNodeEvent(_currentNode);
                     }
                     break;
@@ -617,6 +617,34 @@ namespace ProjectVagabond.Scenes
                 DrawPath(spriteBatch, ServiceLocator.Get<Texture2D>(), path, isVisited ? _global.Palette_Gray : _global.Palette_White);
             }
 
+            // Draw preview nodes for choices
+            if (_sceneState == SceneState.Choosing)
+            {
+                const float NODE_DISTANCE = 80f; // Base distance for new nodes
+                foreach (var choice in _currentChoices)
+                {
+                    // Determine the opacity based on hover state
+                    float alpha = (choice == _hoveredChoice) ? 0.25f : 0.1f;
+                    Color drawColor = Color.White * alpha;
+
+                    if (choice.TargetNodeId.HasValue)
+                    {
+                        if (_nodes.TryGetValue(choice.TargetNodeId.Value, out var targetNode))
+                        {
+                            if (targetNode == _currentNode) continue; // Don't preview the current node (backtracking)
+                            var (texture, sourceRect, origin) = GetNodeDrawData(targetNode, gameTime);
+                            spriteBatch.DrawSnapped(texture, targetNode.Position, sourceRect, drawColor, 0f, origin, 1f, SpriteEffects.None, 0.3f);
+                        }
+                    }
+                    else
+                    {
+                        Vector2 newNodePos = _currentNode.Position + new Vector2(MathF.Cos(choice.Angle), MathF.Sin(choice.Angle)) * NODE_DISTANCE;
+                        var (texture, sourceRect, origin) = GetNodeDrawData(null, gameTime, SplitNodeType.Hidden);
+                        spriteBatch.DrawSnapped(texture, newNodePos, sourceRect, drawColor, 0f, origin, 1f, SpriteEffects.None, 0.3f);
+                    }
+                }
+            }
+
             foreach (var node in _nodes.Values)
             {
                 if (node.Id == _currentNode?.Id && _sceneState == SceneState.NodeTypeReveal)
@@ -679,14 +707,14 @@ namespace ProjectVagabond.Scenes
             {
                 float progress = _nodeRevealTimer / NODE_LIFT_DURATION;
                 yOffset = -Easing.EaseOutQuad(progress) * NODE_LIFT_AMOUNT;
-                nodeTypeToDraw = SplitNodeType.Narrative;
+                nodeTypeToDraw = SplitNodeType.Hidden;
             }
             else if (_nodeRevealTimer < shrinkEndTime)
             {
                 yOffset = -NODE_LIFT_AMOUNT;
                 float progress = (_nodeRevealTimer - liftEndTime) / NODE_SHRINK_DURATION;
                 scale = 1f - Easing.EaseInCubic(progress);
-                nodeTypeToDraw = SplitNodeType.Narrative;
+                nodeTypeToDraw = SplitNodeType.Hidden;
             }
             else if (_nodeRevealTimer < expandEndTime)
             {
@@ -788,10 +816,15 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private (Texture2D texture, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode node, GameTime gameTime, SplitNodeType? typeOverride = null)
+        private (Texture2D texture, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode? node, GameTime gameTime, SplitNodeType? typeOverride = null)
         {
             Texture2D texture;
-            var nodeType = typeOverride ?? node.NodeType;
+            var nodeType = typeOverride ?? node?.NodeType ?? SplitNodeType.Hidden;
+
+            if (!typeOverride.HasValue && node != null && !_visitedNodeIds.Contains(node.Id))
+            {
+                nodeType = SplitNodeType.Hidden;
+            }
 
             switch (nodeType)
             {
@@ -799,7 +832,8 @@ namespace ProjectVagabond.Scenes
                     texture = _spriteManager.SplitNodeStart;
                     break;
                 case SplitNodeType.Battle:
-                    texture = node.Difficulty switch
+                    var difficulty = node?.Difficulty ?? BattleDifficulty.Normal;
+                    texture = difficulty switch
                     {
                         BattleDifficulty.Easy => _spriteManager.CombatNodeEasySprite,
                         BattleDifficulty.Hard => _spriteManager.CombatNodeHardSprite,
@@ -815,6 +849,9 @@ namespace ProjectVagabond.Scenes
                 case SplitNodeType.MajorBattle:
                     texture = _spriteManager.SplitNodeBoss;
                     break;
+                case SplitNodeType.Hidden:
+                    texture = _spriteManager.SplitNodeHidden;
+                    break;
                 default:
                     texture = _spriteManager.CombatNodeNormalSprite; // Fallback
                     break;
@@ -822,7 +859,8 @@ namespace ProjectVagabond.Scenes
 
             int frameIndex = 0;
             float totalTime = (float)gameTime.TotalGameTime.TotalSeconds;
-            frameIndex = (int)((totalTime + node.AnimationOffset) / NODE_FRAME_DURATION) % 2;
+            float animationOffset = node?.AnimationOffset ?? 0f;
+            frameIndex = (int)((totalTime + animationOffset) / NODE_FRAME_DURATION) % 2;
 
             var sourceRect = new Rectangle(frameIndex * 32, 0, 32, 32);
             var origin = new Vector2(16, 16);
