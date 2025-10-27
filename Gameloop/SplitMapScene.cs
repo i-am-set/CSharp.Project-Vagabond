@@ -64,7 +64,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private enum SceneState { Choosing, PathDrawing, PlayerMoving, Arrived, NodeTypeReveal }
+        private enum SceneState { Choosing, PathDrawing, PlayerMoving, Arrived, NodeTypeReveal, Settling }
         private SceneState _sceneState = SceneState.Choosing;
 
         private readonly ProgressionManager _progressionManager;
@@ -111,7 +111,7 @@ namespace ProjectVagabond.Scenes
         private const float NODE_SHRINK_DURATION = 0.2f;
         private const float NODE_EXPAND_DURATION = 0.5f;
         private const float NODE_REVEAL_HOLD_DURATION = 0.5f;
-        private const float NODE_SETTLE_DURATION = 0.2f;
+        private const float NODE_SETTLE_DURATION = 0.8f;
         private const float NODE_LIFT_AMOUNT = 15f;
         private const float NODE_REVEAL_SHAKE_FREQUENCY = 90f;
         private const float NODE_REVEAL_SHAKE_MAGNITUDE = 2f;
@@ -174,10 +174,14 @@ namespace ProjectVagabond.Scenes
                 _playerIconPosition = _currentNode.Position;
                 _cameraPosition = _currentNode.Position;
                 _cameraTargetPosition = _currentNode.Position;
+                _sceneState = SceneState.Choosing;
+                GenerateChoices();
             }
-
-            _sceneState = SceneState.Choosing;
-            GenerateChoices();
+            else // We are returning from an event (battle, etc.)
+            {
+                _sceneState = SceneState.Settling;
+                _nodeRevealTimer = 0f; // Use the same timer for the settle animation
+            }
         }
 
         public override void Exit()
@@ -356,10 +360,18 @@ namespace ProjectVagabond.Scenes
                     break;
                 case SceneState.NodeTypeReveal:
                     _nodeRevealTimer += deltaTime;
-                    if (_nodeRevealTimer >= NODE_LIFT_DURATION + NODE_SHRINK_DURATION + NODE_EXPAND_DURATION + NODE_REVEAL_HOLD_DURATION + NODE_SETTLE_DURATION)
+                    if (_nodeRevealTimer >= NODE_LIFT_DURATION + NODE_SHRINK_DURATION + NODE_EXPAND_DURATION + NODE_REVEAL_HOLD_DURATION)
                     {
                         _visitedNodeIds.Add(_currentNode.Id);
                         TriggerNodeEvent(_currentNode);
+                    }
+                    break;
+                case SceneState.Settling:
+                    _nodeRevealTimer += deltaTime;
+                    if (_nodeRevealTimer >= NODE_SETTLE_DURATION)
+                    {
+                        _sceneState = SceneState.Choosing;
+                        GenerateChoices();
                     }
                     break;
             }
@@ -474,7 +486,8 @@ namespace ProjectVagabond.Scenes
         private void TriggerNodeEvent(SplitMapNode? node)
         {
             if (node == null) return;
-            _sceneState = SceneState.PathDrawing;
+            // The scene state will change when the event is triggered (e.g., scene change).
+            // We don't change it here anymore.
 
             switch (node.NodeType)
             {
@@ -647,14 +660,15 @@ namespace ProjectVagabond.Scenes
 
             foreach (var node in _nodes.Values)
             {
-                if (node.Id == _currentNode?.Id && _sceneState == SceneState.NodeTypeReveal)
+                if (node.Id == _currentNode?.Id && (_sceneState == SceneState.NodeTypeReveal || _sceneState == SceneState.Settling))
                 {
                     DrawNodeRevealAnimation(spriteBatch, gameTime);
                 }
                 else if (node.IsVisible)
                 {
                     var (texture, sourceRect, origin) = GetNodeDrawData(node, gameTime);
-                    spriteBatch.DrawSnapped(texture, node.Position, sourceRect, Color.White, 0f, origin, 1f, SpriteEffects.None, 0.4f);
+                    Color color = _visitedNodeIds.Contains(node.Id) ? Color.Gray : Color.White;
+                    spriteBatch.DrawSnapped(texture, node.Position, sourceRect, color, 0f, origin, 1f, SpriteEffects.None, 0.4f);
                 }
             }
 
@@ -698,50 +712,55 @@ namespace ProjectVagabond.Scenes
             float xOffset = 0f;
             Vector2 nodePosition = _currentNode.Position;
 
-            float liftEndTime = NODE_LIFT_DURATION;
-            float shrinkEndTime = liftEndTime + NODE_SHRINK_DURATION;
-            float expandEndTime = shrinkEndTime + NODE_EXPAND_DURATION;
-            float holdEndTime = expandEndTime + NODE_REVEAL_HOLD_DURATION;
+            if (_sceneState == SceneState.Settling)
+            {
+                float progress = Math.Clamp(_nodeRevealTimer / NODE_SETTLE_DURATION, 0f, 1f);
+                float easedProgress = Easing.EaseInOutCubic(progress);
+                yOffset = MathHelper.Lerp(-NODE_LIFT_AMOUNT, 0, easedProgress);
+                nodeTypeToDraw = _currentNode.NodeType;
+            }
+            else // NodeTypeReveal
+            {
+                float liftEndTime = NODE_LIFT_DURATION;
+                float shrinkEndTime = liftEndTime + NODE_SHRINK_DURATION;
+                float expandEndTime = shrinkEndTime + NODE_EXPAND_DURATION;
+                float holdEndTime = expandEndTime + NODE_REVEAL_HOLD_DURATION;
 
-            if (_nodeRevealTimer < liftEndTime)
-            {
-                float progress = _nodeRevealTimer / NODE_LIFT_DURATION;
-                yOffset = -Easing.EaseOutQuad(progress) * NODE_LIFT_AMOUNT;
-                nodeTypeToDraw = SplitNodeType.Hidden;
-            }
-            else if (_nodeRevealTimer < shrinkEndTime)
-            {
-                yOffset = -NODE_LIFT_AMOUNT;
-                float progress = (_nodeRevealTimer - liftEndTime) / NODE_SHRINK_DURATION;
-                scale = 1f - Easing.EaseInCubic(progress);
-                nodeTypeToDraw = SplitNodeType.Hidden;
-            }
-            else if (_nodeRevealTimer < expandEndTime)
-            {
-                yOffset = -NODE_LIFT_AMOUNT;
-                float progress = (_nodeRevealTimer - shrinkEndTime) / NODE_EXPAND_DURATION;
-                scale = Easing.EaseOutBack(progress);
-                nodeTypeToDraw = _currentNode.NodeType;
-            }
-            else if (_nodeRevealTimer < holdEndTime)
-            {
-                yOffset = -NODE_LIFT_AMOUNT;
-                scale = 1.0f;
-                nodeTypeToDraw = _currentNode.NodeType;
+                if (_nodeRevealTimer < liftEndTime)
+                {
+                    float progress = _nodeRevealTimer / NODE_LIFT_DURATION;
+                    yOffset = -Easing.EaseOutQuad(progress) * NODE_LIFT_AMOUNT;
+                    nodeTypeToDraw = SplitNodeType.Hidden;
+                }
+                else if (_nodeRevealTimer < shrinkEndTime)
+                {
+                    yOffset = -NODE_LIFT_AMOUNT;
+                    float progress = (_nodeRevealTimer - liftEndTime) / NODE_SHRINK_DURATION;
+                    scale = 1f - Easing.EaseInCubic(progress);
+                    nodeTypeToDraw = SplitNodeType.Hidden;
+                }
+                else if (_nodeRevealTimer < expandEndTime)
+                {
+                    yOffset = -NODE_LIFT_AMOUNT;
+                    float progress = (_nodeRevealTimer - shrinkEndTime) / NODE_EXPAND_DURATION;
+                    scale = Easing.EaseOutBack(progress);
+                    nodeTypeToDraw = _currentNode.NodeType;
+                }
+                else // Hold & Shake
+                {
+                    yOffset = -NODE_LIFT_AMOUNT;
+                    scale = 1.0f;
+                    nodeTypeToDraw = _currentNode.NodeType;
 
-                float holdProgress = (_nodeRevealTimer - expandEndTime) / NODE_REVEAL_HOLD_DURATION;
-                float magnitude = (1f - Easing.EaseOutQuad(holdProgress)) * NODE_REVEAL_SHAKE_MAGNITUDE;
-                xOffset = MathF.Sin(holdProgress * NODE_REVEAL_SHAKE_FREQUENCY) * magnitude;
-            }
-            else
-            {
-                float progress = (_nodeRevealTimer - holdEndTime) / NODE_SETTLE_DURATION;
-                yOffset = -Easing.EaseInQuad(1f - progress) * NODE_LIFT_AMOUNT;
-                nodeTypeToDraw = _currentNode.NodeType;
+                    float holdProgress = (_nodeRevealTimer - expandEndTime) / NODE_REVEAL_HOLD_DURATION;
+                    float magnitude = (1f - Easing.EaseOutQuad(holdProgress)) * NODE_REVEAL_SHAKE_MAGNITUDE;
+                    xOffset = MathF.Sin(holdProgress * NODE_REVEAL_SHAKE_FREQUENCY) * magnitude;
+                }
             }
 
             var (texture, sourceRect, origin) = GetNodeDrawData(_currentNode, gameTime, nodeTypeToDraw);
-            spriteBatch.DrawSnapped(texture, nodePosition + new Vector2(xOffset, yOffset), sourceRect, Color.White, rotation, origin, scale, SpriteEffects.None, 0.4f);
+            Color color = _visitedNodeIds.Contains(_currentNode.Id) ? Color.Gray : Color.White;
+            spriteBatch.DrawSnapped(texture, nodePosition + new Vector2(xOffset, yOffset), sourceRect, color, rotation, origin, scale, SpriteEffects.None, 0.4f);
         }
 
         private void DrawPlayerIcon(SpriteBatch spriteBatch, GameTime gameTime)
