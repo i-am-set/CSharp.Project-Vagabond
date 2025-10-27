@@ -77,7 +77,6 @@ namespace ProjectVagabond
         public Texture2D SplitNodeNarrative { get; private set; }
         public Texture2D SplitNodeReward { get; private set; }
         public Texture2D SplitNodeBoss { get; private set; }
-        public Texture2D SplitNodeHidden { get; private set; }
         public Texture2D CombatNodeNormalSprite { get; private set; }
         public Texture2D CombatNodePlayerSprite { get; private set; }
         public Texture2D CombatNodeEasySprite { get; private set; }
@@ -220,8 +219,6 @@ namespace ProjectVagabond
             catch { SplitNodeReward = _textureFactory.CreateColoredTexture(64, 32, Color.Gold); }
             try { SplitNodeBoss = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Boss"); }
             catch { SplitNodeBoss = _textureFactory.CreateColoredTexture(64, 32, Color.Purple); }
-            try { SplitNodeHidden = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Hidden"); }
-            catch { SplitNodeHidden = _textureFactory.CreateColoredTexture(64, 32, Color.Magenta); }
             try { CombatNodeNormalSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/CombatNode_Normal"); }
             catch { CombatNodeNormalSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Gray); }
             try { CombatNodePlayerSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/Combat_Node_Player"); }
@@ -685,4 +682,3 @@ namespace ProjectVagabond
         }
     }
 }
-#nullable restore
