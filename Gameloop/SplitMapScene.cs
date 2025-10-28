@@ -6,6 +6,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -107,7 +108,7 @@ namespace ProjectVagabond.Scenes
         // Node Animation
         private const float NODE_FRAME_DURATION = 0.5f;
         private float _nodeHoverTextBobTimer = 0f;
-        private const float UNSELECTED_FADE_OUT_DURATION = 0.5f;
+        private const float UNSELECTED_FADE_OUT_DURATION = 1.0f;
         private float _nodeLiftTimer = 0f;
         private const float NODE_LIFT_AMOUNT = 15f;
         private const float NODE_LIFT_DURATION = 0.6f;
@@ -264,7 +265,7 @@ namespace ProjectVagabond.Scenes
                                 var element = new FadingElement
                                 {
                                     Position = point.ToVector2(),
-                                    Velocity = new Vector2((float)(_random.NextDouble() * 4 - 2), (float)(_random.NextDouble() * -12 - 2)),
+                                    Velocity = new Vector2((float)(_random.NextDouble() * 4 - 2), (float)(_random.NextDouble() * -6 - 1)),
                                     Color = visitedPathFillColor,
                                     Age = 0f,
                                     Lifetime = UNSELECTED_FADE_OUT_DURATION,
@@ -285,7 +286,7 @@ namespace ProjectVagabond.Scenes
                                 var nodeElement = new FadingElement
                                 {
                                     Position = unselectedNode.Position,
-                                    Velocity = new Vector2((float)(_random.NextDouble() * 2 - 1), (float)(_random.NextDouble() * -8 - 2)),
+                                    Velocity = new Vector2((float)(_random.NextDouble() * 2 - 1), (float)(_random.NextDouble() * -4 - 1)),
                                     Color = Color.White,
                                     Age = 0f,
                                     Lifetime = UNSELECTED_FADE_OUT_DURATION,
@@ -875,7 +876,7 @@ namespace ProjectVagabond.Scenes
             foreach (var element in _fadingElements)
             {
                 float progress = element.Age / element.Lifetime;
-                float alpha = 1.0f - Easing.EaseInQuad(progress);
+                float alpha = 1.0f - Easing.EaseOutQuad(progress);
                 spriteBatch.DrawSnapped(element.Texture, element.Position, element.SourceRect, element.Color * alpha, element.Rotation, element.Origin, element.Scale, SpriteEffects.None, 0.35f);
             }
 
