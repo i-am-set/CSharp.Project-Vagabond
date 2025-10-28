@@ -16,6 +16,21 @@ namespace ProjectVagabond.Scenes
 {
     public class SplitMapScene : GameScene
     {
+        private class FadingElement
+        {
+            public Vector2 Position;
+            public Vector2 Velocity;
+            public Color Color;
+            public float Age;
+            public float Lifetime;
+            public Texture2D? Texture;
+            public Rectangle? SourceRect;
+            public Vector2 Origin;
+            public float Scale;
+            public float Rotation;
+            public float RotationSpeed;
+        }
+
         private readonly ProgressionManager _progressionManager;
         private readonly SceneManager _sceneManager;
         private readonly GameState _gameState;
@@ -52,7 +67,6 @@ namespace ProjectVagabond.Scenes
 
         // Path animation state
         private readonly Dictionary<int, float> _pathAnimationProgress = new();
-        private readonly Dictionary<int, float> _pathRetractionProgress = new();
         private readonly Dictionary<int, float> _pathAnimationDurations = new();
         private const float PATH_ANIMATION_DURATION = 3.0f; // Seconds for the path to draw
         private const string PATH_DRAW_PATTERN = "1111110111010111111001110111110011111111110101100"; // 1 = draw, 0 = skip. Creates a dashed line effect.
@@ -93,11 +107,13 @@ namespace ProjectVagabond.Scenes
         // Node Animation
         private const float NODE_FRAME_DURATION = 0.5f;
         private float _nodeHoverTextBobTimer = 0f;
-        private readonly Dictionary<int, float> _fadingNodeProgress = new();
         private const float UNSELECTED_FADE_OUT_DURATION = 0.5f;
         private float _nodeLiftTimer = 0f;
         private const float NODE_LIFT_AMOUNT = 15f;
         private const float NODE_LIFT_DURATION = 0.6f;
+        private readonly List<FadingElement> _fadingElements = new();
+        private readonly HashSet<int> _fadingPathIds = new();
+        private readonly HashSet<int> _fadingNodeIds = new();
 
 
         public static bool PlayerWonLastBattle { get; set; } = true;
@@ -137,9 +153,10 @@ namespace ProjectVagabond.Scenes
                 _nodeForPathReveal = _playerCurrentNodeId;
                 _lastAnimatedFloor = -1;
                 _pathAnimationProgress.Clear();
-                _pathRetractionProgress.Clear();
                 _pathAnimationDurations.Clear();
-                _fadingNodeProgress.Clear();
+                _fadingElements.Clear();
+                _fadingPathIds.Clear();
+                _fadingNodeIds.Clear();
 
                 _visitedNodeIds.Clear();
                 _visitedNodeIds.Add(_playerCurrentNodeId);
@@ -229,16 +246,58 @@ namespace ProjectVagabond.Scenes
             // Identify unselected paths and nodes to start their fade/retraction animations.
             if (_currentMap.Nodes.TryGetValue(_playerCurrentNodeId, out var currentNode))
             {
+                var pixel = ServiceLocator.Get<Texture2D>();
+                var visitedPathFillColor = _global.Palette_White;
+
                 foreach (var pathId in currentNode.OutgoingPathIds)
                 {
                     if (pathId != _playerMovePath.Id)
                     {
-                        _pathAnimationProgress.Remove(pathId);
-                        _pathRetractionProgress[pathId] = 0f;
-
                         if (_currentMap.Paths.TryGetValue(pathId, out var unselectedPath))
                         {
-                            _fadingNodeProgress[unselectedPath.ToNodeId] = 0f;
+                            _fadingPathIds.Add(unselectedPath.Id);
+                            _fadingNodeIds.Add(unselectedPath.ToNodeId);
+
+                            // Create particles for the path pixels
+                            foreach (var point in unselectedPath.PixelPoints)
+                            {
+                                var element = new FadingElement
+                                {
+                                    Position = point.ToVector2(),
+                                    Velocity = new Vector2((float)(_random.NextDouble() * 4 - 2), (float)(_random.NextDouble() * -12 - 2)),
+                                    Color = visitedPathFillColor,
+                                    Age = 0f,
+                                    Lifetime = UNSELECTED_FADE_OUT_DURATION,
+                                    Texture = pixel,
+                                    SourceRect = null,
+                                    Origin = new Vector2(0.5f),
+                                    Scale = 1f,
+                                    Rotation = 0f,
+                                    RotationSpeed = 0f
+                                };
+                                _fadingElements.Add(element);
+                            }
+
+                            // Create a particle for the destination node
+                            if (_currentMap.Nodes.TryGetValue(unselectedPath.ToNodeId, out var unselectedNode))
+                            {
+                                var (tex, src, origin) = GetNodeDrawData(unselectedNode, new GameTime());
+                                var nodeElement = new FadingElement
+                                {
+                                    Position = unselectedNode.Position,
+                                    Velocity = new Vector2((float)(_random.NextDouble() * 2 - 1), (float)(_random.NextDouble() * -8 - 2)),
+                                    Color = Color.White,
+                                    Age = 0f,
+                                    Lifetime = UNSELECTED_FADE_OUT_DURATION,
+                                    Texture = tex,
+                                    SourceRect = src,
+                                    Origin = origin,
+                                    Scale = 1f,
+                                    Rotation = 0f,
+                                    RotationSpeed = (float)(_random.NextDouble() * 2 - 1)
+                                };
+                                _fadingElements.Add(nodeElement);
+                            }
                         }
                     }
                 }
@@ -312,21 +371,19 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Update retracting path and fading node animations
-            var retractingKeys = _pathRetractionProgress.Keys.ToList();
-            foreach (var pathId in retractingKeys)
+            // Update fading elements
+            for (int i = _fadingElements.Count - 1; i >= 0; i--)
             {
-                if (_pathRetractionProgress[pathId] < UNSELECTED_FADE_OUT_DURATION)
+                var element = _fadingElements[i];
+                element.Age += deltaTime;
+                if (element.Age >= element.Lifetime)
                 {
-                    _pathRetractionProgress[pathId] += deltaTime;
+                    _fadingElements.RemoveAt(i);
                 }
-            }
-            var fadingNodeKeys = _fadingNodeProgress.Keys.ToList();
-            foreach (var nodeId in fadingNodeKeys)
-            {
-                if (_fadingNodeProgress[nodeId] < UNSELECTED_FADE_OUT_DURATION)
+                else
                 {
-                    _fadingNodeProgress[nodeId] += deltaTime;
+                    element.Position += element.Velocity * deltaTime;
+                    element.Rotation += element.RotationSpeed * deltaTime;
                 }
             }
 
@@ -772,15 +829,12 @@ namespace ProjectVagabond.Scenes
             int currentPlayerFloor = _currentMap.Nodes[_playerCurrentNodeId].Floor;
             foreach (var node in _currentMap.Nodes.Values)
             {
+                if (_fadingNodeIds.Contains(node.Id)) continue;
+
                 float nodeAlpha = 0f;
                 bool isNextFloor = node.Floor == currentPlayerFloor + 1;
 
-                if (_fadingNodeProgress.TryGetValue(node.Id, out float fadeTimer))
-                {
-                    float progress = Math.Clamp(fadeTimer / UNSELECTED_FADE_OUT_DURATION, 0f, 1f);
-                    nodeAlpha = 1.0f - Easing.EaseOutQuad(progress);
-                }
-                else if (node.Floor <= currentPlayerFloor || _visitedNodeIds.Contains(node.Id))
+                if (node.Floor <= currentPlayerFloor || _visitedNodeIds.Contains(node.Id))
                 {
                     nodeAlpha = 1.0f;
                 }
@@ -816,6 +870,13 @@ namespace ProjectVagabond.Scenes
 
                 var position = bounds.Center.ToVector2() + node.VisualOffset;
                 spriteBatch.DrawSnapped(texture, position, sourceRect, color * nodeAlpha, 0f, origin, scale, SpriteEffects.None, 0.4f);
+            }
+
+            foreach (var element in _fadingElements)
+            {
+                float progress = element.Age / element.Lifetime;
+                float alpha = 1.0f - Easing.EaseInQuad(progress);
+                spriteBatch.DrawSnapped(element.Texture, element.Position, element.SourceRect, element.Color * alpha, element.Rotation, element.Origin, element.Scale, SpriteEffects.None, 0.35f);
             }
 
             _playerIcon.Draw(spriteBatch);
@@ -858,7 +919,7 @@ namespace ProjectVagabond.Scenes
 
         private void DrawPath(SpriteBatch spriteBatch, Texture2D pixel, SplitMapPath path, Color fillColor)
         {
-            if (_currentMap == null || path.PixelPoints.Count < 2) return;
+            if (_currentMap == null || path.PixelPoints.Count < 2 || _fadingPathIds.Contains(path.Id)) return;
 
             var fromNode = _currentMap.Nodes[path.FromNodeId];
             var toNode = _currentMap.Nodes[path.ToNodeId];
@@ -866,15 +927,7 @@ namespace ProjectVagabond.Scenes
             int numPixelsToDraw;
             float pathAlpha = 1.0f;
 
-            if (_pathRetractionProgress.TryGetValue(path.Id, out float retractionTimer))
-            {
-                float linearProgress = Math.Clamp(retractionTimer / UNSELECTED_FADE_OUT_DURATION, 0f, 1f);
-                if (linearProgress >= 1f) return;
-                float easedProgress = Easing.EaseOutQuad(linearProgress);
-                pathAlpha = 1.0f - easedProgress;
-                numPixelsToDraw = path.PixelPoints.Count;
-            }
-            else if (fromNode.Id == _nodeForPathReveal)
+            if (fromNode.Id == _nodeForPathReveal)
             {
                 float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
                 float animationTimer = _pathAnimationProgress.GetValueOrDefault(path.Id, 0f);
