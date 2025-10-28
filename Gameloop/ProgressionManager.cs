@@ -1,4 +1,5 @@
-﻿using ProjectVagabond.Battle;
+﻿#nullable enable
+using ProjectVagabond.Battle;
 using ProjectVagabond.Progression;
 using System;
 using System.Collections.Generic;
@@ -111,8 +112,8 @@ namespace ProjectVagabond.Progression
 
             CurrentSplit = _splits.Values.ElementAt(_random.Next(_splits.Count));
             CategorizeBattles(CurrentSplit);
-            CurrentSplitMap = SplitMapGenerator.Generate(CurrentSplit);
-            Debug.WriteLine($"[ProgressionManager] Generated new split map: {CurrentSplit.Theme} with {CurrentSplitMap.TotalFloors} floors.");
+            CurrentSplitMap = SplitMapGenerator.GenerateInitial(CurrentSplit);
+            Debug.WriteLine($"[ProgressionManager] Generated initial split map: {CurrentSplit.Theme} with target {CurrentSplitMap.TargetFloorCount} floors.");
         }
 
         private void CategorizeBattles(SplitData splitData)
@@ -155,7 +156,7 @@ namespace ProjectVagabond.Progression
 
             int easyCount = totalCount / 3;
             int normalCount = totalCount / 3;
-            
+
             _categorizedBattles[BattleDifficulty.Easy].AddRange(sortedEncounters.Take(easyCount).Select(e => e.Encounter));
             _categorizedBattles[BattleDifficulty.Normal].AddRange(sortedEncounters.Skip(easyCount).Take(normalCount).Select(e => e.Encounter));
             _categorizedBattles[BattleDifficulty.Hard].AddRange(sortedEncounters.Skip(easyCount + normalCount).Select(e => e.Encounter));
@@ -171,7 +172,7 @@ namespace ProjectVagabond.Progression
                 _categorizedBattles[BattleDifficulty.Normal].Add(_categorizedBattles[BattleDifficulty.Hard].First());
                 _categorizedBattles[BattleDifficulty.Hard].RemoveAt(0);
             }
-            
+
             var fallbackEncounter = sortedEncounters.FirstOrDefault().Encounter;
             if (fallbackEncounter != null)
             {

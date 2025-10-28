@@ -33,6 +33,7 @@ namespace ProjectVagabond.Progression
         public List<int> OutgoingPathIds { get; } = new List<int>();
         public bool IsReachable { get; set; } = false;
         public float AnimationOffset { get; }
+        public Vector2 VisualOffset { get; set; } = Vector2.Zero;
 
         private static int _nextId = 0;
         private const int NODE_SIZE = 16;
