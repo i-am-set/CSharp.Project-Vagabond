@@ -1083,5 +1083,48 @@
     "OffensiveElementIDs": [ 4 ],
     "Effects": { "Gamble": "50,SelfDamage(50)" },
     "Tags": [ "Arcane" ]
+  },
+  {
+    "MoveID": "Leer",
+    "MoveName": "Leer",
+    "Description": "The user gives a harsh glare that lowers the target's Tenacity.",
+    "Power": 0,
+    "ManaCost": 0,
+    "MoveType": "Action",
+    "ImpactType": "Status",
+    "OffensiveStat": "Agility",
+    "MakesContact": false,
+    "Target": "Single",
+    "Accuracy": 100,
+    "Priority": 0,
+    "Rarity": -1,
+    "LevelRequirement": 0,
+    "OffensiveElementIDs": [],
+    "Effects": {
+      "ModifyStatStage": "Tenacity,-1,100,Target"
+    },
+    "Tags": [ "Debuff" ]
+  },
+  {
+    "MoveID": "BulkUp",
+    "MoveName": "Bulk Up",
+    "Description": "The user tenses its muscles to boost its Strength and Tenacity.",
+    "Power": 0,
+    "ManaCost": 15,
+    "MoveType": "Spell",
+    "ImpactType": "Status",
+    "OffensiveStat": "Strength",
+    "MakesContact": false,
+    "Target": "Self",
+    "Accuracy": -1,
+    "Priority": 0,
+    "Rarity": 1,
+    "LevelRequirement": 2,
+    "OffensiveElementIDs": [],
+    "Effects": {
+      "ModifyStatStage_1": "Strength,+1,100,Self",
+      "ModifyStatStage_2": "Tenacity,+1,100,Self"
+    },
+    "Tags": [ "Buff" ]
   }
 ]

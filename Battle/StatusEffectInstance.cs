@@ -33,14 +33,6 @@
         {
             return EffectType switch
             {
-                StatusEffectType.StrengthUp => "Strength Up",
-                StatusEffectType.StrengthDown => "Strength Down",
-                StatusEffectType.IntelligenceUp => "Intelligence Up",
-                StatusEffectType.IntelligenceDown => "Intelligence Down",
-                StatusEffectType.TenacityUp => "Tenacity Up",
-                StatusEffectType.TenacityDown => "Tenacity Down",
-                StatusEffectType.AgilityUp => "Agility Up",
-                StatusEffectType.AgilityDown => "Agility Down",
                 StatusEffectType.Poison => "Poisoned",
                 StatusEffectType.Stun => "Stunned",
                 StatusEffectType.Regen => "Regeneration",

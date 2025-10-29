@@ -19,7 +19,7 @@
         "MinAgility": 14,
         "MaxAgility": 18,
         "DefensiveElementIDs": [ 101 ],
-        "MoveLearnset": [ "ClawRake", "SwiftStrike", "FurySwipes" ],
+        "MoveLearnset": [ "Leer"],
         "MinNumberOfMoves": 2,
         "MaxNumberOfMoves": 3
       }

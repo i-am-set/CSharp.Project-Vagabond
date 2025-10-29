@@ -105,6 +105,18 @@ namespace ProjectVagabond.Battle.UI
             public const float DURATION = 1.75f;
             public const float RISE_DISTANCE = 5f;
         }
+        public class StatStageIndicatorState
+        {
+            public string CombatantID;
+            public string Text;
+            public Color Color;
+            public Vector2 Position;
+            public Vector2 InitialPosition;
+            public float Timer;
+            public const float DURATION = 1.75f;
+            public const float RISE_DISTANCE = 10f;
+        }
+
 
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
@@ -115,6 +127,8 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<DamageIndicatorState> _activeDamageIndicators = new List<DamageIndicatorState>();
         private readonly List<AbilityIndicatorState> _activeAbilityIndicators = new List<AbilityIndicatorState>();
         private readonly List<ResourceBarAnimationState> _activeBarAnimations = new List<ResourceBarAnimationState>();
+        private readonly List<StatStageIndicatorState> _activeStatStageIndicators = new List<StatStageIndicatorState>();
+
 
         private readonly Random _random = new Random();
         private readonly Global _global;
@@ -140,6 +154,7 @@ namespace ProjectVagabond.Battle.UI
             _activeDamageIndicators.Clear();
             _activeAbilityIndicators.Clear();
             _activeBarAnimations.Clear();
+            _activeStatStageIndicators.Clear();
         }
 
         public void StartHealthAnimation(string combatantId, int hpBefore, int hpAfter)
@@ -372,6 +387,19 @@ namespace ProjectVagabond.Battle.UI
             });
         }
 
+        public void StartStatStageIndicator(string combatantId, string text, Color color, Vector2 startPosition)
+        {
+            _activeStatStageIndicators.Add(new StatStageIndicatorState
+            {
+                CombatantID = combatantId,
+                Text = text,
+                Color = color,
+                Position = startPosition,
+                InitialPosition = startPosition,
+                Timer = 0f
+            });
+        }
+
         public void SkipAllHealthAnimations(IEnumerable<BattleCombatant> combatants)
         {
             foreach (var anim in _activeHealthAnimations)
@@ -420,6 +448,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateDamageIndicators(gameTime);
             UpdateAbilityIndicators(gameTime);
             UpdateBarAnimations(gameTime);
+            UpdateStatStageIndicators(gameTime);
         }
 
         private void UpdateBarAnimations(GameTime gameTime)
@@ -643,6 +672,25 @@ namespace ProjectVagabond.Battle.UI
                     float yOffset = -Easing.EaseOutQuad(progress) * DamageIndicatorState.RISE_DISTANCE;
                     indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);
                 }
+            }
+        }
+
+        private void UpdateStatStageIndicators(GameTime gameTime)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeStatStageIndicators.Count - 1; i >= 0; i--)
+            {
+                var indicator = _activeStatStageIndicators[i];
+                indicator.Timer += deltaTime;
+                if (indicator.Timer >= StatStageIndicatorState.DURATION)
+                {
+                    _activeStatStageIndicators.RemoveAt(i);
+                    continue;
+                }
+
+                float progress = indicator.Timer / StatStageIndicatorState.DURATION;
+                float yOffset = -Easing.EaseOutQuad(progress) * StatStageIndicatorState.RISE_DISTANCE;
+                indicator.Position = indicator.InitialPosition + new Vector2(0, yOffset);
             }
         }
 
@@ -901,6 +949,25 @@ namespace ProjectVagabond.Battle.UI
                 Vector2 textPosition = indicator.Position - new Vector2(textSize.X / 2f, textSize.Y);
 
                 spriteBatch.DrawStringOutlinedSnapped(activeFont, indicator.Text, textPosition, drawColor * alpha, Color.Black * alpha);
+            }
+        }
+
+        public void DrawStatStageIndicators(SpriteBatch spriteBatch, BitmapFont font)
+        {
+            foreach (var indicator in _activeStatStageIndicators)
+            {
+                float progress = indicator.Timer / StatStageIndicatorState.DURATION;
+                float alpha = 1.0f;
+                if (progress > 0.75f)
+                {
+                    float fadeProgress = (progress - 0.75f) * 4f;
+                    alpha = 1.0f - Easing.EaseInQuad(fadeProgress);
+                }
+
+                Vector2 textSize = font.MeasureString(indicator.Text);
+                Vector2 textPosition = indicator.Position - new Vector2(textSize.X / 2f, textSize.Y);
+
+                spriteBatch.DrawStringOutlinedSnapped(font, indicator.Text, textPosition, indicator.Color * alpha, Color.Black * alpha);
             }
         }
 

@@ -149,6 +149,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Subscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
             EventBus.Subscribe<GameEvents.AlertPublished>(OnAlertPublished);
+            EventBus.Subscribe<GameEvents.CombatantStatStageChanged>(OnCombatantStatStageChanged);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
@@ -172,6 +173,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.CombatantRecoiled>(OnCombatantRecoiled);
             EventBus.Unsubscribe<GameEvents.AbilityActivated>(OnAbilityActivated);
             EventBus.Unsubscribe<GameEvents.AlertPublished>(OnAlertPublished);
+            EventBus.Unsubscribe<GameEvents.CombatantStatStageChanged>(OnCombatantStatStageChanged);
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
@@ -523,6 +525,7 @@ namespace ProjectVagabond.Scenes
             _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, _currentActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer);
             _uiManager.Draw(spriteBatch, font, gameTime, transform);
             _animationManager.DrawDamageIndicators(spriteBatch, secondaryFont);
+            _animationManager.DrawStatStageIndicators(spriteBatch, secondaryFont);
         }
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -826,6 +829,25 @@ namespace ProjectVagabond.Scenes
         private void OnAlertPublished(GameEvents.AlertPublished e)
         {
             _alertManager.StartAlert(e.Message);
+        }
+
+        private void OnCombatantStatStageChanged(GameEvents.CombatantStatStageChanged e)
+        {
+            string statName = e.Stat.ToString().ToUpper();
+            string changeText;
+            if (e.Amount > 0)
+            {
+                changeText = e.Amount > 1 ? "SHARPLY ROSE" : "ROSE";
+            }
+            else
+            {
+                changeText = e.Amount < -1 ? "HARSHLY FELL" : "FELL";
+            }
+            string fullText = $"{statName} {changeText}!";
+            Color color = e.Amount > 0 ? _global.Palette_LightBlue : _global.Palette_Red;
+
+            Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
+            _animationManager.StartStatStageIndicator(e.Target.CombatantID, fullText, color, hudPosition);
         }
 
         private void FleeBattle()

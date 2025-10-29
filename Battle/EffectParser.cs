@@ -73,5 +73,44 @@ namespace ProjectVagabond.Utils
 
             return true;
         }
+
+        public static bool TryParseStatStageParams(string value, out OffensiveStatType stat, out int amount, out int chance, out string targetStr)
+        {
+            stat = default;
+            amount = 0;
+            chance = 0;
+            targetStr = "Target"; // Default to the move's target
+
+            if (string.IsNullOrEmpty(value)) return false;
+
+            var parts = value.Split(',');
+            if (parts.Length < 3) return false; // Must have at least Stat, Amount, Chance
+
+            if (!Enum.TryParse(parts[0].Trim(), true, out stat)) return false;
+            if (!int.TryParse(parts[1].Trim(), out amount)) return false;
+            if (!int.TryParse(parts[2].Trim(), out chance)) return false;
+
+            if (parts.Length > 3)
+            {
+                targetStr = parts[3].Trim();
+            }
+
+            return true;
+        }
+
+        public static bool TryParseStatStageAbilityParams(string value, out OffensiveStatType stat, out int amount)
+        {
+            stat = default;
+            amount = 0;
+            if (string.IsNullOrEmpty(value)) return false;
+
+            var parts = value.Split(',');
+            if (parts.Length != 2) return false;
+
+            if (!Enum.TryParse(parts[0].Trim(), true, out stat)) return false;
+            if (!int.TryParse(parts[1].Trim(), out amount)) return false;
+
+            return true;
+        }
     }
 }

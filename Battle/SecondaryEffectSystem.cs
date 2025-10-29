@@ -16,9 +16,57 @@ namespace ProjectVagabond.Battle
         private static readonly Random _random = new Random();
 
         /// <summary>
-        /// Processes all secondary effects listed in a move after the primary action (damage/healing) has resolved.
+        /// Processes effects that should occur immediately when a move hits a target,
+        /// concurrent with damage application.
         /// </summary>
-        public static void ProcessEffects(QueuedAction action, List<BattleCombatant> finalTargets, List<DamageCalculator.DamageResult> damageResults)
+        public static void ProcessPrimaryEffects(QueuedAction action, BattleCombatant target)
+        {
+            var move = action.ChosenMove;
+            var attacker = action.Actor;
+
+            if (move?.Effects != null)
+            {
+                foreach (var effectEntry in move.Effects)
+                {
+                    switch (effectEntry.Key.ToLowerInvariant())
+                    {
+                        case "applystatus":
+                            HandleApplyStatus(attacker, target, effectEntry.Value);
+                            break;
+                        case "cleanse":
+                            HandleCleanse(attacker, target, effectEntry.Value);
+                            break;
+                        case "stealbuff":
+                            HandleStealBuff(attacker, target, effectEntry.Value);
+                            break;
+                        case "restoremana":
+                            HandleRestoreMana(attacker, target, effectEntry.Value);
+                            break;
+                        case var s when s.StartsWith("modifystatstage"):
+                            HandleModifyStatStage(attacker, target, effectEntry.Value);
+                            break;
+                    }
+                }
+            }
+
+            // Handle attacker's contact abilities that apply status effects
+            if (move != null && move.MakesContact)
+            {
+                foreach (var ability in attacker.ActiveAbilities)
+                {
+                    if (ability.Effects.TryGetValue("ApplyStatusOnContact", out var value))
+                    {
+                        HandleApplyStatus(attacker, target, value, ability);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Processes effects that occur after all hits of an action have resolved,
+        /// often depending on the aggregate results like total damage dealt.
+        /// </summary>
+        public static void ProcessSecondaryEffects(QueuedAction action, List<BattleCombatant> finalTargets, List<DamageCalculator.DamageResult> damageResults)
         {
             var move = action.ChosenMove;
             var attacker = action.Actor;
@@ -31,32 +79,24 @@ namespace ProjectVagabond.Battle
             for (int targetIndex = 0; targetIndex < uniqueTargets.Count; targetIndex++)
             {
                 var target = uniqueTargets[targetIndex];
-                if (target.IsDefeated) continue; // Don't apply effects to already defeated targets
 
                 // --- Process Move-based Effects ---
                 if (move?.Effects != null)
                 {
                     foreach (var effectEntry in move.Effects)
                     {
-                        ProcessTargetEffect(effectEntry.Key, effectEntry.Value, attacker, target, finalTargets);
+                        switch (effectEntry.Key.ToLowerInvariant())
+                        {
+                            case "executeonkill":
+                                if (target.IsDefeated) HandleExecuteOnKill(attacker, finalTargets, effectEntry.Value);
+                                break;
+                        }
                     }
                 }
 
                 // --- Process Ability-based Reactive Effects ---
-                if (move != null)
+                if (move != null && !target.IsDefeated) // Reactive effects shouldn't trigger if the target is already defeated by the hit.
                 {
-                    // Attacker abilities (e.g., Venomous)
-                    if (move.MakesContact)
-                    {
-                        foreach (var ability in attacker.ActiveAbilities)
-                        {
-                            if (ability.Effects.TryGetValue("ApplyStatusOnContact", out var value))
-                            {
-                                HandleApplyStatus(attacker, target, value, ability);
-                            }
-                        }
-                    }
-
                     // Target abilities (e.g., Static Charge, Iron Barbs)
                     if (move.MakesContact)
                     {
@@ -84,11 +124,18 @@ namespace ProjectVagabond.Battle
                     {
                         foreach (var ability in target.ActiveAbilities)
                         {
-                            if (ability.Effects.TryGetValue("PainFuel", out var painFuelValue) && EffectParser.TryParseInt(painFuelValue, out int duration))
+                            if (ability.Effects.ContainsKey("PainFuel"))
                             {
-                                target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.StrengthUp, duration));
-                                target.AddStatusEffect(new StatusEffectInstance(StatusEffectType.IntelligenceUp, duration));
-                                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability, NarrationText = $"{target.Name}'s {ability.AbilityName} turned pain into power!" });
+                                var (successStr, _) = target.ModifyStatStage(OffensiveStatType.Strength, 2);
+                                if (successStr) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Strength, Amount = 2 });
+
+                                var (successInt, _) = target.ModifyStatStage(OffensiveStatType.Intelligence, 2);
+                                if (successInt) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Intelligence, Amount = 2 });
+
+                                if (successStr || successInt)
+                                {
+                                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability, NarrationText = $"{target.Name}'s {ability.AbilityName} turned pain into power!" });
+                                }
                             }
                         }
                     }
@@ -125,7 +172,7 @@ namespace ProjectVagabond.Battle
                 }
 
                 // --- Process Reactive Status Effects on Target ---
-                if (target.HasStatusEffect(StatusEffectType.Burn) && move != null)
+                if (target.HasStatusEffect(StatusEffectType.Burn) && move != null && !target.IsDefeated)
                 {
                     bool isPhysical = move.ImpactType == ImpactType.Physical;
                     bool isFire = move.OffensiveElementIDs.Contains(2); // 2 is the ElementID for Fire
@@ -192,27 +239,27 @@ namespace ProjectVagabond.Battle
             }
         }
 
-        private static void ProcessTargetEffect(string key, string value, BattleCombatant actor, BattleCombatant target, List<BattleCombatant> allTargets)
+        private static void HandleModifyStatStage(BattleCombatant actor, BattleCombatant target, string value)
         {
-            switch (key.ToLowerInvariant())
+            if (EffectParser.TryParseStatStageParams(value, out var stat, out int amount, out int chance, out string targetStr))
             {
-                case "applystatus":
-                    HandleApplyStatus(actor, target, value);
-                    break;
-                case "cleanse":
-                    HandleCleanse(actor, target, value);
-                    break;
-                case "stealbuff":
-                    HandleStealBuff(actor, target, value);
-                    break;
-                case "executeonkill":
-                    if (target.IsDefeated) HandleExecuteOnKill(actor, allTargets, value);
-                    break;
-                case "restoremana":
-                    HandleRestoreMana(actor, target, value);
-                    break;
+                if (_random.Next(1, 101) <= chance)
+                {
+                    BattleCombatant finalTarget = targetStr.Equals("Self", StringComparison.OrdinalIgnoreCase) ? actor : target;
+
+                    var (success, message) = finalTarget.ModifyStatStage(stat, amount);
+
+                    // Always publish the message, whether it succeeded or failed (e.g., "Stat won't go any higher!").
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = message });
+
+                    if (success)
+                    {
+                        EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = finalTarget, Stat = stat, Amount = amount });
+                    }
+                }
             }
         }
+
 
         private static void HandleApplyStatus(BattleCombatant actor, BattleCombatant target, string value, AbilityData sourceAbility = null)
         {
@@ -282,11 +329,12 @@ namespace ProjectVagabond.Battle
                         // --- Handle Sadist ---
                         foreach (var ability in actor.ActiveAbilities)
                         {
-                            if (ability.Effects.TryGetValue("Sadist", out var sadistValue))
+                            if (ability.Effects.ContainsKey("Sadist"))
                             {
-                                if (EffectParser.TryParseInt(sadistValue, out int strengthUpDuration))
+                                var (success, message) = actor.ModifyStatStage(OffensiveStatType.Strength, 1);
+                                if (success)
                                 {
-                                    actor.AddStatusEffect(new StatusEffectInstance(StatusEffectType.StrengthUp, strengthUpDuration));
+                                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = actor, Stat = OffensiveStatType.Strength, Amount = 1 });
                                     EventBus.Publish(new GameEvents.AbilityActivated
                                     {
                                         Combatant = actor,
@@ -390,7 +438,11 @@ namespace ProjectVagabond.Battle
             {
                 string effectName = parts[0];
                 string effectParams = parts[1];
-                ProcessTargetEffect(effectName, effectParams, actor, actor, allTargets);
+                // This is a simplified call; a full implementation might need more context.
+                if (effectName.ToLowerInvariant().StartsWith("modifystatstage"))
+                {
+                    HandleModifyStatStage(actor, actor, effectParams);
+                }
             }
         }
 
@@ -440,10 +492,6 @@ namespace ProjectVagabond.Battle
                 case StatusEffectType.Silence:
                 case StatusEffectType.Fear:
                 case StatusEffectType.Root:
-                case StatusEffectType.IntelligenceDown:
-                case StatusEffectType.AgilityDown:
-                case StatusEffectType.StrengthDown:
-                case StatusEffectType.TenacityDown:
                     return true;
                 default:
                     return false;

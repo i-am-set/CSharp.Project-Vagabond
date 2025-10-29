@@ -386,7 +386,7 @@ namespace ProjectVagabond.Battle
 
         private void HandleSecondaryEffectResolution()
         {
-            SecondaryEffectSystem.ProcessEffects(_currentActionForEffects, _currentActionFinalTargets, _currentActionDamageResults);
+            SecondaryEffectSystem.ProcessSecondaryEffects(_currentActionForEffects, _currentActionFinalTargets, _currentActionDamageResults);
             _currentActionForEffects = null;
             _currentActionDamageResults = null;
             _currentActionFinalTargets = null;
@@ -462,6 +462,7 @@ namespace ProjectVagabond.Battle
                         var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
                         var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier);
                         target.ApplyDamage(result.DamageAmount);
+                        SecondaryEffectSystem.ProcessPrimaryEffects(action, target); // Process primary effects immediately
                         damageResultsForThisHit.Add(result);
                         _multiHitAggregatedFinalTargets.Add(target);
                     }
@@ -776,17 +777,26 @@ namespace ProjectVagabond.Battle
                 foreach (var ability in combatant.ActiveAbilities)
                 {
                     // Intimidate
-                    if (ability.Effects.TryGetValue("IntimidateOnEnter", out var value) && EffectParser.TryParseInt(value, out int duration))
+                    if (ability.Effects.TryGetValue("IntimidateOnEnter", out var value) && EffectParser.TryParseStatStageAbilityParams(value, out var stat, out var amount))
                     {
                         var opponents = combatant.IsPlayerControlled ? _enemyCombatants : _playerCombatants;
+                        bool anyAffected = false;
                         foreach (var opponent in opponents)
                         {
                             if (!opponent.IsDefeated)
                             {
-                                opponent.AddStatusEffect(new StatusEffectInstance(StatusEffectType.StrengthDown, duration));
+                                var (success, _) = opponent.ModifyStatStage(stat, amount);
+                                if (success)
+                                {
+                                    anyAffected = true;
+                                    EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = opponent, Stat = stat, Amount = amount });
+                                }
                             }
                         }
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = combatant, Ability = ability, NarrationText = $"{combatant.Name}'s Intimidate lowered the opponents' Strength!" });
+                        if (anyAffected)
+                        {
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = combatant, Ability = ability, NarrationText = $"{combatant.Name}'s Intimidate lowered the opponents' {stat}!" });
+                        }
                     }
                 }
             }

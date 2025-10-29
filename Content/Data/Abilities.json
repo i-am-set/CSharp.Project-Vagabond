@@ -369,11 +369,11 @@
     "AbilityName": "Intimidate",
     "RelicName": "Gorgon's Gaze",
     "RelicImagePath": "Sprites/Relics/placeholder_relic",
-    "Description": "Upon entering battle, lowers the Strength of all opponents for 3 turns.",
+    "Description": "Upon entering battle, lowers the Strength of all opponents.",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "IntimidateOnEnter": "3"
+      "IntimidateOnEnter": "Strength,-1"
     },
     "Tags": [ "StatusEffect" ]
   },
@@ -551,11 +551,11 @@
     "AbilityName": "Sadist",
     "RelicName": "Iron Maiden Fragment",
     "RelicImagePath": "Sprites/Relics/placeholder_relic",
-    "Description": "Whenever the holder successfully applies a negative status effect to a target, the holder gets strength up for 2 turns.",
+    "Description": "Whenever the holder successfully applies a negative status effect to a target, the holder's Strength is raised.",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "Sadist": "2"
+      "Sadist": "true"
     },
     "Tags": [ "StatusEffect", "Buff" ]
   },
@@ -616,11 +616,11 @@
     "AbilityName": "Pain Fuel",
     "RelicName": "Masochist's Mail",
     "RelicImagePath": "Sprites/Relics/placeholder_relic",
-    "Description": "The holder channels agony into power. When hit by a critical hit, the holder gains the Strength Up and Intelligence up status effect for 2 turns.",
+    "Description": "The holder channels agony into power. When hit by a critical hit, the holder's Strength and Intelligence are sharply raised.",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
-      "PainFuel": "2"
+      "PainFuel": "true"
     },
     "Tags": [ "Critical", "Buff", "Defense" ]
   },

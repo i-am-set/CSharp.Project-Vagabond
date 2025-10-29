@@ -29,7 +29,8 @@
         "MoveLearnset": [
           "ShoulderBash",
           "ClawRake",
-          "CinderSpark"
+          "CinderSpark",
+          "Leer"
         ],
         "MinNumberOfMoves": 2,
         "MaxNumberOfMoves": 3

@@ -287,6 +287,16 @@ namespace ProjectVagabond
             public int GameStage { get; set; }
             public int NumberOfChoices { get; set; }
         }
+
+        /// <summary>
+        /// Published when a combatant's stat stage is modified.
+        /// </summary>
+        public struct CombatantStatStageChanged
+        {
+            public BattleCombatant Target { get; set; }
+            public OffensiveStatType Stat { get; set; }
+            public int Amount { get; set; } // e.g., +1, -2
+        }
     }
 }
 #nullable restore

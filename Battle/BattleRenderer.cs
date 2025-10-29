@@ -924,9 +924,6 @@ namespace ProjectVagabond.Battle.UI
                 case StatusEffectType.Silence:
                 case StatusEffectType.Fear:
                 case StatusEffectType.Root:
-                case StatusEffectType.IntelligenceDown:
-                case StatusEffectType.AgilityDown:
-                case StatusEffectType.TenacityDown:
                     return true;
                 default:
                     return false;

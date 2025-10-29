@@ -150,6 +150,23 @@ namespace ProjectVagabond.Battle
         /// </summary>
         public int EscalationStacks { get; set; } = 0;
 
+        /// <summary>
+        /// Tracks the current stage modifiers for each stat, from -6 to +6. Resets each battle.
+        /// </summary>
+        public Dictionary<OffensiveStatType, int> StatStages { get; private set; }
+
+
+        public BattleCombatant()
+        {
+            // Initialize stat stages to 0 for all stats.
+            StatStages = new Dictionary<OffensiveStatType, int>
+            {
+                { OffensiveStatType.Strength, 0 },
+                { OffensiveStatType.Intelligence, 0 },
+                { OffensiveStatType.Tenacity, 0 },
+                { OffensiveStatType.Agility, 0 }
+            };
+        }
 
         /// <summary>
         /// Applies a specified amount of damage to the combatant's CurrentHP.
@@ -237,6 +254,34 @@ namespace ProjectVagabond.Battle
             _staticMoves = moves;
         }
 
+        // --- Stat Stage Modification ---
+
+        /// <summary>
+        /// Modifies a stat stage for this combatant, clamping it between -6 and +6.
+        /// </summary>
+        /// <param name="stat">The stat to modify.</param>
+        /// <param name="amount">The amount to change the stage by (e.g., +1, -2).</param>
+        /// <returns>A tuple indicating if the change was successful and a message for narration.</returns>
+        public (bool success, string message) ModifyStatStage(OffensiveStatType stat, int amount)
+        {
+            int currentStage = StatStages[stat];
+            if (amount > 0 && currentStage >= 6)
+            {
+                return (false, $"{Name}'s {stat} won't go any higher!");
+            }
+            if (amount < 0 && currentStage <= -6)
+            {
+                return (false, $"{Name}'s {stat} won't go any lower!");
+            }
+
+            int newStage = Math.Clamp(currentStage + amount, -6, 6);
+            StatStages[stat] = newStage;
+
+            string changeText = amount > 0 ? (amount > 1 ? "sharply rose" : "rose") : (amount < -1 ? "harshly fell" : "fell");
+            return (true, $"{Name}'s {stat} {changeText}!");
+        }
+
+
         // --- Effective Stat Calculation ---
 
         /// <summary>
@@ -262,8 +307,7 @@ namespace ProjectVagabond.Battle
         public int GetEffectiveStrength()
         {
             float stat = Stats.Strength;
-            if (HasStatusEffect(StatusEffectType.StrengthUp)) stat *= BattleConstants.STAT_BUFF_MULTIPLIER;
-            if (HasStatusEffect(StatusEffectType.StrengthDown)) stat *= BattleConstants.STAT_DEBUFF_MULTIPLIER;
+            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Strength]];
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
@@ -271,8 +315,7 @@ namespace ProjectVagabond.Battle
         public int GetEffectiveIntelligence()
         {
             float stat = Stats.Intelligence;
-            if (HasStatusEffect(StatusEffectType.IntelligenceUp)) stat *= BattleConstants.STAT_BUFF_MULTIPLIER;
-            if (HasStatusEffect(StatusEffectType.IntelligenceDown)) stat *= BattleConstants.STAT_DEBUFF_MULTIPLIER;
+            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Intelligence]];
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
@@ -280,8 +323,7 @@ namespace ProjectVagabond.Battle
         public int GetEffectiveTenacity()
         {
             float stat = Stats.Tenacity;
-            if (HasStatusEffect(StatusEffectType.TenacityUp)) stat *= BattleConstants.STAT_BUFF_MULTIPLIER;
-            if (HasStatusEffect(StatusEffectType.TenacityDown)) stat *= BattleConstants.STAT_DEBUFF_MULTIPLIER;
+            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
@@ -289,8 +331,7 @@ namespace ProjectVagabond.Battle
         public int GetEffectiveAgility()
         {
             float stat = Stats.Agility;
-            if (HasStatusEffect(StatusEffectType.AgilityUp)) stat *= BattleConstants.STAT_BUFF_MULTIPLIER;
-            if (HasStatusEffect(StatusEffectType.AgilityDown)) stat *= BattleConstants.STAT_DEBUFF_MULTIPLIER;
+            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
             if (HasStatusEffect(StatusEffectType.Freeze)) stat *= 0.5f;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
 
