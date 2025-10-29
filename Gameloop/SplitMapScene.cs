@@ -893,11 +893,7 @@ namespace ProjectVagabond.Scenes
                 float scale = 1.0f;
                 bool isCurrentNode = node.Id == _playerCurrentNodeId;
 
-                if (node.IsCompleted)
-                {
-                    color = _global.Palette_DarkGray;
-                }
-                else if (isCurrentNode)
+                if (isCurrentNode)
                 {
                     if (_mapState == SplitMapState.FadingNodeToGray)
                     {
@@ -909,7 +905,7 @@ namespace ProjectVagabond.Scenes
                         color = _global.Palette_DarkGray;
                     }
                 }
-                else if (!node.IsReachable)
+                else if (node.IsCompleted || !node.IsReachable)
                 {
                     color = _global.Palette_DarkGray;
                 }
@@ -950,7 +946,7 @@ namespace ProjectVagabond.Scenes
             foreach (var element in _fadingElements)
             {
                 float progress = element.Age / element.Lifetime;
-                float alpha = 1.0f - Easing.EaseOutQuad(progress);
+                float alpha = 0.25f * (1.0f - Easing.EaseOutQuad(progress));
                 spriteBatch.DrawSnapped(element.Texture, element.Position, element.SourceRect, element.Color * alpha, element.Rotation, element.Origin, element.Scale, SpriteEffects.None, 0.35f);
             }
 
