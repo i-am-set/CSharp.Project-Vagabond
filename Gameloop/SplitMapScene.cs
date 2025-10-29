@@ -6,7 +6,6 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -94,7 +93,7 @@ namespace ProjectVagabond.Scenes
         private NarrativeChoice? _pendingChoiceForDiceRoll;
         private float _postEventDelayTimer = 0f;
 
-        private enum SplitMapState { Idle, PlayerMoving, CenteringCamera, LiftingNode, PulsingNode, EventInProgress, LoweringNode, PostEventDelay }
+        private enum SplitMapState { Idle, PlayerMoving, CenteringCamera, LiftingNode, PulsingNode, EventInProgress, FadingNodeToGray, LoweringNode, NodeIconCrossfade, PostEventDelay }
         private SplitMapState _mapState = SplitMapState.Idle;
 
         // Camera Tuning
@@ -115,6 +114,10 @@ namespace ProjectVagabond.Scenes
         private readonly List<FadingElement> _fadingElements = new();
         private readonly HashSet<int> _fadingPathIds = new();
         private readonly HashSet<int> _fadingNodeIds = new();
+        private float _nodeFadeTimer = 0f;
+        private const float NODE_FADE_TO_GRAY_DURATION = 0.3f;
+        private float _nodeCrossfadeTimer = 0f;
+        private const float NODE_CROSSFADE_DURATION = 0.4f;
 
 
         public static bool PlayerWonLastBattle { get; set; } = true;
@@ -183,8 +186,8 @@ namespace ProjectVagabond.Scenes
                 else
                 {
                     // On returning to the scene (e.g., from battle), start the delay before revealing the next floor.
-                    _mapState = SplitMapState.LoweringNode;
-                    _nodeLiftTimer = 0f;
+                    _mapState = SplitMapState.FadingNodeToGray;
+                    _nodeFadeTimer = 0f;
 
                     // We still need to position the camera immediately
                     var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
@@ -330,8 +333,8 @@ namespace ProjectVagabond.Scenes
             if (_wasModalActiveLastFrame)
             {
                 _wasModalActiveLastFrame = false;
-                _mapState = SplitMapState.LoweringNode;
-                _nodeLiftTimer = 0f;
+                _mapState = SplitMapState.FadingNodeToGray;
+                _nodeFadeTimer = 0f;
             }
 
             // Handle event states that pause map interaction
@@ -405,8 +408,14 @@ namespace ProjectVagabond.Scenes
                 case SplitMapState.PulsingNode:
                     UpdatePulsingNode(deltaTime);
                     break;
+                case SplitMapState.FadingNodeToGray:
+                    UpdateFadingNodeToGray(deltaTime);
+                    break;
                 case SplitMapState.LoweringNode:
                     UpdateLoweringNode(deltaTime);
+                    break;
+                case SplitMapState.NodeIconCrossfade:
+                    UpdateNodeIconCrossfade(deltaTime);
                     break;
                 case SplitMapState.PostEventDelay:
                     _postEventDelayTimer -= deltaTime;
@@ -491,6 +500,16 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        private void UpdateFadingNodeToGray(float deltaTime)
+        {
+            _nodeFadeTimer += deltaTime;
+            if (_nodeFadeTimer >= NODE_FADE_TO_GRAY_DURATION)
+            {
+                _mapState = SplitMapState.LoweringNode;
+                _nodeLiftTimer = 0f;
+            }
+        }
+
         private void UpdateLoweringNode(float deltaTime)
         {
             _nodeLiftTimer += deltaTime;
@@ -503,6 +522,21 @@ namespace ProjectVagabond.Scenes
 
             if (_nodeLiftTimer >= NODE_LIFT_DURATION)
             {
+                _mapState = SplitMapState.NodeIconCrossfade;
+                _nodeCrossfadeTimer = 0f;
+            }
+        }
+
+        private void UpdateNodeIconCrossfade(float deltaTime)
+        {
+            _nodeCrossfadeTimer += deltaTime;
+            if (_nodeCrossfadeTimer >= NODE_CROSSFADE_DURATION)
+            {
+                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                if (currentNode != null)
+                {
+                    currentNode.IsCompleted = true;
+                }
                 _mapState = SplitMapState.PostEventDelay;
                 _postEventDelayTimer = POST_EVENT_DELAY;
             }
@@ -718,8 +752,8 @@ namespace ProjectVagabond.Scenes
         private void OnResultNarrationFinished()
         {
             _eventState = EventState.Idle;
-            _mapState = SplitMapState.LoweringNode;
-            _nodeLiftTimer = 0f;
+            _mapState = SplitMapState.FadingNodeToGray;
+            _nodeFadeTimer = 0f;
             _resultNarrator.Clear();
         }
 
@@ -854,13 +888,36 @@ namespace ProjectVagabond.Scenes
 
                 if (nodeAlpha <= 0.01f) continue;
 
-                var (texture, sourceRect, origin) = GetNodeDrawData(node, gameTime);
                 var bounds = node.GetBounds();
                 var color = Color.White;
                 float scale = 1.0f;
+                bool isCurrentNode = node.Id == _playerCurrentNodeId;
 
-                if (!node.IsReachable && node.NodeType != SplitNodeType.Origin) color = _global.Palette_DarkGray;
-                else if (node.Id == _hoveredNodeId) color = _global.ButtonHoverColor;
+                if (node.IsCompleted)
+                {
+                    color = _global.Palette_DarkGray;
+                }
+                else if (isCurrentNode)
+                {
+                    if (_mapState == SplitMapState.FadingNodeToGray)
+                    {
+                        float progress = Math.Clamp(_nodeFadeTimer / NODE_FADE_TO_GRAY_DURATION, 0f, 1f);
+                        color = Color.Lerp(Color.White, _global.Palette_DarkGray, Easing.EaseOutQuad(progress));
+                    }
+                    else if (_mapState >= SplitMapState.LoweringNode)
+                    {
+                        color = _global.Palette_DarkGray;
+                    }
+                }
+                else if (!node.IsReachable)
+                {
+                    color = _global.Palette_DarkGray;
+                }
+
+                if (node.IsReachable && node.Id == _hoveredNodeId)
+                {
+                    color = _global.ButtonHoverColor;
+                }
 
                 if (_mapState == SplitMapState.PulsingNode && node.Id == _playerCurrentNodeId)
                 {
@@ -870,7 +927,24 @@ namespace ProjectVagabond.Scenes
                 }
 
                 var position = bounds.Center.ToVector2() + node.VisualOffset;
-                spriteBatch.DrawSnapped(texture, position, sourceRect, color * nodeAlpha, 0f, origin, scale, SpriteEffects.None, 0.4f);
+
+                if (isCurrentNode && _mapState == SplitMapState.NodeIconCrossfade)
+                {
+                    float progress = Math.Clamp(_nodeCrossfadeTimer / NODE_CROSSFADE_DURATION, 0f, 1f);
+                    float oldIconAlpha = 1.0f - Easing.EaseOutQuad(progress);
+                    float newIconAlpha = Easing.EaseInQuad(progress);
+
+                    var (oldTexture, oldSourceRect, oldOrigin) = GetNodeDrawData(node, gameTime, forceOriginalTexture: true);
+                    spriteBatch.DrawSnapped(oldTexture, position, oldSourceRect, color * nodeAlpha * oldIconAlpha, 0f, oldOrigin, scale, SpriteEffects.None, 0.4f);
+
+                    var (newTexture, newSourceRect, newOrigin) = GetNodeDrawData(node, gameTime, forceCompletedTexture: true);
+                    spriteBatch.DrawSnapped(newTexture, position, newSourceRect, color * nodeAlpha * newIconAlpha, 0f, newOrigin, scale, SpriteEffects.None, 0.41f);
+                }
+                else
+                {
+                    var (texture, sourceRect, origin) = GetNodeDrawData(node, gameTime);
+                    spriteBatch.DrawSnapped(texture, position, sourceRect, color * nodeAlpha, 0f, origin, scale, SpriteEffects.None, 0.4f);
+                }
             }
 
             foreach (var element in _fadingElements)
@@ -995,39 +1069,46 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private (Texture2D texture, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode node, GameTime gameTime)
+        private (Texture2D texture, Rectangle? sourceRect, Vector2 origin) GetNodeDrawData(SplitMapNode node, GameTime gameTime, bool forceOriginalTexture = false, bool forceCompletedTexture = false)
         {
             Texture2D texture;
 
-            switch (node.NodeType)
+            if ((node.IsCompleted && !forceOriginalTexture) || forceCompletedTexture)
             {
-                case SplitNodeType.Origin:
-                    texture = _spriteManager.SplitNodeStart;
-                    break;
-                case SplitNodeType.Battle:
-                    texture = node.Difficulty switch
-                    {
-                        BattleDifficulty.Easy => _spriteManager.CombatNodeEasySprite,
-                        BattleDifficulty.Hard => _spriteManager.CombatNodeHardSprite,
-                        _ => _spriteManager.CombatNodeNormalSprite,
-                    };
-                    break;
-                case SplitNodeType.Narrative:
-                    texture = _spriteManager.SplitNodeNarrative;
-                    break;
-                case SplitNodeType.Reward:
-                    texture = _spriteManager.SplitNodeReward;
-                    break;
-                case SplitNodeType.MajorBattle:
-                    texture = _spriteManager.SplitNodeBoss;
-                    break;
-                default:
-                    texture = _spriteManager.CombatNodeNormalSprite; // Fallback
-                    break;
+                texture = _spriteManager.SplitNodeStart;
+            }
+            else
+            {
+                switch (node.NodeType)
+                {
+                    case SplitNodeType.Origin:
+                        texture = _spriteManager.SplitNodeStart;
+                        break;
+                    case SplitNodeType.Battle:
+                        texture = node.Difficulty switch
+                        {
+                            BattleDifficulty.Easy => _spriteManager.CombatNodeEasySprite,
+                            BattleDifficulty.Hard => _spriteManager.CombatNodeHardSprite,
+                            _ => _spriteManager.CombatNodeNormalSprite,
+                        };
+                        break;
+                    case SplitNodeType.Narrative:
+                        texture = _spriteManager.SplitNodeNarrative;
+                        break;
+                    case SplitNodeType.Reward:
+                        texture = _spriteManager.SplitNodeReward;
+                        break;
+                    case SplitNodeType.MajorBattle:
+                        texture = _spriteManager.SplitNodeBoss;
+                        break;
+                    default:
+                        texture = _spriteManager.CombatNodeNormalSprite; // Fallback
+                        break;
+                }
             }
 
             int frameIndex = 0;
-            if (node.IsReachable || node.NodeType == SplitNodeType.Origin)
+            if (node.IsReachable || node.NodeType == SplitNodeType.Origin || node.IsCompleted)
             {
                 float totalTime = (float)gameTime.TotalGameTime.TotalSeconds;
                 frameIndex = (int)((totalTime + node.AnimationOffset) / NODE_FRAME_DURATION) % 2;
