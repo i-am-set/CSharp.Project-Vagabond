@@ -301,6 +301,7 @@ namespace ProjectVagabond.Progression
                 }
             }
 
+            // Pre-calculate the rasterized pixel points for each path for efficient animation.
             foreach (var path in paths)
             {
                 path.PixelPoints.Clear();
@@ -314,6 +315,7 @@ namespace ProjectVagabond.Progression
                     }
                     else if (segmentPoints.Count > 1)
                     {
+                        // Skip the first point of subsequent segments to avoid duplicates.
                         path.PixelPoints.AddRange(segmentPoints.Skip(1));
                     }
                 }

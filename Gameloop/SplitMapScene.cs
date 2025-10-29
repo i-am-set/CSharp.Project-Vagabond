@@ -47,15 +47,22 @@ namespace ProjectVagabond.Scenes
         private readonly PlayerMapIcon _playerIcon;
         private NarrativeDialog _narrativeDialog;
 
-        private const float CAMERA_LERP_SPEED = 2.5f;
-        private const float POST_EVENT_DELAY = 0.5f;
+        // --- Animation Tuning ---
+        private const float PLAYER_MOVE_SPEED = 50f; // Pixels per second
+        private const float CAMERA_LERP_SPEED = 5f;
+        private const float NODE_LIFT_DURATION = 0.2f;
+        private const float PULSE_DURATION = 0.15f;
+        private const float NODE_LOWERING_DURATION = 0.2f;
+        private const float POST_EVENT_DELAY = 0.25f;
+        private const float PATH_ANIMATION_DURATION = 0.75f;
+        private const float UNSELECTED_FADE_OUT_DURATION = 0.6f;
+
 
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
 
         private float _playerMoveTimer;
         private float _playerMoveDuration;
-        private const float PLAYER_MOVE_SPEED = 32f; // Pixels per second
         private int _playerMoveTargetNodeId;
         private SplitMapPath? _playerMovePath;
 
@@ -68,7 +75,6 @@ namespace ProjectVagabond.Scenes
         // Path animation state
         private readonly Dictionary<int, float> _pathAnimationProgress = new();
         private readonly Dictionary<int, float> _pathAnimationDurations = new();
-        private const float PATH_ANIMATION_DURATION = 3.0f; // Seconds for the path to draw
         private const string PATH_DRAW_PATTERN = "1111110111010111111001110111110011111111110101100"; // 1 = draw, 0 = skip. Creates a dashed line effect.
         private static readonly Random _random = new Random();
 
@@ -82,7 +88,6 @@ namespace ProjectVagabond.Scenes
 
         // Node pulse animation state
         private float _pulseTimer = 0f;
-        private const float PULSE_DURATION = 0.4f;
         private const float PULSE_AMOUNT = 0.3f;
 
         private bool _wasModalActiveLastFrame = false;
@@ -93,7 +98,7 @@ namespace ProjectVagabond.Scenes
         private NarrativeChoice? _pendingChoiceForDiceRoll;
         private float _postEventDelayTimer = 0f;
 
-        private enum SplitMapState { Idle, PlayerMoving, CenteringCamera, LiftingNode, PulsingNode, EventInProgress, FadingNodeToGray, LoweringNode, NodeFadeOut, PostEventDelay }
+        private enum SplitMapState { Idle, PlayerMoving, LiftingNode, PulsingNode, EventInProgress, LoweringNode, PostEventDelay }
         private SplitMapState _mapState = SplitMapState.Idle;
 
         // Camera Tuning
@@ -107,17 +112,11 @@ namespace ProjectVagabond.Scenes
         // Node Animation
         private const float NODE_FRAME_DURATION = 0.5f;
         private float _nodeHoverTextBobTimer = 0f;
-        private const float UNSELECTED_FADE_OUT_DURATION = 1.0f;
         private float _nodeLiftTimer = 0f;
         private const float NODE_LIFT_AMOUNT = 15f;
-        private const float NODE_LIFT_DURATION = 0.6f;
         private readonly List<FadingElement> _fadingElements = new();
         private readonly HashSet<int> _fadingPathIds = new();
         private readonly HashSet<int> _fadingNodeIds = new();
-        private float _nodeFadeTimer = 0f;
-        private const float NODE_FADE_TO_GRAY_DURATION = 0.3f;
-        private float _nodeFadeOutTimer = 0f;
-        private const float NODE_FADE_OUT_DURATION = 0.4f;
 
 
         public static bool PlayerWonLastBattle { get; set; } = true;
@@ -185,16 +184,16 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    // On returning to the scene (e.g., from battle), start the delay before revealing the next floor.
-                    _mapState = SplitMapState.FadingNodeToGray;
-                    _nodeFadeTimer = 0f;
-
-                    // We still need to position the camera immediately
+                    // On returning from a normal battle, mark the node as completed and start the lowering animation.
                     var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                     if (currentNode != null)
                     {
-                        UpdateCameraTarget(currentNode.Position, false);
+                        currentNode.IsCompleted = true;
+                        UpdateCameraTarget(currentNode.Position, false); // Ensure camera is centered
                     }
+                    _mapState = SplitMapState.LoweringNode; // Transition to lowering state
+                    _nodeLiftTimer = 0f; // Reset timer for the lowering animation
+                    GenerateAndRevealNextFloor(); // Reveal next floor immediately
                 }
             }
         }
@@ -246,6 +245,10 @@ namespace ProjectVagabond.Scenes
             _playerIcon.SetIsMoving(true);
             _playerMoveTimer = 0f;
             _playerMoveTargetNodeId = targetNodeId;
+
+            // Concurrently update camera and start pruning animations
+            var targetNode = _currentMap.Nodes[targetNodeId];
+            UpdateCameraTarget(targetNode.Position, false);
 
             // Identify unselected paths and nodes to start their fade/retraction animations.
             if (_currentMap.Nodes.TryGetValue(_playerCurrentNodeId, out var currentNode))
@@ -337,8 +340,14 @@ namespace ProjectVagabond.Scenes
             if (_wasModalActiveLastFrame)
             {
                 _wasModalActiveLastFrame = false;
-                _mapState = SplitMapState.FadingNodeToGray;
-                _nodeFadeTimer = 0f;
+                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                if (currentNode != null)
+                {
+                    currentNode.IsCompleted = true;
+                }
+                _mapState = SplitMapState.LoweringNode;
+                _nodeLiftTimer = 0f;
+                GenerateAndRevealNextFloor();
             }
 
             // Handle event states that pause map interaction
@@ -403,30 +412,21 @@ namespace ProjectVagabond.Scenes
                 case SplitMapState.PlayerMoving:
                     UpdatePlayerMove(deltaTime);
                     break;
-                case SplitMapState.CenteringCamera:
-                    UpdateCenteringCamera(deltaTime);
-                    break;
                 case SplitMapState.LiftingNode:
                     UpdateLiftingNode(deltaTime);
                     break;
                 case SplitMapState.PulsingNode:
                     UpdatePulsingNode(deltaTime);
                     break;
-                case SplitMapState.FadingNodeToGray:
-                    UpdateFadingNodeToGray(deltaTime);
-                    break;
                 case SplitMapState.LoweringNode:
                     UpdateLoweringNode(deltaTime);
-                    break;
-                case SplitMapState.NodeFadeOut:
-                    UpdateNodeFadeOut(deltaTime);
                     break;
                 case SplitMapState.PostEventDelay:
                     _postEventDelayTimer -= deltaTime;
                     if (_postEventDelayTimer <= 0)
                     {
                         _mapState = SplitMapState.Idle;
-                        GenerateAndRevealNextFloor();
+                        UpdateReachableNodes();
                     }
                     break;
             }
@@ -460,18 +460,8 @@ namespace ProjectVagabond.Scenes
                     _playerIcon.SetPosition(toNode.Position);
                     var fromNode = _currentMap.Nodes[fromNodeId];
                     _currentMap.PruneFloor(fromNode.Floor, fromNode.Id);
-                    UpdateCameraTarget(toNode.Position, false);
                 }
 
-                _mapState = SplitMapState.CenteringCamera;
-            }
-        }
-
-        private void UpdateCenteringCamera(float deltaTime)
-        {
-            if (Vector2.DistanceSquared(_cameraOffset, _targetCameraOffset) < 0.1f)
-            {
-                _cameraOffset = _targetCameraOffset;
                 _mapState = SplitMapState.LiftingNode;
                 _nodeLiftTimer = 0f;
             }
@@ -504,42 +494,23 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void UpdateFadingNodeToGray(float deltaTime)
-        {
-            _nodeFadeTimer += deltaTime;
-            if (_nodeFadeTimer >= NODE_FADE_TO_GRAY_DURATION)
-            {
-                _mapState = SplitMapState.LoweringNode;
-                _nodeLiftTimer = 0f;
-            }
-        }
-
         private void UpdateLoweringNode(float deltaTime)
         {
             _nodeLiftTimer += deltaTime;
             var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
             if (currentNode != null)
             {
-                float progress = Math.Clamp(_nodeLiftTimer / NODE_LIFT_DURATION, 0f, 1f);
+                float progress = Math.Clamp(_nodeLiftTimer / NODE_LOWERING_DURATION, 0f, 1f);
+                // Animate from lifted position back to zero
                 currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(-NODE_LIFT_AMOUNT, 0, Easing.EaseOutCubic(progress)));
             }
 
-            if (_nodeLiftTimer >= NODE_LIFT_DURATION)
+            if (_nodeLiftTimer >= NODE_LOWERING_DURATION)
             {
-                _mapState = SplitMapState.NodeFadeOut;
-                _nodeFadeOutTimer = 0f;
-            }
-        }
-
-        private void UpdateNodeFadeOut(float deltaTime)
-        {
-            _nodeFadeOutTimer += deltaTime;
-            if (_nodeFadeOutTimer >= NODE_FADE_OUT_DURATION)
-            {
-                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                // Snap to final position and transition to the next state
                 if (currentNode != null)
                 {
-                    currentNode.IsCompleted = true;
+                    currentNode.VisualOffset = Vector2.Zero;
                 }
                 _mapState = SplitMapState.PostEventDelay;
                 _postEventDelayTimer = POST_EVENT_DELAY;
@@ -756,8 +727,14 @@ namespace ProjectVagabond.Scenes
         private void OnResultNarrationFinished()
         {
             _eventState = EventState.Idle;
-            _mapState = SplitMapState.FadingNodeToGray;
-            _nodeFadeTimer = 0f;
+            var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+            if (currentNode != null)
+            {
+                currentNode.IsCompleted = true;
+            }
+            _mapState = SplitMapState.LoweringNode;
+            _nodeLiftTimer = 0f;
+            GenerateAndRevealNextFloor();
             _resultNarrator.Clear();
         }
 
@@ -868,7 +845,7 @@ namespace ProjectVagabond.Scenes
             int currentPlayerFloor = _currentMap.Nodes[_playerCurrentNodeId].Floor;
             foreach (var node in _currentMap.Nodes.Values)
             {
-                if (node.IsCompleted || _fadingNodeIds.Contains(node.Id)) continue;
+                if (_fadingNodeIds.Contains(node.Id)) continue;
 
                 float nodeAlpha = 0f;
                 bool isNextFloor = node.Floor == currentPlayerFloor + 1;
@@ -890,13 +867,6 @@ namespace ProjectVagabond.Scenes
                     }
                 }
 
-                bool isCurrentNode = node.Id == _playerCurrentNodeId;
-                if (isCurrentNode && _mapState == SplitMapState.NodeFadeOut)
-                {
-                    float progress = Math.Clamp(_nodeFadeOutTimer / NODE_FADE_OUT_DURATION, 0f, 1f);
-                    nodeAlpha = 1.0f - Easing.EaseOutQuad(progress);
-                }
-
                 if (nodeAlpha <= 0.01f) continue;
 
                 var (texture, sourceRect, origin) = GetNodeDrawData(node, gameTime);
@@ -904,17 +874,9 @@ namespace ProjectVagabond.Scenes
                 var color = Color.White;
                 float scale = 1.0f;
 
-                if (isCurrentNode)
+                if (node.IsCompleted)
                 {
-                    if (_mapState == SplitMapState.FadingNodeToGray)
-                    {
-                        float progress = Math.Clamp(_nodeFadeTimer / NODE_FADE_TO_GRAY_DURATION, 0f, 1f);
-                        color = Color.Lerp(Color.White, _global.Palette_DarkGray, Easing.EaseOutQuad(progress));
-                    }
-                    else if (_mapState >= SplitMapState.LoweringNode)
-                    {
-                        color = _global.Palette_DarkGray;
-                    }
+                    color = _global.Palette_DarkGray;
                 }
                 else if (!node.IsReachable)
                 {
