@@ -525,7 +525,6 @@ namespace ProjectVagabond.Scenes
             _renderer.Draw(spriteBatch, font, gameTime, _battleManager.AllCombatants, _currentActor, _uiManager, _inputHandler, _animationManager, _uiManager.SharedPulseTimer);
             _uiManager.Draw(spriteBatch, font, gameTime, transform);
             _animationManager.DrawDamageIndicators(spriteBatch, secondaryFont);
-            _animationManager.DrawStatStageIndicators(spriteBatch, secondaryFont);
         }
 
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -833,17 +832,28 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantStatStageChanged(GameEvents.CombatantStatStageChanged e)
         {
-            string statName = e.Stat.ToString().ToUpper();
-            string changeText;
-            if (e.Amount > 0)
+            string statName = e.Stat switch
             {
-                changeText = e.Amount > 1 ? "SHARPLY ROSE" : "ROSE";
+                OffensiveStatType.Strength => "STR.",
+                OffensiveStatType.Intelligence => "INT.",
+                OffensiveStatType.Tenacity => "TEN.",
+                OffensiveStatType.Agility => "AGI.",
+                _ => e.Stat.ToString().ToUpper()
+            };
+
+            string changeText = e.Amount > 0 ? "ROSE" : "FELL";
+            int absAmount = Math.Abs(e.Amount);
+
+            string fullText;
+            if (absAmount > 1)
+            {
+                fullText = $"{statName} {changeText} {absAmount}x!";
             }
             else
             {
-                changeText = e.Amount < -1 ? "HARSHLY FELL" : "FELL";
+                fullText = $"{statName} {changeText}!";
             }
-            string fullText = $"{statName} {changeText}!";
+
             Color color = e.Amount > 0 ? _global.Palette_LightBlue : _global.Palette_Red;
 
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
