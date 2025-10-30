@@ -832,32 +832,31 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantStatStageChanged(GameEvents.CombatantStatStageChanged e)
         {
-            string statName = e.Stat switch
-            {
-                OffensiveStatType.Strength => "STR.",
-                OffensiveStatType.Intelligence => "INT.",
-                OffensiveStatType.Tenacity => "TEN.",
-                OffensiveStatType.Agility => "AGI.",
-                _ => e.Stat.ToString().ToUpper()
-            };
-
-            string changeText = e.Amount > 0 ? "ROSE" : "FELL";
+            string statText = e.Stat.ToString().ToUpper();
+            string verb = e.Amount > 0 ? "UP" : "DOWN";
             int absAmount = Math.Abs(e.Amount);
 
-            string fullText;
+            string prefixText = "";
+            string suffixText = $" {verb}";
+
             if (absAmount > 1)
             {
-                fullText = $"{statName} {changeText} {absAmount}x!";
-            }
-            else
-            {
-                fullText = $"{statName} {changeText}!";
+                prefixText = $"{absAmount}x ";
             }
 
-            Color color = e.Amount > 0 ? _global.Palette_LightBlue : _global.Palette_Red;
+            Color changeColor = e.Amount > 0 ? _global.Palette_LightBlue : _global.Palette_Red;
+
+            Color statColor = e.Stat switch
+            {
+                OffensiveStatType.Strength => _global.StatColor_Strength,
+                OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
+                OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
+                OffensiveStatType.Agility => _global.StatColor_Agility,
+                _ => _global.Palette_White
+            };
 
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
-            _animationManager.StartStatStageIndicator(e.Target.CombatantID, fullText, color, hudPosition);
+            _animationManager.StartStatStageIndicator(e.Target.CombatantID, prefixText, statText, suffixText, changeColor, statColor, changeColor, hudPosition);
         }
 
         private void FleeBattle()

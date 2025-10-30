@@ -97,11 +97,15 @@ namespace ProjectVagabond.Battle.UI
             public enum IndicatorType { Text, Number, HealNumber, EmphasizedNumber, Effectiveness, StatChange }
             public IndicatorType Type;
             public string CombatantID;
-            public string Text;
+            public string PrimaryText;
+            public string? SecondaryText;
+            public string? TertiaryText;
             public Vector2 Position; // Current position
             public Vector2 Velocity; // For physics-based indicators
             public Vector2 InitialPosition; // For simple animation paths
-            public Color Color; // Used for text indicators like "CRITICAL"
+            public Color PrimaryColor;
+            public Color? SecondaryColor;
+            public Color? TertiaryColor;
             public float Timer;
             public const float DURATION = 1.75f;
             public const float RISE_DISTANCE = 5f;
@@ -322,10 +326,10 @@ namespace ProjectVagabond.Battle.UI
                 {
                     Type = DamageIndicatorState.IndicatorType.Text,
                     CombatantID = combatantId,
-                    Text = text,
+                    PrimaryText = text,
                     Position = startPosition,
                     InitialPosition = startPosition,
-                    Color = color,
+                    PrimaryColor = color,
                     Timer = 0f
                 });
             });
@@ -339,7 +343,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     Type = DamageIndicatorState.IndicatorType.Effectiveness,
                     CombatantID = combatantId,
-                    Text = text,
+                    PrimaryText = text,
                     Position = startPosition,
                     InitialPosition = startPosition,
                     Timer = 0f
@@ -353,7 +357,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 Type = DamageIndicatorState.IndicatorType.Number,
                 CombatantID = combatantId,
-                Text = damageAmount.ToString(),
+                PrimaryText = damageAmount.ToString(),
                 Position = startPosition,
                 Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 20)), // Slower, floatier arc
                 Timer = 0f
@@ -366,7 +370,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 Type = DamageIndicatorState.IndicatorType.EmphasizedNumber,
                 CombatantID = combatantId,
-                Text = damageAmount.ToString(),
+                PrimaryText = damageAmount.ToString(),
                 Position = startPosition,
                 Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 40)), // Higher initial upward velocity
                 Timer = 0f
@@ -379,14 +383,14 @@ namespace ProjectVagabond.Battle.UI
             {
                 Type = DamageIndicatorState.IndicatorType.HealNumber,
                 CombatantID = combatantId,
-                Text = healAmount.ToString(),
+                PrimaryText = healAmount.ToString(),
                 Position = startPosition,
                 Velocity = new Vector2((float)(_random.NextDouble() * 30 - 15), (float)(_random.NextDouble() * -20 - 20)),
                 Timer = 0f
             });
         }
 
-        public void StartStatStageIndicator(string combatantId, string text, Color color, Vector2 startPosition)
+        public void StartStatStageIndicator(string combatantId, string prefixText, string statText, string suffixText, Color prefixColor, Color statColor, Color suffixColor, Vector2 startPosition)
         {
             _pendingTextIndicators.Enqueue(() =>
             {
@@ -394,10 +398,14 @@ namespace ProjectVagabond.Battle.UI
                 {
                     Type = DamageIndicatorState.IndicatorType.StatChange,
                     CombatantID = combatantId,
-                    Text = text,
+                    PrimaryText = prefixText,
+                    SecondaryText = statText,
+                    TertiaryText = suffixText,
                     Position = startPosition,
                     InitialPosition = startPosition,
-                    Color = color,
+                    PrimaryColor = prefixColor,
+                    SecondaryColor = statColor,
+                    TertiaryColor = suffixColor,
                     Timer = 0f
                 });
             });
@@ -880,6 +888,7 @@ namespace ProjectVagabond.Battle.UI
         private void DrawIndicatorsOfType(SpriteBatch spriteBatch, BitmapFont font, DamageIndicatorState.IndicatorType typeToDraw)
         {
             var defaultFont = ServiceLocator.Get<BitmapFont>();
+            const int screenPadding = 2;
 
             foreach (var indicator in _activeDamageIndicators)
             {
@@ -918,7 +927,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     const float flashInterval = 0.2f;
                     bool useAltColor = (int)(indicator.Timer / flashInterval) % 2 == 0;
-                    switch (indicator.Text)
+                    switch (indicator.PrimaryText)
                     {
                         case "EFFECTIVE":
                             drawColor = useAltColor ? _global.Palette_LightBlue : _global.Palette_Yellow;
@@ -936,8 +945,8 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else // Text indicator (Graze, StatChange)
                 {
-                    drawColor = indicator.Color;
-                    if (indicator.Text == "GRAZE")
+                    drawColor = indicator.PrimaryColor;
+                    if (indicator.PrimaryText == "GRAZE")
                     {
                         const float flashInterval = 0.2f;
                         bool useYellow = (int)(indicator.Timer / flashInterval) % 2 == 0;
@@ -945,10 +954,52 @@ namespace ProjectVagabond.Battle.UI
                     }
                 }
 
-                Vector2 textSize = activeFont.MeasureString(indicator.Text);
-                Vector2 textPosition = indicator.Position - new Vector2(textSize.X / 2f, textSize.Y);
+                if (indicator.Type == DamageIndicatorState.IndicatorType.StatChange)
+                {
+                    const float flashInterval = 0.2f;
+                    bool useAltColor = (int)(indicator.Timer / flashInterval) % 2 == 0;
 
-                spriteBatch.DrawStringOutlinedSnapped(activeFont, indicator.Text, textPosition, drawColor * alpha, Color.Black * alpha);
+                    Color prefixColor = useAltColor ? _global.Palette_Yellow : indicator.PrimaryColor;
+                    Color statColor = useAltColor ? _global.Palette_Yellow : indicator.SecondaryColor.Value;
+                    Color suffixColor = useAltColor ? _global.Palette_Yellow : indicator.TertiaryColor.Value;
+
+                    string prefixText = indicator.PrimaryText ?? "";
+                    string statText = indicator.SecondaryText ?? "";
+                    string suffixText = indicator.TertiaryText ?? "";
+
+                    Vector2 prefixSize = activeFont.MeasureString(prefixText);
+                    Vector2 statSize = activeFont.MeasureString(statText);
+                    Vector2 suffixSize = activeFont.MeasureString(suffixText);
+
+                    float totalWidth = prefixSize.X + statSize.X + suffixSize.X;
+                    Vector2 basePosition = indicator.Position - new Vector2(totalWidth / 2f, statSize.Y);
+
+                    // Adjust position to stay on screen
+                    float left = basePosition.X;
+                    float right = basePosition.X + totalWidth;
+                    if (left < screenPadding) basePosition.X += (screenPadding - left);
+                    if (right > Global.VIRTUAL_WIDTH - screenPadding) basePosition.X -= (right - (Global.VIRTUAL_WIDTH - screenPadding));
+
+                    Vector2 currentPos = basePosition;
+                    spriteBatch.DrawStringOutlinedSnapped(activeFont, prefixText, currentPos, prefixColor * alpha, Color.Black * alpha);
+                    currentPos.X += prefixSize.X;
+                    spriteBatch.DrawStringOutlinedSnapped(activeFont, statText, currentPos, statColor * alpha, Color.Black * alpha);
+                    currentPos.X += statSize.X;
+                    spriteBatch.DrawStringOutlinedSnapped(activeFont, suffixText, currentPos, suffixColor * alpha, Color.Black * alpha);
+                }
+                else
+                {
+                    Vector2 textSize = activeFont.MeasureString(indicator.PrimaryText);
+                    Vector2 textPosition = indicator.Position - new Vector2(textSize.X / 2f, textSize.Y);
+
+                    // Adjust position to stay on screen
+                    float left = textPosition.X;
+                    float right = textPosition.X + textSize.X;
+                    if (left < screenPadding) textPosition.X += (screenPadding - left);
+                    if (right > Global.VIRTUAL_WIDTH - screenPadding) textPosition.X -= (right - (Global.VIRTUAL_WIDTH - screenPadding));
+
+                    spriteBatch.DrawStringOutlinedSnapped(activeFont, indicator.PrimaryText, textPosition, drawColor * alpha, Color.Black * alpha);
+                }
             }
         }
 

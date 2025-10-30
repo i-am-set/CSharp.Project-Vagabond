@@ -6,6 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Scenes;
@@ -48,6 +49,12 @@ namespace ProjectVagabond
             TerminalDarkGray = Palette_DarkGray;
             InputCaratColor = Color.Khaki;
 
+            // Initialize Stat Colors
+            StatColor_Strength = Color.DarkOrange;
+            StatColor_Intelligence = Color.Crimson;
+            StatColor_Tenacity = Color.Lime;
+            StatColor_Agility = Color.Yellow;
+             
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
             {
@@ -199,6 +206,12 @@ namespace ProjectVagabond
         public Color ToolTipBorderColor { get; private set; }
         public Color TerminalDarkGray { get; set; }
         public Color InputCaratColor { get; set; }
+
+        // Stat-specific Colors
+        public Color StatColor_Strength { get; private set; }
+        public Color StatColor_Intelligence { get; private set; }
+        public Color StatColor_Tenacity { get; private set; }
+        public Color StatColor_Agility { get; private set; }
 
         // Data-driven Colors
         public Dictionary<int, Color> ElementColors { get; private set; }
