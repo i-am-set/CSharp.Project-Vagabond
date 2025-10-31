@@ -837,11 +837,16 @@ namespace ProjectVagabond.Scenes
             int absAmount = Math.Abs(e.Amount);
 
             string prefixText = "";
-            string suffixText = $" {verb}";
+            string suffixText;
 
             if (absAmount > 1)
             {
                 prefixText = $"{absAmount}x ";
+                suffixText = $" {verb}";
+            }
+            else
+            {
+                suffixText = $" {verb}";
             }
 
             Color changeColor = e.Amount > 0 ? _global.Palette_LightBlue : _global.Palette_Red;
@@ -855,8 +860,11 @@ namespace ProjectVagabond.Scenes
                 _ => _global.Palette_White
             };
 
+            Color prefixColor = changeColor;
+            Color suffixColor = changeColor;
+
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
-            _animationManager.StartStatStageIndicator(e.Target.CombatantID, prefixText, statText, suffixText, changeColor, statColor, changeColor, hudPosition);
+            _animationManager.StartStatStageIndicator(e.Target.CombatantID, prefixText, statText, suffixText, prefixColor, statColor, suffixColor, hudPosition);
         }
 
         private void FleeBattle()

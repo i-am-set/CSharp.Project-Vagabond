@@ -50,8 +50,8 @@ namespace ProjectVagabond
             InputCaratColor = Color.Khaki;
 
             // Initialize Stat Colors
-            StatColor_Strength = Color.DarkOrange;
-            StatColor_Intelligence = Color.Crimson;
+            StatColor_Strength = Color.Crimson;
+            StatColor_Intelligence = Color.Magenta;
             StatColor_Tenacity = Color.Lime;
             StatColor_Agility = Color.Yellow;
              
