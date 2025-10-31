@@ -349,6 +349,10 @@ namespace ProjectVagabond.Battle.UI
         {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             int elementId = move.OffensiveElementIDs.FirstOrDefault();
+            if (elementId == 0) // If the list is empty, FirstOrDefault returns 0. Default to neutral element ID 1.
+            {
+                elementId = 1;
+            }
             Rectangle? sourceRect = null;
             if (spriteManager.ElementIconSourceRects.TryGetValue(elementId, out var rect))
             {
