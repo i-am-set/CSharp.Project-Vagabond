@@ -80,7 +80,7 @@ namespace ProjectVagabond.Battle.UI
 
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
-            UpdateEnemyAnimations(gameTime);
+            UpdateEnemyAnimations(gameTime, combatants);
             UpdatePlayerStatusIcons(combatants.FirstOrDefault(c => c.IsPlayerControlled));
             UpdateStatusIconTooltips(combatants);
         }
@@ -804,12 +804,18 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void UpdateEnemyAnimations(GameTime gameTime)
+        private void UpdateEnemyAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
             var combatantIds = _enemyAnimationTimers.Keys.ToList();
             foreach (var id in combatantIds)
             {
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == id);
+                if (combatant == null || combatant.IsDefeated)
+                {
+                    continue; // Skip animation updates for defeated or non-existent enemies
+                }
+
                 var timers = _enemyAnimationTimers[id];
                 var intervals = _enemyAnimationIntervals[id];
                 var offsets = _enemySpritePartOffsets[id];
