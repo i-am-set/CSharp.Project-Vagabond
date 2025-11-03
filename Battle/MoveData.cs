@@ -1,4 +1,5 @@
-﻿using ProjectVagabond.Battle;
+﻿#nullable enable
+using ProjectVagabond.Battle;
 using System;
 using System.Collections.Generic;
 
@@ -12,17 +13,17 @@ namespace ProjectVagabond.Battle
         /// <summary>
         /// A unique string identifier for the move (e.g., "Tackle", "Fireball").
         /// </summary>
-        public string MoveID { get; set; }
+        public string MoveID { get; set; } = "";
 
         /// <summary>
         /// The display name of the move.
         /// </summary>
-        public string MoveName { get; set; }
+        public string MoveName { get; set; } = "";
 
         /// <summary>
         /// Flavor text or a brief explanation of the move's effects.
         /// </summary>
-        public string Description { get; set; }
+        public string Description { get; set; } = "";
 
         /// <summary>
         /// The base power of the move, used in damage calculation.
@@ -96,6 +97,22 @@ namespace ProjectVagabond.Battle
         public List<string> Tags { get; set; } = new List<string>();
 
         /// <summary>
+        /// The filename of the animation sprite sheet in 'Content/Sprites/MoveAnimationSpriteSheets/'.
+        /// </summary>
+        public string? AnimationSpriteSheet { get; set; }
+
+        /// <summary>
+        /// A multiplier for the animation's playback speed. 1.0 is default (12 FPS).
+        /// </summary>
+        public float AnimationSpeed { get; set; } = 1.0f;
+
+        /// <summary>
+        /// If true, one animation plays in the center of the screen. If false, an animation plays on each target.
+        /// </summary>
+        public bool IsAnimationCentralized { get; set; } = false;
+
+
+        /// <summary>
         /// Creates a shallow copy of the MoveData object.
         /// </summary>
         public MoveData Clone()
@@ -104,3 +121,4 @@ namespace ProjectVagabond.Battle
         }
     }
 }
+#nullable restore

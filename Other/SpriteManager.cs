@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -41,6 +42,7 @@ namespace ProjectVagabond
         private readonly Dictionary<string, int[]> _enemySpriteTopPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteLeftPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteRightPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int[]> _enemySpriteBottomPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _relicSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
 
@@ -535,6 +537,12 @@ namespace ProjectVagabond
             return offsets;
         }
 
+        public int[] GetEnemySpriteBottomPixelOffsets(string archetypeId)
+        {
+            _enemySpriteBottomPixelOffsets.TryGetValue(archetypeId, out var offsets);
+            return offsets;
+        }
+
         private void PreCalculateSpriteBounds(Texture2D sprite, string archetypeId)
         {
             bool isMajor = _enemySprites[archetypeId].IsMajor;
@@ -544,68 +552,36 @@ namespace ProjectVagabond
             var topOffsets = new int[numParts];
             var leftOffsets = new int[numParts];
             var rightOffsets = new int[numParts];
+            var bottomOffsets = new int[numParts];
             var pixelData = new Color[sprite.Width * sprite.Height];
             sprite.GetData(pixelData);
 
             for (int i = 0; i < numParts; i++)
             {
                 int partStartX = i * partSize;
-                int topY = -1;
-                int leftX = -1;
-                int rightX = -1;
+                int topY = -1, leftX = -1, rightX = -1, bottomY = -1;
 
                 // Find Top
-                for (int y = 0; y < partSize; y++)
-                {
-                    for (int x = 0; x < partSize; x++)
-                    {
-                        int index = (y * sprite.Width) + (partStartX + x);
-                        if (pixelData[index].A > 0)
-                        {
-                            topY = y;
-                            goto FoundTopPixel;
-                        }
-                    }
-                }
-            FoundTopPixel:
-                topOffsets[i] = topY != -1 ? topY : int.MaxValue;
+                for (int y = 0; y < partSize; y++) { for (int x = 0; x < partSize; x++) { if (pixelData[(y * sprite.Width) + (partStartX + x)].A > 0) { topY = y; goto FoundTopPixel; } } }
+            FoundTopPixel: topOffsets[i] = topY != -1 ? topY : int.MaxValue;
 
                 // Find Left
-                for (int x = 0; x < partSize; x++)
-                {
-                    for (int y = 0; y < partSize; y++)
-                    {
-                        int index = (y * sprite.Width) + (partStartX + x);
-                        if (pixelData[index].A > 0)
-                        {
-                            leftX = x;
-                            goto FoundLeftPixel;
-                        }
-                    }
-                }
-            FoundLeftPixel:
-                leftOffsets[i] = leftX != -1 ? leftX : int.MaxValue;
+                for (int x = 0; x < partSize; x++) { for (int y = 0; y < partSize; y++) { if (pixelData[(y * sprite.Width) + (partStartX + x)].A > 0) { leftX = x; goto FoundLeftPixel; } } }
+            FoundLeftPixel: leftOffsets[i] = leftX != -1 ? leftX : int.MaxValue;
 
                 // Find Right
-                for (int x = partSize - 1; x >= 0; x--)
-                {
-                    for (int y = 0; y < partSize; y++)
-                    {
-                        int index = (y * sprite.Width) + (partStartX + x);
-                        if (pixelData[index].A > 0)
-                        {
-                            rightX = x;
-                            goto FoundRightPixel;
-                        }
-                    }
-                }
-            FoundRightPixel:
-                rightOffsets[i] = rightX != -1 ? rightX : -1;
+                for (int x = partSize - 1; x >= 0; x--) { for (int y = 0; y < partSize; y++) { if (pixelData[(y * sprite.Width) + (partStartX + x)].A > 0) { rightX = x; goto FoundRightPixel; } } }
+            FoundRightPixel: rightOffsets[i] = rightX;
+
+                // Find Bottom
+                for (int y = partSize - 1; y >= 0; y--) { for (int x = 0; x < partSize; x++) { if (pixelData[(y * sprite.Width) + (partStartX + x)].A > 0) { bottomY = y; goto FoundBottomPixel; } } }
+            FoundBottomPixel: bottomOffsets[i] = bottomY;
             }
 
             _enemySpriteTopPixelOffsets[archetypeId] = topOffsets;
             _enemySpriteLeftPixelOffsets[archetypeId] = leftOffsets;
             _enemySpriteRightPixelOffsets[archetypeId] = rightOffsets;
+            _enemySpriteBottomPixelOffsets[archetypeId] = bottomOffsets;
         }
 
         public Texture2D GetStatusEffectIcon(StatusEffectType effectType)
@@ -681,3 +657,4 @@ namespace ProjectVagabond
         }
     }
 }
+#nullable restore

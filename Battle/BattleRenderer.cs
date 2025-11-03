@@ -864,6 +864,64 @@ namespace ProjectVagabond.Battle.UI
             return new Rectangle(left - padding, top - padding, (right - left) + padding * 2, (bottom - top) + padding * 2);
         }
 
+        public Vector2 GetCombatantVisualCenterPosition(BattleCombatant combatant, IEnumerable<BattleCombatant> allCombatants)
+        {
+            if (combatant.IsPlayerControlled)
+            {
+                // For player, position it above their name/HUD area.
+                const int playerHudY = DIVIDER_Y - 10;
+                const int playerHudPaddingX = 10;
+                var font = ServiceLocator.Get<BitmapFont>();
+                Vector2 nameSize = font.MeasureString(combatant.Name);
+                // Center it horizontally over the name.
+                return new Vector2(playerHudPaddingX + nameSize.X / 2, playerHudY - 20);
+            }
+            else
+            {
+                // For enemies, find their slot and calculate the sprite's visual center.
+                var enemies = allCombatants.Where(c => !c.IsPlayerControlled).ToList();
+                int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
+                if (enemyIndex == -1) return Vector2.Zero;
+
+                const int enemyAreaPadding = 20;
+                int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
+                int slotWidth = availableWidth / enemies.Count;
+                var hudCenterPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), ENEMY_HUD_Y);
+
+                bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
+                int spritePartSize = isMajor ? 96 : 64;
+                var spriteBaseRect = new Rectangle((int)(hudCenterPosition.X - spritePartSize / 2f), (int)(hudCenterPosition.Y - spritePartSize - 10), spritePartSize, spritePartSize);
+
+                var topOffsets = _spriteManager.GetEnemySpriteTopPixelOffsets(combatant.ArchetypeId);
+                var bottomOffsets = _spriteManager.GetEnemySpriteBottomPixelOffsets(combatant.ArchetypeId);
+                var leftOffsets = _spriteManager.GetEnemySpriteLeftPixelOffsets(combatant.ArchetypeId);
+                var rightOffsets = _spriteManager.GetEnemySpriteRightPixelOffsets(combatant.ArchetypeId);
+
+                if (topOffsets == null || bottomOffsets == null || leftOffsets == null || rightOffsets == null)
+                {
+                    return spriteBaseRect.Center.ToVector2(); // Fallback
+                }
+
+                int globalMinX = int.MaxValue, globalMaxX = int.MinValue;
+                int globalMinY = int.MaxValue, globalMaxY = int.MinValue;
+
+                for (int i = 0; i < topOffsets.Length; i++)
+                {
+                    if (topOffsets[i] != int.MaxValue) globalMinY = Math.Min(globalMinY, topOffsets[i]);
+                    if (bottomOffsets[i] != -1) globalMaxY = Math.Max(globalMaxY, bottomOffsets[i]);
+                    if (leftOffsets[i] != int.MaxValue) globalMinX = Math.Min(globalMinX, leftOffsets[i]);
+                    if (rightOffsets[i] != -1) globalMaxX = Math.Max(globalMaxX, rightOffsets[i]);
+                }
+
+                if (globalMinX == int.MaxValue) return spriteBaseRect.Center.ToVector2(); // Fallback if sprite is empty
+
+                float visualCenterX = spriteBaseRect.X + globalMinX + (globalMaxX - globalMinX) / 2f;
+                float visualCenterY = spriteBaseRect.Y + globalMinY + (globalMaxY - globalMinY) / 2f;
+
+                return new Vector2(visualCenterX, visualCenterY);
+            }
+        }
+
         public Vector2 GetCombatantHudCenterPosition(BattleCombatant combatant, IEnumerable<BattleCombatant> allCombatants)
         {
             if (combatant.IsPlayerControlled)

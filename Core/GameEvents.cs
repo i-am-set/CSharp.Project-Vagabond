@@ -297,6 +297,20 @@ namespace ProjectVagabond
             public OffensiveStatType Stat { get; set; }
             public int Amount { get; set; } // e.g., +1, -2
         }
+
+        /// <summary>
+        /// Published by the BattleManager to request that a move's animation be played.
+        /// </summary>
+        public struct MoveAnimationTriggered
+        {
+            public MoveData Move { get; set; }
+            public List<BattleCombatant> Targets { get; set; }
+        }
+
+        /// <summary>
+        /// Published by the BattleScene when a move animation has finished playing (or was skipped).
+        /// </summary>
+        public struct MoveAnimationCompleted { }
     }
 }
 #nullable restore

@@ -482,6 +482,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/mountain.png
 
+#begin Sprites/MoveAnimationSpriteSheets/debug_null_animation.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/debug_null_animation.png;Sprites/MoveAnimationSpriteSheets/debug_null_animation
+
 #begin Sprites/Particles/ember_particle.png
 /importer:TextureImporter
 /processor:TextureProcessor

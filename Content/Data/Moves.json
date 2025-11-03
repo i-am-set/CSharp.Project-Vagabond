@@ -16,7 +16,10 @@
     "Rarity": -1,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 1 ],
-    "Tags": []
+    "Tags": [],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "ClawRake",
@@ -34,7 +37,10 @@
     "Rarity": -1,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 1 ],
-    "Tags": []
+    "Tags": [],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Bonecrusher",
@@ -52,7 +58,10 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 1 ],
-    "Tags": []
+    "Tags": [],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "SwiftStrike",
@@ -70,7 +79,10 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 1 ],
-    "Tags": [ "Priority" ]
+    "Tags": [ "Priority" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Fire ---
   {
@@ -89,7 +101,10 @@
     "Rarity": 0,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 2 ],
-    "Tags": [ "Fire" ]
+    "Tags": [ "Fire" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Pyrosphere",
@@ -107,7 +122,10 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 2 ],
-    "Tags": [ "Fire" ]
+    "Tags": [ "Fire" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "InfernoSurge",
@@ -125,7 +143,10 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 2 ],
-    "Tags": [ "Fire" ]
+    "Tags": [ "Fire" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Scorchbrand",
@@ -143,7 +164,10 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 2 ],
-    "Tags": [ "Fire" ]
+    "Tags": [ "Fire" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Water ---
   {
@@ -162,7 +186,10 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 3 ],
-    "Tags": [ "Water" ]
+    "Tags": [ "Water" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "TorrentDash",
@@ -180,7 +207,10 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 3 ],
-    "Tags": [ "Water", "Priority" ]
+    "Tags": [ "Water", "Priority" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Maelstrom",
@@ -198,7 +228,10 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 3 ],
-    "Tags": [ "Water" ]
+    "Tags": [ "Water" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Arcane ---
   {
@@ -217,7 +250,10 @@
     "Rarity": 0,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 4 ],
-    "Tags": [ "Arcane" ]
+    "Tags": [ "Arcane" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Riftburst",
@@ -235,7 +271,10 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 4 ],
-    "Tags": [ "Arcane" ]
+    "Tags": [ "Arcane" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Nullwave",
@@ -253,7 +292,10 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 4 ],
-    "Tags": [ "Arcane" ]
+    "Tags": [ "Arcane" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Earth ---
   {
@@ -272,7 +314,10 @@
     "Rarity": 0,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 5 ],
-    "Tags": [ "Earth" ]
+    "Tags": [ "Earth" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Faultbreak",
@@ -290,7 +335,10 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 5 ],
-    "Tags": [ "Earth" ]
+    "Tags": [ "Earth" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "MireSplash",
@@ -308,7 +356,10 @@
     "Rarity": 0,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 5 ],
-    "Tags": [ "Earth" ]
+    "Tags": [ "Earth" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Metal ---
   {
@@ -327,7 +378,10 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 6 ],
-    "Tags": [ "Metal" ]
+    "Tags": [ "Metal" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "TitanSlam",
@@ -345,7 +399,10 @@
     "Rarity": 2,
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 6 ],
-    "Tags": [ "Metal" ]
+    "Tags": [ "Metal" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "MoonforgedEdge",
@@ -363,7 +420,10 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 6 ],
-    "Tags": [ "Metal" ]
+    "Tags": [ "Metal" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Toxic ---
   {
@@ -382,7 +442,10 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 7 ],
-    "Tags": [ "Toxic" ]
+    "Tags": [ "Toxic" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "CorrosiveSpittle",
@@ -400,7 +463,10 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 7 ],
-    "Tags": [ "Toxic" ]
+    "Tags": [ "Toxic" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Wind ---
   {
@@ -419,7 +485,10 @@
     "Rarity": 0,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 8 ],
-    "Tags": [ "Wind" ]
+    "Tags": [ "Wind" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "CycloneSpiral",
@@ -437,7 +506,10 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 8 ],
-    "Tags": [ "Wind" ]
+    "Tags": [ "Wind" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Decay ---
   {
@@ -456,7 +528,10 @@
     "Rarity": 2,
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 9 ],
-    "Tags": [ "Void", "Lifesteal" ]
+    "Tags": [ "Void", "Lifesteal" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "SoulRot",
@@ -474,7 +549,10 @@
     "Rarity": 2,
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 9 ],
-    "Tags": [ "Void" ]
+    "Tags": [ "Void" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Light ---
   {
@@ -493,7 +571,10 @@
     "Rarity": 2,
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 10 ],
-    "Tags": [ "Light" ]
+    "Tags": [ "Light" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "LuminousSpark",
@@ -511,7 +592,10 @@
     "Rarity": 0,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 10 ],
-    "Tags": [ "Light" ]
+    "Tags": [ "Light" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Electric ---
   {
@@ -530,7 +614,10 @@
     "Rarity": 0,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 11 ],
-    "Tags": [ "Electric" ]
+    "Tags": [ "Electric" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "VoltLash",
@@ -548,7 +635,10 @@
     "Rarity": 0,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 11 ],
-    "Tags": [ "Electric" ]
+    "Tags": [ "Electric" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Stormspear",
@@ -566,7 +656,10 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 11 ],
-    "Tags": [ "Electric" ]
+    "Tags": [ "Electric" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Ice ---
   {
@@ -585,7 +678,10 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 12 ],
-    "Tags": [ "Ice", "Priority" ]
+    "Tags": [ "Ice", "Priority" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "WintersGrasp",
@@ -603,7 +699,10 @@
     "Rarity": 1,
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 12 ],
-    "Tags": [ "Ice" ]
+    "Tags": [ "Ice" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "WhiteoutTempest",
@@ -621,7 +720,10 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 12 ],
-    "Tags": [ "Ice" ]
+    "Tags": [ "Ice" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Nature ---
   {
@@ -640,7 +742,10 @@
     "Rarity": 0,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 13 ],
-    "Tags": [ "Nature" ]
+    "Tags": [ "Nature" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Needlestorm",
@@ -658,7 +763,10 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 13 ],
-    "Tags": [ "Nature" ]
+    "Tags": [ "Nature" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Sunlance",
@@ -676,7 +784,10 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 13 ],
-    "Tags": [ "Nature", "Light" ]
+    "Tags": [ "Nature", "Light" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- Special ---
   {
@@ -695,7 +806,10 @@
     "Rarity": -1,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 1 ],
-    "Tags": []
+    "Tags": [],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Dodge",
@@ -716,7 +830,10 @@
     "Effects": {
       "ApplyStatus": "Dodging,100,1"
     },
-    "Tags": [ "Defense" ]
+    "Tags": [ "Defense" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Attune",
@@ -737,7 +854,10 @@
     "Effects": {
       "RestoreMana": "100"
     },
-    "Tags": []
+    "Tags": [],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   // --- NEW SPECIAL EFFECT MOVES ---
   {
@@ -757,7 +877,10 @@
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 1 ],
     "Effects": { "MultiHit": "2,5" },
-    "Tags": [ "MultiHit" ]
+    "Tags": [ "MultiHit" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "VampiricBite",
@@ -776,7 +899,10 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 9 ],
     "Effects": { "Lifesteal": "50" },
-    "Tags": [ "Void", "Lifesteal" ]
+    "Tags": [ "Void", "Lifesteal" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "FinishingBlow",
@@ -795,7 +921,10 @@
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 6 ],
     "Effects": { "Execute": "25,3.0" },
-    "Tags": [ "Metal" ]
+    "Tags": [ "Metal" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "SonicBoom",
@@ -814,7 +943,10 @@
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 8 ],
     "Effects": { "FixedDamage": "40" },
-    "Tags": [ "Wind" ]
+    "Tags": [ "Wind" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "FocusEnergy",
@@ -833,7 +965,10 @@
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 4 ],
     "Effects": { "RampUp": "30,120" },
-    "Tags": [ "Arcane" ]
+    "Tags": [ "Arcane" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "DrillPeck",
@@ -852,7 +987,10 @@
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 1 ],
     "Effects": { "ArmorPierce": "50" },
-    "Tags": []
+    "Tags": [],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "ToxicSting",
@@ -871,7 +1009,10 @@
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 7 ],
     "Effects": { "ApplyStatus": "Poison,100,3" },
-    "Tags": [ "Toxic", "StatusEffect" ]
+    "Tags": [ "Toxic", "StatusEffect" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "SearingCoals",
@@ -892,7 +1033,10 @@
     "Effects": {
       "ApplyStatus": "Burn,100,3"
     },
-    "Tags": [ "Fire", "StatusEffect" ]
+    "Tags": [ "Fire", "StatusEffect" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Immolate",
@@ -911,7 +1055,10 @@
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 2 ],
     "Effects": { "DetonateStatus": "Burn,3" },
-    "Tags": [ "Fire", "StatusEffect" ]
+    "Tags": [ "Fire", "StatusEffect" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "PurifyingLight",
@@ -930,7 +1077,10 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 10 ],
     "Effects": { "Cleanse": "Self,All" },
-    "Tags": [ "Light", "Healing" ]
+    "Tags": [ "Light", "Healing" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "SiphonPower",
@@ -949,7 +1099,10 @@
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 4 ],
     "Effects": { "StealBuff": "75" },
-    "Tags": [ "Arcane", "Buff" ]
+    "Tags": [ "Arcane", "Buff" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "SolarBeam",
@@ -968,7 +1121,10 @@
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 10, 13 ],
     "Effects": { "Charge": "1" },
-    "Tags": [ "Light", "Nature", "Charge" ]
+    "Tags": [ "Light", "Nature", "Charge" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "TimeBomb",
@@ -987,7 +1143,10 @@
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 2 ],
     "Effects": { "DelayedAttack": "2" },
-    "Tags": [ "Fire" ]
+    "Tags": [ "Fire" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Rampage",
@@ -1006,7 +1165,10 @@
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 1 ],
     "Effects": { "ExecuteOnKill": "ApplyStatus(StrengthUp,100,3)" },
-    "Tags": [ "Buff" ]
+    "Tags": [ "Buff" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "WildCharge",
@@ -1025,7 +1187,10 @@
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 11 ],
     "Effects": { "Recoil": "25" },
-    "Tags": [ "Electric" ]
+    "Tags": [ "Electric" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "BloodMagic",
@@ -1044,7 +1209,10 @@
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 9 ],
     "Effects": { "HPCost": "20" },
-    "Tags": [ "Void", "HPCost" ]
+    "Tags": [ "Void", "HPCost" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Overload",
@@ -1063,7 +1231,10 @@
     "LevelRequirement": 6,
     "OffensiveElementIDs": [ 11 ],
     "Effects": { "SelfDebuff": "Stun,100,1" },
-    "Tags": [ "Electric" ]
+    "Tags": [ "Electric" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Misfire",
@@ -1082,7 +1253,10 @@
     "LevelRequirement": 6,
     "OffensiveElementIDs": [ 4 ],
     "Effects": { "Gamble": "50,SelfDamage(50)" },
-    "Tags": [ "Arcane" ]
+    "Tags": [ "Arcane" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "Leer",
@@ -1103,7 +1277,10 @@
     "Effects": {
       "ModifyStatStage": "Tenacity,-1,100,Target"
     },
-    "Tags": [ "Debuff" ]
+    "Tags": [ "Debuff" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   },
   {
     "MoveID": "BulkUp",
@@ -1125,6 +1302,9 @@
       "ModifyStatStage_1": "Strength,+1,100,Self",
       "ModifyStatStage_2": "Tenacity,+1,100,Self"
     },
-    "Tags": [ "Buff" ]
+    "Tags": [ "Buff" ],
+    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpeed": 1.0,
+    "IsAnimationCentralized": false
   }
 ]

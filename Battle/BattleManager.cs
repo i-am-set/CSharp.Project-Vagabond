@@ -1,4 +1,5 @@
-﻿using ProjectVagabond.Battle;
+﻿#nullable enable
+using ProjectVagabond.Battle;
 using ProjectVagabond.Utils;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -20,6 +21,7 @@ namespace ProjectVagabond.Battle
             StartOfTurn,
             ActionSelection,
             ActionResolution,
+            AnimatingMove,
             SecondaryEffectResolution,
             CheckForDefeat,
             EndOfTurn,
@@ -30,7 +32,7 @@ namespace ProjectVagabond.Battle
         private readonly List<BattleCombatant> _enemyCombatants;
         private readonly List<BattleCombatant> _allCombatants;
         private List<QueuedAction> _actionQueue;
-        private QueuedAction _currentActionForEffects;
+        private QueuedAction? _currentActionForEffects;
         private List<DamageCalculator.DamageResult> _currentActionDamageResults;
         private List<BattleCombatant> _currentActionFinalTargets;
         private BattlePhase _currentPhase;
@@ -40,14 +42,15 @@ namespace ProjectVagabond.Battle
         private static readonly Random _random = new Random();
 
         // State for multi-hit moves
-        private QueuedAction _currentMultiHitAction;
+        private QueuedAction? _currentMultiHitAction;
         private int _multiHitCountRemaining;
         private int _totalHitsForNarration;
         private List<DamageCalculator.DamageResult> _multiHitAggregatedDamageResults;
         private List<BattleCombatant> _multiHitAggregatedFinalTargets;
 
         // State for action resolution flow
-        private QueuedAction _actionToExecute;
+        private QueuedAction? _actionToExecute;
+        private QueuedAction? _actionPendingAnimation;
         private bool _endOfTurnEffectsProcessed;
 
         public BattlePhase CurrentPhase => _currentPhase;
@@ -76,6 +79,7 @@ namespace ProjectVagabond.Battle
             _endOfTurnEffectsProcessed = false;
 
             EventBus.Subscribe<GameEvents.SecondaryEffectComplete>(OnSecondaryEffectComplete);
+            EventBus.Subscribe<GameEvents.MoveAnimationCompleted>(OnMoveAnimationCompleted);
 
             // Process on-enter abilities
             HandleOnEnterAbilities();
@@ -99,6 +103,15 @@ namespace ProjectVagabond.Battle
             if (_currentPhase == BattlePhase.SecondaryEffectResolution)
             {
                 _currentPhase = BattlePhase.CheckForDefeat;
+            }
+        }
+
+        private void OnMoveAnimationCompleted(GameEvents.MoveAnimationCompleted e)
+        {
+            if (_currentPhase == BattlePhase.AnimatingMove && _actionPendingAnimation != null)
+            {
+                ProcessMoveAction(_actionPendingAnimation);
+                _actionPendingAnimation = null;
             }
         }
 
@@ -151,6 +164,10 @@ namespace ProjectVagabond.Battle
                     break;
                 case BattlePhase.ActionResolution:
                     HandleActionResolution();
+                    break;
+                case BattlePhase.AnimatingMove:
+                    // In this phase, we are simply waiting for the MoveAnimationCompleted event.
+                    // The BattleScene is responsible for publishing it when its animation manager is idle.
                     break;
                 case BattlePhase.SecondaryEffectResolution:
                     HandleSecondaryEffectResolution();
@@ -380,7 +397,19 @@ namespace ProjectVagabond.Battle
             }
             else if (action.ChosenMove != null)
             {
-                ProcessMoveAction(action);
+                if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
+                {
+                    _actionPendingAnimation = action;
+                    _currentPhase = BattlePhase.AnimatingMove;
+                    var targets = ResolveTargets(action); // Resolve targets for the animation
+                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = action.ChosenMove, Targets = targets });
+                    // The manager will now wait in this phase until the MoveAnimationCompleted event is received.
+                }
+                else
+                {
+                    // No animation, proceed directly to processing the move
+                    ProcessMoveAction(action);
+                }
             }
         }
 
@@ -923,3 +952,4 @@ namespace ProjectVagabond.Battle
         }
     }
 }
+#nullable restore
