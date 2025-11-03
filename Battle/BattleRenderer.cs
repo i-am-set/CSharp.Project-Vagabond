@@ -43,6 +43,12 @@ namespace ProjectVagabond.Battle.UI
         private const float ENEMY_ANIM_MIN_INTERVAL = 0.4f;
         private const float ENEMY_ANIM_MAX_INTERVAL = 0.6f;
 
+        // Attacker Animation
+        private readonly Dictionary<string, float> _attackAnimTimers = new();
+        private string? _lastAttackerId;
+        private const float ATTACK_BOB_DURATION = 0.4f;
+        private const float ATTACK_BOB_AMOUNT = 4f;
+
         // Layout Constants
         private const int DIVIDER_Y = 123;
         private const int MAX_ENEMIES = 5;
@@ -66,6 +72,8 @@ namespace ProjectVagabond.Battle.UI
             _enemySpritePartOffsets.Clear();
             _enemyAnimationTimers.Clear();
             _enemyAnimationIntervals.Clear();
+            _attackAnimTimers.Clear();
+            _lastAttackerId = null;
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -121,6 +129,33 @@ namespace ProjectVagabond.Battle.UI
         {
             var secondaryFont = _core.SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
+
+            // --- Update Attacker Animation State ---
+            var currentAttackerId = (currentActor != null && !currentActor.IsPlayerControlled) ? currentActor.CombatantID : null;
+            if (currentAttackerId != _lastAttackerId)
+            {
+                if (currentAttackerId != null)
+                {
+                    _attackAnimTimers[currentAttackerId] = 0f; // Start animation for the new attacker
+                }
+                _lastAttackerId = currentAttackerId;
+            }
+
+            // Update all active animation timers
+            var idsToRemove = new List<string>();
+            foreach (var id in _attackAnimTimers.Keys.ToList())
+            {
+                _attackAnimTimers[id] += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                if (_attackAnimTimers[id] >= ATTACK_BOB_DURATION)
+                {
+                    idsToRemove.Add(id);
+                }
+            }
+            foreach (var id in idsToRemove)
+            {
+                _attackAnimTimers.Remove(id);
+            }
+
 
             _currentTargets.Clear();
             var enemies = allCombatants.Where(c => !c.IsPlayerControlled).ToList();
@@ -563,6 +598,23 @@ namespace ProjectVagabond.Battle.UI
                 int slotWidth = availableWidth / enemies.Count;
                 var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), ENEMY_HUD_Y);
 
+                if (_attackAnimTimers.TryGetValue(currentActor.CombatantID, out float animTimer))
+                {
+                    float progress = Math.Clamp(animTimer / ATTACK_BOB_DURATION, 0f, 1f);
+                    float yOffset;
+                    if (progress < 0.5f)
+                    {
+                        float phaseProgress = progress * 2f;
+                        yOffset = Easing.EaseInCubic(phaseProgress) * ATTACK_BOB_AMOUNT;
+                    }
+                    else
+                    {
+                        float phaseProgress = (progress - 0.5f) * 2f;
+                        yOffset = (1.0f - Easing.EaseOutCubic(phaseProgress)) * ATTACK_BOB_AMOUNT;
+                    }
+                    centerPosition.Y += yOffset;
+                }
+
                 var spriteRect = new Rectangle((int)(centerPosition.X - spritePartSize / 2f), (int)(centerPosition.Y - spritePartSize - 10), spritePartSize, spritePartSize);
 
                 // Calculate the highest point of the sprite for this frame
@@ -575,6 +627,32 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 centerPosition, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState)
         {
+            if (_attackAnimTimers.TryGetValue(combatant.CombatantID, out float animTimer))
+            {
+                float progress = Math.Clamp(animTimer / ATTACK_BOB_DURATION, 0f, 1f);
+                float yOffset;
+
+                // The animation is split into two halves: easing down and easing back up.
+                if (progress < 0.5f)
+                {
+                    // Phase 1: Ease In Downward motion.
+                    // Remap the first half of the progress (0.0 to 0.5) to a 0.0 to 1.0 range for the easing function.
+                    float phaseProgress = progress * 2f;
+                    float easedProgress = Easing.EaseInCubic(phaseProgress);
+                    yOffset = easedProgress * ATTACK_BOB_AMOUNT;
+                }
+                else
+                {
+                    // Phase 2: Ease Out Upward motion.
+                    // Remap the second half of the progress (0.5 to 1.0) to a 0.0 to 1.0 range.
+                    float phaseProgress = (progress - 0.5f) * 2f;
+                    float easedProgress = Easing.EaseOutCubic(phaseProgress);
+                    // Interpolate from the max offset back to zero.
+                    yOffset = (1.0f - easedProgress) * ATTACK_BOB_AMOUNT;
+                }
+                centerPosition.Y += yOffset;
+            }
+
             var pixel = ServiceLocator.Get<Texture2D>();
             bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
             int spritePartSize = isMajor ? 96 : 64;
