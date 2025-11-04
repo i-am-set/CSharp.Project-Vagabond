@@ -1370,6 +1370,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/peak.png
 
+#begin Sprites/Player/player_heart_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Player/player_heart_spritesheet.png;Sprites/Player/player_heart_spritesheet
+
 #begin Sprites/Relics/placeholder_relic.png
 /importer:TextureImporter
 /processor:TextureProcessor
