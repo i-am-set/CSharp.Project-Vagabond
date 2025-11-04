@@ -113,6 +113,7 @@ namespace ProjectVagabond.Battle.UI
 
         // Hover Box Animation
         private MoveButton? _hoveredMoveButton;
+        private bool _shouldAttuneButtonPulse = false;
 
 
         public ActionMenu()
@@ -186,14 +187,14 @@ namespace ProjectVagabond.Battle.UI
             };
             _secondaryActionButtons.Add(strikeButton);
 
-            var dodgeButton = new TextOverImageButton(Rectangle.Empty, "DODGE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[1]) { HasRightClickHint = true };
-            dodgeButton.OnClick += () => {
-                if (BattleDataCache.Moves.TryGetValue("Dodge", out var dodgeMove))
+            var attuneButton = new TextOverImageButton(Rectangle.Empty, "ATTUNE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[3]) { HasRightClickHint = true };
+            attuneButton.OnClick += () => {
+                if (BattleDataCache.Moves.TryGetValue("Attune", out var attuneMove))
                 {
-                    SelectMove(dodgeMove, null);
+                    SelectMove(attuneMove, null);
                 }
             };
-            _secondaryActionButtons.Add(dodgeButton);
+            _secondaryActionButtons.Add(attuneButton);
 
             var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2]) { HasRightClickHint = true };
             stallButton.OnClick += () => {
@@ -281,17 +282,6 @@ namespace ProjectVagabond.Battle.UI
             {
                 OnMovesMenuOpened?.Invoke();
                 PopulateMoveButtons();
-
-                _secondaryButtonsToAnimate.Clear();
-                _secondaryButtonAnimationDelayTimer = 0f;
-                foreach (var button in _secondaryActionButtons)
-                {
-                    if (button is TextOverImageButton toib)
-                    {
-                        toib.HideForAnimation();
-                        _secondaryButtonsToAnimate.Enqueue(toib);
-                    }
-                }
             }
             else if (newState == MenuState.Targeting)
             {
@@ -369,6 +359,12 @@ namespace ProjectVagabond.Battle.UI
             if (_player.Stats.CurrentMana < move.ManaCost)
             {
                 EventBus.Publish(new GameEvents.AlertPublished { Message = "NOT ENOUGH MANA" });
+                var attuneButton = _secondaryActionButtons.FirstOrDefault(b => b.Text == "ATTUNE");
+                if (attuneButton != null)
+                {
+                    attuneButton.TriggerShake();
+                    attuneButton.TriggerFlash(_global.Palette_Red, 0.4f);
+                }
                 return;
             }
 
@@ -596,17 +592,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            if (_secondaryButtonsToAnimate.Any())
-            {
-                _secondaryButtonAnimationDelayTimer += dt;
-                if (_secondaryButtonAnimationDelayTimer >= SEQUENTIAL_ANIMATION_DELAY)
-                {
-                    _secondaryButtonAnimationDelayTimer = 0f;
-                    var buttonToAnimate = _secondaryButtonsToAnimate.Dequeue();
-                    buttonToAnimate.TriggerAppearAnimation();
-                }
-            }
-
             HoveredButton = null; // Reset at the start of each frame
 
             switch (_currentState)
@@ -637,6 +622,7 @@ namespace ProjectVagabond.Battle.UI
                     HoveredMove = null;
                     _hoveredSpellbookEntry = null;
                     _hoveredMoveButton = null;
+                    _shouldAttuneButtonPulse = false;
 
                     // Update button animation states
                     foreach (var button in _moveButtons)
@@ -671,6 +657,11 @@ namespace ProjectVagabond.Battle.UI
                             HoveredButton = button;
                             _hoveredMoveButton = button;
 
+                            if (_player != null && _player.Stats.CurrentMana < button.Move.ManaCost)
+                            {
+                                _shouldAttuneButtonPulse = true;
+                            }
+
                             if (currentMouseState.RightButton == ButtonState.Pressed)
                             {
                                 rightClickHeldOnAButton = true;
@@ -689,7 +680,7 @@ namespace ProjectVagabond.Battle.UI
                             string? moveId = button.Text switch
                             {
                                 "STRIKE" => _player?.DefaultStrikeMoveID,
-                                "DODGE" => "Dodge",
+                                "ATTUNE" => "Attune",
                                 "STALL" => "Stall",
                                 _ => null
                             };
@@ -703,7 +694,7 @@ namespace ProjectVagabond.Battle.UI
                                 {
                                     rightClickHeldOnAButton = true;
                                     moveForTooltip = move;
-                                    simpleTooltip = (move.MoveID == "Dodge" || move.MoveID == "Stall");
+                                    simpleTooltip = false;
                                 }
                             }
                         }
@@ -1071,6 +1062,13 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // --- Draw Secondary Action Buttons (Vertical Stack) ---
+            Color? attunePulseColor = null;
+            if (_shouldAttuneButtonPulse)
+            {
+                float pulse = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 8f) + 1f) / 2f; // Fast pulse
+                attunePulseColor = Color.Lerp(Color.White, _global.Palette_LightBlue, pulse);
+            }
+
             for (int i = 0; i < _secondaryActionButtons.Count; i++)
             {
                 var button = _secondaryActionButtons[i];
@@ -1082,7 +1080,14 @@ namespace ProjectVagabond.Battle.UI
                     secButtonWidth,
                     secButtonHeight
                 );
-                button.Draw(spriteBatch, font, gameTime, transform);
+
+                Color? tintOverride = null;
+                if (button.Text == "ATTUNE" && attunePulseColor.HasValue)
+                {
+                    tintOverride = attunePulseColor;
+                }
+
+                button.Draw(spriteBatch, font, gameTime, transform, false, null, null, tintOverride);
             }
 
 
@@ -1115,37 +1120,41 @@ namespace ProjectVagabond.Battle.UI
                 var nameSize = font.MeasureString(moveName);
                 var namePos = new Vector2(bounds.X + horizontalPadding, currentY);
 
-                string powerText = move.Power > 0 ? $"POW: {move.Power}" : "POW: ---";
-                string accuracyText = move.Accuracy >= 0 ? $"ACC: {move.Accuracy}%" : "ACC: ---";
-                var powerSize = secondaryFont.MeasureString(powerText);
-                var accSize = secondaryFont.MeasureString(accuracyText);
+                // --- Build stats line conditionally ---
+                var statsSegments = new List<(string Text, Color Color)>();
                 string moveTypeText = move.MoveType.ToString().ToUpper();
-                string separator = " / ";
-                var moveTypeSize = secondaryFont.MeasureString(moveTypeText);
-                var separatorSize = secondaryFont.MeasureString(separator);
-
-                float totalStatsWidth = powerSize.Width + separatorSize.Width + accSize.Width + separatorSize.Width + moveTypeSize.Width;
-                float statsY = currentY + (nameSize.Height - powerSize.Height) / 2;
-                float statsStartX = bounds.Right - horizontalPadding - totalStatsWidth;
-
-                // Draw Stats Line (RIGHT ALIGNED, with colored separators)
-                float currentX = statsStartX;
-                spriteBatch.DrawStringSnapped(secondaryFont, powerText, new Vector2(currentX, statsY), _global.Palette_White);
-                currentX += powerSize.Width;
-                spriteBatch.DrawStringSnapped(secondaryFont, separator, new Vector2(currentX, statsY), _global.Palette_DarkGray);
-                currentX += separatorSize.Width;
-                spriteBatch.DrawStringSnapped(secondaryFont, accuracyText, new Vector2(currentX, statsY), _global.Palette_White);
-                currentX += accSize.Width;
-                spriteBatch.DrawStringSnapped(secondaryFont, separator, new Vector2(currentX, statsY), _global.Palette_DarkGray);
-                currentX += separatorSize.Width;
-
                 Color moveTypeColor = move.MoveType switch
                 {
                     MoveType.Spell => _global.Palette_LightBlue,
                     MoveType.Action => _global.Palette_Orange,
                     _ => _global.Palette_White
                 };
-                spriteBatch.DrawStringSnapped(secondaryFont, moveTypeText, new Vector2(currentX, statsY), moveTypeColor);
+                statsSegments.Add((moveTypeText, moveTypeColor));
+
+                // Conditionally add Power and Accuracy
+                if (move.ImpactType != ImpactType.Status)
+                {
+                    string separator = " / ";
+                    string accuracyText = move.Accuracy >= 0 ? $"ACC: {move.Accuracy}%" : "ACC: ---";
+                    string powerText = move.Power > 0 ? $"POW: {move.Power}" : "POW: ---";
+
+                    statsSegments.Insert(0, (separator, _global.Palette_DarkGray));
+                    statsSegments.Insert(0, (accuracyText, _global.Palette_White));
+                    statsSegments.Insert(0, (separator, _global.Palette_DarkGray));
+                    statsSegments.Insert(0, (powerText, _global.Palette_White));
+                }
+
+                float totalStatsWidth = statsSegments.Sum(s => secondaryFont.MeasureString(s.Text).Width);
+                float statsY = currentY + (nameSize.Height - secondaryFont.LineHeight) / 2;
+                float statsStartX = bounds.Right - horizontalPadding - totalStatsWidth;
+
+                // Draw Stats Line (RIGHT ALIGNED)
+                float currentX = statsStartX;
+                foreach (var segment in statsSegments)
+                {
+                    spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, statsY), segment.Color);
+                    currentX += secondaryFont.MeasureString(segment.Text).Width;
+                }
 
                 // Draw Name (with scrolling)
                 float textAvailableWidth = statsStartX - namePos.X - 4;

@@ -841,7 +841,7 @@
     "Description": "Focus your inner energy to restore all mana.",
     "Power": 0,
     "ManaCost": 0,
-    "MoveType": "Action",
+    "MoveType": "Spell",
     "ImpactType": "Status",
     "OffensiveStat": "Intelligence",
     "MakesContact": false,
@@ -900,8 +900,8 @@
     "OffensiveElementIDs": [ 9 ],
     "Effects": { "Lifesteal": "50" },
     "Tags": [ "Void", "Lifesteal" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_bite",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {

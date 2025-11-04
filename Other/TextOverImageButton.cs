@@ -74,12 +74,13 @@ namespace ProjectVagabond.UI
             }
             if (verticalScale < 0.01f) return;
 
-            // 1. Calculate animation offset
+            // 1. Calculate animation offsets
+            var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
             float yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             int animatedHeight = (int)(Bounds.Height * verticalScale);
             var animatedBounds = new Rectangle(
-                Bounds.X + (int)(horizontalOffset ?? 0f),
-                Bounds.Center.Y - animatedHeight / 2 + (int)yOffset + (int)(verticalOffset ?? 0f),
+                Bounds.X + (int)MathF.Round(horizontalOffset ?? 0f) + (int)MathF.Round(shakeOffset.X),
+                Bounds.Center.Y - animatedHeight / 2 + (int)yOffset + (int)(verticalOffset ?? 0f) + (int)MathF.Round(shakeOffset.Y),
                 Bounds.Width,
                 animatedHeight
             );
@@ -123,31 +124,31 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // 3. Draw background with animation offset
+            // 3. Apply flash tint if active
+            if (flashTint.HasValue)
+            {
+                float flashAmount = flashTint.Value.A / 255f;
+                backgroundTintColor = Color.Lerp(backgroundTintColor, flashTint.Value, flashAmount);
+                textColor = Color.Lerp(textColor, flashTint.Value, flashAmount);
+                iconColor = Color.Lerp(iconColor, flashTint.Value, flashAmount);
+            }
+
+            // 4. Draw background with animation offset
             spriteBatch.DrawSnapped(_backgroundTexture, animatedBounds, backgroundTintColor);
 
             // Only draw contents if mostly visible
             if (verticalScale > 0.8f)
             {
-                // 4. Calculate content layout
-                Vector2 textSize = font.MeasureString(Text);
-                float totalContentWidth = textSize.X;
-                int iconWidth = 0;
+                // --- NEW LAYOUT LOGIC ---
+                const int iconPaddingLeft = 5;
                 const int iconTextGap = 2;
 
+                // 5. Draw Icon (if it exists)
+                Rectangle iconRect = Rectangle.Empty;
                 if (IconTexture != null && IconSourceRect.HasValue)
                 {
-                    iconWidth = IconSourceRect.Value.Width;
-                    totalContentWidth += iconWidth + iconTextGap;
-                }
-
-                float contentStartX = animatedBounds.X + (animatedBounds.Width - totalContentWidth) / 2f;
-
-                // 5. Draw Icon
-                if (IconTexture != null && IconSourceRect.HasValue)
-                {
-                    var iconRect = new Rectangle(
-                        (int)contentStartX,
+                    iconRect = new Rectangle(
+                        animatedBounds.X + iconPaddingLeft,
                         animatedBounds.Y + (animatedBounds.Height - IconSourceRect.Value.Height) / 2,
                         IconSourceRect.Value.Width,
                         IconSourceRect.Value.Height
@@ -156,7 +157,25 @@ namespace ProjectVagabond.UI
                 }
 
                 // 6. Draw Text
-                float textStartX = contentStartX + iconWidth + (IconTexture != null ? iconTextGap : 0);
+                Vector2 textSize = font.MeasureString(Text);
+                float textStartX;
+
+                if (iconRect != Rectangle.Empty)
+                {
+                    // Calculate the space available for the text (to the right of the icon)
+                    float textSpaceStartX = iconRect.Right + iconTextGap;
+                    float textSpaceEndX = animatedBounds.Right - iconPaddingLeft; // Mirror the left padding for symmetry
+                    float textSpaceWidth = textSpaceEndX - textSpaceStartX;
+
+                    // Center the text within that available space
+                    textStartX = textSpaceStartX + (textSpaceWidth - textSize.X) / 2f;
+                }
+                else
+                {
+                    // If there's no icon, center the text within the entire button
+                    textStartX = animatedBounds.X + (animatedBounds.Width - textSize.X) / 2f;
+                }
+
                 Vector2 textPosition = new Vector2(textStartX, animatedBounds.Center.Y) + TextRenderOffset;
                 Vector2 textOrigin = new Vector2(0, MathF.Round(textSize.Y / 2f));
 

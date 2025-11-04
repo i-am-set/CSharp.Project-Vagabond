@@ -87,7 +87,6 @@ namespace ProjectVagabond.UI
         private float _squashAnimationTimer = 0f;
         private const float SQUASH_ANIMATION_DURATION = 0.03f;
         private const int LEFT_ALIGN_PADDING = 4;
-        private const float SHAKE_AMOUNT = 1f;
         private static readonly Random _random = new Random();
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
@@ -95,6 +94,16 @@ namespace ProjectVagabond.UI
         private float _slideOffset = 0f;
         private const float SLIDE_TARGET_OFFSET = -1f;
         private const float SLIDE_SPEED = 80f;
+
+        // Feedback Animation State
+        protected float _shakeTimer = 0f;
+        private const float SHAKE_DURATION = 0.3f;
+        private const float SHAKE_MAGNITUDE = 2f;
+        private const float SHAKE_FREQUENCY = 40f;
+
+        protected float _flashTimer = 0f;
+        protected float _flashDuration = 0f;
+        protected Color _flashColor;
 
         // Text-based constructor
         public Button(Rectangle bounds, string text, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0.0f, bool enableHoverSway = true, BitmapFont? font = null)
@@ -190,6 +199,18 @@ namespace ProjectVagabond.UI
             }
         }
 
+        public virtual void TriggerShake()
+        {
+            _shakeTimer = SHAKE_DURATION;
+        }
+
+        public virtual void TriggerFlash(Color color, float duration = 0.4f)
+        {
+            _flashColor = color;
+            _flashDuration = duration;
+            _flashTimer = duration;
+        }
+
         public virtual void ResetAnimationState()
         {
             _hoverAnimator.Reset();
@@ -197,6 +218,33 @@ namespace ProjectVagabond.UI
             _squashAnimationTimer = 0f;
             IsHovered = false;
             _slideOffset = 0f;
+            _shakeTimer = 0f;
+            _flashTimer = 0f;
+        }
+
+        protected (Vector2 shakeOffset, Color? flashTint) UpdateFeedbackAnimations(GameTime gameTime)
+        {
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            Vector2 shakeOffset = Vector2.Zero;
+            Color? flashTint = null;
+
+            if (_shakeTimer > 0)
+            {
+                _shakeTimer -= dt;
+                float progress = 1f - (_shakeTimer / SHAKE_DURATION);
+                float magnitude = SHAKE_MAGNITUDE * (1f - Easing.EaseOutQuad(progress));
+                shakeOffset.X = MathF.Sin(_shakeTimer * SHAKE_FREQUENCY) * magnitude;
+            }
+
+            if (_flashTimer > 0)
+            {
+                _flashTimer -= dt;
+                float progress = 1f - (_flashTimer / _flashDuration);
+                float alpha = 1.0f - Easing.EaseInQuad(progress);
+                flashTint = new Color(_flashColor, alpha);
+            }
+
+            return (shakeOffset, flashTint);
         }
 
         public virtual void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
@@ -230,7 +278,7 @@ namespace ProjectVagabond.UI
             {
                 float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
                 scale.Y = MathHelper.Lerp(1.0f, 1.5f / Bounds.Height, progress);
-                shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_AMOUNT);
+                shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_MAGNITUDE);
             }
 
             var position = new Vector2(Bounds.Center.X + (horizontalOffset ?? 0f), Bounds.Center.Y + (verticalOffset ?? 0f)) + shakeOffset;
@@ -295,7 +343,7 @@ namespace ProjectVagabond.UI
                 float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
                 float targetScaleY = 1.5f / textSize.Y;
                 scale.Y = MathHelper.Lerp(1.0f, targetScaleY, progress);
-                shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_AMOUNT);
+                shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_MAGNITUDE);
             }
 
             Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
