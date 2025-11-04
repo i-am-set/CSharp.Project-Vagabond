@@ -17,8 +17,8 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 1 ],
     "Tags": [],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_impact",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -38,7 +38,7 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 1 ],
     "Tags": [],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "basic_claw",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -59,7 +59,7 @@
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 1 ],
     "Tags": [],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "basic_impact_3",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -80,8 +80,8 @@
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 1 ],
     "Tags": [ "Priority" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_impact_2",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   // --- Fire ---
@@ -102,7 +102,7 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 2 ],
     "Tags": [ "Fire" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "fire_flame_small",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -123,7 +123,7 @@
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 2 ],
     "Tags": [ "Fire" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "fire_impact",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -144,7 +144,7 @@
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 2 ],
     "Tags": [ "Fire" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "fire_flame_ground_large",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -165,7 +165,7 @@
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 2 ],
     "Tags": [ "Fire" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "fire_slash",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -187,7 +187,7 @@
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 3 ],
     "Tags": [ "Water" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "water_wave",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -208,7 +208,7 @@
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 3 ],
     "Tags": [ "Water", "Priority" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "water_slash",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -229,8 +229,8 @@
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 3 ],
     "Tags": [ "Water" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "wind_tornado",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   // --- Arcane ---
@@ -251,7 +251,7 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 4 ],
     "Tags": [ "Arcane" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "basic_impact_2",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -272,7 +272,7 @@
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 4 ],
     "Tags": [ "Arcane" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "arcane_slash",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -293,7 +293,7 @@
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 4 ],
     "Tags": [ "Arcane" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "arcane_impact",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -315,7 +315,7 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 5 ],
     "Tags": [ "Earth" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "earth_stone_falling",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -336,13 +336,13 @@
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 5 ],
     "Tags": [ "Earth" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_impact",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
-    "MoveID": "MireSplash",
-    "MoveName": "Mire Splash",
+    "MoveID": "MagicMud",
+    "MoveName": "Magic Mud",
     "Description": "A splash of enchanted mud is launched at the target. It's not very damaging, but is often used to slow opponents.",
     "Power": 20,
     "ManaCost": 10,
@@ -357,14 +357,14 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 5 ],
     "Tags": [ "Earth" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "earth_mud_splat",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   // --- Metal ---
   {
-    "MoveID": "IronfangSlash",
-    "MoveName": "Ironfang Slash",
+    "MoveID": "SwordSlash",
+    "MoveName": "Sword Slash",
     "Description": "A vicious slash with a metal weapon, aimed to tear through flesh and armor alike.",
     "Power": 70,
     "ManaCost": 0,
@@ -379,8 +379,8 @@
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 6 ],
     "Tags": [ "Metal" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_slash",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -400,14 +400,14 @@
     "LevelRequirement": 4,
     "OffensiveElementIDs": [ 6 ],
     "Tags": [ "Metal" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_explosion",
+    "AnimationSpeed": 2,
     "IsAnimationCentralized": false
   },
   {
     "MoveID": "MoonforgedEdge",
     "MoveName": "Moonforged Edge",
-    "Description": "A precise strike with a blade of enchanted silver or steel, shining with a faint lunar light.",
+    "Description": "A precise strike with a blade of summoned from moonlight, shining with a faint lunar glow.",
     "Power": 65,
     "ManaCost": 20,
     "MoveType": "Spell",
@@ -421,8 +421,8 @@
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 6 ],
     "Tags": [ "Metal" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_slash",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   // --- Toxic ---
@@ -443,8 +443,8 @@
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 7 ],
     "Tags": [ "Toxic" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "toxic_purple_slash",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -464,8 +464,8 @@
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 7 ],
     "Tags": [ "Toxic" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "toxic_green_spit",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   // --- Wind ---
@@ -486,8 +486,8 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 8 ],
     "Tags": [ "Wind" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_slash_2",
+    "AnimationSpeed": 2.5,
     "IsAnimationCentralized": false
   },
   {
@@ -507,17 +507,17 @@
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 8 ],
     "Tags": [ "Wind" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "wind_tornado",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   // --- Decay ---
   {
     "MoveID": "Bloodleech",
     "MoveName": "Bloodleech",
-    "Description": "A dark spell that drains the target's life force to heal the user. A favorite of vampires and necromancers.",
-    "Power": 60,
-    "ManaCost": 25,
+    "Description": "Drains the target's life force, healing the user for 30% of the damage dealt.",
+    "Power": 80,
+    "ManaCost": 20,
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "OffensiveStat": "Intelligence",
@@ -528,16 +528,17 @@
     "Rarity": 2,
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 9 ],
+    "Effects": { "Lifesteal": "30" },
     "Tags": [ "Void", "Lifesteal" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "void_leech",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   {
     "MoveID": "SoulRot",
     "MoveName": "Soul Rot",
-    "Description": "A vile curse that causes the target's very essence to wither. The lingering effects can be devastating.",
-    "Power": 70,
+    "Description": "A vile curse that causes the target's very essence to wither.",
+    "Power": 90,
     "ManaCost": 30,
     "MoveType": "Spell",
     "ImpactType": "Magical",
@@ -550,7 +551,7 @@
     "LevelRequirement": 3,
     "OffensiveElementIDs": [ 9 ],
     "Tags": [ "Void" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "void_orb",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -572,7 +573,7 @@
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 10 ],
     "Tags": [ "Light" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "arcane_impact_3",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -588,13 +589,13 @@
     "MakesContact": false,
     "Target": "Single",
     "Accuracy": 100,
-    "Priority": 0,
+    "Priority": 1,
     "Rarity": 0,
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 10 ],
     "Tags": [ "Light" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "arcane_impact_4",
+    "AnimationSpeed": 3.0,
     "IsAnimationCentralized": false
   },
   // --- Electric ---
@@ -615,8 +616,8 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 11 ],
     "Tags": [ "Electric" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "electric_sparkle_spiral",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -636,8 +637,8 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 11 ],
     "Tags": [ "Electric" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "electric_soundwave_small",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -657,16 +658,16 @@
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 11 ],
     "Tags": [ "Electric" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "electric_impact",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   // --- Ice ---
   {
     "MoveID": "Shiverfang",
     "MoveName": "Shiverfang",
-    "Description": "A quick bite with fangs made of magical ice. This attack is known for its surprising quickness.",
-    "Power": 40,
+    "Description": "A quick bite with fangs made of magical ice.",
+    "Power": 80,
     "ManaCost": 15,
     "MoveType": "Spell",
     "ImpactType": "Physical",
@@ -678,30 +679,30 @@
     "Rarity": 1,
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 12 ],
-    "Tags": [ "Ice", "Priority" ],
-    "AnimationSpriteSheet": "ice_ground_spike",
-    "AnimationSpeed": 0.75,
+    "Tags": [ "Ice" ],
+    "AnimationSpriteSheet": "basic_bite",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
     "MoveID": "WintersGrasp",
     "MoveName": "Winter’s Grasp",
-    "Description": "A blast of super-chilled air freezes the target. The intense cold can sometimes stop a foe in their tracks.",
-    "Power": 65,
-    "ManaCost": 20,
+    "Description": "A spike of ice is conjured at the target's feet.",
+    "Power": 95,
+    "ManaCost": 40,
     "MoveType": "Spell",
-    "ImpactType": "Magical",
+    "ImpactType": "Physical",
     "OffensiveStat": "Intelligence",
     "MakesContact": false,
     "Target": "Single",
-    "Accuracy": 100,
+    "Accuracy": 80,
     "Priority": 0,
     "Rarity": 1,
     "LevelRequirement": 2,
     "OffensiveElementIDs": [ 12 ],
     "Tags": [ "Ice" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "ice_ground_spike",
+    "AnimationSpeed": 0.75,
     "IsAnimationCentralized": false
   },
   {
@@ -721,8 +722,8 @@
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 12 ],
     "Tags": [ "Ice" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "wind_blowing_large",
+    "AnimationSpeed": 3.0,
     "IsAnimationCentralized": false
   },
   // --- Nature ---
@@ -730,7 +731,7 @@
     "MoveID": "BriarLash",
     "MoveName": "Briar Lash",
     "Description": "Summons thorny vines from the earth to strike a foe. A versatile spell for those attuned to the natural world.",
-    "Power": 45,
+    "Power": 55,
     "ManaCost": 15,
     "MoveType": "Spell",
     "ImpactType": "Physical",
@@ -743,7 +744,7 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 13 ],
     "Tags": [ "Nature" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "nature_impact",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -764,7 +765,7 @@
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 13 ],
     "Tags": [ "Nature" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "nature_impact",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -785,7 +786,7 @@
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 13 ],
     "Tags": [ "Nature", "Light" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "nature_impact",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -807,7 +808,7 @@
     "LevelRequirement": 0,
     "OffensiveElementIDs": [ 1 ],
     "Tags": [],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "stall",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -855,11 +856,10 @@
       "RestoreMana": "100"
     },
     "Tags": [],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_orb_pulse_2",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
-  // --- NEW SPECIAL EFFECT MOVES ---
   {
     "MoveID": "FurySwipes",
     "MoveName": "Fury Swipes",
@@ -878,8 +878,8 @@
     "OffensiveElementIDs": [ 1 ],
     "Effects": { "MultiHit": "2,5" },
     "Tags": [ "MultiHit" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_swipe",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -907,7 +907,7 @@
   {
     "MoveID": "FinishingBlow",
     "MoveName": "Finishing Blow",
-    "Description": "A calculated strike that deals triple damage to foes below 25% health.",
+    "Description": "A calculated strike that deals triple damage to foes below 30% health.",
     "Power": 50,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -920,7 +920,7 @@
     "Rarity": 3,
     "LevelRequirement": 5,
     "OffensiveElementIDs": [ 6 ],
-    "Effects": { "Execute": "25,3.0" },
+    "Effects": { "Execute": "30,3.0" },
     "Tags": [ "Metal" ],
     "AnimationSpriteSheet": "debug_null_animation",
     "AnimationSpeed": 1.0,
@@ -944,14 +944,14 @@
     "OffensiveElementIDs": [ 8 ],
     "Effects": { "FixedDamage": "40" },
     "Tags": [ "Wind" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_impact_2",
+    "AnimationSpeed": 3.0,
     "IsAnimationCentralized": false
   },
   {
     "MoveID": "FocusEnergy",
     "MoveName": "Focus Energy",
-    "Description": "An arcane bolt that grows in power by 10 each time it is used, up to a maximum of 50 bonus power.",
+    "Description": "An arcane bolt that grows in power by 30 each time it is used, up to a maximum of 120 power.",
     "Power": 30,
     "ManaCost": 15,
     "MoveType": "Spell",
@@ -966,14 +966,14 @@
     "OffensiveElementIDs": [ 4 ],
     "Effects": { "RampUp": "30,120" },
     "Tags": [ "Arcane" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_impact",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
-    "MoveID": "DrillPeck",
-    "MoveName": "Drill Peck",
-    "Description": "A spinning, armor-shattering peck that ignores 50% of the target's tenacity.",
+    "MoveID": "Drill",
+    "MoveName": "Drill",
+    "Description": "A spinning, armor-shattering attack that ignores 50% of the target's tenacity.",
     "Power": 75,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -988,8 +988,8 @@
     "OffensiveElementIDs": [ 1 ],
     "Effects": { "ArmorPierce": "50" },
     "Tags": [],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_impact_3",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1010,7 +1010,7 @@
     "OffensiveElementIDs": [ 7 ],
     "Effects": { "ApplyStatus": "Poison,100,3" },
     "Tags": [ "Toxic", "StatusEffect" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "toxic_purple_gas",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -1034,7 +1034,7 @@
       "ApplyStatus": "Burn,100,3"
     },
     "Tags": [ "Fire", "StatusEffect" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "fire_impact",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -1056,7 +1056,7 @@
     "OffensiveElementIDs": [ 2 ],
     "Effects": { "DetonateStatus": "Burn,3" },
     "Tags": [ "Fire", "StatusEffect" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "fire_flame_ground_large",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -1078,7 +1078,7 @@
     "OffensiveElementIDs": [ 10 ],
     "Effects": { "Cleanse": "Self,All" },
     "Tags": [ "Light", "Healing" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "basic_multi_sparkle",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -1100,8 +1100,8 @@
     "OffensiveElementIDs": [ 4 ],
     "Effects": { "StealBuff": "75" },
     "Tags": [ "Arcane", "Buff" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "arcane_blue_flame",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1122,8 +1122,8 @@
     "OffensiveElementIDs": [ 10, 13 ],
     "Effects": { "Charge": "1" },
     "Tags": [ "Light", "Nature", "Charge" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_explosion_4",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1144,8 +1144,8 @@
     "OffensiveElementIDs": [ 2 ],
     "Effects": { "DelayedAttack": "2" },
     "Tags": [ "Fire" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_explosion_5",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1166,14 +1166,14 @@
     "OffensiveElementIDs": [ 1 ],
     "Effects": { "ExecuteOnKill": "ApplyStatus(StrengthUp,100,3)" },
     "Tags": [ "Buff" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_impact_2",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
-    "MoveID": "WildCharge",
-    "MoveName": "Wild Charge",
-    "Description": "A reckless, full-body tackle cloaked in lightning. The user takes 25% of the damage dealt as recoil.",
+    "MoveID": "OverCharge",
+    "MoveName": "Over Charge",
+    "Description": "A reckless lightning burst. The user takes 25% of the damage dealt as recoil.",
     "Power": 90,
     "ManaCost": 0,
     "MoveType": "Action",
@@ -1188,8 +1188,8 @@
     "OffensiveElementIDs": [ 11 ],
     "Effects": { "Recoil": "25" },
     "Tags": [ "Electric" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "electric_impact",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1210,16 +1210,16 @@
     "OffensiveElementIDs": [ 9 ],
     "Effects": { "HPCost": "20" },
     "Tags": [ "Void", "HPCost" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "void_leech",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
     "MoveID": "Overload",
     "MoveName": "Overload",
-    "Description": "Discharges a massive amount of electrical energy, but leaves the user stunned for the next turn.",
+    "Description": "Discharges a massive amount of electrical energy, but has a 20% chance to leave the user stunned for the next turn.",
     "Power": 130,
-    "ManaCost": 60,
+    "ManaCost": 50,
     "MoveType": "Spell",
     "ImpactType": "Magical",
     "OffensiveStat": "Intelligence",
@@ -1230,10 +1230,10 @@
     "Rarity": 4,
     "LevelRequirement": 6,
     "OffensiveElementIDs": [ 11 ],
-    "Effects": { "SelfDebuff": "Stun,100,1" },
+    "Effects": { "SelfDebuff": "Stun,20,1" },
     "Tags": [ "Electric" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "electric_shock",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1254,8 +1254,8 @@
     "OffensiveElementIDs": [ 4 ],
     "Effects": { "Gamble": "50,SelfDamage(50)" },
     "Tags": [ "Arcane" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "basic_explosion",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   },
   {
@@ -1278,7 +1278,7 @@
       "ModifyStatStage": "Tenacity,-1,100,Target"
     },
     "Tags": [ "Debuff" ],
-    "AnimationSpriteSheet": "debug_null_animation",
+    "AnimationSpriteSheet": "eye_shimmer",
     "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
@@ -1303,8 +1303,8 @@
       "ModifyStatStage_2": "Tenacity,+1,100,Self"
     },
     "Tags": [ "Buff" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "status_stat_up",
+    "AnimationSpeed": 2.0,
     "IsAnimationCentralized": false
   }
 ]

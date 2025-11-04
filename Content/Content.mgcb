@@ -494,6 +494,42 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/arcane_blue_flame.png;Sprites/MoveAnimationSpriteSheets/arcane_blue_flame
 
+#begin Sprites/MoveAnimationSpriteSheets/arcane_impact_3.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/arcane_impact_3.png;Sprites/MoveAnimationSpriteSheets/arcane_impact_3
+
+#begin Sprites/MoveAnimationSpriteSheets/arcane_impact_4.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/arcane_impact_4.png;Sprites/MoveAnimationSpriteSheets/arcane_impact_4
+
+#begin Sprites/MoveAnimationSpriteSheets/arcane_impact_5.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/arcane_impact_5.png;Sprites/MoveAnimationSpriteSheets/arcane_impact_5
+
 #begin Sprites/MoveAnimationSpriteSheets/arcane_impact.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -674,6 +710,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/basic_multi_sparkle.png;Sprites/MoveAnimationSpriteSheets/basic_multi_sparkle
 
+#begin Sprites/MoveAnimationSpriteSheets/basic_orb_pulse_2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/basic_orb_pulse_2.png;Sprites/MoveAnimationSpriteSheets/basic_orb_pulse_2
+
 #begin Sprites/MoveAnimationSpriteSheets/basic_orb_pulse.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -734,6 +782,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/basic_smokescreen.png;Sprites/MoveAnimationSpriteSheets/basic_smokescreen
 
+#begin Sprites/MoveAnimationSpriteSheets/basic_swipe.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/basic_swipe.png;Sprites/MoveAnimationSpriteSheets/basic_swipe
+
 #begin Sprites/MoveAnimationSpriteSheets/blue_shimmer.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -757,6 +817,66 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/debug_null_animation.png;Sprites/MoveAnimationSpriteSheets/debug_null_animation
+
+#begin Sprites/MoveAnimationSpriteSheets/earth_mud_splat.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/earth_mud_splat.png;Sprites/MoveAnimationSpriteSheets/earth_mud_splat
+
+#begin Sprites/MoveAnimationSpriteSheets/earth_stone_falling.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/earth_stone_falling.png;Sprites/MoveAnimationSpriteSheets/earth_stone_falling
+
+#begin Sprites/MoveAnimationSpriteSheets/electric_impact.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/electric_impact.png;Sprites/MoveAnimationSpriteSheets/electric_impact
+
+#begin Sprites/MoveAnimationSpriteSheets/electric_lightning_strike.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/electric_lightning_strike.png;Sprites/MoveAnimationSpriteSheets/electric_lightning_strike
+
+#begin Sprites/MoveAnimationSpriteSheets/electric_shock.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/electric_shock.png;Sprites/MoveAnimationSpriteSheets/electric_shock
 
 #begin Sprites/MoveAnimationSpriteSheets/electric_soundwave_small.png
 /importer:TextureImporter
@@ -806,6 +926,42 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/eye_shimmer.png;Sprites/MoveAnimationSpriteSheets/eye_shimmer
 
+#begin Sprites/MoveAnimationSpriteSheets/fire_flame_ground_large.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/fire_flame_ground_large.png;Sprites/MoveAnimationSpriteSheets/fire_flame_ground_large
+
+#begin Sprites/MoveAnimationSpriteSheets/fire_flame_ground.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/fire_flame_ground.png;Sprites/MoveAnimationSpriteSheets/fire_flame_ground
+
+#begin Sprites/MoveAnimationSpriteSheets/fire_flame_small.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/fire_flame_small.png;Sprites/MoveAnimationSpriteSheets/fire_flame_small
+
 #begin Sprites/MoveAnimationSpriteSheets/fire_impact.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -817,18 +973,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/fire_impact.png;Sprites/MoveAnimationSpriteSheets/fire_impact
-
-#begin Sprites/MoveAnimationSpriteSheets/fire_large_ground_flame.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/MoveAnimationSpriteSheets/fire_large_ground_flame.png;Sprites/MoveAnimationSpriteSheets/fire_large_ground_flame
 
 #begin Sprites/MoveAnimationSpriteSheets/fire_slash_2.png
 /importer:TextureImporter
@@ -914,7 +1058,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/light_slash.png;Sprites/MoveAnimationSpriteSheets/light_slash
 
-#begin Sprites/MoveAnimationSpriteSheets/magic_impact_3.png
+#begin Sprites/MoveAnimationSpriteSheets/nature_impact.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -924,9 +1068,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/MoveAnimationSpriteSheets/magic_impact_3.png;Sprites/MoveAnimationSpriteSheets/magic_impact_3
+/build:Sprites/MoveAnimationSpriteSheets/nature_impact.png;Sprites/MoveAnimationSpriteSheets/nature_impact
 
-#begin Sprites/MoveAnimationSpriteSheets/magic_impact_4.png
+#begin Sprites/MoveAnimationSpriteSheets/stall.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -936,7 +1080,19 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/MoveAnimationSpriteSheets/magic_impact_4.png;Sprites/MoveAnimationSpriteSheets/magic_impact_4
+/build:Sprites/MoveAnimationSpriteSheets/stall.png;Sprites/MoveAnimationSpriteSheets/stall
+
+#begin Sprites/MoveAnimationSpriteSheets/status_stat_up.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/status_stat_up.png;Sprites/MoveAnimationSpriteSheets/status_stat_up
 
 #begin Sprites/MoveAnimationSpriteSheets/toxic_green_bubble_pop.png
 /importer:TextureImporter
@@ -1058,6 +1214,30 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/toxic_purple_slash.png;Sprites/MoveAnimationSpriteSheets/toxic_purple_slash
 
+#begin Sprites/MoveAnimationSpriteSheets/void_impact.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/void_impact.png;Sprites/MoveAnimationSpriteSheets/void_impact
+
+#begin Sprites/MoveAnimationSpriteSheets/void_leech.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/void_leech.png;Sprites/MoveAnimationSpriteSheets/void_leech
+
 #begin Sprites/MoveAnimationSpriteSheets/void_orb.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -1129,6 +1309,30 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/MoveAnimationSpriteSheets/water_slash.png;Sprites/MoveAnimationSpriteSheets/water_slash
+
+#begin Sprites/MoveAnimationSpriteSheets/water_wave.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/water_wave.png;Sprites/MoveAnimationSpriteSheets/water_wave
+
+#begin Sprites/MoveAnimationSpriteSheets/wind_blowing_large.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MoveAnimationSpriteSheets/wind_blowing_large.png;Sprites/MoveAnimationSpriteSheets/wind_blowing_large
 
 #begin Sprites/MoveAnimationSpriteSheets/wind_tornado.png
 /importer:TextureImporter
