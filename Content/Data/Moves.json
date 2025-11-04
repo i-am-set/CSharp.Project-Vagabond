@@ -679,8 +679,8 @@
     "LevelRequirement": 1,
     "OffensiveElementIDs": [ 12 ],
     "Tags": [ "Ice", "Priority" ],
-    "AnimationSpriteSheet": "debug_null_animation",
-    "AnimationSpeed": 1.0,
+    "AnimationSpriteSheet": "ice_ground_spike",
+    "AnimationSpeed": 0.75,
     "IsAnimationCentralized": false
   },
   {
