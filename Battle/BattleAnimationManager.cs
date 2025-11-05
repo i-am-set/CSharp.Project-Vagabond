@@ -757,6 +757,7 @@ namespace ProjectVagabond.Battle.UI
         public void DrawResourceBarAnimations(SpriteBatch spriteBatch, IEnumerable<BattleCombatant> allCombatants)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
 
             foreach (var anim in _activeBarAnimations)
             {
@@ -794,14 +795,19 @@ namespace ProjectVagabond.Battle.UI
                     if (enemyIndex == -1) continue;
 
                     const int enemyAreaPadding = 20;
-                    const int enemyHudY = 100;
                     int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                     int slotWidth = availableWidth / enemies.Count;
-                    var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), enemyHudY);
+                    var slotCenterX = enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2);
+
+                    bool isMajor = spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
+                    int spritePartSize = isMajor ? 96 : 64;
+                    float spriteRectBottom = spritePartSize;
+                    float hudY = spriteRectBottom + 12;
+                    float barY = hudY + 2;
 
                     const int barWidth = 40;
                     const int barHeight = 2;
-                    barRect = new Rectangle((int)(centerPosition.X - barWidth / 2f), (int)(centerPosition.Y + 2), barWidth, barHeight);
+                    barRect = new Rectangle((int)(slotCenterX - barWidth / 2f), (int)barY, barWidth, barHeight);
                     maxResource = combatant.Stats.MaxHP;
                 }
 

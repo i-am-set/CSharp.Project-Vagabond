@@ -74,8 +74,9 @@ namespace ProjectVagabond.Battle.UI
 
             if (move.IsAnimationCentralized)
             {
-                var centerScreen = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
-                var instance = new MoveAnimationInstance(animationData, centerScreen, move.AnimationSpeed);
+                // Centralized animations are anchored to the player's heart sprite.
+                var position = renderer.PlayerSpritePosition;
+                var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed);
                 _activeAnimations.Add(instance);
             }
             else

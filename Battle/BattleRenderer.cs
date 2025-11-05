@@ -27,12 +27,14 @@ namespace ProjectVagabond.Battle.UI
         private readonly Global _global;
         private readonly Core _core;
         private readonly TooltipManager _tooltipManager;
+        private readonly PlayerCombatSprite _playerCombatSprite;
 
         // State
         private List<TargetInfo> _currentTargets = new List<TargetInfo>();
         private readonly List<StatusIconInfo> _playerStatusIcons = new List<StatusIconInfo>();
         private readonly Dictionary<string, List<StatusIconInfo>> _enemyStatusIcons = new Dictionary<string, List<StatusIconInfo>>();
         private StatusIconInfo? _hoveredStatusIcon;
+        public Vector2 PlayerSpritePosition { get; private set; }
 
 
         // Enemy Sprite Animation
@@ -61,6 +63,7 @@ namespace ProjectVagabond.Battle.UI
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
+            _playerCombatSprite = new PlayerCombatSprite();
         }
 
         public void Reset()
@@ -82,6 +85,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateEnemyAnimations(gameTime, combatants);
             UpdatePlayerStatusIcons(combatants.FirstOrDefault(c => c.IsPlayerControlled));
             UpdateStatusIconTooltips(combatants);
+            _playerCombatSprite.Update(gameTime);
         }
 
         private void UpdateStatusIconTooltips(IEnumerable<BattleCombatant> allCombatants)
@@ -162,6 +166,13 @@ namespace ProjectVagabond.Battle.UI
 
             // --- Draw Enemy HUDs ---
             DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, uiManager.TargetTypeForSelection, animationManager, uiManager.HoverHighlightState);
+
+            // --- Draw Player Sprite ---
+            float lowestEnemyY = GetLowestEnemySpriteY(enemies);
+            float heartY = lowestEnemyY + 68 + 16; // 16 is half of the 32px heart height
+            PlayerSpritePosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, heartY);
+            _playerCombatSprite.SetPosition(PlayerSpritePosition);
+            _playerCombatSprite.Draw(spriteBatch);
 
             // --- Draw Player HUD ---
             DrawPlayerHud(spriteBatch, font, secondaryFont, player, gameTime, animationManager, uiManager, uiManager.HoverHighlightState);
@@ -637,13 +648,16 @@ namespace ProjectVagabond.Battle.UI
                 {
                     // Phase 1: Ease In Downward motion.
                     float phaseProgress = progress * 2f;
-                    yBobOffset = Easing.EaseInCubic(phaseProgress) * ATTACK_BOB_AMOUNT;
+                    float easedProgress = Easing.EaseInCubic(phaseProgress);
+                    yBobOffset = easedProgress * ATTACK_BOB_AMOUNT;
                 }
                 else
                 {
                     // Phase 2: Ease Out Upward motion.
                     float phaseProgress = (progress - 0.5f) * 2f;
-                    yBobOffset = (1.0f - Easing.EaseOutCubic(phaseProgress)) * ATTACK_BOB_AMOUNT;
+                    float easedProgress = Easing.EaseOutCubic(phaseProgress);
+                    // Interpolate from the max offset back to zero.
+                    yBobOffset = (1.0f - easedProgress) * ATTACK_BOB_AMOUNT;
                 }
             }
 
@@ -1031,6 +1045,23 @@ namespace ProjectVagabond.Battle.UI
 
                 return new Vector2(slotCenterX, hudY);
             }
+        }
+
+        private float GetLowestEnemySpriteY(List<BattleCombatant> enemies)
+        {
+            if (!enemies.Any()) return 0;
+
+            float lowestY = 0;
+
+            foreach (var enemy in enemies)
+            {
+                bool isMajor = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId);
+                int spritePartSize = isMajor ? 96 : 64;
+                var spriteRect = new Rectangle(0, 0, spritePartSize, spritePartSize); // X doesn't matter here
+                lowestY = Math.Max(lowestY, spriteRect.Bottom);
+            }
+
+            return lowestY;
         }
 
         private float GetEnemySpriteStaticTopY(BattleCombatant enemy, float spriteRectTopY)

@@ -741,6 +741,13 @@ namespace ProjectVagabond.Battle.UI
         {
             InitializeButtons();
 
+            // Draw the semi-transparent background for the entire action area, even when the menu is not "visible".
+            var pixel = ServiceLocator.Get<Texture2D>();
+            var bgColor = _global.Palette_Black * 0.8f;
+            const int dividerY = 123;
+            var bgRect = new Rectangle(0, dividerY, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - dividerY);
+            spriteBatch.DrawSnapped(pixel, bgRect, bgColor);
+
             // The drawing of discarding buttons is now handled by the BattleUIManager
             // to ensure they are rendered on top of all other UI elements.
 
@@ -753,7 +760,7 @@ namespace ProjectVagabond.Battle.UI
                         const int buttonWidth = 96;
                         const int buttonHeight = 43;
                         const int buttonSpacing = 5;
-                        const int dividerY = 123;
+                        // const int dividerY = 123; // Already defined above
 
                         int totalWidth = (buttonWidth * _actionButtons.Count) + (buttonSpacing * (_actionButtons.Count - 1));
                         int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
@@ -788,7 +795,7 @@ namespace ProjectVagabond.Battle.UI
                         const int backButtonPadding = 8;
                         const int backButtonHeight = 5;
                         const int backButtonTopMargin = 1;
-                        const int dividerY = 123;
+                        // const int dividerY = 123; // Already defined above
                         const int horizontalPadding = 10;
                         const int verticalPadding = 2;
                         int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);

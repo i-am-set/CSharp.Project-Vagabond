@@ -303,6 +303,7 @@ namespace ProjectVagabond
         /// </summary>
         public struct MoveAnimationTriggered
         {
+            public BattleCombatant Actor { get; set; }
             public MoveData Move { get; set; }
             public List<BattleCombatant> Targets { get; set; }
         }

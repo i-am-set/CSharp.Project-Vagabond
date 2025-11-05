@@ -402,7 +402,16 @@ namespace ProjectVagabond.Battle
                     _actionPendingAnimation = action;
                     _currentPhase = BattlePhase.AnimatingMove;
                     var targets = ResolveTargets(action); // Resolve targets for the animation
-                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = action.ChosenMove, Targets = targets });
+
+                    MoveData animMove = action.ChosenMove;
+                    // Force enemy animations to be centralized
+                    if (!action.Actor.IsPlayerControlled)
+                    {
+                        animMove = action.ChosenMove.Clone();
+                        animMove.IsAnimationCentralized = true;
+                    }
+
+                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = animMove, Targets = targets });
                     // The manager will now wait in this phase until the MoveAnimationCompleted event is received.
                 }
                 else
