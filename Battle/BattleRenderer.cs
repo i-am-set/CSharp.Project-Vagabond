@@ -54,7 +54,7 @@ namespace ProjectVagabond.Battle.UI
         // Layout Constants
         private const int DIVIDER_Y = 123;
         private const int MAX_ENEMIES = 5;
-        private const float PLAYER_INDICATOR_BOB_SPEED = 1.5f;
+        private const float PLAYER_INDICATOR_BOB_SPEED = 0.75f;
         private const float TITLE_INDICATOR_BOB_SPEED = PLAYER_INDICATOR_BOB_SPEED / 2f;
 
         public BattleRenderer()
@@ -86,6 +86,23 @@ namespace ProjectVagabond.Battle.UI
             UpdatePlayerStatusIcons(combatants.FirstOrDefault(c => c.IsPlayerControlled));
             UpdateStatusIconTooltips(combatants);
             _playerCombatSprite.Update(gameTime);
+
+            // Pre-calculate player sprite position for the frame
+            var font = ServiceLocator.Get<BitmapFont>();
+            const int playerHudPaddingX = 10;
+            const int barWidth = 60;
+            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth - 245;
+            float hudLeft = playerHudPaddingX;
+            float hudRight = hpStartX + barWidth;
+            float hudCenterX = hudLeft + (hudRight - hudLeft) / 2f;
+
+            const int playerHudY = DIVIDER_Y - 10;
+            float nameTopY = playerHudY - font.LineHeight - 2; // Adjusted name position
+            const int heartHeight = 32;
+            const int gap = 0; // Gap between name and heart
+            float heartBottomY = nameTopY - gap;
+            float heartCenterY = heartBottomY - (heartHeight / 2f);
+            PlayerSpritePosition = new Vector2(hudCenterX - 6, heartCenterY);
         }
 
         private void UpdateStatusIconTooltips(IEnumerable<BattleCombatant> allCombatants)
@@ -168,9 +185,6 @@ namespace ProjectVagabond.Battle.UI
             DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, uiManager.TargetTypeForSelection, animationManager, uiManager.HoverHighlightState);
 
             // --- Draw Player Sprite ---
-            float lowestEnemyY = GetLowestEnemySpriteY(enemies);
-            float heartY = lowestEnemyY + 68 + 16; // 16 is half of the 32px heart height
-            PlayerSpritePosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, heartY);
             _playerCombatSprite.SetPosition(PlayerSpritePosition);
             _playerCombatSprite.Draw(spriteBatch);
 
@@ -199,7 +213,7 @@ namespace ProjectVagabond.Battle.UI
         {
             if (!enemies.Any()) return;
 
-            const int enemyAreaPadding = 20;
+            const int enemyAreaPadding = 40;
             int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
             int slotWidth = availableWidth / enemies.Count;
 
@@ -247,7 +261,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 nameColor = _global.Palette_Yellow;
             }
-            spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7 + yOffset), nameColor);
+            spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight - 2 + yOffset), nameColor);
 
             var offsetVector = Vector2.Zero; // No bobbing for bars
             DrawPlayerResourceBars(spriteBatch, player, offsetVector, uiManager);
@@ -274,7 +288,7 @@ namespace ProjectVagabond.Battle.UI
             const int barPaddingX = 10;
             const int hpBarY = DIVIDER_Y - 9;
             const int manaBarY = hpBarY + 3; // Adjusted for 2px HP bar + 1px gap
-            float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth;
+            float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth - 245;
 
             // HP Bar
             float hpPercent = player.Stats.MaxHP > 0 ? Math.Clamp(player.VisualHP / player.Stats.MaxHP, 0f, 1f) : 0f;
@@ -443,7 +457,7 @@ namespace ProjectVagabond.Battle.UI
                         const int playerHudY = DIVIDER_Y - 10;
                         const int playerHudPaddingX = 10;
                         Vector2 nameSize = font.MeasureString(player.Name);
-                        Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7);
+                        Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - font.LineHeight - 2);
                         var arrowPos = new Vector2(
                             namePos.X - arrowRect.Width - 4 + swayOffset, // Horizontal sway
                             namePos.Y + (nameSize.Y - arrowRect.Height) / 2 - 1
@@ -500,7 +514,7 @@ namespace ProjectVagabond.Battle.UI
                 bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
                 int spritePartSize = isMajor ? 96 : 64;
 
-                const int enemyAreaPadding = 20;
+                const int enemyAreaPadding = 40;
                 int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                 int slotWidth = availableWidth / enemies.Count;
                 var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), 0);
@@ -546,7 +560,7 @@ namespace ProjectVagabond.Battle.UI
                 bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
                 int spritePartSize = isMajor ? 96 : 64;
 
-                const int enemyAreaPadding = 20;
+                const int enemyAreaPadding = 40;
                 int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                 int slotWidth = availableWidth / enemies.Count;
                 var centerPosition = new Vector2(enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2), 0);
@@ -591,7 +605,7 @@ namespace ProjectVagabond.Battle.UI
                 const int playerHudY = DIVIDER_Y - 10;
                 const int playerHudPaddingX = 10;
                 Vector2 nameSize = font.MeasureString(currentActor.Name);
-                Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - font.LineHeight + 7);
+                Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - font.LineHeight - 2);
                 var arrowPos = new Vector2(
                     namePos.X - arrowRect.Width - 4 + swayOffset,
                     namePos.Y + (nameSize.Y - arrowRect.Height) / 2 - 1
@@ -608,7 +622,7 @@ namespace ProjectVagabond.Battle.UI
                 bool isMajor = _spriteManager.IsMajorEnemySprite(currentActor.ArchetypeId);
                 int spritePartSize = isMajor ? 96 : 64;
 
-                const int enemyAreaPadding = 20;
+                const int enemyAreaPadding = 40;
                 int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                 int slotWidth = availableWidth / enemies.Count;
                 var slotCenterX = enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2);
@@ -854,7 +868,7 @@ namespace ProjectVagabond.Battle.UI
             const int playerHudPaddingX = 10;
 
             const int barWidth = 60;
-            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth;
+            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth - 245;
 
             const int iconSize = 5;
             const int iconPadding = 2;
@@ -943,10 +957,10 @@ namespace ProjectVagabond.Battle.UI
             const int playerHudY = DIVIDER_Y - 10;
             const int playerHudPaddingX = 10;
             Vector2 nameSize = nameFont.MeasureString(player.Name);
-            Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - nameFont.LineHeight + 7);
+            Vector2 namePos = new Vector2(playerHudPaddingX, playerHudY - nameFont.LineHeight - 2);
 
             const int barWidth = 60;
-            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth;
+            float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth - 245;
 
             int left = (int)namePos.X;
             int right = (int)(hpStartX + barWidth);
@@ -960,13 +974,7 @@ namespace ProjectVagabond.Battle.UI
         {
             if (combatant.IsPlayerControlled)
             {
-                // For player, position it above their name/HUD area.
-                const int playerHudY = DIVIDER_Y - 10;
-                const int playerHudPaddingX = 10;
-                var font = ServiceLocator.Get<BitmapFont>();
-                Vector2 nameSize = font.MeasureString(combatant.Name);
-                // Center it horizontally over the name.
-                return new Vector2(playerHudPaddingX + nameSize.X / 2, playerHudY - 20);
+                return PlayerSpritePosition;
             }
             else
             {
@@ -975,7 +983,7 @@ namespace ProjectVagabond.Battle.UI
                 int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
                 if (enemyIndex == -1) return Vector2.Zero;
 
-                const int enemyAreaPadding = 20;
+                const int enemyAreaPadding = 40;
                 int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                 int slotWidth = availableWidth / enemies.Count;
                 var slotCenterX = enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2);
@@ -1023,7 +1031,7 @@ namespace ProjectVagabond.Battle.UI
                 const int playerHudPaddingX = 10;
 
                 const int barWidth = 60;
-                float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth;
+                float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth - 245;
 
                 float centerX = hpStartX + barWidth / 2f;
                 return new Vector2(centerX, playerHudY);
@@ -1034,7 +1042,7 @@ namespace ProjectVagabond.Battle.UI
                 int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
                 if (enemyIndex == -1) return Vector2.Zero;
 
-                const int enemyAreaPadding = 20;
+                const int enemyAreaPadding = 40;
                 int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                 int slotWidth = availableWidth / enemies.Count;
                 var slotCenterX = enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2);

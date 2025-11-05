@@ -773,7 +773,7 @@ namespace ProjectVagabond.Battle.UI
                     const int barPaddingX = 10;
                     const int hpBarY = DIVIDER_Y - 9;
                     const int manaBarY = hpBarY + 3;
-                    float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth;
+                    float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth - 245;
 
                     if (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
                     {
@@ -794,20 +794,22 @@ namespace ProjectVagabond.Battle.UI
                     int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
                     if (enemyIndex == -1) continue;
 
+                    // Replicate layout logic from BattleRenderer
+                    bool isMajor = spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
+                    int spritePartSize = isMajor ? 96 : 64;
+                    float spriteRectBottom = spritePartSize;
+
                     const int enemyAreaPadding = 20;
                     int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                     int slotWidth = availableWidth / enemies.Count;
                     var slotCenterX = enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2);
 
-                    bool isMajor = spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
-                    int spritePartSize = isMajor ? 96 : 64;
-                    float spriteRectBottom = spritePartSize;
                     float hudY = spriteRectBottom + 12;
-                    float barY = hudY + 2;
+                    var hudCenterPosition = new Vector2(slotCenterX, hudY);
 
                     const int barWidth = 40;
                     const int barHeight = 2;
-                    barRect = new Rectangle((int)(slotCenterX - barWidth / 2f), (int)barY, barWidth, barHeight);
+                    barRect = new Rectangle((int)(hudCenterPosition.X - barWidth / 2f), (int)(hudCenterPosition.Y + 2), barWidth, barHeight);
                     maxResource = combatant.Stats.MaxHP;
                 }
 
