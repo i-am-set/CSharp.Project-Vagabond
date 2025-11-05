@@ -73,6 +73,7 @@ namespace ProjectVagabond
         public Texture2D SpellbookPageSprite { get; private set; }
         public Texture2D SpellbookClosedSprite { get; private set; }
         public Texture2D PlayerHeartSpriteSheet { get; private set; }
+        public Texture2D PlayerHeartSpriteSheetSilhouette { get; private set; }
 
         // Split Map Node Sprites
         public Texture2D SplitNodeStart { get; private set; }
@@ -649,8 +650,16 @@ namespace ProjectVagabond
             try { _fogOfWarSprite = _core.Content.Load<Texture2D>("Sprites/UI/GameMap/ui_map_fog_of_war"); }
             catch { _fogOfWarSprite = _textureFactory.CreateColoredTexture(5, 5, Color.Black); }
 
-            try { PlayerHeartSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/player_heart_spritesheet"); }
-            catch { PlayerHeartSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.DeepPink); }
+            try
+            {
+                PlayerHeartSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/player_heart_spritesheet");
+                PlayerHeartSpriteSheetSilhouette = CreateSilhouette(PlayerHeartSpriteSheet);
+            }
+            catch
+            {
+                PlayerHeartSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.DeepPink);
+                PlayerHeartSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(32, 32, Color.White);
+            }
         }
 
         [Obsolete("LoadSpriteContent is deprecated, please use LoadEssentialContent and LoadGameContent instead.")]

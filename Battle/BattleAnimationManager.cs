@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -797,14 +798,13 @@ namespace ProjectVagabond.Battle.UI
                     // Replicate layout logic from BattleRenderer
                     bool isMajor = spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
                     int spritePartSize = isMajor ? 96 : 64;
-                    float spriteRectBottom = spritePartSize;
 
-                    const int enemyAreaPadding = 20;
+                    const int enemyAreaPadding = 40;
                     int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
                     int slotWidth = availableWidth / enemies.Count;
                     var slotCenterX = enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2);
 
-                    float hudY = spriteRectBottom + 12;
+                    float hudY = spritePartSize + 12;
                     var hudCenterPosition = new Vector2(slotCenterX, hudY);
 
                     const int barWidth = 40;

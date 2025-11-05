@@ -686,10 +686,7 @@ namespace ProjectVagabond.Scenes
                     }
                     _animationManager.StartHealthLossAnimation(target.CombatantID, target.VisualHP, target.Stats.CurrentHP);
                     _animationManager.StartHealthAnimation(target.CombatantID, (int)target.VisualHP, target.Stats.CurrentHP);
-                    if (!target.IsPlayerControlled)
-                    {
-                        _animationManager.StartHitFlashAnimation(target.CombatantID);
-                    }
+                    _animationManager.StartHitFlashAnimation(target.CombatantID);
 
                     int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
                     if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0))

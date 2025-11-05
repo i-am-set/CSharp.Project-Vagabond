@@ -186,7 +186,7 @@ namespace ProjectVagabond.Battle.UI
 
             // --- Draw Player Sprite ---
             _playerCombatSprite.SetPosition(PlayerSpritePosition);
-            _playerCombatSprite.Draw(spriteBatch);
+            _playerCombatSprite.Draw(spriteBatch, animationManager, player);
 
             // --- Draw Player HUD ---
             DrawPlayerHud(spriteBatch, font, secondaryFont, player, gameTime, animationManager, uiManager, uiManager.HoverHighlightState);
@@ -717,6 +717,7 @@ namespace ProjectVagabond.Battle.UI
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X - 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X + 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X, (int)baseDrawPosition.Y - 1, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X, (int)baseDrawPosition.Y + 1, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
                         }
                     }
 

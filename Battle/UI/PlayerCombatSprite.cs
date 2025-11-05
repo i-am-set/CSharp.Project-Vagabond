@@ -21,7 +21,7 @@ namespace ProjectVagabond.Battle.UI
         private int _frameCount;
         private const int FRAME_WIDTH = 32;
         private const int FRAME_HEIGHT = 32;
-        private const float FRAME_DURATION = 0.2f; // ~5 FPS
+        private const float FRAME_DURATION = 0.4f; // ~2.5 FPS
 
         public PlayerCombatSprite()
         {
@@ -59,13 +59,55 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant player)
         {
             Initialize();
-            if (_texture == null) return;
+            if (_texture == null || player == null) return;
+
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+            var silhouette = spriteManager.PlayerHeartSpriteSheetSilhouette;
+            var global = ServiceLocator.Get<Global>();
+            var outlineColor = global.Palette_DarkGray;
 
             var sourceRectangle = new Rectangle(_frameIndex * FRAME_WIDTH, 0, FRAME_WIDTH, FRAME_HEIGHT);
-            spriteBatch.DrawSnapped(_texture, _position, sourceRectangle, Color.White, 0f, _origin, 1f, SpriteEffects.None, 0.5f);
+
+            // Get hit flash state and apply shake
+            var hitFlashState = animationManager.GetHitFlashState(player.CombatantID);
+            Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
+            bool isFlashingWhite = hitFlashState != null && hitFlashState.IsCurrentlyWhite;
+
+            var topLeftPosition = new Point(
+                (int)MathF.Round(_position.X - _origin.X + shakeOffset.X),
+                (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y)
+            );
+
+            if (silhouette != null)
+            {
+                // Draw outline using integer-based rectangles offset from the snapped top-left position.
+                var rect = new Rectangle(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+
+                rect.Location = new Point(topLeftPosition.X - 1, topLeftPosition.Y);
+                spriteBatch.Draw(silhouette, rect, sourceRectangle, outlineColor, 0f, Vector2.Zero, SpriteEffects.None, 0.49f);
+
+                rect.Location = new Point(topLeftPosition.X + 1, topLeftPosition.Y);
+                spriteBatch.Draw(silhouette, rect, sourceRectangle, outlineColor, 0f, Vector2.Zero, SpriteEffects.None, 0.49f);
+
+                rect.Location = new Point(topLeftPosition.X, topLeftPosition.Y - 1);
+                spriteBatch.Draw(silhouette, rect, sourceRectangle, outlineColor, 0f, Vector2.Zero, SpriteEffects.None, 0.49f);
+
+                rect.Location = new Point(topLeftPosition.X, topLeftPosition.Y + 1);
+                spriteBatch.Draw(silhouette, rect, sourceRectangle, outlineColor, 0f, Vector2.Zero, SpriteEffects.None, 0.49f);
+            }
+
+            // Draw main sprite
+            var mainRect = new Rectangle(topLeftPosition.X, topLeftPosition.Y, FRAME_WIDTH, FRAME_HEIGHT);
+            spriteBatch.Draw(_texture, mainRect, sourceRectangle, Color.White, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
+
+            // Draw flash overlay
+            if (isFlashingWhite && silhouette != null)
+            {
+                spriteBatch.Draw(silhouette, mainRect, sourceRectangle, Color.White * 0.8f, 0f, Vector2.Zero, SpriteEffects.None, 0.51f);
+            }
         }
     }
 }
