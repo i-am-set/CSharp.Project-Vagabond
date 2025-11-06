@@ -59,7 +59,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant player)
+        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant player, Color? tintColorOverride = null)
         {
             Initialize();
             if (_texture == null || player == null) return;
@@ -67,7 +67,6 @@ namespace ProjectVagabond.Battle.UI
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var silhouette = spriteManager.PlayerHeartSpriteSheetSilhouette;
             var global = ServiceLocator.Get<Global>();
-            var outlineColor = global.Palette_DarkGray;
 
             var sourceRectangle = new Rectangle(_frameIndex * FRAME_WIDTH, 0, FRAME_WIDTH, FRAME_HEIGHT);
 
@@ -80,6 +79,10 @@ namespace ProjectVagabond.Battle.UI
                 (int)MathF.Round(_position.X - _origin.X + shakeOffset.X),
                 (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y)
             );
+
+            Color mainColor = tintColorOverride ?? Color.White;
+            Color outlineColor = tintColorOverride ?? global.Palette_DarkGray;
+
 
             if (silhouette != null)
             {
@@ -101,7 +104,7 @@ namespace ProjectVagabond.Battle.UI
 
             // Draw main sprite
             var mainRect = new Rectangle(topLeftPosition.X, topLeftPosition.Y, FRAME_WIDTH, FRAME_HEIGHT);
-            spriteBatch.Draw(_texture, mainRect, sourceRectangle, Color.White, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
+            spriteBatch.Draw(_texture, mainRect, sourceRectangle, mainColor, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
 
             // Draw flash overlay
             if (isFlashingWhite && silhouette != null)

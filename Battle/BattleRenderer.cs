@@ -181,12 +181,56 @@ namespace ProjectVagabond.Battle.UI
             var enemies = allCombatants.Where(c => !c.IsPlayerControlled).ToList();
             var player = allCombatants.FirstOrDefault(c => c.IsPlayerControlled);
 
+            // --- Pre-calculate selectable targets for this frame ---
+            var selectableTargets = new HashSet<BattleCombatant>();
+            bool isTargetingPhase = uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting;
+            bool isHoveringMoveWithTargets = uiManager.HoverHighlightState.CurrentMove != null && uiManager.HoverHighlightState.Targets.Any();
+            bool shouldGrayOutUnselectable = isTargetingPhase || isHoveringMoveWithTargets;
+
+            if (isTargetingPhase)
+            {
+                var targetType = uiManager.TargetTypeForSelection;
+                if (targetType.HasValue)
+                {
+                    if (targetType == TargetType.Single || targetType == TargetType.SingleAll)
+                    {
+                        foreach (var c in allCombatants)
+                        {
+                            if (!c.IsDefeated)
+                            {
+                                if (targetType == TargetType.Single && !c.IsPlayerControlled)
+                                {
+                                    selectableTargets.Add(c);
+                                }
+                                else if (targetType == TargetType.SingleAll)
+                                {
+                                    selectableTargets.Add(c);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            else if (isHoveringMoveWithTargets)
+            {
+                foreach (var target in uiManager.HoverHighlightState.Targets)
+                {
+                    selectableTargets.Add(target);
+                }
+            }
+
+
             // --- Draw Enemy HUDs ---
-            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, uiManager.TargetTypeForSelection, animationManager, uiManager.HoverHighlightState);
+            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState);
 
             // --- Draw Player Sprite ---
+            Color? playerSpriteTint = null;
+            if (shouldGrayOutUnselectable && !selectableTargets.Contains(player) && player != null && !player.IsDefeated)
+            {
+                playerSpriteTint = _global.ButtonDisableColor;
+            }
             _playerCombatSprite.SetPosition(PlayerSpritePosition);
-            _playerCombatSprite.Draw(spriteBatch, animationManager, player);
+            _playerCombatSprite.Draw(spriteBatch, animationManager, player, playerSpriteTint);
 
             // --- Draw Player HUD ---
             DrawPlayerHud(spriteBatch, font, secondaryFont, player, gameTime, animationManager, uiManager, uiManager.HoverHighlightState);
@@ -209,7 +253,7 @@ namespace ProjectVagabond.Battle.UI
             // in the BattleScene's final draw pass. This method is now empty.
         }
 
-        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, TargetType? currentTargetType, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState)
+        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState)
         {
             if (!enemies.Any()) return;
 
@@ -221,24 +265,21 @@ namespace ProjectVagabond.Battle.UI
             {
                 var enemy = enemies[i];
                 var slotCenter = new Vector2(enemyAreaPadding + (i * slotWidth) + (slotWidth / 2), 0);
-                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, animationManager, hoverHighlightState);
+                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, shouldGrayOutUnselectable, selectableTargets, animationManager, hoverHighlightState);
 
-                if (!enemy.IsDefeated && currentTargetType.HasValue)
+                // Populate _currentTargets for the targeting indicator visuals
+                if (selectableTargets.Contains(enemy))
                 {
-                    bool isTarget = currentTargetType == TargetType.Single || currentTargetType == TargetType.SingleAll;
-                    if (isTarget)
-                    {
-                        bool isMajor = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId);
-                        int spritePartSize = isMajor ? 96 : 64;
-                        float hudY = spritePartSize + 12;
-                        var hudCenterForBounds = new Vector2(slotCenter.X, hudY);
+                    bool isMajor = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId);
+                    int spritePartSize = isMajor ? 96 : 64;
+                    float hudY = spritePartSize + 12;
+                    var hudCenterForBounds = new Vector2(slotCenter.X, hudY);
 
-                        _currentTargets.Add(new TargetInfo
-                        {
-                            Combatant = enemy,
-                            Bounds = GetCombatantInteractionBounds(enemy, hudCenterForBounds, nameFont, statsFont)
-                        });
-                    }
+                    _currentTargets.Add(new TargetInfo
+                    {
+                        Combatant = enemy,
+                        Bounds = GetCombatantInteractionBounds(enemy, hudCenterForBounds, nameFont, statsFont)
+                    });
                 }
             }
         }
@@ -651,7 +692,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState)
+        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState)
         {
             float yBobOffset = 0;
             if (_attackAnimTimers.TryGetValue(combatant.CombatantID, out float animTimer))
@@ -681,6 +722,15 @@ namespace ProjectVagabond.Battle.UI
 
             var spriteRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), (int)yBobOffset, spritePartSize, spritePartSize);
             Color tintColor = Color.White * combatant.VisualAlpha;
+            Color outlineColor = _global.Palette_DarkGray * combatant.VisualAlpha;
+
+            bool isSelectable = selectableTargets.Contains(combatant);
+
+            if (shouldGrayOutUnselectable && !isSelectable)
+            {
+                tintColor = _global.ButtonDisableColor * combatant.VisualAlpha;
+                outlineColor = _global.ButtonDisableColor * combatant.VisualAlpha * 0.5f;
+            }
 
             Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
             Texture2D enemySilhouette = _spriteManager.GetEnemySpriteSilhouette(combatant.ArchetypeId);
@@ -704,7 +754,6 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
 
                     // --- Outline Pass ---
-                    Color outlineColor = _global.Palette_DarkGray * combatant.VisualAlpha;
                     if (enemySilhouette != null)
                     {
                         for (int i = 0; i < numParts; i++)
