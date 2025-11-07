@@ -21,7 +21,7 @@ namespace ProjectVagabond.Battle.UI
         private int _frameCount;
         private const int FRAME_WIDTH = 32;
         private const int FRAME_HEIGHT = 32;
-        private const float FRAME_DURATION = 0.4f; // ~2.5 FPS
+        private const float FRAME_DURATION = 0.2f; // ~5 FPS
 
         public PlayerCombatSprite()
         {
@@ -59,7 +59,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant player, Color? tintColorOverride = null)
+        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant player, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f)
         {
             Initialize();
             if (_texture == null || player == null) return;
@@ -81,7 +81,7 @@ namespace ProjectVagabond.Battle.UI
             );
 
             Color mainColor = tintColorOverride ?? Color.White;
-            Color outlineColor = tintColorOverride ?? global.Palette_DarkGray;
+            Color outlineColor = isHighlighted ? Color.Yellow : (tintColorOverride ?? global.Palette_DarkGray);
 
 
             if (silhouette != null)
@@ -105,6 +105,12 @@ namespace ProjectVagabond.Battle.UI
             // Draw main sprite
             var mainRect = new Rectangle(topLeftPosition.X, topLeftPosition.Y, FRAME_WIDTH, FRAME_HEIGHT);
             spriteBatch.Draw(_texture, mainRect, sourceRectangle, mainColor, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
+
+            // Draw highlight overlay
+            if (isHighlighted && silhouette != null)
+            {
+                spriteBatch.Draw(silhouette, mainRect, sourceRectangle, Color.Yellow * pulseAlpha, 0f, Vector2.Zero, SpriteEffects.None, 0.505f);
+            }
 
             // Draw flash overlay
             if (isFlashingWhite && silhouette != null)

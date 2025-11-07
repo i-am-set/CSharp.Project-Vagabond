@@ -28,6 +28,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly Core _core;
         private readonly TooltipManager _tooltipManager;
         private readonly PlayerCombatSprite _playerCombatSprite;
+        private readonly Color _turnInactiveTintColor;
 
         // State
         private List<TargetInfo> _currentTargets = new List<TargetInfo>();
@@ -64,6 +65,7 @@ namespace ProjectVagabond.Battle.UI
             _core = ServiceLocator.Get<Core>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
             _playerCombatSprite = new PlayerCombatSprite();
+            _turnInactiveTintColor = Color.Lerp(Color.White, _global.ButtonDisableColor, 0.5f);
         }
 
         public void Reset()
@@ -181,11 +183,21 @@ namespace ProjectVagabond.Battle.UI
             var enemies = allCombatants.Where(c => !c.IsPlayerControlled).ToList();
             var player = allCombatants.FirstOrDefault(c => c.IsPlayerControlled);
 
+            // --- Pulse Calculation for Highlights ---
+            float pulseAlpha = 0.25f + ((MathF.Sin(sharedBobbingTimer * 6f) + 1f) / 2f) * 0.15f; // Oscillates between 0.25 and 0.40
+
             // --- Pre-calculate selectable targets for this frame ---
             var selectableTargets = new HashSet<BattleCombatant>();
             bool isTargetingPhase = uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting;
             bool isHoveringMoveWithTargets = uiManager.HoverHighlightState.CurrentMove != null && uiManager.HoverHighlightState.Targets.Any();
             bool shouldGrayOutUnselectable = isTargetingPhase || isHoveringMoveWithTargets;
+
+            var hoveredMove = uiManager.HoverHighlightState.CurrentMove;
+            if (!isTargetingPhase && hoveredMove != null && hoveredMove.Target == TargetType.None)
+            {
+                shouldGrayOutUnselectable = true;
+                // selectableTargets remains empty, which is the desired state to gray out everyone.
+            }
 
             if (isTargetingPhase)
             {
@@ -221,19 +233,36 @@ namespace ProjectVagabond.Battle.UI
 
 
             // --- Draw Enemy HUDs ---
-            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState);
+            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState, pulseAlpha);
 
             // --- Draw Player Sprite ---
             Color? playerSpriteTint = null;
-            if (shouldGrayOutUnselectable && !selectableTargets.Contains(player) && player != null && !player.IsDefeated)
+            bool isPlayerHighlighted = false;
+            bool isTurnInProgress = (currentActor != null && !currentActor.IsPlayerControlled);
+            if (isTurnInProgress && player != currentActor)
             {
-                playerSpriteTint = _global.ButtonDisableColor;
+                playerSpriteTint = _turnInactiveTintColor;
+            }
+
+            if (shouldGrayOutUnselectable && player != null && !player.IsDefeated)
+            {
+                if (selectableTargets.Contains(player))
+                {
+                    if (!isTargetingPhase) // Only highlight if not in targeting phase
+                    {
+                        isPlayerHighlighted = true;
+                    }
+                }
+                else
+                {
+                    playerSpriteTint = _global.ButtonDisableColor;
+                }
             }
             _playerCombatSprite.SetPosition(PlayerSpritePosition);
-            _playerCombatSprite.Draw(spriteBatch, animationManager, player, playerSpriteTint);
+            _playerCombatSprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isPlayerHighlighted, pulseAlpha);
 
             // --- Draw Player HUD ---
-            DrawPlayerHud(spriteBatch, font, secondaryFont, player, gameTime, animationManager, uiManager, uiManager.HoverHighlightState);
+            DrawPlayerHud(spriteBatch, font, secondaryFont, player, currentActor, gameTime, animationManager, uiManager, uiManager.HoverHighlightState);
 
             // --- Draw UI Title ---
             DrawUITitle(spriteBatch, secondaryFont, gameTime, uiManager.SubMenuState);
@@ -253,7 +282,7 @@ namespace ProjectVagabond.Battle.UI
             // in the BattleScene's final draw pass. This method is now empty.
         }
 
-        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState)
+        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha)
         {
             if (!enemies.Any()) return;
 
@@ -265,7 +294,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 var enemy = enemies[i];
                 var slotCenter = new Vector2(enemyAreaPadding + (i * slotWidth) + (slotWidth / 2), 0);
-                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, shouldGrayOutUnselectable, selectableTargets, animationManager, hoverHighlightState);
+                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, hoverHighlightState, pulseAlpha);
 
                 // Populate _currentTargets for the targeting indicator visuals
                 if (selectableTargets.Contains(enemy))
@@ -284,25 +313,25 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, GameTime gameTime, BattleAnimationManager animationManager, BattleUIManager uiManager, HoverHighlightState hoverHighlightState)
+        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, BattleCombatant currentActor, GameTime gameTime, BattleAnimationManager animationManager, BattleUIManager uiManager, HoverHighlightState hoverHighlightState)
         {
             if (player == null) return;
 
             const int playerHudY = DIVIDER_Y - 10;
             const int playerHudPaddingX = 10;
-            float yOffset = 0;
-
-            if (player.IsPlayerControlled && !player.IsDefeated) // Check if it's the player's turn to select an action
-            {
-                yOffset = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * PLAYER_INDICATOR_BOB_SPEED * MathF.PI) > 0) ? -1f : 0f;
-            }
 
             Color nameColor = Color.White;
+            bool isTurnInProgress = (currentActor != null && !currentActor.IsPlayerControlled);
+            if (isTurnInProgress)
+            {
+                nameColor = _turnInactiveTintColor;
+            }
+
             if (hoverHighlightState.Targets.Contains(player))
             {
                 nameColor = _global.Palette_Yellow;
             }
-            spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight - 2 + yOffset), nameColor);
+            spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight - 2), nameColor);
 
             var offsetVector = Vector2.Zero; // No bobbing for bars
             DrawPlayerResourceBars(spriteBatch, player, offsetVector, uiManager);
@@ -692,7 +721,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState)
+        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha)
         {
             float yBobOffset = 0;
             if (_attackAnimTimers.TryGetValue(combatant.CombatantID, out float animTimer))
@@ -724,12 +753,27 @@ namespace ProjectVagabond.Battle.UI
             Color tintColor = Color.White * combatant.VisualAlpha;
             Color outlineColor = _global.Palette_DarkGray * combatant.VisualAlpha;
 
-            bool isSelectable = selectableTargets.Contains(combatant);
+            bool isCurrentActor = (currentActor != null && combatant.CombatantID == currentActor.CombatantID);
+            bool isTurnInProgress = (currentActor != null);
 
-            if (shouldGrayOutUnselectable && !isSelectable)
+            if (isTurnInProgress && !isCurrentActor)
             {
-                tintColor = _global.ButtonDisableColor * combatant.VisualAlpha;
-                outlineColor = _global.ButtonDisableColor * combatant.VisualAlpha * 0.5f;
+                tintColor = _turnInactiveTintColor * combatant.VisualAlpha;
+                outlineColor = _turnInactiveTintColor * combatant.VisualAlpha * 0.5f;
+            }
+
+            bool isSelectable = selectableTargets.Contains(combatant);
+            if (shouldGrayOutUnselectable)
+            {
+                if (isSelectable && !isTargetingPhase)
+                {
+                    outlineColor = Color.Yellow * combatant.VisualAlpha;
+                }
+                else if (!isSelectable)
+                {
+                    tintColor = _global.ButtonDisableColor * combatant.VisualAlpha;
+                    outlineColor = _global.ButtonDisableColor * combatant.VisualAlpha * 0.5f;
+                }
             }
 
             Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
@@ -778,6 +822,11 @@ namespace ProjectVagabond.Battle.UI
                         var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
                         var drawRect = new Rectangle((int)drawPosition.X, (int)drawPosition.Y, spriteRect.Width, spriteRect.Height);
                         spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
+
+                        if (isSelectable && shouldGrayOutUnselectable && !isTargetingPhase)
+                        {
+                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, Color.Yellow * pulseAlpha);
+                        }
 
                         if (isFlashingWhite && enemySilhouette != null)
                         {
