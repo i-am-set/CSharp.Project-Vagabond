@@ -272,14 +272,6 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published when the player draws one or more cards into their hand.
-        /// </summary>
-        public struct PlayerHandDrawn
-        {
-            public IEnumerable<SpellbookEntry> DrawnEntries { get; set; }
-        }
-
-        /// <summary>
         /// Published to trigger the spell choice UI.
         /// </summary>
         public struct SpellChoiceRequested

@@ -50,7 +50,7 @@ namespace ProjectVagabond
                 return;
             }
 
-            // 3. Check if the player already knows the move.
+            // 3. Check if the player already knows the move (no duplicates).
             if (_gameState.PlayerState.SpellbookPages.Any(p => p != null && p.MoveID.Equals(moveId, System.StringComparison.OrdinalIgnoreCase)))
             {
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Player already knows {moveData.MoveName}." });

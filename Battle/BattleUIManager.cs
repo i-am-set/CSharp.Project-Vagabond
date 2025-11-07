@@ -197,12 +197,6 @@ namespace ProjectVagabond.Battle.UI
 
             _battleNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
 
-            // Draw discarding cards on top of everything, including the narrator.
-            foreach (var button in _actionMenu.ButtonsBeingDiscarded)
-            {
-                button.Draw(spriteBatch, font, gameTime, transform);
-            }
-
             DrawControlPrompt(spriteBatch);
         }
 

@@ -69,6 +69,8 @@ namespace ProjectVagabond
                 sb.AppendLine("    remove <ID> [[qty]  - Removes an item from inventory.");
                 sb.AppendLine("    learn <ID>         - Teaches the player a new move.");
                 sb.AppendLine("    forget <ID>        - Makes the player forget a move.");
+                sb.AppendLine("    equip <page> <slot> - Equips a spell from your spellbook to a combat slot.");
+                sb.AppendLine("    unequip <slot>     - Unequips a spell from a combat slot.");
                 sb.AppendLine("    addpage            - Adds an empty spell page.");
                 sb.AppendLine("    removepage         - Removes the last spell page.");
                 sb.AppendLine();
@@ -127,6 +129,9 @@ namespace ProjectVagabond
                 if (args.Length == 0) return _gameState.PlayerState?.SpellbookPages.Where(p => p != null).Select(p => p.MoveID).ToList() ?? new List<string>();
                 return new List<string>();
             });
+
+            _commands["equip"] = new Command("equip", (args) => HandleEquip(args), "equip <page> <slot> - Equips a spell to a combat slot (1-4).");
+            _commands["unequip"] = new Command("unequip", (args) => HandleUnequip(args), "unequip <slot> - Unequips a spell from a combat slot (1-4).");
 
             _commands["addpage"] = new Command("addpage", (args) =>
             {
@@ -260,6 +265,88 @@ namespace ProjectVagabond
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- // 
 
+        private void HandleEquip(string[] args)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized." });
+                return;
+            }
+
+            if (args.Length < 3 || !int.TryParse(args[1], out int pageNumber) || !int.TryParse(args[2], out int slotNumber))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: equip <page_number> <slot_number>" });
+                return;
+            }
+
+            if (slotNumber < 1 || slotNumber > 4)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Slot number must be between 1 and 4." });
+                return;
+            }
+
+            if (pageNumber < 1 || pageNumber > _gameState.PlayerState.SpellbookPages.Count)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Invalid page number. You have {_gameState.PlayerState.SpellbookPages.Count} pages." });
+                return;
+            }
+
+            var spellEntry = _gameState.PlayerState.SpellbookPages[pageNumber - 1];
+            if (spellEntry == null)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Spellbook page {pageNumber} is empty." });
+                return;
+            }
+
+            // Check if the spell is already equipped and unequip it if so.
+            for (int i = 0; i < _gameState.PlayerState.EquippedSpells.Length; i++)
+            {
+                if (_gameState.PlayerState.EquippedSpells[i] == spellEntry)
+                {
+                    _gameState.PlayerState.EquippedSpells[i] = null;
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unequipped {spellEntry.MoveID} from slot {i + 1}." });
+                }
+            }
+
+            // Equip the spell in the new slot.
+            _gameState.PlayerState.EquippedSpells[slotNumber - 1] = spellEntry;
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Equipped {spellEntry.MoveID} to slot {slotNumber}." });
+        }
+
+        private void HandleUnequip(string[] args)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized." });
+                return;
+            }
+
+            if (args.Length < 2 || !int.TryParse(args[1], out int slotNumber))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: unequip <slot_number>" });
+                return;
+            }
+
+            if (slotNumber < 1 || slotNumber > 4)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Slot number must be between 1 and 4." });
+                return;
+            }
+
+            var spellToUnequip = _gameState.PlayerState.EquippedSpells[slotNumber - 1];
+            if (spellToUnequip != null)
+            {
+                _gameState.PlayerState.EquippedSpells[slotNumber - 1] = null;
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unequipped {spellToUnequip.MoveID} from slot {slotNumber}." });
+            }
+            else
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Slot {slotNumber} is already empty." });
+            }
+        }
+
         private void HandleGiveItem(string[] args)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
@@ -372,7 +459,15 @@ namespace ProjectVagabond
                         {
                             moveName = moveData.MoveName;
                         }
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Page {i + 1}: {moveName} [dim](Used: {entry.TimesUsed}) ({entry.MoveID})[/]" });
+
+                        string equippedStatus = "";
+                        int equippedSlot = Array.IndexOf(_gameState.PlayerState.EquippedSpells, entry);
+                        if (equippedSlot != -1)
+                        {
+                            equippedStatus = $" [yellow][Equipped: Slot {equippedSlot + 1}][/]";
+                        }
+
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  Page {i + 1}: {moveName} [dim](Used: {entry.TimesUsed}) ({entry.MoveID})[/]{equippedStatus}" });
                     }
                 }
             }

@@ -45,11 +45,6 @@ namespace ProjectVagabond.Battle
         public float VisualAlpha { get; set; } = 1.0f;
 
         /// <summary>
-        /// For the player, this manages their deck, hand, and discard pile. Null for enemies.
-        /// </summary>
-        public CombatDeckManager DeckManager { get; set; }
-
-        /// <summary>
         /// A list of moves this combatant can use. For enemies, this is a static list.
         /// For the player, this is an adapter property that returns their current hand.
         /// </summary>
@@ -57,9 +52,9 @@ namespace ProjectVagabond.Battle
         {
             get
             {
-                if (DeckManager != null)
+                if (IsPlayerControlled)
                 {
-                    return DeckManager.Hand
+                    return EquippedSpells
                         .Where(entry => entry != null && BattleDataCache.Moves.ContainsKey(entry.MoveID))
                         .Select(entry => BattleDataCache.Moves[entry.MoveID])
                         .ToList();
@@ -70,9 +65,9 @@ namespace ProjectVagabond.Battle
         private List<MoveData> _staticMoves = new List<MoveData>();
 
         /// <summary>
-        /// For the player, provides direct access to the SpellbookEntry objects in their hand.
+        /// For the player, provides direct access to the SpellbookEntry objects in their equipped loadout.
         /// </summary>
-        public SpellbookEntry[] Hand => DeckManager?.Hand;
+        public SpellbookEntry?[] EquippedSpells { get; set; }
 
         /// <summary>
         /// The move ID for the player's basic "Strike" action. Null for enemies.

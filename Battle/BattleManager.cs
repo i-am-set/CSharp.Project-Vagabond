@@ -38,7 +38,6 @@ namespace ProjectVagabond.Battle
         private BattlePhase _currentPhase;
         public int RoundNumber { get; private set; }
         private bool _playerActionSubmitted;
-        private bool _playerUsedSpellThisTurn = false;
         private static readonly Random _random = new Random();
 
         // State for multi-hit moves
@@ -83,19 +82,6 @@ namespace ProjectVagabond.Battle
 
             // Process on-enter abilities
             HandleOnEnterAbilities();
-
-            // Announce the initial hand draw for the player.
-            foreach (var player in _playerCombatants)
-            {
-                if (player.Hand != null)
-                {
-                    var initialHand = player.Hand.Where(entry => entry != null).ToList();
-                    if (initialHand.Any())
-                    {
-                        EventBus.Publish(new GameEvents.PlayerHandDrawn { DrawnEntries = initialHand });
-                    }
-                }
-            }
         }
 
         private void OnSecondaryEffectComplete(GameEvents.SecondaryEffectComplete e)
@@ -121,12 +107,6 @@ namespace ProjectVagabond.Battle
         public void SetPlayerAction(QueuedAction action)
         {
             if (_currentPhase != BattlePhase.ActionSelection || _playerActionSubmitted) return;
-
-            // Track if a spell was used to trigger hand cycling
-            if (action.SpellbookEntry != null)
-            {
-                _playerUsedSpellThisTurn = true;
-            }
 
             // Handle pre-action effects that might prevent the action from being queued normally.
             if (HandlePreActionEffects(action))
@@ -244,24 +224,6 @@ namespace ProjectVagabond.Battle
             }
 
             _actionQueue.InsertRange(0, startOfTurnActions);
-
-            // Player draws cards. If a spell was used, discard the whole hand and draw a new one.
-            foreach (var player in _playerCombatants)
-            {
-                if (!player.IsDefeated)
-                {
-                    if (_playerUsedSpellThisTurn)
-                    {
-                        player.DeckManager?.DiscardHand();
-                    }
-                    var newlyDrawn = player.DeckManager?.DrawToFillHand();
-                    if (newlyDrawn != null && newlyDrawn.Any())
-                    {
-                        EventBus.Publish(new GameEvents.PlayerHandDrawn { DrawnEntries = newlyDrawn });
-                    }
-                }
-            }
-            _playerUsedSpellThisTurn = false; // Reset flag after handling
 
             _currentPhase = BattlePhase.ActionSelection;
             _playerActionSubmitted = IsPlayerTurnSkipped;
@@ -458,7 +420,7 @@ namespace ProjectVagabond.Battle
 
             if (action.Actor.IsPlayerControlled && action.SpellbookEntry != null)
             {
-                action.Actor.DeckManager?.CastMove(action.SpellbookEntry);
+                action.SpellbookEntry.TimesUsed++;
             }
 
             if (action.ChosenMove.Effects.TryGetValue("MultiHit", out var multiHitValue) && EffectParser.TryParseIntArray(multiHitValue, out int[] hitParams) && hitParams.Length == 2)

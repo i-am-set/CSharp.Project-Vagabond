@@ -16,25 +16,17 @@ namespace ProjectVagabond.Battle.UI
         public int DisplayPower { get; }
         private readonly BitmapFont _moveFont;
         private readonly Texture2D _backgroundSpriteSheet;
-        private readonly bool _isNew;
-        public bool IsNew => _isNew;
         public bool IsAnimating => _animState == AnimationState.Appearing;
-        public bool IsAnimatingDiscard => _animState == AnimationState.Discarding;
-        public bool IsFadeToWhiteComplete { get; private set; }
 
 
         public Texture2D IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
 
         // Animation State
-        private enum AnimationState { Hidden, Idle, Appearing, Discarding }
+        private enum AnimationState { Hidden, Idle, Appearing }
         private AnimationState _animState = AnimationState.Idle;
         private float _appearTimer = 0f;
         private const float APPEAR_DURATION = 0.25f; // Duration of the appear animation
-        private float _discardTimer = 0f;
-        private const float FADE_TO_WHITE_DURATION = 0.0f;
-        private const float COLLAPSE_DURATION = 0.125f;
-        private const float DISCARD_DURATION = FADE_TO_WHITE_DURATION + COLLAPSE_DURATION;
 
         // Scrolling Text State
         private bool _isScrollingInitialized = false;
@@ -57,7 +49,7 @@ namespace ProjectVagabond.Battle.UI
         private const float OVERLAY_FADE_SPEED = 2.0f;
 
 
-        public MoveButton(MoveData move, SpellbookEntry entry, int displayPower, BitmapFont font, Texture2D backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool isNew, bool startVisible = true)
+        public MoveButton(MoveData move, SpellbookEntry entry, int displayPower, BitmapFont font, Texture2D backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
             Move = move;
@@ -67,7 +59,6 @@ namespace ProjectVagabond.Battle.UI
             _backgroundSpriteSheet = backgroundSpriteSheet;
             IconTexture = iconTexture;
             IconSourceRect = iconSourceRect;
-            _isNew = isNew;
             _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
             _overlayFadeTimer = (float)(_random.NextDouble() * Math.PI * 2.0); // Random start phase for desynchronization
             HasRightClickHint = true;
@@ -85,22 +76,6 @@ namespace ProjectVagabond.Battle.UI
         public void ShowInstantly()
         {
             _animState = AnimationState.Idle;
-        }
-
-        public void TriggerDiscardAnimation()
-        {
-            if (_animState != AnimationState.Hidden)
-            {
-                _animState = AnimationState.Discarding;
-                _discardTimer = 0f;
-                IsFadeToWhiteComplete = false;
-            }
-        }
-
-        public override void ResetAnimationState()
-        {
-            base.ResetAnimationState();
-            IsFadeToWhiteComplete = false;
         }
 
         private void UpdateScrolling(GameTime gameTime)
@@ -157,48 +132,17 @@ namespace ProjectVagabond.Battle.UI
             // --- Animation Scaling ---
             float scaleX = 1.0f;
             float scaleY = 1.0f;
-            float contentAlphaMultiplier = 1.0f;
-            float whiteOverlayAlpha = 0f;
             if (_animState == AnimationState.Appearing)
             {
                 _appearTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 float progress = Math.Clamp(_appearTimer / APPEAR_DURATION, 0f, 1f);
 
-                if (_isNew)
-                {
-                    // New card: Flip horizontally
-                    scaleX = Easing.EaseOutBack(progress);
-                }
-                else
-                {
-                    // Old card: Pop in vertically
-                    scaleY = Easing.EaseOutBack(progress);
-                }
+                // Pop in vertically
+                scaleY = Easing.EaseOutBack(progress);
 
                 if (progress >= 1.0f)
                 {
                     _animState = AnimationState.Idle;
-                }
-            }
-            else if (_animState == AnimationState.Discarding)
-            {
-                _discardTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-                // Content is instantly hidden, and the overlay is instantly opaque.
-                contentAlphaMultiplier = 0.0f;
-                whiteOverlayAlpha = 1.0f;
-                IsFadeToWhiteComplete = true;
-
-                // The entire animation duration is now used for the collapse.
-                float progress = Math.Clamp(_discardTimer / DISCARD_DURATION, 0f, 1f);
-                float easedProgress = Easing.EaseInQuint(progress);
-
-                scaleX = 1.0f - easedProgress; // Collapse horizontally.
-                scaleY = 1.0f;
-
-                if (_discardTimer >= DISCARD_DURATION)
-                {
-                    _animState = AnimationState.Hidden;
                 }
             }
 
@@ -226,24 +170,6 @@ namespace ProjectVagabond.Battle.UI
                 if (!canAfford) finalTintColor = _global.ButtonDisableColor * 0.5f;
                 else if (_isPressed) finalTintColor = Color.Gray;
                 else if (isActivated) finalTintColor = _global.ButtonHoverColor;
-
-                if (_isNew && _animState == AnimationState.Appearing)
-                {
-                    const float flashRatio = 0.75f;
-                    float flashDuration = APPEAR_DURATION * flashRatio;
-                    if (_appearTimer < flashDuration)
-                    {
-                        float flashProgress = _appearTimer / flashDuration;
-                        finalTintColor = Color.Lerp(_global.Palette_Red, finalTintColor, Easing.EaseInQuad(flashProgress));
-                    }
-                }
-            }
-            finalTintColor *= contentAlphaMultiplier;
-
-            // Draw the white overlay during discard animation
-            if (whiteOverlayAlpha > 0f)
-            {
-                spriteBatch.DrawSnapped(pixel, animatedBounds, Color.White * whiteOverlayAlpha);
             }
 
             // Only draw contents if the button is mostly visible to avoid squashed text/icons

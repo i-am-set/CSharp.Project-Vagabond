@@ -27,6 +27,11 @@ namespace ProjectVagabond
         public List<SpellbookEntry> SpellbookPages { get; set; } = new List<SpellbookEntry>();
 
         /// <summary>
+        /// Represents the player's 4-slot combat loadout. Holds references to entries in the SpellbookPages.
+        /// </summary>
+        public SpellbookEntry?[] EquippedSpells { get; set; } = new SpellbookEntry?[4];
+
+        /// <summary>
         /// Represents the player's inventory, mapping an ItemID to its quantity.
         /// </summary>
         public Dictionary<string, int> Inventory { get; set; } = new Dictionary<string, int>();

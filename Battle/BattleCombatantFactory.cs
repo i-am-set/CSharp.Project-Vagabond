@@ -82,8 +82,7 @@ namespace ProjectVagabond.Battle
             if (combatant.IsPlayerControlled)
             {
                 combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
-                combatant.DeckManager = new CombatDeckManager();
-                combatant.DeckManager.Initialize(gameState.PlayerState.SpellbookPages);
+                combatant.EquippedSpells = gameState.PlayerState.EquippedSpells;
 
                 // Apply temporary buffs from narrative choices
                 var tempBuffsComp = componentStore.GetComponent<TemporaryBuffsComponent>(entityId);
@@ -99,7 +98,6 @@ namespace ProjectVagabond.Battle
             else
             {
                 // For non-player combatants, populate their static move list from the archetype.
-                // The player's moves are now handled by the CombatDeckManager, which is initialized in the BattleManager.
                 var staticMoves = new List<MoveData>();
                 foreach (var moveId in statsComponent.AvailableMoveIDs)
                 {

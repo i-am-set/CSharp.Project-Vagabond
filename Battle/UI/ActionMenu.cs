@@ -73,20 +73,6 @@ namespace ProjectVagabond.Battle.UI
         private const int EXTRA_SCROLL_SPACES = 1;
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
-        // State for animation
-        private readonly HashSet<SpellbookEntry> _newlyDrawnEntries = new HashSet<SpellbookEntry>();
-        private enum ButtonAnimationPhase { Hidden, AnimatingNewText, AnimatingButton, Idle }
-        private readonly Dictionary<MoveButton, (ButtonAnimationPhase phase, float timer)> _buttonAnimationStates = new();
-        private readonly Queue<MoveButton> _pendingButtonAnimations = new Queue<MoveButton>();
-        private float _animationDelayTimer = 0f;
-        private const float SEQUENTIAL_ANIMATION_DELAY = 0.05f;
-
-        // "NEW!" Text Animation Tuning
-        private const float NEW_TEXT_FADE_IN_DURATION = 0.0375f;
-        private const float NEW_TEXT_HOLD_DURATION = 0.05f;
-        private const float NEW_TEXT_FADE_OUT_DURATION = 0.05f;
-        private const float NEW_TEXT_TOTAL_DURATION = NEW_TEXT_FADE_IN_DURATION + NEW_TEXT_HOLD_DURATION + NEW_TEXT_FADE_OUT_DURATION;
-
         private Queue<ImageButton> _actionButtonsToAnimate = new Queue<ImageButton>();
         private float _actionButtonAnimationDelayTimer = 0f;
         private const float ACTION_BUTTON_SEQUENTIAL_ANIMATION_DELAY = 0.05f;
@@ -105,11 +91,6 @@ namespace ProjectVagabond.Battle.UI
         // Shared animation timer for main action buttons
         public float SharedSwayTimer { get; private set; } = 0f;
         private bool _wasAnyActionHoveredLastFrame = false;
-
-        // Discard Animation State
-        public readonly List<MoveButton> ButtonsBeingDiscarded = new List<MoveButton>();
-        public bool IsAnimatingDiscard => ButtonsBeingDiscarded.Any();
-        private static readonly Random _random = new Random();
 
         // Hover Box Animation
         private MoveButton? _hoveredMoveButton;
@@ -131,16 +112,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             };
             _previousMouseState = Mouse.GetState();
-            EventBus.Subscribe<GameEvents.PlayerHandDrawn>(OnPlayerHandDrawn);
-        }
-
-        private void OnPlayerHandDrawn(GameEvents.PlayerHandDrawn e)
-        {
-            _newlyDrawnEntries.Clear();
-            foreach (var entry in e.DrawnEntries)
-            {
-                _newlyDrawnEntries.Add(entry);
-            }
         }
 
         private void InitializeButtons()
@@ -257,10 +228,8 @@ namespace ProjectVagabond.Battle.UI
             _currentState = newState;
             HoveredMove = null;
 
-            // If we are leaving the moves menu, mark all newly drawn cards as "seen"
             if (oldState == MenuState.Moves && newState != MenuState.Moves)
             {
-                _newlyDrawnEntries.Clear();
                 _isHoverInfoScrollingInitialized = false;
             }
 
@@ -302,40 +271,25 @@ namespace ProjectVagabond.Battle.UI
             var spriteManager = ServiceLocator.Get<SpriteManager>();
 
             _moveButtons.Clear();
-            _buttonAnimationStates.Clear();
-            _pendingButtonAnimations.Clear();
-            _animationDelayTimer = 0f;
 
-            var currentHand = _player.Hand;
-            if (currentHand == null) return;
+            var equippedSpells = _player.EquippedSpells;
+            if (equippedSpells == null) return;
 
-            for (int i = 0; i < Math.Min(currentHand.Length, 4); i++)
+            for (int i = 0; i < equippedSpells.Length; i++)
             {
-                var entry = currentHand[i];
+                var entry = equippedSpells[i];
                 if (entry == null || !BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move)) continue;
 
-                bool isNewForAnimation = _newlyDrawnEntries.Contains(entry);
-
                 int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, move);
-                var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, isNewForAnimation, false);
+                var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, true);
                 _moveButtons.Add(moveButton);
 
-                if (isNewForAnimation)
-                {
-                    // If it's new, queue it for the "NEW!" animation sequence.
-                    _buttonAnimationStates[moveButton] = (ButtonAnimationPhase.Hidden, 0f);
-                    _pendingButtonAnimations.Enqueue(moveButton);
-                }
-                else
-                {
-                    // If it's not new, make it appear instantly.
-                    moveButton.ShowInstantly();
-                    _buttonAnimationStates[moveButton] = (ButtonAnimationPhase.Idle, 0f);
-                }
+                // All buttons appear instantly now.
+                moveButton.ShowInstantly();
             }
         }
 
-        private MoveButton CreateMoveButton(MoveData move, SpellbookEntry entry, int displayPower, BitmapFont font, Texture2D background, bool isNew, bool startVisible)
+        private MoveButton CreateMoveButton(MoveData move, SpellbookEntry entry, int displayPower, BitmapFont font, Texture2D background, bool startVisible)
         {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             int elementId = move.OffensiveElementIDs.FirstOrDefault();
@@ -349,7 +303,7 @@ namespace ProjectVagabond.Battle.UI
                 sourceRect = rect;
             }
 
-            var moveButton = new MoveButton(move, entry, displayPower, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, isNew, startVisible) { HasRightClickHint = true };
+            var moveButton = new MoveButton(move, entry, displayPower, font, background, spriteManager.ElementIconsSpriteSheet, sourceRect, startVisible) { HasRightClickHint = true };
             moveButton.OnClick += () => HandleMoveButtonClick(move, entry, moveButton);
             return moveButton;
         }
@@ -368,32 +322,13 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
-            // Only trigger discard animation for spells from the hand
-            if (move.MoveType == MoveType.Spell && entry != null)
-            {
-                // Add to the discard list and trigger its animation.
-                // The button will now be drawn independently until its animation is finished.
-                ButtonsBeingDiscarded.Add(button);
-                button.TriggerDiscardAnimation();
-
-                // Immediately proceed with selecting the move.
-                SelectMove(move, entry);
-            }
-            else
-            {
-                SelectMove(move, entry);
-            }
+            SelectMove(move, entry);
         }
 
         private void SelectMove(MoveData move, SpellbookEntry? entry)
         {
             _selectedMove = move;
             _selectedSpellbookEntry = entry;
-
-            if (entry != null)
-            {
-                _newlyDrawnEntries.Remove(entry);
-            }
 
             switch (move.Target)
             {
@@ -546,19 +481,6 @@ namespace ProjectVagabond.Battle.UI
             InitializeButtons();
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Update and clean up any buttons that are currently animating their discard.
-            // This happens independently of the current menu state.
-            for (int i = ButtonsBeingDiscarded.Count - 1; i >= 0; i--)
-            {
-                var button = ButtonsBeingDiscarded[i];
-                // The animation timer is updated within the button's Draw method.
-                // We just need to check if it's finished to remove it.
-                if (!button.IsAnimatingDiscard)
-                {
-                    ButtonsBeingDiscarded.RemoveAt(i);
-                }
-            }
-
             if (!_isVisible)
             {
                 _previousMouseState = currentMouseState;
@@ -575,20 +497,6 @@ namespace ProjectVagabond.Battle.UI
                     _actionButtonAnimationDelayTimer = 0f;
                     var buttonToAnimate = _actionButtonsToAnimate.Dequeue();
                     buttonToAnimate.TriggerAppearAnimation();
-                }
-            }
-
-            if (_pendingButtonAnimations.Any())
-            {
-                _animationDelayTimer += dt;
-                if (_animationDelayTimer >= SEQUENTIAL_ANIMATION_DELAY)
-                {
-                    _animationDelayTimer = 0f;
-                    var buttonToStart = _pendingButtonAnimations.Dequeue();
-                    if (buttonToStart.IsNew)
-                    {
-                        _buttonAnimationStates[buttonToStart] = (ButtonAnimationPhase.AnimatingNewText, 0f);
-                    }
                 }
             }
 
@@ -623,24 +531,6 @@ namespace ProjectVagabond.Battle.UI
                     _hoveredSpellbookEntry = null;
                     _hoveredMoveButton = null;
                     _shouldAttuneButtonPulse = false;
-
-                    // Update button animation states
-                    foreach (var button in _moveButtons)
-                    {
-                        if (_buttonAnimationStates.TryGetValue(button, out var state))
-                        {
-                            if (state.phase == ButtonAnimationPhase.AnimatingNewText)
-                            {
-                                state.timer += dt;
-                                if (state.timer >= NEW_TEXT_TOTAL_DURATION)
-                                {
-                                    state.phase = ButtonAnimationPhase.Idle;
-                                    button.ShowInstantly();
-                                }
-                                _buttonAnimationStates[button] = state;
-                            }
-                        }
-                    }
 
                     bool rightClickHeldOnAButton = false;
                     MoveData? moveForTooltip = null;
@@ -747,9 +637,6 @@ namespace ProjectVagabond.Battle.UI
             const int dividerY = 123;
             var bgRect = new Rectangle(0, dividerY, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - dividerY);
             spriteBatch.DrawSnapped(pixel, bgRect, bgColor);
-
-            // The drawing of discarding buttons is now handled by the BattleUIManager
-            // to ensure they are rendered on top of all other UI elements.
 
             if (!_isVisible) return;
 
@@ -949,44 +836,39 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            // --- NEW LAYOUT CONSTANTS ---
-
-            // Main Moves (stack)
+            // --- LAYOUT CONSTANTS ---
             const int moveButtonWidth = 128;
             const int moveButtonHeight = 9;
             const int moveRows = 4;
             const int moveRowSpacing = 0;
             const int moveBlockHeight = moveRows * (moveButtonHeight + moveRowSpacing) - moveRowSpacing;
 
-            // Secondary Actions (vertical stack)
             const int secButtonWidth = 60;
             const int secButtonHeight = 13;
             const int secRowSpacing = 0;
             const int secRows = 3;
             const int secBlockHeight = secRows * (secButtonHeight + secRowSpacing) - secRowSpacing;
 
-            // Border
             const int borderWidth = 120;
             const int borderHeight = 37;
             const int layoutGap = 2;
 
-            // Combined Layout Calculation
-            const int totalCombinedWidth = moveButtonWidth + layoutGap + borderWidth + layoutGap + secButtonWidth;
-            int layoutStartX = (Global.VIRTUAL_WIDTH - totalCombinedWidth) / 2;
+            // --- NEW LAYOUT CALCULATION ---
+            // New Order: [Secondary Actions] [Main Moves] [Info Box], shifted right.
 
             // Positioning
-            int moveGridStartY = 128;
+            int moveGridStartY = 128; // This is the vertical anchor for the layout
 
-            // 1. Main Moves Position
-            int moveGridStartX = layoutStartX;
+            // 1. Main Moves Position (The reference point for the shift)
+            int moveGridStartX = 65;
 
-            // 2. Border Position
+            // 2. Secondary Actions Position (to the left of Main Moves)
+            int secGridStartX = moveGridStartX - layoutGap - secButtonWidth;
+            int secGridStartY = moveGridStartY + (moveBlockHeight / 2) - (secBlockHeight / 2);
+
+            // 3. Border (Info Box) Position (to the right of Main Moves)
             int borderX = moveGridStartX + moveButtonWidth + layoutGap;
             int borderY = moveGridStartY + (moveBlockHeight / 2) - (borderHeight / 2);
-
-            // 3. Secondary Actions Position
-            int secGridStartX = borderX + borderWidth + layoutGap;
-            int secGridStartY = moveGridStartY + (moveBlockHeight / 2) - (secBlockHeight / 2);
 
 
             // --- Draw the border ---
@@ -1005,14 +887,6 @@ namespace ProjectVagabond.Battle.UI
             for (int i = 0; i < _moveButtons.Count; i++)
             {
                 var button = _moveButtons[i];
-
-                // Skip drawing the button here if it's currently being discarded.
-                // It will be drawn separately in the main Draw method.
-                if (ButtonsBeingDiscarded.Contains(button))
-                {
-                    continue;
-                }
-
                 int row = i; // Single column
 
                 var buttonBounds = new Rectangle(
@@ -1028,44 +902,7 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(pixel, button.Bounds, _global.Palette_DarkGray);
                 }
 
-                if (_buttonAnimationStates.TryGetValue(button, out var state))
-                {
-                    if (state.phase == ButtonAnimationPhase.AnimatingNewText)
-                    {
-                        float alpha = 0f;
-                        float scale = 0f;
-
-                        if (state.timer < NEW_TEXT_FADE_IN_DURATION)
-                        {
-                            float fadeInProgress = state.timer / NEW_TEXT_FADE_IN_DURATION;
-                            scale = Easing.EaseOutBack(fadeInProgress);
-                            alpha = fadeInProgress;
-                        }
-                        else if (state.timer < NEW_TEXT_FADE_IN_DURATION + NEW_TEXT_HOLD_DURATION)
-                        {
-                            alpha = 1f;
-                            scale = 1f;
-                        }
-                        else
-                        {
-                            float fadeOutProgress = (state.timer - (NEW_TEXT_FADE_IN_DURATION + NEW_TEXT_HOLD_DURATION)) / NEW_TEXT_FADE_OUT_DURATION;
-                            float easedProgress = Easing.EaseInQuint(fadeOutProgress);
-                            alpha = 1f - easedProgress;
-                            scale = 1f - easedProgress;
-                        }
-
-                        string newText = "NEW!";
-                        var newTextSize = secondaryFont.MeasureString(newText);
-                        var newTextOrigin = new Vector2(newTextSize.Width / 2f, newTextSize.Height / 2f);
-                        var newTextPos = button.Bounds.Center.ToVector2();
-
-                        spriteBatch.DrawStringOutlinedSnapped(secondaryFont, newText, newTextPos, _global.Palette_Yellow * alpha, Color.Black * alpha, 0f, newTextOrigin, scale, SpriteEffects.None, 0f);
-                    }
-                    else if (state.phase == ButtonAnimationPhase.AnimatingButton || state.phase == ButtonAnimationPhase.Idle)
-                    {
-                        button.Draw(spriteBatch, font, gameTime, transform);
-                    }
-                }
+                button.Draw(spriteBatch, font, gameTime, transform);
             }
 
             // --- Draw Secondary Action Buttons (Vertical Stack) ---
