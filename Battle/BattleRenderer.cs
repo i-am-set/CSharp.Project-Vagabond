@@ -184,7 +184,7 @@ namespace ProjectVagabond.Battle.UI
             var player = allCombatants.FirstOrDefault(c => c.IsPlayerControlled);
 
             // --- Pulse Calculation for Highlights ---
-            float pulseAlpha = 0.25f + ((MathF.Sin(sharedBobbingTimer * 6f) + 1f) / 2f) * 0.15f; // Oscillates between 0.25 and 0.40
+            float pulseAlpha = 0.10f + ((MathF.Sin(sharedBobbingTimer * 6f) + 1f) / 2f) * 0.10f; // Oscillates between 0.10 and 0.20
 
             // --- Pre-calculate selectable targets for this frame ---
             var selectableTargets = new HashSet<BattleCombatant>();
