@@ -27,7 +27,7 @@ namespace ProjectVagabond.Battle.UI
         private List<BattleCombatant>? _allCombatants;
         private List<BattleCombatant>? _allTargets;
         private List<Button> _actionButtons = new List<Button>();
-        private List<MoveButton> _moveButtons = new List<MoveButton>();
+        private readonly MoveButton?[] _moveButtons = new MoveButton?[4];
         private List<Button> _secondaryActionButtons = new List<Button>();
         private Button _backButton;
         private readonly Global _global;
@@ -95,6 +95,13 @@ namespace ProjectVagabond.Battle.UI
         // Hover Box Animation
         private MoveButton? _hoveredMoveButton;
         private bool _shouldAttuneButtonPulse = false;
+
+        // --- Moves Menu Layout Constants ---
+        private const int MOVE_BUTTON_WIDTH = 128;
+        private const int MOVE_BUTTON_HEIGHT = 9;
+        private const int MOVE_ROW_SPACING = 1;
+        private const int MOVE_ROWS = 4;
+        private const int MOVE_BLOCK_HEIGHT = MOVE_ROWS * (MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING) - MOVE_ROW_SPACING;
 
 
         public ActionMenu()
@@ -199,7 +206,7 @@ namespace ProjectVagabond.Battle.UI
             }
             foreach (var button in _moveButtons)
             {
-                button.ResetAnimationState();
+                button?.ResetAnimationState();
             }
             foreach (var button in _secondaryActionButtons)
             {
@@ -270,21 +277,21 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var spriteManager = ServiceLocator.Get<SpriteManager>();
 
-            _moveButtons.Clear();
-
             var equippedSpells = _player.EquippedSpells;
             if (equippedSpells == null) return;
 
             for (int i = 0; i < equippedSpells.Length; i++)
             {
                 var entry = equippedSpells[i];
-                if (entry == null || !BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move)) continue;
+                if (entry == null || !BattleDataCache.Moves.TryGetValue(entry.MoveID, out var move))
+                {
+                    _moveButtons[i] = null;
+                    continue;
+                }
 
                 int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, move);
                 var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, true);
-                _moveButtons.Add(moveButton);
-
-                // All buttons appear instantly now.
+                _moveButtons[i] = moveButton;
                 moveButton.ShowInstantly();
             }
         }
@@ -476,6 +483,46 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
+        private void UpdateLayout()
+        {
+            switch (_currentState)
+            {
+                case MenuState.Moves:
+                    const int secButtonWidth = 60;
+                    const int secButtonHeight = 13;
+                    const int secRowSpacing = 0;
+                    const int secRows = 3;
+                    const int secBlockHeight = secRows * (secButtonHeight + secRowSpacing) - secRowSpacing;
+                    const int borderWidth = 120;
+                    const int layoutGap = 2;
+                    int moveGridStartY = 128;
+                    int moveGridStartX = 65;
+                    int secGridStartX = moveGridStartX - layoutGap - secButtonWidth;
+                    int secGridStartY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (secBlockHeight / 2);
+
+                    for (int i = 0; i < _moveButtons.Length; i++)
+                    {
+                        var button = _moveButtons[i];
+                        if (button == null) continue;
+
+                        int rowStep = MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING;
+                        button.Bounds = new Rectangle(
+                            moveGridStartX,
+                            moveGridStartY + i * rowStep,
+                            MOVE_BUTTON_WIDTH,
+                            rowStep // 10px high clickable area
+                        );
+                    }
+                    for (int i = 0; i < _secondaryActionButtons.Count; i++)
+                    {
+                        var button = _secondaryActionButtons[i];
+                        int yPos = secGridStartY + i * (secButtonHeight + secRowSpacing);
+                        button.Bounds = new Rectangle(secGridStartX, yPos, secButtonWidth, secButtonHeight);
+                    }
+                    break;
+            }
+        }
+
         public void Update(MouseState currentMouseState, GameTime gameTime)
         {
             InitializeButtons();
@@ -487,6 +534,7 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
+            UpdateLayout();
             UpdateSpamDetection(gameTime, currentMouseState);
 
             if (_actionButtonsToAnimate.Any())
@@ -539,6 +587,7 @@ namespace ProjectVagabond.Battle.UI
                     // Update buttons and check for hover/right-click
                     foreach (var button in _moveButtons)
                     {
+                        if (button == null) continue;
                         button.Update(currentMouseState);
                         if (button.IsHovered)
                         {
@@ -837,12 +886,6 @@ namespace ProjectVagabond.Battle.UI
             var pixel = ServiceLocator.Get<Texture2D>();
 
             // --- LAYOUT CONSTANTS ---
-            const int moveButtonWidth = 128;
-            const int moveButtonHeight = 9;
-            const int moveRows = 4;
-            const int moveRowSpacing = 0;
-            const int moveBlockHeight = moveRows * (moveButtonHeight + moveRowSpacing) - moveRowSpacing;
-
             const int secButtonWidth = 60;
             const int secButtonHeight = 13;
             const int secRowSpacing = 0;
@@ -854,21 +897,12 @@ namespace ProjectVagabond.Battle.UI
             const int layoutGap = 2;
 
             // --- NEW LAYOUT CALCULATION ---
-            // New Order: [Secondary Actions] [Main Moves] [Info Box], shifted right.
-
-            // Positioning
-            int moveGridStartY = 128; // This is the vertical anchor for the layout
-
-            // 1. Main Moves Position (The reference point for the shift)
+            int moveGridStartY = 128;
             int moveGridStartX = 65;
-
-            // 2. Secondary Actions Position (to the left of Main Moves)
             int secGridStartX = moveGridStartX - layoutGap - secButtonWidth;
-            int secGridStartY = moveGridStartY + (moveBlockHeight / 2) - (secBlockHeight / 2);
-
-            // 3. Border (Info Box) Position (to the right of Main Moves)
-            int borderX = moveGridStartX + moveButtonWidth + layoutGap;
-            int borderY = moveGridStartY + (moveBlockHeight / 2) - (borderHeight / 2);
+            int secGridStartY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (secBlockHeight / 2);
+            int borderX = moveGridStartX + MOVE_BUTTON_WIDTH + layoutGap;
+            int borderY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (borderHeight / 2);
 
 
             // --- Draw the border ---
@@ -884,25 +918,77 @@ namespace ProjectVagabond.Battle.UI
 
 
             // --- Draw Main Move Buttons ---
-            for (int i = 0; i < _moveButtons.Count; i++)
+            for (int i = 0; i < _moveButtons.Length; i++)
             {
                 var button = _moveButtons[i];
-                int row = i; // Single column
+                int row = i;
+                int rowStep = MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING;
 
-                var buttonBounds = new Rectangle(
+                var visualBounds = new Rectangle(
                     moveGridStartX,
-                    moveGridStartY + row * (moveButtonHeight + moveRowSpacing),
-                    moveButtonWidth,
-                    moveButtonHeight
+                    moveGridStartY + row * rowStep,
+                    MOVE_BUTTON_WIDTH,
+                    MOVE_BUTTON_HEIGHT
                 );
-                button.Bounds = buttonBounds;
 
-                if (button == _hoveredMoveButton && button.IsEnabled)
+                if (button == null)
                 {
-                    spriteBatch.DrawSnapped(pixel, button.Bounds, _global.Palette_DarkGray);
-                }
+                    // Draw placeholder for empty slot
+                    var placeholderFillColor = Color.Black;
+                    spriteBatch.DrawSnapped(pixel, visualBounds, placeholderFillColor);
+                    var placeholderBorderColor = _global.Palette_DarkGray;
 
-                button.Draw(spriteBatch, font, gameTime, transform);
+                    const int dashLength = 2;
+                    const int gapLength = 1;
+                    const int patternLength = dashLength + gapLength;
+
+                    // Top edge
+                    for (int x = visualBounds.Left; x < visualBounds.Right; x += patternLength)
+                    {
+                        int width = Math.Min(dashLength, visualBounds.Right - x);
+                        spriteBatch.DrawSnapped(pixel, new Rectangle(x, visualBounds.Top, width, 1), placeholderBorderColor);
+                    }
+                    // Bottom edge
+                    for (int x = visualBounds.Left; x < visualBounds.Right; x += patternLength)
+                    {
+                        int width = Math.Min(dashLength, visualBounds.Right - x);
+                        spriteBatch.DrawSnapped(pixel, new Rectangle(x, visualBounds.Bottom - 1, width, 1), placeholderBorderColor);
+                    }
+                    // Left edge
+                    for (int y = visualBounds.Top; y < visualBounds.Bottom; y += patternLength)
+                    {
+                        int height = Math.Min(dashLength, visualBounds.Bottom - y);
+                        spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Left, y, 1, height), placeholderBorderColor);
+                    }
+                    // Right edge
+                    for (int y = visualBounds.Top; y < visualBounds.Bottom; y += patternLength)
+                    {
+                        int height = Math.Min(dashLength, visualBounds.Bottom - y);
+                        spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Right - 1, y, 1, height), placeholderBorderColor);
+                    }
+                }
+                else
+                {
+                    // Draw the border
+                    var buttonBorderColor = _global.Palette_DarkGray;
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Left, visualBounds.Top, visualBounds.Width, 1), buttonBorderColor); // Top
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Left, visualBounds.Bottom - 1, visualBounds.Width, 1), buttonBorderColor); // Bottom
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Left, visualBounds.Top, 1, visualBounds.Height), buttonBorderColor); // Left
+                    spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Right - 1, visualBounds.Top, 1, visualBounds.Height), buttonBorderColor); // Right
+
+                    if (button == _hoveredMoveButton && button.IsEnabled)
+                    {
+                        // Draw the hover background inset within the border
+                        var hoverBgRect = new Rectangle(visualBounds.X + 1, visualBounds.Y + 1, visualBounds.Width - 2, visualBounds.Height - 2);
+                        spriteBatch.DrawSnapped(pixel, hoverBgRect, _global.Palette_DarkGray);
+                    }
+
+                    // Temporarily set bounds for drawing content, then restore
+                    var originalBounds = button.Bounds;
+                    button.Bounds = visualBounds;
+                    button.Draw(spriteBatch, font, gameTime, transform);
+                    button.Bounds = originalBounds;
+                }
             }
 
             // --- Draw Secondary Action Buttons (Vertical Stack) ---
@@ -916,27 +1002,12 @@ namespace ProjectVagabond.Battle.UI
             for (int i = 0; i < _secondaryActionButtons.Count; i++)
             {
                 var button = _secondaryActionButtons[i];
-                int yPos = secGridStartY + i * (secButtonHeight + secRowSpacing);
-
-                button.Bounds = new Rectangle(
-                    secGridStartX,
-                    yPos,
-                    secButtonWidth,
-                    secButtonHeight
-                );
-
-                Color? tintOverride = null;
-                if (button.Text == "ATTUNE" && attunePulseColor.HasValue)
-                {
-                    tintOverride = attunePulseColor;
-                }
-
-                button.Draw(spriteBatch, font, gameTime, transform, false, null, null, tintOverride);
+                button.Draw(spriteBatch, font, gameTime, transform, false, null, null, button.Text == "ATTUNE" ? attunePulseColor : null);
             }
 
 
             // --- Back Button ---
-            int layoutBottomY = Math.Max(borderRect.Bottom, moveGridStartY + moveBlockHeight);
+            int layoutBottomY = Math.Max(borderRect.Bottom, moveGridStartY + MOVE_BLOCK_HEIGHT);
             int backButtonY = layoutBottomY + 7;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
