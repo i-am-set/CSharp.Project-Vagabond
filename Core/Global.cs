@@ -54,7 +54,7 @@ namespace ProjectVagabond
             StatColor_Intelligence = Color.Magenta;
             StatColor_Tenacity = Color.Lime;
             StatColor_Agility = Color.Yellow;
-             
+
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
             {
@@ -119,6 +119,7 @@ namespace ProjectVagabond
         public const int DEFAULT_TERMINAL_WIDTH = 270;
         public const int DEFAULT_TERMINAL_HEIGHT = 169;
         public const int COMBAT_TERMINAL_BUFFER = 65;
+        public const int SPLIT_MAP_GRID_SIZE = 32;
 
         // Player stats Global
         public const int MAX_MAX_HEALTH_ENERGY = 48;
@@ -149,6 +150,7 @@ namespace ProjectVagabond
 
         // Debugging variables
         public bool ShowDebugOverlays { get; set; } = false;
+        public bool ShowSplitMapGrid { get; set; } = false;
 
         // Settings variables
         public bool UseImperialUnits { get; set; } = false;

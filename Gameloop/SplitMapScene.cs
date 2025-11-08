@@ -555,8 +555,9 @@ namespace ProjectVagabond.Scenes
         {
             if (_currentMap == null) return;
 
-            // This logic now centers the camera on the target node, positioning it in the left quarter of the screen.
-            float targetX = (Global.VIRTUAL_WIDTH / 4f) - targetNodePosition.X;
+            // This logic now anchors the camera so the player node appears at a fixed horizontal position on screen.
+            const float playerScreenAnchorX = 40f;
+            float targetX = playerScreenAnchorX - targetNodePosition.X;
             float targetY = (Global.VIRTUAL_HEIGHT / 2f) - targetNodePosition.Y;
 
             _targetCameraOffset = new Vector2(targetX, targetY);
@@ -822,6 +823,36 @@ namespace ProjectVagabond.Scenes
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
 
             var pixel = ServiceLocator.Get<Texture2D>();
+
+            if (_global.ShowSplitMapGrid)
+            {
+                Color gridColor = _global.Palette_DarkGray * 0.5f;
+                const int gridSize = Global.SPLIT_MAP_GRID_SIZE;
+
+                // Get the visible area in world coordinates
+                Matrix.Invert(ref cameraTransform, out var inverseCameraTransform);
+                var topLeft = Vector2.Transform(Vector2.Zero, inverseCameraTransform);
+                var bottomRight = Vector2.Transform(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), inverseCameraTransform);
+
+                // Calculate grid boundaries based on visible area
+                int startX = (int)Math.Floor(topLeft.X / gridSize) * gridSize;
+                int endX = (int)Math.Ceiling(bottomRight.X / gridSize) * gridSize;
+                int startY = (int)Math.Floor(topLeft.Y / gridSize) * gridSize;
+                int endY = (int)Math.Ceiling(bottomRight.Y / gridSize) * gridSize;
+
+                // Draw vertical lines
+                for (int x = startX; x <= endX; x += gridSize)
+                {
+                    spriteBatch.DrawLineSnapped(new Vector2(x, startY), new Vector2(x, endY), gridColor);
+                }
+
+                // Draw horizontal lines
+                for (int y = startY; y <= endY; y += gridSize)
+                {
+                    spriteBatch.DrawLineSnapped(new Vector2(startX, y), new Vector2(endX, y), gridColor);
+                }
+            }
+
             var visitedPathFillColor = _global.Palette_White;
             var highlightedPathFillColor = _global.Palette_Yellow;
 

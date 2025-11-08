@@ -450,6 +450,10 @@ namespace ProjectVagabond
 
             if (KeyPressed(Keys.F1, currentKeyboardState, _previousKeyboardState))
             {
+                _global.ShowSplitMapGrid = !_global.ShowSplitMapGrid;
+            }
+            if (KeyPressed(Keys.F3, currentKeyboardState, _previousKeyboardState)) // MOVED TO F3
+            {
                 _global.ShowDebugOverlays = !_global.ShowDebugOverlays;
                 _diceRollingSystem.DebugShowColliders = _global.ShowDebugOverlays;
             }

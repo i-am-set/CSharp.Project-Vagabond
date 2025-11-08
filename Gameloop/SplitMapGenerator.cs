@@ -19,9 +19,9 @@ namespace ProjectVagabond.Progression
         // --- Generation Tuning ---
         private const int MIN_NODES_PER_COLUMN = 1;
         private const int MAX_NODES_PER_COLUMN = 3;
-        private const int COLUMN_WIDTH = 60;
-        private const int HORIZONTAL_PADDING = 50;
-        private const int VERTICAL_PADDING = 40; // Minimal padding to keep nodes off the absolute edge
+        private const int COLUMN_WIDTH = 64; // 2 * GRID_SIZE
+        private const int HORIZONTAL_PADDING = 64; // 2 * GRID_SIZE
+        private const int VERTICAL_PADDING = 32; // 1 * GRID_SIZE
         private const float BATTLE_EVENT_WEIGHT = 0.7f; // 70% chance for a battle
         private const float NARRATIVE_EVENT_WEIGHT = 0.3f; // 30% chance for a narrative
         private const float PATH_SEGMENT_LENGTH = 10f; // Smaller value = more wiggles
@@ -35,7 +35,7 @@ namespace ProjectVagabond.Progression
         private const float NODE_REPULSION_RADIUS = 30f;
         private const float NODE_REPULSION_STRENGTH = 15f;
         private const float REWARD_NODE_CHANCE = 0.05f;
-        private const float VERTICAL_SPREAD = 180f;
+        private const float VERTICAL_SPREAD = 160; // Approx 5 * GRID_SIZE
 
 
         public static SplitMap? GenerateInitial(SplitData splitData)
@@ -143,7 +143,13 @@ namespace ProjectVagabond.Progression
                     float randomYOffset = ((float)_random.NextDouble() * 2f - 1f) * maxOffset;
                     finalY = laneCenterY + randomYOffset;
                 }
-                newNodes.Add(new SplitMapNode(columnIndex, new Vector2(finalX, finalY)));
+
+                // Snap the final calculated position to the grid.
+                const float gridSize = Global.SPLIT_MAP_GRID_SIZE;
+                float snappedX = MathF.Round(finalX / gridSize) * gridSize;
+                float snappedY = MathF.Round(finalY / gridSize) * gridSize;
+
+                newNodes.Add(new SplitMapNode(columnIndex, new Vector2(snappedX, snappedY)));
             }
             return newNodes;
         }
