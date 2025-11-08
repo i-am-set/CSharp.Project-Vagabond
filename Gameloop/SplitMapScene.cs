@@ -48,7 +48,7 @@ namespace ProjectVagabond.Scenes
         private NarrativeDialog _narrativeDialog;
 
         // --- Animation Tuning ---
-        private const float PLAYER_MOVE_SPEED = 150f; // Pixels per second
+        private const float PLAYER_MOVE_SPEED = 50f; // Pixels per second
         private const float CAMERA_LERP_SPEED = 5f;
         private const float NODE_LIFT_DURATION = 0.2f;
         private const float PULSE_DURATION = 0.15f;

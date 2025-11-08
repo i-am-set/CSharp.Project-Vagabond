@@ -272,36 +272,64 @@ namespace ProjectVagabond.Progression
                 }
                 else if (outgoingPaths.Count > 1)
                 {
-                    Vector2 averageDestination = Vector2.Zero;
-                    var destinationNodes = new List<SplitMapNode>();
-                    foreach (var path in outgoingPaths)
+                    // 1. Identify the main path (closest vertically)
+                    SplitMapPath? mainPath = outgoingPaths
+                        .Select(p => new { Path = p, ToNode = allNodes.FirstOrDefault(n => n.Id == p.ToNodeId) })
+                        .Where(x => x.ToNode != null)
+                        .OrderBy(x => Math.Abs(x.ToNode.Position.Y - fromNode.Position.Y))
+                        .FirstOrDefault()?.Path;
+
+                    if (mainPath == null) // Fallback: treat as single paths
                     {
-                        var toNode = allNodes.FirstOrDefault(n => n.Id == path.ToNodeId);
-                        if (toNode != null)
+                        foreach (var path in outgoingPaths)
                         {
-                            averageDestination += toNode.Position;
-                            destinationNodes.Add(toNode);
+                            var toNode = allNodes.FirstOrDefault(n => n.Id == path.ToNodeId);
+                            if (toNode != null)
+                            {
+                                path.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, toNode.Position, new List<int> { fromNode.Id, toNode.Id }, allNodes);
+                            }
                         }
+                        continue;
                     }
-                    if (!destinationNodes.Any()) continue;
-                    averageDestination /= destinationNodes.Count;
 
-                    float splitProgress = (float)_random.NextDouble() * (PATH_SPLIT_POINT_MAX - PATH_SPLIT_POINT_MIN) + PATH_SPLIT_POINT_MIN;
-                    var splitPoint = Vector2.Lerp(fromNode.Position, averageDestination, splitProgress);
+                    // 2. Generate the main path's points first
+                    var mainPathToNode = allNodes.First(n => n.Id == mainPath.ToNodeId);
+                    mainPath.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, mainPathToNode.Position, new List<int> { fromNode.Id, mainPathToNode.Id }, allNodes);
 
-                    var trunkIgnoreIds = new List<int> { fromNode.Id };
-                    trunkIgnoreIds.AddRange(destinationNodes.Select(n => n.Id));
-                    var trunkPoints = GenerateWigglyPathPoints(fromNode.Position, splitPoint, trunkIgnoreIds, allNodes);
-
-                    foreach (var path in outgoingPaths)
+                    // 3. Generate branch paths splitting from the main path
+                    var branchPaths = outgoingPaths.Where(p => p != mainPath).ToList();
+                    foreach (var branchPath in branchPaths)
                     {
-                        var toNode = allNodes.FirstOrDefault(n => n.Id == path.ToNodeId);
-                        if (toNode != null)
+                        var branchToNode = allNodes.FirstOrDefault(n => n.Id == branchPath.ToNodeId);
+                        if (branchToNode == null) continue;
+
+                        // a. Choose a random split point on the main path
+                        if (mainPath.RenderPoints.Count < 5) // Not enough points to split from, generate a direct path
                         {
-                            var branchIgnoreIds = new List<int> { fromNode.Id, toNode.Id };
-                            var branchPoints = GenerateWigglyPathPoints(splitPoint, toNode.Position, branchIgnoreIds, allNodes);
-                            path.RenderPoints = trunkPoints.Concat(branchPoints.Skip(1)).ToList();
+                            branchPath.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, branchToNode.Position, new List<int> { fromNode.Id, branchToNode.Id }, allNodes);
+                            continue;
                         }
+
+                        // b. Calculate a random split index
+                        int minIndex = (int)(mainPath.RenderPoints.Count * PATH_SPLIT_POINT_MIN);
+                        int maxIndex = (int)(mainPath.RenderPoints.Count * PATH_SPLIT_POINT_MAX);
+                        if (minIndex >= maxIndex) // Ensure there's a valid range
+                        {
+                            minIndex = 1;
+                            maxIndex = mainPath.RenderPoints.Count - 2;
+                        }
+                        int splitIndex = _random.Next(minIndex, maxIndex);
+                        Vector2 splitPoint = mainPath.RenderPoints[splitIndex];
+
+                        // c. Get the trunk portion
+                        var trunkPoints = mainPath.RenderPoints.Take(splitIndex + 1).ToList();
+
+                        // d. Generate the branch portion
+                        var branchIgnoreIds = new List<int> { fromNode.Id, branchToNode.Id };
+                        var branchPoints = GenerateWigglyPathPoints(splitPoint, branchToNode.Position, branchIgnoreIds, allNodes);
+
+                        // e. Combine them
+                        branchPath.RenderPoints = trunkPoints.Concat(branchPoints.Skip(1)).ToList();
                     }
                 }
             }
