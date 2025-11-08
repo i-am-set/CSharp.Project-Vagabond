@@ -970,16 +970,20 @@ namespace ProjectVagabond.Battle.UI
             float hpStartX = Global.VIRTUAL_WIDTH - playerHudPaddingX - barWidth - 245;
 
             const int iconSize = 5;
-            const int iconPadding = 2;
-            const int iconGap = 1;
-            int currentX = (int)hpStartX - iconPadding - iconSize;
+            const int iconPadding = 2; // Gap between bars and first icon
+            const int iconGap = 1;     // Gap between icons
+
+            // Start drawing icons to the right of the bars
+            int currentX = (int)hpStartX + barWidth + iconPadding;
 
             foreach (var effect in player.ActiveStatusEffects)
             {
                 int iconY = (int)(playerHudY + (secondaryFont.LineHeight - iconSize) / 2f) + 1;
                 var iconBounds = new Rectangle(currentX, iconY, iconSize, iconSize);
                 _playerStatusIcons.Add(new StatusIconInfo { Effect = effect, Bounds = iconBounds });
-                currentX -= (iconSize + iconPadding + iconGap);
+
+                // Increment X to place the next icon to the right
+                currentX += iconSize + iconGap;
             }
         }
 

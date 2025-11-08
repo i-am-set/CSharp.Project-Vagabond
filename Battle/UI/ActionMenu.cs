@@ -957,6 +957,10 @@ namespace ProjectVagabond.Battle.UI
                 {
                     // Draw the border
                     var buttonBorderColor = _global.Palette_DarkGray;
+                    if (_player != null && _player.Stats.CurrentMana < button.Move.ManaCost)
+                    {
+                        buttonBorderColor = Color.Transparent;
+                    }
                     spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Left, visualBounds.Top, visualBounds.Width, 1), buttonBorderColor); // Top
                     spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Left, visualBounds.Bottom - 1, visualBounds.Width, 1), buttonBorderColor); // Bottom
                     spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Left, visualBounds.Top, 1, visualBounds.Height), buttonBorderColor); // Left
