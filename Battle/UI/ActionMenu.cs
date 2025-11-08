@@ -938,33 +938,19 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawSnapped(pixel, visualBounds, placeholderFillColor);
                     var placeholderBorderColor = _global.Palette_DarkGray;
 
-                    const int dashLength = 2;
-                    const int gapLength = 1;
+                    const int dashLength = 1;
+                    const int gapLength = 3;
                     const int patternLength = dashLength + gapLength;
 
-                    // Top edge
-                    for (int x = visualBounds.Left; x < visualBounds.Right; x += patternLength)
+                    int lineY = visualBounds.Center.Y;
+                    int lineStartX = visualBounds.Left + 3;
+                    int lineEndX = visualBounds.Right - 1;
+
+                    // Draw the horizontal dotted line
+                    for (int x = lineStartX; x < lineEndX; x += patternLength)
                     {
-                        int width = Math.Min(dashLength, visualBounds.Right - x);
-                        spriteBatch.DrawSnapped(pixel, new Rectangle(x, visualBounds.Top, width, 1), placeholderBorderColor);
-                    }
-                    // Bottom edge
-                    for (int x = visualBounds.Left; x < visualBounds.Right; x += patternLength)
-                    {
-                        int width = Math.Min(dashLength, visualBounds.Right - x);
-                        spriteBatch.DrawSnapped(pixel, new Rectangle(x, visualBounds.Bottom - 1, width, 1), placeholderBorderColor);
-                    }
-                    // Left edge
-                    for (int y = visualBounds.Top; y < visualBounds.Bottom; y += patternLength)
-                    {
-                        int height = Math.Min(dashLength, visualBounds.Bottom - y);
-                        spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Left, y, 1, height), placeholderBorderColor);
-                    }
-                    // Right edge
-                    for (int y = visualBounds.Top; y < visualBounds.Bottom; y += patternLength)
-                    {
-                        int height = Math.Min(dashLength, visualBounds.Bottom - y);
-                        spriteBatch.DrawSnapped(pixel, new Rectangle(visualBounds.Right - 1, y, 1, height), placeholderBorderColor);
+                        int width = Math.Min(dashLength, lineEndX - x);
+                        spriteBatch.DrawSnapped(pixel, new Rectangle(x, lineY, width, 1), placeholderBorderColor);
                     }
                 }
                 else
