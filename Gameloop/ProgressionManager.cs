@@ -113,7 +113,7 @@ namespace ProjectVagabond.Progression
             CurrentSplit = _splits.Values.ElementAt(_random.Next(_splits.Count));
             CategorizeBattles(CurrentSplit);
             CurrentSplitMap = SplitMapGenerator.GenerateInitial(CurrentSplit);
-            Debug.WriteLine($"[ProgressionManager] Generated initial split map: {CurrentSplit.Theme} with target {CurrentSplitMap.TargetFloorCount} floors.");
+            Debug.WriteLine($"[ProgressionManager] Generated initial split map: {CurrentSplit.Theme} with target {CurrentSplitMap.TargetColumnCount} columns.");
         }
 
         private void CategorizeBattles(SplitData splitData)

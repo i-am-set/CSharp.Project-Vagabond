@@ -48,7 +48,7 @@ namespace ProjectVagabond.Scenes
         private NarrativeDialog _narrativeDialog;
 
         // --- Animation Tuning ---
-        private const float PLAYER_MOVE_SPEED = 50f; // Pixels per second
+        private const float PLAYER_MOVE_SPEED = 150f; // Pixels per second
         private const float CAMERA_LERP_SPEED = 5f;
         private const float NODE_LIFT_DURATION = 0.2f;
         private const float PULSE_DURATION = 0.15f;
@@ -170,7 +170,7 @@ namespace ProjectVagabond.Scenes
                     _playerIcon.SetPosition(startNode.Position);
                     UpdateCameraTarget(startNode.Position, true);
                     // The initial reveal happens after the "event" (which is none for the start node)
-                    GenerateAndRevealNextFloor();
+                    GenerateAndRevealNextColumn();
                 }
             }
             else
@@ -193,7 +193,7 @@ namespace ProjectVagabond.Scenes
                     }
                     _mapState = SplitMapState.LoweringNode; // Transition to lowering state
                     _nodeLiftTimer = 0f; // Reset timer for the lowering animation
-                    GenerateAndRevealNextFloor(); // Reveal next floor immediately
+                    GenerateAndRevealNextColumn(); // Reveal next floor immediately
                 }
             }
         }
@@ -347,7 +347,7 @@ namespace ProjectVagabond.Scenes
                 }
                 _mapState = SplitMapState.LoweringNode;
                 _nodeLiftTimer = 0f;
-                GenerateAndRevealNextFloor();
+                GenerateAndRevealNextColumn();
             }
 
             // Handle event states that pause map interaction
@@ -459,7 +459,7 @@ namespace ProjectVagabond.Scenes
                 {
                     _playerIcon.SetPosition(toNode.Position);
                     var fromNode = _currentMap.Nodes[fromNodeId];
-                    _currentMap.PruneFloor(fromNode.Floor, fromNode.Id);
+                    _currentMap.PruneColumn(fromNode.Floor, fromNode.Id);
                 }
 
                 _mapState = SplitMapState.LiftingNode;
@@ -555,9 +555,9 @@ namespace ProjectVagabond.Scenes
         {
             if (_currentMap == null) return;
 
-            // This logic now centers the camera on the target node, positioning it in the bottom third of the screen.
-            float targetX = (Global.VIRTUAL_WIDTH / 2f) - targetNodePosition.X;
-            float targetY = (Global.VIRTUAL_HEIGHT * 2 / 3f) - targetNodePosition.Y;
+            // This logic now centers the camera on the target node, positioning it in the left quarter of the screen.
+            float targetX = (Global.VIRTUAL_WIDTH / 4f) - targetNodePosition.X;
+            float targetY = (Global.VIRTUAL_HEIGHT / 2f) - targetNodePosition.Y;
 
             _targetCameraOffset = new Vector2(targetX, targetY);
 
@@ -734,11 +734,11 @@ namespace ProjectVagabond.Scenes
             }
             _mapState = SplitMapState.LoweringNode;
             _nodeLiftTimer = 0f;
-            GenerateAndRevealNextFloor();
+            GenerateAndRevealNextColumn();
             _resultNarrator.Clear();
         }
 
-        private void GenerateAndRevealNextFloor()
+        private void GenerateAndRevealNextColumn()
         {
             if (_currentMap == null) return;
 
@@ -746,7 +746,7 @@ namespace ProjectVagabond.Scenes
             if (currentNode == null) return;
 
             int highestFloorInMap = _currentMap.Nodes.Values.Max(n => n.Floor);
-            if (currentNode.Floor == highestFloorInMap && currentNode.Floor < _currentMap.TargetFloorCount - 1)
+            if (currentNode.Floor == highestFloorInMap && currentNode.Floor < _currentMap.TargetColumnCount - 1)
             {
                 SplitMapGenerator.GenerateNextFloor(_currentMap, _progressionManager.CurrentSplit, currentNode.Id);
             }

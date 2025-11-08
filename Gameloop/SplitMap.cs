@@ -11,28 +11,28 @@ namespace ProjectVagabond.Progression
     {
         public Dictionary<int, SplitMapNode> Nodes { get; }
         public Dictionary<int, SplitMapPath> Paths { get; }
-        public int TargetFloorCount { get; }
+        public int TargetColumnCount { get; }
         public int StartNodeId { get; }
-        public float MapHeight { get; }
+        public float MapWidth { get; }
 
-        public SplitMap(List<SplitMapNode> nodes, List<SplitMapPath> paths, int targetFloorCount, int startNodeId, float mapHeight)
+        public SplitMap(List<SplitMapNode> nodes, List<SplitMapPath> paths, int targetColumnCount, int startNodeId, float mapWidth)
         {
             Nodes = nodes.ToDictionary(n => n.Id, n => n);
             Paths = paths.ToDictionary(p => p.Id, p => p);
-            TargetFloorCount = targetFloorCount;
+            TargetColumnCount = targetColumnCount;
             StartNodeId = startNodeId;
-            MapHeight = mapHeight;
+            MapWidth = mapWidth;
         }
 
         /// <summary>
-        /// Removes all nodes on a given floor except for a specified one to keep,
+        /// Removes all nodes on a given column except for a specified one to keep,
         /// and cleans up all associated paths.
         /// </summary>
-        /// <param name="floor">The floor index to prune.</param>
-        /// <param name="keepNodeId">The ID of the single node to preserve on that floor.</param>
-        public void PruneFloor(int floor, int keepNodeId)
+        /// <param name="columnIndex">The column index to prune.</param>
+        /// <param name="keepNodeId">The ID of the single node to preserve on that column.</param>
+        public void PruneColumn(int columnIndex, int keepNodeId)
         {
-            var nodesToRemove = Nodes.Values.Where(n => n.Floor == floor && n.Id != keepNodeId).ToList();
+            var nodesToRemove = Nodes.Values.Where(n => n.Floor == columnIndex && n.Id != keepNodeId).ToList();
             if (!nodesToRemove.Any()) return;
 
             var pathsToRemove = new HashSet<int>();

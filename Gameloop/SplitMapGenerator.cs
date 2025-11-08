@@ -17,26 +17,25 @@ namespace ProjectVagabond.Progression
         private static readonly Random _random = new Random();
 
         // --- Generation Tuning ---
-        private const int MIN_NODES_PER_FLOOR = 1;
-        private const int MAX_NODES_PER_FLOOR = 3;
-        public const int MAP_WIDTH = 280;
-        private const int FLOOR_HEIGHT = 60;
-        private const int HORIZONTAL_PADDING = 40; // Minimal padding to keep nodes off the absolute edge
-        private const int VERTICAL_PADDING = 50;
+        private const int MIN_NODES_PER_COLUMN = 1;
+        private const int MAX_NODES_PER_COLUMN = 3;
+        private const int COLUMN_WIDTH = 60;
+        private const int HORIZONTAL_PADDING = 50;
+        private const int VERTICAL_PADDING = 40; // Minimal padding to keep nodes off the absolute edge
         private const float BATTLE_EVENT_WEIGHT = 0.7f; // 70% chance for a battle
         private const float NARRATIVE_EVENT_WEIGHT = 0.3f; // 30% chance for a narrative
         private const float PATH_SEGMENT_LENGTH = 10f; // Smaller value = more wiggles
         private const float PATH_MAX_OFFSET = 5f; // Max perpendicular deviation
         private const float SECONDARY_PATH_CHANCE = 0.4f; // Chance for a node to have a second outgoing path
-        private const float NODE_HORIZONTAL_VARIANCE_FACTOR = 1.0f; // Node can move within 100% of its "lane"
-        private const float NODE_VERTICAL_VARIANCE_PIXELS = 15f;
+        private const float NODE_VERTICAL_VARIANCE_FACTOR = 1.0f; // Node can move within 100% of its "lane"
+        private const float NODE_HORIZONTAL_VARIANCE_PIXELS = 15f;
         private const float MAX_CONNECTION_DISTANCE = 120f; // Max distance for a path to be considered "close"
         private const float PATH_SPLIT_POINT_MIN = 0.2f;
         private const float PATH_SPLIT_POINT_MAX = 0.8f;
         private const float NODE_REPULSION_RADIUS = 30f;
         private const float NODE_REPULSION_STRENGTH = 15f;
         private const float REWARD_NODE_CHANCE = 0.05f;
-        private const float HORIZONTAL_SPREAD = 180f;
+        private const float VERTICAL_SPREAD = 180f;
 
 
         public static SplitMap? GenerateInitial(SplitData splitData)
@@ -44,42 +43,42 @@ namespace ProjectVagabond.Progression
             SplitMapNode.ResetIdCounter();
             SplitMapPath.ResetIdCounter();
 
-            int totalFloors = _random.Next(splitData.SplitLengthMin, splitData.SplitLengthMax + 1);
-            float mapHeight = (totalFloors - 1) * FLOOR_HEIGHT + VERTICAL_PADDING * 2;
+            int totalColumns = _random.Next(splitData.SplitLengthMin, splitData.SplitLengthMax + 1);
+            float mapWidth = (totalColumns - 1) * COLUMN_WIDTH + HORIZONTAL_PADDING * 2;
 
-            // Generate only the first two floors initially
-            var nodesByFloor = new List<SplitMapNode>[2];
-            var startNodePosition = new Vector2(Global.VIRTUAL_WIDTH / 2f, mapHeight - VERTICAL_PADDING);
-            nodesByFloor[0] = PlaceNodesForFloor(0, totalFloors, mapHeight, 0, startNodePosition);
-            nodesByFloor[1] = PlaceNodesForFloor(1, totalFloors, mapHeight, nodesByFloor[0].Count, nodesByFloor[0].First().Position);
+            // Generate only the first two columns initially
+            var nodesByColumn = new List<SplitMapNode>[2];
+            var startNodePosition = new Vector2(HORIZONTAL_PADDING, Global.VIRTUAL_HEIGHT / 2f);
+            nodesByColumn[0] = PlaceNodesForColumn(0, totalColumns, mapWidth, 0, startNodePosition);
+            nodesByColumn[1] = PlaceNodesForColumn(1, totalColumns, mapWidth, nodesByColumn[0].Count, nodesByColumn[0].First().Position);
 
-            var paths = ConnectNodes(nodesByFloor[0], nodesByFloor[1]);
-            AssignEvents(nodesByFloor[1], splitData, totalFloors); // Only assign events to the newly created floor 1
+            var paths = ConnectNodes(nodesByColumn[0], nodesByColumn[1]);
+            AssignEvents(nodesByColumn[1], splitData, totalColumns); // Only assign events to the newly created column 1
 
             // Assign origin type to the start node
-            nodesByFloor[0].First().NodeType = SplitNodeType.Origin;
+            nodesByColumn[0].First().NodeType = SplitNodeType.Origin;
 
-            var allNodes = nodesByFloor.SelectMany(floor => floor).ToList();
+            var allNodes = nodesByColumn.SelectMany(floor => floor).ToList();
             int startNodeId = allNodes.FirstOrDefault(n => n.Floor == 0)?.Id ?? -1;
 
             if (startNodeId == -1) return null;
 
             GeneratePathRenderPoints(paths, allNodes);
 
-            return new SplitMap(allNodes, paths, totalFloors, startNodeId, mapHeight);
+            return new SplitMap(allNodes, paths, totalColumns, startNodeId, mapWidth);
         }
 
         public static void GenerateNextFloor(SplitMap map, SplitData splitData, int parentNodeId)
         {
             if (map == null || !map.Nodes.TryGetValue(parentNodeId, out var parentNode)) return;
 
-            int newFloorIndex = parentNode.Floor + 1;
+            int newColumnIndex = parentNode.Floor + 1;
 
-            if (newFloorIndex >= map.TargetFloorCount) return; // Don't generate past the target
+            if (newColumnIndex >= map.TargetColumnCount) return; // Don't generate past the target
 
             // 1. Place new nodes relative to the parent
-            int previousFloorNodeCount = map.Nodes.Values.Count(n => n.Floor == parentNode.Floor);
-            var newNodes = PlaceNodesForFloor(newFloorIndex, map.TargetFloorCount, map.MapHeight, previousFloorNodeCount, parentNode.Position);
+            int previousColumnNodeCount = map.Nodes.Values.Count(n => n.Floor == parentNode.Floor);
+            var newNodes = PlaceNodesForColumn(newColumnIndex, map.TargetColumnCount, map.MapWidth, previousColumnNodeCount, parentNode.Position);
 
             // Add new nodes to the map
             foreach (var node in newNodes)
@@ -99,20 +98,20 @@ namespace ProjectVagabond.Progression
             }
 
             // 3. Assign events to new nodes
-            AssignEvents(newNodes, splitData, map.TargetFloorCount);
+            AssignEvents(newNodes, splitData, map.TargetColumnCount);
 
             // 4. Generate render points for new paths
             var allNodesForRender = map.Nodes.Values.ToList();
             GeneratePathRenderPoints(newPaths, allNodesForRender);
         }
 
-        private static List<SplitMapNode> PlaceNodesForFloor(int floor, int totalFloors, float mapHeight, int previousFloorNodeCount, Vector2 parentPosition)
+        private static List<SplitMapNode> PlaceNodesForColumn(int columnIndex, int totalColumns, float mapWidth, int previousColumnNodeCount, Vector2 parentPosition)
         {
             var newNodes = new List<SplitMapNode>();
             const int nodeRadius = 8;
             int numNodes;
 
-            if (floor == 0 || floor == totalFloors - 1)
+            if (columnIndex == 0 || columnIndex == totalColumns - 1)
             {
                 numNodes = 1;
             }
@@ -120,93 +119,93 @@ namespace ProjectVagabond.Progression
             {
                 do
                 {
-                    numNodes = _random.Next(MIN_NODES_PER_FLOOR, MAX_NODES_PER_FLOOR + 1); // Generates 1, 2, or 3 nodes.
-                } while (numNodes == previousFloorNodeCount);
+                    numNodes = _random.Next(MIN_NODES_PER_COLUMN, MAX_NODES_PER_COLUMN + 1); // Generates 1, 2, or 3 nodes.
+                } while (numNodes == previousColumnNodeCount);
             }
 
-            float y = mapHeight - VERTICAL_PADDING - (floor * FLOOR_HEIGHT);
-            float laneWidth = (numNodes > 0) ? HORIZONTAL_SPREAD / numNodes : 0;
-            float laneStartX = parentPosition.X - HORIZONTAL_SPREAD / 2f;
+            float x = HORIZONTAL_PADDING + (columnIndex * COLUMN_WIDTH);
+            float laneHeight = (numNodes > 0) ? VERTICAL_SPREAD / numNodes : 0;
+            float laneStartY = parentPosition.Y - VERTICAL_SPREAD / 2f;
 
             for (int i = 0; i < numNodes; i++)
             {
-                float finalX;
-                float finalY = y + ((float)_random.NextDouble() * 2f - 1f) * NODE_VERTICAL_VARIANCE_PIXELS;
+                float finalY;
+                float finalX = x + ((float)_random.NextDouble() * 2f - 1f) * NODE_HORIZONTAL_VARIANCE_PIXELS;
 
                 if (numNodes == 1)
                 {
-                    finalX = parentPosition.X;
+                    finalY = parentPosition.Y;
                 }
                 else
                 {
-                    float laneCenterX = laneStartX + (i * laneWidth) + (laneWidth / 2f);
-                    float maxOffset = (laneWidth / 2f - nodeRadius) * NODE_HORIZONTAL_VARIANCE_FACTOR;
-                    float randomXOffset = ((float)_random.NextDouble() * 2f - 1f) * maxOffset;
-                    finalX = laneCenterX + randomXOffset;
+                    float laneCenterY = laneStartY + (i * laneHeight) + (laneHeight / 2f);
+                    float maxOffset = (laneHeight / 2f - nodeRadius) * NODE_VERTICAL_VARIANCE_FACTOR;
+                    float randomYOffset = ((float)_random.NextDouble() * 2f - 1f) * maxOffset;
+                    finalY = laneCenterY + randomYOffset;
                 }
-                newNodes.Add(new SplitMapNode(floor, new Vector2(finalX, finalY)));
+                newNodes.Add(new SplitMapNode(columnIndex, new Vector2(finalX, finalY)));
             }
             return newNodes;
         }
 
-        private static List<SplitMapPath> ConnectNodes(List<SplitMapNode> lowerFloor, List<SplitMapNode> upperFloor)
+        private static List<SplitMapPath> ConnectNodes(List<SplitMapNode> previousColumn, List<SplitMapNode> nextColumn)
         {
             var paths = new List<SplitMapPath>();
 
-            // Pass 1: Ensure every lower node connects up to at least one upper node.
-            foreach (var lowerNode in lowerFloor)
+            // Pass 1: Ensure every node in the previous column connects to at least one in the next.
+            foreach (var prevNode in previousColumn)
             {
-                var closeNodes = upperFloor.Where(n => Vector2.Distance(n.Position, lowerNode.Position) <= MAX_CONNECTION_DISTANCE).ToList();
+                var closeNodes = nextColumn.Where(n => Vector2.Distance(n.Position, prevNode.Position) <= MAX_CONNECTION_DISTANCE).ToList();
 
                 SplitMapNode targetNode;
                 if (closeNodes.Any())
                 {
-                    var weights = CalculateWeights(lowerNode, closeNodes);
+                    var weights = CalculateWeights(prevNode, closeNodes);
                     targetNode = WeightedRandomSelect(weights);
                 }
                 else
                 {
-                    targetNode = upperFloor.OrderBy(n => Vector2.DistanceSquared(n.Position, lowerNode.Position)).First();
+                    targetNode = nextColumn.OrderBy(n => Vector2.DistanceSquared(n.Position, prevNode.Position)).First();
                 }
 
-                var path = new SplitMapPath(lowerNode.Id, targetNode.Id);
+                var path = new SplitMapPath(prevNode.Id, targetNode.Id);
                 paths.Add(path);
-                lowerNode.OutgoingPathIds.Add(path.Id);
+                prevNode.OutgoingPathIds.Add(path.Id);
                 targetNode.IncomingPathIds.Add(path.Id);
             }
 
-            // Pass 2: Ensure every upper node is reachable.
-            foreach (var upperNode in upperFloor)
+            // Pass 2: Ensure every node in the next column is reachable.
+            foreach (var nextNode in nextColumn)
             {
-                if (!upperNode.IncomingPathIds.Any())
+                if (!nextNode.IncomingPathIds.Any())
                 {
-                    var closestLower = lowerFloor.OrderBy(n => Vector2.DistanceSquared(n.Position, upperNode.Position)).First();
-                    var path = new SplitMapPath(closestLower.Id, upperNode.Id);
+                    var closestPrev = previousColumn.OrderBy(n => Vector2.DistanceSquared(n.Position, nextNode.Position)).First();
+                    var path = new SplitMapPath(closestPrev.Id, nextNode.Id);
                     paths.Add(path);
-                    closestLower.OutgoingPathIds.Add(path.Id);
-                    upperNode.IncomingPathIds.Add(path.Id);
+                    closestPrev.OutgoingPathIds.Add(path.Id);
+                    nextNode.IncomingPathIds.Add(path.Id);
                 }
             }
 
             // Pass 3: Add optional secondary paths for more branching.
-            foreach (var lowerNode in lowerFloor)
+            foreach (var prevNode in previousColumn)
             {
                 if (_random.NextDouble() < SECONDARY_PATH_CHANCE)
                 {
-                    var connectedUpperNodeIds = lowerNode.OutgoingPathIds.Select(pId => paths.First(p => p.Id == pId).ToNodeId).ToHashSet();
-                    var availableTargets = upperFloor
-                        .Where(n => !connectedUpperNodeIds.Contains(n.Id) && Vector2.Distance(n.Position, lowerNode.Position) <= MAX_CONNECTION_DISTANCE)
+                    var connectedNextNodeIds = prevNode.OutgoingPathIds.Select(pId => paths.First(p => p.Id == pId).ToNodeId).ToHashSet();
+                    var availableTargets = nextColumn
+                        .Where(n => !connectedNextNodeIds.Contains(n.Id) && Vector2.Distance(n.Position, prevNode.Position) <= MAX_CONNECTION_DISTANCE)
                         .ToList();
 
                     if (availableTargets.Any())
                     {
-                        var weights = CalculateWeights(lowerNode, availableTargets);
+                        var weights = CalculateWeights(prevNode, availableTargets);
                         if (weights.Any())
                         {
                             var targetNode = WeightedRandomSelect(weights);
-                            var path = new SplitMapPath(lowerNode.Id, targetNode.Id);
+                            var path = new SplitMapPath(prevNode.Id, targetNode.Id);
                             paths.Add(path);
-                            lowerNode.OutgoingPathIds.Add(path.Id);
+                            prevNode.OutgoingPathIds.Add(path.Id);
                             targetNode.IncomingPathIds.Add(path.Id);
                         }
                     }
@@ -215,16 +214,16 @@ namespace ProjectVagabond.Progression
             return paths;
         }
 
-        private static Dictionary<SplitMapNode, float> CalculateWeights(SplitMapNode lowerNode, List<SplitMapNode> potentialUpperNodes)
+        private static Dictionary<SplitMapNode, float> CalculateWeights(SplitMapNode prevNode, List<SplitMapNode> potentialNextNodes)
         {
             var weights = new Dictionary<SplitMapNode, float>();
-            if (!potentialUpperNodes.Any()) return weights;
+            if (!potentialNextNodes.Any()) return weights;
 
-            foreach (var upperNode in potentialUpperNodes)
+            foreach (var nextNode in potentialNextNodes)
             {
-                float horizontalDistance = Math.Abs(lowerNode.Position.X - upperNode.Position.X);
-                float weight = 1.0f / (1.0f + (horizontalDistance * 0.1f));
-                weights[upperNode] = weight;
+                float verticalDistance = Math.Abs(prevNode.Position.Y - nextNode.Position.Y);
+                float weight = 1.0f / (1.0f + (verticalDistance * 0.1f));
+                weights[nextNode] = weight;
             }
             return weights;
         }
@@ -378,7 +377,7 @@ namespace ProjectVagabond.Progression
             return points;
         }
 
-        private static void AssignEvents(List<SplitMapNode> nodesToAssign, SplitData splitData, int totalFloors)
+        private static void AssignEvents(List<SplitMapNode> nodesToAssign, SplitData splitData, int totalColumns)
         {
             var progressionManager = ServiceLocator.Get<ProgressionManager>();
 
@@ -408,7 +407,7 @@ namespace ProjectVagabond.Progression
             for (int i = 0; i < nodesToAssign.Count; i++)
             {
                 var node = nodesToAssign[i];
-                if (node.Floor == totalFloors - 1)
+                if (node.Floor == totalColumns - 1)
                 {
                     node.NodeType = SplitNodeType.MajorBattle;
                     if (splitData.PossibleMajorBattles.Any())
