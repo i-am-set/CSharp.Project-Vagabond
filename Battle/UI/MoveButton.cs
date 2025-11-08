@@ -250,7 +250,7 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 // --- Draw "NO MANA" overlay ---
-                if (!canAfford)
+                if (!canAfford && isActivated)
                 {
                     string noManaText = "NOT ENOUGH MANA";
                     Vector2 noManaSize = _moveFont.MeasureString(noManaText);
