@@ -448,15 +448,11 @@ namespace ProjectVagabond
                 else _debugConsole.Show();
             }
 
-            if (KeyPressed(Keys.F1, currentKeyboardState, _previousKeyboardState))
-            {
-                _global.ShowSplitMapGrid = !_global.ShowSplitMapGrid;
-            }
-            if (KeyPressed(Keys.F3, currentKeyboardState, _previousKeyboardState)) // MOVED TO F3
-            {
-                _global.ShowDebugOverlays = !_global.ShowDebugOverlays;
-                _diceRollingSystem.DebugShowColliders = _global.ShowDebugOverlays;
-            }
+            // --- Debug Overlays (Hold to show) ---
+            _global.ShowSplitMapGrid = currentKeyboardState.IsKeyDown(Keys.F1);
+            _global.ShowDebugOverlays = currentKeyboardState.IsKeyDown(Keys.F3);
+            _diceRollingSystem.DebugShowColliders = _global.ShowDebugOverlays;
+
             if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState))
             {
                 if (_sceneManager.CurrentActiveScene?.GetType() != typeof(BattleScene))
