@@ -19,14 +19,14 @@ namespace ProjectVagabond.Progression
         // --- Generation Tuning ---
         private const int MIN_NODES_PER_COLUMN = 2;
         private const int MAX_NODES_PER_COLUMN = 3;
-        private const int COLUMN_WIDTH = 64; // 4 * GRID_SIZE
-        private const int HORIZONTAL_PADDING = 32; // 2 * GRID_SIZE
+        private const int COLUMN_WIDTH = 96; // 6 * GRID_SIZE
+        private const int HORIZONTAL_PADDING = 64; // 4 * GRID_SIZE
         private const float BATTLE_EVENT_WEIGHT = 0.7f; // 70% chance for a battle
         private const float NARRATIVE_EVENT_WEIGHT = 0.3f; // 30% chance for a narrative
         private const float PATH_SEGMENT_LENGTH = 10f; // Smaller value = more wiggles
         private const float PATH_MAX_OFFSET = 5f; // Max perpendicular deviation
         private const float SECONDARY_PATH_CHANCE = 0.4f; // Chance for a node to have a second outgoing path
-        private const float NODE_HORIZONTAL_VARIANCE_PIXELS = 8f;
+        private const float NODE_HORIZONTAL_VARIANCE_PIXELS = 20f;
         private const float MAX_CONNECTION_DISTANCE = 120f; // Max distance for a path to be considered "close"
         private const float PATH_SPLIT_POINT_MIN = 0.2f;
         private const float PATH_SPLIT_POINT_MAX = 0.8f;
@@ -155,28 +155,40 @@ namespace ProjectVagabond.Progression
                     availableYSlots.Remove(_validYPositions[originalIndex + 1]);
                 }
 
-                const float gridSize = Global.SPLIT_MAP_GRID_SIZE;
-                float snappedX = MathF.Round(finalX / gridSize) * gridSize;
-
-                newNodes.Add(new SplitMapNode(columnIndex, new Vector2(snappedX, finalY)));
+                newNodes.Add(new SplitMapNode(columnIndex, new Vector2(finalX, finalY)));
             }
             return newNodes;
         }
 
         private static List<SplitMapPath> ConnectColumnPair(List<SplitMapNode> previousColumn, List<SplitMapNode> nextColumn, List<SplitMapPath> allExistingPaths, List<SplitMapNode> allNodes)
         {
-            var newPaths = new List<SplitMapPath>();
+            var newPathsInThisColumn = new List<SplitMapPath>();
             var sortedPrev = previousColumn.OrderBy(n => n.Position.Y).ToList();
             var sortedNext = nextColumn.OrderBy(n => n.Position.Y).ToList();
 
-            // Pass 1: Primary connections (each previous node connects to its closest next node)
+            // Pass 1: Primary connections (each previous node connects to its closest valid next node)
             foreach (var prevNode in sortedPrev)
             {
-                var targetNode = sortedNext.OrderBy(n => Vector2.DistanceSquared(n.Position, prevNode.Position)).First();
-                var path = new SplitMapPath(prevNode.Id, targetNode.Id);
-                newPaths.Add(path);
-                prevNode.OutgoingPathIds.Add(path.Id);
-                targetNode.IncomingPathIds.Add(path.Id);
+                var bestTarget = sortedNext
+                    .Select(target => new {
+                        Node = target,
+                        Distance = Vector2.DistanceSquared(prevNode.Position, target.Position),
+                        Intersects = allExistingPaths.Concat(newPathsInThisColumn).Any(existing =>
+                            LineSegmentsIntersect(prevNode.Position, target.Position,
+                                allNodes.First(n => n.Id == existing.FromNodeId).Position,
+                                allNodes.First(n => n.Id == existing.ToNodeId).Position))
+                    })
+                    .Where(item => !item.Intersects)
+                    .OrderBy(item => item.Distance)
+                    .FirstOrDefault()?.Node;
+
+                if (bestTarget != null)
+                {
+                    var path = new SplitMapPath(prevNode.Id, bestTarget.Id);
+                    newPathsInThisColumn.Add(path);
+                    prevNode.OutgoingPathIds.Add(path.Id);
+                    bestTarget.IncomingPathIds.Add(path.Id);
+                }
             }
 
             // Pass 2: Ensure reachability for all nodes in the next column
@@ -184,54 +196,57 @@ namespace ProjectVagabond.Progression
             {
                 if (!nextNode.IncomingPathIds.Any())
                 {
-                    var sourceNode = sortedPrev.OrderBy(n => Vector2.DistanceSquared(n.Position, nextNode.Position)).First();
-                    var path = new SplitMapPath(sourceNode.Id, nextNode.Id);
-                    newPaths.Add(path);
-                    sourceNode.OutgoingPathIds.Add(path.Id);
-                    nextNode.IncomingPathIds.Add(path.Id);
+                    var bestSource = sortedPrev
+                        .Select(source => new {
+                            Node = source,
+                            Distance = Vector2.DistanceSquared(source.Position, nextNode.Position),
+                            Intersects = allExistingPaths.Concat(newPathsInThisColumn).Any(existing =>
+                                LineSegmentsIntersect(source.Position, nextNode.Position,
+                                    allNodes.First(n => n.Id == existing.FromNodeId).Position,
+                                    allNodes.First(n => n.Id == existing.ToNodeId).Position))
+                        })
+                        .Where(item => !item.Intersects)
+                        .OrderBy(item => item.Distance)
+                        .FirstOrDefault()?.Node;
+
+                    if (bestSource != null)
+                    {
+                        var path = new SplitMapPath(bestSource.Id, nextNode.Id);
+                        newPathsInThisColumn.Add(path);
+                        bestSource.OutgoingPathIds.Add(path.Id);
+                        nextNode.IncomingPathIds.Add(path.Id);
+                    }
                 }
             }
 
-            // Pass 3: Add optional secondary paths, checking for intersections
+            // Pass 3: Secondary connections
             foreach (var prevNode in sortedPrev)
             {
                 if (_random.NextDouble() < SECONDARY_PATH_CHANCE)
                 {
-                    var connectedNextNodeIds = prevNode.OutgoingPathIds.Select(pId => newPaths.First(p => p.Id == pId).ToNodeId).ToHashSet();
-                    var availableTargets = sortedNext.Where(n => !connectedNextNodeIds.Contains(n.Id)).ToList();
+                    var connectedNextNodeIds = prevNode.OutgoingPathIds.Select(id => allExistingPaths.Concat(newPathsInThisColumn).First(p => p.Id == id).ToNodeId).ToHashSet();
+                    var availableTargets = sortedNext.Where(n => !connectedNextNodeIds.Contains(n.Id)).OrderBy(x => _random.Next()).ToList();
 
-                    if (availableTargets.Any())
+                    foreach (var targetNode in availableTargets)
                     {
-                        var targetNode = availableTargets[_random.Next(availableTargets.Count)];
-
-                        var candidateStart = prevNode.Position;
-                        var candidateEnd = targetNode.Position;
-
-                        bool intersects = false;
-                        // Check against all paths generated so far (from previous columns and this column's passes)
-                        var allPathsToCheck = allExistingPaths.Concat(newPaths);
-                        foreach (var existingPath in allPathsToCheck)
-                        {
-                            var p1 = allNodes.First(n => n.Id == existingPath.FromNodeId).Position;
-                            var p2 = allNodes.First(n => n.Id == existingPath.ToNodeId).Position;
-                            if (LineSegmentsIntersect(candidateStart, candidateEnd, p1, p2))
-                            {
-                                intersects = true;
-                                break;
-                            }
-                        }
+                        bool intersects = allExistingPaths.Concat(newPathsInThisColumn).Any(existing =>
+                            LineSegmentsIntersect(prevNode.Position, targetNode.Position,
+                                allNodes.First(n => n.Id == existing.FromNodeId).Position,
+                                allNodes.First(n => n.Id == existing.ToNodeId).Position));
 
                         if (!intersects)
                         {
                             var path = new SplitMapPath(prevNode.Id, targetNode.Id);
-                            newPaths.Add(path);
+                            newPathsInThisColumn.Add(path);
                             prevNode.OutgoingPathIds.Add(path.Id);
                             targetNode.IncomingPathIds.Add(path.Id);
+                            break; // Only add one secondary path per node
                         }
                     }
                 }
             }
-            return newPaths;
+
+            return newPathsInThisColumn;
         }
 
         private static void GeneratePathRenderPoints(List<SplitMapPath> paths, List<SplitMapNode> allNodes)
