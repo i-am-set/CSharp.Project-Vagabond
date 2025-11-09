@@ -110,10 +110,18 @@ namespace ProjectVagabond.Progression
                 return;
             }
 
+            CurrentSplitMap?.Dispose(); // Dispose the old render target if it exists
+
             CurrentSplit = _splits.Values.ElementAt(_random.Next(_splits.Count));
             CategorizeBattles(CurrentSplit);
             CurrentSplitMap = SplitMapGenerator.GenerateInitial(CurrentSplit);
             Debug.WriteLine($"[ProgressionManager] Generated initial split map: {CurrentSplit.Theme} with target {CurrentSplitMap.TargetColumnCount} columns.");
+        }
+
+        public void ClearCurrentSplitMap()
+        {
+            CurrentSplitMap?.Dispose();
+            CurrentSplitMap = null;
         }
 
         private void CategorizeBattles(SplitData splitData)

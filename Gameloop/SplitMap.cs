@@ -1,6 +1,15 @@
 ﻿#nullable enable
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Progression;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ProjectVagabond.Progression
 {
@@ -11,17 +20,24 @@ namespace ProjectVagabond.Progression
     {
         public Dictionary<int, SplitMapNode> Nodes { get; }
         public Dictionary<int, SplitMapPath> Paths { get; }
+        public RenderTarget2D BakedSceneryTexture { get; }
         public int TargetColumnCount { get; }
         public int StartNodeId { get; }
         public float MapWidth { get; }
 
-        public SplitMap(List<SplitMapNode> nodes, List<SplitMapPath> paths, int targetColumnCount, int startNodeId, float mapWidth)
+        public SplitMap(List<SplitMapNode> nodes, List<SplitMapPath> paths, RenderTarget2D bakedScenery, int targetColumnCount, int startNodeId, float mapWidth)
         {
             Nodes = nodes.ToDictionary(n => n.Id, n => n);
             Paths = paths.ToDictionary(p => p.Id, p => p);
+            BakedSceneryTexture = bakedScenery;
             TargetColumnCount = targetColumnCount;
             StartNodeId = startNodeId;
             MapWidth = mapWidth;
+        }
+
+        public void Dispose()
+        {
+            BakedSceneryTexture?.Dispose();
         }
 
         /// <summary>

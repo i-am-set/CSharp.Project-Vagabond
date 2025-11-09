@@ -54,7 +54,7 @@ namespace ProjectVagabond
             StatColor_Intelligence = Color.Magenta;
             StatColor_Tenacity = Color.Lime;
             StatColor_Agility = Color.Yellow;
-
+             
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
             {
@@ -166,24 +166,26 @@ namespace ProjectVagabond
         public float MountainsLevel { get; set; } = 0.8f;
 
         // Static Color Palette
-        public Color Palette_Black { get; set; } = new Color(14, 13, 19); // #2a2839
-        public Color Palette_DarkGray { get; set; } = new Color(42, 40, 57); // #2E2C3B
-        public Color Palette_Gray { get; set; } = new Color(62, 65, 95); // #3E415F
-        public Color Palette_LightGray { get; set; } = new Color(85, 96, 125); // #55607D
-        public Color Palette_White { get; set; } = new Color(116, 125, 136); // #747D88
-        public Color Palette_Teal { get; set; } = new Color(65, 222, 149); // #41DE95
-        public Color Palette_LightBlue { get; set; } = new Color(42, 164, 170); // #2AA4AA
-        public Color Palette_DarkBlue { get; set; } = new Color(59, 119, 166); // #3B77A6
-        public Color Palette_DarkGreen { get; set; } = new Color(36, 147, 55); // #249337
-        public Color Palette_LightGreen { get; set; } = new Color(86, 190, 68); // #56BE44
-        public Color Palette_LightYellow { get; set; } = new Color(198, 222, 120); // #C6DE78
-        public Color Palette_Yellow { get; set; } = new Color(243, 194, 32); // #F3C220
-        public Color Palette_Orange { get; set; } = new Color(196, 101, 28); // #C4651C
-        public Color Palette_Red { get; set; } = new Color(181, 65, 49); // #B54131
-        public Color Palette_DarkPurple { get; set; } = new Color(97, 64, 122); // #61407A
-        public Color Palette_LightPurple { get; set; } = new Color(143, 61, 167); // #8F3DA7
-        public Color Palette_Pink { get; set; } = new Color(234, 97, 157); // #EA619D
-        public Color Palette_BrightWhite { get; set; } = new Color(193, 229, 234); // #C1E5EA
+        public Color Palette_Black { get; set; } = new Color(14, 13, 19);
+        public Color Palette_DarkestGray { get; set; } = new Color(18, 16, 33);
+        public Color Palette_DarkerGray { get; set; } = new Color(26, 29, 49);
+        public Color Palette_DarkGray { get; set; } = new Color(42, 40, 57);
+        public Color Palette_Gray { get; set; } = new Color(62, 65, 95);
+        public Color Palette_LightGray { get; set; } = new Color(85, 96, 125);
+        public Color Palette_White { get; set; } = new Color(116, 125, 136);
+        public Color Palette_Teal { get; set; } = new Color(65, 222, 149);
+        public Color Palette_LightBlue { get; set; } = new Color(42, 164, 170); 
+        public Color Palette_DarkBlue { get; set; } = new Color(59, 119, 166); 
+        public Color Palette_DarkGreen { get; set; } = new Color(36, 147, 55); 
+        public Color Palette_LightGreen { get; set; } = new Color(86, 190, 68); 
+        public Color Palette_LightYellow { get; set; } = new Color(198, 222, 120); 
+        public Color Palette_Yellow { get; set; } = new Color(243, 194, 32); 
+        public Color Palette_Orange { get; set; } = new Color(196, 101, 28);
+        public Color Palette_Red { get; set; } = new Color(181, 65, 49); 
+        public Color Palette_DarkPurple { get; set; } = new Color(97, 64, 122); 
+        public Color Palette_LightPurple { get; set; } = new Color(143, 61, 167);
+        public Color Palette_Pink { get; set; } = new Color(234, 97, 157); 
+        public Color Palette_BrightWhite { get; set; } = new Color(193, 229, 234);
 
         // Colors
         public Color WaterColor { get; private set; }

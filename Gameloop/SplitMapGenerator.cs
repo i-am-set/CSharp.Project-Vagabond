@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Utils;
@@ -34,6 +35,13 @@ namespace ProjectVagabond.Progression
         private const float NODE_REPULSION_STRENGTH = 15f;
         private const float REWARD_NODE_CHANCE = 0.05f;
         private static readonly List<int> _validYPositions = new List<int>();
+
+        // --- Tree Generation Tuning ---
+        private const int TREE_DENSITY_STEP = 2; // Check for a tree every pixel for max density.
+        private const float TREE_NOISE_SCALE = 8.0f; // Controls the size of clearings. Higher value = smaller, more frequent clearings.
+        private const float TREE_PLACEMENT_THRESHOLD = 0.45f; // Noise value must be above this to place a tree. Higher value = more clearings.
+        private const float TREE_EXCLUSION_RADIUS_NODE = 16f;
+        private const float TREE_EXCLUSION_RADIUS_PATH = 8f;
 
 
         static SplitMapGenerator()
@@ -101,8 +109,9 @@ namespace ProjectVagabond.Progression
             if (startNodeId == -1) return null;
 
             GeneratePathRenderPoints(allPaths, allNodes);
+            var bakedScenery = BakeTreesToTexture(allNodes, allPaths, mapWidth);
 
-            return new SplitMap(allNodes, allPaths, totalColumns, startNodeId, mapWidth);
+            return new SplitMap(allNodes, allPaths, bakedScenery, totalColumns, startNodeId, mapWidth);
         }
 
         public static void GenerateNextFloor(SplitMap map, SplitData splitData, int parentNodeId)
@@ -475,6 +484,110 @@ namespace ProjectVagabond.Progression
                         break;
                 }
             }
+        }
+
+        private static RenderTarget2D BakeTreesToTexture(List<SplitMapNode> allNodes, List<SplitMapPath> allPaths, float mapWidth)
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var spriteBatch = ServiceLocator.Get<SpriteBatch>();
+            var global = ServiceLocator.Get<Global>();
+            var pixel = ServiceLocator.Get<Texture2D>();
+
+            int textureWidth = (int)mapWidth + HORIZONTAL_PADDING * 2;
+            int textureHeight = Global.VIRTUAL_HEIGHT;
+
+            var renderTarget = new RenderTarget2D(graphicsDevice, textureWidth, textureHeight);
+            var treePositions = GenerateTrees(allNodes, allPaths, mapWidth);
+
+            graphicsDevice.SetRenderTarget(renderTarget);
+            graphicsDevice.Clear(Color.Transparent);
+
+            spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+
+            // Y-sort trees before drawing to the texture
+            foreach (var treePos in treePositions.OrderBy(p => p.Y))
+            {
+                spriteBatch.DrawSnapped(pixel, treePos + new Vector2(0, -1), global.Palette_DarkerGray); // Top
+                spriteBatch.DrawSnapped(pixel, treePos, global.Palette_DarkestGray);      // Middle
+                spriteBatch.DrawSnapped(pixel, treePos + new Vector2(0, 1), global.Palette_DarkestGray); // Bottom
+            }
+
+            spriteBatch.End();
+
+            graphicsDevice.SetRenderTarget(null); // Reset to back buffer
+
+            return renderTarget;
+        }
+
+        private static List<Vector2> GenerateTrees(List<SplitMapNode> allNodes, List<SplitMapPath> allPaths, float mapWidth)
+        {
+            var treePositions = new List<Vector2>();
+            var noiseManager = ServiceLocator.Get<NoiseMapManager>();
+
+            int endX = (int)mapWidth + HORIZONTAL_PADDING;
+            int endY = Global.VIRTUAL_HEIGHT;
+
+            // Pre-calculate exclusion zones for performance
+            var noSpawnZone = new bool[endX, endY];
+            float nodeRadiusSq = TREE_EXCLUSION_RADIUS_NODE * TREE_EXCLUSION_RADIUS_NODE;
+            float pathRadiusSq = TREE_EXCLUSION_RADIUS_PATH * TREE_EXCLUSION_RADIUS_PATH;
+
+            foreach (var node in allNodes)
+            {
+                int minX = (int)Math.Max(0, node.Position.X - TREE_EXCLUSION_RADIUS_NODE);
+                int maxX = (int)Math.Min(endX - 1, node.Position.X + TREE_EXCLUSION_RADIUS_NODE);
+                int minY = (int)Math.Max(0, node.Position.Y - TREE_EXCLUSION_RADIUS_NODE);
+                int maxY = (int)Math.Min(endY - 1, node.Position.Y + TREE_EXCLUSION_RADIUS_NODE);
+
+                for (int y = minY; y <= maxY; y++)
+                {
+                    for (int x = minX; x <= maxX; x++)
+                    {
+                        if (Vector2.DistanceSquared(new Vector2(x, y), node.Position) < nodeRadiusSq)
+                        {
+                            noSpawnZone[x, y] = true;
+                        }
+                    }
+                }
+            }
+
+            foreach (var path in allPaths)
+            {
+                foreach (var point in path.RenderPoints)
+                {
+                    int minX = (int)Math.Max(0, point.X - TREE_EXCLUSION_RADIUS_PATH);
+                    int maxX = (int)Math.Min(endX - 1, point.X + TREE_EXCLUSION_RADIUS_PATH);
+                    int minY = (int)Math.Max(0, point.Y - TREE_EXCLUSION_RADIUS_PATH);
+                    int maxY = (int)Math.Min(endY - 1, point.Y + TREE_EXCLUSION_RADIUS_PATH);
+
+                    for (int y = minY; y <= maxY; y++)
+                    {
+                        for (int x = minX; x <= maxX; x++)
+                        {
+                            if (Vector2.DistanceSquared(new Vector2(x, y), point) < pathRadiusSq)
+                            {
+                                noSpawnZone[x, y] = true;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Generate trees
+            for (int y = 0; y < endY; y += TREE_DENSITY_STEP)
+            {
+                for (int x = 0; x < endX; x += TREE_DENSITY_STEP)
+                {
+                    if (noSpawnZone[x, y]) continue;
+
+                    float noiseValue = noiseManager.GetNoiseValue(NoiseMapType.Lushness, x * TREE_NOISE_SCALE, y * TREE_NOISE_SCALE);
+                    if (noiseValue > TREE_PLACEMENT_THRESHOLD)
+                    {
+                        treePositions.Add(new Vector2(x, y));
+                    }
+                }
+            }
+            return treePositions;
         }
 
         // --- Line Intersection Helper ---

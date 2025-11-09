@@ -6,6 +6,7 @@ using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -29,6 +30,14 @@ namespace ProjectVagabond.Scenes
             public float Scale;
             public float Rotation;
             public float RotationSpeed;
+        }
+
+        private struct DrawableMapObject
+        {
+            public enum ObjectType { Node, Player }
+            public ObjectType Type;
+            public Vector2 Position;
+            public object? Data;
         }
 
         private readonly ProgressionManager _progressionManager;
@@ -191,6 +200,11 @@ namespace ProjectVagabond.Scenes
         {
             base.Exit();
             _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
+            // Only clear the map if we are not transitioning to a scene that will return here (like Battle)
+            if (BattleSetup.ReturnSceneState != GameSceneState.Split)
+            {
+                _progressionManager.ClearCurrentSplitMap();
+            }
         }
 
 
@@ -782,99 +796,52 @@ namespace ProjectVagabond.Scenes
                 Color gridColor = _global.Palette_DarkGray * 0.5f;
                 const int gridSize = Global.SPLIT_MAP_GRID_SIZE;
 
-                // Get the visible area in world coordinates
                 Matrix.Invert(ref cameraTransform, out var inverseCameraTransform);
                 var topLeft = Vector2.Transform(Vector2.Zero, inverseCameraTransform);
                 var bottomRight = Vector2.Transform(new Vector2(Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), inverseCameraTransform);
 
-                // Calculate grid boundaries based on visible area
                 int startX = (int)Math.Floor(topLeft.X / gridSize) * gridSize;
                 int endX = (int)Math.Ceiling(bottomRight.X / gridSize) * gridSize;
                 int startY = (int)Math.Floor(topLeft.Y / gridSize) * gridSize;
                 int endY = (int)Math.Ceiling(bottomRight.Y / gridSize) * gridSize;
 
-                // Draw vertical lines
                 for (int x = startX; x <= endX; x += gridSize)
                 {
                     spriteBatch.DrawLineSnapped(new Vector2(x, startY), new Vector2(x, endY), gridColor);
                 }
-
-                // Draw horizontal lines
                 for (int y = startY; y <= endY; y += gridSize)
                 {
                     spriteBatch.DrawLineSnapped(new Vector2(startX, y), new Vector2(endX, y), gridColor);
                 }
             }
 
-            // --- Pass 1: Draw all paths as gray underlays ---
-            foreach (var path in _currentMap.Paths.Values)
+            // --- Y-Sorting Setup ---
+            var drawableObjects = new List<DrawableMapObject>();
+            drawableObjects.AddRange(_currentMap.Nodes.Values.Select(n => new DrawableMapObject { Type = DrawableMapObject.ObjectType.Node, Position = n.Position, Data = n }));
+            drawableObjects.Add(new DrawableMapObject { Type = DrawableMapObject.ObjectType.Player, Position = _playerIcon.Position });
+
+            // Draw baked scenery texture first, underneath everything else.
+            if (_currentMap.BakedSceneryTexture != null)
             {
-                DrawPath(spriteBatch, pixel, path, true, null);
+                spriteBatch.DrawSnapped(_currentMap.BakedSceneryTexture, Vector2.Zero, Color.White);
             }
 
-            // --- Pass 2: Draw visited and animating paths (non-highlighted) ---
-            SplitMapPath? highlightedPath = null;
-            if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
+            drawableObjects.Sort((a, b) => a.Position.Y.CompareTo(b.Position.Y));
+
+            // --- Path and Dynamic Object Rendering ---
+            DrawAllPaths(spriteBatch, pixel);
+
+            foreach (var obj in drawableObjects)
             {
-                highlightedPath = _currentMap.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == _hoveredNodeId);
-            }
-
-            foreach (var path in _currentMap.Paths.Values)
-            {
-                if (path == highlightedPath) continue;
-
-                var fromNode = _currentMap.Nodes[path.FromNodeId];
-                var toNode = _currentMap.Nodes[path.ToNodeId];
-
-                bool isPathFromCurrentNode = fromNode.Id == _playerCurrentNodeId;
-                bool isPathToReachableNode = toNode.IsReachable;
-                bool isPathVisited = _visitedNodeIds.Contains(toNode.Id);
-
-                if (isPathVisited || (isPathFromCurrentNode && isPathToReachableNode))
+                switch (obj.Type)
                 {
-                    DrawPath(spriteBatch, pixel, path, false, highlightedPath);
+                    case DrawableMapObject.ObjectType.Node:
+                        DrawNode(spriteBatch, (SplitMapNode)obj.Data!, gameTime);
+                        break;
+                    case DrawableMapObject.ObjectType.Player:
+                        _playerIcon.Draw(spriteBatch);
+                        break;
                 }
-            }
-
-            // --- Pass 3: Draw the highlighted path on top of everything ---
-            if (highlightedPath != null)
-            {
-                DrawPath(spriteBatch, pixel, highlightedPath, false, highlightedPath);
-            }
-
-
-            foreach (var node in _currentMap.Nodes.Values)
-            {
-                if (_fadingNodeIds.Contains(node.Id)) continue;
-
-                var (texture, sourceRect, origin) = GetNodeDrawData(node, gameTime);
-                var bounds = node.GetBounds();
-                var color = Color.White;
-                float scale = 1.0f;
-
-                if (node.IsCompleted)
-                {
-                    color = _global.Palette_DarkGray;
-                }
-                else if (node.NodeType != SplitNodeType.Origin && node.Id != _playerCurrentNodeId && !node.IsReachable)
-                {
-                    color = _global.Palette_DarkGray;
-                }
-
-                if (node.IsReachable && node.Id == _hoveredNodeId)
-                {
-                    color = _global.ButtonHoverColor;
-                }
-
-                if (_mapState == SplitMapState.PulsingNode && node.Id == _playerCurrentNodeId)
-                {
-                    float pulseProgress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f);
-                    float pulseWave = MathF.Sin(pulseProgress * MathF.PI);
-                    scale += pulseWave * PULSE_AMOUNT;
-                }
-
-                var position = bounds.Center.ToVector2() + node.VisualOffset;
-                spriteBatch.DrawSnapped(texture, position, sourceRect, color, 0f, origin, scale, SpriteEffects.None, 0.4f);
             }
 
             foreach (var element in _fadingElements)
@@ -883,8 +850,6 @@ namespace ProjectVagabond.Scenes
                 float alpha = 0.25f * (1.0f - Easing.EaseOutQuad(progress));
                 spriteBatch.DrawSnapped(element.Texture, element.Position, element.SourceRect, element.Color * alpha, element.Rotation, element.Origin, element.Scale, SpriteEffects.None, 0.35f);
             }
-
-            _playerIcon.Draw(spriteBatch);
 
             spriteBatch.End();
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
@@ -922,38 +887,69 @@ namespace ProjectVagabond.Scenes
             if (_eventState == EventState.NarratingResult) _resultNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
         }
 
-        private void DrawPath(SpriteBatch spriteBatch, Texture2D pixel, SplitMapPath path, bool isUnderlay, SplitMapPath? highlightedPath)
+        private void DrawAllPaths(SpriteBatch spriteBatch, Texture2D pixel)
+        {
+            if (_currentMap == null) return;
+
+            // --- Pass 1: Draw all paths as gray underlays ---
+            foreach (var path in _currentMap.Paths.Values)
+            {
+                DrawPath(spriteBatch, pixel, path, _global.Palette_DarkGray, true);
+            }
+
+            // --- Pass 2: Draw visited and animating paths (non-highlighted) ---
+            SplitMapPath? highlightedPath = null;
+            if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
+            {
+                highlightedPath = _currentMap.Paths.Values.FirstOrDefault(p => p.FromNodeId == _playerCurrentNodeId && p.ToNodeId == _hoveredNodeId);
+            }
+
+            foreach (var path in _currentMap.Paths.Values)
+            {
+                if (path == highlightedPath) continue;
+
+                var fromNode = _currentMap.Nodes[path.FromNodeId];
+                var toNode = _currentMap.Nodes[path.ToNodeId];
+
+                bool isPathFromCurrentNode = fromNode.Id == _playerCurrentNodeId;
+                bool isPathToReachableNode = toNode.IsReachable;
+                bool isPathVisited = _visitedNodeIds.Contains(toNode.Id);
+                bool isAnimating = isPathFromCurrentNode && isPathToReachableNode && !_visitedNodeIds.Contains(toNode.Id);
+
+                if (isPathVisited || isAnimating)
+                {
+                    DrawPath(spriteBatch, pixel, path, _global.Palette_White, isAnimating);
+                }
+            }
+
+            // --- Pass 3: Draw the highlighted path on top of everything ---
+            if (highlightedPath != null)
+            {
+                DrawPath(spriteBatch, pixel, highlightedPath, _global.Palette_Yellow, false);
+            }
+        }
+
+        private void DrawPath(SpriteBatch spriteBatch, Texture2D pixel, SplitMapPath path, Color pathColor, bool isAnimating)
         {
             if (_currentMap == null || path.PixelPoints.Count < 2 || _fadingPathIds.Contains(path.Id)) return;
 
             var fromNode = _currentMap.Nodes[path.FromNodeId];
             var toNode = _currentMap.Nodes[path.ToNodeId];
 
-            Color pathColor;
             int numPixelsToDraw;
 
-            if (isUnderlay)
+            if (isAnimating)
             {
-                pathColor = _global.Palette_DarkGray;
-                numPixelsToDraw = path.PixelPoints.Count;
+                float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
+                float animationTimer = _pathAnimationProgress.GetValueOrDefault(path.Id, 0f);
+                float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
+                if (linearProgress <= 0f) return;
+                float easedProgress = Easing.EaseOutCubic(linearProgress);
+                numPixelsToDraw = (int)(easedProgress * path.PixelPoints.Count);
             }
-            else // Overlay pass
+            else
             {
-                pathColor = (path == highlightedPath) ? _global.Palette_Yellow : _global.Palette_White;
-                bool isAnimating = fromNode.Id == _nodeForPathReveal && toNode.IsReachable && !_visitedNodeIds.Contains(toNode.Id);
-                if (isAnimating)
-                {
-                    float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
-                    float animationTimer = _pathAnimationProgress.GetValueOrDefault(path.Id, 0f);
-                    float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
-                    if (linearProgress <= 0f) return;
-                    float easedProgress = Easing.EaseOutCubic(linearProgress);
-                    numPixelsToDraw = (int)(easedProgress * path.PixelPoints.Count);
-                }
-                else
-                {
-                    numPixelsToDraw = path.PixelPoints.Count;
-                }
+                numPixelsToDraw = path.PixelPoints.Count;
             }
 
             if (numPixelsToDraw <= 0) return;
@@ -994,6 +990,39 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        private void DrawNode(SpriteBatch spriteBatch, SplitMapNode node, GameTime gameTime)
+        {
+            if (_fadingNodeIds.Contains(node.Id)) return;
+
+            var (texture, sourceRect, origin) = GetNodeDrawData(node, gameTime);
+            var bounds = node.GetBounds();
+            var color = Color.White;
+            float scale = 1.0f;
+
+            if (node.IsCompleted)
+            {
+                color = _global.Palette_DarkGray;
+            }
+            else if (node.NodeType != SplitNodeType.Origin && node.Id != _playerCurrentNodeId && !node.IsReachable)
+            {
+                color = _global.Palette_DarkGray;
+            }
+
+            if (node.IsReachable && node.Id == _hoveredNodeId)
+            {
+                color = _global.ButtonHoverColor;
+            }
+
+            if (_mapState == SplitMapState.PulsingNode && node.Id == _playerCurrentNodeId)
+            {
+                float pulseProgress = Math.Clamp(_pulseTimer / PULSE_DURATION, 0f, 1f);
+                float pulseWave = MathF.Sin(pulseProgress * MathF.PI);
+                scale += pulseWave * PULSE_AMOUNT;
+            }
+
+            var position = bounds.Center.ToVector2() + node.VisualOffset;
+            spriteBatch.DrawSnapped(texture, position, sourceRect, color, 0f, origin, scale, SpriteEffects.None, 0.4f);
+        }
 
         public override void DrawUnderlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
