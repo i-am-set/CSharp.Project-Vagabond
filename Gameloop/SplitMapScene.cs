@@ -70,7 +70,6 @@ namespace ProjectVagabond.Scenes
         private int _hoveredNodeId = -1;
         private readonly HashSet<int> _visitedNodeIds = new HashSet<int>();
         private int _nodeForPathReveal = -1;
-        private int _lastAnimatedFloor = -1;
 
         // Path animation state
         private readonly Dictionary<int, float> _pathAnimationProgress = new();
@@ -100,14 +99,6 @@ namespace ProjectVagabond.Scenes
 
         private enum SplitMapState { Idle, PlayerMoving, LiftingNode, PulsingNode, EventInProgress, LoweringNode, PostEventDelay }
         private SplitMapState _mapState = SplitMapState.Idle;
-
-        // Camera Tuning
-        private const float CAMERA_TOP_PADDING = 20f;
-
-        // Floor Reveal Animation
-        private bool _isFadingInNextFloor = false;
-        private float _floorFadeInTimer = 0f;
-        private const float FLOOR_FADE_IN_DURATION = 0.5f;
 
         // Node Animation
         private const float NODE_FRAME_DURATION = 0.5f;
@@ -154,7 +145,6 @@ namespace ProjectVagabond.Scenes
                 _currentMap = _progressionManager.CurrentSplitMap;
                 _playerCurrentNodeId = _currentMap?.StartNodeId ?? -1;
                 _nodeForPathReveal = _playerCurrentNodeId;
-                _lastAnimatedFloor = -1;
                 _pathAnimationProgress.Clear();
                 _pathAnimationDurations.Clear();
                 _fadingElements.Clear();
@@ -169,8 +159,8 @@ namespace ProjectVagabond.Scenes
                 {
                     _playerIcon.SetPosition(startNode.Position);
                     UpdateCameraTarget(startNode.Position, true);
-                    // The initial reveal happens after the "event" (which is none for the start node)
-                    GenerateAndRevealNextColumn();
+                    UpdateReachableNodes();
+                    StartPathRevealAnimation();
                 }
             }
             else
@@ -193,7 +183,6 @@ namespace ProjectVagabond.Scenes
                     }
                     _mapState = SplitMapState.LoweringNode; // Transition to lowering state
                     _nodeLiftTimer = 0f; // Reset timer for the lowering animation
-                    GenerateAndRevealNextColumn(); // Reveal next floor immediately
                 }
             }
         }
@@ -347,7 +336,6 @@ namespace ProjectVagabond.Scenes
                 }
                 _mapState = SplitMapState.LoweringNode;
                 _nodeLiftTimer = 0f;
-                GenerateAndRevealNextColumn();
             }
 
             // Handle event states that pause map interaction
@@ -365,17 +353,6 @@ namespace ProjectVagabond.Scenes
 
             // Smooth camera scrolling
             _cameraOffset = Vector2.Lerp(_cameraOffset, _targetCameraOffset, deltaTime * CAMERA_LERP_SPEED);
-
-            // Update floor fade-in animation
-            if (_isFadingInNextFloor)
-            {
-                _floorFadeInTimer += deltaTime;
-                if (_floorFadeInTimer >= FLOOR_FADE_IN_DURATION)
-                {
-                    _floorFadeInTimer = FLOOR_FADE_IN_DURATION;
-                    _isFadingInNextFloor = false;
-                }
-            }
 
             // Update active path animations
             var appearingKeys = _pathAnimationProgress.Keys.ToList();
@@ -427,6 +404,7 @@ namespace ProjectVagabond.Scenes
                     {
                         _mapState = SplitMapState.Idle;
                         UpdateReachableNodes();
+                        StartPathRevealAnimation();
                     }
                     break;
             }
@@ -558,7 +536,11 @@ namespace ProjectVagabond.Scenes
             // This logic now anchors the camera so the player node appears at a fixed horizontal position on screen.
             const float playerScreenAnchorX = 40f;
             float targetX = playerScreenAnchorX - targetNodePosition.X;
-            float targetY = (Global.VIRTUAL_HEIGHT / 2f) - targetNodePosition.Y;
+
+            // The camera's vertical position is now fixed to keep the map vertically centered.
+            // The map is generated around the world's vertical center (Global.VIRTUAL_HEIGHT / 2f).
+            // To align this with the screen's vertical center, the Y offset should be 0.
+            float targetY = 0;
 
             _targetCameraOffset = new Vector2(targetX, targetY);
 
@@ -574,23 +556,14 @@ namespace ProjectVagabond.Scenes
             var currentNode = _currentMap?.Nodes[_nodeForPathReveal];
             if (currentNode == null) return;
 
-            if (currentNode.Floor != _lastAnimatedFloor)
+            if (_currentMap != null && _currentMap.Nodes.TryGetValue(_nodeForPathReveal, out var nodeForPaths))
             {
-                _isFadingInNextFloor = true;
-                _floorFadeInTimer = 0f;
-
-                _lastAnimatedFloor = currentNode.Floor;
-                if (_currentMap != null && _currentMap.Nodes.TryGetValue(_nodeForPathReveal, out var nodeForPaths))
+                foreach (var pathId in nodeForPaths.OutgoingPathIds)
                 {
-                    foreach (var pathId in nodeForPaths.OutgoingPathIds)
-                    {
-                        if (!_pathAnimationProgress.ContainsKey(pathId))
-                        {
-                            _pathAnimationProgress[pathId] = 0f;
-                            float duration = PATH_ANIMATION_DURATION + (float)(_random.NextDouble() * 2.0 - 1.0);
-                            _pathAnimationDurations[pathId] = Math.Max(1.0f, duration);
-                        }
-                    }
+                    // Reset or start animation for newly reachable paths
+                    _pathAnimationProgress[pathId] = 0f;
+                    float duration = PATH_ANIMATION_DURATION + (float)(_random.NextDouble() * 0.5 - 0.25);
+                    _pathAnimationDurations[pathId] = Math.Max(0.5f, duration);
                 }
             }
         }
@@ -735,28 +708,8 @@ namespace ProjectVagabond.Scenes
             }
             _mapState = SplitMapState.LoweringNode;
             _nodeLiftTimer = 0f;
-            GenerateAndRevealNextColumn();
             _resultNarrator.Clear();
         }
-
-        private void GenerateAndRevealNextColumn()
-        {
-            if (_currentMap == null) return;
-
-            var currentNode = _currentMap.Nodes.GetValueOrDefault(_playerCurrentNodeId);
-            if (currentNode == null) return;
-
-            int highestFloorInMap = _currentMap.Nodes.Values.Max(n => n.Floor);
-            if (currentNode.Floor == highestFloorInMap && currentNode.Floor < _currentMap.TargetColumnCount - 1)
-            {
-                SplitMapGenerator.GenerateNextFloor(_currentMap, _progressionManager.CurrentSplit, currentNode.Id);
-            }
-
-            UpdateReachableNodes();
-            StartPathRevealAnimation();
-            UpdateCameraTarget(currentNode.Position, false);
-        }
-
 
         private void TriggerReward()
         {
@@ -853,9 +806,13 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            var visitedPathFillColor = _global.Palette_White;
-            var highlightedPathFillColor = _global.Palette_Yellow;
+            // --- Pass 1: Draw all paths as gray underlays ---
+            foreach (var path in _currentMap.Paths.Values)
+            {
+                DrawPath(spriteBatch, pixel, path, true, null);
+            }
 
+            // --- Pass 2: Draw visited and animating paths (non-highlighted) ---
             SplitMapPath? highlightedPath = null;
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
             {
@@ -865,40 +822,30 @@ namespace ProjectVagabond.Scenes
             foreach (var path in _currentMap.Paths.Values)
             {
                 if (path == highlightedPath) continue;
-                DrawPath(spriteBatch, pixel, path, visitedPathFillColor);
+
+                var fromNode = _currentMap.Nodes[path.FromNodeId];
+                var toNode = _currentMap.Nodes[path.ToNodeId];
+
+                bool isPathFromCurrentNode = fromNode.Id == _playerCurrentNodeId;
+                bool isPathToReachableNode = toNode.IsReachable;
+                bool isPathVisited = _visitedNodeIds.Contains(toNode.Id);
+
+                if (isPathVisited || (isPathFromCurrentNode && isPathToReachableNode))
+                {
+                    DrawPath(spriteBatch, pixel, path, false, highlightedPath);
+                }
             }
 
+            // --- Pass 3: Draw the highlighted path on top of everything ---
             if (highlightedPath != null)
             {
-                DrawPath(spriteBatch, pixel, highlightedPath, highlightedPathFillColor);
+                DrawPath(spriteBatch, pixel, highlightedPath, false, highlightedPath);
             }
 
-            int currentPlayerFloor = _currentMap.Nodes[_playerCurrentNodeId].Floor;
+
             foreach (var node in _currentMap.Nodes.Values)
             {
                 if (_fadingNodeIds.Contains(node.Id)) continue;
-
-                float nodeAlpha = 0f;
-                bool isNextFloor = node.Floor == currentPlayerFloor + 1;
-
-                if (node.Floor <= currentPlayerFloor || _visitedNodeIds.Contains(node.Id))
-                {
-                    nodeAlpha = 1.0f;
-                }
-                else if (isNextFloor)
-                {
-                    if (_isFadingInNextFloor)
-                    {
-                        float progress = Math.Clamp(_floorFadeInTimer / FLOOR_FADE_IN_DURATION, 0f, 1f);
-                        nodeAlpha = Easing.EaseOutQuad(progress);
-                    }
-                    else if (_lastAnimatedFloor == currentPlayerFloor)
-                    {
-                        nodeAlpha = 1.0f;
-                    }
-                }
-
-                if (nodeAlpha <= 0.01f) continue;
 
                 var (texture, sourceRect, origin) = GetNodeDrawData(node, gameTime);
                 var bounds = node.GetBounds();
@@ -909,7 +856,7 @@ namespace ProjectVagabond.Scenes
                 {
                     color = _global.Palette_DarkGray;
                 }
-                else if (!node.IsReachable)
+                else if (node.NodeType != SplitNodeType.Origin && node.Id != _playerCurrentNodeId && !node.IsReachable)
                 {
                     color = _global.Palette_DarkGray;
                 }
@@ -927,7 +874,7 @@ namespace ProjectVagabond.Scenes
                 }
 
                 var position = bounds.Center.ToVector2() + node.VisualOffset;
-                spriteBatch.DrawSnapped(texture, position, sourceRect, color * nodeAlpha, 0f, origin, scale, SpriteEffects.None, 0.4f);
+                spriteBatch.DrawSnapped(texture, position, sourceRect, color, 0f, origin, scale, SpriteEffects.None, 0.4f);
             }
 
             foreach (var element in _fadingElements)
@@ -975,35 +922,41 @@ namespace ProjectVagabond.Scenes
             if (_eventState == EventState.NarratingResult) _resultNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
         }
 
-        private void DrawPath(SpriteBatch spriteBatch, Texture2D pixel, SplitMapPath path, Color fillColor)
+        private void DrawPath(SpriteBatch spriteBatch, Texture2D pixel, SplitMapPath path, bool isUnderlay, SplitMapPath? highlightedPath)
         {
             if (_currentMap == null || path.PixelPoints.Count < 2 || _fadingPathIds.Contains(path.Id)) return;
 
             var fromNode = _currentMap.Nodes[path.FromNodeId];
             var toNode = _currentMap.Nodes[path.ToNodeId];
 
+            Color pathColor;
             int numPixelsToDraw;
-            float pathAlpha = 1.0f;
 
-            if (fromNode.Id == _nodeForPathReveal)
+            if (isUnderlay)
             {
-                float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
-                float animationTimer = _pathAnimationProgress.GetValueOrDefault(path.Id, 0f);
-                float linearProgress = Math.Clamp((animationTimer * 2f) / duration, 0f, 1f);
-                if (linearProgress <= 0f) return;
-                float easedProgress = Easing.EaseOutCubic(linearProgress);
-                numPixelsToDraw = (int)(easedProgress * path.PixelPoints.Count);
-            }
-            else if (_visitedNodeIds.Contains(fromNode.Id))
-            {
+                pathColor = _global.Palette_DarkGray;
                 numPixelsToDraw = path.PixelPoints.Count;
             }
-            else
+            else // Overlay pass
             {
-                return;
+                pathColor = (path == highlightedPath) ? _global.Palette_Yellow : _global.Palette_White;
+                bool isAnimating = fromNode.Id == _nodeForPathReveal && toNode.IsReachable && !_visitedNodeIds.Contains(toNode.Id);
+                if (isAnimating)
+                {
+                    float duration = _pathAnimationDurations.GetValueOrDefault(path.Id, PATH_ANIMATION_DURATION);
+                    float animationTimer = _pathAnimationProgress.GetValueOrDefault(path.Id, 0f);
+                    float linearProgress = Math.Clamp(animationTimer / duration, 0f, 1f);
+                    if (linearProgress <= 0f) return;
+                    float easedProgress = Easing.EaseOutCubic(linearProgress);
+                    numPixelsToDraw = (int)(easedProgress * path.PixelPoints.Count);
+                }
+                else
+                {
+                    numPixelsToDraw = path.PixelPoints.Count;
+                }
             }
 
-            if (numPixelsToDraw <= 0 || pathAlpha <= 0.01f) return;
+            if (numPixelsToDraw <= 0) return;
 
             for (int i = 0; i < numPixelsToDraw; i++)
             {
@@ -1030,13 +983,11 @@ namespace ProjectVagabond.Scenes
                         else alpha = Math.Min(alpha, (distTo - PATH_EXCLUSION_RADIUS) / PATH_FADE_DISTANCE);
                     }
 
-                    alpha *= pathAlpha;
-
                     if (alpha > 0.01f)
                     {
                         float noise = _gameState.NoiseManager.GetNoiseValue(NoiseMapType.Resources, point.X * PATH_COLOR_NOISE_SCALE, point.Y * PATH_COLOR_NOISE_SCALE);
                         float multiplier = MathHelper.Lerp(PATH_COLOR_VARIATION_MIN, PATH_COLOR_VARIATION_MAX, noise);
-                        Color pixelColor = new Color(fillColor.ToVector3() * multiplier);
+                        Color pixelColor = new Color(pathColor.ToVector3() * multiplier);
                         spriteBatch.Draw(pixel, point.ToVector2(), pixelColor * alpha);
                     }
                 }
