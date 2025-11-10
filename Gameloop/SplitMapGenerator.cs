@@ -16,6 +16,7 @@ namespace ProjectVagabond.Progression
     public static class SplitMapGenerator
     {
         private static readonly Random _random = new Random();
+        private static readonly SeededPerlin _baldSpotNoise;
 
         // --- Generation Tuning ---
         private const int MIN_NODES_PER_COLUMN = 2;
@@ -43,9 +44,15 @@ namespace ProjectVagabond.Progression
         private const float TREE_EXCLUSION_RADIUS_NODE = 16f;
         private const float TREE_EXCLUSION_RADIUS_PATH = 8f;
 
+        // --- Bald Spot Generation Tuning ---
+        private const float BALD_SPOT_NOISE_SCALE = 0.1f; // Higher value = smaller, more frequent spots.
+        private const float BALD_SPOT_THRESHOLD = 0.65f; // Noise must be ABOVE this to create a bald spot. Higher value = fewer spots.
+
 
         static SplitMapGenerator()
         {
+            _baldSpotNoise = new SeededPerlin(_random.Next());
+
             const int gridSize = Global.SPLIT_MAP_GRID_SIZE;
             const int numPositions = 9;
             int totalHeight = (numPositions - 1) * gridSize;
@@ -580,10 +587,15 @@ namespace ProjectVagabond.Progression
                 {
                     if (noSpawnZone[x, y]) continue;
 
-                    float noiseValue = noiseManager.GetNoiseValue(NoiseMapType.Lushness, x * TREE_NOISE_SCALE, y * TREE_NOISE_SCALE);
-                    if (noiseValue > TREE_PLACEMENT_THRESHOLD)
+                    float lushnessNoise = noiseManager.GetNoiseValue(NoiseMapType.Lushness, x * TREE_NOISE_SCALE, y * TREE_NOISE_SCALE);
+                    if (lushnessNoise > TREE_PLACEMENT_THRESHOLD)
                     {
-                        treePositions.Add(new Vector2(x, y));
+                        // Now check the bald spot noise layer
+                        float baldnessNoise = (_baldSpotNoise.Noise(x * BALD_SPOT_NOISE_SCALE, y * BALD_SPOT_NOISE_SCALE) + 1f) * 0.5f; // Normalize to 0-1
+                        if (baldnessNoise <= BALD_SPOT_THRESHOLD)
+                        {
+                            treePositions.Add(new Vector2(x, y));
+                        }
                     }
                 }
             }

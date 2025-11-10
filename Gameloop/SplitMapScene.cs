@@ -328,14 +328,23 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
+            // Call base.Update() ONCE at the beginning. This updates the input block timer
+            // and, crucially, sets up the previousMouseState for this frame's logic.
             base.Update(gameTime);
+
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT));
+            _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
 
             if (_hoveredNodeId != -1)
             {
                 _nodeHoverTextBobTimer += deltaTime;
+            }
+
+            // Now check the input block timer, which was just updated by base.Update().
+            if (IsInputBlocked)
+            {
+                return;
             }
 
             // Handle modal dialogs first, as they pause the main scene logic
@@ -346,7 +355,6 @@ namespace ProjectVagabond.Scenes
                     _narrativeDialog.Update(gameTime);
                 }
                 _wasModalActiveLastFrame = true;
-                base.Update(gameTime);
                 return;
             }
 
@@ -366,13 +374,11 @@ namespace ProjectVagabond.Scenes
             // Handle event states that pause map interaction
             if (_eventState == EventState.AwaitingDiceRoll)
             {
-                base.Update(gameTime);
                 return;
             }
             if (_eventState == EventState.NarratingResult)
             {
                 _resultNarrator.Update(gameTime);
-                base.Update(gameTime);
                 return;
             }
 
@@ -435,8 +441,6 @@ namespace ProjectVagabond.Scenes
             }
 
             _playerIcon.Update(gameTime);
-
-            base.Update(gameTime);
         }
 
         private void UpdatePlayerMove(float deltaTime)

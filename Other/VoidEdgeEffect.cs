@@ -12,65 +12,6 @@ namespace ProjectVagabond.UI
     /// </summary>
     public class VoidEdgeEffect
     {
-        #region Nested Perlin Noise Class
-        /// <summary>
-        /// A self-contained implementation of classic 2D Perlin noise.
-        /// </summary>
-        private class SeededPerlin
-        {
-            private readonly int[] p = new int[512];
-
-            public SeededPerlin(int seed)
-            {
-                var rng = new Random(seed);
-                var permutation = new int[256];
-                for (int i = 0; i < 256; i++)
-                {
-                    permutation[i] = i;
-                }
-
-                for (int i = permutation.Length - 1; i > 0; i--)
-                {
-                    int j = rng.Next(i + 1);
-                    (permutation[i], permutation[j]) = (permutation[j], permutation[i]);
-                }
-
-                for (int i = 0; i < 256; i++)
-                {
-                    p[i] = p[256 + i] = permutation[i];
-                }
-            }
-
-            public float Noise(float x, float y)
-            {
-                int X = (int)Math.Floor(x) & 255;
-                int Y = (int)Math.Floor(y) & 255;
-
-                x -= (float)Math.Floor(x);
-                y -= (float)Math.Floor(y);
-
-                float u = Fade(x);
-                float v = Fade(y);
-
-                int A = p[X] + Y;
-                int B = p[X + 1] + Y;
-
-                return Lerp(v, Lerp(u, Grad(p[A], x, y), Grad(p[B], x - 1, y)),
-                               Lerp(u, Grad(p[A + 1], x, y - 1), Grad(p[B + 1], x - 1, y - 1)));
-            }
-
-            private static float Fade(float t) => t * t * t * (t * (t * 6 - 15) + 10);
-            private static float Lerp(float t, float a, float b) => a + t * (b - a);
-            private static float Grad(int hash, float x, float y)
-            {
-                int h = hash & 7;
-                float u = h < 4 ? x : y;
-                float v = h < 4 ? y : x;
-                return ((h & 1) == 0 ? u : -u) + ((h & 2) == 0 ? v : -v);
-            }
-        }
-        #endregion
-
         // --- Tuning Parameters ---
         public Color EdgeColor { get; set; }
         public int EdgeWidth { get; set; }
@@ -102,7 +43,7 @@ namespace ProjectVagabond.UI
             _noise = new SeededPerlin(Environment.TickCount);
         }
 
-        public void Update(GameTime gameTime, Rectangle bounds)
+        public void Update(GameTime gameTime, Rectangle bounds, Vector2 cameraOffset)
         {
             if (bounds.Width <= 0 || bounds.Height <= 0) return;
 
@@ -135,17 +76,17 @@ namespace ProjectVagabond.UI
             }
 
             // Generate noise and color data for each edge texture
-            UpdateTopTexture(bounds.Width);
-            UpdateBottomTexture(bounds.Width);
-            UpdateLeftTexture(bounds.Height);
-            UpdateRightTexture(bounds.Height);
+            UpdateTopTexture(bounds.Width, cameraOffset);
+            UpdateBottomTexture(bounds.Width, cameraOffset);
+            UpdateLeftTexture(bounds.Height, cameraOffset);
+            UpdateRightTexture(bounds.Height, cameraOffset);
         }
 
-        private void UpdateTopTexture(int width)
+        private void UpdateTopTexture(int width, Vector2 cameraOffset)
         {
             for (int x = 0; x < width; x++)
             {
-                float noiseVal = (_noise.Noise(x * NoiseScale, _time * 0.1f) + 1f) * 0.5f; // Range [0, 1]
+                float noiseVal = (_noise.Noise((x - cameraOffset.X) * NoiseScale, _time * 0.1f) + 1f) * 0.5f; // Range [0, 1]
                 int length = (int)(noiseVal * EdgeWidth);
 
                 for (int y = 0; y < EdgeWidth; y++)
@@ -164,11 +105,11 @@ namespace ProjectVagabond.UI
             _topTexture!.SetData(_topData);
         }
 
-        private void UpdateBottomTexture(int width)
+        private void UpdateBottomTexture(int width, Vector2 cameraOffset)
         {
             for (int x = 0; x < width; x++)
             {
-                float noiseVal = (_noise.Noise(x * NoiseScale, _time * 0.1f + 1000f) + 1f) * 0.5f;
+                float noiseVal = (_noise.Noise((x - cameraOffset.X) * NoiseScale, _time * 0.1f + 1000f) + 1f) * 0.5f;
                 int length = (int)(noiseVal * EdgeWidth);
 
                 for (int y = 0; y < EdgeWidth; y++)
@@ -187,11 +128,11 @@ namespace ProjectVagabond.UI
             _bottomTexture!.SetData(_bottomData);
         }
 
-        private void UpdateLeftTexture(int height)
+        private void UpdateLeftTexture(int height, Vector2 cameraOffset)
         {
             for (int y = 0; y < height; y++)
             {
-                float noiseVal = (_noise.Noise(_time * 0.1f + 2000f, y * NoiseScale) + 1f) * 0.5f;
+                float noiseVal = (_noise.Noise(_time * 0.1f + 2000f, (y - cameraOffset.Y) * NoiseScale) + 1f) * 0.5f;
                 int length = (int)(noiseVal * EdgeWidth);
 
                 for (int x = 0; x < EdgeWidth; x++)
@@ -210,11 +151,11 @@ namespace ProjectVagabond.UI
             _leftTexture!.SetData(_leftData);
         }
 
-        private void UpdateRightTexture(int height)
+        private void UpdateRightTexture(int height, Vector2 cameraOffset)
         {
             for (int y = 0; y < height; y++)
             {
-                float noiseVal = (_noise.Noise(_time * 0.1f + 3000f, y * NoiseScale) + 1f) * 0.5f;
+                float noiseVal = (_noise.Noise(_time * 0.1f + 3000f, (y - cameraOffset.Y) * NoiseScale) + 1f) * 0.5f;
                 int length = (int)(noiseVal * EdgeWidth);
 
                 for (int x = 0; x < EdgeWidth; x++)
