@@ -188,60 +188,59 @@ namespace ProjectVagabond.Progression
             var sortedPrev = previousColumn.OrderBy(n => n.Position.Y).ToList();
             var sortedNext = nextColumn.OrderBy(n => n.Position.Y).ToList();
 
-            // Pass 1: Primary connections (each previous node connects to its closest valid next node)
+            // Pass 1: Primary connections
             foreach (var prevNode in sortedPrev)
             {
-                var bestTarget = sortedNext
-                    .Select(target => new {
-                        Node = target,
-                        Distance = Vector2.DistanceSquared(prevNode.Position, target.Position),
-                        Intersects = allExistingPaths.Concat(newPathsInThisColumn).Any(existing =>
-                            LineSegmentsIntersect(prevNode.Position, target.Position,
-                                allNodes.First(n => n.Id == existing.FromNodeId).Position,
-                                allNodes.First(n => n.Id == existing.ToNodeId).Position))
-                    })
-                    .Where(item => !item.Intersects)
-                    .OrderBy(item => item.Distance)
-                    .FirstOrDefault()?.Node;
+                var potentialTargets = sortedNext
+                    .OrderBy(target => Vector2.DistanceSquared(prevNode.Position, target.Position));
 
-                if (bestTarget != null)
+                foreach (var targetNode in potentialTargets)
                 {
-                    var path = new SplitMapPath(prevNode.Id, bestTarget.Id);
-                    newPathsInThisColumn.Add(path);
-                    prevNode.OutgoingPathIds.Add(path.Id);
-                    bestTarget.IncomingPathIds.Add(path.Id);
-                }
-            }
+                    var tentativePathPoints = GenerateWigglyPathPoints(prevNode.Position, targetNode.Position, new List<int> { prevNode.Id, targetNode.Id }, allNodes);
 
-            // Pass 2: Ensure reachability for all nodes in the next column
-            foreach (var nextNode in sortedNext)
-            {
-                if (!nextNode.IncomingPathIds.Any())
-                {
-                    var bestSource = sortedPrev
-                        .Select(source => new {
-                            Node = source,
-                            Distance = Vector2.DistanceSquared(source.Position, nextNode.Position),
-                            Intersects = allExistingPaths.Concat(newPathsInThisColumn).Any(existing =>
-                                LineSegmentsIntersect(source.Position, nextNode.Position,
-                                    allNodes.First(n => n.Id == existing.FromNodeId).Position,
-                                    allNodes.First(n => n.Id == existing.ToNodeId).Position))
-                        })
-                        .Where(item => !item.Intersects)
-                        .OrderBy(item => item.Distance)
-                        .FirstOrDefault()?.Node;
+                    bool intersects = allExistingPaths.Any(existing => PathSegmentsIntersect(tentativePathPoints, existing.RenderPoints)) ||
+                                      newPathsInThisColumn.Any(newPath => PathSegmentsIntersect(tentativePathPoints, newPath.RenderPoints));
 
-                    if (bestSource != null)
+                    if (!intersects)
                     {
-                        var path = new SplitMapPath(bestSource.Id, nextNode.Id);
+                        var path = new SplitMapPath(prevNode.Id, targetNode.Id);
+                        path.RenderPoints = tentativePathPoints;
                         newPathsInThisColumn.Add(path);
-                        bestSource.OutgoingPathIds.Add(path.Id);
-                        nextNode.IncomingPathIds.Add(path.Id);
+                        prevNode.OutgoingPathIds.Add(path.Id);
+                        targetNode.IncomingPathIds.Add(path.Id);
+                        break; // Move to the next prevNode
                     }
                 }
             }
 
-            // Pass 3: Secondary connections (branching)
+            // Pass 2: Ensure reachability
+            foreach (var nextNode in sortedNext)
+            {
+                if (nextNode.IncomingPathIds.Any()) continue;
+
+                var potentialSources = sortedPrev
+                    .OrderBy(source => Vector2.DistanceSquared(source.Position, nextNode.Position));
+
+                foreach (var sourceNode in potentialSources)
+                {
+                    var tentativePathPoints = GenerateWigglyPathPoints(sourceNode.Position, nextNode.Position, new List<int> { sourceNode.Id, nextNode.Id }, allNodes);
+
+                    bool intersects = allExistingPaths.Any(existing => PathSegmentsIntersect(tentativePathPoints, existing.RenderPoints)) ||
+                                      newPathsInThisColumn.Any(newPath => PathSegmentsIntersect(tentativePathPoints, newPath.RenderPoints));
+
+                    if (!intersects)
+                    {
+                        var path = new SplitMapPath(sourceNode.Id, nextNode.Id);
+                        path.RenderPoints = tentativePathPoints;
+                        newPathsInThisColumn.Add(path);
+                        sourceNode.OutgoingPathIds.Add(path.Id);
+                        nextNode.IncomingPathIds.Add(path.Id);
+                        break; // Move to the next unreachable nextNode
+                    }
+                }
+            }
+
+            // Pass 3: Secondary connections
             foreach (var prevNode in sortedPrev)
             {
                 if (_random.NextDouble() < SECONDARY_PATH_CHANCE)
@@ -249,7 +248,12 @@ namespace ProjectVagabond.Progression
                     var primaryPathsFromNode = newPathsInThisColumn.Where(p => p.FromNodeId == prevNode.Id).ToList();
                     if (!primaryPathsFromNode.Any()) continue;
 
-                    var connectedNextNodeIds = prevNode.OutgoingPathIds.Select(id => allExistingPaths.Concat(newPathsInThisColumn).First(p => p.Id == id).ToNodeId).ToHashSet();
+                    var connectedNextNodeIds = prevNode.OutgoingPathIds
+                        .Select(id => allExistingPaths.Concat(newPathsInThisColumn).FirstOrDefault(p => p.Id == id)?.ToNodeId)
+                        .Where(id => id.HasValue)
+                        .Select(id => id.Value)
+                        .ToHashSet();
+
                     var shuffledPrimaryPaths = primaryPathsFromNode.OrderBy(p => _random.Next()).ToList();
 
                     foreach (var primaryPath in shuffledPrimaryPaths)
@@ -271,14 +275,15 @@ namespace ProjectVagabond.Progression
 
                         foreach (var targetNode in validBranchTargets)
                         {
-                            bool intersects = allExistingPaths.Concat(newPathsInThisColumn).Any(existing =>
-                                LineSegmentsIntersect(prevNode.Position, targetNode.Position,
-                                    allNodes.First(n => n.Id == existing.FromNodeId).Position,
-                                    allNodes.First(n => n.Id == existing.ToNodeId).Position));
+                            var tentativePathPoints = GenerateWigglyPathPoints(prevNode.Position, targetNode.Position, new List<int> { prevNode.Id, targetNode.Id }, allNodes);
+
+                            bool intersects = allExistingPaths.Any(existing => PathSegmentsIntersect(tentativePathPoints, existing.RenderPoints)) ||
+                                              newPathsInThisColumn.Any(newPath => PathSegmentsIntersect(tentativePathPoints, newPath.RenderPoints));
 
                             if (!intersects)
                             {
                                 var path = new SplitMapPath(prevNode.Id, targetNode.Id);
+                                path.RenderPoints = tentativePathPoints;
                                 newPathsInThisColumn.Add(path);
                                 prevNode.OutgoingPathIds.Add(path.Id);
                                 targetNode.IncomingPathIds.Add(path.Id);
@@ -296,78 +301,8 @@ namespace ProjectVagabond.Progression
 
         private static void GeneratePathRenderPoints(List<SplitMapPath> paths, List<SplitMapNode> allNodes)
         {
-            var pathsByStartNode = paths.ToLookup(p => p.FromNodeId);
-
-            foreach (var group in pathsByStartNode)
-            {
-                var fromNode = allNodes.FirstOrDefault(n => n.Id == group.Key);
-                if (fromNode == null) continue;
-
-                var outgoingPaths = group.ToList();
-
-                if (outgoingPaths.Count == 1)
-                {
-                    var path = outgoingPaths.First();
-                    var toNode = allNodes.FirstOrDefault(n => n.Id == path.ToNodeId);
-                    if (toNode != null)
-                    {
-                        path.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, toNode.Position, new List<int> { fromNode.Id, toNode.Id }, allNodes);
-                    }
-                }
-                else if (outgoingPaths.Count > 1)
-                {
-                    SplitMapPath? mainPath = outgoingPaths
-                        .Select(p => new { Path = p, ToNode = allNodes.FirstOrDefault(n => n.Id == p.ToNodeId) })
-                        .Where(x => x.ToNode != null)
-                        .OrderBy(x => Math.Abs(x.ToNode.Position.Y - fromNode.Position.Y))
-                        .FirstOrDefault()?.Path;
-
-                    if (mainPath == null)
-                    {
-                        foreach (var path in outgoingPaths)
-                        {
-                            var toNode = allNodes.FirstOrDefault(n => n.Id == path.ToNodeId);
-                            if (toNode != null)
-                            {
-                                path.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, toNode.Position, new List<int> { fromNode.Id, toNode.Id }, allNodes);
-                            }
-                        }
-                        continue;
-                    }
-
-                    var mainPathToNode = allNodes.First(n => n.Id == mainPath.ToNodeId);
-                    mainPath.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, mainPathToNode.Position, new List<int> { fromNode.Id, mainPathToNode.Id }, allNodes);
-
-                    var branchPaths = outgoingPaths.Where(p => p != mainPath).ToList();
-                    foreach (var branchPath in branchPaths)
-                    {
-                        var branchToNode = allNodes.FirstOrDefault(n => n.Id == branchPath.ToNodeId);
-                        if (branchToNode == null) continue;
-
-                        if (mainPath.RenderPoints.Count < 5)
-                        {
-                            branchPath.RenderPoints = GenerateWigglyPathPoints(fromNode.Position, branchToNode.Position, new List<int> { fromNode.Id, branchToNode.Id }, allNodes);
-                            continue;
-                        }
-
-                        int minIndex = (int)(mainPath.RenderPoints.Count * PATH_SPLIT_POINT_MIN);
-                        int maxIndex = (int)(mainPath.RenderPoints.Count * PATH_SPLIT_POINT_MAX);
-                        if (minIndex >= maxIndex)
-                        {
-                            minIndex = 1;
-                            maxIndex = mainPath.RenderPoints.Count - 2;
-                        }
-                        int splitIndex = _random.Next(minIndex, maxIndex);
-                        Vector2 splitPoint = mainPath.RenderPoints[splitIndex];
-
-                        var trunkPoints = mainPath.RenderPoints.Take(splitIndex + 1).ToList();
-                        var branchIgnoreIds = new List<int> { fromNode.Id, branchToNode.Id };
-                        var branchPoints = GenerateWigglyPathPoints(splitPoint, branchToNode.Position, branchIgnoreIds, allNodes);
-                        branchPath.RenderPoints = trunkPoints.Concat(branchPoints.Skip(1)).ToList();
-                    }
-                }
-            }
-
+            // The wiggly RenderPoints are now generated during connection.
+            // This method is now only responsible for generating the pixel-perfect points for drawing.
             foreach (var path in paths)
             {
                 path.PixelPoints.Clear();
@@ -677,6 +612,23 @@ namespace ProjectVagabond.Progression
             if (o3 == 0 && OnSegment(p2, p1, q2)) return true;
             if (o4 == 0 && OnSegment(p2, q1, q2)) return true;
 
+            return false;
+        }
+
+        private static bool PathSegmentsIntersect(List<Vector2> path1, List<Vector2> path2)
+        {
+            if (path1.Count < 2 || path2.Count < 2) return false;
+
+            for (int i = 0; i < path1.Count - 1; i++)
+            {
+                for (int j = 0; j < path2.Count - 1; j++)
+                {
+                    if (LineSegmentsIntersect(path1[i], path1[i + 1], path2[j], path2[j + 1]))
+                    {
+                        return true;
+                    }
+                }
+            }
             return false;
         }
     }

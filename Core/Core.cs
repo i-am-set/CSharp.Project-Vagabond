@@ -455,11 +455,9 @@ namespace ProjectVagabond
 
             if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState))
             {
-                if (_sceneManager.CurrentActiveScene?.GetType() != typeof(BattleScene))
-                {
-                    BattleSetup.EnemyArchetypes = new List<string> { "wanderer", "scarab", "wanderer" };
-                    _sceneManager.ChangeScene(GameSceneState.Battle);
-                }
+                // Soft reset the game
+                _progressionManager.ClearCurrentSplitMap();
+                _sceneManager.ChangeScene(GameSceneState.MainMenu);
             }
             if (KeyPressed(Keys.F6, currentKeyboardState, _previousKeyboardState))
             {
