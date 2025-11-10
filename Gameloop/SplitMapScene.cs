@@ -124,7 +124,7 @@ namespace ProjectVagabond.Scenes
 
             _voidEdgeEffect = new VoidEdgeEffect(
                 edgeColor: _global.Palette_Black,
-                edgeWidth: 6,
+                edgeWidth: 10,
                 noiseScale: 0.5f,
                 noiseSpeed: 10f
             );

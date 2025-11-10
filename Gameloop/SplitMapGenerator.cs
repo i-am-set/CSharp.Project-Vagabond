@@ -17,6 +17,7 @@ namespace ProjectVagabond.Progression
     {
         private static readonly Random _random = new Random();
         private static readonly SeededPerlin _baldSpotNoise;
+        private static readonly SeededPerlin _nodeExclusionNoise;
 
         // --- Generation Tuning ---
         private const int MIN_NODES_PER_COLUMN = 2;
@@ -48,10 +49,15 @@ namespace ProjectVagabond.Progression
         private const float BALD_SPOT_NOISE_SCALE = 0.1f; // Higher value = smaller, more frequent spots.
         private const float BALD_SPOT_THRESHOLD = 0.65f; // Noise must be ABOVE this to create a bald spot. Higher value = fewer spots.
 
+        // --- Node Exclusion Zone Tuning ---
+        private const float NODE_EXCLUSION_NOISE_SCALE = 2.5f; // Controls the number of "spikes". Higher value = more spikes.
+        private const float NODE_EXCLUSION_NOISE_STRENGTH = 0.4f; // Controls the jaggedness. 0 = perfect circle, 1 = very spikey.
+
 
         static SplitMapGenerator()
         {
             _baldSpotNoise = new SeededPerlin(_random.Next());
+            _nodeExclusionNoise = new SeededPerlin(_random.Next());
 
             const int gridSize = Global.SPLIT_MAP_GRID_SIZE;
             const int numPositions = 9;
@@ -559,7 +565,6 @@ namespace ProjectVagabond.Progression
 
             // Pre-calculate exclusion zones for performance
             var noSpawnZone = new bool[endX, endY];
-            float nodeRadiusSq = TREE_EXCLUSION_RADIUS_NODE * TREE_EXCLUSION_RADIUS_NODE;
             float pathRadiusSq = TREE_EXCLUSION_RADIUS_PATH * TREE_EXCLUSION_RADIUS_PATH;
 
             foreach (var node in allNodes)
@@ -573,7 +578,19 @@ namespace ProjectVagabond.Progression
                 {
                     for (int x = minX; x <= maxX; x++)
                     {
-                        if (Vector2.DistanceSquared(new Vector2(x, y), node.Position) < nodeRadiusSq)
+                        Vector2 currentPixel = new Vector2(x, y);
+                        float distance = Vector2.Distance(currentPixel, node.Position);
+
+                        Vector2 direction = currentPixel - node.Position;
+                        float angle = MathF.Atan2(direction.Y, direction.X);
+
+                        float noiseInputX = MathF.Cos(angle * NODE_EXCLUSION_NOISE_SCALE);
+                        float noiseInputY = MathF.Sin(angle * NODE_EXCLUSION_NOISE_SCALE);
+                        float noise = (_nodeExclusionNoise.Noise(noiseInputX, noiseInputY) + 1f) * 0.5f;
+
+                        float modulatedRadius = TREE_EXCLUSION_RADIUS_NODE * (1.0f - NODE_EXCLUSION_NOISE_STRENGTH * noise);
+
+                        if (distance < modulatedRadius)
                         {
                             noSpawnZone[x, y] = true;
                         }
