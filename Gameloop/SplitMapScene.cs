@@ -49,6 +49,7 @@ namespace ProjectVagabond.Scenes
         private readonly StoryNarrator _resultNarrator;
         private readonly ChoiceGenerator _choiceGenerator;
         private readonly ComponentStore _componentStore;
+        private readonly VoidEdgeEffect _voidEdgeEffect;
 
 
         private SplitMap? _currentMap;
@@ -138,6 +139,13 @@ namespace ProjectVagabond.Scenes
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
             _resultNarrator = new StoryNarrator(narratorBounds);
             _resultNarrator.OnFinished += OnResultNarrationFinished;
+
+            _voidEdgeEffect = new VoidEdgeEffect(
+                edgeColor: _global.Palette_Black,
+                edgeWidth: 6,
+                noiseScale: 0.5f,
+                noiseSpeed: 10f
+            );
         }
 
         public override Rectangle GetAnimatedBounds() => new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
@@ -320,7 +328,10 @@ namespace ProjectVagabond.Scenes
 
         public override void Update(GameTime gameTime)
         {
+            base.Update(gameTime);
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT));
 
             if (_hoveredNodeId != -1)
             {
@@ -786,6 +797,7 @@ namespace ProjectVagabond.Scenes
             var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
             var finalTransform = cameraTransform * transform;
 
+            // --- Pass 1: World-space elements (Map Content) ---
             spriteBatch.End();
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: finalTransform);
 
@@ -815,12 +827,10 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // --- Y-Sorting Setup ---
             var drawableObjects = new List<DrawableMapObject>();
             drawableObjects.AddRange(_currentMap.Nodes.Values.Select(n => new DrawableMapObject { Type = DrawableMapObject.ObjectType.Node, Position = n.Position, Data = n }));
             drawableObjects.Add(new DrawableMapObject { Type = DrawableMapObject.ObjectType.Player, Position = _playerIcon.Position });
 
-            // Draw baked scenery texture first, underneath everything else.
             if (_currentMap.BakedSceneryTexture != null)
             {
                 spriteBatch.DrawSnapped(_currentMap.BakedSceneryTexture, Vector2.Zero, Color.White);
@@ -828,7 +838,6 @@ namespace ProjectVagabond.Scenes
 
             drawableObjects.Sort((a, b) => a.Position.Y.CompareTo(b.Position.Y));
 
-            // --- Path and Dynamic Object Rendering ---
             DrawAllPaths(spriteBatch, pixel);
 
             foreach (var obj in drawableObjects)
@@ -852,7 +861,12 @@ namespace ProjectVagabond.Scenes
             }
 
             spriteBatch.End();
+
+            // --- Pass 2: Screen-space UI (Void Edge, Hover Text, Dialogs) ---
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
+
+            var mapBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+            _voidEdgeEffect.Draw(spriteBatch, mapBounds);
 
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
             {
