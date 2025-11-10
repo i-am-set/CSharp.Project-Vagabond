@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -43,7 +44,7 @@ namespace ProjectVagabond.Scenes
         protected bool firstTimeOpened = true;
 
         private const float INPUT_BLOCK_DURATION = 0.2f;
-        private float _inputBlockTimer = 0f;
+        protected float _inputBlockTimer = 0f;
 
         /// <summary>
         /// The input device used to navigate to this scene.

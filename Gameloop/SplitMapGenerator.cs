@@ -235,32 +235,55 @@ namespace ProjectVagabond.Progression
                 }
             }
 
-            // Pass 3: Secondary connections
+            // Pass 3: Secondary connections (branching)
             foreach (var prevNode in sortedPrev)
             {
                 if (_random.NextDouble() < SECONDARY_PATH_CHANCE)
                 {
+                    var primaryPathsFromNode = newPathsInThisColumn.Where(p => p.FromNodeId == prevNode.Id).ToList();
+                    if (!primaryPathsFromNode.Any()) continue;
+
                     var connectedNextNodeIds = prevNode.OutgoingPathIds.Select(id => allExistingPaths.Concat(newPathsInThisColumn).First(p => p.Id == id).ToNodeId).ToHashSet();
-                    var availableTargets = sortedNext.Where(n => !connectedNextNodeIds.Contains(n.Id)).OrderBy(x => _random.Next()).ToList();
+                    var shuffledPrimaryPaths = primaryPathsFromNode.OrderBy(p => _random.Next()).ToList();
 
-                    foreach (var targetNode in availableTargets)
+                    foreach (var primaryPath in shuffledPrimaryPaths)
                     {
-                        bool intersects = allExistingPaths.Concat(newPathsInThisColumn).Any(existing =>
-                            LineSegmentsIntersect(prevNode.Position, targetNode.Position,
-                                allNodes.First(n => n.Id == existing.FromNodeId).Position,
-                                allNodes.First(n => n.Id == existing.ToNodeId).Position));
+                        var primaryTargetNode = sortedNext.FirstOrDefault(n => n.Id == primaryPath.ToNodeId);
+                        if (primaryTargetNode == null) continue;
 
-                        if (!intersects)
+                        int primaryTargetIndex = sortedNext.IndexOf(primaryTargetNode);
+                        var potentialBranchTargets = new List<SplitMapNode>();
+                        if (primaryTargetIndex > 0) potentialBranchTargets.Add(sortedNext[primaryTargetIndex - 1]);
+                        if (primaryTargetIndex < sortedNext.Count - 1) potentialBranchTargets.Add(sortedNext[primaryTargetIndex + 1]);
+
+                        var validBranchTargets = potentialBranchTargets
+                            .Where(n => !connectedNextNodeIds.Contains(n.Id))
+                            .OrderBy(n => _random.Next())
+                            .ToList();
+
+                        if (!validBranchTargets.Any()) continue;
+
+                        foreach (var targetNode in validBranchTargets)
                         {
-                            var path = new SplitMapPath(prevNode.Id, targetNode.Id);
-                            newPathsInThisColumn.Add(path);
-                            prevNode.OutgoingPathIds.Add(path.Id);
-                            targetNode.IncomingPathIds.Add(path.Id);
-                            break; // Only add one secondary path per node
+                            bool intersects = allExistingPaths.Concat(newPathsInThisColumn).Any(existing =>
+                                LineSegmentsIntersect(prevNode.Position, targetNode.Position,
+                                    allNodes.First(n => n.Id == existing.FromNodeId).Position,
+                                    allNodes.First(n => n.Id == existing.ToNodeId).Position));
+
+                            if (!intersects)
+                            {
+                                var path = new SplitMapPath(prevNode.Id, targetNode.Id);
+                                newPathsInThisColumn.Add(path);
+                                prevNode.OutgoingPathIds.Add(path.Id);
+                                targetNode.IncomingPathIds.Add(path.Id);
+                                goto nextPrevNode;
+                            }
                         }
                     }
                 }
+            nextPrevNode:;
             }
+
 
             return newPathsInThisColumn;
         }

@@ -17,21 +17,6 @@ namespace ProjectVagabond.Scenes
 {
     public class SplitMapScene : GameScene
     {
-        private class FadingElement
-        {
-            public Vector2 Position;
-            public Vector2 Velocity;
-            public Color Color;
-            public float Age;
-            public float Lifetime;
-            public Texture2D? Texture;
-            public Rectangle? SourceRect;
-            public Vector2 Origin;
-            public float Scale;
-            public float Rotation;
-            public float RotationSpeed;
-        }
-
         private struct DrawableMapObject
         {
             public enum ObjectType { Node, Player }
@@ -65,7 +50,6 @@ namespace ProjectVagabond.Scenes
         private const float NODE_LOWERING_DURATION = 0.2f;
         private const float POST_EVENT_DELAY = 0.25f;
         private const float PATH_ANIMATION_DURATION = 0.75f;
-        private const float UNSELECTED_FADE_OUT_DURATION = 0.6f;
 
 
         private Vector2 _cameraOffset;
@@ -79,6 +63,7 @@ namespace ProjectVagabond.Scenes
         // Node interaction state
         private int _hoveredNodeId = -1;
         private readonly HashSet<int> _visitedNodeIds = new HashSet<int>();
+        private readonly HashSet<int> _traversedPathIds = new HashSet<int>();
         private int _nodeForPathReveal = -1;
 
         // Path animation state
@@ -115,9 +100,6 @@ namespace ProjectVagabond.Scenes
         private float _nodeHoverTextBobTimer = 0f;
         private float _nodeLiftTimer = 0f;
         private const float NODE_LIFT_AMOUNT = 15f;
-        private readonly List<FadingElement> _fadingElements = new();
-        private readonly HashSet<int> _fadingPathIds = new();
-        private readonly HashSet<int> _fadingNodeIds = new();
 
 
         public static bool PlayerWonLastBattle { get; set; } = true;
@@ -164,11 +146,9 @@ namespace ProjectVagabond.Scenes
                 _nodeForPathReveal = _playerCurrentNodeId;
                 _pathAnimationProgress.Clear();
                 _pathAnimationDurations.Clear();
-                _fadingElements.Clear();
-                _fadingPathIds.Clear();
-                _fadingNodeIds.Clear();
 
                 _visitedNodeIds.Clear();
+                _traversedPathIds.Clear();
                 _visitedNodeIds.Add(_playerCurrentNodeId);
 
                 var startNode = _currentMap?.Nodes[_playerCurrentNodeId];
@@ -257,80 +237,39 @@ namespace ProjectVagabond.Scenes
             _playerMoveTimer = 0f;
             _playerMoveTargetNodeId = targetNodeId;
 
-            // Concurrently update camera and start pruning animations
-            var targetNode = _currentMap.Nodes[targetNodeId];
-            UpdateCameraTarget(targetNode.Position, false);
+            // Find all currently reachable nodes from the player's current position.
+            var currentNode = _currentMap.Nodes[_playerCurrentNodeId];
+            var reachableNodeIds = currentNode.OutgoingPathIds
+                .Select(pathId => _currentMap.Paths[pathId].ToNodeId)
+                .ToList();
 
-            // Identify unselected paths and nodes to start their fade/retraction animations.
-            if (_currentMap.Nodes.TryGetValue(_playerCurrentNodeId, out var currentNode))
+            // Mark only the unselected reachable nodes as unreachable.
+            foreach (var nodeId in reachableNodeIds)
             {
-                var pixel = ServiceLocator.Get<Texture2D>();
-                var visitedPathFillColor = _global.Palette_White;
-                var selectedPathPixels = new HashSet<Point>(_playerMovePath.PixelPoints);
-
-                foreach (var pathId in currentNode.OutgoingPathIds)
+                if (nodeId != targetNodeId)
                 {
-                    if (pathId != _playerMovePath.Id)
-                    {
-                        if (_currentMap.Paths.TryGetValue(pathId, out var unselectedPath))
-                        {
-                            _fadingPathIds.Add(unselectedPath.Id);
-                            _fadingNodeIds.Add(unselectedPath.ToNodeId);
-
-                            // Create particles for the path pixels THAT ARE NOT SHARED
-                            foreach (var point in unselectedPath.PixelPoints)
-                            {
-                                if (!selectedPathPixels.Contains(point))
-                                {
-                                    var element = new FadingElement
-                                    {
-                                        Position = point.ToVector2(),
-                                        Velocity = new Vector2((float)(_random.NextDouble() * 4 - 2), (float)(_random.NextDouble() * -6 - 1)),
-                                        Color = visitedPathFillColor,
-                                        Age = 0f,
-                                        Lifetime = UNSELECTED_FADE_OUT_DURATION,
-                                        Texture = pixel,
-                                        SourceRect = null,
-                                        Origin = new Vector2(0.5f),
-                                        Scale = 1f,
-                                        Rotation = 0f,
-                                        RotationSpeed = 0f
-                                    };
-                                    _fadingElements.Add(element);
-                                }
-                            }
-
-                            // Create a particle for the destination node
-                            if (_currentMap.Nodes.TryGetValue(unselectedPath.ToNodeId, out var unselectedNode))
-                            {
-                                var (tex, src, origin) = GetNodeDrawData(unselectedNode, new GameTime());
-                                var nodeElement = new FadingElement
-                                {
-                                    Position = unselectedNode.Position,
-                                    Velocity = new Vector2((float)(_random.NextDouble() * 2 - 1), (float)(_random.NextDouble() * -4 - 1)),
-                                    Color = Color.White,
-                                    Age = 0f,
-                                    Lifetime = UNSELECTED_FADE_OUT_DURATION,
-                                    Texture = tex,
-                                    SourceRect = src,
-                                    Origin = origin,
-                                    Scale = 1f,
-                                    Rotation = 0f,
-                                    RotationSpeed = (float)(_random.NextDouble() * 2 - 1)
-                                };
-                                _fadingElements.Add(nodeElement);
-                            }
-                        }
-                    }
+                    _currentMap.Nodes[nodeId].IsReachable = false;
                 }
             }
+            // The selected targetNodeId remains IsReachable = true, so it and its path will be drawn correctly.
         }
 
         public override void Update(GameTime gameTime)
         {
-            // Call base.Update() ONCE at the beginning. This updates the input block timer
-            // and, crucially, sets up the previousMouseState for this frame's logic.
-            base.Update(gameTime);
+            // Manually handle the logic that needs to run at the start of the frame.
+            if (_inputBlockTimer > 0)
+            {
+                _inputBlockTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            }
+
+            // Now check the input block timer.
+            if (IsInputBlocked)
+            {
+                // We must still call base.Update to keep the input states ticking over,
+                // otherwise the first click after the block ends will be missed.
+                base.Update(gameTime);
+                return;
+            }
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
@@ -341,12 +280,6 @@ namespace ProjectVagabond.Scenes
                 _nodeHoverTextBobTimer += deltaTime;
             }
 
-            // Now check the input block timer, which was just updated by base.Update().
-            if (IsInputBlocked)
-            {
-                return;
-            }
-
             // Handle modal dialogs first, as they pause the main scene logic
             if (_narrativeDialog.IsActive || _sceneManager.IsModalActive)
             {
@@ -355,6 +288,8 @@ namespace ProjectVagabond.Scenes
                     _narrativeDialog.Update(gameTime);
                 }
                 _wasModalActiveLastFrame = true;
+                // Call base.Update at the end before returning
+                base.Update(gameTime);
                 return;
             }
 
@@ -366,6 +301,7 @@ namespace ProjectVagabond.Scenes
                 if (currentNode != null)
                 {
                     currentNode.IsCompleted = true;
+                    UpdateCameraTarget(currentNode.Position, false);
                 }
                 _mapState = SplitMapState.LoweringNode;
                 _nodeLiftTimer = 0f;
@@ -374,11 +310,13 @@ namespace ProjectVagabond.Scenes
             // Handle event states that pause map interaction
             if (_eventState == EventState.AwaitingDiceRoll)
             {
+                base.Update(gameTime);
                 return;
             }
             if (_eventState == EventState.NarratingResult)
             {
                 _resultNarrator.Update(gameTime);
+                base.Update(gameTime);
                 return;
             }
 
@@ -393,22 +331,6 @@ namespace ProjectVagabond.Scenes
                 if (_pathAnimationProgress[pathId] < duration)
                 {
                     _pathAnimationProgress[pathId] += deltaTime;
-                }
-            }
-
-            // Update fading elements
-            for (int i = _fadingElements.Count - 1; i >= 0; i--)
-            {
-                var element = _fadingElements[i];
-                element.Age += deltaTime;
-                if (element.Age >= element.Lifetime)
-                {
-                    _fadingElements.RemoveAt(i);
-                }
-                else
-                {
-                    element.Position += element.Velocity * deltaTime;
-                    element.Rotation += element.RotationSpeed * deltaTime;
                 }
             }
 
@@ -441,6 +363,9 @@ namespace ProjectVagabond.Scenes
             }
 
             _playerIcon.Update(gameTime);
+
+            // At the very end, call the base update to handle input state for the NEXT frame.
+            base.Update(gameTime);
         }
 
         private void UpdatePlayerMove(float deltaTime)
@@ -457,16 +382,17 @@ namespace ProjectVagabond.Scenes
             if (progress >= 1f)
             {
                 _playerIcon.SetIsMoving(false);
-                int fromNodeId = _playerCurrentNodeId;
+                if (_playerMovePath != null)
+                {
+                    _traversedPathIds.Add(_playerMovePath.Id);
+                }
                 _playerCurrentNodeId = _playerMoveTargetNodeId;
                 _visitedNodeIds.Add(_playerCurrentNodeId);
 
                 var toNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                if (_currentMap != null && toNode != null)
+                if (toNode != null)
                 {
                     _playerIcon.SetPosition(toNode.Position);
-                    var fromNode = _currentMap.Nodes[fromNodeId];
-                    _currentMap.PruneColumn(fromNode.Floor, fromNode.Id);
                 }
 
                 _mapState = SplitMapState.LiftingNode;
@@ -857,13 +783,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            foreach (var element in _fadingElements)
-            {
-                float progress = element.Age / element.Lifetime;
-                float alpha = 0.25f * (1.0f - Easing.EaseOutQuad(progress));
-                spriteBatch.DrawSnapped(element.Texture, element.Position, element.SourceRect, element.Color * alpha, element.Rotation, element.Origin, element.Scale, SpriteEffects.None, 0.35f);
-            }
-
             spriteBatch.End();
 
             // --- Pass 2: Screen-space UI (Void Edge, Hover Text, Dialogs) ---
@@ -912,7 +831,7 @@ namespace ProjectVagabond.Scenes
             // --- Pass 1: Draw all paths as gray underlays ---
             foreach (var path in _currentMap.Paths.Values)
             {
-                DrawPath(spriteBatch, pixel, path, _global.Palette_DarkGray, true);
+                DrawPath(spriteBatch, pixel, path, _global.Palette_DarkGray, false);
             }
 
             // --- Pass 2: Draw visited and animating paths (non-highlighted) ---
@@ -931,10 +850,10 @@ namespace ProjectVagabond.Scenes
 
                 bool isPathFromCurrentNode = fromNode.Id == _playerCurrentNodeId;
                 bool isPathToReachableNode = toNode.IsReachable;
-                bool isPathVisited = _visitedNodeIds.Contains(toNode.Id);
+                bool isPathTraversed = _traversedPathIds.Contains(path.Id);
                 bool isAnimating = isPathFromCurrentNode && isPathToReachableNode && !_visitedNodeIds.Contains(toNode.Id);
 
-                if (isPathVisited || isAnimating)
+                if (isPathTraversed || isAnimating)
                 {
                     DrawPath(spriteBatch, pixel, path, _global.Palette_White, isAnimating);
                 }
@@ -949,7 +868,7 @@ namespace ProjectVagabond.Scenes
 
         private void DrawPath(SpriteBatch spriteBatch, Texture2D pixel, SplitMapPath path, Color pathColor, bool isAnimating)
         {
-            if (_currentMap == null || path.PixelPoints.Count < 2 || _fadingPathIds.Contains(path.Id)) return;
+            if (_currentMap == null || path.PixelPoints.Count < 2) return;
 
             var fromNode = _currentMap.Nodes[path.FromNodeId];
             var toNode = _currentMap.Nodes[path.ToNodeId];
@@ -1010,8 +929,6 @@ namespace ProjectVagabond.Scenes
 
         private void DrawNode(SpriteBatch spriteBatch, SplitMapNode node, GameTime gameTime)
         {
-            if (_fadingNodeIds.Contains(node.Id)) return;
-
             var (texture, sourceRect, origin) = GetNodeDrawData(node, gameTime);
             var bounds = node.GetBounds();
             var color = Color.White;
