@@ -153,6 +153,21 @@ namespace ProjectVagabond
         }
 
         /// <summary>
+        /// Resets the entire game state to its initial condition for a new game.
+        /// </summary>
+        public void Reset()
+        {
+            PlayerEntityId = 0;
+            PlayerState = null;
+            ActiveEntities.Clear();
+            ExploredCells.Clear();
+            IsActionQueueDirty = true;
+            _isExecutingActions = false;
+            _isPaused = false;
+            IsPausedByConsole = false;
+        }
+
+        /// <summary>
         /// Safely consumes an item from the player's inventory.
         /// </summary>
         /// <param name="itemID">The ID of the item to consume.</param>

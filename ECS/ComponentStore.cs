@@ -107,5 +107,13 @@ namespace ProjectVagabond
             }
             return Enumerable.Empty<int>();
         }
+
+        /// <summary>
+        /// Clears all components for all entities, resetting the store to its initial state.
+        /// </summary>
+        public void Clear()
+        {
+            _components.Clear();
+        }
     }
 }

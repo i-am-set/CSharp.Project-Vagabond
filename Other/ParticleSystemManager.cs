@@ -42,6 +42,11 @@ namespace ProjectVagabond.Particles
             }
         }
 
+        public void ClearAllEmitters()
+        {
+            _emitters.Clear();
+        }
+
         public void Update(float deltaTime)
         {
             // Update the vector field first, so all emitters in this frame use the same state.

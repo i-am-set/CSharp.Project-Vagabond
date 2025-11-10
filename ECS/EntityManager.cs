@@ -40,5 +40,14 @@ namespace ProjectVagabond
             // if the DestroyEntity logic is only called once per entity lifetime.
             _availableIds.Enqueue(entityId);
         }
+
+        /// <summary>
+        /// Clears all entity IDs, resetting the manager to its initial state.
+        /// </summary>
+        public void Clear()
+        {
+            _availableIds.Clear();
+            _nextId = 0;
+        }
     }
 }

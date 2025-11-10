@@ -48,6 +48,14 @@ namespace ProjectVagabond
             _requestThisFrame = true;
         }
 
+        public void Hide()
+        {
+            _isVisible = false;
+            _timer = 0f;
+            _currentRequestor = null;
+            _requestThisFrame = false;
+        }
+
         public void Update(GameTime gameTime)
         {
             if (_requestThisFrame)

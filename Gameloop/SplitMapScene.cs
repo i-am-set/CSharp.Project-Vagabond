@@ -140,13 +140,25 @@ namespace ProjectVagabond.Scenes
 
             if (_progressionManager.CurrentSplitMap == null)
             {
+                // This is a full reset of the scene's state for a new run
+                _mapState = SplitMapState.Idle;
+                _eventState = EventState.Idle;
+                _playerMoveTimer = 0f;
+                _playerMoveDuration = 0f;
+                _playerMoveTargetNodeId = -1;
+                _playerMovePath = null;
+                _hoveredNodeId = -1;
+                _pendingChoiceForDiceRoll = null;
+                _postEventDelayTimer = 0f;
+                _nodeLiftTimer = 0f;
+                _pulseTimer = 0f;
+
                 _progressionManager.GenerateNewSplitMap();
                 _currentMap = _progressionManager.CurrentSplitMap;
                 _playerCurrentNodeId = _currentMap?.StartNodeId ?? -1;
                 _nodeForPathReveal = _playerCurrentNodeId;
                 _pathAnimationProgress.Clear();
                 _pathAnimationDurations.Clear();
-
                 _visitedNodeIds.Clear();
                 _traversedPathIds.Clear();
                 _visitedNodeIds.Add(_playerCurrentNodeId);
@@ -162,8 +174,8 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
+                // This handles returning from a battle/event within the same run
                 _currentMap = _progressionManager.CurrentSplitMap;
-                // This handles returning from a battle/event
                 if (WasMajorBattle && PlayerWonLastBattle)
                 {
                     WasMajorBattle = false;
@@ -171,15 +183,14 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    // On returning from a normal battle, mark the node as completed and start the lowering animation.
                     var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                     if (currentNode != null)
                     {
                         currentNode.IsCompleted = true;
-                        UpdateCameraTarget(currentNode.Position, false); // Ensure camera is centered
+                        UpdateCameraTarget(currentNode.Position, false);
                     }
-                    _mapState = SplitMapState.LoweringNode; // Transition to lowering state
-                    _nodeLiftTimer = 0f; // Reset timer for the lowering animation
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
                 }
             }
         }

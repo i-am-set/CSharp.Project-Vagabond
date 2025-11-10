@@ -456,8 +456,7 @@ namespace ProjectVagabond
             if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState))
             {
                 // Soft reset the game
-                _progressionManager.ClearCurrentSplitMap();
-                _sceneManager.ChangeScene(GameSceneState.MainMenu);
+                SoftResetGame();
             }
             if (KeyPressed(Keys.F6, currentKeyboardState, _previousKeyboardState))
             {
@@ -854,6 +853,30 @@ namespace ProjectVagabond
 
         public void ExitApplication() => Exit();
 
+        private void SoftResetGame()
+        {
+            // 1. Stop/reset all active managers and systems
+            _diceRollingSystem.ClearRoll();
+            _actionExecutionSystem.HandleInterruption();
+            _particleSystemManager.ClearAllEmitters();
+            _hapticsManager.StopAll();
+            _tooltipManager.Hide();
+            _loadingScreen.Clear();
+            _debugConsole.ClearHistory();
+            _progressionManager.ClearCurrentSplitMap();
+
+            // 2. Completely reset the entity-component-system state
+            var entityManager = ServiceLocator.Get<EntityManager>();
+            var componentStore = ServiceLocator.Get<ComponentStore>();
+            entityManager.Clear();
+            componentStore.Clear();
+            _gameState.Reset();
+
+            // 3. Transition back to the main menu
+            _sceneManager.ChangeScene(GameSceneState.MainMenu);
+        }
+
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
     }
 }
+﻿
