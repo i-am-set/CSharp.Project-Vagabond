@@ -24,8 +24,6 @@ namespace ProjectVagabond.Progression
         private const int MAX_NODES_PER_COLUMN = 3;
         private const int COLUMN_WIDTH = 96; // 6 * GRID_SIZE
         private const int HORIZONTAL_PADDING = 64; // 4 * GRID_SIZE
-        private const float BATTLE_EVENT_WEIGHT = 0.7f; // 70% chance for a battle
-        private const float NARRATIVE_EVENT_WEIGHT = 0.3f; // 30% chance for a narrative
         private const float PATH_SEGMENT_LENGTH = 10f; // Smaller value = more wiggles
         private const float PATH_MAX_OFFSET = 5f; // Max perpendicular deviation
         private const float SECONDARY_PATH_CHANCE = 0.4f; // Chance for a node to have a second outgoing path
@@ -35,14 +33,27 @@ namespace ProjectVagabond.Progression
         private const float PATH_SPLIT_POINT_MAX = 0.8f;
         private const float NODE_REPULSION_RADIUS = 30f;
         private const float NODE_REPULSION_STRENGTH = 15f;
-        private const float REWARD_NODE_CHANCE = 0.05f;
         private static readonly List<int> _validYPositions = new List<int>();
+
+        private static readonly List<(SplitNodeType type, float weight)> _nodeTypeWeights = new()
+        {
+            (SplitNodeType.Narrative, 20f),
+            (SplitNodeType.Village, 8f),
+            (SplitNodeType.Cottage, 10f),
+            (SplitNodeType.WatchPost, 4f),
+            (SplitNodeType.Farm, 5f),
+            (SplitNodeType.Church, 3f),
+            (SplitNodeType.Town, 2f),
+            (SplitNodeType.WizardTower, 1f),
+            (SplitNodeType.GuardOutpost, 2f),
+            (SplitNodeType.Kingdom, 0.5f)
+        };
 
         // --- Tree Generation Tuning ---
         private const int TREE_DENSITY_STEP = 2; // Check for a tree every pixel for max density.
         private const float TREE_NOISE_SCALE = 8.0f; // Controls the size of clearings. Higher value = smaller, more frequent clearings.
         private const float TREE_PLACEMENT_THRESHOLD = 0.45f; // Noise value must be above this to place a tree. Higher value = more clearings.
-        private const float TREE_EXCLUSION_RADIUS_NODE = 16f;
+        private const float TREE_EXCLUSION_RADIUS_NODE = 20f;
         private const float TREE_EXCLUSION_RADIUS_PATH = 8f;
 
         // --- Bald Spot Generation Tuning ---
@@ -240,7 +251,7 @@ namespace ProjectVagabond.Progression
                 }
             }
 
-            // Pass 3: Secondary connections
+            // Pass 3: Secondary connections (branching)
             foreach (var prevNode in sortedPrev)
             {
                 if (_random.NextDouble() < SECONDARY_PATH_CHANCE)
@@ -379,27 +390,22 @@ namespace ProjectVagabond.Progression
         {
             var progressionManager = ServiceLocator.Get<ProgressionManager>();
 
-            var baseChoices = new List<(SplitNodeType type, float weight)>();
-            if (splitData.PossibleBattles != null && splitData.PossibleBattles.Any())
+            var availableChoices = new List<(SplitNodeType type, float weight)>(_nodeTypeWeights);
+
+            // Filter out types if their corresponding data is missing in the current split
+            if (splitData.PossibleNarrativeEventIDs == null || !splitData.PossibleNarrativeEventIDs.Any())
             {
-                baseChoices.Add((SplitNodeType.Battle, BATTLE_EVENT_WEIGHT * (1.0f - REWARD_NODE_CHANCE)));
-                baseChoices.Add((SplitNodeType.Reward, BATTLE_EVENT_WEIGHT * REWARD_NODE_CHANCE));
+                availableChoices.RemoveAll(c => c.type == SplitNodeType.Narrative);
             }
-            if (splitData.PossibleNarrativeEventIDs != null && splitData.PossibleNarrativeEventIDs.Any())
+            if (splitData.PossibleBattles == null || !splitData.PossibleBattles.Any())
             {
-                baseChoices.Add((SplitNodeType.Narrative, NARRATIVE_EVENT_WEIGHT));
+                availableChoices.RemoveAll(c => c.type == SplitNodeType.Battle);
             }
 
-            if (!baseChoices.Any())
+            if (!availableChoices.Any())
             {
-                if (splitData.PossibleBattles != null && splitData.PossibleBattles.Any())
-                {
-                    baseChoices.Add((SplitNodeType.Battle, 1.0f));
-                }
-                else
-                {
-                    return;
-                }
+                // Fallback if no choices are possible
+                return;
             }
 
             for (int i = 0; i < nodesToAssign.Count; i++)
@@ -413,17 +419,6 @@ namespace ProjectVagabond.Progression
                         node.EventData = splitData.PossibleMajorBattles[_random.Next(splitData.PossibleMajorBattles.Count)];
                     }
                     continue;
-                }
-
-                SplitNodeType? previousNodeType = (i > 0) ? nodesToAssign[i - 1].NodeType : (SplitNodeType?)null;
-                var availableChoices = baseChoices;
-                if (previousNodeType.HasValue)
-                {
-                    availableChoices = baseChoices.Where(c => c.type != previousNodeType.Value).ToList();
-                    if (!availableChoices.Any())
-                    {
-                        availableChoices = baseChoices;
-                    }
                 }
 
                 float totalWeight = availableChoices.Sum(c => c.weight);
@@ -450,7 +445,17 @@ namespace ProjectVagabond.Progression
                     case SplitNodeType.Narrative:
                         node.EventData = progressionManager.GetRandomNarrative()?.EventID;
                         break;
+                    // New and existing non-event nodes fall through here
                     case SplitNodeType.Reward:
+                    case SplitNodeType.Kingdom:
+                    case SplitNodeType.Town:
+                    case SplitNodeType.Village:
+                    case SplitNodeType.Church:
+                    case SplitNodeType.Farm:
+                    case SplitNodeType.Cottage:
+                    case SplitNodeType.GuardOutpost:
+                    case SplitNodeType.WizardTower:
+                    case SplitNodeType.WatchPost:
                         node.EventData = null;
                         break;
                 }

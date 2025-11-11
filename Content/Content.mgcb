@@ -434,6 +434,30 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MapNodes/CombatNode_Normal.png;Sprites/MapNodes/CombatNode_Normal
 
+#begin Sprites/MapNodes/MapNode_Castle.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Castle.png;Sprites/MapNodes/MapNode_Castle
+
+#begin Sprites/MapNodes/MapNode_Church.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Church.png;Sprites/MapNodes/MapNode_Church
+
 #begin Sprites/MapNodes/MapNode_Event.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -446,6 +470,54 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/MapNodes/MapNode_Event.png;Sprites/MapNodes/MapNode_Event
 
+#begin Sprites/MapNodes/MapNode_Farm.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Farm.png;Sprites/MapNodes/MapNode_Farm
+
+#begin Sprites/MapNodes/MapNode_House.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_House.png;Sprites/MapNodes/MapNode_House
+
+#begin Sprites/MapNodes/MapNode_House2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_House2.png;Sprites/MapNodes/MapNode_House2
+
+#begin Sprites/MapNodes/MapNode_House3.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_House3.png;Sprites/MapNodes/MapNode_House3
+
 #begin Sprites/MapNodes/MapNode_Start.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -457,6 +529,66 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/MapNodes/MapNode_Start.png;Sprites/MapNodes/MapNode_Start
+
+#begin Sprites/MapNodes/MapNode_Tower.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Tower.png;Sprites/MapNodes/MapNode_Tower
+
+#begin Sprites/MapNodes/MapNode_Tower2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Tower2.png;Sprites/MapNodes/MapNode_Tower2
+
+#begin Sprites/MapNodes/MapNode_Tower3.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Tower3.png;Sprites/MapNodes/MapNode_Tower3
+
+#begin Sprites/MapNodes/MapNode_Town.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Town.png;Sprites/MapNodes/MapNode_Town
+
+#begin Sprites/MapNodes/MapNode_Town2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/MapNodes/MapNode_Town2.png;Sprites/MapNodes/MapNode_Town2
 
 #begin Sprites/MapNodes/MapNode_Treasure.png
 /importer:TextureImporter

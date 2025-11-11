@@ -21,7 +21,16 @@ namespace ProjectVagabond.Progression
         Battle,
         Narrative,
         Reward,
-        MajorBattle
+        MajorBattle,
+        Kingdom,
+        Town,
+        Village,
+        Church,
+        Farm,
+        Cottage,
+        GuardOutpost,
+        WizardTower,
+        WatchPost
     }
 
     public enum BattleDifficulty

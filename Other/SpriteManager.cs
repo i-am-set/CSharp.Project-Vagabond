@@ -84,6 +84,17 @@ namespace ProjectVagabond
         public Texture2D CombatNodePlayerSprite { get; private set; }
         public Texture2D CombatNodeEasySprite { get; private set; }
         public Texture2D CombatNodeHardSprite { get; private set; }
+        public Texture2D SplitNodeCastle { get; private set; }
+        public Texture2D SplitNodeChurch { get; private set; }
+        public Texture2D SplitNodeFarm { get; private set; }
+        public Texture2D SplitNodeHouse { get; private set; }
+        public Texture2D SplitNodeHouse2 { get; private set; }
+        public Texture2D SplitNodeHouse3 { get; private set; }
+        public Texture2D SplitNodeTower { get; private set; }
+        public Texture2D SplitNodeTower2 { get; private set; }
+        public Texture2D SplitNodeTower3 { get; private set; }
+        public Texture2D SplitNodeTown { get; private set; }
+        public Texture2D SplitNodeTown2 { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -230,6 +241,28 @@ namespace ProjectVagabond
             catch { CombatNodeEasySprite = _textureFactory.CreateColoredTexture(64, 32, Color.Green); }
             try { CombatNodeHardSprite = _core.Content.Load<Texture2D>("Sprites/MapNodes/CombatNode_Hard"); }
             catch { CombatNodeHardSprite = _textureFactory.CreateColoredTexture(64, 32, Color.DarkRed); }
+            try { SplitNodeCastle = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Castle"); }
+            catch { SplitNodeCastle = _textureFactory.CreateColoredTexture(64, 32, Color.SlateGray); }
+            try { SplitNodeChurch = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Church"); }
+            catch { SplitNodeChurch = _textureFactory.CreateColoredTexture(64, 32, Color.LightGoldenrodYellow); }
+            try { SplitNodeFarm = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Farm"); }
+            catch { SplitNodeFarm = _textureFactory.CreateColoredTexture(64, 32, Color.SaddleBrown); }
+            try { SplitNodeHouse = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_House"); }
+            catch { SplitNodeHouse = _textureFactory.CreateColoredTexture(64, 32, Color.BurlyWood); }
+            try { SplitNodeHouse2 = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_House2"); }
+            catch { SplitNodeHouse2 = _textureFactory.CreateColoredTexture(64, 32, Color.RosyBrown); }
+            try { SplitNodeHouse3 = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_House3"); }
+            catch { SplitNodeHouse3 = _textureFactory.CreateColoredTexture(64, 32, Color.SandyBrown); }
+            try { SplitNodeTower = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Tower"); }
+            catch { SplitNodeTower = _textureFactory.CreateColoredTexture(64, 32, Color.DarkGray); }
+            try { SplitNodeTower2 = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Tower2"); }
+            catch { SplitNodeTower2 = _textureFactory.CreateColoredTexture(64, 32, Color.DimGray); }
+            try { SplitNodeTower3 = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Tower3"); }
+            catch { SplitNodeTower3 = _textureFactory.CreateColoredTexture(64, 32, Color.SlateBlue); }
+            try { SplitNodeTown = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Town"); }
+            catch { SplitNodeTown = _textureFactory.CreateColoredTexture(64, 32, Color.IndianRed); }
+            try { SplitNodeTown2 = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Town2"); }
+            catch { SplitNodeTown2 = _textureFactory.CreateColoredTexture(64, 32, Color.Maroon); }
 
 
             InitializeArrowSourceRects();

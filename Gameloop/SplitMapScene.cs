@@ -76,7 +76,7 @@ namespace ProjectVagabond.Scenes
         private const float PATH_COLOR_VARIATION_MIN = 0.1f;
         private const float PATH_COLOR_VARIATION_MAX = 1.0f;
         private const float PATH_COLOR_NOISE_SCALE = 0.3f;
-        private const float PATH_EXCLUSION_RADIUS = 5f; // Half of a 20x20 exclusion zone
+        private const float PATH_EXCLUSION_RADIUS = 10f; // Half of a 20x20 exclusion zone
         private const float PATH_FADE_DISTANCE = 12f;
 
 
@@ -559,11 +559,32 @@ namespace ProjectVagabond.Scenes
                             _narrativeDialog.Show(narrativeEvent, OnNarrativeChoiceSelected);
                             _wasModalActiveLastFrame = true;
                         }
+                        else // Failsafe for invalid event ID
+                        {
+                            node.IsCompleted = true;
+                            UpdateCameraTarget(node.Position, false);
+                            _mapState = SplitMapState.LoweringNode;
+                            _nodeLiftTimer = 0f;
+                        }
+                    }
+                    else // Failsafe for missing event data
+                    {
+                        node.IsCompleted = true;
+                        UpdateCameraTarget(node.Position, false);
+                        _mapState = SplitMapState.LoweringNode;
+                        _nodeLiftTimer = 0f;
                     }
                     break;
 
                 case SplitNodeType.Reward:
                     TriggerReward();
+                    break;
+
+                default: // Failsafe for all other node types without events
+                    node.IsCompleted = true;
+                    UpdateCameraTarget(node.Position, false);
+                    _mapState = SplitMapState.LoweringNode;
+                    _nodeLiftTimer = 0f;
                     break;
             }
         }
@@ -817,6 +838,15 @@ namespace ProjectVagabond.Scenes
                         SplitNodeType.Narrative => "EVENT",
                         SplitNodeType.Reward => "REWARD",
                         SplitNodeType.MajorBattle => "MAJOR BATTLE",
+                        SplitNodeType.Kingdom => "KINGDOM",
+                        SplitNodeType.Town => "TOWN",
+                        SplitNodeType.Village => "VILLAGE",
+                        SplitNodeType.Church => "CHURCH",
+                        SplitNodeType.Farm => "FARM",
+                        SplitNodeType.Cottage => "COTTAGE",
+                        SplitNodeType.GuardOutpost => "GUARD OUTPOST",
+                        SplitNodeType.WizardTower => "WIZARD TOWER",
+                        SplitNodeType.WatchPost => "WATCH POST",
                         _ => ""
                     };
 
@@ -842,7 +872,7 @@ namespace ProjectVagabond.Scenes
             // --- Pass 1: Draw all paths as gray underlays ---
             foreach (var path in _currentMap.Paths.Values)
             {
-                DrawPath(spriteBatch, pixel, path, _global.Palette_DarkGray, false);
+                DrawPath(spriteBatch, pixel, path, _global.Palette_Gray, false);
             }
 
             // --- Pass 2: Draw visited and animating paths (non-highlighted) ---
@@ -947,11 +977,11 @@ namespace ProjectVagabond.Scenes
 
             if (node.IsCompleted)
             {
-                color = _global.Palette_DarkGray;
+                color = _global.Palette_Gray;
             }
             else if (node.NodeType != SplitNodeType.Origin && node.Id != _playerCurrentNodeId && !node.IsReachable)
             {
-                color = _global.Palette_DarkGray;
+                color = _global.Palette_Gray;
             }
 
             if (node.IsReachable && node.Id == _hoveredNodeId)
@@ -1003,6 +1033,38 @@ namespace ProjectVagabond.Scenes
                     break;
                 case SplitNodeType.MajorBattle:
                     texture = _spriteManager.SplitNodeBoss;
+                    break;
+                case SplitNodeType.Kingdom:
+                    texture = _spriteManager.SplitNodeCastle;
+                    break;
+                case SplitNodeType.Town:
+                    texture = _spriteManager.SplitNodeTown2;
+                    break;
+                case SplitNodeType.Village:
+                    texture = _spriteManager.SplitNodeTown;
+                    break;
+                case SplitNodeType.Church:
+                    texture = _spriteManager.SplitNodeChurch;
+                    break;
+                case SplitNodeType.Farm:
+                    texture = _spriteManager.SplitNodeFarm;
+                    break;
+                case SplitNodeType.Cottage:
+                    texture = (node.Id % 3) switch
+                    {
+                        0 => _spriteManager.SplitNodeHouse,
+                        1 => _spriteManager.SplitNodeHouse2,
+                        _ => _spriteManager.SplitNodeHouse3,
+                    };
+                    break;
+                case SplitNodeType.GuardOutpost:
+                    texture = _spriteManager.SplitNodeTower;
+                    break;
+                case SplitNodeType.WizardTower:
+                    texture = _spriteManager.SplitNodeTower2;
+                    break;
+                case SplitNodeType.WatchPost:
+                    texture = _spriteManager.SplitNodeTower3;
                     break;
                 default:
                     texture = _spriteManager.CombatNodeNormalSprite; // Fallback
