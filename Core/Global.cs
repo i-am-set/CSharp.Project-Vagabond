@@ -168,7 +168,7 @@ namespace ProjectVagabond
         // Static Color Palette
         public Color Palette_Black { get; set; } = new Color(14, 13, 19);
         public Color Palette_DarkestGray { get; set; } = new Color(18, 16, 33);
-        public Color Palette_DarkerGray { get; set; } = new Color(26, 29, 49);
+        public Color Palette_DarkerGray { get; set; } = new Color(20, 23, 43);
         public Color Palette_DarkGray { get; set; } = new Color(42, 40, 57);
         public Color Palette_Gray { get; set; } = new Color(62, 65, 95);
         public Color Palette_LightGray { get; set; } = new Color(85, 96, 125);

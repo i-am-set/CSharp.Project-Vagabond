@@ -54,6 +54,8 @@ namespace ProjectVagabond.Scenes
 
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
+        private Vector2 RoundedCameraOffset => new Vector2(MathF.Round(_cameraOffset.X), MathF.Round(_cameraOffset.Y));
+
 
         private float _playerMoveTimer;
         private float _playerMoveDuration;
@@ -101,6 +103,18 @@ namespace ProjectVagabond.Scenes
         private float _nodeLiftTimer = 0f;
         private const float NODE_LIFT_AMOUNT = 15f;
 
+        // Camera Panning State
+        private bool _isPanning = false;
+        private Point _panStartMousePosition;
+        private Point _lastPanMousePosition;
+        private Vector2 _panStartCameraOffset;
+        private Vector2 _cameraVelocity = Vector2.Zero;
+        private const float PAN_SENSITIVITY = 0.15f;
+        private const float PAN_FRICTION = 10f;
+        private float _snapBackDelayTimer = 0f;
+        private const float SNAP_BACK_DELAY = 1f;
+        private const float SCROLL_PAN_SPEED = 2f;
+
 
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
@@ -137,6 +151,7 @@ namespace ProjectVagabond.Scenes
             base.Enter();
             _playerIcon.SetIsMoving(false);
             _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
+            _isPanning = false;
 
             if (_progressionManager.CurrentSplitMap == null)
             {
@@ -331,8 +346,42 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // Smooth camera scrolling
+            // Handle camera logic
+            if (!_isPanning)
+            {
+                if (_cameraVelocity.LengthSquared() > 0.1f)
+                {
+                    // Apply inertia
+                    _cameraOffset += _cameraVelocity;
+                    _cameraVelocity = Vector2.Lerp(_cameraVelocity, Vector2.Zero, PAN_FRICTION * deltaTime);
+                    ClampCameraOffset();
+                    _targetCameraOffset = _cameraOffset; // Prevent LERP from fighting inertia
+                    _snapBackDelayTimer = SNAP_BACK_DELAY; // Reset timer while sliding
+                }
+                else
+                {
+                    // Stop tiny movements and officially end the slide
+                    _cameraVelocity = Vector2.Zero;
+
+                    // Countdown to snap back
+                    if (_snapBackDelayTimer > 0)
+                    {
+                        _snapBackDelayTimer -= deltaTime;
+                        if (_snapBackDelayTimer <= 0)
+                        {
+                            var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                            if (currentNode != null)
+                            {
+                                UpdateCameraTarget(currentNode.Position, false);
+                            }
+                        }
+                    }
+                }
+            }
+            // Always LERP towards the target. When panning/sliding, target is updated to current, so LERP does nothing.
+            // When snap-back triggers, target is updated to player, and LERP takes over.
             _cameraOffset = Vector2.Lerp(_cameraOffset, _targetCameraOffset, deltaTime * CAMERA_LERP_SPEED);
+
 
             // Update active path animations
             var appearingKeys = _pathAnimationProgress.Keys.ToList();
@@ -345,11 +394,10 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
+            HandleMapInput(gameTime);
+
             switch (_mapState)
             {
-                case SplitMapState.Idle:
-                    HandleNodeInput();
-                    break;
                 case SplitMapState.PlayerMoving:
                     UpdatePlayerMove(deltaTime);
                     break;
@@ -377,6 +425,137 @@ namespace ProjectVagabond.Scenes
 
             // At the very end, call the base update to handle input state for the NEXT frame.
             base.Update(gameTime);
+        }
+
+        private void HandleMapInput(GameTime gameTime)
+        {
+            var currentMouseState = Mouse.GetState();
+            var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
+            var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
+            Matrix.Invert(ref cameraTransform, out var inverseCameraTransform);
+            var mouseInMapSpace = Vector2.Transform(virtualMousePos, inverseCameraTransform);
+
+            // 1. Update hover state first
+            _hoveredNodeId = -1;
+            if (_currentMap != null)
+            {
+                foreach (var node in _currentMap.Nodes.Values)
+                {
+                    if (node.IsReachable && node.GetBounds().Contains(mouseInMapSpace))
+                    {
+                        _hoveredNodeId = node.Id;
+                        break;
+                    }
+                }
+            }
+
+            // 2. Handle camera panning (which depends on hover state)
+            HandleCameraPan(currentMouseState, virtualMousePos);
+
+            // 3. Handle node input (which is skipped if panning)
+            if (!_isPanning && _mapState == SplitMapState.Idle)
+            {
+                bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
+
+                if (leftClickPressed && _hoveredNodeId != -1 && UIInputManager.CanProcessMouseClick())
+                {
+                    StartPlayerMove(_hoveredNodeId);
+                    _hoveredNodeId = -1; // Clear hover state immediately on click
+                    UIInputManager.ConsumeMouseClick();
+                }
+            }
+        }
+
+        private void HandleCameraPan(MouseState currentMouseState, Vector2 virtualMousePos)
+        {
+            bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
+            bool leftClickHeld = currentMouseState.LeftButton == ButtonState.Pressed;
+            bool leftClickReleased = currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
+
+            // Handle Scroll Wheel Panning
+            int scrollDelta = currentMouseState.ScrollWheelValue - previousMouseState.ScrollWheelValue;
+            if (scrollDelta != 0 && _mapState == SplitMapState.Idle)
+            {
+                // Add to the camera's velocity instead of directly setting its position.
+                _cameraVelocity.X -= Math.Sign(scrollDelta) * SCROLL_PAN_SPEED;
+
+                // Stop any LERPing towards a target and reset the snap-back timer.
+                _targetCameraOffset = _cameraOffset;
+                _snapBackDelayTimer = SNAP_BACK_DELAY;
+            }
+
+            // Start Drag Panning
+            if (leftClickPressed && _hoveredNodeId == -1 && _mapState == SplitMapState.Idle && UIInputManager.CanProcessMouseClick())
+            {
+                _isPanning = true;
+                _panStartMousePosition = currentMouseState.Position;
+                _lastPanMousePosition = currentMouseState.Position;
+                _panStartCameraOffset = _cameraOffset;
+                _cameraVelocity = Vector2.Zero;
+                UIInputManager.ConsumeMouseClick();
+            }
+
+            // End Drag Panning
+            if (leftClickReleased)
+            {
+                if (_isPanning)
+                {
+                    _isPanning = false;
+                    // The snap-back timer is now handled in Update after the slide finishes.
+                }
+            }
+
+            // Update Drag Panning
+            if (_isPanning && leftClickHeld)
+            {
+                // Explicitly stop panning if the player starts moving or an event occurs.
+                if (_mapState != SplitMapState.Idle)
+                {
+                    _isPanning = false;
+                    return;
+                }
+
+                _snapBackDelayTimer = SNAP_BACK_DELAY; // Keep resetting the timer while actively panning.
+
+                Vector2 panCurrentMousePosition = currentMouseState.Position.ToVector2();
+                Vector2 panLastMousePosition = _lastPanMousePosition.ToVector2();
+                Vector2 deltaScreen = panCurrentMousePosition - panLastMousePosition;
+
+                // The velocity is the movement from the last frame, scaled.
+                _cameraVelocity.X = deltaScreen.X * PAN_SENSITIVITY;
+                _cameraVelocity.Y = 0;
+
+                // Update camera position directly by the same amount
+                _cameraOffset += _cameraVelocity;
+
+                ClampCameraOffset();
+
+                _targetCameraOffset = _cameraOffset; // Make LERP target the current position to prevent fighting
+                _lastPanMousePosition = currentMouseState.Position;
+            }
+        }
+
+        private void ClampCameraOffset()
+        {
+            if (_currentMap != null)
+            {
+                float mapContentWidth = _currentMap.MapWidth;
+                float screenWidth = Global.VIRTUAL_WIDTH;
+
+                if (mapContentWidth > screenWidth)
+                {
+                    const float maxOffsetX = 0;
+                    float minOffsetX = screenWidth - mapContentWidth;
+                    _cameraOffset.X = Math.Clamp(_cameraOffset.X, minOffsetX, maxOffsetX);
+                }
+                else
+                {
+                    // If map is smaller, force it to be centered.
+                    _cameraOffset.X = (screenWidth - mapContentWidth) / 2;
+                }
+                // Force Y to be 0
+                _cameraOffset.Y = 0;
+            }
         }
 
         private void UpdatePlayerMove(float deltaTime)
@@ -455,59 +634,37 @@ namespace ProjectVagabond.Scenes
                 if (currentNode != null)
                 {
                     currentNode.VisualOffset = Vector2.Zero;
+                    // Update the camera target to the new node position
+                    UpdateCameraTarget(currentNode.Position, false);
                 }
                 _mapState = SplitMapState.PostEventDelay;
                 _postEventDelayTimer = POST_EVENT_DELAY;
             }
         }
 
-        private void HandleNodeInput()
-        {
-            var mouseState = Mouse.GetState();
-            var virtualMousePos = Core.TransformMouse(mouseState.Position);
-
-            var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
-            Matrix.Invert(ref cameraTransform, out var inverseCameraTransform);
-            var mouseInMapSpace = Vector2.Transform(virtualMousePos, inverseCameraTransform);
-
-            bool leftClickPressed = mouseState.LeftButton == ButtonState.Pressed && base.previousMouseState.LeftButton == ButtonState.Released;
-
-            _hoveredNodeId = -1;
-
-            if (_currentMap != null)
-            {
-                foreach (var node in _currentMap.Nodes.Values)
-                {
-                    if (node.IsReachable && node.GetBounds().Contains(mouseInMapSpace))
-                    {
-                        _hoveredNodeId = node.Id;
-                        break;
-                    }
-                }
-            }
-
-            if (leftClickPressed && _hoveredNodeId != -1 && UIInputManager.CanProcessMouseClick())
-            {
-                StartPlayerMove(_hoveredNodeId);
-                _hoveredNodeId = -1; // Clear hover state immediately on click
-                UIInputManager.ConsumeMouseClick();
-            }
-        }
-
-
         private void UpdateCameraTarget(Vector2 targetNodePosition, bool snap)
         {
             if (_currentMap == null) return;
 
-            // This logic now anchors the camera so the player node appears at a fixed horizontal position on screen.
             const float playerScreenAnchorX = 40f;
             float targetX = playerScreenAnchorX - targetNodePosition.X;
 
-            // The camera's vertical position is now fixed to keep the map vertically centered.
-            // The map is generated around the world's vertical center (Global.VIRTUAL_HEIGHT / 2f).
-            // To align this with the screen's vertical center, the Y offset should be 0.
-            float targetY = 0;
+            float mapContentWidth = _currentMap.MapWidth;
+            float screenWidth = Global.VIRTUAL_WIDTH;
 
+            if (mapContentWidth > screenWidth)
+            {
+                float minOffsetX = screenWidth - mapContentWidth;
+                const float maxOffsetX = 0;
+                targetX = Math.Clamp(targetX, minOffsetX, maxOffsetX);
+            }
+            else
+            {
+                // Center the map horizontally if it's smaller than the screen
+                targetX = (screenWidth - mapContentWidth) / 2;
+            }
+
+            float targetY = 0;
             _targetCameraOffset = new Vector2(targetX, targetY);
 
             if (snap)
@@ -756,7 +913,7 @@ namespace ProjectVagabond.Scenes
         {
             if (_currentMap == null) return;
 
-            var cameraTransform = Matrix.CreateTranslation(_cameraOffset.X, _cameraOffset.Y, 0);
+            var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
             var finalTransform = cameraTransform * transform;
 
             // --- Pass 1: World-space elements (Map Content) ---
