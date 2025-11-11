@@ -113,7 +113,7 @@ namespace ProjectVagabond.Scenes
         private const float PAN_FRICTION = 10f;
         private float _snapBackDelayTimer = 0f;
         private const float SNAP_BACK_DELAY = 1f;
-        private const float SCROLL_PAN_SPEED = 2f;
+        private const float SCROLL_PAN_SPEED = 1f;
 
 
         public static bool PlayerWonLastBattle { get; set; } = true;
