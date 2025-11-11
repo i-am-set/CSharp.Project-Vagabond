@@ -791,7 +791,6 @@ namespace ProjectVagabond.Scenes
 
             var drawableObjects = new List<DrawableMapObject>();
             drawableObjects.AddRange(_currentMap.Nodes.Values.Select(n => new DrawableMapObject { Type = DrawableMapObject.ObjectType.Node, Position = n.Position, Data = n }));
-            drawableObjects.Add(new DrawableMapObject { Type = DrawableMapObject.ObjectType.Player, Position = _playerIcon.Position });
 
             if (_currentMap.BakedSceneryTexture != null)
             {
@@ -804,16 +803,14 @@ namespace ProjectVagabond.Scenes
 
             foreach (var obj in drawableObjects)
             {
-                switch (obj.Type)
+                if (obj.Type == DrawableMapObject.ObjectType.Node)
                 {
-                    case DrawableMapObject.ObjectType.Node:
-                        DrawNode(spriteBatch, (SplitMapNode)obj.Data!, gameTime);
-                        break;
-                    case DrawableMapObject.ObjectType.Player:
-                        _playerIcon.Draw(spriteBatch);
-                        break;
+                    DrawNode(spriteBatch, (SplitMapNode)obj.Data!, gameTime);
                 }
             }
+
+            // Draw player icon last to ensure it's on top of nodes
+            _playerIcon.Draw(spriteBatch);
 
             spriteBatch.End();
 

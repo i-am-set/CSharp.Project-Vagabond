@@ -64,6 +64,10 @@ namespace ProjectVagabond.Progression
         private const float NODE_EXCLUSION_NOISE_SCALE = 2.5f; // Controls the number of "spikes". Higher value = more spikes.
         private const float NODE_EXCLUSION_NOISE_STRENGTH = 0.4f; // Controls the jaggedness. 0 = perfect circle, 1 = very spikey.
 
+        // --- Node Placement Tuning ---
+        private const int NODE_SPREAD_BIAS_START_INDEX = 2; // Index of the first slot in the central bias zone (inclusive)
+        private const int NODE_SPREAD_BIAS_END_INDEX = 6;   // Index of the last slot in the central bias zone (inclusive)
+
 
         static SplitMapGenerator()
         {
@@ -166,13 +170,34 @@ namespace ProjectVagabond.Progression
 
             for (int i = 0; i < numNodes; i++)
             {
-                if (!availableYSlots.Any()) break; // Stop if we run out of valid, non-adjacent slots.
+                if (!availableYSlots.Any()) break;
 
                 float finalX = x + ((float)_random.NextDouble() * 2f - 1f) * NODE_HORIZONTAL_VARIANCE_PIXELS;
+                int finalY;
 
-                // Pick a random available slot
-                int ySlotIndexInAvailableList = _random.Next(availableYSlots.Count);
-                int finalY = availableYSlots[ySlotIndexInAvailableList];
+                // If this is the first node of a multi-node column, bias the pick towards the center.
+                if (i == 0 && numNodes > 1)
+                {
+                    var centralSlots = availableYSlots.Where(y =>
+                    {
+                        int index = _validYPositions.IndexOf(y);
+                        return index >= NODE_SPREAD_BIAS_START_INDEX && index <= NODE_SPREAD_BIAS_END_INDEX;
+                    }).ToList();
+
+                    if (centralSlots.Any())
+                    {
+                        finalY = centralSlots[_random.Next(centralSlots.Count)];
+                    }
+                    else
+                    {
+                        // Fallback if central slots are somehow all taken (highly unlikely).
+                        finalY = availableYSlots[_random.Next(availableYSlots.Count)];
+                    }
+                }
+                else // For the only node in a column, or subsequent nodes, pick randomly.
+                {
+                    finalY = availableYSlots[_random.Next(availableYSlots.Count)];
+                }
 
                 // Find the original index of the chosen slot to identify its neighbors
                 int originalIndex = _validYPositions.IndexOf(finalY);
@@ -306,6 +331,13 @@ namespace ProjectVagabond.Progression
             nextPrevNode:;
             }
 
+            // Pass 4: Pruning - Remove any nodes in the next column that are still unreachable.
+            var unreachableNodes = sortedNext.Where(n => !n.IncomingPathIds.Any()).ToList();
+            foreach (var unreachable in unreachableNodes)
+            {
+                nextColumn.Remove(unreachable);
+                allNodes.Remove(unreachable);
+            }
 
             return newPathsInThisColumn;
         }
