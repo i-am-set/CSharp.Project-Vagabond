@@ -29,8 +29,10 @@ namespace ProjectVagabond.UI
             _cursorMappings = new Dictionary<CursorState, (string, float)>
             {
                 { CursorState.Default, ("cursor_default", 1f / 12f) },
-                // Future cursor states like Hover and Click can be mapped to their assets here.
-                // { CursorState.Hover, ("cursor_hover", 1f / 12f) },
+                { CursorState.HoverClickable, ("cursor_hover_clickable", 1f / 12f) },
+                { CursorState.HoverDraggable, ("cursor_hover_draggable", 1f / 12f) },
+                { CursorState.Dragging, ("cursor_dragging_draggable", 1f / 12f) },
+                // Future cursor states like Click can be mapped to their assets here.
                 // { CursorState.Click, ("cursor_click", 1f / 12f) },
             };
 
@@ -42,7 +44,7 @@ namespace ProjectVagabond.UI
         public void SetState(CursorState state)
         {
             // The highest priority state set this frame wins.
-            // Click > Hover > Default
+            // Dragging > Click > HoverClickable > HoverDraggable > Hover > Default
             if (state > _requestedState)
             {
                 _requestedState = state;
@@ -88,9 +90,16 @@ namespace ProjectVagabond.UI
             var mouseState = Mouse.GetState();
             var virtualMousePos = Core.TransformMouse(mouseState.Position);
 
+            // Add a 1-pixel vertical offset if either mouse button is pressed.
+            if (mouseState.LeftButton == ButtonState.Pressed || mouseState.RightButton == ButtonState.Pressed)
+            {
+                virtualMousePos.Y += 1;
+            }
+
             var sourceRect = _currentSpriteAnimation.Frames[_currentFrameIndex];
 
             // The cursor is drawn with its hotspot as the origin, aligning the tip with the mouse position.
+            // The color is set to white, as the BlendState will handle the inversion.
             spriteBatch.DrawSnapped(
                 _currentSpriteAnimation.Texture,
                 virtualMousePos,

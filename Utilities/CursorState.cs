@@ -4,6 +4,9 @@
     {
         Default,
         Hover,
-        Click
+        HoverDraggable,
+        HoverClickable,
+        Click,
+        Dragging
     }
 }

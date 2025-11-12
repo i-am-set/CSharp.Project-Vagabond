@@ -266,6 +266,8 @@ namespace ProjectVagabond
             catch { SplitNodeTown2 = _textureFactory.CreateColoredTexture(64, 32, Color.Maroon); }
 
             LoadAndCacheCursorSprite("cursor_default");
+            LoadAndCacheCursorSprite("cursor_hover_clickable");
+            LoadAndCacheCursorSprite("cursor_dragging_draggable");
 
             InitializeArrowSourceRects();
             InitializeActionButtonsSourceRects();

@@ -1970,6 +1970,42 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Cursor/cursor_default.png;Sprites/UI/Cursor/cursor_default
 
+#begin Sprites/UI/Cursor/cursor_dragging_draggable.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Cursor/cursor_dragging_draggable.png;Sprites/UI/Cursor/cursor_dragging_draggable
+
+#begin Sprites/UI/Cursor/cursor_hover_clickable.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Cursor/cursor_hover_clickable.png;Sprites/UI/Cursor/cursor_hover_clickable
+
+#begin Sprites/UI/Cursor/cursor_hover_draggable.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Cursor/cursor_hover_draggable.png;Sprites/UI/Cursor/cursor_hover_draggable
+
 #begin Sprites/UI/KeyPrompts/mouse/ui_mouse_blank.png
 /importer:TextureImporter
 /processor:TextureProcessor

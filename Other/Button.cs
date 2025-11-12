@@ -182,7 +182,7 @@ namespace ProjectVagabond.UI
             var cursorManager = ServiceLocator.Get<CursorManager>();
             if (IsHovered)
             {
-                cursorManager.SetState(_isPressed ? CursorState.Click : CursorState.Hover);
+                cursorManager.SetState(_isPressed ? CursorState.Click : CursorState.HoverClickable);
             }
 
             _previousMouseState = currentMouseState;

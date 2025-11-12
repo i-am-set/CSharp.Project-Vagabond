@@ -53,6 +53,7 @@ namespace ProjectVagabond
         private Color _flashColor;
         private float _glitchTimer;
         private float _glitchDuration;
+        private BlendState _cursorInvertBlendState;
 
         private class ScreenFlashState
         {
@@ -277,6 +278,18 @@ namespace ProjectVagabond
                 false,
                 GraphicsDevice.PresentationParameters.BackBufferFormat,
                 DepthFormat.Depth24);
+
+            // Initialize the custom blend state for the inverted cursor
+            _cursorInvertBlendState = new BlendState
+            {
+                ColorBlendFunction = BlendFunction.Add,
+                ColorSourceBlend = Blend.InverseDestinationColor,
+                ColorDestinationBlend = Blend.InverseSourceAlpha,
+
+                AlphaBlendFunction = BlendFunction.Add,
+                AlphaSourceBlend = Blend.Zero,
+                AlphaDestinationBlend = Blend.One
+            };
 
             base.Initialize();
         }
@@ -684,6 +697,12 @@ namespace ProjectVagabond
             _spriteBatch.End();
 
             // --- Phase 4: Draw UI elements that should NOT have the shader applied ---
+            // Draw the custom cursor first, using the special blend state.
+            _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Invert(_mouseTransformMatrix));
+            _cursorManager.Draw(_spriteBatch);
+            _spriteBatch.End();
+
+            // Draw other non-inverted UI
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
 
@@ -700,11 +719,6 @@ namespace ProjectVagabond
                 var versionPosition = new Vector2(padding, screenHeight - _defaultFont.LineHeight - padding);
                 _spriteBatch.DrawStringSnapped(_defaultFont, versionText, versionPosition, _global.Palette_DarkGray);
             }
-            _spriteBatch.End();
-
-            // Draw the custom cursor on top of everything, in virtual space.
-            _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Invert(_mouseTransformMatrix));
-            _cursorManager.Draw(_spriteBatch);
             _spriteBatch.End();
 
             // Draw the debug mouse dot last, so it's on top of even the cursor.

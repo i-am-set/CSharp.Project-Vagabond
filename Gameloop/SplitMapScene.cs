@@ -429,13 +429,14 @@ namespace ProjectVagabond.Scenes
 
         private void HandleMapInput(GameTime gameTime)
         {
+            var cursorManager = ServiceLocator.Get<CursorManager>();
             var currentMouseState = Mouse.GetState();
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
             var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
             Matrix.Invert(ref cameraTransform, out var inverseCameraTransform);
             var mouseInMapSpace = Vector2.Transform(virtualMousePos, inverseCameraTransform);
 
-            // 1. Update hover state first
+            // 1. Update hover state and cursor
             _hoveredNodeId = -1;
             if (_currentMap != null)
             {
@@ -449,8 +450,22 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
+            if (_hoveredNodeId != -1)
+            {
+                cursorManager.SetState(CursorState.HoverClickable);
+            }
+            else if (_mapState == SplitMapState.Idle)
+            {
+                cursorManager.SetState(CursorState.HoverDraggable);
+            }
+
             // 2. Handle camera panning (which depends on hover state)
             HandleCameraPan(currentMouseState, virtualMousePos);
+
+            if (_isPanning)
+            {
+                cursorManager.SetState(CursorState.Dragging);
+            }
 
             // 3. Handle node input (which is skipped if panning)
             if (!_isPanning && _mapState == SplitMapState.Idle)
