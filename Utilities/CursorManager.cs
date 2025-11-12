@@ -80,7 +80,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch)
+        public void Draw(SpriteBatch spriteBatch, Vector2 screenPosition, float scale)
         {
             if (_currentSpriteAnimation.Texture == null || _currentSpriteAnimation.Frames.Length == 0)
             {
@@ -88,26 +88,28 @@ namespace ProjectVagabond.UI
             }
 
             var mouseState = Mouse.GetState();
-            var virtualMousePos = Core.TransformMouse(mouseState.Position);
+            var drawPosition = screenPosition;
 
             // Add a 1-pixel vertical offset if either mouse button is pressed.
+            // This offset needs to be scaled to match the final render scale.
             if (mouseState.LeftButton == ButtonState.Pressed || mouseState.RightButton == ButtonState.Pressed)
             {
-                virtualMousePos.Y += 1;
+                drawPosition.Y += 1 * scale;
             }
 
             var sourceRect = _currentSpriteAnimation.Frames[_currentFrameIndex];
 
             // The cursor is drawn with its hotspot as the origin, aligning the tip with the mouse position.
             // The color is set to white, as the BlendState will handle the inversion.
+            // We use DrawSnapped to ensure the final position is on an integer pixel boundary.
             spriteBatch.DrawSnapped(
                 _currentSpriteAnimation.Texture,
-                virtualMousePos,
+                drawPosition,
                 sourceRect,
                 Color.White,
                 0f,
                 CURSOR_HOTSPOT,
-                1f,
+                scale, // Apply the global scale factor
                 SpriteEffects.None,
                 0f // Topmost layer
             );

@@ -3,14 +3,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Dice;
-using ProjectVagabond.Particles;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
@@ -206,4 +199,3 @@ namespace ProjectVagabond.Scenes
         protected bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
     }
 }
-﻿

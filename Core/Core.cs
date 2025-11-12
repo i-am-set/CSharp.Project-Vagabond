@@ -411,6 +411,9 @@ namespace ProjectVagabond
 
         protected override void Update(GameTime gameTime)
         {
+            // Enforce cursor invisibility every frame as a failsafe.
+            IsMouseVisible = false;
+
             // Pause the entire game update loop if the window is not focused.
             if (!IsActive)
             {
@@ -620,21 +623,6 @@ namespace ProjectVagabond
                 Matrix virtualSpaceTransform = Matrix.Identity;
 
                 _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, virtualSpaceTransform);
-
-                // Draw the custom cursor into the scene render target so it gets all post-processing effects.
-                // It needs its own batch with the special blend state.
-                _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp, transformMatrix: virtualSpaceTransform);
-                _cursorManager.Draw(_spriteBatch);
-                _spriteBatch.End();
-
-                // Draw the debug dot here as well.
-                if (_drawMouseDebugDot)
-                {
-                    _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: virtualSpaceTransform);
-                    var virtualMousePos = TransformMouse(Mouse.GetState().Position);
-                    _spriteBatch.Draw(_pixel, virtualMousePos, Color.Red);
-                    _spriteBatch.End();
-                }
             }
 
             // --- Phase 1.5: Render the dice system to its own render target. ---
@@ -658,6 +646,12 @@ namespace ProjectVagabond
                     _spriteBatch.Draw(diceRenderTarget, _finalRenderRectangle, Color.White);
                 }
             }
+            _spriteBatch.End();
+
+            // Draw the custom cursor onto the composite target so it gets post-processing effects.
+            // This pass uses the special invert blend state and NO transformation matrix, so it works in screen space.
+            _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp);
+            _cursorManager.Draw(_spriteBatch, Mouse.GetState().Position.ToVector2(), _finalScale);
             _spriteBatch.End();
 
             Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
@@ -729,6 +723,15 @@ namespace ProjectVagabond
                 _spriteBatch.DrawStringSnapped(_defaultFont, versionText, versionPosition, _global.Palette_DarkGray);
             }
             _spriteBatch.End();
+
+            // Draw the debug mouse dot last, in virtual space, on top of everything.
+            if (_drawMouseDebugDot)
+            {
+                _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Invert(_mouseTransformMatrix));
+                var virtualMousePos = TransformMouse(Mouse.GetState().Position);
+                _spriteBatch.Draw(_pixel, virtualMousePos, Color.Red);
+                _spriteBatch.End();
+            }
 
             base.Draw(gameTime);
         }
