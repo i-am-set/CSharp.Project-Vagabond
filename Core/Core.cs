@@ -620,6 +620,21 @@ namespace ProjectVagabond
                 Matrix virtualSpaceTransform = Matrix.Identity;
 
                 _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, virtualSpaceTransform);
+
+                // Draw the custom cursor into the scene render target so it gets all post-processing effects.
+                // It needs its own batch with the special blend state.
+                _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp, transformMatrix: virtualSpaceTransform);
+                _cursorManager.Draw(_spriteBatch);
+                _spriteBatch.End();
+
+                // Draw the debug dot here as well.
+                if (_drawMouseDebugDot)
+                {
+                    _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: virtualSpaceTransform);
+                    var virtualMousePos = TransformMouse(Mouse.GetState().Position);
+                    _spriteBatch.Draw(_pixel, virtualMousePos, Color.Red);
+                    _spriteBatch.End();
+                }
             }
 
             // --- Phase 1.5: Render the dice system to its own render target. ---
@@ -697,12 +712,6 @@ namespace ProjectVagabond
             _spriteBatch.End();
 
             // --- Phase 4: Draw UI elements that should NOT have the shader applied ---
-            // Draw the custom cursor first, using the special blend state.
-            _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Invert(_mouseTransformMatrix));
-            _cursorManager.Draw(_spriteBatch);
-            _spriteBatch.End();
-
-            // Draw other non-inverted UI
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
 
@@ -720,15 +729,6 @@ namespace ProjectVagabond
                 _spriteBatch.DrawStringSnapped(_defaultFont, versionText, versionPosition, _global.Palette_DarkGray);
             }
             _spriteBatch.End();
-
-            // Draw the debug mouse dot last, so it's on top of even the cursor.
-            if (_drawMouseDebugDot)
-            {
-                _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Invert(_mouseTransformMatrix));
-                var virtualMousePos = TransformMouse(Mouse.GetState().Position);
-                _spriteBatch.Draw(_pixel, virtualMousePos, Color.Red);
-                _spriteBatch.End();
-            }
 
             base.Draw(gameTime);
         }
