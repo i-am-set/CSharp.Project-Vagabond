@@ -1,12 +1,15 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace ProjectVagabond.Scenes
@@ -56,7 +59,6 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
-            _core.IsMouseVisible = true;
             _mapRenderer.ResetHeaderState();
 
             if (_settingsButton == null)
@@ -213,3 +215,4 @@ namespace ProjectVagabond.Scenes
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
     }
 }
+﻿

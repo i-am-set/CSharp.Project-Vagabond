@@ -178,6 +178,13 @@ namespace ProjectVagabond.UI
                 }
             }
 
+            // Update cursor state
+            var cursorManager = ServiceLocator.Get<CursorManager>();
+            if (IsHovered)
+            {
+                cursorManager.SetState(_isPressed ? CursorState.Click : CursorState.Hover);
+            }
+
             _previousMouseState = currentMouseState;
         }
 

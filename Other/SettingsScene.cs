@@ -464,7 +464,6 @@ namespace ProjectVagabond.Scenes
 
             if (selectionChanged)
             {
-                _core.IsMouseVisible = false;
                 keyboardNavigatedLastFrame = true;
             }
 

@@ -45,6 +45,7 @@ namespace ProjectVagabond
         private readonly Dictionary<string, int[]> _enemySpriteBottomPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _relicSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, (Texture2D Texture, Rectangle[] Frames)> _cursorSprites = new Dictionary<string, (Texture2D, Rectangle[])>();
 
 
         private Texture2D _logoSprite;
@@ -264,6 +265,7 @@ namespace ProjectVagabond
             try { SplitNodeTown2 = _core.Content.Load<Texture2D>("Sprites/MapNodes/MapNode_Town2"); }
             catch { SplitNodeTown2 = _textureFactory.CreateColoredTexture(64, 32, Color.Maroon); }
 
+            LoadAndCacheCursorSprite("cursor_default");
 
             InitializeArrowSourceRects();
             InitializeActionButtonsSourceRects();
@@ -640,6 +642,43 @@ namespace ProjectVagabond
                 _statusEffectIcons[effectType] = placeholder; // Cache the placeholder to avoid repeated load attempts
                 return placeholder;
             }
+        }
+
+        private void LoadAndCacheCursorSprite(string assetName)
+        {
+            if (_cursorSprites.ContainsKey(assetName)) return;
+
+            try
+            {
+                var texture = _core.Content.Load<Texture2D>($"Sprites/UI/Cursor/{assetName}");
+                int frameWidth = texture.Height;
+                if (frameWidth <= 0)
+                {
+                    throw new InvalidOperationException("Cursor sprite sheet height must be greater than zero.");
+                }
+                int frameCount = texture.Width / frameWidth;
+                var frames = new Rectangle[frameCount];
+                for (int i = 0; i < frameCount; i++)
+                {
+                    frames[i] = new Rectangle(i * frameWidth, 0, frameWidth, frameWidth);
+                }
+                _cursorSprites[assetName] = (texture, frames);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[SpriteManager] [ERROR] Failed to load cursor '{assetName}': {ex.Message}. Using placeholder.");
+                var placeholder = _textureFactory.CreateColoredTexture(8, 8, Color.Magenta);
+                _cursorSprites[assetName] = (placeholder, new[] { new Rectangle(0, 0, 8, 8) });
+            }
+        }
+
+        public (Texture2D Texture, Rectangle[] Frames) GetCursorAnimation(string assetName)
+        {
+            if (!_cursorSprites.ContainsKey(assetName))
+            {
+                LoadAndCacheCursorSprite(assetName);
+            }
+            return _cursorSprites[assetName];
         }
 
         /// <summary>

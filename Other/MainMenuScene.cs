@@ -278,7 +278,6 @@ namespace ProjectVagabond.Scenes
                         Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
                         Mouse.SetPosition(screenPos.X, screenPos.Y);
 
-                        _core.IsMouseVisible = false;
                         keyboardNavigatedLastFrame = true;
                     }
                     else
@@ -286,7 +285,6 @@ namespace ProjectVagabond.Scenes
                         Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
                         Mouse.SetPosition(screenPos.X, screenPos.Y);
 
-                        _core.IsMouseVisible = false;
                         keyboardNavigatedLastFrame = true;
                     }
                 }
@@ -306,7 +304,6 @@ namespace ProjectVagabond.Scenes
                         Point screenPos = Core.TransformVirtualToScreen(selectedButton.Bounds.Center);
                         Mouse.SetPosition(screenPos.X, screenPos.Y);
 
-                        _core.IsMouseVisible = false;
                         keyboardNavigatedLastFrame = true;
                     }
                 }
@@ -371,3 +368,4 @@ namespace ProjectVagabond.Scenes
         }
     }
 }
+﻿

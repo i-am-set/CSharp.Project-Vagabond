@@ -3,7 +3,14 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
@@ -88,11 +95,10 @@ namespace ProjectVagabond.Scenes
 
             if (this.LastUsedInputForNav == InputDevice.Keyboard)
             {
-                _core.IsMouseVisible = false;
+                keyboardNavigatedLastFrame = true;
             }
             else // Mouse was used to enter
             {
-                _core.IsMouseVisible = true;
                 keyboardNavigatedLastFrame = false;
             }
         }
@@ -121,10 +127,7 @@ namespace ProjectVagabond.Scenes
             }
             else if (currentMouseState.Position != previousMouseState.Position)
             {
-                if (!IsInputBlocked)
-                {
-                    _core.IsMouseVisible = true;
-                }
+                // No longer need to manage OS cursor visibility here.
             }
 
             // Update previous states at the end of the frame for the next frame's logic
@@ -196,7 +199,6 @@ namespace ProjectVagabond.Scenes
                 Point screenPos = Core.TransformVirtualToScreen(firstElementBounds.Value.Center);
                 Mouse.SetPosition(screenPos.X, screenPos.Y);
 
-                _core.IsMouseVisible = false;
                 keyboardNavigatedLastFrame = true;
             }
         }
@@ -204,3 +206,4 @@ namespace ProjectVagabond.Scenes
         protected bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
     }
 }
+﻿

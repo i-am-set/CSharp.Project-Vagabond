@@ -92,6 +92,7 @@ namespace ProjectVagabond
         private AnimationManager _animationManager;
         private DebugConsole _debugConsole;
         private ProgressionManager _progressionManager;
+        private CursorManager _cursorManager;
 
         // Input State
         private KeyboardState _previousKeyboardState;
@@ -113,7 +114,7 @@ namespace ProjectVagabond
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
-            IsMouseVisible = true;
+            IsMouseVisible = false;
 
             _graphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
             _graphics.PreferredBackBufferHeight = Global.VIRTUAL_HEIGHT;
@@ -240,6 +241,9 @@ namespace ProjectVagabond
 
             _debugConsole = new DebugConsole();
             ServiceLocator.Register<DebugConsole>(_debugConsole);
+
+            _cursorManager = new CursorManager();
+            ServiceLocator.Register<CursorManager>(_cursorManager);
 
             // Phase 4: Final Setup
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
@@ -601,6 +605,7 @@ namespace ProjectVagabond
             _sceneManager.Update(gameTime);
             _diceRollingSystem.Update(gameTime); // Update dice visuals and game logic every frame.
             _animationManager.Update(gameTime);
+            _cursorManager.Update(gameTime);
 
             // These systems handle game logic and should be paused.
             if (!_gameState.IsPaused)
@@ -732,6 +737,11 @@ namespace ProjectVagabond
                 var versionPosition = new Vector2(padding, screenHeight - _defaultFont.LineHeight - padding);
                 _spriteBatch.DrawStringSnapped(_defaultFont, versionText, versionPosition, _global.Palette_DarkGray);
             }
+            _spriteBatch.End();
+
+            // Draw the custom cursor on top of everything, in virtual space.
+            _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Invert(_mouseTransformMatrix));
+            _cursorManager.Draw(_spriteBatch);
             _spriteBatch.End();
 
             base.Draw(gameTime);
@@ -879,4 +889,3 @@ namespace ProjectVagabond
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
     }
 }
-﻿

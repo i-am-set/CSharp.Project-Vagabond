@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -45,7 +47,6 @@ namespace ProjectVagabond.UI
             _currentInputDelay = _inputDelay;
             _previousKeyboardState = Keyboard.GetState();
             _previousMouseState = Mouse.GetState();
-            _core.IsMouseVisible = true;
 
             var defaultFont = ServiceLocator.Get<BitmapFont>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
@@ -138,7 +139,7 @@ namespace ProjectVagabond.UI
             }
             else if (currentMouseState.Position != _previousMouseState.Position)
             {
-                _core.IsMouseVisible = true;
+                // No longer need to manage OS cursor visibility
             }
 
             for (int i = 0; i < _buttons.Count; i++)
@@ -159,7 +160,6 @@ namespace ProjectVagabond.UI
 
                 if (upPressed || downPressed || leftPressed || rightPressed)
                 {
-                    _core.IsMouseVisible = false;
                     _keyboardNavigatedLastFrame = true;
 
                     if (_isHorizontalLayout)
@@ -190,7 +190,6 @@ namespace ProjectVagabond.UI
                         Point screenPos = Core.TransformVirtualToScreen(_buttons[_selectedButtonIndex].Bounds.Center);
                         Mouse.SetPosition(screenPos.X, screenPos.Y);
                         _keyboardNavigatedLastFrame = true;
-                        _core.IsMouseVisible = false;
                     }
                 }
             }
