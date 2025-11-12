@@ -2,7 +2,6 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -22,7 +21,7 @@ namespace ProjectVagabond.UI
         private int _currentFrameIndex;
 
         // The pixel coordinate of the cursor's "tip" within its sprite frame.
-        private static readonly Vector2 CURSOR_HOTSPOT = new Vector2(3, 1);
+        private static readonly Vector2 CURSOR_HOTSPOT = new Vector2(7, 7);
 
         public CursorManager()
         {

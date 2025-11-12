@@ -96,6 +96,7 @@ namespace ProjectVagabond
 
         // Input State
         private KeyboardState _previousKeyboardState;
+        private bool _drawMouseDebugDot = false;
 
         // Physics Timestep
         private float _physicsTimeAccumulator = 0f;
@@ -454,6 +455,7 @@ namespace ProjectVagabond
 
             // --- Debug Overlays (Hold to show) ---
             _global.ShowSplitMapGrid = currentKeyboardState.IsKeyDown(Keys.F1);
+            _drawMouseDebugDot = currentKeyboardState.IsKeyDown(Keys.F2);
             _global.ShowDebugOverlays = currentKeyboardState.IsKeyDown(Keys.F3);
             _diceRollingSystem.DebugShowColliders = _global.ShowDebugOverlays;
 
@@ -508,45 +510,6 @@ namespace ProjectVagabond
             if (KeyPressed(Keys.F12, currentKeyboardState, _previousKeyboardState))
             {
                 _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
-            }
-
-            // Use F2 to trigger a sample grouped dice roll for demonstration.
-            if (KeyPressed(Keys.F2, currentKeyboardState, _previousKeyboardState))
-            {
-                // 1. Define the groups for the roll.
-                var rollRequest = new List<DiceGroup>
-                {
-                    new DiceGroup
-                    {
-                        GroupId = "damage",
-                        NumberOfDice = 2,
-                        Tint = Color.Red,
-                        ResultProcessing = DiceResultProcessing.Sum,
-                        DieType = DieType.D6, // Explicitly a D6
-                        Scale = 1.0f // Normal size
-                    },
-                    new DiceGroup
-                    {
-                        GroupId = "status_effect",
-                        NumberOfDice = 1,
-                        Tint = Color.Blue,
-                        ResultProcessing = DiceResultProcessing.IndividualValues,
-                        DieType = DieType.D6, // Explicitly a D6
-                        Scale = 0.6f // Smaller die
-                    },
-                    new DiceGroup
-                    {
-                        GroupId = "poison_damage",
-                        NumberOfDice = 1,
-                        Tint = Color.Green,
-                        ResultProcessing = DiceResultProcessing.Sum,
-                        DieType = DieType.D4,
-                        Scale = 1.0f
-                    }
-                };
-
-                // 2. Call the roll method with the request.
-                _diceRollingSystem.Roll(rollRequest);
             }
 
             _previousKeyboardState = currentKeyboardState;
@@ -744,6 +707,15 @@ namespace ProjectVagabond
             _cursorManager.Draw(_spriteBatch);
             _spriteBatch.End();
 
+            // Draw the debug mouse dot last, so it's on top of even the cursor.
+            if (_drawMouseDebugDot)
+            {
+                _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Invert(_mouseTransformMatrix));
+                var virtualMousePos = TransformMouse(Mouse.GetState().Position);
+                _spriteBatch.Draw(_pixel, virtualMousePos, Color.Red);
+                _spriteBatch.End();
+            }
+
             base.Draw(gameTime);
         }
 
@@ -830,7 +802,8 @@ namespace ProjectVagabond
         public static Vector2 TransformMouse(Point screenPoint)
         {
             var coreInstance = ServiceLocator.Get<Core>();
-            return Vector2.Transform(screenPoint.ToVector2(), coreInstance.MouseTransformMatrix);
+            var transformed = Vector2.Transform(screenPoint.ToVector2(), coreInstance.MouseTransformMatrix);
+            return new Vector2(MathF.Round(transformed.X), MathF.Round(transformed.Y));
         }
 
         /// <summary>

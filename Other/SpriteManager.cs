@@ -651,24 +651,25 @@ namespace ProjectVagabond
             try
             {
                 var texture = _core.Content.Load<Texture2D>($"Sprites/UI/Cursor/{assetName}");
-                int frameWidth = texture.Height;
-                if (frameWidth <= 0)
+                const int frameSize = 16;
+                if (texture.Height != frameSize)
                 {
-                    throw new InvalidOperationException("Cursor sprite sheet height must be greater than zero.");
+                    Debug.WriteLine($"[SpriteManager] [WARNING] Cursor sprite '{assetName}' has an incorrect height. Expected {frameSize}, but got {texture.Height}.");
                 }
-                int frameCount = texture.Width / frameWidth;
+
+                int frameCount = texture.Width / frameSize;
                 var frames = new Rectangle[frameCount];
                 for (int i = 0; i < frameCount; i++)
                 {
-                    frames[i] = new Rectangle(i * frameWidth, 0, frameWidth, frameWidth);
+                    frames[i] = new Rectangle(i * frameSize, 0, frameSize, frameSize);
                 }
                 _cursorSprites[assetName] = (texture, frames);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[SpriteManager] [ERROR] Failed to load cursor '{assetName}': {ex.Message}. Using placeholder.");
-                var placeholder = _textureFactory.CreateColoredTexture(8, 8, Color.Magenta);
-                _cursorSprites[assetName] = (placeholder, new[] { new Rectangle(0, 0, 8, 8) });
+                var placeholder = _textureFactory.CreateColoredTexture(16, 16, Color.Magenta);
+                _cursorSprites[assetName] = (placeholder, new[] { new Rectangle(0, 0, 16, 16) });
             }
         }
 
