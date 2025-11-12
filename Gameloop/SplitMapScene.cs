@@ -109,7 +109,7 @@ namespace ProjectVagabond.Scenes
         private Point _lastPanMousePosition;
         private Vector2 _panStartCameraOffset;
         private Vector2 _cameraVelocity = Vector2.Zero;
-        private const float PAN_SENSITIVITY = 0.15f;
+        private const float PAN_SENSITIVITY = 1.0f;
         private const float PAN_FRICTION = 10f;
         private float _snapBackDelayTimer = 0f;
         private const float SNAP_BACK_DELAY = 1f;
@@ -459,6 +459,16 @@ namespace ProjectVagabond.Scenes
 
                 if (leftClickPressed && _hoveredNodeId != -1 && UIInputManager.CanProcessMouseClick())
                 {
+                    // If the camera is panned away, start snapping it back to the current player node immediately.
+                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                    if (currentNode != null)
+                    {
+                        UpdateCameraTarget(currentNode.Position, false); // This sets the LERP target.
+                    }
+                    // Cancel any pending delay and stop any inertial slide.
+                    _snapBackDelayTimer = 0f;
+                    _cameraVelocity = Vector2.Zero;
+
                     StartPlayerMove(_hoveredNodeId);
                     _hoveredNodeId = -1; // Clear hover state immediately on click
                     UIInputManager.ConsumeMouseClick();
@@ -517,12 +527,13 @@ namespace ProjectVagabond.Scenes
 
                 _snapBackDelayTimer = SNAP_BACK_DELAY; // Keep resetting the timer while actively panning.
 
-                Vector2 panCurrentMousePosition = currentMouseState.Position.ToVector2();
-                Vector2 panLastMousePosition = _lastPanMousePosition.ToVector2();
-                Vector2 deltaScreen = panCurrentMousePosition - panLastMousePosition;
+                // Convert current and last mouse positions to virtual space to get a resolution-independent delta.
+                Vector2 virtualCurrentPos = Core.TransformMouse(currentMouseState.Position);
+                Vector2 virtualLastPos = Core.TransformMouse(_lastPanMousePosition);
+                Vector2 virtualDelta = virtualCurrentPos - virtualLastPos;
 
-                // The velocity is the movement from the last frame, scaled.
-                _cameraVelocity.X = deltaScreen.X * PAN_SENSITIVITY;
+                // The velocity is now based on virtual pixel movement.
+                _cameraVelocity.X = virtualDelta.X * PAN_SENSITIVITY;
                 _cameraVelocity.Y = 0;
 
                 // Update camera position directly by the same amount
