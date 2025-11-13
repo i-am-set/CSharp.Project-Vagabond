@@ -1,4 +1,4 @@
-﻿#nullable enable
+﻿﻿﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -25,6 +25,9 @@ namespace ProjectVagabond.Scenes
             public Vector2 Position;
             public object? Data;
         }
+
+        private enum SplitMapViewState { Map, Inventory }
+        private SplitMapViewState _currentViewState = SplitMapViewState.Map;
 
         private readonly ProgressionManager _progressionManager;
         private readonly SceneManager _sceneManager;
@@ -236,7 +239,24 @@ namespace ProjectVagabond.Scenes
 
         private void OnInventoryButtonPressed()
         {
-            Debug.WriteLine("Inventory button pressed");
+            _currentViewState = _currentViewState == SplitMapViewState.Map ? SplitMapViewState.Inventory : SplitMapViewState.Map;
+
+            if (_currentViewState == SplitMapViewState.Inventory)
+            {
+                _isPanning = false;
+                _cameraVelocity = Vector2.Zero;
+                _snapBackDelayTimer = 0f;
+                _targetCameraOffset = new Vector2(0, 200);
+                _cameraOffset = _targetCameraOffset; // Snap instantly
+            }
+            else
+            {
+                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                if (currentNode != null)
+                {
+                    UpdateCameraTarget(currentNode.Position, true); // Snap back instantly
+                }
+            }
         }
 
 
@@ -365,33 +385,39 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // Handle camera logic
-            if (!_isPanning)
-            {
-                if (_cameraVelocity.LengthSquared() > 0.1f)
-                {
-                    // Apply inertia
-                    _cameraOffset += _cameraVelocity;
-                    _cameraVelocity = Vector2.Lerp(_cameraVelocity, Vector2.Zero, PAN_FRICTION * deltaTime);
-                    ClampCameraOffset();
-                    _targetCameraOffset = _cameraOffset; // Prevent LERP from fighting inertia
-                    _snapBackDelayTimer = SNAP_BACK_DELAY; // Reset timer while sliding
-                }
-                else
-                {
-                    // Stop tiny movements and officially end the slide
-                    _cameraVelocity = Vector2.Zero;
+            // Update top-level UI elements first, so they can consume input.
+            _inventoryButton?.Update(currentMouseState);
 
-                    // Countdown to snap back
-                    if (_snapBackDelayTimer > 0)
+            // Handle camera logic
+            if (_currentViewState == SplitMapViewState.Map)
+            {
+                if (!_isPanning)
+                {
+                    if (_cameraVelocity.LengthSquared() > 0.1f)
                     {
-                        _snapBackDelayTimer -= deltaTime;
-                        if (_snapBackDelayTimer <= 0)
+                        // Apply inertia
+                        _cameraOffset += _cameraVelocity;
+                        _cameraVelocity = Vector2.Lerp(_cameraVelocity, Vector2.Zero, PAN_FRICTION * deltaTime);
+                        ClampCameraOffset();
+                        _targetCameraOffset.X = _cameraOffset.X;
+                        _snapBackDelayTimer = SNAP_BACK_DELAY; // Reset timer while sliding
+                    }
+                    else
+                    {
+                        // Stop tiny movements and officially end the slide
+                        _cameraVelocity = Vector2.Zero;
+
+                        // Countdown to snap back
+                        if (_snapBackDelayTimer > 0)
                         {
-                            var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                            if (currentNode != null)
+                            _snapBackDelayTimer -= deltaTime;
+                            if (_snapBackDelayTimer <= 0)
                             {
-                                UpdateCameraTarget(currentNode.Position, false);
+                                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                                if (currentNode != null)
+                                {
+                                    UpdateCameraTarget(currentNode.Position, false);
+                                }
                             }
                         }
                     }
@@ -413,7 +439,11 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            HandleMapInput(gameTime);
+            if (_currentViewState == SplitMapViewState.Map)
+            {
+                HandleMapInput(gameTime);
+            }
+
 
             switch (_mapState)
             {
@@ -441,7 +471,6 @@ namespace ProjectVagabond.Scenes
             }
 
             _playerIcon.Update(gameTime);
-            _inventoryButton?.Update(currentMouseState);
 
             // At the very end, call the base update to handle input state for the NEXT frame.
             base.Update(gameTime);
@@ -474,7 +503,7 @@ namespace ProjectVagabond.Scenes
             {
                 cursorManager.SetState(CursorState.HoverClickable);
             }
-            else if (_mapState == SplitMapState.Idle)
+            else if (_mapState == SplitMapState.Idle && (_inventoryButton == null || !_inventoryButton.IsHovered))
             {
                 cursorManager.SetState(CursorState.HoverDraggable);
             }
@@ -513,6 +542,12 @@ namespace ProjectVagabond.Scenes
 
         private void HandleCameraPan(MouseState currentMouseState, Vector2 virtualMousePos)
         {
+            if (_currentViewState != SplitMapViewState.Map)
+            {
+                _isPanning = false;
+                return;
+            }
+
             bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
             bool leftClickHeld = currentMouseState.LeftButton == ButtonState.Pressed;
             bool leftClickReleased = currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
@@ -525,12 +560,12 @@ namespace ProjectVagabond.Scenes
                 _cameraVelocity.X -= Math.Sign(scrollDelta) * SCROLL_PAN_SPEED;
 
                 // Stop any LERPing towards a target and reset the snap-back timer.
-                _targetCameraOffset = _cameraOffset;
+                _targetCameraOffset.X = _cameraOffset.X;
                 _snapBackDelayTimer = SNAP_BACK_DELAY;
             }
 
             // Start Drag Panning
-            if (leftClickPressed && _hoveredNodeId == -1 && _mapState == SplitMapState.Idle && UIInputManager.CanProcessMouseClick())
+            if (leftClickPressed && _hoveredNodeId == -1 && _mapState == SplitMapState.Idle && UIInputManager.CanProcessMouseClick() && (_inventoryButton == null || !_inventoryButton.IsHovered))
             {
                 _isPanning = true;
                 _panStartMousePosition = currentMouseState.Position;
@@ -572,11 +607,11 @@ namespace ProjectVagabond.Scenes
                 _cameraVelocity.Y = 0;
 
                 // Update camera position directly by the same amount
-                _cameraOffset += _cameraVelocity;
+                _cameraOffset.X += _cameraVelocity.X;
 
                 ClampCameraOffset();
 
-                _targetCameraOffset = _cameraOffset; // Make LERP target the current position to prevent fighting
+                _targetCameraOffset.X = _cameraOffset.X; // Make LERP target the current X position
                 _lastPanMousePosition = currentMouseState.Position;
             }
         }
@@ -599,8 +634,7 @@ namespace ProjectVagabond.Scenes
                     // If map is smaller, force it to be centered.
                     _cameraOffset.X = (screenWidth - mapContentWidth) / 2;
                 }
-                // Force Y to be 0
-                _cameraOffset.Y = 0;
+                // Do not clamp Y here to allow vertical panning
             }
         }
 
@@ -710,8 +744,7 @@ namespace ProjectVagabond.Scenes
                 targetX = (screenWidth - mapContentWidth) / 2;
             }
 
-            float targetY = 0;
-            _targetCameraOffset = new Vector2(targetX, targetY);
+            _targetCameraOffset = new Vector2(targetX, 0);
 
             if (snap)
             {
@@ -1041,6 +1074,15 @@ namespace ProjectVagabond.Scenes
             // Draw player icon last to ensure it's on top of nodes
             _playerIcon.Draw(spriteBatch);
 
+            // Draw placeholder inventory menu
+            var inventoryBounds = new Rectangle(0, 200, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
+            spriteBatch.DrawSnapped(pixel, inventoryBounds, _global.Palette_DarkestGray);
+            var inventoryText = "INVENTORY MENU";
+            var textSize = font.MeasureString(inventoryText);
+            var textPos = new Vector2(inventoryBounds.Center.X - textSize.Width / 2, inventoryBounds.Center.Y - textSize.Height / 2);
+            spriteBatch.DrawStringSnapped(font, inventoryText, textPos, _global.Palette_White);
+
+
             spriteBatch.End();
 
             // --- Pass 2: Screen-space UI (Void Edge, Hover Text, Dialogs) ---
@@ -1049,10 +1091,7 @@ namespace ProjectVagabond.Scenes
             var mapBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             _voidEdgeEffect.Draw(spriteBatch, mapBounds);
 
-            if (_inventoryButton != null)
-            {
-                _inventoryButton.Draw(spriteBatch, font, gameTime, transform);
-            }
+            _inventoryButton?.Draw(spriteBatch, font, gameTime, transform);
 
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
             {
@@ -1084,9 +1123,9 @@ namespace ProjectVagabond.Scenes
                     if (!string.IsNullOrEmpty(nodeText))
                     {
                         var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-                        var textSize = secondaryFont.MeasureString(nodeText);
+                        var nodeTextSize = secondaryFont.MeasureString(nodeText);
                         float yOffset = (MathF.Sin(_nodeHoverTextBobTimer * 4f) > 0) ? -1f : 0f;
-                        var textPosition = new Vector2((Global.VIRTUAL_WIDTH - textSize.Width) / 2f, Global.VIRTUAL_HEIGHT - textSize.Height - 3 + yOffset);
+                        var textPosition = new Vector2((Global.VIRTUAL_WIDTH - nodeTextSize.Width) / 2f, Global.VIRTUAL_HEIGHT - nodeTextSize.Height - 3 + yOffset);
                         spriteBatch.DrawStringSnapped(secondaryFont, nodeText, textPosition, _global.Palette_Yellow);
                     }
                 }
