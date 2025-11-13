@@ -2162,6 +2162,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/KeyPrompts/ui_key_up.png;Sprites/UI/KeyPrompts/ui_key_up
 
+#begin Sprites/UI/SplitMap/SplitMap_Header_Border.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/SplitMap/SplitMap_Header_Border.png;Sprites/UI/SplitMap/SplitMap_Header_Border
+
 #begin Sprites/warningMark.png
 /importer:TextureImporter
 /processor:TextureProcessor
