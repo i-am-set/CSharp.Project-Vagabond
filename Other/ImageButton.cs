@@ -1,4 +1,4 @@
-﻿#nullable enable
+﻿﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -31,6 +31,14 @@ namespace ProjectVagabond.UI
         private const float SHAKE_DURATION = 0.3f;
         private const float SHAKE_MAGNITUDE = 4f;
         private const float SHAKE_FREQUENCY = 30f;
+
+        // Unhover Fade Animation
+        private float _unhoverTimer = 0f;
+        private float _currentAlpha = 1.0f;
+        private const float FADE_OUT_DELAY = 0.5f; // Delay before fading out
+        private const float FADE_DURATION = 0.3f; // Speed of the fade
+        private const float FADE_OUT_ALPHA = 0.2f; // Target alpha when faded out (20%)
+        private const float FADE_IN_ALPHA = 1.0f; // Target alpha when hovered/active (100%)
 
         public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = false, bool zoomHapticOnClick = true, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null)
             : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, font)
@@ -88,6 +96,8 @@ namespace ProjectVagabond.UI
         {
             base.ResetAnimationState();
             _shakeTimer = 0f;
+            _unhoverTimer = 0f;
+            _currentAlpha = 1.0f;
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
@@ -96,6 +106,34 @@ namespace ProjectVagabond.UI
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // --- Alpha Animation ---
+            if (isActivated)
+            {
+                _unhoverTimer = 0f;
+                if (_currentAlpha < FADE_IN_ALPHA)
+                {
+                    _currentAlpha = Math.Min(FADE_IN_ALPHA, _currentAlpha + dt / FADE_DURATION);
+                }
+            }
+            else
+            {
+                _unhoverTimer += dt;
+                if (_unhoverTimer > FADE_OUT_DELAY)
+                {
+                    if (_currentAlpha > FADE_OUT_ALPHA)
+                    {
+                        _currentAlpha = Math.Max(FADE_OUT_ALPHA, _currentAlpha - dt / FADE_DURATION);
+                    }
+                }
+                else
+                {
+                    if (_currentAlpha < FADE_IN_ALPHA)
+                    {
+                        _currentAlpha = Math.Min(FADE_IN_ALPHA, _currentAlpha + dt / FADE_DURATION);
+                    }
+                }
+            }
 
             // --- Hover Animation ---
             float hoverYOffset = 0f;
@@ -167,7 +205,7 @@ namespace ProjectVagabond.UI
                 sourceRectToDraw = _hoverSourceRect;
             }
 
-            Color drawColor = tintColorOverride ?? Color.White;
+            Color drawColor = (tintColorOverride ?? Color.White) * _currentAlpha;
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
@@ -175,8 +213,9 @@ namespace ProjectVagabond.UI
             }
             else if (DebugColor.HasValue)
             {
-                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), animatedBounds, DebugColor.Value);
+                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), animatedBounds, DebugColor.Value * _currentAlpha);
             }
         }
     }
 }
+﻿﻿

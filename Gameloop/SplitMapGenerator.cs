@@ -1,4 +1,4 @@
-﻿#nullable enable
+﻿﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Battle;
@@ -22,8 +22,8 @@ namespace ProjectVagabond.Progression
         // --- Generation Tuning ---
         private const int MIN_NODES_PER_COLUMN = 2;
         private const int MAX_NODES_PER_COLUMN = 3;
-        private const int COLUMN_WIDTH = 96; // 6 * GRID_SIZE
-        private const int HORIZONTAL_PADDING = 64; // 4 * GRID_SIZE
+        public const int COLUMN_WIDTH = 96; // 6 * GRID_SIZE
+        public const int HORIZONTAL_PADDING = 64; // 4 * GRID_SIZE
         private const float PATH_SEGMENT_LENGTH = 10f; // Smaller value = more wiggles
         private const float PATH_MAX_OFFSET = 5f; // Max perpendicular deviation
         private const float SECONDARY_PATH_CHANCE = 0.4f; // Chance for a node to have a second outgoing path
@@ -33,7 +33,7 @@ namespace ProjectVagabond.Progression
         private const float PATH_SPLIT_POINT_MAX = 0.8f;
         private const float NODE_REPULSION_RADIUS = 30f;
         private const float NODE_REPULSION_STRENGTH = 15f;
-        private static readonly List<int> _validYPositions = new List<int>();
+        public static readonly List<int> _validYPositions = new List<int>();
 
         private static readonly List<(SplitNodeType type, float weight)> _nodeTypeWeights = new()
         {

@@ -1,4 +1,4 @@
-﻿#nullable enable
+﻿﻿﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -11,6 +11,7 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond.Scenes
@@ -41,6 +42,7 @@ namespace ProjectVagabond.Scenes
         private int _playerCurrentNodeId;
         private readonly PlayerMapIcon _playerIcon;
         private NarrativeDialog _narrativeDialog;
+        private ImageButton? _inventoryButton;
 
         // --- Animation Tuning ---
         private const float PLAYER_MOVE_SPEED = 50f; // Pixels per second
@@ -138,9 +140,9 @@ namespace ProjectVagabond.Scenes
 
             _voidEdgeEffect = new VoidEdgeEffect(
                 edgeColor: _global.Palette_Black,
-                edgeWidth: 10,
-                noiseScale: 0.5f,
-                noiseSpeed: 10f
+                edgeWidth: 6,
+                noiseScale: 0.1f,
+                noiseSpeed: 3f
             );
         }
 
@@ -152,6 +154,16 @@ namespace ProjectVagabond.Scenes
             _playerIcon.SetIsMoving(false);
             _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
             _isPanning = false;
+
+            if (_inventoryButton == null)
+            {
+                var inventoryIcon = _spriteManager.SplitMapInventoryButton;
+                var rects = _spriteManager.SplitMapInventoryButtonSourceRects;
+                _inventoryButton = new ImageButton(new Rectangle(7, 7, 16, 16), inventoryIcon, rects[0], rects[1]);
+                _inventoryButton.OnClick += OnInventoryButtonPressed;
+            }
+            _inventoryButton.ResetAnimationState();
+
 
             if (_progressionManager.CurrentSplitMap == null)
             {
@@ -214,11 +226,17 @@ namespace ProjectVagabond.Scenes
         {
             base.Exit();
             _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
+            if (_inventoryButton != null) _inventoryButton.OnClick -= OnInventoryButtonPressed;
             // Only clear the map if we are not transitioning to a scene that will return here (like Battle)
             if (BattleSetup.ReturnSceneState != GameSceneState.Split)
             {
                 _progressionManager.ClearCurrentSplitMap();
             }
+        }
+
+        private void OnInventoryButtonPressed()
+        {
+            Debug.WriteLine("Inventory button pressed");
         }
 
 
@@ -298,6 +316,7 @@ namespace ProjectVagabond.Scenes
             }
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            var currentMouseState = Mouse.GetState();
 
             _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
 
@@ -422,6 +441,7 @@ namespace ProjectVagabond.Scenes
             }
 
             _playerIcon.Update(gameTime);
+            _inventoryButton?.Update(currentMouseState);
 
             // At the very end, call the base update to handle input state for the NEXT frame.
             base.Update(gameTime);
@@ -970,6 +990,32 @@ namespace ProjectVagabond.Scenes
                 {
                     spriteBatch.DrawLineSnapped(new Vector2(startX, y), new Vector2(endX, y), gridColor);
                 }
+
+                // --- NEW DEBUG DRAWING LOGIC ---
+                if (_currentMap != null)
+                {
+                    // Draw red dots for all feasible node positions
+                    for (int i = 0; i < _currentMap.TargetColumnCount; i++)
+                    {
+                        float anchorX = SplitMapGenerator.HORIZONTAL_PADDING + (i * SplitMapGenerator.COLUMN_WIDTH);
+                        foreach (var anchorY in SplitMapGenerator._validYPositions)
+                        {
+                            spriteBatch.DrawSnapped(pixel, new Rectangle((int)anchorX - 1, anchorY - 1, 3, 3), Color.Red);
+                        }
+                    }
+
+                    // Draw teal squares for actual node anchor points
+                    foreach (var node in _currentMap.Nodes.Values)
+                    {
+                        float anchorX = SplitMapGenerator.HORIZONTAL_PADDING + (node.Floor * SplitMapGenerator.COLUMN_WIDTH);
+                        // Find the closest valid Y position to the node's actual Y position
+                        int anchorY = SplitMapGenerator._validYPositions.OrderBy(y => Math.Abs(y - node.Position.Y)).First();
+
+                        int squareSize = 5;
+                        spriteBatch.DrawSnapped(pixel, new Rectangle((int)anchorX - squareSize / 2, anchorY - squareSize / 2, squareSize, squareSize), _global.Palette_Teal);
+                    }
+                }
+                // --- END NEW DEBUG DRAWING LOGIC ---
             }
 
             var drawableObjects = new List<DrawableMapObject>();
@@ -1002,6 +1048,11 @@ namespace ProjectVagabond.Scenes
 
             var mapBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             _voidEdgeEffect.Draw(spriteBatch, mapBounds);
+
+            if (_inventoryButton != null)
+            {
+                _inventoryButton.Draw(spriteBatch, font, gameTime, transform);
+            }
 
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
             {
@@ -1083,7 +1134,7 @@ namespace ProjectVagabond.Scenes
             // --- Pass 3: Draw the highlighted path on top of everything ---
             if (highlightedPath != null)
             {
-                DrawPath(spriteBatch, pixel, highlightedPath, _global.Palette_Yellow, false);
+                DrawPath(spriteBatch, pixel, highlightedPath, _global.Palette_Red, false);
             }
         }
 
@@ -1264,3 +1315,4 @@ namespace ProjectVagabond.Scenes
         }
     }
 }
+#nullable restore
