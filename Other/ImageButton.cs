@@ -111,10 +111,7 @@ namespace ProjectVagabond.UI
             if (isActivated)
             {
                 _unhoverTimer = 0f;
-                if (_currentAlpha < FADE_IN_ALPHA)
-                {
-                    _currentAlpha = Math.Min(FADE_IN_ALPHA, _currentAlpha + dt / FADE_DURATION);
-                }
+                _currentAlpha = FADE_IN_ALPHA; // Snap to full opacity
             }
             else
             {
@@ -124,13 +121,6 @@ namespace ProjectVagabond.UI
                     if (_currentAlpha > FADE_OUT_ALPHA)
                     {
                         _currentAlpha = Math.Max(FADE_OUT_ALPHA, _currentAlpha - dt / FADE_DURATION);
-                    }
-                }
-                else
-                {
-                    if (_currentAlpha < FADE_IN_ALPHA)
-                    {
-                        _currentAlpha = Math.Min(FADE_IN_ALPHA, _currentAlpha + dt / FADE_DURATION);
                     }
                 }
             }
@@ -205,7 +195,25 @@ namespace ProjectVagabond.UI
                 sourceRectToDraw = _hoverSourceRect;
             }
 
-            Color drawColor = (tintColorOverride ?? Color.White) * _currentAlpha;
+            // --- Color Logic ---
+            Color baseColor;
+            if (tintColorOverride.HasValue)
+            {
+                baseColor = tintColorOverride.Value;
+            }
+            else
+            {
+                if (isActivated)
+                {
+                    baseColor = _global.ButtonHoverColor;
+                }
+                else
+                {
+                    baseColor = Color.White;
+                }
+            }
+
+            Color drawColor = baseColor * _currentAlpha;
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
@@ -218,4 +226,3 @@ namespace ProjectVagabond.UI
         }
     }
 }
-﻿﻿
