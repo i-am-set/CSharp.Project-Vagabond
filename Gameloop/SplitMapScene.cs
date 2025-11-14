@@ -1,4 +1,5 @@
-﻿#nullable enable
+﻿
+#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -388,7 +389,11 @@ namespace ProjectVagabond.Scenes
             }
 
             // Update top-level UI elements first, so they can consume input.
-            _inventoryButton?.Update(currentMouseState);
+            if (_inventoryButton != null)
+            {
+                _inventoryButton.IsEnabled = _mapState != SplitMapState.PlayerMoving;
+                _inventoryButton.Update(currentMouseState);
+            }
 
             // Handle camera logic
             if (_currentViewState == SplitMapViewState.Map)
@@ -615,6 +620,9 @@ namespace ProjectVagabond.Scenes
 
                 _targetCameraOffset.X = _cameraOffset.X; // Make LERP target the current X position
                 _lastPanMousePosition = currentMouseState.Position;
+
+                // Lock the cursor's Y position
+                Mouse.SetPosition(currentMouseState.Position.X, _panStartMousePosition.Y);
             }
         }
 
