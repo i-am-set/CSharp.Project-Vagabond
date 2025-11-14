@@ -1,5 +1,4 @@
-﻿
-#nullable enable
+﻿﻿﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -163,7 +162,7 @@ namespace ProjectVagabond.Scenes
             {
                 var inventoryIcon = _spriteManager.SplitMapInventoryButton;
                 var rects = _spriteManager.SplitMapInventoryButtonSourceRects;
-                _inventoryButton = new ImageButton(new Rectangle(7, 7, 16, 16), inventoryIcon, rects[0], rects[1]);
+                _inventoryButton = new ImageButton(new Rectangle(7, 10, 16, 16), inventoryIcon, rects[0], rects[1]);
                 _inventoryButton.OnClick += OnInventoryButtonPressed;
             }
             _inventoryButton.ResetAnimationState();
@@ -247,7 +246,7 @@ namespace ProjectVagabond.Scenes
                 _isPanning = false;
                 _cameraVelocity = Vector2.Zero;
                 _snapBackDelayTimer = 0f;
-                _targetCameraOffset = new Vector2(0, 200);
+                _targetCameraOffset = new Vector2(0, -200);
                 _cameraOffset = _targetCameraOffset; // Snap instantly
                 _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
             }
@@ -389,11 +388,7 @@ namespace ProjectVagabond.Scenes
             }
 
             // Update top-level UI elements first, so they can consume input.
-            if (_inventoryButton != null)
-            {
-                _inventoryButton.IsEnabled = _mapState != SplitMapState.PlayerMoving;
-                _inventoryButton.Update(currentMouseState);
-            }
+            _inventoryButton?.Update(currentMouseState);
 
             // Handle camera logic
             if (_currentViewState == SplitMapViewState.Map)
@@ -1084,13 +1079,10 @@ namespace ProjectVagabond.Scenes
             // Draw player icon last to ensure it's on top of nodes
             _playerIcon.Draw(spriteBatch);
 
-            // Draw placeholder inventory menu
-            var inventoryBounds = new Rectangle(0, 200, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
-            spriteBatch.DrawSnapped(pixel, inventoryBounds, _global.Palette_DarkestGray);
-            var inventoryText = "INVENTORY MENU";
-            var textSize = font.MeasureString(inventoryText);
-            var textPos = new Vector2(inventoryBounds.Center.X - textSize.Width / 2, inventoryBounds.Center.Y - textSize.Height / 2);
-            spriteBatch.DrawStringSnapped(font, inventoryText, textPos, _global.Palette_White);
+            // Draw the inventory menu UI elements
+            var inventoryPosition = new Vector2(0, 200);
+            spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, inventoryPosition, Color.White);
+            spriteBatch.DrawSnapped(_spriteManager.InventoryBorderWeapons, inventoryPosition, Color.White);
 
 
             spriteBatch.End();

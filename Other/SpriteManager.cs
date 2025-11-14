@@ -1,4 +1,4 @@
-﻿#nullable enable
+﻿﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -101,6 +101,11 @@ namespace ProjectVagabond
         public Texture2D SplitMapInventoryButton { get; private set; }
         public Texture2D SplitMapHeaderBorder { get; private set; }
         public Texture2D SplitMapCloseInventoryButton { get; private set; }
+        public Texture2D InventoryBorderArmor { get; private set; }
+        public Texture2D InventoryBorderHeader { get; private set; }
+        public Texture2D InventoryBorderRelics { get; private set; }
+        public Texture2D InventoryBorderSpells { get; private set; }
+        public Texture2D InventoryBorderWeapons { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -275,6 +280,16 @@ namespace ProjectVagabond
             catch { SplitMapHeaderBorder = _textureFactory.CreateColoredTexture(320, 28, Color.Magenta); }
             try { SplitMapCloseInventoryButton = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/SplitMap_Close_Inventory_Button"); }
             catch { SplitMapCloseInventoryButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
+            try { InventoryBorderArmor = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_armor"); }
+            catch { InventoryBorderArmor = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            try { InventoryBorderHeader = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_header"); }
+            catch { InventoryBorderHeader = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            try { InventoryBorderRelics = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_relics"); }
+            catch { InventoryBorderRelics = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            try { InventoryBorderSpells = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_spells"); }
+            catch { InventoryBorderSpells = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            try { InventoryBorderWeapons = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_weapons"); }
+            catch { InventoryBorderWeapons = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");

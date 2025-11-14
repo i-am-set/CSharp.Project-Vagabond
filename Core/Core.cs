@@ -1,4 +1,4 @@
-﻿using Microsoft.Xna.Framework;
+﻿﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -730,6 +730,12 @@ namespace ProjectVagabond
                 _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Invert(_mouseTransformMatrix));
                 var virtualMousePos = TransformMouse(Mouse.GetState().Position);
                 _spriteBatch.Draw(_pixel, virtualMousePos, Color.Red);
+
+                var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+                string coordText = $"({virtualMousePos.X}, {virtualMousePos.Y})";
+                Vector2 textPos = virtualMousePos + new Vector2(3, -secondaryFont.LineHeight / 2);
+                _spriteBatch.DrawStringSnapped(secondaryFont, coordText, textPos, Color.Red);
+
                 _spriteBatch.End();
             }
 

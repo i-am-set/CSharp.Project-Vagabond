@@ -2006,6 +2006,66 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Cursor/cursor_hover_draggable.png;Sprites/UI/Cursor/cursor_hover_draggable
 
+#begin Sprites/UI/Inventory/inventory_border_armor.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_border_armor.png;Sprites/UI/Inventory/inventory_border_armor
+
+#begin Sprites/UI/Inventory/inventory_border_header.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_border_header.png;Sprites/UI/Inventory/inventory_border_header
+
+#begin Sprites/UI/Inventory/inventory_border_relics.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_border_relics.png;Sprites/UI/Inventory/inventory_border_relics
+
+#begin Sprites/UI/Inventory/inventory_border_spells.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_border_spells.png;Sprites/UI/Inventory/inventory_border_spells
+
+#begin Sprites/UI/Inventory/inventory_border_weapons.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_border_weapons.png;Sprites/UI/Inventory/inventory_border_weapons
+
 #begin Sprites/UI/KeyPrompts/mouse/ui_mouse_blank.png
 /importer:TextureImporter
 /processor:TextureProcessor
