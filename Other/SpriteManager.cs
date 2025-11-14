@@ -1,4 +1,4 @@
-﻿﻿#nullable enable
+﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -36,6 +36,7 @@ namespace ProjectVagabond
         public Dictionary<int, Rectangle> RarityBackgroundSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Dictionary<int, Rectangle> SpellUsesSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Rectangle[] SplitMapInventoryButtonSourceRects { get; private set; }
+        public Rectangle[] SplitMapCloseInventoryButtonSourceRects { get; private set; }
 
 
         // Enemy Sprite Cache
@@ -99,6 +100,7 @@ namespace ProjectVagabond
         public Texture2D SplitNodeTown2 { get; private set; }
         public Texture2D SplitMapInventoryButton { get; private set; }
         public Texture2D SplitMapHeaderBorder { get; private set; }
+        public Texture2D SplitMapCloseInventoryButton { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -271,6 +273,8 @@ namespace ProjectVagabond
             catch { SplitMapInventoryButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
             try { SplitMapHeaderBorder = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/SplitMap_Header_Border"); }
             catch { SplitMapHeaderBorder = _textureFactory.CreateColoredTexture(320, 28, Color.Magenta); }
+            try { SplitMapCloseInventoryButton = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/SplitMap_Close_Inventory_Button"); }
+            catch { SplitMapCloseInventoryButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");
@@ -283,6 +287,7 @@ namespace ProjectVagabond
             InitializeRarityBackgrounds();
             InitializeSpellUsesRects();
             InitializeSplitMapInventoryButtonRects();
+            InitializeSplitMapCloseInventoryButtonRects();
         }
 
         private void InitializeSplitMapInventoryButtonRects()
@@ -294,6 +299,17 @@ namespace ProjectVagabond
             SplitMapInventoryButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
             // Frame 1: Hover
             SplitMapInventoryButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
+        }
+
+        private void InitializeSplitMapCloseInventoryButtonRects()
+        {
+            SplitMapCloseInventoryButtonSourceRects = new Rectangle[2];
+            const int frameWidth = 16;
+            const int frameHeight = 16;
+            // Frame 0: Idle
+            SplitMapCloseInventoryButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
+            // Frame 1: Hover
+            SplitMapCloseInventoryButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
         }
 
         private void InitializeRarityBackgrounds()

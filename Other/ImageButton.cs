@@ -13,9 +13,9 @@ namespace ProjectVagabond.UI
 {
     public class ImageButton : Button
     {
-        private readonly Texture2D? _spriteSheet;
-        private readonly Rectangle? _defaultSourceRect;
-        private readonly Rectangle? _hoverSourceRect;
+        private Texture2D? _spriteSheet;
+        private Rectangle? _defaultSourceRect;
+        private Rectangle? _hoverSourceRect;
         private readonly Rectangle? _clickedSourceRect;
         private readonly Rectangle? _disabledSourceRect;
         private bool _isHeldDown;
@@ -32,14 +32,6 @@ namespace ProjectVagabond.UI
         private const float SHAKE_MAGNITUDE = 4f;
         private const float SHAKE_FREQUENCY = 30f;
 
-        // Unhover Fade Animation
-        private float _unhoverTimer = 0f;
-        private float _currentAlpha = 1.0f;
-        private const float FADE_OUT_DELAY = 0.5f; // Delay before fading out
-        private const float FADE_DURATION = 0.3f; // Speed of the fade
-        private const float FADE_OUT_ALPHA = 0.2f; // Target alpha when faded out (20%)
-        private const float FADE_IN_ALPHA = 1.0f; // Target alpha when hovered/active (100%)
-
         public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = false, bool zoomHapticOnClick = true, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null)
             : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, font)
         {
@@ -50,6 +42,13 @@ namespace ProjectVagabond.UI
             _disabledSourceRect = disabledSourceRect;
             DebugColor = debugColor;
             _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
+        }
+
+        public void SetSprites(Texture2D spriteSheet, Rectangle defaultRect, Rectangle hoverRect)
+        {
+            _spriteSheet = spriteSheet;
+            _defaultSourceRect = defaultRect;
+            _hoverSourceRect = hoverRect;
         }
 
         public void TriggerAppearAnimation()
@@ -96,8 +95,6 @@ namespace ProjectVagabond.UI
         {
             base.ResetAnimationState();
             _shakeTimer = 0f;
-            _unhoverTimer = 0f;
-            _currentAlpha = 1.0f;
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
@@ -106,24 +103,6 @@ namespace ProjectVagabond.UI
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-            // --- Alpha Animation ---
-            if (isActivated)
-            {
-                _unhoverTimer = 0f;
-                _currentAlpha = FADE_IN_ALPHA; // Snap to full opacity
-            }
-            else
-            {
-                _unhoverTimer += dt;
-                if (_unhoverTimer > FADE_OUT_DELAY)
-                {
-                    if (_currentAlpha > FADE_OUT_ALPHA)
-                    {
-                        _currentAlpha = Math.Max(FADE_OUT_ALPHA, _currentAlpha - dt / FADE_DURATION);
-                    }
-                }
-            }
 
             // --- Hover Animation ---
             float hoverYOffset = 0f;
@@ -196,24 +175,7 @@ namespace ProjectVagabond.UI
             }
 
             // --- Color Logic ---
-            Color baseColor;
-            if (tintColorOverride.HasValue)
-            {
-                baseColor = tintColorOverride.Value;
-            }
-            else
-            {
-                if (isActivated)
-                {
-                    baseColor = _global.ButtonHoverColor;
-                }
-                else
-                {
-                    baseColor = Color.White;
-                }
-            }
-
-            Color drawColor = baseColor * _currentAlpha;
+            Color drawColor = tintColorOverride ?? Color.White;
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
@@ -221,7 +183,7 @@ namespace ProjectVagabond.UI
             }
             else if (DebugColor.HasValue)
             {
-                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), animatedBounds, DebugColor.Value * _currentAlpha);
+                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), animatedBounds, DebugColor.Value);
             }
         }
     }

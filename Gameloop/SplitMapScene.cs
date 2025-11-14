@@ -1,4 +1,4 @@
-﻿﻿﻿#nullable enable
+﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -248,6 +248,7 @@ namespace ProjectVagabond.Scenes
                 _snapBackDelayTimer = 0f;
                 _targetCameraOffset = new Vector2(0, 200);
                 _cameraOffset = _targetCameraOffset; // Snap instantly
+                _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
             }
             else
             {
@@ -256,6 +257,7 @@ namespace ProjectVagabond.Scenes
                 {
                     UpdateCameraTarget(currentNode.Position, true); // Snap back instantly
                 }
+                _inventoryButton?.SetSprites(_spriteManager.SplitMapInventoryButton, _spriteManager.SplitMapInventoryButtonSourceRects[0], _spriteManager.SplitMapInventoryButtonSourceRects[1]);
             }
         }
 
