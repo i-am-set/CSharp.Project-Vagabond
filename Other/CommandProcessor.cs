@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using ProjectVagabond.Progression;
 
 namespace ProjectVagabond
 {
@@ -190,6 +191,26 @@ namespace ProjectVagabond
                 var core = ServiceLocator.Get<Core>();
                 core.ExitApplication();
             }, "exit - Exit the game.");
+
+            _commands["debugstartcombat"] = new Command("debugstartcombat", (args) =>
+            {
+                var progressionManager = ServiceLocator.Get<ProgressionManager>();
+                var sceneManager = ServiceLocator.Get<SceneManager>();
+
+                var randomEncounter = progressionManager.GetRandomBattleFromSplit("forest");
+
+                if (randomEncounter != null && randomEncounter.Any())
+                {
+                    BattleSetup.EnemyArchetypes = randomEncounter;
+                    BattleSetup.ReturnSceneState = GameSceneState.Split;
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Starting debug combat with enemies: [yellow]{string.Join(", ", randomEncounter)}[/]" });
+                    sceneManager.ChangeScene(GameSceneState.Battle);
+                }
+                else
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Could not start debug combat. No 'forest' split data or no battles defined for it." });
+                }
+            }, "debugstartcombat - Starts a random combat encounter from the 'forest' split.");
 
             _commands["debug_colorpalette"] = new Command("debug_colorpalette", (args) =>
             {
@@ -561,3 +582,4 @@ namespace ProjectVagabond
         }
     }
 }
+﻿

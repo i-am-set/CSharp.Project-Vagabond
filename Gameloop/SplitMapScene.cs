@@ -1,4 +1,4 @@
-﻿﻿﻿#nullable enable
+﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -1083,6 +1083,7 @@ namespace ProjectVagabond.Scenes
             var inventoryPosition = new Vector2(0, 200);
             spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, inventoryPosition, Color.White);
             spriteBatch.DrawSnapped(_spriteManager.InventoryBorderWeapons, inventoryPosition, Color.White);
+            spriteBatch.DrawSnapped(_spriteManager.InventoryDivider, inventoryPosition, Color.White);
 
 
             spriteBatch.End();

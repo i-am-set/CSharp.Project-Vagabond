@@ -13,7 +13,7 @@ namespace ProjectVagabond.Progression
 {
     public class ProgressionManager
     {
-        private readonly Dictionary<string, SplitData> _splits = new Dictionary<string, SplitData>();
+        private readonly Dictionary<string, SplitData> _splits = new Dictionary<string, SplitData>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, NarrativeEvent> _narrativeEvents = new Dictionary<string, NarrativeEvent>();
         private static readonly Random _random = new Random();
 
@@ -199,6 +199,15 @@ namespace ProjectVagabond.Progression
             // Fallback if a category is empty for some reason
             Debug.WriteLine($"[ProgressionManager] [WARNING] No battles found for difficulty '{difficulty}'. Using first available battle as fallback.");
             return CurrentSplit?.PossibleBattles?.FirstOrDefault();
+        }
+
+        public List<string>? GetRandomBattleFromSplit(string theme)
+        {
+            if (_splits.TryGetValue(theme, out var splitData) && splitData.PossibleBattles != null && splitData.PossibleBattles.Any())
+            {
+                return splitData.PossibleBattles[_random.Next(splitData.PossibleBattles.Count)];
+            }
+            return null;
         }
 
         public List<string>? GetRandomMajorBattle() => GetRandomEncounter(CurrentSplit?.PossibleMajorBattles);

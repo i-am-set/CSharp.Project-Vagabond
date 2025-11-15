@@ -1,4 +1,4 @@
-﻿﻿#nullable enable
+﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -106,6 +106,7 @@ namespace ProjectVagabond
         public Texture2D InventoryBorderRelics { get; private set; }
         public Texture2D InventoryBorderSpells { get; private set; }
         public Texture2D InventoryBorderWeapons { get; private set; }
+        public Texture2D InventoryDivider { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -290,6 +291,8 @@ namespace ProjectVagabond
             catch { InventoryBorderSpells = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryBorderWeapons = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_weapons"); }
             catch { InventoryBorderWeapons = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            try { InventoryDivider = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_divider"); }
+            catch { InventoryDivider = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");
