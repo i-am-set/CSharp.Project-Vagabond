@@ -50,6 +50,8 @@ namespace ProjectVagabond.Scenes
         private NarrativeDialog _narrativeDialog;
         private ImageButton? _inventoryButton;
         private readonly List<InventoryHeaderButton> _inventoryHeaderButtons = new();
+        private readonly Dictionary<InventoryHeaderButton, float> _inventoryHeaderButtonOffsets = new();
+        private readonly Dictionary<InventoryHeaderButton, Rectangle> _inventoryHeaderButtonBaseBounds = new();
 
         // --- Animation Tuning ---
         private const float PLAYER_MOVE_SPEED = 50f; // Pixels per second
@@ -233,13 +235,14 @@ namespace ProjectVagabond.Scenes
             _inventoryButton.ResetAnimationState();
 
             _inventoryHeaderButtons.Clear();
+            _inventoryHeaderButtonOffsets.Clear();
+            _inventoryHeaderButtonBaseBounds.Clear();
             _selectedInventoryCategory = InventoryCategory.Weapons; // Default selection
 
             var categories = Enum.GetValues(typeof(InventoryCategory)).Cast<InventoryCategory>().ToList();
             int numButtons = categories.Count;
             const int buttonSize = 32;
             const int containerWidth = 210;
-            var buttonSpriteSheet = _spriteManager.InventoryHeaderButtonDebugSpriteSheet;
             var buttonRects = _spriteManager.InventoryHeaderButtonSourceRects;
 
             float totalButtonWidth = numButtons * buttonSize;
@@ -247,10 +250,33 @@ namespace ProjectVagabond.Scenes
             float gapWidth = (numButtons > 1) ? totalSpacing / (numButtons - 1) : 0;
 
             float currentX = (Global.VIRTUAL_WIDTH - containerWidth) / 2f;
-            float buttonY = 200 + 35; // 200 is the inventory offset, 35 is padding from top
+            float buttonY = 200 + 6; // 200 is the inventory offset, 6 is padding from top
 
             foreach (var category in categories)
             {
+                Texture2D buttonSpriteSheet;
+                switch (category)
+                {
+                    case InventoryCategory.Weapons:
+                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonWeapons;
+                        break;
+                    case InventoryCategory.Armor:
+                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonArmor;
+                        break;
+                    case InventoryCategory.Spells:
+                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonSpells;
+                        break;
+                    case InventoryCategory.Relics:
+                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonRelics;
+                        break;
+                    case InventoryCategory.Consumables:
+                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonConsumables;
+                        break;
+                    default:
+                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonWeapons; // Failsafe
+                        break;
+                }
+
                 int menuIndex = (int)category;
                 var bounds = new Rectangle((int)MathF.Round(currentX), (int)buttonY, buttonSize, buttonSize);
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], menuIndex, category.ToString());
@@ -258,6 +284,8 @@ namespace ProjectVagabond.Scenes
                     _selectedInventoryCategory = category;
                 };
                 _inventoryHeaderButtons.Add(button);
+                _inventoryHeaderButtonOffsets[button] = 0f;
+                _inventoryHeaderButtonBaseBounds[button] = bounds;
                 currentX += buttonSize + gapWidth;
             }
         }
@@ -485,8 +513,35 @@ namespace ProjectVagabond.Scenes
             else if (_currentViewState == SplitMapViewState.Inventory)
             {
                 var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
-                foreach (var button in _inventoryHeaderButtons)
+                int selectedIndex = (int)_selectedInventoryCategory;
+                const float repulsionAmount = 8f;
+                const float repulsionSpeed = 15f;
+
+                for (int i = 0; i < _inventoryHeaderButtons.Count; i++)
                 {
+                    var button = _inventoryHeaderButtons[i];
+
+                    float targetOffset = 0f;
+                    if (i < selectedIndex)
+                    {
+                        targetOffset = -repulsionAmount;
+                    }
+                    else if (i > selectedIndex)
+                    {
+                        targetOffset = repulsionAmount;
+                    }
+
+                    float currentOffset = _inventoryHeaderButtonOffsets[button];
+                    _inventoryHeaderButtonOffsets[button] = MathHelper.Lerp(currentOffset, targetOffset, repulsionSpeed * deltaTime);
+                    float finalOffset = _inventoryHeaderButtonOffsets[button];
+
+                    var baseBounds = _inventoryHeaderButtonBaseBounds[button];
+                    button.Bounds = new Rectangle(
+                        baseBounds.X + (int)MathF.Round(finalOffset),
+                        baseBounds.Y,
+                        baseBounds.Width,
+                        baseBounds.Height);
+
                     button.Update(currentMouseState, cameraTransform);
                 }
             }

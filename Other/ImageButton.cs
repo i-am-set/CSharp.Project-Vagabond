@@ -152,10 +152,9 @@ namespace ProjectVagabond.UI
                 totalHorizontalOffset *= ServiceLocator.Get<Core>().FinalScale;
             }
 
-            float tactileHoverOffset = isActivated ? -1f : 0f;
             var animatedBounds = new Rectangle(
                 Bounds.X + (int)MathF.Round(totalHorizontalOffset),
-                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f) + (int)hoverYOffset + (int)tactileHoverOffset,
+                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f) + (int)hoverYOffset,
                 Bounds.Width,
                 animatedHeight
             );
