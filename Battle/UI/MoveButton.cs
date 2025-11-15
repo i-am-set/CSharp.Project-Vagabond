@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -76,6 +77,11 @@ namespace ProjectVagabond.Battle.UI
         public void ShowInstantly()
         {
             _animState = AnimationState.Idle;
+        }
+
+        public override void Update(MouseState currentMouseState, Matrix? worldTransform = null)
+        {
+            base.Update(currentMouseState, worldTransform);
         }
 
         private void UpdateScrolling(GameTime gameTime)

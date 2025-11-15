@@ -484,9 +484,10 @@ namespace ProjectVagabond.Scenes
             }
             else if (_currentViewState == SplitMapViewState.Inventory)
             {
+                var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
                 foreach (var button in _inventoryHeaderButtons)
                 {
-                    button.Update(currentMouseState);
+                    button.Update(currentMouseState, cameraTransform);
                 }
             }
 
@@ -1128,8 +1129,30 @@ namespace ProjectVagabond.Scenes
             {
                 var inventoryPosition = new Vector2(0, 200);
                 spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, inventoryPosition, Color.White);
-                spriteBatch.DrawSnapped(_spriteManager.InventoryBorderWeapons, inventoryPosition, Color.White);
-                spriteBatch.DrawSnapped(_spriteManager.InventoryDivider, inventoryPosition, Color.White);
+
+                Texture2D selectedBorderSprite;
+                switch (_selectedInventoryCategory)
+                {
+                    case InventoryCategory.Weapons:
+                        selectedBorderSprite = _spriteManager.InventoryBorderWeapons;
+                        break;
+                    case InventoryCategory.Armor:
+                        selectedBorderSprite = _spriteManager.InventoryBorderArmor;
+                        break;
+                    case InventoryCategory.Spells:
+                        selectedBorderSprite = _spriteManager.InventoryBorderSpells;
+                        break;
+                    case InventoryCategory.Relics:
+                        selectedBorderSprite = _spriteManager.InventoryBorderRelics;
+                        break;
+                    case InventoryCategory.Consumables:
+                        selectedBorderSprite = _spriteManager.InventoryBorderConsumables;
+                        break;
+                    default:
+                        selectedBorderSprite = _spriteManager.InventoryBorderWeapons; // Failsafe
+                        break;
+                }
+                spriteBatch.DrawSnapped(selectedBorderSprite, inventoryPosition, Color.White);
 
                 foreach (var button in _inventoryHeaderButtons)
                 {

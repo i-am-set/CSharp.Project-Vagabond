@@ -53,6 +53,11 @@ namespace ProjectVagabond.UI
             _appearTimer = 0f;
         }
 
+        public override void Update(MouseState currentMouseState, Matrix? worldTransform = null)
+        {
+            base.Update(currentMouseState, worldTransform);
+        }
+
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             if (_animState == AnimationState.Hidden) return;

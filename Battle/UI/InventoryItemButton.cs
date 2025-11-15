@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -18,6 +19,11 @@ namespace ProjectVagabond.Battle.UI
             _itemFont = font;
             Item = item;
             Quantity = quantity;
+        }
+
+        public override void Update(MouseState currentMouseState, Matrix? worldTransform = null)
+        {
+            base.Update(currentMouseState, worldTransform);
         }
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)

@@ -139,7 +139,7 @@ namespace ProjectVagabond.UI
             DebugColor = debugColor;
         }
 
-        public virtual void Update(MouseState currentMouseState)
+        public virtual void Update(MouseState currentMouseState, Matrix? worldTransform = null)
         {
             if (!IsEnabled)
             {
@@ -152,6 +152,12 @@ namespace ProjectVagabond.UI
             Vector2 virtualMousePos = UseScreenCoordinates
                 ? currentMouseState.Position.ToVector2()
                 : Core.TransformMouse(currentMouseState.Position);
+
+            if (worldTransform.HasValue)
+            {
+                var inverseTransform = Matrix.Invert(worldTransform.Value);
+                virtualMousePos = Vector2.Transform(virtualMousePos, inverseTransform);
+            }
 
             UpdateHoverState(virtualMousePos);
 

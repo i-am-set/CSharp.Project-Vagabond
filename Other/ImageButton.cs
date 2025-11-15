@@ -1,4 +1,4 @@
-﻿﻿#nullable enable
+﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -70,7 +70,7 @@ namespace ProjectVagabond.UI
             _animState = AnimationState.Hidden;
         }
 
-        public override void Update(MouseState currentMouseState)
+        public override void Update(MouseState currentMouseState, Matrix? worldTransform = null)
         {
             if (_animState != AnimationState.Idle)
             {
@@ -79,7 +79,7 @@ namespace ProjectVagabond.UI
                 return;
             }
 
-            base.Update(currentMouseState);
+            base.Update(currentMouseState, worldTransform);
 
             if (!IsEnabled)
             {
