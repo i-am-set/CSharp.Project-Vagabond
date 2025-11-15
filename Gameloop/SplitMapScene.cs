@@ -279,7 +279,7 @@ namespace ProjectVagabond.Scenes
 
                 int menuIndex = (int)category;
                 var bounds = new Rectangle((int)MathF.Round(currentX), (int)buttonY, buttonSize, buttonSize);
-                var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], menuIndex, category.ToString());
+                var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
                 button.OnClick += () => {
                     _selectedInventoryCategory = category;
                 };
@@ -542,6 +542,7 @@ namespace ProjectVagabond.Scenes
                         baseBounds.Width,
                         baseBounds.Height);
 
+                    button.IsSelected = ((int)_selectedInventoryCategory == button.MenuIndex);
                     button.Update(currentMouseState, cameraTransform);
                 }
             }
@@ -1211,8 +1212,7 @@ namespace ProjectVagabond.Scenes
 
                 foreach (var button in _inventoryHeaderButtons)
                 {
-                    bool isSelected = (int)_selectedInventoryCategory == button.MenuIndex;
-                    button.Draw(spriteBatch, font, gameTime, Matrix.Identity, forceHover: isSelected);
+                    button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
             }
 

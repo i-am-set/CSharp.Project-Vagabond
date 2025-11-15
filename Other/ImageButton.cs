@@ -18,7 +18,9 @@ namespace ProjectVagabond.UI
         private Rectangle? _hoverSourceRect;
         private readonly Rectangle? _clickedSourceRect;
         private readonly Rectangle? _disabledSourceRect;
+        private readonly Rectangle? _selectedSourceRect;
         private bool _isHeldDown;
+        public bool IsSelected { get; set; }
 
         // Animation state
         private enum AnimationState { Hidden, Idle, Appearing }
@@ -32,7 +34,7 @@ namespace ProjectVagabond.UI
         private const float SHAKE_MAGNITUDE = 4f;
         private const float SHAKE_FREQUENCY = 30f;
 
-        public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = false, bool zoomHapticOnClick = true, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null)
+        public ImageButton(Rectangle bounds, Texture2D? spriteSheet = null, Rectangle? defaultSourceRect = null, Rectangle? hoverSourceRect = null, Rectangle? clickedSourceRect = null, Rectangle? disabledSourceRect = null, string? function = null, bool enableHoverSway = false, bool zoomHapticOnClick = true, bool startVisible = true, BitmapFont? font = null, Color? debugColor = null, Rectangle? selectedSourceRect = null)
             : base(bounds, "", function, null, null, null, false, 0.0f, enableHoverSway, font)
         {
             _spriteSheet = spriteSheet;
@@ -40,6 +42,7 @@ namespace ProjectVagabond.UI
             _hoverSourceRect = hoverSourceRect;
             _clickedSourceRect = clickedSourceRect;
             _disabledSourceRect = disabledSourceRect;
+            _selectedSourceRect = selectedSourceRect;
             DebugColor = debugColor;
             _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
         }
@@ -164,6 +167,10 @@ namespace ProjectVagabond.UI
             if (!IsEnabled && _disabledSourceRect.HasValue)
             {
                 sourceRectToDraw = _disabledSourceRect;
+            }
+            else if (IsSelected && _selectedSourceRect.HasValue)
+            {
+                sourceRectToDraw = _selectedSourceRect;
             }
             else if (_isHeldDown && _clickedSourceRect.HasValue)
             {

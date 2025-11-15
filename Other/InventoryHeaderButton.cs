@@ -9,8 +9,8 @@ namespace ProjectVagabond.UI
         public int MenuIndex { get; }
         public string ButtonName { get; }
 
-        public InventoryHeaderButton(Rectangle bounds, Texture2D spriteSheet, Rectangle defaultSourceRect, Rectangle hoverSourceRect, int menuIndex, string name)
-            : base(bounds, spriteSheet, defaultSourceRect, hoverSourceRect, function: name)
+        public InventoryHeaderButton(Rectangle bounds, Texture2D spriteSheet, Rectangle defaultSourceRect, Rectangle hoverSourceRect, Rectangle selectedSourceRect, int menuIndex, string name)
+            : base(bounds, spriteSheet, defaultSourceRect, hoverSourceRect, selectedSourceRect: selectedSourceRect, function: name)
         {
             MenuIndex = menuIndex;
             ButtonName = name;
