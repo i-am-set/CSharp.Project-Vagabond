@@ -5,6 +5,9 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -37,6 +40,7 @@ namespace ProjectVagabond
         public Dictionary<int, Rectangle> SpellUsesSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Rectangle[] SplitMapInventoryButtonSourceRects { get; private set; }
         public Rectangle[] SplitMapCloseInventoryButtonSourceRects { get; private set; }
+        public Rectangle[] InventoryHeaderButtonSourceRects { get; private set; }
 
 
         // Enemy Sprite Cache
@@ -107,6 +111,7 @@ namespace ProjectVagabond
         public Texture2D InventoryBorderSpells { get; private set; }
         public Texture2D InventoryBorderWeapons { get; private set; }
         public Texture2D InventoryDivider { get; private set; }
+        public Texture2D InventoryHeaderButtonDebugSpriteSheet { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -293,6 +298,8 @@ namespace ProjectVagabond
             catch { InventoryBorderWeapons = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryDivider = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_divider"); }
             catch { InventoryDivider = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            try { InventoryHeaderButtonDebugSpriteSheet = _textureFactory.CreateTwoColorTexture(64, 32, Color.Pink, Color.White); }
+            catch { InventoryHeaderButtonDebugSpriteSheet = _textureFactory.CreateColoredTexture(64, 32, Color.Magenta); }
 
             LoadAndCacheCursorSprite("cursor_default");
             LoadAndCacheCursorSprite("cursor_hover_clickable");
@@ -306,6 +313,18 @@ namespace ProjectVagabond
             InitializeSpellUsesRects();
             InitializeSplitMapInventoryButtonRects();
             InitializeSplitMapCloseInventoryButtonRects();
+            InitializeInventoryHeaderButtonRects();
+        }
+
+        private void InitializeInventoryHeaderButtonRects()
+        {
+            InventoryHeaderButtonSourceRects = new Rectangle[2];
+            const int frameWidth = 32;
+            const int frameHeight = 32;
+            // Frame 0: Default
+            InventoryHeaderButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
+            // Frame 1: Hover/Selected
+            InventoryHeaderButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
         }
 
         private void InitializeSplitMapInventoryButtonRects()
@@ -799,3 +818,4 @@ namespace ProjectVagabond
     }
 }
 #nullable restore
+﻿﻿

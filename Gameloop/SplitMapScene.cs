@@ -29,6 +29,9 @@ namespace ProjectVagabond.Scenes
         private enum SplitMapViewState { Map, Inventory }
         private SplitMapViewState _currentViewState = SplitMapViewState.Map;
 
+        private enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables }
+        private InventoryCategory _selectedInventoryCategory;
+
         private readonly ProgressionManager _progressionManager;
         private readonly SceneManager _sceneManager;
         private readonly GameState _gameState;
@@ -46,6 +49,7 @@ namespace ProjectVagabond.Scenes
         private readonly PlayerMapIcon _playerIcon;
         private NarrativeDialog _narrativeDialog;
         private ImageButton? _inventoryButton;
+        private readonly List<InventoryHeaderButton> _inventoryHeaderButtons = new();
 
         // --- Animation Tuning ---
         private const float PLAYER_MOVE_SPEED = 50f; // Pixels per second
@@ -158,15 +162,7 @@ namespace ProjectVagabond.Scenes
             _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
             _isPanning = false;
 
-            if (_inventoryButton == null)
-            {
-                var inventoryIcon = _spriteManager.SplitMapInventoryButton;
-                var rects = _spriteManager.SplitMapInventoryButtonSourceRects;
-                _inventoryButton = new ImageButton(new Rectangle(7, 10, 16, 16), inventoryIcon, rects[0], rects[1]);
-                _inventoryButton.OnClick += OnInventoryButtonPressed;
-            }
-            _inventoryButton.ResetAnimationState();
-
+            InitializeInventoryUI();
 
             if (_progressionManager.CurrentSplitMap == null)
             {
@@ -222,6 +218,47 @@ namespace ProjectVagabond.Scenes
                     _mapState = SplitMapState.LoweringNode;
                     _nodeLiftTimer = 0f;
                 }
+            }
+        }
+
+        private void InitializeInventoryUI()
+        {
+            if (_inventoryButton == null)
+            {
+                var inventoryIcon = _spriteManager.SplitMapInventoryButton;
+                var rects = _spriteManager.SplitMapInventoryButtonSourceRects;
+                _inventoryButton = new ImageButton(new Rectangle(7, 10, 16, 16), inventoryIcon, rects[0], rects[1]);
+                _inventoryButton.OnClick += OnInventoryButtonPressed;
+            }
+            _inventoryButton.ResetAnimationState();
+
+            _inventoryHeaderButtons.Clear();
+            _selectedInventoryCategory = InventoryCategory.Weapons; // Default selection
+
+            var categories = Enum.GetValues(typeof(InventoryCategory)).Cast<InventoryCategory>().ToList();
+            int numButtons = categories.Count;
+            const int buttonSize = 32;
+            const int containerWidth = 210;
+            var buttonSpriteSheet = _spriteManager.InventoryHeaderButtonDebugSpriteSheet;
+            var buttonRects = _spriteManager.InventoryHeaderButtonSourceRects;
+
+            float totalButtonWidth = numButtons * buttonSize;
+            float totalSpacing = containerWidth - totalButtonWidth;
+            float gapWidth = (numButtons > 1) ? totalSpacing / (numButtons - 1) : 0;
+
+            float currentX = (Global.VIRTUAL_WIDTH - containerWidth) / 2f;
+            float buttonY = 200 + 35; // 200 is the inventory offset, 35 is padding from top
+
+            foreach (var category in categories)
+            {
+                int menuIndex = (int)category;
+                var bounds = new Rectangle((int)MathF.Round(currentX), (int)buttonY, buttonSize, buttonSize);
+                var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], menuIndex, category.ToString());
+                button.OnClick += () => {
+                    _selectedInventoryCategory = category;
+                };
+                _inventoryHeaderButtons.Add(button);
+                currentX += buttonSize + gapWidth;
             }
         }
 
@@ -444,6 +481,13 @@ namespace ProjectVagabond.Scenes
             if (_currentViewState == SplitMapViewState.Map)
             {
                 HandleMapInput(gameTime);
+            }
+            else if (_currentViewState == SplitMapViewState.Inventory)
+            {
+                foreach (var button in _inventoryHeaderButtons)
+                {
+                    button.Update(currentMouseState);
+                }
             }
 
 
@@ -1080,10 +1124,19 @@ namespace ProjectVagabond.Scenes
             _playerIcon.Draw(spriteBatch);
 
             // Draw the inventory menu UI elements
-            var inventoryPosition = new Vector2(0, 200);
-            spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, inventoryPosition, Color.White);
-            spriteBatch.DrawSnapped(_spriteManager.InventoryBorderWeapons, inventoryPosition, Color.White);
-            spriteBatch.DrawSnapped(_spriteManager.InventoryDivider, inventoryPosition, Color.White);
+            if (_currentViewState == SplitMapViewState.Inventory)
+            {
+                var inventoryPosition = new Vector2(0, 200);
+                spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, inventoryPosition, Color.White);
+                spriteBatch.DrawSnapped(_spriteManager.InventoryBorderWeapons, inventoryPosition, Color.White);
+                spriteBatch.DrawSnapped(_spriteManager.InventoryDivider, inventoryPosition, Color.White);
+
+                foreach (var button in _inventoryHeaderButtons)
+                {
+                    bool isSelected = (int)_selectedInventoryCategory == button.MenuIndex;
+                    button.Draw(spriteBatch, font, gameTime, Matrix.Identity, forceHover: isSelected);
+                }
+            }
 
 
             spriteBatch.End();

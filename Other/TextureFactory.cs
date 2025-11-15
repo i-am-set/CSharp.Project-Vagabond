@@ -1,6 +1,18 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 
 namespace ProjectVagabond
 {
@@ -16,6 +28,23 @@ namespace ProjectVagabond
             for (int i = 0; i < colorData.Length; i++)
             {
                 colorData[i] = color;
+            }
+            texture.SetData(colorData);
+            return texture;
+        }
+
+        public Texture2D CreateTwoColorTexture(int width, int height, Color color1, Color color2)
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var texture = new Texture2D(graphicsDevice, width, height);
+            var colorData = new Color[width * height];
+            int midpoint = width / 2;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    colorData[y * width + x] = (x < midpoint) ? color1 : color2;
+                }
             }
             texture.SetData(colorData);
             return texture;
@@ -339,3 +368,4 @@ namespace ProjectVagabond
         }
     }
 }
+﻿﻿
