@@ -38,6 +38,7 @@ namespace ProjectVagabond
         public Rectangle[] SplitMapInventoryButtonSourceRects { get; private set; }
         public Rectangle[] SplitMapCloseInventoryButtonSourceRects { get; private set; }
         public Rectangle[] InventoryHeaderButtonSourceRects { get; private set; }
+        public Rectangle[] InventorySlotSourceRects { get; private set; }
 
 
         // Enemy Sprite Cache
@@ -113,6 +114,7 @@ namespace ProjectVagabond
         public Texture2D InventoryHeaderButtonSpells { get; private set; }
         public Texture2D InventoryHeaderButtonRelics { get; private set; }
         public Texture2D InventoryHeaderButtonConsumables { get; private set; }
+        public Texture2D InventorySlotIdleSpriteSheet { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -309,6 +311,8 @@ namespace ProjectVagabond
             catch { InventoryHeaderButtonRelics = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventoryHeaderButtonConsumables = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_consumables"); }
             catch { InventoryHeaderButtonConsumables = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
+            try { InventorySlotIdleSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_idle"); }
+            catch { InventorySlotIdleSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
 
 
             LoadAndCacheCursorSprite("cursor_default");
@@ -324,6 +328,19 @@ namespace ProjectVagabond
             InitializeSplitMapInventoryButtonRects();
             InitializeSplitMapCloseInventoryButtonRects();
             InitializeInventoryHeaderButtonRects();
+            InitializeInventorySlotRects();
+        }
+
+        private void InitializeInventorySlotRects()
+        {
+            if (InventorySlotIdleSpriteSheet == null) return;
+            const int frameSize = 48; // Frames are 48x48
+            int frameCount = InventorySlotIdleSpriteSheet.Width / frameSize;
+            InventorySlotSourceRects = new Rectangle[frameCount];
+            for (int i = 0; i < frameCount; i++)
+            {
+                InventorySlotSourceRects[i] = new Rectangle(i * frameSize, 0, frameSize, frameSize);
+            }
         }
 
         private void InitializeInventoryHeaderButtonRects()

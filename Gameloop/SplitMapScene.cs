@@ -52,6 +52,8 @@ namespace ProjectVagabond.Scenes
         private readonly List<InventoryHeaderButton> _inventoryHeaderButtons = new();
         private readonly Dictionary<InventoryHeaderButton, float> _inventoryHeaderButtonOffsets = new();
         private readonly Dictionary<InventoryHeaderButton, Rectangle> _inventoryHeaderButtonBaseBounds = new();
+        private readonly List<InventorySlot> _inventorySlots = new();
+        private Rectangle _inventorySlotArea;
 
         // --- Animation Tuning ---
         private const float PLAYER_MOVE_SPEED = 50f; // Pixels per second
@@ -287,6 +289,38 @@ namespace ProjectVagabond.Scenes
                 _inventoryHeaderButtonOffsets[button] = 0f;
                 _inventoryHeaderButtonBaseBounds[button] = bounds;
                 currentX += buttonSize + gapWidth;
+            }
+
+            // Initialize inventory slot grid
+            const int slotContainerWidth = 180;
+            const int slotContainerHeight = 132;
+            const int slotColumns = 4;
+            const int slotRows = 3;
+            const int slotSize = 48;
+
+            int containerX = (Global.VIRTUAL_WIDTH - slotContainerWidth) / 2 - 60;
+            int containerY = 200 + 6 + 32 + 1; // 200 (offset) + 6 (padding) + 32 (button height) + 1 (gap) = 239
+            _inventorySlotArea = new Rectangle(containerX, containerY, slotContainerWidth, slotContainerHeight);
+
+            _inventorySlots.Clear();
+
+            // Calculate the spacing between the centers of the slots
+            float spaceBetweenX = (slotColumns > 1) ? (float)(slotContainerWidth - (slotSize)) / (slotColumns - 1) : 0;
+            float spaceBetweenY = (slotRows > 1) ? (float)(slotContainerHeight - (slotSize)) / (slotRows - 1) : 0;
+
+            var slotFrames = _spriteManager.InventorySlotSourceRects;
+            if (slotFrames == null || slotFrames.Length == 0) return;
+
+            for (int row = 0; row < slotRows; row++)
+            {
+                for (int col = 0; col < slotColumns; col++)
+                {
+                    float nodeX = _inventorySlotArea.X + (slotSize / 2f) + (col * spaceBetweenX);
+                    float nodeY = _inventorySlotArea.Y + (slotSize / 2f) + (row * spaceBetweenY);
+                    var position = new Vector2(MathF.Round(nodeX), MathF.Round(nodeY));
+                    var randomFrame = slotFrames[_random.Next(slotFrames.Length)];
+                    _inventorySlots.Add(new InventorySlot(position, randomFrame));
+                }
             }
         }
 
@@ -544,6 +578,15 @@ namespace ProjectVagabond.Scenes
 
                     button.IsSelected = ((int)_selectedInventoryCategory == button.MenuIndex);
                     button.Update(currentMouseState, cameraTransform);
+                }
+
+                var slotFrames = _spriteManager.InventorySlotSourceRects;
+                if (slotFrames != null)
+                {
+                    foreach (var slot in _inventorySlots)
+                    {
+                        slot.Update(gameTime, slotFrames);
+                    }
                 }
             }
 
@@ -1129,32 +1172,6 @@ namespace ProjectVagabond.Scenes
                 {
                     spriteBatch.DrawLineSnapped(new Vector2(startX, y), new Vector2(endX, y), gridColor);
                 }
-
-                // --- NEW DEBUG DRAWING LOGIC ---
-                if (_currentMap != null)
-                {
-                    // Draw red dots for all feasible node positions
-                    for (int i = 0; i < _currentMap.TargetColumnCount; i++)
-                    {
-                        float anchorX = SplitMapGenerator.HORIZONTAL_PADDING + (i * SplitMapGenerator.COLUMN_WIDTH);
-                        foreach (var anchorY in SplitMapGenerator._validYPositions)
-                        {
-                            spriteBatch.DrawSnapped(pixel, new Rectangle((int)anchorX - 1, anchorY - 1, 3, 3), Color.Red);
-                        }
-                    }
-
-                    // Draw teal squares for actual node anchor points
-                    foreach (var node in _currentMap.Nodes.Values)
-                    {
-                        float anchorX = SplitMapGenerator.HORIZONTAL_PADDING + (node.Floor * SplitMapGenerator.COLUMN_WIDTH);
-                        // Find the closest valid Y position to the node's actual Y position
-                        int anchorY = SplitMapGenerator._validYPositions.OrderBy(y => Math.Abs(y - node.Position.Y)).First();
-
-                        int squareSize = 5;
-                        spriteBatch.DrawSnapped(pixel, new Rectangle((int)anchorX - squareSize / 2, anchorY - squareSize / 2, squareSize, squareSize), _global.Palette_Teal);
-                    }
-                }
-                // --- END NEW DEBUG DRAWING LOGIC ---
             }
 
             var drawableObjects = new List<DrawableMapObject>();
@@ -1213,6 +1230,39 @@ namespace ProjectVagabond.Scenes
                 foreach (var button in _inventoryHeaderButtons)
                 {
                     button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                }
+
+                // Draw the inventory slots
+                const int slotSize = 48;
+                var slotOrigin = new Vector2(slotSize / 2f);
+                foreach (var slot in _inventorySlots)
+                {
+                    spriteBatch.DrawSnapped(
+                        _spriteManager.InventorySlotIdleSpriteSheet,
+                        slot.Position,
+                        slot.SourceRectangle,
+                        Color.White,
+                        0f,
+                        slotOrigin,
+                        1f,
+                        SpriteEffects.None,
+                        0f
+                    );
+                }
+
+                if (_global.ShowSplitMapGrid)
+                {
+                    spriteBatch.DrawSnapped(pixel, _inventorySlotArea, Color.Blue * 0.5f);
+                    foreach (var slot in _inventorySlots)
+                    {
+                        var slotRect = new Rectangle((int)(slot.Position.X - slotSize / 2f), (int)(slot.Position.Y - slotSize / 2f), slotSize, slotSize);
+                        spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Top), new Vector2(slotRect.Right, slotRect.Top), Color.Teal);
+                        spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Bottom), new Vector2(slotRect.Right, slotRect.Bottom), Color.Teal);
+                        spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Top), new Vector2(slotRect.Left, slotRect.Bottom), Color.Teal);
+                        spriteBatch.DrawLineSnapped(new Vector2(slotRect.Right, slotRect.Top), new Vector2(slotRect.Right, slotRect.Bottom), Color.Teal);
+
+                        spriteBatch.DrawSnapped(pixel, new Rectangle((int)slot.Position.X - 1, (int)slot.Position.Y - 1, 3, 3), Color.Pink);
+                    }
                 }
             }
 
