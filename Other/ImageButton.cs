@@ -115,7 +115,6 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                // Still update the animator to reset its state when not hovered, but don't use the offset.
                 _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             }
 
@@ -131,39 +130,29 @@ namespace ProjectVagabond.UI
 
             float totalHorizontalOffset = (horizontalOffset ?? 0f) + shakeOffset;
 
-
             // --- Animation Scaling ---
-            float verticalScale = 1.0f;
+            float scale = 1.0f;
             if (_animState == AnimationState.Appearing)
             {
                 _appearTimer += dt;
                 float progress = Math.Clamp(_appearTimer / APPEAR_DURATION, 0f, 1f);
-                verticalScale = Easing.EaseOutCubic(progress);
+                scale = Easing.EaseOutCubic(progress);
                 if (progress >= 1.0f)
                 {
                     _animState = AnimationState.Idle;
                 }
             }
 
-            if (verticalScale < 0.01f) return;
+            if (scale < 0.01f) return;
 
-            // --- Calculate Animated Bounds ---
-            int animatedHeight = (int)(Bounds.Height * verticalScale);
-
-            if (UseScreenCoordinates)
-            {
-                totalHorizontalOffset *= ServiceLocator.Get<Core>().FinalScale;
-            }
-
-            var animatedBounds = new Rectangle(
-                Bounds.X + (int)MathF.Round(totalHorizontalOffset),
-                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f) + (int)hoverYOffset,
-                Bounds.Width,
-                animatedHeight
+            // --- Calculate Draw Position ---
+            var animatedCenterPosition = new Vector2(
+                Bounds.Center.X + totalHorizontalOffset,
+                Bounds.Center.Y + (verticalOffset ?? 0f) + hoverYOffset
             );
 
+            // --- Select Source Rectangle ---
             Rectangle? sourceRectToDraw = _defaultSourceRect;
-
             if (!IsEnabled && _disabledSourceRect.HasValue)
             {
                 sourceRectToDraw = _disabledSourceRect;
@@ -184,13 +173,16 @@ namespace ProjectVagabond.UI
             // --- Color Logic ---
             Color drawColor = tintColorOverride ?? Color.White;
 
+            // --- Draw ---
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
-                spriteBatch.DrawSnapped(_spriteSheet, animatedBounds, sourceRectToDraw, drawColor);
+                var origin = sourceRectToDraw.Value.Size.ToVector2() / 2f;
+                spriteBatch.DrawSnapped(_spriteSheet, animatedCenterPosition, sourceRectToDraw, drawColor, 0f, origin, scale, SpriteEffects.None, 0f);
             }
             else if (DebugColor.HasValue)
             {
-                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), animatedBounds, DebugColor.Value);
+                // Debug draw should still respect the logical bounds for hit testing visualization
+                spriteBatch.DrawSnapped(ServiceLocator.Get<Texture2D>(), Bounds, DebugColor.Value);
             }
         }
     }

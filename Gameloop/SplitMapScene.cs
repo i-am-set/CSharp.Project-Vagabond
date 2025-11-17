@@ -31,6 +31,7 @@ namespace ProjectVagabond.Scenes
 
         private enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables }
         private InventoryCategory _selectedInventoryCategory;
+        private InventoryCategory _previousInventoryCategory;
 
         private readonly ProgressionManager _progressionManager;
         private readonly SceneManager _sceneManager;
@@ -128,6 +129,10 @@ namespace ProjectVagabond.Scenes
         private const float SNAP_BACK_DELAY = 1f;
         private const float SCROLL_PAN_SPEED = 1f;
 
+        // Inventory Animation State
+        private float _headerBobTimer;
+        private Vector2 _inventoryPositionOffset = Vector2.Zero;
+
 
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
@@ -167,6 +172,9 @@ namespace ProjectVagabond.Scenes
             _isPanning = false;
 
             InitializeInventoryUI();
+            _previousInventoryCategory = _selectedInventoryCategory;
+            _headerBobTimer = 1f; // Set to a "completed" state initially
+            _inventoryPositionOffset = Vector2.Zero;
 
             if (_progressionManager.CurrentSplitMap == null)
             {
@@ -243,19 +251,17 @@ namespace ProjectVagabond.Scenes
 
             var categories = Enum.GetValues(typeof(InventoryCategory)).Cast<InventoryCategory>().ToList();
             int numButtons = categories.Count;
-            const int buttonSize = 32;
+            const int buttonSpriteSize = 32;
             const int containerWidth = 210;
             var buttonRects = _spriteManager.InventoryHeaderButtonSourceRects;
 
-            float totalButtonWidth = numButtons * buttonSize;
-            float totalSpacing = containerWidth - totalButtonWidth;
-            float gapWidth = (numButtons > 1) ? totalSpacing / (numButtons - 1) : 0;
-
-            float currentX = (Global.VIRTUAL_WIDTH - containerWidth) / 2f;
+            float buttonClickableWidth = (float)containerWidth / numButtons;
+            float startX = (Global.VIRTUAL_WIDTH - containerWidth) / 2f;
             float buttonY = 200 + 6; // 200 is the inventory offset, 6 is padding from top
 
-            foreach (var category in categories)
+            for (int i = 0; i < numButtons; i++)
             {
+                var category = categories[i];
                 Texture2D buttonSpriteSheet;
                 switch (category)
                 {
@@ -280,7 +286,7 @@ namespace ProjectVagabond.Scenes
                 }
 
                 int menuIndex = (int)category;
-                var bounds = new Rectangle((int)MathF.Round(currentX), (int)buttonY, buttonSize, buttonSize);
+                var bounds = new Rectangle((int)MathF.Round(startX + i * buttonClickableWidth), (int)buttonY, (int)MathF.Round(buttonClickableWidth), buttonSpriteSize);
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
                 button.OnClick += () => {
                     _selectedInventoryCategory = category;
@@ -288,7 +294,6 @@ namespace ProjectVagabond.Scenes
                 _inventoryHeaderButtons.Add(button);
                 _inventoryHeaderButtonOffsets[button] = 0f;
                 _inventoryHeaderButtonBaseBounds[button] = bounds;
-                currentX += buttonSize + gapWidth;
             }
 
             // Initialize inventory slot grid
@@ -572,7 +577,7 @@ namespace ProjectVagabond.Scenes
                     var baseBounds = _inventoryHeaderButtonBaseBounds[button];
                     button.Bounds = new Rectangle(
                         baseBounds.X + (int)MathF.Round(finalOffset),
-                        baseBounds.Y,
+                        baseBounds.Y + (int)MathF.Round(_inventoryPositionOffset.Y),
                         baseBounds.Width,
                         baseBounds.Height);
 
@@ -1201,7 +1206,9 @@ namespace ProjectVagabond.Scenes
             if (_currentViewState == SplitMapViewState.Inventory)
             {
                 var inventoryPosition = new Vector2(0, 200);
-                spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, inventoryPosition, Color.White);
+                var headerPosition = inventoryPosition + _inventoryPositionOffset;
+
+                spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, headerPosition, Color.White);
 
                 Texture2D selectedBorderSprite;
                 switch (_selectedInventoryCategory)
