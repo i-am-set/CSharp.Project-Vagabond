@@ -13,12 +13,12 @@ namespace ProjectVagabond.UI
 {
     public class ImageButton : Button
     {
-        private Texture2D? _spriteSheet;
-        private Rectangle? _defaultSourceRect;
-        private Rectangle? _hoverSourceRect;
-        private readonly Rectangle? _clickedSourceRect;
-        private readonly Rectangle? _disabledSourceRect;
-        private readonly Rectangle? _selectedSourceRect;
+        protected Texture2D? _spriteSheet;
+        protected Rectangle? _defaultSourceRect;
+        protected Rectangle? _hoverSourceRect;
+        protected readonly Rectangle? _clickedSourceRect;
+        protected readonly Rectangle? _disabledSourceRect;
+        protected readonly Rectangle? _selectedSourceRect;
         private bool _isHeldDown;
         public bool IsSelected { get; set; }
 
@@ -145,10 +145,14 @@ namespace ProjectVagabond.UI
 
             if (scale < 0.01f) return;
 
-            // --- Calculate Draw Position ---
-            var animatedCenterPosition = new Vector2(
-                Bounds.Center.X + totalHorizontalOffset,
-                Bounds.Center.Y + (verticalOffset ?? 0f) + hoverYOffset
+            // --- Calculate Animated Bounds ---
+            int animatedWidth = (int)(Bounds.Width * scale);
+            int animatedHeight = (int)(Bounds.Height * scale);
+            var animatedBounds = new Rectangle(
+                Bounds.Center.X - animatedWidth / 2 + (int)MathF.Round(totalHorizontalOffset),
+                Bounds.Center.Y - animatedHeight / 2 + (int)(verticalOffset ?? 0f) + (int)hoverYOffset,
+                animatedWidth,
+                animatedHeight
             );
 
             // --- Select Source Rectangle ---
@@ -176,8 +180,7 @@ namespace ProjectVagabond.UI
             // --- Draw ---
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
-                var origin = sourceRectToDraw.Value.Size.ToVector2() / 2f;
-                spriteBatch.DrawSnapped(_spriteSheet, animatedCenterPosition, sourceRectToDraw, drawColor, 0f, origin, scale, SpriteEffects.None, 0f);
+                spriteBatch.DrawSnapped(_spriteSheet, animatedBounds, sourceRectToDraw, drawColor);
             }
             else if (DebugColor.HasValue)
             {

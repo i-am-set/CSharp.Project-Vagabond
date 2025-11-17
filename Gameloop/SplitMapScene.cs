@@ -55,6 +55,8 @@ namespace ProjectVagabond.Scenes
         private readonly Dictionary<InventoryHeaderButton, Rectangle> _inventoryHeaderButtonBaseBounds = new();
         private readonly List<InventorySlot> _inventorySlots = new();
         private Rectangle _inventorySlotArea;
+        private ImageButton? _debugButton1;
+        private ImageButton? _debugButton2;
 
         // --- Animation Tuning ---
         private const float PLAYER_MOVE_SPEED = 50f; // Pixels per second
@@ -130,7 +132,8 @@ namespace ProjectVagabond.Scenes
         private const float SCROLL_PAN_SPEED = 1f;
 
         // Inventory Animation State
-        private float _headerBobTimer;
+        private float _inventoryArrowAnimTimer;
+        private const float INVENTORY_ARROW_ANIM_DURATION = 0.2f;
         private Vector2 _inventoryPositionOffset = Vector2.Zero;
 
 
@@ -173,7 +176,7 @@ namespace ProjectVagabond.Scenes
 
             InitializeInventoryUI();
             _previousInventoryCategory = _selectedInventoryCategory;
-            _headerBobTimer = 1f; // Set to a "completed" state initially
+            _inventoryArrowAnimTimer = INVENTORY_ARROW_ANIM_DURATION; // Start in a "completed" state
             _inventoryPositionOffset = Vector2.Zero;
 
             if (_progressionManager.CurrentSplitMap == null)
@@ -327,6 +330,42 @@ namespace ProjectVagabond.Scenes
                     _inventorySlots.Add(new InventorySlot(position, randomFrame));
                 }
             }
+
+            var arrowSpriteSheet = _spriteManager.ArrowIconSpriteSheet;
+            var arrowRects = _spriteManager.ArrowIconSourceRects;
+            var leftArrowRect = arrowRects[0]; // West arrow
+            var rightArrowRect = arrowRects[4]; // East arrow
+
+            _debugButton1 = new ImageButton(
+                new Rectangle(0, 0, 5, 5), // Position will be set in Update
+                arrowSpriteSheet,
+                leftArrowRect,
+                leftArrowRect
+            );
+            _debugButton1.OnClick += () =>
+            {
+                int currentIndex = (int)_selectedInventoryCategory;
+                if (currentIndex > 0)
+                {
+                    _selectedInventoryCategory = (InventoryCategory)(currentIndex - 1);
+                }
+            };
+
+            _debugButton2 = new ImageButton(
+                new Rectangle(0, 0, 5, 5), // Position will be set in Update
+                arrowSpriteSheet,
+                rightArrowRect,
+                rightArrowRect
+            );
+            _debugButton2.OnClick += () =>
+            {
+                int currentIndex = (int)_selectedInventoryCategory;
+                int maxIndex = Enum.GetValues(typeof(InventoryCategory)).Length - 1;
+                if (currentIndex < maxIndex)
+                {
+                    _selectedInventoryCategory = (InventoryCategory)(currentIndex + 1);
+                }
+            };
         }
 
         public override void Exit()
@@ -552,9 +591,27 @@ namespace ProjectVagabond.Scenes
             else if (_currentViewState == SplitMapViewState.Inventory)
             {
                 var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
+
+                // UPDATE DEBUG BUTTONS FIRST
+                _debugButton1?.Update(currentMouseState, cameraTransform);
+                _debugButton2?.Update(currentMouseState, cameraTransform);
+
+                if (_selectedInventoryCategory != _previousInventoryCategory)
+                {
+                    _inventoryArrowAnimTimer = 0f; // Reset timer on change
+                }
+                _previousInventoryCategory = _selectedInventoryCategory;
+
+                if (_inventoryArrowAnimTimer < INVENTORY_ARROW_ANIM_DURATION)
+                {
+                    _inventoryArrowAnimTimer += deltaTime;
+                }
+
                 int selectedIndex = (int)_selectedInventoryCategory;
                 const float repulsionAmount = 8f;
                 const float repulsionSpeed = 15f;
+
+                InventoryHeaderButton? selectedButton = null;
 
                 for (int i = 0; i < _inventoryHeaderButtons.Count; i++)
                 {
@@ -582,8 +639,38 @@ namespace ProjectVagabond.Scenes
                         baseBounds.Height);
 
                     button.IsSelected = ((int)_selectedInventoryCategory == button.MenuIndex);
+                    if (button.IsSelected)
+                    {
+                        selectedButton = button;
+                    }
                     button.Update(currentMouseState, cameraTransform);
                 }
+
+                // Now update debug button positions and visibility
+                if (selectedButton != null && _debugButton1 != null && _debugButton2 != null)
+                {
+                    float progress = Math.Clamp(_inventoryArrowAnimTimer / INVENTORY_ARROW_ANIM_DURATION, 0f, 1f);
+                    float easedProgress = Easing.EaseOutCubic(progress);
+                    float currentOffset = MathHelper.Lerp(16f, 13f, easedProgress);
+
+                    var selectedBounds = selectedButton.Bounds;
+                    _debugButton1.Bounds = new Rectangle(
+                        selectedBounds.Center.X - (int)currentOffset - (_debugButton1.Bounds.Width / 2),
+                        selectedBounds.Center.Y - _debugButton1.Bounds.Height / 2 - 2,
+                        _debugButton1.Bounds.Width,
+                        _debugButton1.Bounds.Height
+                    );
+                    _debugButton2.Bounds = new Rectangle(
+                        selectedBounds.Center.X + (int)currentOffset - (_debugButton2.Bounds.Width / 2),
+                        selectedBounds.Center.Y - _debugButton2.Bounds.Height / 2 - 2,
+                        _debugButton2.Bounds.Width,
+                        _debugButton2.Bounds.Height
+                    );
+
+                    _debugButton1.IsEnabled = (int)_selectedInventoryCategory > 0;
+                    _debugButton2.IsEnabled = (int)_selectedInventoryCategory < Enum.GetValues(typeof(InventoryCategory)).Length - 1;
+                }
+
 
                 var slotFrames = _spriteManager.InventorySlotSourceRects;
                 if (slotFrames != null)
@@ -1257,6 +1344,15 @@ namespace ProjectVagabond.Scenes
                     );
                 }
 
+                if (_debugButton1 != null && _debugButton1.IsEnabled)
+                {
+                    _debugButton1.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                }
+                if (_debugButton2 != null && _debugButton2.IsEnabled)
+                {
+                    _debugButton2.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                }
+
                 if (_global.ShowSplitMapGrid)
                 {
                     spriteBatch.DrawSnapped(pixel, _inventorySlotArea, Color.Blue * 0.5f);
@@ -1545,4 +1641,3 @@ namespace ProjectVagabond.Scenes
         }
     }
 }
-#nullable restore
