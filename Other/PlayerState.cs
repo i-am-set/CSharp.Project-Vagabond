@@ -1,4 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace ProjectVagabond
 {
@@ -20,53 +36,72 @@ namespace ProjectVagabond
         public List<int> DefensiveElementIDs { get; set; } = new List<int>();
         public string DefaultStrikeMoveID { get; set; }
 
+        // --- Inventories ---
+        public Dictionary<string, int> WeaponsInventory { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> ArmorsInventory { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> RelicInventory { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> ConsumableInventory { get; set; } = new Dictionary<string, int>();
+
+        // --- Spell Management ---
         /// <summary>
         /// Represents the player's spellbook. The size of the list is the number of
         /// spell pages the player has. A null entry indicates an empty page.
         /// </summary>
-        public List<SpellbookEntry> SpellbookPages { get; set; } = new List<SpellbookEntry>();
+        public List<SpellbookEntry?> SpellbookPages { get; set; } = new List<SpellbookEntry?>();
 
         /// <summary>
         /// Represents the player's 4-slot combat loadout. Holds references to entries in the SpellbookPages.
         /// </summary>
         public SpellbookEntry?[] EquippedSpells { get; set; } = new SpellbookEntry?[4];
 
-        /// <summary>
-        /// Represents the player's inventory, mapping an ItemID to its quantity.
-        /// </summary>
-        public Dictionary<string, int> Inventory { get; set; } = new Dictionary<string, int>();
+        // --- Equipment ---
+        public string? EquippedWeaponId { get; set; }
+        public string? EquippedArmorId { get; set; }
+        public string?[] EquippedRelics { get; set; } = new string?[3];
 
-        /// <summary>
-        /// Adds an item to the player's inventory.
-        /// </summary>
-        public void AddItem(string itemID, int quantity = 1)
+
+        #region Inventory Management
+        private void AddItemToInventory(Dictionary<string, int> inventory, string itemId, int quantity)
         {
-            if (Inventory.ContainsKey(itemID))
+            if (inventory.ContainsKey(itemId))
             {
-                Inventory[itemID] += quantity;
+                inventory[itemId] += quantity;
             }
             else
             {
-                Inventory[itemID] = quantity;
+                inventory[itemId] = quantity;
             }
         }
 
-        /// <summary>
-        /// Removes an item from the player's inventory.
-        /// </summary>
-        /// <returns>True if the item was successfully removed, false otherwise.</returns>
-        public bool RemoveItem(string itemID, int quantity = 1)
+        private bool RemoveItemFromInventory(Dictionary<string, int> inventory, string itemId, int quantity)
         {
-            if (Inventory.TryGetValue(itemID, out int currentQuantity) && currentQuantity >= quantity)
+            if (inventory.TryGetValue(itemId, out int currentQuantity))
             {
-                Inventory[itemID] -= quantity;
-                if (Inventory[itemID] <= 0)
+                if (currentQuantity <= quantity)
                 {
-                    Inventory.Remove(itemID);
+                    inventory.Remove(itemId);
+                }
+                else
+                {
+                    inventory[itemId] -= quantity;
                 }
                 return true;
             }
             return false;
         }
+
+        public void AddWeapon(string weaponId, int quantity = 1) => AddItemToInventory(WeaponsInventory, weaponId, quantity);
+        public bool RemoveWeapon(string weaponId, int quantity = 1) => RemoveItemFromInventory(WeaponsInventory, weaponId, quantity);
+
+        public void AddArmor(string armorId, int quantity = 1) => AddItemToInventory(ArmorsInventory, armorId, quantity);
+        public bool RemoveArmor(string armorId, int quantity = 1) => RemoveItemFromInventory(ArmorsInventory, armorId, quantity);
+
+        public void AddRelic(string relicId, int quantity = 1) => AddItemToInventory(RelicInventory, relicId, quantity);
+        public bool RemoveRelic(string relicId, int quantity = 1) => RemoveItemFromInventory(RelicInventory, relicId, quantity);
+
+        public void AddConsumable(string consumableId, int quantity = 1) => AddItemToInventory(ConsumableInventory, consumableId, quantity);
+        public bool RemoveConsumable(string consumableId, int quantity = 1) => RemoveItemFromInventory(ConsumableInventory, consumableId, quantity);
+
+        #endregion
     }
 }

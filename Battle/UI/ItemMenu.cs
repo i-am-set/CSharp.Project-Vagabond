@@ -2,13 +2,18 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
+using System.Reflection;
 using System.Text;
 
 namespace ProjectVagabond.Battle.UI
@@ -96,7 +101,7 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var gameState = ServiceLocator.Get<GameState>();
 
-            var items = gameState.PlayerState.Inventory
+            var items = gameState.PlayerState.ConsumableInventory
                 .Where(kvp => kvp.Value > 0)
                 .OrderBy(kvp => kvp.Key)
                 .ToList();
@@ -559,3 +564,4 @@ namespace ProjectVagabond.Battle.UI
     }
 }
 #nullable restore
+﻿

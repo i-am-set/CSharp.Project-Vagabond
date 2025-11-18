@@ -1,7 +1,14 @@
 ﻿using Microsoft.Xna.Framework;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace ProjectVagabond
 {
@@ -79,7 +86,17 @@ namespace ProjectVagabond
             BattleDataCache.Moves.TryGetValue(moveId, out var moveData);
             string moveName = moveData?.MoveName ?? moveId;
 
-            // 4. Remove the move (by setting the page to null) and provide feedback.
+            // 4. Unequip the spell if it's currently in a combat slot.
+            for (int i = 0; i < _gameState.PlayerState.EquippedSpells.Length; i++)
+            {
+                if (_gameState.PlayerState.EquippedSpells[i]?.MoveID == moveId)
+                {
+                    _gameState.PlayerState.EquippedSpells[i] = null;
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unequipped {moveName} from slot {i + 1}." });
+                }
+            }
+
+            // 5. Remove the move (by setting the page to null) and provide feedback.
             _gameState.PlayerState.SpellbookPages[pageIndex] = null;
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_orange]Player forgot {moveName}." });
         }
@@ -90,3 +107,4 @@ namespace ProjectVagabond
         }
     }
 }
+﻿

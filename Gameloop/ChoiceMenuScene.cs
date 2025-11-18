@@ -14,7 +14,6 @@ using System.Linq;
 namespace ProjectVagabond.Scenes
 {
     public enum ChoiceType { Spell, Ability, Item }
-
     public class ChoiceMenuScene : GameScene
     {
         private readonly List<ChoiceCard> _cards = new List<ChoiceCard>();
@@ -172,7 +171,7 @@ namespace ProjectVagabond.Scenes
             }
             else if (choiceData is ConsumableItemData item)
             {
-                _gameState.PlayerState.AddItem(item.ItemID);
+                _gameState.PlayerState.AddConsumable(item.ItemID);
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {item.ItemName}!" });
             }
 

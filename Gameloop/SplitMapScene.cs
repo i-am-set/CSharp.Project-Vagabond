@@ -393,6 +393,7 @@ namespace ProjectVagabond.Scenes
                 _targetCameraOffset = new Vector2(0, -200);
                 _cameraOffset = _targetCameraOffset; // Snap instantly
                 _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
+                UpdateInventorySlots();
             }
             else
             {
@@ -612,6 +613,7 @@ namespace ProjectVagabond.Scenes
                             slot.RandomizeFrame(slotFrames);
                         }
                     }
+                    UpdateInventorySlots();
                 }
                 _previousInventoryCategory = _selectedInventoryCategory;
 
@@ -1275,6 +1277,59 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        private void UpdateInventorySlots()
+        {
+            foreach (var slot in _inventorySlots)
+            {
+                slot.Clear();
+            }
+
+            int slotIndex = 0;
+
+            switch (_selectedInventoryCategory)
+            {
+                case InventoryCategory.Weapons:
+                    var weapons = _gameState.PlayerState.WeaponsInventory.ToList();
+                    for (int i = 0; i < weapons.Count && slotIndex < _inventorySlots.Count; i++, slotIndex++)
+                    {
+                        _inventorySlots[slotIndex].AssignItem(weapons[i].Key, weapons[i].Value);
+                    }
+                    break;
+                case InventoryCategory.Armor:
+                    var armors = _gameState.PlayerState.ArmorsInventory.ToList();
+                    for (int i = 0; i < armors.Count && slotIndex < _inventorySlots.Count; i++, slotIndex++)
+                    {
+                        _inventorySlots[slotIndex].AssignItem(armors[i].Key, armors[i].Value);
+                    }
+                    break;
+                case InventoryCategory.Spells:
+                    var spells = _gameState.PlayerState.SpellbookPages;
+                    for (int i = 0; i < spells.Count && slotIndex < _inventorySlots.Count; i++)
+                    {
+                        if (spells[i] != null)
+                        {
+                            _inventorySlots[slotIndex].AssignItem(spells[i]!.MoveID, 1); // Spells have quantity 1
+                            slotIndex++;
+                        }
+                    }
+                    break;
+                case InventoryCategory.Relics:
+                    var relics = _gameState.PlayerState.RelicInventory.ToList();
+                    for (int i = 0; i < relics.Count && slotIndex < _inventorySlots.Count; i++, slotIndex++)
+                    {
+                        _inventorySlots[slotIndex].AssignItem(relics[i].Key, relics[i].Value);
+                    }
+                    break;
+                case InventoryCategory.Consumables:
+                    var consumables = _gameState.PlayerState.ConsumableInventory.ToList();
+                    for (int i = 0; i < consumables.Count && slotIndex < _inventorySlots.Count; i++, slotIndex++)
+                    {
+                        _inventorySlots[slotIndex].AssignItem(consumables[i].Key, consumables[i].Value);
+                    }
+                    break;
+            }
+        }
+
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (_currentMap == null) return;
@@ -1382,6 +1437,9 @@ namespace ProjectVagabond.Scenes
                 // Draw the inventory slots
                 const int slotSize = 48;
                 var slotOrigin = new Vector2(slotSize / 2f);
+                var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+                const int slotPadding = 4;
+
                 foreach (var slot in _inventorySlots)
                 {
                     spriteBatch.DrawSnapped(
@@ -1395,6 +1453,31 @@ namespace ProjectVagabond.Scenes
                         SpriteEffects.None,
                         0f
                     );
+
+                    if (!string.IsNullOrEmpty(slot.ItemId))
+                    {
+                        // Draw Item ID
+                        var itemIdText = slot.ItemId;
+                        var textSize = secondaryFont.MeasureString(itemIdText);
+                        var textPosition = new Vector2(
+                            slot.Position.X - textSize.Width / 2f,
+                            slot.Position.Y - textSize.Height / 2f
+                        );
+                        spriteBatch.DrawStringSnapped(secondaryFont, itemIdText, textPosition, _global.Palette_BrightWhite);
+
+                        // Draw Quantity
+                        if (slot.Quantity > 1)
+                        {
+                            var quantityText = $"x{slot.Quantity}";
+                            var quantitySize = secondaryFont.MeasureString(quantityText);
+                            var slotRect = new Rectangle((int)(slot.Position.X - slotSize / 2f), (int)(slot.Position.Y - slotSize / 2f), slotSize, slotSize);
+                            var quantityPosition = new Vector2(
+                                slotRect.Right - quantitySize.Width - slotPadding,
+                                slotRect.Bottom - quantitySize.Height - slotPadding
+                            );
+                            spriteBatch.DrawStringSnapped(secondaryFont, quantityText, quantityPosition, _global.Palette_Gray);
+                        }
+                    }
                 }
 
                 if (_debugButton1 != null && _debugButton1.IsEnabled)

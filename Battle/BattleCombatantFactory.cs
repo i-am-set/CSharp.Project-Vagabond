@@ -1,6 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -62,27 +76,23 @@ namespace ProjectVagabond.Battle
             // Initialize visual HP to be the same as logical HP at the start of battle.
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
-            // Populate passive abilities from the entity's component
-            var abilitiesComponent = componentStore.GetComponent<PassiveAbilitiesComponent>(entityId);
-            if (abilitiesComponent != null)
-            {
-                foreach (var abilityId in abilitiesComponent.AbilityIDs)
-                {
-                    if (BattleDataCache.Abilities.TryGetValue(abilityId, out var abilityData))
-                    {
-                        combatant.ActiveAbilities.Add(abilityData);
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"[BattleCombatantFactory] [WARNING] AbilityID '{abilityId}' not found in cache for combatant '{combatant.Name}'.");
-                    }
-                }
-            }
-
             if (combatant.IsPlayerControlled)
             {
                 combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
                 combatant.EquippedSpells = gameState.PlayerState.EquippedSpells;
+
+                // Populate passive abilities from the player's equipped relics.
+                if (gameState.PlayerState.EquippedRelics != null)
+                {
+                    foreach (var relicId in gameState.PlayerState.EquippedRelics)
+                    {
+                        if (!string.IsNullOrEmpty(relicId) && BattleDataCache.Abilities.TryGetValue(relicId, out var abilityData))
+                        {
+                            combatant.ActiveAbilities.Add(abilityData);
+                        }
+                    }
+                }
+
 
                 // Apply temporary buffs from narrative choices
                 var tempBuffsComp = componentStore.GetComponent<TemporaryBuffsComponent>(entityId);
@@ -111,9 +121,27 @@ namespace ProjectVagabond.Battle
                     }
                 }
                 combatant.SetStaticMoves(staticMoves);
+
+                // Populate passive abilities for enemies from their component
+                var abilitiesComponent = componentStore.GetComponent<PassiveAbilitiesComponent>(entityId);
+                if (abilitiesComponent != null)
+                {
+                    foreach (var abilityId in abilitiesComponent.AbilityIDs)
+                    {
+                        if (BattleDataCache.Abilities.TryGetValue(abilityId, out var abilityData))
+                        {
+                            combatant.ActiveAbilities.Add(abilityData);
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"[BattleCombatantFactory] [WARNING] AbilityID '{abilityId}' not found in cache for combatant '{combatant.Name}'.");
+                        }
+                    }
+                }
             }
 
             return combatant;
         }
     }
 }
+﻿

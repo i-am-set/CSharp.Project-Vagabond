@@ -104,7 +104,7 @@ namespace ProjectVagabond
                 PlayerState.DefaultStrikeMoveID = baseStats.DefaultStrikeMoveID;
 
                 // Initialize spellbook with SpellbookEntry objects
-                PlayerState.SpellbookPages = new List<SpellbookEntry>(new SpellbookEntry[10]);
+                PlayerState.SpellbookPages = new List<SpellbookEntry?>(new SpellbookEntry?[10]);
                 for (int i = 0; i < Math.Min(PlayerState.SpellbookPages.Count, baseStats.StartingMoveIDs.Count); i++)
                 {
                     string moveId = baseStats.StartingMoveIDs[i];
@@ -114,6 +114,20 @@ namespace ProjectVagabond
                     }
                 }
             }
+
+            // Populate starting equipped relics from the component into the new PlayerState
+            var passiveAbilitiesComp = _componentStore.GetComponent<PassiveAbilitiesComponent>(PlayerEntityId);
+            if (passiveAbilitiesComp != null)
+            {
+                for (int i = 0; i < Math.Min(PlayerState.EquippedRelics.Length, passiveAbilitiesComp.AbilityIDs.Count); i++)
+                {
+                    string relicId = passiveAbilitiesComp.AbilityIDs[i];
+                    // Add the starting relics to the inventory so they can be unequipped/re-equipped
+                    PlayerState.AddRelic(relicId);
+                    PlayerState.EquippedRelics[i] = relicId;
+                }
+            }
+
 
             // Create and add the live CombatantStatsComponent to the player entity
             var liveStats = new CombatantStatsComponent
@@ -143,9 +157,9 @@ namespace ProjectVagabond
             }
 
             // Add some starting items for testing
-            PlayerState.Inventory["HealthPotion"] = 5;
-            PlayerState.Inventory["StrengthTonic"] = 2;
-            PlayerState.Inventory["FireScroll"] = 3;
+            PlayerState.AddConsumable("HealthPotion", 5);
+            PlayerState.AddConsumable("StrengthTonic", 2);
+            PlayerState.AddConsumable("FireScroll", 3);
 
 
             // Initial map reveal
@@ -168,23 +182,14 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Safely consumes an item from the player's inventory.
+        /// Safely consumes an item from the player's consumable inventory.
         /// </summary>
         /// <param name="itemID">The ID of the item to consume.</param>
         /// <param name="quantity">The number of items to consume.</param>
         /// <returns>True if the item was successfully consumed, false otherwise.</returns>
-        public bool ConsumeItem(string itemID, int quantity = 1)
+        public bool ConsumeConsumable(string itemID, int quantity = 1)
         {
-            if (PlayerState.Inventory.TryGetValue(itemID, out int currentQuantity) && currentQuantity >= quantity)
-            {
-                PlayerState.Inventory[itemID] -= quantity;
-                if (PlayerState.Inventory[itemID] <= 0)
-                {
-                    PlayerState.Inventory.Remove(itemID);
-                }
-                return true;
-            }
-            return false;
+            return PlayerState.RemoveConsumable(itemID, quantity);
         }
 
         /// <summary>
@@ -393,7 +398,9 @@ namespace ProjectVagabond
             switch (outcome.OutcomeType)
             {
                 case "GiveItem":
-                    PlayerState.AddItem(outcome.Value);
+                    // Assuming narrative "GiveItem" is always for consumables for now.
+                    // This can be expanded later if needed.
+                    PlayerState.AddConsumable(outcome.Value);
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {outcome.Value}!" });
                     break;
                 case "AddBuff":

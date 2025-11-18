@@ -12,6 +12,9 @@ namespace ProjectVagabond.UI
     {
         public Vector2 Position { get; }
         public Rectangle SourceRectangle { get; private set; }
+        public string? ItemId { get; private set; }
+        public int Quantity { get; private set; }
+
 
         private float _frameChangeTimer;
         private float _nextFrameChangeTime;
@@ -26,6 +29,18 @@ namespace ProjectVagabond.UI
             Position = position;
             SourceRectangle = sourceRectangle;
             ResetFrameChangeTimer();
+        }
+
+        public void AssignItem(string itemId, int quantity)
+        {
+            ItemId = itemId;
+            Quantity = quantity;
+        }
+
+        public void Clear()
+        {
+            ItemId = null;
+            Quantity = 0;
         }
 
         private void ResetFrameChangeTimer()

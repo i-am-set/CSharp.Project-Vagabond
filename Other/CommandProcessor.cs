@@ -64,16 +64,14 @@ namespace ProjectVagabond
                 sb.AppendLine("    damage <amount>    - Damages the player.");
                 sb.AppendLine();
                 sb.AppendLine("  [palette_teal]Inventory & Moves[/]");
-                sb.AppendLine("    inventory          - Shows player's current inventory.");
-                sb.AppendLine("    spellbook          - Shows player's current spellbook.");
-                sb.AppendLine("    give <ID> [[qty]    - Adds an item to inventory.");
-                sb.AppendLine("    remove <ID> [[qty]  - Removes an item from inventory.");
-                sb.AppendLine("    learn <ID>         - Teaches the player a new move.");
-                sb.AppendLine("    forget <ID>        - Makes the player forget a move.");
-                sb.AppendLine("    equip <page> <slot> - Equips a spell from your spellbook to a combat slot.");
-                sb.AppendLine("    unequip <slot>     - Unequips a spell from a combat slot.");
-                sb.AppendLine("    addpage            - Adds an empty spell page.");
-                sb.AppendLine("    removepage         - Removes the last spell page.");
+                sb.AppendLine("    inventory          - Shows all player inventories.");
+                sb.AppendLine("    spellbook          - Shows player's spellbook and equipped spells.");
+                sb.AppendLine("    givespell <ID>     - Adds a spell to the spellbook.");
+                sb.AppendLine("    removespell <ID>   - Removes a spell from the spellbook.");
+                sb.AppendLine("    give<type> <ID> [qty] - Adds an item. Types: weapon, armor, relic, consumable.");
+                sb.AppendLine("    remove<type> <ID> [qty] - Removes an item. Types: weapon, armor, relic, consumable.");
+                sb.AppendLine("    equip<type> <ID> [slot] - Equips an item. Types: weapon, armor, relic.");
+                sb.AppendLine("    unequip<type> [slot] - Unequips an item. Types: weapon, armor, relic.");
                 sb.AppendLine();
                 sb.AppendLine("  [palette_teal]System[/]");
                 sb.AppendLine("    clear              - Clears the console history.");
@@ -92,47 +90,67 @@ namespace ProjectVagabond
                 debugConsole.ClearHistory();
             }, "clear - Clears the console history.");
 
-            _commands["learn"] = new Command("learn", (args) =>
+            _commands["givespell"] = new Command("givespell", (args) =>
             {
                 if (args.Length < 2)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: learn <MoveID>" });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: givespell <MoveID>" });
                     return;
                 }
                 EventBus.Publish(new GameEvents.PlayerMoveSetChanged { MoveID = args[1], ChangeType = GameEvents.MoveSetChangeType.Learn });
             },
-            "learn <MoveID> - Teach the player a new move.",
+            "givespell <MoveID> - Adds a spell to the player's spellbook.",
             (args) =>
             {
-                if (args.Length == 0) return BattleDataCache.Moves.Keys.ToList();
+                if (args.Length == 0) return BattleDataCache.Moves.Keys.Where(id => BattleDataCache.Moves[id].MoveType == MoveType.Spell).ToList();
                 return new List<string>();
             });
 
-            _commands["forget"] = new Command("forget", (args) =>
+            _commands["removespell"] = new Command("removespell", (args) =>
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
                 if (_gameState.PlayerState == null)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized. Start a game first." });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized." });
                     return;
                 }
                 if (args.Length < 2)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: forget <MoveID>" });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: removespell <MoveID>" });
                     return;
                 }
                 EventBus.Publish(new GameEvents.PlayerMoveSetChanged { MoveID = args[1], ChangeType = GameEvents.MoveSetChangeType.Forget });
             },
-            "forget <MoveID> - Make the player forget a move.",
+            "removespell <MoveID> - Removes a spell from the player's spellbook.",
             (args) =>
             {
                 _gameState ??= ServiceLocator.Get<GameState>();
-                if (args.Length == 0) return _gameState.PlayerState?.SpellbookPages.Where(p => p != null).Select(p => p.MoveID).ToList() ?? new List<string>();
+                if (args.Length == 0) return _gameState.PlayerState?.SpellbookPages.Where(p => p != null).Select(p => p!.MoveID).ToList() ?? new List<string>();
                 return new List<string>();
             });
 
+
             _commands["equip"] = new Command("equip", (args) => HandleEquip(args), "equip <page> <slot> - Equips a spell to a combat slot (1-4).");
             _commands["unequip"] = new Command("unequip", (args) => HandleUnequip(args), "unequip <slot> - Unequips a spell from a combat slot (1-4).");
+
+            // --- New Inventory Commands ---
+            _commands["giveconsumable"] = new Command("giveconsumable", (args) => HandleGiveItem(args, "consumable"), "giveconsumable <ItemID> [qty] - Adds a consumable.", (s) => BattleDataCache.Consumables.Keys.ToList());
+            _commands["removeconsumable"] = new Command("removeconsumable", (args) => HandleRemoveItem(args, "consumable"), "removeconsumable <ItemID> [qty] - Removes a consumable.", (s) => _gameState?.PlayerState.ConsumableInventory.Keys.ToList() ?? new List<string>());
+            _commands["giverelic"] = new Command("giverelic", (args) => HandleGiveItem(args, "relic"), "giverelic <AbilityID> [qty] - Adds a relic.", (s) => BattleDataCache.Abilities.Keys.ToList());
+            _commands["removerelic"] = new Command("removerelic", (args) => HandleRemoveItem(args, "relic"), "removerelic <AbilityID> [qty] - Removes a relic.", (s) => _gameState?.PlayerState.RelicInventory.Keys.ToList() ?? new List<string>());
+            _commands["giveweapon"] = new Command("giveweapon", (args) => HandleGiveItem(args, "weapon"), "giveweapon <WeaponID> [qty] - Adds a weapon.", (s) => new List<string>());
+            _commands["removeweapon"] = new Command("removeweapon", (args) => HandleRemoveItem(args, "weapon"), "removeweapon <WeaponID> [qty] - Removes a weapon.", (s) => _gameState?.PlayerState.WeaponsInventory.Keys.ToList() ?? new List<string>());
+            _commands["givearmor"] = new Command("givearmor", (args) => HandleGiveItem(args, "armor"), "givearmor <ArmorID> [qty] - Adds armor.", (s) => new List<string>());
+            _commands["removearmor"] = new Command("removearmor", (args) => HandleRemoveItem(args, "armor"), "removearmor <ArmorID> [qty] - Removes armor.", (s) => _gameState?.PlayerState.ArmorsInventory.Keys.ToList() ?? new List<string>());
+
+            // --- New Equip Commands ---
+            _commands["equiprelic"] = new Command("equiprelic", HandleEquipRelic, "equiprelic <AbilityID> <slot> - Equips a relic to a slot (1-3).", (s) => _gameState?.PlayerState.RelicInventory.Keys.ToList() ?? new List<string>());
+            _commands["unequiprelic"] = new Command("unequiprelic", HandleUnequipRelic, "unequiprelic <slot> - Unequips a relic from a slot (1-3).");
+            _commands["equipweapon"] = new Command("equipweapon", HandleEquipWeapon, "equipweapon <WeaponID> - Equips a weapon.", (s) => _gameState?.PlayerState.WeaponsInventory.Keys.ToList() ?? new List<string>());
+            _commands["unequipweapon"] = new Command("unequipweapon", HandleUnequipWeapon, "unequipweapon - Unequips the current weapon.");
+            _commands["equiparmor"] = new Command("equiparmor", HandleEquipArmor, "equiparmor <ArmorID> - Equips an armor piece.", (s) => _gameState?.PlayerState.ArmorsInventory.Keys.ToList() ?? new List<string>());
+            _commands["unequiparmor"] = new Command("unequiparmor", HandleUnequipArmor, "unequiparmor - Unequips the current armor.");
+
 
             _commands["addpage"] = new Command("addpage", (args) =>
             {
@@ -165,22 +183,7 @@ namespace ProjectVagabond
                 }
             }, "removepage - Removes the last spell page from the player's spellbook.");
 
-            _commands["give"] = new Command("give", (args) => HandleGiveItem(args), "give <ItemID> [quantity=1] - Adds an item to inventory.",
-                (args) =>
-                {
-                    if (args.Length == 0) return BattleDataCache.Consumables.Keys.ToList();
-                    return new List<string>();
-                });
-
-            _commands["remove"] = new Command("remove", (args) => HandleRemoveItem(args), "remove <ItemID> [quantity=1] - Removes an item from inventory.",
-                (args) =>
-                {
-                    _gameState ??= ServiceLocator.Get<GameState>();
-                    if (args.Length == 0) return _gameState.PlayerState?.Inventory.Keys.ToList() ?? new List<string>();
-                    return new List<string>();
-                });
-
-            _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows player's current inventory.");
+            _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows all player inventories.");
             _commands["spellbook"] = new Command("spellbook", (args) => HandleShowSpellbook(), "spellbook - Shows the player's current spellbook.");
             _commands["stats"] = new Command("stats", (args) => HandleShowStats(), "stats - Shows player's current stats.");
             _commands["heal"] = new Command("heal", (args) => HandleHeal(args), "heal <amount> - Heals the player.");
@@ -368,27 +371,21 @@ namespace ProjectVagabond
             }
         }
 
-        private void HandleGiveItem(string[] args)
+        private void HandleGiveItem(string[] args, string itemType)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.PlayerState == null)
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized. Start a game first." });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized." });
                 return;
             }
             if (args.Length < 2)
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: give <ItemID> [quantity]" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Usage: {args[0]} <ItemID> [quantity]" });
                 return;
             }
 
             string itemID = args[1];
-            if (!BattleDataCache.Consumables.ContainsKey(itemID))
-            {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Item '{itemID}' not found." });
-                return;
-            }
-
             int quantity = 1;
             if (args.Length > 2 && !int.TryParse(args[2], out quantity))
             {
@@ -396,21 +393,27 @@ namespace ProjectVagabond
                 return;
             }
 
-            _gameState.PlayerState.AddItem(itemID, quantity);
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Added {quantity}x {itemID} to inventory." });
+            switch (itemType)
+            {
+                case "consumable": _gameState.PlayerState.AddConsumable(itemID, quantity); break;
+                case "relic": _gameState.PlayerState.AddRelic(itemID, quantity); break;
+                case "weapon": _gameState.PlayerState.AddWeapon(itemID, quantity); break;
+                case "armor": _gameState.PlayerState.AddArmor(itemID, quantity); break;
+            }
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Added {quantity}x {itemID} to {itemType} inventory." });
         }
 
-        private void HandleRemoveItem(string[] args)
+        private void HandleRemoveItem(string[] args, string itemType)
         {
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.PlayerState == null)
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized. Start a game first." });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized." });
                 return;
             }
             if (args.Length < 2)
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: remove <ItemID> [quantity]" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Usage: {args[0]} <ItemID> [quantity]" });
                 return;
             }
 
@@ -422,13 +425,22 @@ namespace ProjectVagabond
                 return;
             }
 
-            if (_gameState.PlayerState.RemoveItem(itemID, quantity))
+            bool success = false;
+            switch (itemType)
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Removed {quantity}x {itemID} from inventory." });
+                case "consumable": success = _gameState.PlayerState.RemoveConsumable(itemID, quantity); break;
+                case "relic": success = _gameState.PlayerState.RemoveRelic(itemID, quantity); break;
+                case "weapon": success = _gameState.PlayerState.RemoveWeapon(itemID, quantity); break;
+                case "armor": success = _gameState.PlayerState.RemoveArmor(itemID, quantity); break;
+            }
+
+            if (success)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Removed up to {quantity}x {itemID} from {itemType} inventory." });
             }
             else
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Could not remove {quantity}x {itemID}. Not enough in inventory." });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Item '{itemID}' not found in {itemType} inventory." });
             }
         }
 
@@ -437,20 +449,36 @@ namespace ProjectVagabond
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.PlayerState == null)
             {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized. Start a game first." });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Player state not initialized." });
                 return;
             }
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Player Inventory:" });
-            if (_gameState.PlayerState.Inventory.Any())
+
+            var sb = new StringBuilder();
+            sb.AppendLine("[yellow]-- INVENTORY --[/]");
+
+            sb.AppendLine("[teal]Weapons:[/]");
+            if (_gameState.PlayerState.WeaponsInventory.Any())
+                foreach (var item in _gameState.PlayerState.WeaponsInventory) sb.AppendLine($"  - {item.Key}: {item.Value}");
+            else sb.AppendLine("  (Empty)");
+
+            sb.AppendLine("[teal]Armor:[/]");
+            if (_gameState.PlayerState.ArmorsInventory.Any())
+                foreach (var item in _gameState.PlayerState.ArmorsInventory) sb.AppendLine($"  - {item.Key}: {item.Value}");
+            else sb.AppendLine("  (Empty)");
+
+            sb.AppendLine("[teal]Relics:[/]");
+            if (_gameState.PlayerState.RelicInventory.Any())
+                foreach (var item in _gameState.PlayerState.RelicInventory) sb.AppendLine($"  - {item.Key}: {item.Value}");
+            else sb.AppendLine("  (Empty)");
+
+            sb.AppendLine("[teal]Consumables:[/]");
+            if (_gameState.PlayerState.ConsumableInventory.Any())
+                foreach (var item in _gameState.PlayerState.ConsumableInventory) sb.AppendLine($"  - {item.Key}: {item.Value}");
+            else sb.AppendLine("  (Empty)");
+
+            foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries))
             {
-                foreach (var item in _gameState.PlayerState.Inventory)
-                {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"  - {item.Key}: {item.Value}" });
-                }
-            }
-            else
-            {
-                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "  (Empty)" });
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = line });
             }
         }
 
@@ -561,6 +589,143 @@ namespace ProjectVagabond
             stats.CurrentHP = Math.Max(0, stats.CurrentHP - amount);
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Dealt {oldHP - stats.CurrentHP} damage. Current HP: {stats.CurrentHP}/{stats.MaxHP}" });
         }
+
+        private void HandleEquipRelic(string[] args)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null) return;
+
+            if (args.Length < 3 || !int.TryParse(args[2], out int slot))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: equiprelic <AbilityID> <slot>" });
+                return;
+            }
+            if (slot < 1 || slot > 3)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Relic slot must be between 1 and 3." });
+                return;
+            }
+
+            string relicId = args[1];
+            if (!_gameState.PlayerState.RelicInventory.ContainsKey(relicId))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Player does not own relic '{relicId}'." });
+                return;
+            }
+
+            // Unequip from any other slot if already equipped
+            for (int i = 0; i < _gameState.PlayerState.EquippedRelics.Length; i++)
+            {
+                if (_gameState.PlayerState.EquippedRelics[i] == relicId)
+                {
+                    _gameState.PlayerState.EquippedRelics[i] = null;
+                }
+            }
+
+            _gameState.PlayerState.EquippedRelics[slot - 1] = relicId;
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Equipped '{relicId}' to relic slot {slot}." });
+        }
+
+        private void HandleUnequipRelic(string[] args)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null) return;
+
+            if (args.Length < 2 || !int.TryParse(args[1], out int slot))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: unequiprelic <slot>" });
+                return;
+            }
+            if (slot < 1 || slot > 3)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Relic slot must be between 1 and 3." });
+                return;
+            }
+
+            string? relicId = _gameState.PlayerState.EquippedRelics[slot - 1];
+            if (relicId != null)
+            {
+                _gameState.PlayerState.EquippedRelics[slot - 1] = null;
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unequipped '{relicId}' from relic slot {slot}." });
+            }
+            else
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Relic slot {slot} is already empty." });
+            }
+        }
+
+        private void HandleEquipWeapon(string[] args)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null) return;
+
+            if (args.Length < 2)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: equipweapon <WeaponID>" });
+                return;
+            }
+            string weaponId = args[1];
+            if (!_gameState.PlayerState.WeaponsInventory.ContainsKey(weaponId))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Player does not own weapon '{weaponId}'." });
+                return;
+            }
+            _gameState.PlayerState.EquippedWeaponId = weaponId;
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Equipped '{weaponId}'." });
+        }
+
+        private void HandleUnequipWeapon(string[] args)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null) return;
+
+            if (_gameState.PlayerState.EquippedWeaponId != null)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unequipped '{_gameState.PlayerState.EquippedWeaponId}'." });
+                _gameState.PlayerState.EquippedWeaponId = null;
+            }
+            else
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "No weapon is equipped." });
+            }
+        }
+
+        private void HandleEquipArmor(string[] args)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null) return;
+
+            if (args.Length < 2)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: equiparmor <ArmorID>" });
+                return;
+            }
+            string armorId = args[1];
+            if (!_gameState.PlayerState.ArmorsInventory.ContainsKey(armorId))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Player does not own armor '{armorId}'." });
+                return;
+            }
+            _gameState.PlayerState.EquippedArmorId = armorId;
+            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Equipped '{armorId}'." });
+        }
+
+        private void HandleUnequipArmor(string[] args)
+        {
+            _gameState ??= ServiceLocator.Get<GameState>();
+            if (_gameState.PlayerState == null) return;
+
+            if (_gameState.PlayerState.EquippedArmorId != null)
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"Unequipped '{_gameState.PlayerState.EquippedArmorId}'." });
+                _gameState.PlayerState.EquippedArmorId = null;
+            }
+            else
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "No armor is equipped." });
+            }
+        }
+
 
         public void ProcessCommand(string input)
         {

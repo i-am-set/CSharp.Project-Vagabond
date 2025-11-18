@@ -98,8 +98,8 @@ namespace ProjectVagabond
         public struct ActionDeclared
         {
             public BattleCombatant Actor { get; set; }
-            public MoveData Move { get; set; }
-            public ConsumableItemData Item { get; set; }
+            public MoveData? Move { get; set; }
+            public ConsumableItemData? Item { get; set; }
         }
 
         /// <summary>
@@ -109,8 +109,8 @@ namespace ProjectVagabond
         public struct BattleActionExecuted
         {
             public BattleCombatant Actor { get; set; }
-            public MoveData ChosenMove { get; set; }
-            public ConsumableItemData UsedItem { get; set; }
+            public MoveData? ChosenMove { get; set; }
+            public ConsumableItemData? UsedItem { get; set; }
             public List<BattleCombatant> Targets { get; set; }
             public List<DamageCalculator.DamageResult> DamageResults { get; set; }
         }
