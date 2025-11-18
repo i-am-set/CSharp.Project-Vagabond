@@ -40,18 +40,23 @@ namespace ProjectVagabond.UI
 
             if (_frameChangeTimer >= _nextFrameChangeTime)
             {
-                if (allFrames.Count > 1)
-                {
-                    Rectangle newFrame;
-                    do
-                    {
-                        newFrame = allFrames[_random.Next(allFrames.Count)];
-                    } while (newFrame == SourceRectangle); // Ensure the new frame is different
-
-                    SourceRectangle = newFrame;
-                }
-                ResetFrameChangeTimer();
+                RandomizeFrame(allFrames);
             }
+        }
+
+        public void RandomizeFrame(IReadOnlyList<Rectangle> allFrames)
+        {
+            if (allFrames.Count > 1)
+            {
+                Rectangle newFrame;
+                do
+                {
+                    newFrame = allFrames[_random.Next(allFrames.Count)];
+                } while (newFrame == SourceRectangle); // Ensure the new frame is different
+
+                SourceRectangle = newFrame;
+            }
+            ResetFrameChangeTimer();
         }
     }
 }

@@ -39,6 +39,8 @@ namespace ProjectVagabond
         public Rectangle[] SplitMapCloseInventoryButtonSourceRects { get; private set; }
         public Rectangle[] InventoryHeaderButtonSourceRects { get; private set; }
         public Rectangle[] InventorySlotSourceRects { get; private set; }
+        public Rectangle[] InventoryLeftArrowButtonSourceRects { get; private set; }
+        public Rectangle[] InventoryRightArrowButtonSourceRects { get; private set; }
 
 
         // Enemy Sprite Cache
@@ -115,6 +117,8 @@ namespace ProjectVagabond
         public Texture2D InventoryHeaderButtonRelics { get; private set; }
         public Texture2D InventoryHeaderButtonConsumables { get; private set; }
         public Texture2D InventorySlotIdleSpriteSheet { get; private set; }
+        public Texture2D InventoryLeftArrowButton { get; private set; }
+        public Texture2D InventoryRightArrowButton { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -313,6 +317,10 @@ namespace ProjectVagabond
             catch { InventoryHeaderButtonConsumables = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventorySlotIdleSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_idle"); }
             catch { InventorySlotIdleSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
+            try { InventoryLeftArrowButton = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_left_arrow_button"); }
+            catch { InventoryLeftArrowButton = _textureFactory.CreateColoredTexture(10, 5, Color.Magenta); }
+            try { InventoryRightArrowButton = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_right_arrow_button"); }
+            catch { InventoryRightArrowButton = _textureFactory.CreateColoredTexture(10, 5, Color.Magenta); }
 
 
             LoadAndCacheCursorSprite("cursor_default");
@@ -329,6 +337,21 @@ namespace ProjectVagabond
             InitializeSplitMapCloseInventoryButtonRects();
             InitializeInventoryHeaderButtonRects();
             InitializeInventorySlotRects();
+            InitializeInventoryArrowButtonRects();
+        }
+
+        private void InitializeInventoryArrowButtonRects()
+        {
+            const int frameWidth = 5;
+            const int frameHeight = 5;
+
+            InventoryLeftArrowButtonSourceRects = new Rectangle[2];
+            InventoryLeftArrowButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight); // Idle
+            InventoryLeftArrowButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight); // Hover
+
+            InventoryRightArrowButtonSourceRects = new Rectangle[2];
+            InventoryRightArrowButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight); // Idle
+            InventoryRightArrowButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight); // Hover
         }
 
         private void InitializeInventorySlotRects()
@@ -846,4 +869,3 @@ namespace ProjectVagabond
         }
     }
 }
-#nullable restore
