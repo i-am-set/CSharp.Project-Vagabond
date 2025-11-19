@@ -350,6 +350,54 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/hill.png
 
+#begin Sprites/Items/Consumables/fire_scroll.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Consumables/fire_scroll.png;Sprites/Items/Consumables/fire_scroll
+
+#begin Sprites/Items/Consumables/health_potion.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Consumables/health_potion.png;Sprites/Items/Consumables/health_potion
+
+#begin Sprites/Items/Relics/placeholder_relic.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/placeholder_relic.png;Sprites/Items/Relics/placeholder_relic
+
+#begin Sprites/Items/Relics/placeholder_relic2.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/placeholder_relic2.png;Sprites/Items/Relics/placeholder_relic2
+
 #begin Sprites/logo.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -1513,18 +1561,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/Player/player_heart_spritesheet.png;Sprites/Player/player_heart_spritesheet
-
-#begin Sprites/Relics/placeholder_relic.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/Relics/placeholder_relic.png;Sprites/Relics/placeholder_relic
 
 #begin Sprites/shortRest.png
 /importer:TextureImporter

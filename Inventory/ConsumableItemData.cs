@@ -12,6 +12,7 @@ namespace ProjectVagabond.Battle
         public string ItemID { get; set; }
         public string ItemName { get; set; }
         public string Description { get; set; }
+        public string ImagePath { get; set; }
         public ConsumableType Type { get; set; }
         public TargetType Target { get; set; }
         public int PrimaryValue { get; set; }

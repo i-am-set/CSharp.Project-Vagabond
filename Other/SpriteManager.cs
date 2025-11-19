@@ -5,6 +5,9 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
@@ -30,9 +33,9 @@ namespace ProjectVagabond
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
 
         // Source Rectangles for UI elements
-        public Rectangle[] ActionButtonSourceRects { get; private set; } // 0-1: Act, 2-3: Item, 4-5: Flee (Normal, Hover)
+        public Rectangle[] ActionButtonSourceRects { get; private set; }
         public Dictionary<int, Rectangle> ElementIconSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
-        public Rectangle[] ActionIconSourceRects { get; private set; } // 0: Strike, 1: Dodge, 2: Stall
+        public Rectangle[] ActionIconSourceRects { get; private set; }
         public Dictionary<int, Rectangle> RarityBackgroundSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Dictionary<int, Rectangle> SpellUsesSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Rectangle[] SplitMapInventoryButtonSourceRects { get; private set; }
@@ -50,7 +53,10 @@ namespace ProjectVagabond
         private readonly Dictionary<string, int[]> _enemySpriteRightPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteBottomPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
-        private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _relicSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
+
+        // General Item/Relic Sprite Cache
+        private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _itemSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
+
         private readonly Dictionary<string, (Texture2D Texture, Rectangle[] Frames)> _cursorSprites = new Dictionary<string, (Texture2D, Rectangle[])>();
 
 
@@ -155,9 +161,6 @@ namespace ProjectVagabond
             _textureFactory = ServiceLocator.Get<TextureFactory>();
         }
 
-        /// <summary>
-        /// Loads assets required for the main menu and essential UI elements that are always present.
-        /// </summary>
         public void LoadEssentialContent()
         {
             try { _logoSprite = _core.Content.Load<Texture2D>("Sprites/logo"); }
@@ -205,12 +208,7 @@ namespace ProjectVagabond
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("[SpriteManager] [ERROR] Failed to load 'ui_action_moves_button_area_background'. This is a critical UI asset.");
-                Debug.WriteLine("[SpriteManager] [ACTION REQUIRED] Please ensure the following:");
-                Debug.WriteLine("1. The file exists at 'Content/Sprites/UI/BattleUI/ui_action_moves_button_area_background.png'");
-                Debug.WriteLine("2. The file has been added to your 'Content.mgcb' file.");
-                Debug.WriteLine("3. The file's 'Build Action' in the content pipeline is set to 'Build'.");
-                Debug.WriteLine($"4. Detailed error: {ex.Message}");
+                Debug.WriteLine("[SpriteManager] [ERROR] Failed to load 'ui_action_moves_button_area_background'.");
                 ActionMovesBackgroundSprite = _textureFactory.CreateColoredTexture(294, 47, Color.Magenta);
             }
 
@@ -600,40 +598,44 @@ namespace ProjectVagabond
 
         public Texture2D GetRelicSprite(string imagePath)
         {
-            if (string.IsNullOrEmpty(imagePath))
-            {
-                LoadAndCacheRelic("placeholder", null);
-                return _relicSprites["placeholder"].Original;
-            }
-
-            if (_relicSprites.TryGetValue(imagePath, out var cachedSprite))
-            {
-                return cachedSprite.Original;
-            }
-
-            return LoadAndCacheRelic(imagePath, imagePath).Original;
+            return GetItemSprite(imagePath);
         }
 
         public Texture2D GetRelicSpriteSilhouette(string imagePath)
         {
             if (string.IsNullOrEmpty(imagePath))
             {
-                LoadAndCacheRelic("placeholder", null);
-                return _relicSprites["placeholder"].Silhouette;
+                LoadAndCacheItem("placeholder", null);
+                return _itemSprites["placeholder"].Silhouette;
             }
 
-            if (_relicSprites.TryGetValue(imagePath, out var cachedSprite))
+            if (_itemSprites.TryGetValue(imagePath, out var cachedSprite))
             {
                 return cachedSprite.Silhouette;
             }
 
-            return LoadAndCacheRelic(imagePath, imagePath).Silhouette;
+            return LoadAndCacheItem(imagePath, imagePath).Silhouette;
         }
 
-        private (Texture2D Original, Texture2D Silhouette) LoadAndCacheRelic(string cacheKey, string? imagePath)
+        public Texture2D GetItemSprite(string imagePath)
         {
-            // If it's already cached, return immediately.
-            if (_relicSprites.TryGetValue(cacheKey, out var cachedTuple))
+            if (string.IsNullOrEmpty(imagePath))
+            {
+                LoadAndCacheItem("placeholder", null);
+                return _itemSprites["placeholder"].Original;
+            }
+
+            if (_itemSprites.TryGetValue(imagePath, out var cachedSprite))
+            {
+                return cachedSprite.Original;
+            }
+
+            return LoadAndCacheItem(imagePath, imagePath).Original;
+        }
+
+        private (Texture2D Original, Texture2D Silhouette) LoadAndCacheItem(string cacheKey, string? imagePath)
+        {
+            if (_itemSprites.TryGetValue(cacheKey, out var cachedTuple))
             {
                 return cachedTuple;
             }
@@ -645,18 +647,17 @@ namespace ProjectVagabond
                 {
                     originalTexture = _core.Content.Load<Texture2D>(imagePath);
                 }
-                else // This is the placeholder case
+                else
                 {
                     originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.White);
                 }
             }
             catch
             {
-                Debug.WriteLine($"[SpriteManager] [WARNING] Could not load relic sprite at '{imagePath}'. Using white placeholder.");
+                Debug.WriteLine($"[SpriteManager] [WARNING] Could not load item sprite at '{imagePath}'. Using white placeholder.");
                 originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.White);
             }
 
-            // Generate silhouette
             var originalData = new Color[originalTexture.Width * originalTexture.Height];
             originalTexture.GetData(originalData);
 
@@ -677,7 +678,7 @@ namespace ProjectVagabond
             silhouetteTexture.SetData(silhouetteData);
 
             var tuple = (originalTexture, silhouetteTexture);
-            _relicSprites[cacheKey] = tuple;
+            _itemSprites[cacheKey] = tuple;
             return tuple;
         }
 
@@ -808,9 +809,6 @@ namespace ProjectVagabond
             return _cursorSprites[assetName];
         }
 
-        /// <summary>
-        /// Loads all assets related to the main game world, combat, and entities.
-        /// </summary>
         public void LoadGameContent()
         {
             try { _waterSprite = _core.Content.Load<Texture2D>("Sprites/water"); }

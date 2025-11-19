@@ -37,10 +37,11 @@
         ],
         "DefaultStrikeMoveID": "ClawRake",
         "StartingRelics": {
-          "Vigor": 1
+          "OakenHeart": 1
         },
         "StartingConsumables": {
-          "FireScroll": 2
+          "FireScroll": 2,
+          "HealthPotion": 3
         }
       }
     },

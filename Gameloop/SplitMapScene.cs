@@ -1390,10 +1390,10 @@ namespace ProjectVagabond.Scenes
                 switch (_selectedInventoryCategory)
                 {
                     case InventoryCategory.Weapons:
-                        foreach (var kvp in _gameState.PlayerState.Weapons) currentItems.Add((kvp.Key, kvp.Value, null, null));
+                        foreach (var kvp in _gameState.PlayerState.Weapons) currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null));
                         break;
                     case InventoryCategory.Armor:
-                        foreach (var kvp in _gameState.PlayerState.Armors) currentItems.Add((kvp.Key, kvp.Value, null, null));
+                        foreach (var kvp in _gameState.PlayerState.Armors) currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null));
                         break;
                     case InventoryCategory.Relics:
                         foreach (var kvp in _gameState.PlayerState.Relics)
@@ -1408,7 +1408,7 @@ namespace ProjectVagabond.Scenes
                         foreach (var kvp in _gameState.PlayerState.Consumables)
                         {
                             if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
-                                currentItems.Add((data.ItemName, kvp.Value, null, null));
+                                currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null));
                             else
                                 currentItems.Add((kvp.Key, kvp.Value, null, null));
                         }
@@ -1418,9 +1418,14 @@ namespace ProjectVagabond.Scenes
                         foreach (var entry in _gameState.PlayerState.Spells)
                         {
                             if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
-                                currentItems.Add((moveData.MoveName, 1, null, null)); // Quantity 1 for unique spells
+                            {
+                                // Use a generic spell scroll path, but we will tint it later
+                                currentItems.Add((moveData.MoveName, 1, $"Sprites/Items/Spells/{moveData.MoveID}", null));
+                            }
                             else
+                            {
                                 currentItems.Add((entry.MoveID, 1, null, null));
+                            }
                         }
                         break;
                 }
@@ -1440,10 +1445,28 @@ namespace ProjectVagabond.Scenes
                         // Draw Icon (if available) or Text
                         if (!string.IsNullOrEmpty(item.IconPath))
                         {
-                            var icon = _spriteManager.GetRelicSprite(item.IconPath);
+                            // Use the new generic GetItemSprite method
+                            var icon = _spriteManager.GetItemSprite(item.IconPath);
+
+                            Color tint = Color.White;
+                            // Apply tint for spells based on element if needed, or just draw white
+                            if (_selectedInventoryCategory == InventoryCategory.Spells)
+                            {
+                                // Find the move data again to get the element color
+                                var moveData = BattleDataCache.Moves.Values.FirstOrDefault(m => m.MoveName == item.Name);
+                                if (moveData != null)
+                                {
+                                    int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
+                                    if (_global.ElementColors.TryGetValue(elementId, out var elementColor))
+                                    {
+                                        tint = elementColor;
+                                    }
+                                }
+                            }
+
                             if (icon != null)
                             {
-                                spriteBatch.DrawSnapped(icon, slot.Position, null, Color.White, 0f, new Vector2(icon.Width / 2f, icon.Height / 2f), 1f, SpriteEffects.None, 0f);
+                                spriteBatch.DrawSnapped(icon, slot.Position, null, tint, 0f, new Vector2(icon.Width / 2f, icon.Height / 2f), 1f, SpriteEffects.None, 0f);
                             }
                         }
                         else
