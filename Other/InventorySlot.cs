@@ -1,7 +1,18 @@
-﻿#nullable enable
+﻿
+#nullable enable
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.UI
 {
@@ -14,6 +25,7 @@ namespace ProjectVagabond.UI
         public Rectangle SourceRectangle { get; private set; }
         public string? ItemId { get; private set; }
         public int Quantity { get; private set; }
+        public bool IsHovered { get; set; }
 
 
         private float _frameChangeTimer;
@@ -75,4 +87,3 @@ namespace ProjectVagabond.UI
         }
     }
 }
-#nullable restore

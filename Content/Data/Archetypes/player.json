@@ -37,7 +37,8 @@
         ],
         "DefaultStrikeMoveID": "ClawRake",
         "StartingRelics": {
-          "OakenHeart": 1
+          "OakenHeart": 1,
+          "PriestsPendant": 1
         },
         "StartingConsumables": {
           "FireScroll": 2,

@@ -436,7 +436,7 @@ namespace ProjectVagabond.Scenes
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
                 if (_selectedChoiceData is RelicData relicData)
                 {
-                    var relicSprite = spriteManager.GetRelicSprite(relicData.RelicImagePath);
+                    var relicSprite = spriteManager.GetRelicSprite($"Sprites/Items/Relics/{relicData.RelicID}");
                     if (relicSprite != null)
                     {
                         float relicScale = 1f;

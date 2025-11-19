@@ -123,6 +123,7 @@ namespace ProjectVagabond
         public Texture2D InventoryHeaderButtonRelics { get; private set; }
         public Texture2D InventoryHeaderButtonConsumables { get; private set; }
         public Texture2D InventorySlotIdleSpriteSheet { get; private set; }
+        public Texture2D InventorySlotHoverSprite { get; private set; }
         public Texture2D InventoryLeftArrowButton { get; private set; }
         public Texture2D InventoryRightArrowButton { get; private set; }
 
@@ -315,6 +316,8 @@ namespace ProjectVagabond
             catch { InventoryHeaderButtonConsumables = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventorySlotIdleSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_idle"); }
             catch { InventorySlotIdleSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
+            try { InventorySlotHoverSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_hover"); }
+            catch { InventorySlotHoverSprite = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
             try { InventoryLeftArrowButton = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_left_arrow_button"); }
             catch { InventoryLeftArrowButton = _textureFactory.CreateColoredTexture(10, 5, Color.Magenta); }
             try { InventoryRightArrowButton = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_right_arrow_button"); }
@@ -602,6 +605,11 @@ namespace ProjectVagabond
         }
 
         public Texture2D GetRelicSpriteSilhouette(string imagePath)
+        {
+            return GetItemSpriteSilhouette(imagePath);
+        }
+
+        public Texture2D GetItemSpriteSilhouette(string imagePath)
         {
             if (string.IsNullOrEmpty(imagePath))
             {

@@ -4,6 +4,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -98,7 +100,7 @@ namespace ProjectVagabond.UI
             _cardType = ChoiceType.Ability;
             Title = relic.RelicName.ToUpper();
             _abilityName = relic.AbilityName.ToUpper();
-            _relicImagePath = relic.RelicImagePath;
+            _relicImagePath = $"Sprites/Items/Relics/{relic.RelicID}";
             Description = relic.Description.ToUpper();
             _rarity = relic.Rarity;
             _rarityText = GetRarityString(_rarity);

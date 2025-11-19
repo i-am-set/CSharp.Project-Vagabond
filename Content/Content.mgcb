@@ -374,7 +374,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Consumables/health_potion.png;Sprites/Items/Consumables/health_potion
 
-#begin Sprites/Items/Relics/all_seeing_eye.png
+#begin Sprites/Items/Relics/allseeingeye.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -384,9 +384,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/Items/Relics/all_seeing_eye.png;Sprites/Items/Relics/all_seeing_eye
+/build:Sprites/Items/Relics/allseeingeye.png;Sprites/Items/Relics/allseeingeye
 
-#begin Sprites/Items/Relics/charred_effigy.png
+#begin Sprites/Items/Relics/ArcanistsRing.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -396,9 +396,9 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/Items/Relics/charred_effigy.png;Sprites/Items/Relics/charred_effigy
+/build:Sprites/Items/Relics/ArcanistsRing.png;Sprites/Items/Relics/ArcanistsRing
 
-#begin Sprites/Items/Relics/earthen_core.png
+#begin Sprites/Items/Relics/berserkersheart.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -408,7 +408,103 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/Items/Relics/earthen_core.png;Sprites/Items/Relics/earthen_core
+/build:Sprites/Items/Relics/berserkersheart.png;Sprites/Items/Relics/berserkersheart
+
+#begin Sprites/Items/Relics/bulwarkshield.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/bulwarkshield.png;Sprites/Items/Relics/bulwarkshield
+
+#begin Sprites/Items/Relics/charredeffigy.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/charredeffigy.png;Sprites/Items/Relics/charredeffigy
+
+#begin Sprites/Items/Relics/crackedgauntlet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/crackedgauntlet.png;Sprites/Items/Relics/crackedgauntlet
+
+#begin Sprites/Items/Relics/earthencore.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/earthencore.png;Sprites/Items/Relics/earthencore
+
+#begin Sprites/Items/Relics/enchantedpeony.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/enchantedpeony.png;Sprites/Items/Relics/enchantedpeony
+
+#begin Sprites/Items/Relics/everfreshpeach.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/everfreshpeach.png;Sprites/Items/Relics/everfreshpeach
+
+#begin Sprites/Items/Relics/gorgonsgaze.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/gorgonsgaze.png;Sprites/Items/Relics/gorgonsgaze
+
+#begin Sprites/Items/Relics/hourglassofdecay.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/hourglassofdecay.png;Sprites/Items/Relics/hourglassofdecay
 
 #begin Sprites/Items/Relics/oakenheart.png
 /importer:TextureImporter
@@ -422,6 +518,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Relics/oakenheart.png;Sprites/Items/Relics/oakenheart
 
+#begin Sprites/Items/Relics/orbofthestormcaller.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/orbofthestormcaller.png;Sprites/Items/Relics/orbofthestormcaller
+
 #begin Sprites/Items/Relics/placeholder_relic.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -434,7 +542,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Relics/placeholder_relic.png;Sprites/Items/Relics/placeholder_relic
 
-#begin Sprites/Items/Relics/shattered_amulet.png
+#begin Sprites/Items/Relics/priestspendant.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -444,7 +552,67 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/Items/Relics/shattered_amulet.png;Sprites/Items/Relics/shattered_amulet
+/build:Sprites/Items/Relics/priestspendant.png;Sprites/Items/Relics/priestspendant
+
+#begin Sprites/Items/Relics/pristinegem.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/pristinegem.png;Sprites/Items/Relics/pristinegem
+
+#begin Sprites/Items/Relics/rustybeartrap.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/rustybeartrap.png;Sprites/Items/Relics/rustybeartrap
+
+#begin Sprites/Items/Relics/serpentsfang.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/serpentsfang.png;Sprites/Items/Relics/serpentsfang
+
+#begin Sprites/Items/Relics/shatteredamulet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/shatteredamulet.png;Sprites/Items/Relics/shatteredamulet
+
+#begin Sprites/Items/Relics/vulturespendant.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/vulturespendant.png;Sprites/Items/Relics/vulturespendant
 
 #begin Sprites/logo.png
 /importer:TextureImporter
@@ -2258,6 +2426,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_right_arrow_button.png;Sprites/UI/Inventory/inventory_right_arrow_button
 
+#begin Sprites/UI/Inventory/inventory_slot_hover.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_slot_hover.png;Sprites/UI/Inventory/inventory_slot_hover
+
 #begin Sprites/UI/Inventory/inventory_slot_idle.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -2269,6 +2449,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_slot_idle.png;Sprites/UI/Inventory/inventory_slot_idle
+
+#begin Sprites/UI/Inventory/inventory_slot_selected.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_slot_selected.png;Sprites/UI/Inventory/inventory_slot_selected
 
 #begin Sprites/UI/KeyPrompts/mouse/ui_mouse_blank.png
 /importer:TextureImporter

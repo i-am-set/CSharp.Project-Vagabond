@@ -721,9 +721,32 @@ namespace ProjectVagabond.Scenes
 
                 if (slotFrames != null)
                 {
+                    const int slotSize = 48;
+                    float radiusSq = (slotSize / 2f) * (slotSize / 2f);
+                    InventorySlot? closestSlot = null;
+                    float minDistanceSq = float.MaxValue;
+
                     foreach (var slot in _inventorySlots)
                     {
                         slot.Update(gameTime, slotFrames);
+                        slot.IsHovered = false; // Reset first
+
+                        float distSq = Vector2.DistanceSquared(mouseInWorldSpace, slot.Position);
+                        if (distSq <= radiusSq)
+                        {
+                            // Found a candidate, check if it's closer than the previous best
+                            if (distSq < minDistanceSq)
+                            {
+                                minDistanceSq = distSq;
+                                closestSlot = slot;
+                            }
+                        }
+                    }
+
+                    // Only the single closest slot gets the hover state
+                    if (closestSlot != null)
+                    {
+                        closestSlot.IsHovered = true;
                     }
                 }
             }
@@ -1399,7 +1422,7 @@ namespace ProjectVagabond.Scenes
                         foreach (var kvp in _gameState.PlayerState.Relics)
                         {
                             if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
-                                currentItems.Add((data.RelicName, kvp.Value, data.RelicImagePath, null));
+                                currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null));
                             else
                                 currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null)); // Fallback to ID-based path
                         }
@@ -1435,7 +1458,9 @@ namespace ProjectVagabond.Scenes
                     var slot = _inventorySlots[i];
 
                     // Draw Slot BG
-                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, slot.Position, slot.SourceRectangle, Color.White, 0f, slotOrigin, 1f, SpriteEffects.None, 0f);
+                    Texture2D bgTexture = slot.IsHovered ? _spriteManager.InventorySlotHoverSprite : _spriteManager.InventorySlotIdleSpriteSheet;
+                    Rectangle? sourceRect = slot.IsHovered ? null : slot.SourceRectangle;
+                    spriteBatch.DrawSnapped(bgTexture, slot.Position, sourceRect, Color.White, 0f, slotOrigin, 1f, SpriteEffects.None, 0f);
 
                     // Draw Item Content if exists
                     if (i < currentItems.Count)
@@ -1466,6 +1491,21 @@ namespace ProjectVagabond.Scenes
 
                             if (icon != null)
                             {
+                                // Always draw outline now
+                                var silhouette = _spriteManager.GetItemSpriteSilhouette(item.IconPath);
+                                if (silhouette != null)
+                                {
+                                    // Determine color based on hover state
+                                    Color outlineColor = slot.IsHovered ? _global.Palette_White : _global.Palette_DarkGray;
+                                    Vector2 origin = new Vector2(icon.Width / 2f, icon.Height / 2f);
+
+                                    // Draw 4 offsets
+                                    spriteBatch.DrawSnapped(silhouette, slot.Position + new Vector2(-1, 0), null, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
+                                    spriteBatch.DrawSnapped(silhouette, slot.Position + new Vector2(1, 0), null, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
+                                    spriteBatch.DrawSnapped(silhouette, slot.Position + new Vector2(0, -1), null, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
+                                    spriteBatch.DrawSnapped(silhouette, slot.Position + new Vector2(0, 1), null, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
+                                }
+
                                 spriteBatch.DrawSnapped(icon, slot.Position, null, tint, 0f, new Vector2(icon.Width / 2f, icon.Height / 2f), 1f, SpriteEffects.None, 0f);
                             }
                         }
@@ -1486,7 +1526,7 @@ namespace ProjectVagabond.Scenes
                             var qtySize = secondaryFont.MeasureString(qty);
                             // Fix: Access Width and Height properties of Size2/SizeF
                             var qtyPos = slot.Position + new Vector2(slotSize / 2f - qtySize.Width - 4, slotSize / 2f - qtySize.Height - 4);
-                            spriteBatch.DrawStringSnapped(secondaryFont, qty, qtyPos, _global.Palette_LightGray);
+                            spriteBatch.DrawStringSnapped(secondaryFont, qty, qtyPos, _global.Palette_Gray);
                         }
                     }
                 }

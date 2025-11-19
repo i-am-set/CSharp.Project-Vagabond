@@ -11,7 +11,6 @@ namespace ProjectVagabond.Battle
         public string RelicID { get; set; }
         public string RelicName { get; set; }
         public string AbilityName { get; set; }
-        public string RelicImagePath { get; set; }
         public string Description { get; set; }
         public int Rarity { get; set; } = 0;
         public int LevelRequirement { get; set; } = 0;
