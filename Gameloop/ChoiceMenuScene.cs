@@ -14,6 +14,7 @@ using System.Linq;
 namespace ProjectVagabond.Scenes
 {
     public enum ChoiceType { Spell, Ability, Item }
+
     public class ChoiceMenuScene : GameScene
     {
         private readonly List<ChoiceCard> _cards = new List<ChoiceCard>();
@@ -83,11 +84,10 @@ namespace ProjectVagabond.Scenes
             _onChoiceMade = onChoiceMade;
             _selectedCard = null;
 
-            // Layout calculation for vertical pillars
             const int cardWidth = 95;
             const int cardGap = 5;
-            const int startY = 9; // Card top is now lower
-            const int cardHeight = Global.VIRTUAL_HEIGHT - 2 - 8; // Card is now shorter
+            const int startY = 9;
+            const int cardHeight = Global.VIRTUAL_HEIGHT - 2 - 8;
             int totalWidth = (cardWidth * choices.Count) + (cardGap * (choices.Count - 1));
             int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
 
@@ -121,7 +121,6 @@ namespace ProjectVagabond.Scenes
 
             if (otherCards.Any())
             {
-                // Trigger all non-selected card animations at once.
                 foreach (var card in otherCards)
                 {
                     card.StartOutroAnimation(false);
@@ -129,7 +128,6 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                // If there are no other cards, we can immediately start the selected card's animation.
                 selectedCard.StartOutroAnimation(true, OnSelectedCardOutroComplete);
             }
         }
@@ -140,7 +138,7 @@ namespace ProjectVagabond.Scenes
             {
                 _currentPhase = AnimationPhase.SpellTransform_PopIn;
                 _transformAnimTimer = 0f;
-                float initialTilt = (float)(_random.NextDouble() * Math.PI) - MathHelper.PiOver2; // -90 to +90 degrees
+                float initialTilt = (float)(_random.NextDouble() * Math.PI) - MathHelper.PiOver2;
                 float spinDirection = (_random.Next(2) == 0) ? 1f : -1f;
                 _transformInitialRotation = initialTilt + (spinDirection * MathHelper.TwoPi);
             }
@@ -154,7 +152,6 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                // For abilities/items, just handle the choice immediately after the card disappears
                 HandleChoice(_selectedChoiceData);
             }
         }
@@ -163,11 +160,13 @@ namespace ProjectVagabond.Scenes
         {
             if (choiceData is MoveData move)
             {
-                EventBus.Publish(new GameEvents.PlayerMoveSetChanged { MoveID = move.MoveID, ChangeType = GameEvents.MoveSetChangeType.Learn });
+                // Fires "Add" event
+                EventBus.Publish(new GameEvents.PlayerMoveAdded { MoveID = move.MoveID, Type = GameEvents.AcquisitionType.Add });
             }
             else if (choiceData is AbilityData ability)
             {
-                EventBus.Publish(new GameEvents.PlayerAbilitySetChanged { AbilityID = ability.AbilityID, ChangeType = GameEvents.AbilitySetChangeType.Learn });
+                // Fires "Add" event for relic
+                EventBus.Publish(new GameEvents.PlayerRelicAdded { RelicID = ability.AbilityID, Type = GameEvents.AcquisitionType.Add });
             }
             else if (choiceData is ConsumableItemData item)
             {
@@ -190,14 +189,12 @@ namespace ProjectVagabond.Scenes
             base.Update(gameTime);
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Always update all cards so their internal animation timers can tick.
             var currentMouseState = Mouse.GetState();
             foreach (var card in _cards)
             {
                 card.Update(currentMouseState, gameTime);
             }
 
-            // Handle the scene's animation orchestration
             switch (_currentPhase)
             {
                 case AnimationPhase.CardIntro:
@@ -213,7 +210,6 @@ namespace ProjectVagabond.Scenes
                     }
                     else if (_cards.All(c => !c.IsIntroAnimating))
                     {
-                        // All cards have finished sliding in, transition to next phase
                         _currentPhase = AnimationPhase.RarityIntro;
                         foreach (var card in _cards)
                         {
@@ -241,13 +237,10 @@ namespace ProjectVagabond.Scenes
 
                 case AnimationPhase.AnimatingOutro:
                     var unselectedCards = _cards.Where(c => c != _selectedCard).ToList();
-
-                    // Check if all unselected cards have finished their outro animation.
                     bool allUnselectedAreDone = unselectedCards.All(c => !c.IsAnimatingOut);
 
                     if (allUnselectedAreDone)
                     {
-                        // All non-selected cards are gone. Animate the selected one, but only trigger it once.
                         if (_selectedCard != null && !_selectedCard.IsAnimatingOut)
                         {
                             _selectedCard.StartOutroAnimation(true, OnSelectedCardOutroComplete);
@@ -317,9 +310,7 @@ namespace ProjectVagabond.Scenes
                     break;
 
                 case AnimationPhase.Idle:
-                    // Input is only processed when idle.
                     if (IsInputBlocked) return;
-                    // The card's own Update method (called above) handles hover/click logic.
                     break;
             }
         }
@@ -339,7 +330,6 @@ namespace ProjectVagabond.Scenes
 
                 if (pageSprite != null && bookSprite != null)
                 {
-                    // Default values
                     float pageScale = 1f;
                     float pageAlpha = 1f;
                     Vector2 pagePos = _transformAnimPosition;
@@ -352,7 +342,6 @@ namespace ProjectVagabond.Scenes
                     float bookScale = 1f;
                     Color bookFlashColor = Color.Transparent;
 
-                    // State-based animation calculations
                     if (_currentPhase == AnimationPhase.SpellTransform_PopIn)
                     {
                         float progress = Math.Clamp(_transformAnimTimer / TRANSFORM_POP_IN_DURATION, 0f, 1f);
@@ -381,17 +370,15 @@ namespace ProjectVagabond.Scenes
                     }
                     else if (_currentPhase == AnimationPhase.SpellTransform_Absorb)
                     {
-                        pageAlpha = 0f; // Page is gone
+                        pageAlpha = 0f;
                         bookPos = new Vector2(_transformAnimPosition.X, Global.VIRTUAL_HEIGHT - 1);
 
                         float timer = _transformAnimTimer;
 
-                        // --- Scale Animation ---
                         if (timer < TRANSFORM_ABSORB_PULSE_UP_DURATION)
                         {
                             float pulseProgress = timer / TRANSFORM_ABSORB_PULSE_UP_DURATION;
                             bookScale = MathHelper.Lerp(1.0f, ABSORB_PULSE_SCALE, Easing.EaseOutQuad(pulseProgress));
-                            // Flash fades out during the inflation using an easing function for more impact.
                             bookFlashColor = Color.White * (1.0f - Easing.EaseInQuint(pulseProgress));
                         }
                         else if (timer < TRANSFORM_ABSORB_PULSE_UP_DURATION + TRANSFORM_ABSORB_HANG_DURATION)
@@ -404,9 +391,8 @@ namespace ProjectVagabond.Scenes
                             bookScale = MathHelper.Lerp(ABSORB_PULSE_SCALE, 1.0f, Easing.EaseInQuad(pulseProgress));
                         }
 
-                        // --- Hop & Shake (tied to the overall progress for a smooth decay) ---
                         float progress = Math.Clamp(timer / TOTAL_ABSORB_DURATION, 0f, 1f);
-                        float hopPulseProgress = MathF.Sin(progress * MathHelper.Pi); // Simple pulse for hop is fine
+                        float hopPulseProgress = MathF.Sin(progress * MathHelper.Pi);
                         bookPos.Y -= ABSORB_HOP_AMOUNT * hopPulseProgress;
 
                         float shakeDecay = 1.0f - Easing.EaseOutQuad(progress);
@@ -423,7 +409,6 @@ namespace ProjectVagabond.Scenes
                         bookPos = new Vector2(_transformAnimPosition.X, MathHelper.Lerp(bookStartY, bookEndY, easedProgress));
                     }
 
-                    // Draw the page first
                     if (pageAlpha > 0)
                     {
                         spriteBatch.DrawSnapped(pageSprite, pagePos, null, Color.White * pageAlpha, pageRotation, pageOrigin, pageScale, SpriteEffects.None, 0f);
@@ -433,19 +418,14 @@ namespace ProjectVagabond.Scenes
                         }
                     }
 
-                    // Draw the spellbook on top so the page goes "behind" it
                     if (_currentPhase >= AnimationPhase.SpellTransform_BookIntro)
                     {
                         spriteBatch.DrawSnapped(bookSprite, bookPos, null, Color.White, 0f, bookOrigin, bookScale, SpriteEffects.None, 0f);
                         if (_currentPhase == AnimationPhase.SpellTransform_Absorb && bookFlashColor.A > 0)
                         {
-                            // End the current AlphaBlend batch to draw the additive flash
                             spriteBatch.End();
                             spriteBatch.Begin(blendState: BlendState.Additive, samplerState: SamplerState.PointClamp, transformMatrix: transform);
-
                             spriteBatch.DrawSnapped(bookSprite, bookPos, null, bookFlashColor, 0f, bookOrigin, bookScale, SpriteEffects.None, 0f);
-
-                            // End the additive batch and resume the original AlphaBlend batch
                             spriteBatch.End();
                             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
                         }
@@ -472,12 +452,12 @@ namespace ProjectVagabond.Scenes
                             relicScale = Easing.EaseOutBackBig(progress);
                             relicRotation = MathHelper.Lerp(_transformInitialRotation, 0f, Easing.EaseOutQuint(progress));
                         }
-                        else // RelicTransform_MoveOut
+                        else
                         {
                             float progress = Math.Clamp(_transformAnimTimer / TRANSFORM_MOVE_OUT_DURATION, 0f, 1f);
                             float easedProgress = Easing.EaseInQuint(progress);
 
-                            float relicEndY = Global.VIRTUAL_HEIGHT + relicSprite.Height; // Move off bottom of screen
+                            float relicEndY = Global.VIRTUAL_HEIGHT + relicSprite.Height;
                             relicPos.Y = MathHelper.Lerp(_transformAnimPosition.Y, relicEndY, easedProgress);
                             relicAlpha = 1.0f - easedProgress;
                         }

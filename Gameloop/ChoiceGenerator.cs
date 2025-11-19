@@ -9,8 +9,7 @@ namespace ProjectVagabond.Utils
 {
     /// <summary>
     /// A service responsible for generating curated lists of choices (spells, abilities, items)
-    /// based on the current game progression and a weighted rarity system. This decouples the
-    /// choice generation logic from the UI scenes that display them.
+    /// based on the current game progression and a weighted rarity system.
     /// </summary>
     public class ChoiceGenerator
     {
@@ -271,10 +270,10 @@ namespace ProjectVagabond.Utils
             var gameState = ServiceLocator.Get<GameState>();
             var componentStore = ServiceLocator.Get<ComponentStore>();
 
-            // Tally tags from spellbook
-            if (gameState.PlayerState?.SpellbookPages != null)
+            // Tally tags from spells
+            if (gameState.PlayerState?.Spells != null)
             {
-                foreach (var entry in gameState.PlayerState.SpellbookPages)
+                foreach (var entry in gameState.PlayerState.Spells)
                 {
                     if (entry != null && BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData) && moveData.Tags != null)
                     {

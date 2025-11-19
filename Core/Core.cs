@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended;
@@ -84,8 +84,8 @@ namespace ProjectVagabond
         private ParticleSystemManager _particleSystemManager;
         private GameState _gameState;
         private ActionExecutionSystem _actionExecutionSystem;
-        private MoveLearningSystem _moveLearningSystem;
-        private AbilityLearningSystem _abilityLearningSystem;
+        private MoveAcquisitionSystem _moveAcquisitionSystem;
+        private RelicAcquisitionSystem _relicAcquisitionSystem;
         private SpriteManager _spriteManager;
         private DiceRollingSystem _diceRollingSystem;
         private BackgroundManager _backgroundManager;
@@ -213,11 +213,11 @@ namespace ProjectVagabond
             _actionExecutionSystem = new ActionExecutionSystem();
             ServiceLocator.Register<ActionExecutionSystem>(_actionExecutionSystem);
 
-            _moveLearningSystem = new MoveLearningSystem();
-            ServiceLocator.Register<MoveLearningSystem>(_moveLearningSystem);
+            _moveAcquisitionSystem = new MoveAcquisitionSystem();
+            ServiceLocator.Register<MoveAcquisitionSystem>(_moveAcquisitionSystem);
 
-            _abilityLearningSystem = new AbilityLearningSystem();
-            ServiceLocator.Register<AbilityLearningSystem>(_abilityLearningSystem);
+            _relicAcquisitionSystem = new RelicAcquisitionSystem();
+            ServiceLocator.Register<RelicAcquisitionSystem>(_relicAcquisitionSystem);
 
             var terminalRenderer = new TerminalRenderer();
             ServiceLocator.Register<TerminalRenderer>(terminalRenderer);
@@ -257,8 +257,8 @@ namespace ProjectVagabond
             ServiceLocator.Register<Texture2D>(_pixel);
 
             _systemManager.RegisterSystem(_actionExecutionSystem, 0f);
-            _systemManager.RegisterSystem(_moveLearningSystem, 0f);
-            _systemManager.RegisterSystem(_abilityLearningSystem, 0f);
+            _systemManager.RegisterSystem(_moveAcquisitionSystem, 0f);
+            _systemManager.RegisterSystem(_relicAcquisitionSystem, 0f);
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
             _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene()); // Changed to GameMapScene

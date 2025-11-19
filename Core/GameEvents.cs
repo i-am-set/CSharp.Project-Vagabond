@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -38,11 +37,7 @@ namespace ProjectVagabond
         /// <summary>
         /// Published when the player's action queue is modified.
         /// </summary>
-        public struct ActionQueueChanged
-        {
-            // This event can be expanded with more data if needed,
-            // but for now, its existence is enough to signal a refresh.
-        }
+        public struct ActionQueueChanged { }
 
         /// <summary>
         /// Published when the player entity completes a move to a new tile.
@@ -98,8 +93,8 @@ namespace ProjectVagabond
         public struct ActionDeclared
         {
             public BattleCombatant Actor { get; set; }
-            public MoveData? Move { get; set; }
-            public ConsumableItemData? Item { get; set; }
+            public MoveData Move { get; set; }
+            public ConsumableItemData Item { get; set; }
         }
 
         /// <summary>
@@ -109,8 +104,8 @@ namespace ProjectVagabond
         public struct BattleActionExecuted
         {
             public BattleCombatant Actor { get; set; }
-            public MoveData? ChosenMove { get; set; }
-            public ConsumableItemData? UsedItem { get; set; }
+            public MoveData ChosenMove { get; set; }
+            public ConsumableItemData UsedItem { get; set; }
             public List<BattleCombatant> Targets { get; set; }
             public List<DamageCalculator.DamageResult> DamageResults { get; set; }
         }
@@ -127,39 +122,30 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Defines the type of change for a player's move set.
+        /// Defines whether an item/move is being added or removed.
         /// </summary>
-        public enum MoveSetChangeType
+        public enum AcquisitionType
         {
-            Learn,
-            Forget
+            Add,
+            Remove
         }
 
         /// <summary>
-        /// Published to request a change to the player's set of available combat moves.
+        /// Published when the player gains or loses a move (Spell or Action).
         /// </summary>
-        public struct PlayerMoveSetChanged
+        public struct PlayerMoveAdded
         {
             public string MoveID { get; set; }
-            public MoveSetChangeType ChangeType { get; set; }
+            public AcquisitionType Type { get; set; }
         }
 
         /// <summary>
-        /// Defines the type of change for a player's ability set.
+        /// Published when the player gains or loses a relic (Ability).
         /// </summary>
-        public enum AbilitySetChangeType
+        public struct PlayerRelicAdded
         {
-            Learn,
-            Forget
-        }
-
-        /// <summary>
-        /// Published to request a change to the player's set of passive abilities.
-        /// </summary>
-        public struct PlayerAbilitySetChanged
-        {
-            public string AbilityID { get; set; }
-            public AbilitySetChangeType ChangeType { get; set; }
+            public string RelicID { get; set; }
+            public AcquisitionType Type { get; set; }
         }
 
         /// <summary>
@@ -170,13 +156,7 @@ namespace ProjectVagabond
             public BattleCombatant DefeatedCombatant { get; set; }
         }
 
-        /// <summary>
-        /// Published by the SecondaryEffectSystem after it has finished processing all effects for an action.
-        /// This signals the BattleManager to proceed with its state machine.
-        /// </summary>
-        public struct SecondaryEffectComplete
-        {
-        }
+        public struct SecondaryEffectComplete { }
 
         /// <summary>
         /// Published when a status effect triggers a passive event, like dealing damage or healing.
@@ -204,7 +184,7 @@ namespace ProjectVagabond
         public struct ActionFailed
         {
             public BattleCombatant Actor { get; set; }
-            public string Reason { get; set; } // e.g., "silenced", "confused"
+            public string Reason { get; set; }
         }
 
         /// <summary>
@@ -221,8 +201,8 @@ namespace ProjectVagabond
         /// </summary>
         public struct CombatantHealed
         {
-            public BattleCombatant Actor { get; set; } // The one causing the healing
-            public BattleCombatant Target { get; set; } // The one receiving the healing
+            public BattleCombatant Actor { get; set; }
+            public BattleCombatant Target { get; set; }
             public int HealAmount { get; set; }
             public int VisualHPBefore { get; set; }
         }
@@ -272,22 +252,13 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Published to trigger the spell choice UI.
-        /// </summary>
-        public struct SpellChoiceRequested
-        {
-            public int GameStage { get; set; }
-            public int NumberOfChoices { get; set; }
-        }
-
-        /// <summary>
         /// Published when a combatant's stat stage is modified.
         /// </summary>
         public struct CombatantStatStageChanged
         {
             public BattleCombatant Target { get; set; }
             public OffensiveStatType Stat { get; set; }
-            public int Amount { get; set; } // e.g., +1, -2
+            public int Amount { get; set; }
         }
 
         /// <summary>
@@ -306,4 +277,3 @@ namespace ProjectVagabond
         public struct MoveAnimationCompleted { }
     }
 }
-#nullable restore

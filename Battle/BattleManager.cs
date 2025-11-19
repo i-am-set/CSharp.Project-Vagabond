@@ -1,21 +1,10 @@
 ﻿#nullable enable
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Text;
+using System;
 
 namespace ProjectVagabond.Battle
 {
@@ -559,7 +548,9 @@ namespace ProjectVagabond.Battle
         private void ProcessItemAction(QueuedAction action)
         {
             var gameState = ServiceLocator.Get<GameState>();
-            if (!gameState.ConsumeConsumable(action.ChosenItem.ItemID))
+
+            // Use the new specific inventory method
+            if (!gameState.PlayerState.RemoveConsumable(action.ChosenItem.ItemID))
             {
                 Debug.WriteLine($"[BattleManager] [ERROR] Failed to consume item '{action.ChosenItem.ItemID}'.");
                 return;
@@ -934,5 +925,3 @@ namespace ProjectVagabond.Battle
         }
     }
 }
-#nullable restore
-﻿

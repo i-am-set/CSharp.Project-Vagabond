@@ -17,26 +17,21 @@ namespace ProjectVagabond.Battle.UI
     public enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item }
     public class HoverHighlightState { public MoveData? CurrentMove; public List<BattleCombatant> Targets = new List<BattleCombatant>(); public float Timer = 0f; public const float SingleTargetFlashOnDuration = 0.4f; public const float SingleTargetFlashOffDuration = 0.2f; public const float MultiTargetFlashOnDuration = 0.4f; public const float MultiTargetFlashOffDuration = 0.4f; }
 
-    /// <summary>
-    /// Manages the state and interaction of all UI components in the battle scene, including menus and narration.
-    /// </summary>
     public class BattleUIManager
     {
-        public event Action<MoveData, SpellbookEntry, BattleCombatant>? OnMoveSelected;
+        public event Action<MoveData, MoveEntry, BattleCombatant>? OnMoveSelected;
         public event Action<ConsumableItemData, BattleCombatant>? OnItemSelected;
         public event Action? OnFleeRequested;
 
-        // UI Components
         private readonly BattleNarrator _battleNarrator;
         private readonly ActionMenu _actionMenu;
         private readonly ItemMenu _itemMenu;
         private readonly Button _itemTargetingBackButton;
 
-        // State
         public BattleUIState UIState { get; private set; } = BattleUIState.Default;
         public BattleSubMenuState SubMenuState { get; private set; } = BattleSubMenuState.None;
         public MoveData? MoveForTargeting { get; private set; }
-        public SpellbookEntry? SpellForTargeting => _actionMenu.SelectedSpellbookEntry;
+        public MoveEntry? SpellForTargeting => _actionMenu.SelectedSpellbookEntry;
         public ConsumableItemData? ItemForTargeting { get; private set; }
         public TargetType? TargetTypeForSelection =>
             UIState == BattleUIState.Targeting ? MoveForTargeting?.Target :
@@ -52,7 +47,6 @@ namespace ProjectVagabond.Battle.UI
 
         public bool IsBusy => _battleNarrator.IsBusy || _narrationQueue.Any();
 
-        // Control Prompt State
         private bool _isPromptVisible;
         private readonly List<Texture2D> _promptTextures = new List<Texture2D>();
         private int _promptTextureIndex;
@@ -79,7 +73,6 @@ namespace ProjectVagabond.Battle.UI
                 OnItemMenuRequested();
             };
 
-            // Wire up events from menus to internal handlers
             _actionMenu.OnMoveSelected += HandlePlayerMoveSelected;
             _actionMenu.OnItemMenuRequested += OnItemMenuRequested;
             _actionMenu.OnMovesMenuOpened += () => SubMenuState = BattleSubMenuState.ActionMoves;
@@ -145,7 +138,6 @@ namespace ProjectVagabond.Battle.UI
             UpdateHoverHighlights(gameTime);
             UpdateControlPrompt(gameTime);
 
-            // Always update the action menu to handle background animations like card discards.
             _actionMenu.Update(currentMouseState, gameTime);
 
             if (SubMenuState == BattleSubMenuState.Item)
@@ -159,7 +151,6 @@ namespace ProjectVagabond.Battle.UI
                 _itemTargetingBackButton.Update(currentMouseState);
             }
 
-            // Synchronize UI state with ActionMenu's internal state
             if (_actionMenu.CurrentMenuState == ActionMenu.MenuState.Targeting)
             {
                 UIState = BattleUIState.Targeting;
@@ -185,8 +176,6 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
-                // The main action menu content is only drawn when its submenu is active.
-                // The Draw method in ActionMenu already checks for visibility.
                 _actionMenu.Draw(spriteBatch, font, gameTime, transform);
             }
 
@@ -221,25 +210,24 @@ namespace ProjectVagabond.Battle.UI
                 currentHoveredButton = _itemMenu.HoveredButton;
             }
 
-            _isPromptVisible = true; // The prompt is now always visible.
+            _isPromptVisible = true;
 
             if (currentHoveredButton == null)
             {
-                if (_lastHoveredButton != null) // Only update if the state changes from hovered to not-hovered
+                if (_lastHoveredButton != null)
                 {
                     _promptTextures.Clear();
                     _promptTextures.Add(spriteManager.MousePromptDisabled);
                     _promptTextureIndex = 0;
                     _lastHoveredButton = null;
                 }
-                else if (!_promptTextures.Any()) // Initial setup for disabled state
+                else if (!_promptTextures.Any())
                 {
                     _promptTextures.Add(spriteManager.MousePromptDisabled);
                 }
                 return;
             }
 
-            // Check if the hovered button has changed
             if (currentHoveredButton != _lastHoveredButton)
             {
                 _lastHoveredButton = currentHoveredButton;
@@ -247,7 +235,6 @@ namespace ProjectVagabond.Battle.UI
                 _promptCycleTimer = 0f;
                 _promptTextureIndex = 0;
 
-                // Build the list of available actions, excluding the blank sprite
                 if (currentHoveredButton.HasLeftClickAction)
                 {
                     _promptTextures.Add(spriteManager.MousePromptLeftClick);
@@ -258,7 +245,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // Update the animation cycle only if there are multiple actions
             if (_promptTextures.Count > 1)
             {
                 _promptCycleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -270,7 +256,6 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
-                // If there's only one (or zero) actions, ensure we're showing the first one and not cycling.
                 _promptTextureIndex = 0;
             }
         }
@@ -328,7 +313,7 @@ namespace ProjectVagabond.Battle.UI
             _itemTargetingBackButton.Draw(spriteBatch, font, gameTime, transform);
         }
 
-        private void HandlePlayerMoveSelected(MoveData move, SpellbookEntry entry, BattleCombatant target)
+        private void HandlePlayerMoveSelected(MoveData move, MoveEntry entry, BattleCombatant target)
         {
             OnMoveSelected?.Invoke(move, entry, target);
         }
@@ -366,7 +351,6 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateHoverHighlights(GameTime gameTime)
         {
-            // The timer now updates every frame, regardless of hover state.
             HoverHighlightState.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             var hoveredMove = _actionMenu.HoveredMove;
@@ -396,4 +380,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-#nullable restore

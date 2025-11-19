@@ -1,7 +1,14 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,14 +24,12 @@ namespace ProjectVagabond
 
     public class GameState
     {
-        // Injected Dependencies
         private readonly NoiseMapManager _noiseManager;
         private readonly ComponentStore _componentStore;
         private readonly ChunkManager _chunkManager;
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
 
-        // Lazyloaded System Dependencies
         private ActionExecutionSystem _actionExecutionSystem;
 
         private bool _isExecutingActions = false;
@@ -60,12 +65,8 @@ namespace ProjectVagabond
         public int InitialActionCount { get; private set; }
         public bool IsActionQueueDirty { get; set; } = true;
 
-        // Fog of War
         public HashSet<Point> ExploredCells { get; private set; } = new HashSet<Point>();
         private const int FOG_OF_WAR_RADIUS = 40;
-
-
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, ChunkManager chunkManager, Global global, SpriteManager spriteManager)
         {
@@ -88,7 +89,6 @@ namespace ProjectVagabond
         {
             PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0));
 
-            // Initialize PlayerState from the player's base stats component
             PlayerState = new PlayerState();
             var baseStats = _componentStore.GetComponent<PlayerBaseStatsComponent>(PlayerEntityId);
             if (baseStats != null)
@@ -103,72 +103,58 @@ namespace ProjectVagabond
                 PlayerState.DefensiveElementIDs = new List<int>(baseStats.DefensiveElementIDs);
                 PlayerState.DefaultStrikeMoveID = baseStats.DefaultStrikeMoveID;
 
-                // Initialize spellbook with SpellbookEntry objects
-                PlayerState.SpellbookPages = new List<SpellbookEntry?>(new SpellbookEntry?[10]);
-                for (int i = 0; i < Math.Min(PlayerState.SpellbookPages.Count, baseStats.StartingMoveIDs.Count); i++)
+                // Initialize Move Inventories
+                PlayerState.Spells = new List<MoveEntry>();
+                PlayerState.Actions = new List<MoveEntry>();
+
+                // Parse Starting Moves
+                foreach (string moveId in baseStats.StartingMoveIDs)
                 {
-                    string moveId = baseStats.StartingMoveIDs[i];
-                    if (!string.IsNullOrEmpty(moveId))
+                    if (!string.IsNullOrEmpty(moveId) && BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
                     {
-                        PlayerState.SpellbookPages[i] = new SpellbookEntry(moveId, 0);
+                        if (moveData.MoveType == MoveType.Spell)
+                        {
+                            PlayerState.Spells.Add(new MoveEntry(moveId, 0));
+                        }
+                        else if (moveData.MoveType == MoveType.Action)
+                        {
+                            PlayerState.Actions.Add(new MoveEntry(moveId, 0));
+                        }
                     }
                 }
             }
 
-            // Populate starting equipped relics from the component into the new PlayerState
-            var passiveAbilitiesComp = _componentStore.GetComponent<PassiveAbilitiesComponent>(PlayerEntityId);
-            if (passiveAbilitiesComp != null)
-            {
-                for (int i = 0; i < Math.Min(PlayerState.EquippedRelics.Length, passiveAbilitiesComp.AbilityIDs.Count); i++)
-                {
-                    string relicId = passiveAbilitiesComp.AbilityIDs[i];
-                    // Add the starting relics to the inventory so they can be unequipped/re-equipped
-                    PlayerState.AddRelic(relicId);
-                    PlayerState.EquippedRelics[i] = relicId;
-                }
-            }
-
-
-            // Create and add the live CombatantStatsComponent to the player entity
+            // Create and add the live CombatantStatsComponent
             var liveStats = new CombatantStatsComponent
             {
                 Level = PlayerState.Level,
                 MaxHP = PlayerState.MaxHP,
-                CurrentHP = PlayerState.MaxHP, // Start with full health
+                CurrentHP = PlayerState.MaxHP,
                 MaxMana = PlayerState.MaxMana,
-                CurrentMana = PlayerState.MaxMana, // Start with full mana
+                CurrentMana = PlayerState.MaxMana,
                 Strength = PlayerState.Strength,
                 Intelligence = PlayerState.Intelligence,
                 Tenacity = PlayerState.Tenacity,
                 Agility = PlayerState.Agility,
                 DefensiveElementIDs = new List<int>(PlayerState.DefensiveElementIDs),
-                AvailableMoveIDs = PlayerState.SpellbookPages
-                                        .Where(p => p != null && !string.IsNullOrEmpty(p.MoveID))
-                                        .Select(p => p.MoveID)
-                                        .ToList()
+                // Combine known spells and actions for the component, just in case
+                AvailableMoveIDs = PlayerState.Spells.Select(m => m.MoveID).Concat(PlayerState.Actions.Select(m => m.MoveID)).ToList()
             };
             _componentStore.AddComponent(PlayerEntityId, liveStats);
 
-            // Initialize the render position to match the logical position
             var posComp = _componentStore.GetComponent<PositionComponent>(PlayerEntityId);
             if (posComp != null)
             {
                 _componentStore.AddComponent(PlayerEntityId, new RenderPositionComponent { WorldPosition = posComp.WorldPosition });
             }
 
-            // Add some starting items for testing
             PlayerState.AddConsumable("HealthPotion", 5);
             PlayerState.AddConsumable("StrengthTonic", 2);
             PlayerState.AddConsumable("FireScroll", 3);
 
-
-            // Initial map reveal
             UpdateExploration(PlayerWorldPos);
         }
 
-        /// <summary>
-        /// Resets the entire game state to its initial condition for a new game.
-        /// </summary>
         public void Reset()
         {
             PlayerEntityId = 0;
@@ -181,21 +167,6 @@ namespace ProjectVagabond
             IsPausedByConsole = false;
         }
 
-        /// <summary>
-        /// Safely consumes an item from the player's consumable inventory.
-        /// </summary>
-        /// <param name="itemID">The ID of the item to consume.</param>
-        /// <param name="quantity">The number of items to consume.</param>
-        /// <returns>True if the item was successfully consumed, false otherwise.</returns>
-        public bool ConsumeConsumable(string itemID, int quantity = 1)
-        {
-            return PlayerState.RemoveConsumable(itemID, quantity);
-        }
-
-        /// <summary>
-        /// Updates the set of explored cells based on the player's current position.
-        /// </summary>
-        /// <param name="centerPosition">The player's current world position.</param>
         public void UpdateExploration(Vector2 centerPosition)
         {
             int radius = FOG_OF_WAR_RADIUS;
@@ -219,14 +190,11 @@ namespace ProjectVagabond
 
         public void InitializeRenderableEntities()
         {
-            // Initialize textures for all entities that have a RenderableComponent but no texture assigned yet.
-            // This is a robust way to handle the player, NPCs, POIs, and any other future renderable entity type.
             var allEntitiesWithRenderable = _componentStore.GetAllEntitiesWithComponent<RenderableComponent>().ToList();
             foreach (var entityId in allEntitiesWithRenderable)
             {
                 var renderable = _componentStore.GetComponent<RenderableComponent>(entityId);
 
-                // If a texture is already assigned (e.g., by a more specific system), leave it alone.
                 if (renderable.Texture != null)
                 {
                     continue;
@@ -238,14 +206,10 @@ namespace ProjectVagabond
                 }
                 else
                 {
-                    // For any other entity (NPCs, POIs, etc.), assign a default 1x1 pixel.
-                    // The color property, loaded from the archetype JSON, will give it its appearance.
                     renderable.Texture = ServiceLocator.Get<Texture2D>();
                 }
             }
         }
-
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public void UpdateActiveEntities()
         {
@@ -293,12 +257,10 @@ namespace ProjectVagabond
         {
             mapData = default;
 
-            // 1. Terrain Check
             mapData = GetMapDataAt((int)position.X, (int)position.Y);
             if (!(mapData.TerrainHeight >= _global.WaterLevel && mapData.TerrainHeight < _global.MountainsLevel))
                 return false;
 
-            // 2. Entity Blocking Check
             if (position == targetDestination)
             {
                 return true;
@@ -309,7 +271,7 @@ namespace ProjectVagabond
                 return false;
             }
 
-            return true; // All checks passed
+            return true;
         }
 
         public bool IsPositionPassable(Vector2 position, MapView view, out MapData mapData)
@@ -332,15 +294,13 @@ namespace ProjectVagabond
                 var worldPosComp = _componentStore.GetComponent<PositionComponent>(entityId);
                 if (worldPosComp != null && worldPosComp.WorldPosition == position)
                 {
-                    // An entity is on this tile. Check if it's a blocking entity.
-                    // Blocking entities are mobile characters (Player or NPCs). POIs without these tags are passable.
                     if (_componentStore.HasComponent<PlayerTagComponent>(entityId))
                     {
-                        return true; // It's a character, so the tile is occupied.
+                        return true;
                     }
                 }
             }
-            return false; // No blocking entities found.
+            return false;
         }
 
         public int GetMovementTickCost(MovementMode mode, MapData mapData)
@@ -353,13 +313,12 @@ namespace ProjectVagabond
                 _ => 2
             };
 
-            // Apply world map terrain penalties
             ticks += mapData.TerrainHeight switch
             {
-                var height when height < _global.FlatlandsLevel => 0, // Flatlands are the baseline
-                var height when height < _global.HillsLevel => 1,     // Hills cost 1 extra tick
-                var height when height < _global.MountainsLevel => 2, // Mountains cost 2 extra ticks
-                _ => 99 // Impassable, but should be caught earlier
+                var height when height < _global.FlatlandsLevel => 0,
+                var height when height < _global.HillsLevel => 1,
+                var height when height < _global.MountainsLevel => 2,
+                _ => 99
             };
 
             return ticks;
@@ -398,8 +357,6 @@ namespace ProjectVagabond
             switch (outcome.OutcomeType)
             {
                 case "GiveItem":
-                    // Assuming narrative "GiveItem" is always for consumables for now.
-                    // This can be expanded later if needed.
                     PlayerState.AddConsumable(outcome.Value);
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {outcome.Value}!" });
                     break;

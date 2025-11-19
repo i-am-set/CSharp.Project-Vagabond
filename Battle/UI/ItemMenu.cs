@@ -2,18 +2,13 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using System.Text;
 
 namespace ProjectVagabond.Battle.UI
@@ -101,7 +96,8 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var gameState = ServiceLocator.Get<GameState>();
 
-            var items = gameState.PlayerState.ConsumableInventory
+            // --- Use Consumables Inventory ---
+            var items = gameState.PlayerState.Consumables
                 .Where(kvp => kvp.Value > 0)
                 .OrderBy(kvp => kvp.Key)
                 .ToList();
@@ -192,7 +188,6 @@ namespace ProjectVagabond.Battle.UI
 
         private void OpenSortMenu()
         {
-            // Placeholder for future sorting logic
         }
 
         public void Update(MouseState currentMouseState, GameTime gameTime)
@@ -203,7 +198,7 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
 
-            HoveredButton = null; // Reset at the start of each frame
+            HoveredButton = null;
 
             if (_sortContextMenu.IsOpen)
             {
@@ -316,9 +311,8 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var spriteManager = ServiceLocator.Get<SpriteManager>();
 
-            // --- Layout Constants ---
             const int horizontalPadding = 10;
-            const int dividerY = 122; // Was 114
+            const int dividerY = 122;
             const int menuVerticalOffset = 4;
             const int itemListHeight = 37;
             const int bottomBarTopPadding = 5;
@@ -332,7 +326,6 @@ namespace ProjectVagabond.Battle.UI
             int gridStartX = horizontalPadding + (Global.VIRTUAL_WIDTH - (horizontalPadding * 2) - totalGridWidth) / 2;
 
             var bgSprite = spriteManager.ActionMovesBackgroundSprite;
-            // The background rectangle height is now derived from itemListHeight to maintain the border.
             var bgRect = new Rectangle(gridStartX - 1, dividerY + menuVerticalOffset - 1, 294, itemListHeight + 2);
             spriteBatch.DrawSnapped(bgSprite, bgRect, Color.White);
 
@@ -416,15 +409,13 @@ namespace ProjectVagabond.Battle.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            // --- Layout Constants from Screenshot ---
             const int boxWidth = 294;
             const int boxHeight = 47;
-            const int boxY = 125; // Was 117
+            const int boxY = 125;
             int boxX = (Global.VIRTUAL_WIDTH - boxWidth) / 2;
 
             var tooltipBounds = new Rectangle(boxX, boxY, boxWidth, boxHeight);
 
-            // Draw the border
             spriteBatch.DrawLineSnapped(new Vector2(tooltipBounds.Left, tooltipBounds.Top), new Vector2(tooltipBounds.Right, tooltipBounds.Top), _global.Palette_White);
             spriteBatch.DrawLineSnapped(new Vector2(tooltipBounds.Left, tooltipBounds.Bottom), new Vector2(tooltipBounds.Right, tooltipBounds.Bottom), _global.Palette_White);
             spriteBatch.DrawLineSnapped(new Vector2(tooltipBounds.Left, tooltipBounds.Top), new Vector2(tooltipBounds.Left, tooltipBounds.Bottom), _global.Palette_White);
@@ -432,7 +423,6 @@ namespace ProjectVagabond.Battle.UI
 
             if (_itemForTooltip != null)
             {
-                // 1. Draw Item Name
                 var itemName = _itemForTooltip.ItemName.ToUpper();
                 var nameSize = font.MeasureString(itemName);
                 var namePos = new Vector2(
@@ -441,8 +431,7 @@ namespace ProjectVagabond.Battle.UI
                 );
                 spriteBatch.DrawStringSnapped(font, itemName, namePos, _global.Palette_BrightWhite);
 
-                // 2. Draw Description (wrapped)
-                string effectText = GetItemEffectDescription(_itemForTooltip);
+                string effectText = _itemForTooltip.Description.ToUpper();
                 var wrappedLines = WrapTextByCharCount(effectText, 46);
                 float currentY = namePos.Y + nameSize.Height + 6;
 
@@ -458,7 +447,6 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            // Draw the back button
             int backButtonY = tooltipBounds.Bottom + 4;
             var backSize = secondaryFont.MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
@@ -475,7 +463,7 @@ namespace ProjectVagabond.Battle.UI
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             const int horizontalPadding = 10;
-            const int dividerY = 122; // Was 114
+            const int dividerY = 122;
             const int menuVerticalOffset = 4;
             const int bottomBarTopPadding = 5;
             const int itemWidth = 145;
@@ -513,11 +501,6 @@ namespace ProjectVagabond.Battle.UI
 
             _yesButton.Draw(spriteBatch, font, gameTime, transform);
             _noButton.Draw(spriteBatch, font, gameTime, transform);
-        }
-
-        private string GetItemEffectDescription(ConsumableItemData item)
-        {
-            return item.Description.ToUpper();
         }
 
         private List<string> WrapTextByCharCount(string text, int maxCharsPerLine)
@@ -563,5 +546,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-#nullable restore
-﻿

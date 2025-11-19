@@ -1,18 +1,19 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
 {
-    /// <summary>
-    /// Handles all player input during a battle, including targeting and menu navigation shortcuts.
-    /// </summary>
     public class BattleInputHandler
     {
-        public event Action<MoveData, SpellbookEntry, BattleCombatant> OnMoveTargetSelected;
+        public event Action<MoveData, MoveEntry, BattleCombatant> OnMoveTargetSelected;
         public event Action<ConsumableItemData, BattleCombatant> OnItemTargetSelected;
         public event Action OnBackRequested;
 
@@ -64,7 +65,7 @@ namespace ProjectVagabond.Battle.UI
                         {
                             OnMoveTargetSelected?.Invoke(uiManager.MoveForTargeting, uiManager.SpellForTargeting, selectedTarget);
                         }
-                        else // ItemTargeting
+                        else
                         {
                             OnItemTargetSelected?.Invoke(uiManager.ItemForTargeting, selectedTarget);
                         }

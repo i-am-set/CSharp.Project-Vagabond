@@ -1,20 +1,6 @@
-﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
-using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -26,15 +12,12 @@ namespace ProjectVagabond.Battle
         /// <summary>
         /// Creates a BattleCombatant instance from a given entity ID.
         /// </summary>
-        /// <param name="entityId">The ID of the entity to convert.</param>
-        /// <param name="combatantId">A unique ID for the combatant within the battle context.</param>
-        /// <returns>A fully populated BattleCombatant object, or null if the entity is missing required components.</returns>
         public static BattleCombatant CreateFromEntity(int entityId, string combatantId)
         {
             var componentStore = ServiceLocator.Get<ComponentStore>();
             var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
             var gameState = ServiceLocator.Get<GameState>();
-            // An entity must have stats to be a combatant.
+
             var statsComponent = componentStore.GetComponent<CombatantStatsComponent>(entityId);
             if (statsComponent == null)
             {
@@ -61,53 +44,56 @@ namespace ProjectVagabond.Battle
                 {
                     Level = statsComponent.Level,
                     MaxHP = statsComponent.MaxHP,
-                    CurrentHP = statsComponent.CurrentHP, // Use current health from component
+                    CurrentHP = statsComponent.CurrentHP,
                     MaxMana = statsComponent.MaxMana,
-                    CurrentMana = statsComponent.CurrentMana, // Use current mana from component
+                    CurrentMana = statsComponent.CurrentMana,
                     Strength = statsComponent.Strength,
                     Intelligence = statsComponent.Intelligence,
                     Tenacity = statsComponent.Tenacity,
                     Agility = statsComponent.Agility
                 },
                 DefensiveElementIDs = new List<int>(statsComponent.DefensiveElementIDs),
-                EscalationStacks = 0 // Ensure stacks are reset at the start of battle
+                EscalationStacks = 0
             };
 
-            // Initialize visual HP to be the same as logical HP at the start of battle.
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
             if (combatant.IsPlayerControlled)
             {
+                // Player setup from PlayerState
                 combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
                 combatant.EquippedSpells = gameState.PlayerState.EquippedSpells;
 
-                // Populate passive abilities from the player's equipped relics.
-                if (gameState.PlayerState.EquippedRelics != null)
+                // Load Passive Abilities from EQUIPPED relics only
+                foreach (var relicId in gameState.PlayerState.EquippedRelics)
                 {
-                    foreach (var relicId in gameState.PlayerState.EquippedRelics)
+                    if (!string.IsNullOrEmpty(relicId))
                     {
-                        if (!string.IsNullOrEmpty(relicId) && BattleDataCache.Abilities.TryGetValue(relicId, out var abilityData))
+                        // Note: We assume RelicID matches AbilityID in data
+                        if (BattleDataCache.Abilities.TryGetValue(relicId, out var abilityData))
                         {
                             combatant.ActiveAbilities.Add(abilityData);
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"[BattleCombatantFactory] [WARNING] Relic/Ability ID '{relicId}' not found for player.");
                         }
                     }
                 }
 
-
-                // Apply temporary buffs from narrative choices
+                // Apply temporary buffs
                 var tempBuffsComp = componentStore.GetComponent<TemporaryBuffsComponent>(entityId);
                 if (tempBuffsComp != null)
                 {
                     foreach (var buff in tempBuffsComp.Buffs)
                     {
-                        // Apply with a long duration; they are managed by battle count, not turns.
                         combatant.AddStatusEffect(new StatusEffectInstance(buff.EffectType, 99));
                     }
                 }
             }
             else
             {
-                // For non-player combatants, populate their static move list from the archetype.
+                // Enemy setup from component
                 var staticMoves = new List<MoveData>();
                 foreach (var moveId in statsComponent.AvailableMoveIDs)
                 {
@@ -115,14 +101,10 @@ namespace ProjectVagabond.Battle
                     {
                         staticMoves.Add(moveData);
                     }
-                    else
-                    {
-                        Debug.WriteLine($"[BattleCombatantFactory] [WARNING] MoveID '{moveId}' not found in cache for combatant '{combatant.Name}'.");
-                    }
                 }
                 combatant.SetStaticMoves(staticMoves);
 
-                // Populate passive abilities for enemies from their component
+                // Load passive abilities from component (Enemies don't have inventory)
                 var abilitiesComponent = componentStore.GetComponent<PassiveAbilitiesComponent>(entityId);
                 if (abilitiesComponent != null)
                 {
@@ -132,10 +114,6 @@ namespace ProjectVagabond.Battle
                         {
                             combatant.ActiveAbilities.Add(abilityData);
                         }
-                        else
-                        {
-                            Debug.WriteLine($"[BattleCombatantFactory] [WARNING] AbilityID '{abilityId}' not found in cache for combatant '{combatant.Name}'.");
-                        }
                     }
                 }
             }
@@ -144,4 +122,3 @@ namespace ProjectVagabond.Battle
         }
     }
 }
-﻿

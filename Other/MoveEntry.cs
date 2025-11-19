@@ -1,30 +1,29 @@
 ﻿namespace ProjectVagabond
 {
     /// <summary>
-    /// Represents a single entry in the player's spellbook, containing a move
+    /// Represents a single move entry in the player's list (Spell or Action), containing the MoveID
     /// and a persistent counter for how many times it has been used.
     /// </summary>
-    public class SpellbookEntry
+    public class MoveEntry
     {
         public string MoveID { get; set; }
         public int TimesUsed { get; set; }
 
-        public SpellbookEntry(string moveId, int timesUsed = 0)
+        public MoveEntry(string moveId, int timesUsed = 0)
         {
             MoveID = moveId;
             TimesUsed = timesUsed;
         }
 
         // Parameterless constructor for serialization if needed in the future.
-        public SpellbookEntry() { }
+        public MoveEntry() { }
 
         /// <summary>
-        /// Creates a shallow copy of the SpellbookEntry. This is sufficient because
-        /// its properties (string, int) are value types or immutable.
+        /// Creates a shallow copy of the MoveEntry.
         /// </summary>
-        public SpellbookEntry Clone()
+        public MoveEntry Clone()
         {
-            return (SpellbookEntry)this.MemberwiseClone();
+            return (MoveEntry)this.MemberwiseClone();
         }
     }
 }

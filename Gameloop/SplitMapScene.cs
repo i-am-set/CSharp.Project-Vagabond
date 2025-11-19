@@ -393,7 +393,6 @@ namespace ProjectVagabond.Scenes
                 _targetCameraOffset = new Vector2(0, -200);
                 _cameraOffset = _targetCameraOffset; // Snap instantly
                 _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
-                UpdateInventorySlots();
             }
             else
             {
@@ -613,7 +612,6 @@ namespace ProjectVagabond.Scenes
                             slot.RandomizeFrame(slotFrames);
                         }
                     }
-                    UpdateInventorySlots();
                 }
                 _previousInventoryCategory = _selectedInventoryCategory;
 
@@ -1277,59 +1275,6 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void UpdateInventorySlots()
-        {
-            foreach (var slot in _inventorySlots)
-            {
-                slot.Clear();
-            }
-
-            int slotIndex = 0;
-
-            switch (_selectedInventoryCategory)
-            {
-                case InventoryCategory.Weapons:
-                    var weapons = _gameState.PlayerState.WeaponsInventory.ToList();
-                    for (int i = 0; i < weapons.Count && slotIndex < _inventorySlots.Count; i++, slotIndex++)
-                    {
-                        _inventorySlots[slotIndex].AssignItem(weapons[i].Key, weapons[i].Value);
-                    }
-                    break;
-                case InventoryCategory.Armor:
-                    var armors = _gameState.PlayerState.ArmorsInventory.ToList();
-                    for (int i = 0; i < armors.Count && slotIndex < _inventorySlots.Count; i++, slotIndex++)
-                    {
-                        _inventorySlots[slotIndex].AssignItem(armors[i].Key, armors[i].Value);
-                    }
-                    break;
-                case InventoryCategory.Spells:
-                    var spells = _gameState.PlayerState.SpellbookPages;
-                    for (int i = 0; i < spells.Count && slotIndex < _inventorySlots.Count; i++)
-                    {
-                        if (spells[i] != null)
-                        {
-                            _inventorySlots[slotIndex].AssignItem(spells[i]!.MoveID, 1); // Spells have quantity 1
-                            slotIndex++;
-                        }
-                    }
-                    break;
-                case InventoryCategory.Relics:
-                    var relics = _gameState.PlayerState.RelicInventory.ToList();
-                    for (int i = 0; i < relics.Count && slotIndex < _inventorySlots.Count; i++, slotIndex++)
-                    {
-                        _inventorySlots[slotIndex].AssignItem(relics[i].Key, relics[i].Value);
-                    }
-                    break;
-                case InventoryCategory.Consumables:
-                    var consumables = _gameState.PlayerState.ConsumableInventory.ToList();
-                    for (int i = 0; i < consumables.Count && slotIndex < _inventorySlots.Count; i++, slotIndex++)
-                    {
-                        _inventorySlots[slotIndex].AssignItem(consumables[i].Key, consumables[i].Value);
-                    }
-                    break;
-            }
-        }
-
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             if (_currentMap == null) return;
@@ -1437,45 +1382,89 @@ namespace ProjectVagabond.Scenes
                 // Draw the inventory slots
                 const int slotSize = 48;
                 var slotOrigin = new Vector2(slotSize / 2f);
+
+                // Populate current items based on category
+                var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses)>();
                 var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-                const int slotPadding = 4;
 
-                foreach (var slot in _inventorySlots)
+                switch (_selectedInventoryCategory)
                 {
-                    spriteBatch.DrawSnapped(
-                        _spriteManager.InventorySlotIdleSpriteSheet,
-                        slot.Position,
-                        slot.SourceRectangle,
-                        Color.White,
-                        0f,
-                        slotOrigin,
-                        1f,
-                        SpriteEffects.None,
-                        0f
-                    );
-
-                    if (!string.IsNullOrEmpty(slot.ItemId))
-                    {
-                        // Draw Item ID
-                        var itemIdText = slot.ItemId;
-                        var textSize = secondaryFont.MeasureString(itemIdText);
-                        var textPosition = new Vector2(
-                            slot.Position.X - textSize.Width / 2f,
-                            slot.Position.Y - textSize.Height / 2f
-                        );
-                        spriteBatch.DrawStringSnapped(secondaryFont, itemIdText, textPosition, _global.Palette_BrightWhite);
-
-                        // Draw Quantity
-                        if (slot.Quantity > 1)
+                    case InventoryCategory.Weapons:
+                        foreach (var kvp in _gameState.PlayerState.Weapons) currentItems.Add((kvp.Key, kvp.Value, null, null));
+                        break;
+                    case InventoryCategory.Armor:
+                        foreach (var kvp in _gameState.PlayerState.Armors) currentItems.Add((kvp.Key, kvp.Value, null, null));
+                        break;
+                    case InventoryCategory.Relics:
+                        foreach (var kvp in _gameState.PlayerState.Relics)
                         {
-                            var quantityText = $"x{slot.Quantity}";
-                            var quantitySize = secondaryFont.MeasureString(quantityText);
-                            var slotRect = new Rectangle((int)(slot.Position.X - slotSize / 2f), (int)(slot.Position.Y - slotSize / 2f), slotSize, slotSize);
-                            var quantityPosition = new Vector2(
-                                slotRect.Right - quantitySize.Width - slotPadding,
-                                slotRect.Bottom - quantitySize.Height - slotPadding
-                            );
-                            spriteBatch.DrawStringSnapped(secondaryFont, quantityText, quantityPosition, _global.Palette_Gray);
+                            if (BattleDataCache.Abilities.TryGetValue(kvp.Key, out var data))
+                                currentItems.Add((data.RelicName, kvp.Value, data.RelicImagePath, null));
+                            else
+                                currentItems.Add((kvp.Key, kvp.Value, null, null));
+                        }
+                        break;
+                    case InventoryCategory.Consumables:
+                        foreach (var kvp in _gameState.PlayerState.Consumables)
+                        {
+                            if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
+                                currentItems.Add((data.ItemName, kvp.Value, null, null));
+                            else
+                                currentItems.Add((kvp.Key, kvp.Value, null, null));
+                        }
+                        break;
+                    case InventoryCategory.Spells:
+                        // Spells are stored as objects, iterate list
+                        foreach (var entry in _gameState.PlayerState.Spells)
+                        {
+                            if (entry != null)
+                            {
+                                if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
+                                    currentItems.Add((moveData.MoveName, 1, null, null)); // Spells don't stack quantity in same way, show 1
+                                else
+                                    currentItems.Add((entry.MoveID, 1, null, null));
+                            }
+                        }
+                        break;
+                }
+
+                for (int i = 0; i < _inventorySlots.Count; i++)
+                {
+                    var slot = _inventorySlots[i];
+
+                    // Draw Slot BG
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, slot.Position, slot.SourceRectangle, Color.White, 0f, slotOrigin, 1f, SpriteEffects.None, 0f);
+
+                    // Draw Item Content if exists
+                    if (i < currentItems.Count)
+                    {
+                        var item = currentItems[i];
+
+                        // Draw Icon (if available) or Text
+                        if (!string.IsNullOrEmpty(item.IconPath))
+                        {
+                            var icon = _spriteManager.GetRelicSprite(item.IconPath);
+                            if (icon != null)
+                            {
+                                spriteBatch.DrawSnapped(icon, slot.Position, null, Color.White, 0f, new Vector2(icon.Width / 2f, icon.Height / 2f), 1f, SpriteEffects.None, 0f);
+                            }
+                        }
+                        else
+                        {
+                            // Draw Name centered (truncated if too long)
+                            string displayName = item.Name;
+                            if (displayName.Length > 8) displayName = displayName.Substring(0, 6) + "..";
+                            var textSize = secondaryFont.MeasureString(displayName);
+                            spriteBatch.DrawStringSnapped(secondaryFont, displayName, slot.Position - new Vector2(textSize.Width / 2f, textSize.Height / 2f), _global.Palette_BrightWhite);
+                        }
+
+                        // Draw Quantity (if > 1)
+                        if (item.Quantity > 1)
+                        {
+                            string qty = $"x{item.Quantity}";
+                            var qtySize = secondaryFont.MeasureString(qty);
+                            var qtyPos = slot.Position + new Vector2(slotSize / 2f - qtySize.Width - 4, slotSize / 2f - qtySize.Height - 4);
+                            spriteBatch.DrawStringSnapped(secondaryFont, qty, qtyPos, _global.Palette_LightGray);
                         }
                     }
                 }

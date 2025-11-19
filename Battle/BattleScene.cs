@@ -1,4 +1,4 @@
-﻿﻿#nullable enable
+﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -448,7 +448,7 @@ namespace ProjectVagabond.Scenes
             else
             {
                 // Normal battle rewards spells
-                var playerSpells = _gameState.PlayerState?.SpellbookPages.Where(p => p != null).Select(p => p.MoveID);
+                var playerSpells = _gameState.PlayerState?.Spells.Select(p => p.MoveID);
                 var excludeIds = playerSpells != null ? new HashSet<string>(playerSpells) : null;
                 choices.AddRange(_choiceGenerator.GenerateSpellChoices(gameStage, numberOfChoices, excludeIds));
             }
@@ -574,7 +574,7 @@ namespace ProjectVagabond.Scenes
         }
 
         #region Event Handlers
-        private void OnPlayerMoveSelected(MoveData move, SpellbookEntry entry, BattleCombatant target)
+        private void OnPlayerMoveSelected(MoveData move, MoveEntry entry, BattleCombatant target)
         {
             var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
             if (player != null)
@@ -585,7 +585,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void OnPlayerMoveTargetSelected(MoveData move, SpellbookEntry entry, BattleCombatant target)
+        private void OnPlayerMoveTargetSelected(MoveData move, MoveEntry entry, BattleCombatant target)
         {
             OnPlayerMoveSelected(move, entry, target);
         }
@@ -906,4 +906,3 @@ namespace ProjectVagabond.Scenes
         #endregion
     }
 }
-#nullable restore

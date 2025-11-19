@@ -3,9 +3,11 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace ProjectVagabond.Battle.UI
@@ -13,7 +15,7 @@ namespace ProjectVagabond.Battle.UI
     public class MoveButton : Button
     {
         public MoveData Move { get; }
-        public SpellbookEntry Entry { get; }
+        public MoveEntry Entry { get; }
         public int DisplayPower { get; }
         private readonly BitmapFont _moveFont;
         private readonly Texture2D _backgroundSpriteSheet;
@@ -23,13 +25,11 @@ namespace ProjectVagabond.Battle.UI
         public Texture2D IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
 
-        // Animation State
         private enum AnimationState { Hidden, Idle, Appearing }
         private AnimationState _animState = AnimationState.Idle;
         private float _appearTimer = 0f;
-        private const float APPEAR_DURATION = 0.25f; // Duration of the appear animation
+        private const float APPEAR_DURATION = 0.25f;
 
-        // Scrolling Text State
         private bool _isScrollingInitialized = false;
         private float _scrollPosition = 0f;
         private float _scrollWaitTimer = 0f;
@@ -37,20 +37,18 @@ namespace ProjectVagabond.Battle.UI
         private enum ScrollState { PausedAtStart, Scrolling, PausedAtLoopPoint }
         private ScrollState _scrollState = ScrollState.PausedAtStart;
 
-        // Scrolling Tuning
-        private const float SCROLL_SPEED = 25f; // pixels per second
-        private const float SCROLL_PAUSE_DURATION = 1.5f; // seconds
-        private const int SCROLL_GAP_SPACES = 3; // Number of space characters to use as a gap
+        private const float SCROLL_SPEED = 25f;
+        private const float SCROLL_PAUSE_DURATION = 1.5f;
+        private const int SCROLL_GAP_SPACES = 3;
 
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
-        // Overlay Fade Animation
         private static readonly Random _random = new Random();
         private float _overlayFadeTimer;
         private const float OVERLAY_FADE_SPEED = 2.0f;
 
 
-        public MoveButton(MoveData move, SpellbookEntry entry, int displayPower, BitmapFont font, Texture2D backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
+        public MoveButton(MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
             Move = move;
@@ -61,7 +59,7 @@ namespace ProjectVagabond.Battle.UI
             IconTexture = iconTexture;
             IconSourceRect = iconSourceRect;
             _animState = startVisible ? AnimationState.Idle : AnimationState.Hidden;
-            _overlayFadeTimer = (float)(_random.NextDouble() * Math.PI * 2.0); // Random start phase for desynchronization
+            _overlayFadeTimer = (float)(_random.NextDouble() * Math.PI * 2.0);
             HasRightClickHint = true;
         }
 
@@ -102,9 +100,9 @@ namespace ProjectVagabond.Battle.UI
                     _scrollPosition += SCROLL_SPEED * dt;
                     if (_scrollPosition >= _loopWidth)
                     {
-                        _scrollPosition = _loopWidth; // Clamp to the exact loop point
+                        _scrollPosition = _loopWidth;
                         _scrollState = ScrollState.PausedAtLoopPoint;
-                        _scrollWaitTimer = 1.0f; // The requested 1-second pause
+                        _scrollWaitTimer = 1.0f;
                     }
                     break;
 
@@ -112,8 +110,6 @@ namespace ProjectVagabond.Battle.UI
                     _scrollWaitTimer -= dt;
                     if (_scrollWaitTimer <= 0)
                     {
-                        // This is the key part. After the pause, we wrap the position
-                        // and immediately continue scrolling in the same frame.
                         _scrollPosition -= _loopWidth;
                         _scrollState = ScrollState.Scrolling;
                     }
@@ -135,7 +131,6 @@ namespace ProjectVagabond.Battle.UI
             float hoverOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
             _overlayFadeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // --- Animation Scaling ---
             float scaleX = 1.0f;
             float scaleY = 1.0f;
             if (_animState == AnimationState.Appearing)
@@ -143,7 +138,6 @@ namespace ProjectVagabond.Battle.UI
                 _appearTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
                 float progress = Math.Clamp(_appearTimer / APPEAR_DURATION, 0f, 1f);
 
-                // Pop in vertically
                 scaleY = Easing.EaseOutBack(progress);
 
                 if (progress >= 1.0f)
@@ -154,7 +148,6 @@ namespace ProjectVagabond.Battle.UI
 
             if (scaleX < 0.01f || scaleY < 0.01f) return;
 
-            // --- Calculate Animated Bounds ---
             int animatedWidth = (int)(Bounds.Width * scaleX);
             int animatedHeight = (int)(Bounds.Height * scaleY);
             var animatedBounds = new Rectangle(
@@ -164,7 +157,6 @@ namespace ProjectVagabond.Battle.UI
                 animatedHeight
             );
 
-            // --- Determine Tint Color ---
             Color finalTintColor;
             if (tintColorOverride.HasValue)
             {
@@ -178,12 +170,10 @@ namespace ProjectVagabond.Battle.UI
                 else if (isActivated) finalTintColor = _global.ButtonHoverColor;
             }
 
-            // Only draw contents if the button is mostly visible to avoid squashed text/icons
             if (scaleX > 0.1f && scaleY > 0.1f)
             {
                 float contentAlpha = finalTintColor.A / 255f;
 
-                // --- Draw Icon/Placeholder ---
                 const int iconSize = 9;
                 const int iconPadding = 4;
                 var iconRect = new Rectangle(
@@ -199,24 +189,21 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink * contentAlpha); // Fallback
+                    spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink * contentAlpha);
                 }
 
-                // --- Prepare for text drawing ---
                 var textColor = isActivated && canAfford ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
                 if (!canAfford)
                 {
                     textColor = _global.ButtonDisableColor;
                 }
 
-                // --- Calculate available space for move name ---
                 float textStartX = iconRect.Right + iconPadding;
                 const int textRightMargin = 4;
                 float textAvailableWidth = animatedBounds.Right - textStartX - textRightMargin;
                 var moveNameTextSize = _moveFont.MeasureString(this.Text);
                 bool needsScrolling = moveNameTextSize.Width > textAvailableWidth;
 
-                // --- Draw Move Name (static or scrolling) ---
                 if (needsScrolling)
                 {
                     if (!_isScrollingInitialized)
@@ -255,7 +242,6 @@ namespace ProjectVagabond.Battle.UI
                     spriteBatch.DrawStringSnapped(_moveFont, this.Text, textPosition, textColor * contentAlpha);
                 }
 
-                // --- Draw "NO MANA" overlay ---
                 if (!canAfford && isActivated)
                 {
                     string noManaText = "NOT ENOUGH MANA";
@@ -270,4 +256,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-#nullable restore

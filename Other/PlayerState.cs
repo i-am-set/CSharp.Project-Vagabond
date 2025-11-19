@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -11,17 +12,14 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 
 namespace ProjectVagabond
 {
     /// <summary>
     /// Holds all dynamic, persistent data for the player character.
-    /// This acts as the single source of truth for the player's state,
-    /// separate from their static archetype definition.
+    /// This acts as the single source of truth for the player's state.
     /// </summary>
     public class PlayerState
     {
@@ -36,72 +34,162 @@ namespace ProjectVagabond
         public List<int> DefensiveElementIDs { get; set; } = new List<int>();
         public string DefaultStrikeMoveID { get; set; }
 
-        // --- Inventories ---
-        public Dictionary<string, int> WeaponsInventory { get; set; } = new Dictionary<string, int>();
-        public Dictionary<string, int> ArmorsInventory { get; set; } = new Dictionary<string, int>();
-        public Dictionary<string, int> RelicInventory { get; set; } = new Dictionary<string, int>();
-        public Dictionary<string, int> ConsumableInventory { get; set; } = new Dictionary<string, int>();
+        // --- INVENTORIES ---
+        // String ID -> Quantity
+        public Dictionary<string, int> Weapons { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> Armors { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> Relics { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> Consumables { get; set; } = new Dictionary<string, int>();
 
-        // --- Spell Management ---
+        // --- MOVES ---
         /// <summary>
-        /// Represents the player's spellbook. The size of the list is the number of
-        /// spell pages the player has. A null entry indicates an empty page.
+        /// Stores infinite list of acquired Spells.
         /// </summary>
-        public List<SpellbookEntry?> SpellbookPages { get; set; } = new List<SpellbookEntry?>();
+        public List<MoveEntry> Spells { get; set; } = new List<MoveEntry>();
 
         /// <summary>
-        /// Represents the player's 4-slot combat loadout. Holds references to entries in the SpellbookPages.
+        /// Stores infinite list of acquired Actions.
         /// </summary>
-        public SpellbookEntry?[] EquippedSpells { get; set; } = new SpellbookEntry?[4];
+        public List<MoveEntry> Actions { get; set; } = new List<MoveEntry>();
 
-        // --- Equipment ---
+        // --- EQUIPMENT ---
         public string? EquippedWeaponId { get; set; }
         public string? EquippedArmorId { get; set; }
+
+        /// <summary>
+        /// The player's 3 active relic slots. Only these provide passive abilities in combat.
+        /// </summary>
         public string?[] EquippedRelics { get; set; } = new string?[3];
 
+        /// <summary>
+        /// The player's 4 active combat move slots (Spells only).
+        /// </summary>
+        public MoveEntry?[] EquippedSpells { get; set; } = new MoveEntry?[4];
 
-        #region Inventory Management
-        private void AddItemToInventory(Dictionary<string, int> inventory, string itemId, int quantity)
+        // --- WEAPON MANAGEMENT ---
+        public void AddWeapon(string weaponId, int quantity = 1)
         {
-            if (inventory.ContainsKey(itemId))
+            if (Weapons.ContainsKey(weaponId)) Weapons[weaponId] += quantity;
+            else Weapons[weaponId] = quantity;
+        }
+
+        public void RemoveWeapon(string weaponId, int quantity = 1)
+        {
+            if (Weapons.TryGetValue(weaponId, out int current))
             {
-                inventory[itemId] += quantity;
-            }
-            else
-            {
-                inventory[itemId] = quantity;
+                Weapons[weaponId] = Math.Max(0, current - quantity);
+                if (Weapons[weaponId] == 0) Weapons.Remove(weaponId);
+
+                if (EquippedWeaponId == weaponId && Weapons.GetValueOrDefault(weaponId) == 0)
+                    EquippedWeaponId = null;
             }
         }
 
-        private bool RemoveItemFromInventory(Dictionary<string, int> inventory, string itemId, int quantity)
+        // --- ARMOR MANAGEMENT ---
+        public void AddArmor(string armorId, int quantity = 1)
         {
-            if (inventory.TryGetValue(itemId, out int currentQuantity))
+            if (Armors.ContainsKey(armorId)) Armors[armorId] += quantity;
+            else Armors[armorId] = quantity;
+        }
+
+        public void RemoveArmor(string armorId, int quantity = 1)
+        {
+            if (Armors.TryGetValue(armorId, out int current))
             {
-                if (currentQuantity <= quantity)
+                Armors[armorId] = Math.Max(0, current - quantity);
+                if (Armors[armorId] == 0) Armors.Remove(armorId);
+
+                if (EquippedArmorId == armorId && Armors.GetValueOrDefault(armorId) == 0)
+                    EquippedArmorId = null;
+            }
+        }
+
+        // --- RELIC MANAGEMENT ---
+        public void AddRelic(string relicId, int quantity = 1)
+        {
+            if (Relics.ContainsKey(relicId)) Relics[relicId] += quantity;
+            else Relics[relicId] = quantity;
+        }
+
+        public void RemoveRelic(string relicId, int quantity = 1)
+        {
+            if (Relics.TryGetValue(relicId, out int current))
+            {
+                Relics[relicId] = Math.Max(0, current - quantity);
+                if (Relics[relicId] == 0) Relics.Remove(relicId);
+
+                if (!Relics.ContainsKey(relicId))
                 {
-                    inventory.Remove(itemId);
+                    for (int i = 0; i < EquippedRelics.Length; i++)
+                    {
+                        if (EquippedRelics[i] == relicId) EquippedRelics[i] = null;
+                    }
                 }
-                else
-                {
-                    inventory[itemId] -= quantity;
-                }
+            }
+        }
+
+        // --- CONSUMABLE MANAGEMENT ---
+        public void AddConsumable(string itemId, int quantity = 1)
+        {
+            if (Consumables.ContainsKey(itemId)) Consumables[itemId] += quantity;
+            else Consumables[itemId] = quantity;
+        }
+
+        public bool RemoveConsumable(string itemId, int quantity = 1)
+        {
+            if (Consumables.TryGetValue(itemId, out int current) && current >= quantity)
+            {
+                Consumables[itemId] -= quantity;
+                if (Consumables[itemId] <= 0) Consumables.Remove(itemId);
                 return true;
             }
             return false;
         }
 
-        public void AddWeapon(string weaponId, int quantity = 1) => AddItemToInventory(WeaponsInventory, weaponId, quantity);
-        public bool RemoveWeapon(string weaponId, int quantity = 1) => RemoveItemFromInventory(WeaponsInventory, weaponId, quantity);
+        // --- MOVE MANAGEMENT ---
+        public void AddMove(string moveId)
+        {
+            if (!BattleDataCache.Moves.TryGetValue(moveId, out var moveData)) return;
 
-        public void AddArmor(string armorId, int quantity = 1) => AddItemToInventory(ArmorsInventory, armorId, quantity);
-        public bool RemoveArmor(string armorId, int quantity = 1) => RemoveItemFromInventory(ArmorsInventory, armorId, quantity);
+            if (moveData.MoveType == MoveType.Spell)
+            {
+                if (!Spells.Any(m => m.MoveID == moveId))
+                {
+                    Spells.Add(new MoveEntry(moveId, 0));
+                }
+            }
+            else if (moveData.MoveType == MoveType.Action)
+            {
+                if (!Actions.Any(m => m.MoveID == moveId))
+                {
+                    Actions.Add(new MoveEntry(moveId, 0));
+                }
+            }
+        }
 
-        public void AddRelic(string relicId, int quantity = 1) => AddItemToInventory(RelicInventory, relicId, quantity);
-        public bool RemoveRelic(string relicId, int quantity = 1) => RemoveItemFromInventory(RelicInventory, relicId, quantity);
+        public void RemoveMove(string moveId)
+        {
+            // Try removing from Spells
+            var spellIndex = Spells.FindIndex(m => m.MoveID == moveId);
+            if (spellIndex != -1)
+            {
+                var entry = Spells[spellIndex];
+                Spells.RemoveAt(spellIndex);
 
-        public void AddConsumable(string consumableId, int quantity = 1) => AddItemToInventory(ConsumableInventory, consumableId, quantity);
-        public bool RemoveConsumable(string consumableId, int quantity = 1) => RemoveItemFromInventory(ConsumableInventory, consumableId, quantity);
+                // Unequip if equipped
+                for (int i = 0; i < EquippedSpells.Length; i++)
+                {
+                    if (EquippedSpells[i] == entry) EquippedSpells[i] = null;
+                }
+                return;
+            }
 
-        #endregion
+            // Try removing from Actions
+            var actionIndex = Actions.FindIndex(m => m.MoveID == moveId);
+            if (actionIndex != -1)
+            {
+                Actions.RemoveAt(actionIndex);
+            }
+        }
     }
 }

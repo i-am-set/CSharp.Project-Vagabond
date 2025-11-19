@@ -1,7 +1,15 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -10,44 +18,14 @@ namespace ProjectVagabond.Battle
     /// </summary>
     public class BattleCombatant
     {
-        /// <summary>
-        /// The original Entity ID from the overworld ECS. Used for retrieving visual information.
-        /// </summary>
         public int EntityId { get; set; }
-        /// <summary>
-        /// The archetype ID (e.g., "wanderer") used to create this combatant.
-        /// </summary>
         public string ArchetypeId { get; set; }
-
-        /// <summary>
-        /// A unique identifier for this instance of a combatant in the battle.
-        /// </summary>
         public string CombatantID { get; set; }
-
-        /// <summary>
-        /// The display name of the combatant.
-        /// </summary>
         public string Name { get; set; }
-
-        /// <summary>
-        /// An instance of the CombatantStats class holding all core attributes.
-        /// </summary>
         public CombatantStats Stats { get; set; }
-
-        /// <summary>
-        /// The health value displayed on screen, which animates towards the logical CurrentHP.
-        /// </summary>
         public float VisualHP { get; set; }
-
-        /// <summary>
-        /// The alpha value displayed on screen, which animates for effects like fading on death.
-        /// </summary>
         public float VisualAlpha { get; set; } = 1.0f;
 
-        /// <summary>
-        /// A list of moves this combatant can use. For enemies, this is a static list.
-        /// For the player, this is an adapter property that returns their current hand.
-        /// </summary>
         public List<MoveData> AvailableMoves
         {
             get
@@ -65,95 +43,29 @@ namespace ProjectVagabond.Battle
         private List<MoveData> _staticMoves = new List<MoveData>();
 
         /// <summary>
-        /// For the player, provides direct access to the SpellbookEntry objects in their equipped loadout.
+        /// For the player, provides direct access to the MoveEntry objects in their equipped loadout.
         /// </summary>
-        public SpellbookEntry?[] EquippedSpells { get; set; }
+        public MoveEntry?[] EquippedSpells { get; set; }
 
-        /// <summary>
-        /// The move ID for the player's basic "Strike" action. Null for enemies.
-        /// </summary>
         public string DefaultStrikeMoveID { get; set; }
-
-
-        /// <summary>
-        /// A list of currently active status effects.
-        /// </summary>
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
-
-        /// <summary>
-        /// A list of currently active passive abilities.
-        /// </summary>
         public List<AbilityData> ActiveAbilities { get; set; } = new List<AbilityData>();
-
-        /// <summary>
-        /// A list of element IDs associated with this combatant's defensive type.
-        /// </summary>
         public List<int> DefensiveElementIDs { get; set; } = new List<int>();
-
-        /// <summary>
-        /// True if this combatant is controlled by the player.
-        /// </summary>
         public bool IsPlayerControlled { get; set; }
-
-        /// <summary>
-        /// Gets a value indicating whether the combatant is defeated (CurrentHP is 0 or less).
-        /// </summary>
         public bool IsDefeated => Stats.CurrentHP <= 0;
-
-        /// <summary>
-        /// A flag indicating that this combatant has just been defeated and is playing its death animation/narration.
-        /// </summary>
         public bool IsDying { get; set; } = false;
-
-        /// <summary>
-        /// A flag indicating that the combatant's death sequence is complete and it should be removed from rendering.
-        /// </summary>
         public bool IsRemovalProcessed { get; set; } = false;
-
-        /// <summary>
-        /// Tracks moves that increase in power with successive uses. Key: MoveID, Value: Use count.
-        /// </summary>
         public Dictionary<string, int> RampingMoveCounters { get; set; } = new Dictionary<string, int>();
-
-        /// <summary>
-        /// If not null, this combatant is charging a move and cannot act.
-        /// </summary>
         public DelayedAction ChargingAction { get; set; }
-
-        /// <summary>
-        /// A queue of actions that will execute on future turns.
-        /// </summary>
         public Queue<DelayedAction> DelayedActions { get; set; } = new Queue<DelayedAction>();
-
-        /// <summary>
-        /// A flag to track if the combatant has used their first attack, for abilities like "First Blood".
-        /// </summary>
         public bool HasUsedFirstAttack { get; set; } = false;
-
-        /// <summary>
-        /// A flag to track if the Spellweaver ability is charged and ready to be consumed.
-        /// </summary>
         public bool IsSpellweaverActive { get; set; } = false;
-
-        /// <summary>
-        /// A flag to track if the Momentum ability is charged and ready to be consumed.
-        /// </summary>
         public bool IsMomentumActive { get; set; } = false;
-
-        /// <summary>
-        /// The number of damage-boosting stacks from the Escalation ability.
-        /// </summary>
         public int EscalationStacks { get; set; } = 0;
-
-        /// <summary>
-        /// Tracks the current stage modifiers for each stat, from -6 to +6. Resets each battle.
-        /// </summary>
         public Dictionary<OffensiveStatType, int> StatStages { get; private set; }
-
 
         public BattleCombatant()
         {
-            // Initialize stat stages to 0 for all stats.
             StatStages = new Dictionary<OffensiveStatType, int>
             {
                 { OffensiveStatType.Strength, 0 },
@@ -163,51 +75,24 @@ namespace ProjectVagabond.Battle
             };
         }
 
-        /// <summary>
-        /// Applies a specified amount of damage to the combatant's CurrentHP.
-        /// </summary>
-        /// <param name="damageAmount">The amount of damage to apply.</param>
+        // ... [Rest of class methods (ApplyDamage, etc) remain the same] ...
+
         public void ApplyDamage(int damageAmount)
         {
             Stats.CurrentHP -= damageAmount;
-            if (Stats.CurrentHP < 0)
-            {
-                Stats.CurrentHP = 0;
-            }
+            if (Stats.CurrentHP < 0) Stats.CurrentHP = 0;
         }
 
-        /// <summary>
-        /// Applies a specified amount of healing to the combatant's CurrentHP, clamped to MaxHP.
-        /// </summary>
-        /// <param name="healAmount">The amount of health to restore.</param>
         public void ApplyHealing(int healAmount)
         {
             Stats.CurrentHP += healAmount;
-            if (Stats.CurrentHP > Stats.MaxHP)
-            {
-                Stats.CurrentHP = Stats.MaxHP;
-            }
+            if (Stats.CurrentHP > Stats.MaxHP) Stats.CurrentHP = Stats.MaxHP;
         }
 
-        /// <summary>
-        /// Checks if the combatant currently has a specific status effect.
-        /// </summary>
-        /// <param name="effectType">The status effect to check for.</param>
-        /// <returns>True if the effect is active, otherwise false.</returns>
-        public bool HasStatusEffect(StatusEffectType effectType)
-        {
-            return ActiveStatusEffects.Any(e => e.EffectType == effectType);
-        }
+        public bool HasStatusEffect(StatusEffectType effectType) => ActiveStatusEffects.Any(e => e.EffectType == effectType);
 
-        /// <summary>
-        /// Adds a new status effect to the combatant, resetting the duration if it already exists.
-        /// An extra turn is added to the duration to account for the end-of-round decrement.
-        /// </summary>
-        /// <param name="newEffect">The new status effect instance to add.</param>
-        /// <returns>True if the status effect was newly applied, false if it was just refreshed.</returns>
         public bool AddStatusEffect(StatusEffectInstance newEffect)
         {
-            // Check for immunities from passive abilities before applying the effect.
             foreach (var ability in ActiveAbilities)
             {
                 if (ability.Effects.TryGetValue("StatusImmunity", out var immunityValue))
@@ -217,57 +102,26 @@ namespace ProjectVagabond.Battle
                     {
                         if (Enum.TryParse<StatusEffectType>(typeStr.Trim(), true, out var immuneType))
                         {
-                            if (newEffect.EffectType == immuneType)
-                            {
-                                // This combatant is immune to this status effect.
-                                return false; // Exit the method, preventing the effect from being added.
-                            }
+                            if (newEffect.EffectType == immuneType) return false;
                         }
                     }
                 }
             }
 
             bool hadEffectBefore = HasStatusEffect(newEffect.EffectType);
-
-            // Remove any existing effect of the same type to reset its duration.
             ActiveStatusEffects.RemoveAll(e => e.EffectType == newEffect.EffectType);
-
-            // Add 1 to the duration to account for the immediate end-of-round decrement.
-            // A 1-turn effect should last until the end of the *next* round.
             newEffect.DurationInTurns += 1;
-
             ActiveStatusEffects.Add(newEffect);
-
             return !hadEffectBefore;
         }
 
-        /// <summary>
-        /// For non-player combatants, this sets their static list of moves for the battle.
-        /// </summary>
-        public void SetStaticMoves(List<MoveData> moves)
-        {
-            _staticMoves = moves;
-        }
+        public void SetStaticMoves(List<MoveData> moves) { _staticMoves = moves; }
 
-        // --- Stat Stage Modification ---
-
-        /// <summary>
-        /// Modifies a stat stage for this combatant, clamping it between -6 and +6.
-        /// </summary>
-        /// <param name="stat">The stat to modify.</param>
-        /// <param name="amount">The amount to change the stage by (e.g., +1, -2).</param>
-        /// <returns>A tuple indicating if the change was successful and a message for narration.</returns>
         public (bool success, string message) ModifyStatStage(OffensiveStatType stat, int amount)
         {
             int currentStage = StatStages[stat];
-            if (amount > 0 && currentStage >= 6)
-            {
-                return (false, $"{Name}'s {stat} won't go any higher!");
-            }
-            if (amount < 0 && currentStage <= -6)
-            {
-                return (false, $"{Name}'s {stat} won't go any lower!");
-            }
+            if (amount > 0 && currentStage >= 6) return (false, $"{Name}'s {stat} won't go any higher!");
+            if (amount < 0 && currentStage <= -6) return (false, $"{Name}'s {stat} won't go any lower!");
 
             int newStage = Math.Clamp(currentStage + amount, -6, 6);
             StatStages[stat] = newStage;
@@ -276,13 +130,6 @@ namespace ProjectVagabond.Battle
             return (true, $"{Name}'s {stat} {changeText}!");
         }
 
-
-        // --- Effective Stat Calculation ---
-
-        /// <summary>
-        /// Gets the combatant's effective defensive element IDs, including those granted by passive abilities.
-        /// </summary>
-        /// <returns>A list of unique defensive element IDs.</returns>
         public List<int> GetEffectiveDefensiveElementIDs()
         {
             var effectiveElements = new List<int>(this.DefensiveElementIDs);
@@ -290,10 +137,7 @@ namespace ProjectVagabond.Battle
             {
                 if (ability.Effects.TryGetValue("AddDefensiveElement", out var elementIdStr) && int.TryParse(elementIdStr, out int elementId))
                 {
-                    if (!effectiveElements.Contains(elementId))
-                    {
-                        effectiveElements.Add(elementId);
-                    }
+                    if (!effectiveElements.Contains(elementId)) effectiveElements.Add(elementId);
                 }
             }
             return effectiveElements;
@@ -301,32 +145,28 @@ namespace ProjectVagabond.Battle
 
         public int GetEffectiveStrength()
         {
-            float stat = Stats.Strength;
-            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Strength]];
+            float stat = Stats.Strength * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Strength]];
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveIntelligence()
         {
-            float stat = Stats.Intelligence;
-            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Intelligence]];
+            float stat = Stats.Intelligence * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Intelligence]];
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveTenacity()
         {
-            float stat = Stats.Tenacity;
-            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
+            float stat = Stats.Tenacity * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Tenacity]];
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
             return (int)Math.Round(stat);
         }
 
         public int GetEffectiveAgility()
         {
-            float stat = Stats.Agility;
-            stat *= BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
+            float stat = Stats.Agility * BattleConstants.StatStageMultipliers[StatStages[OffensiveStatType.Agility]];
             if (HasStatusEffect(StatusEffectType.Freeze)) stat *= 0.5f;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
 
