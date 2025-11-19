@@ -374,6 +374,54 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Consumables/health_potion.png;Sprites/Items/Consumables/health_potion
 
+#begin Sprites/Items/Relics/all_seeing_eye.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/all_seeing_eye.png;Sprites/Items/Relics/all_seeing_eye
+
+#begin Sprites/Items/Relics/charred_effigy.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/charred_effigy.png;Sprites/Items/Relics/charred_effigy
+
+#begin Sprites/Items/Relics/earthen_core.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/earthen_core.png;Sprites/Items/Relics/earthen_core
+
+#begin Sprites/Items/Relics/oakenheart.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/oakenheart.png;Sprites/Items/Relics/oakenheart
+
 #begin Sprites/Items/Relics/placeholder_relic.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -386,7 +434,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Relics/placeholder_relic.png;Sprites/Items/Relics/placeholder_relic
 
-#begin Sprites/Items/Relics/placeholder_relic2.png
+#begin Sprites/Items/Relics/shattered_amulet.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -396,7 +444,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/Items/Relics/placeholder_relic2.png;Sprites/Items/Relics/placeholder_relic2
+/build:Sprites/Items/Relics/shattered_amulet.png;Sprites/Items/Relics/shattered_amulet
 
 #begin Sprites/logo.png
 /importer:TextureImporter

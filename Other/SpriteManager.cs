@@ -640,6 +640,8 @@ namespace ProjectVagabond
                 return cachedTuple;
             }
 
+            Debug.WriteLine($"[SpriteManager] LoadAndCacheItem called for: '{imagePath}'");
+
             Texture2D originalTexture;
             try
             {
@@ -649,13 +651,14 @@ namespace ProjectVagabond
                 }
                 else
                 {
-                    originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.White);
+                    originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                Debug.WriteLine($"[SpriteManager] [WARNING] Could not load item sprite at '{imagePath}'. Using white placeholder.");
-                originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.White);
+                Debug.WriteLine($"[SpriteManager] [ERROR] FAILED to load: '{imagePath}'. Exception: {ex.Message}");
+                Debug.WriteLine($"[SpriteManager] Content Root Directory: '{_core.Content.RootDirectory}'");
+                originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
             }
 
             var originalData = new Color[originalTexture.Width * originalTexture.Height];

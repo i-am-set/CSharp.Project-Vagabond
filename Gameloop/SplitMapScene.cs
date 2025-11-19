@@ -633,8 +633,8 @@ namespace ProjectVagabond.Scenes
                 var headerArea = new Rectangle(firstHeader.Left, firstHeader.Top, lastHeader.Right - firstHeader.Left, firstHeader.Height);
                 headerArea.Y += (int)_inventoryPositionOffset.Y; // Adjust for bobbing
 
-                bool leftInput = KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState) || (scrollDelta < 0 && headerArea.Contains(mouseInWorldSpace));
-                bool rightInput = KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState) || (scrollDelta > 0 && headerArea.Contains(mouseInWorldSpace));
+                bool leftInput = KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState) || (scrollDelta > 0 && headerArea.Contains(mouseInWorldSpace));
+                bool rightInput = KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState) || (scrollDelta < 0 && headerArea.Contains(mouseInWorldSpace));
 
                 if (leftInput)
                 {
@@ -1401,7 +1401,7 @@ namespace ProjectVagabond.Scenes
                             if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
                                 currentItems.Add((data.RelicName, kvp.Value, data.RelicImagePath, null));
                             else
-                                currentItems.Add((kvp.Key, kvp.Value, null, null));
+                                currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null)); // Fallback to ID-based path
                         }
                         break;
                     case InventoryCategory.Consumables:
@@ -1410,7 +1410,7 @@ namespace ProjectVagabond.Scenes
                             if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
                                 currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null));
                             else
-                                currentItems.Add((kvp.Key, kvp.Value, null, null));
+                                currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null)); // Fallback to ID-based path
                         }
                         break;
                     case InventoryCategory.Spells:
@@ -1424,7 +1424,7 @@ namespace ProjectVagabond.Scenes
                             }
                             else
                             {
-                                currentItems.Add((entry.MoveID, 1, null, null));
+                                currentItems.Add((entry.MoveID, 1, $"Sprites/Items/Spells/{entry.MoveID}", null)); // Fallback to ID-based path
                             }
                         }
                         break;

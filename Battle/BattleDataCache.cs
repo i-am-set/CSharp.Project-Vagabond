@@ -24,6 +24,7 @@ namespace ProjectVagabond.Battle
             {
                 PropertyNameCaseInsensitive = true,
                 ReadCommentHandling = JsonCommentHandling.Skip,
+                AllowTrailingCommas = true, // Added to prevent loading failures from minor JSON syntax errors
                 Converters = { new JsonStringEnumConverter() }
             };
 
