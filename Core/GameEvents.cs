@@ -235,7 +235,7 @@ namespace ProjectVagabond
         {
             public BattleCombatant Actor { get; set; }
             public int RecoilDamage { get; set; }
-            public AbilityData? SourceAbility { get; set; }
+            public RelicData? SourceAbility { get; set; }
         }
 
         /// <summary>
@@ -244,7 +244,7 @@ namespace ProjectVagabond
         public struct AbilityActivated
         {
             public BattleCombatant Combatant { get; set; }
-            public AbilityData Ability { get; set; }
+            public RelicData Ability { get; set; }
             /// <summary>
             /// Optional text for the player-facing battle narrator.
             /// </summary>

@@ -1235,7 +1235,7 @@ namespace ProjectVagabond.Scenes
             const int numberOfChoices = 3;
             int gameStage = 1;
 
-            var playerAbilities = _componentStore.GetComponent<PassiveAbilitiesComponent>(_gameState.PlayerEntityId)?.AbilityIDs;
+            var playerAbilities = _componentStore.GetComponent<PassiveAbilitiesComponent>(_gameState.PlayerEntityId)?.RelicIDs;
             var excludeIds = playerAbilities != null ? new HashSet<string>(playerAbilities) : null;
             choices.AddRange(_choiceGenerator.GenerateAbilityChoices(gameStage, numberOfChoices, excludeIds));
 
@@ -1398,7 +1398,7 @@ namespace ProjectVagabond.Scenes
                     case InventoryCategory.Relics:
                         foreach (var kvp in _gameState.PlayerState.Relics)
                         {
-                            if (BattleDataCache.Abilities.TryGetValue(kvp.Key, out var data))
+                            if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
                                 currentItems.Add((data.RelicName, kvp.Value, data.RelicImagePath, null));
                             else
                                 currentItems.Add((kvp.Key, kvp.Value, null, null));
@@ -1414,16 +1414,13 @@ namespace ProjectVagabond.Scenes
                         }
                         break;
                     case InventoryCategory.Spells:
-                        // Spells are stored as objects, iterate list
+                        // Updated logic: Iterate over Spells list
                         foreach (var entry in _gameState.PlayerState.Spells)
                         {
-                            if (entry != null)
-                            {
-                                if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
-                                    currentItems.Add((moveData.MoveName, 1, null, null)); // Spells don't stack quantity in same way, show 1
-                                else
-                                    currentItems.Add((entry.MoveID, 1, null, null));
-                            }
+                            if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
+                                currentItems.Add((moveData.MoveName, 1, null, null)); // Quantity 1 for unique spells
+                            else
+                                currentItems.Add((entry.MoveID, 1, null, null));
                         }
                         break;
                 }
@@ -1455,6 +1452,7 @@ namespace ProjectVagabond.Scenes
                             string displayName = item.Name;
                             if (displayName.Length > 8) displayName = displayName.Substring(0, 6) + "..";
                             var textSize = secondaryFont.MeasureString(displayName);
+                            // Fix: Access Width and Height properties of Size2/SizeF
                             spriteBatch.DrawStringSnapped(secondaryFont, displayName, slot.Position - new Vector2(textSize.Width / 2f, textSize.Height / 2f), _global.Palette_BrightWhite);
                         }
 
@@ -1463,6 +1461,7 @@ namespace ProjectVagabond.Scenes
                         {
                             string qty = $"x{item.Quantity}";
                             var qtySize = secondaryFont.MeasureString(qty);
+                            // Fix: Access Width and Height properties of Size2/SizeF
                             var qtyPos = slot.Position + new Vector2(slotSize / 2f - qtySize.Width - 4, slotSize / 2f - qtySize.Height - 4);
                             spriteBatch.DrawStringSnapped(secondaryFont, qty, qtyPos, _global.Palette_LightGray);
                         }

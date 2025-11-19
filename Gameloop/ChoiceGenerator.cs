@@ -1,4 +1,13 @@
-﻿using ProjectVagabond.Battle;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,33 +16,23 @@ using System.Text;
 
 namespace ProjectVagabond.Utils
 {
-    /// <summary>
-    /// A service responsible for generating curated lists of choices (spells, abilities, items)
-    /// based on the current game progression and a weighted rarity system.
-    /// </summary>
     public class ChoiceGenerator
     {
         private static readonly Random _random = new Random();
 
-        // --- Rarity Tuning ---
         private readonly Dictionary<int, int> _rarityWeights = new Dictionary<int, int>
         {
-            // Rarity Level -> Weight
-            { 0, 60 }, // Common
-            { 1, 30 }, // Uncommon
-            { 2, 9 },  // Rare
-            { 3, 1 }   // Epic
+            { 0, 60 },
+            { 1, 30 },
+            { 2, 9 },
+            { 3, 1 }
         };
 
-        // --- Tag Weighting Tuning ---
         private const float ITEM_BASE_WEIGHT = 100f;
         private const float FIRST_TAG_BONUS = 200f;
         private const float SUBSEQUENT_TAG_BONUS_FACTOR = 0.5f;
         private const float MAX_TAG_BONUS = 380f;
 
-        /// <summary>
-        /// Generates a list of spell choices for the player.
-        /// </summary>
         public List<MoveData> GenerateSpellChoices(int gameStage, int count, HashSet<string>? excludeIds = null)
         {
             return GenerateChoices(
@@ -48,26 +47,20 @@ namespace ProjectVagabond.Utils
             );
         }
 
-        /// <summary>
-        /// Generates a list of ability choices for the player.
-        /// </summary>
-        public List<AbilityData> GenerateAbilityChoices(int gameStage, int count, HashSet<string>? excludeIds = null)
+        public List<RelicData> GenerateAbilityChoices(int gameStage, int count, HashSet<string>? excludeIds = null)
         {
             return GenerateChoices(
                 gameStage,
                 count,
-                BattleDataCache.Abilities.Values,
+                BattleDataCache.Relics.Values,
                 item => item.Rarity,
-                item => item.AbilityID,
+                item => item.RelicID,
                 item => item.RelicName,
                 item => item.Tags,
                 excludeIds
             );
         }
 
-        /// <summary>
-        /// A generic, reusable method to generate weighted choices for any reward type.
-        /// </summary>
         private List<T> GenerateChoices<T>(
             int gameStage,
             int count,
@@ -98,10 +91,8 @@ namespace ProjectVagabond.Utils
             }
 
 
-            // 1. Filter the master item list based on the current game stage and initial exclusions.
             var availableItemsQuery = allItems.Where(item =>
             {
-                // A bit of reflection to get LevelRequirement, assuming it exists.
                 var prop = typeof(T).GetProperty("LevelRequirement");
                 int levelReq = (int)(prop?.GetValue(item) ?? 0);
                 return levelReq <= gameStage;
@@ -120,12 +111,10 @@ namespace ProjectVagabond.Utils
                 return new List<T>();
             }
 
-            // 2. Group available items by their rarity.
             var itemsByRarity = availableItems
                 .GroupBy(getRarity)
                 .ToDictionary(g => g.Key, g => g.ToList());
 
-            // 3. Filter the rarity weights to only include rarities that are actually available.
             var availableRarityWeights = _rarityWeights
                 .Where(kvp => itemsByRarity.ContainsKey(kvp.Key) && itemsByRarity[kvp.Key].Any())
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
@@ -137,12 +126,10 @@ namespace ProjectVagabond.Utils
                 return new List<T>();
             }
 
-            // 4. Perform selection until we have enough unique items.
             while (chosenItems.Count < count && chosenItems.Count < availableItems.Count)
             {
                 log.AppendLine($"\n--- Picking Choice {chosenItems.Count + 1} of {count} ---");
 
-                // A. Select a Rarity Tier
                 int totalRarityWeight = availableRarityWeights.Values.Sum();
                 int randomRarityRoll = _random.Next(0, totalRarityWeight);
                 int chosenRarity = -1;
@@ -172,7 +159,6 @@ namespace ProjectVagabond.Utils
                     continue;
                 }
 
-                // B. Select an Item from that Tier using Tag Weighting
                 log.AppendLine($"Step 2: Selecting Item from Tier '{(RarityLevel)chosenRarity}'");
                 var availableInRarity = potentialItems.Except(chosenItems).ToList();
                 if (!availableInRarity.Any())
@@ -228,9 +214,6 @@ namespace ProjectVagabond.Utils
             return chosenItems.ToList();
         }
 
-        /// <summary>
-        /// Calculates the total bonus weight for an item based on its tags and the player's current build.
-        /// </summary>
         private float CalculateTagBonus(List<string> itemTags, Dictionary<string, int> playerTagCounts, StringBuilder bonusLog)
         {
             if (itemTags == null || !itemTags.Any()) return 0f;
@@ -261,16 +244,12 @@ namespace ProjectVagabond.Utils
             return clampedBonus;
         }
 
-        /// <summary>
-        /// Tallies the tags from the player's current spells and abilities.
-        /// </summary>
         private Dictionary<string, int> CalculatePlayerTagCounts()
         {
             var tagCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             var gameState = ServiceLocator.Get<GameState>();
             var componentStore = ServiceLocator.Get<ComponentStore>();
 
-            // Tally tags from spells
             if (gameState.PlayerState?.Spells != null)
             {
                 foreach (var entry in gameState.PlayerState.Spells)
@@ -285,15 +264,14 @@ namespace ProjectVagabond.Utils
                 }
             }
 
-            // Tally tags from abilities/relics
             var abilitiesComponent = componentStore.GetComponent<PassiveAbilitiesComponent>(gameState.PlayerEntityId);
-            if (abilitiesComponent?.AbilityIDs != null)
+            if (abilitiesComponent?.RelicIDs != null)
             {
-                foreach (var abilityId in abilitiesComponent.AbilityIDs)
+                foreach (var relicId in abilitiesComponent.RelicIDs)
                 {
-                    if (BattleDataCache.Abilities.TryGetValue(abilityId, out var abilityData) && abilityData.Tags != null)
+                    if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData) && relicData.Tags != null)
                     {
-                        foreach (var tag in abilityData.Tags)
+                        foreach (var tag in relicData.Tags)
                         {
                             tagCounts[tag] = tagCounts.GetValueOrDefault(tag, 0) + 1;
                         }
@@ -304,7 +282,6 @@ namespace ProjectVagabond.Utils
             return tagCounts;
         }
 
-        // Helper enum for logging rarity names
         private enum RarityLevel { Action = -1, Common, Uncommon, Rare, Epic, Mythic, Legendary }
     }
 }

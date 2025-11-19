@@ -18,11 +18,23 @@ namespace ProjectVagabond.Battle
         public List<string> StartingMoveIDs { get; set; } = new List<string>();
         public string DefaultStrikeMoveID { get; set; }
 
+        // New Inventory Initializers
+        public Dictionary<string, int> StartingWeapons { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> StartingArmor { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> StartingRelics { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> StartingConsumables { get; set; } = new Dictionary<string, int>();
+
         public IComponent Clone()
         {
             var clone = (PlayerBaseStatsComponent)this.MemberwiseClone();
             clone.DefensiveElementIDs = new List<int>(this.DefensiveElementIDs);
             clone.StartingMoveIDs = new List<string>(this.StartingMoveIDs);
+
+            clone.StartingWeapons = new Dictionary<string, int>(this.StartingWeapons);
+            clone.StartingArmor = new Dictionary<string, int>(this.StartingArmor);
+            clone.StartingRelics = new Dictionary<string, int>(this.StartingRelics);
+            clone.StartingConsumables = new Dictionary<string, int>(this.StartingConsumables);
+
             return clone;
         }
     }

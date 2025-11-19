@@ -1,24 +1,25 @@
-﻿using ProjectVagabond.Battle;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Battle
 {
-    /// <summary>
-    /// A stateless, static system for processing secondary effects of moves.
-    /// It maps effect IDs to specific logic and publishes an event upon completion.
-    /// </summary>
     public static class SecondaryEffectSystem
     {
         private static readonly Random _random = new Random();
 
-        /// <summary>
-        /// Processes effects that should occur immediately when a move hits a target,
-        /// concurrent with damage application.
-        /// </summary>
         public static void ProcessPrimaryEffects(QueuedAction action, BattleCombatant target)
         {
             var move = action.ChosenMove;
@@ -49,38 +50,30 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // Handle attacker's contact abilities that apply status effects
             if (move != null && move.MakesContact)
             {
-                foreach (var ability in attacker.ActiveAbilities)
+                foreach (var relic in attacker.ActiveRelics)
                 {
-                    if (ability.Effects.TryGetValue("ApplyStatusOnContact", out var value))
+                    if (relic.Effects.TryGetValue("ApplyStatusOnContact", out var value))
                     {
-                        HandleApplyStatus(attacker, target, value, ability);
+                        HandleApplyStatus(attacker, target, value, relic);
                     }
                 }
             }
         }
 
-        /// <summary>
-        /// Processes effects that occur after all hits of an action have resolved,
-        /// often depending on the aggregate results like total damage dealt.
-        /// </summary>
         public static void ProcessSecondaryEffects(QueuedAction action, List<BattleCombatant> finalTargets, List<DamageCalculator.DamageResult> damageResults)
         {
             var move = action.ChosenMove;
             var attacker = action.Actor;
 
-            // Process effects that apply once to the actor, based on aggregate results.
             ProcessActorEffects(action, finalTargets, damageResults);
 
-            // Process effects that apply once per unique target.
             var uniqueTargets = finalTargets.Distinct().ToList();
             for (int targetIndex = 0; targetIndex < uniqueTargets.Count; targetIndex++)
             {
                 var target = uniqueTargets[targetIndex];
 
-                // --- Process Move-based Effects ---
                 if (move?.Effects != null)
                 {
                     foreach (var effectEntry in move.Effects)
@@ -94,37 +87,34 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                // --- Process Ability-based Reactive Effects ---
-                if (move != null && !target.IsDefeated) // Reactive effects shouldn't trigger if the target is already defeated by the hit.
+                if (move != null && !target.IsDefeated)
                 {
-                    // Target abilities (e.g., Static Charge, Iron Barbs)
                     if (move.MakesContact)
                     {
-                        foreach (var ability in target.ActiveAbilities)
+                        foreach (var relic in target.ActiveRelics)
                         {
-                            if (ability.Effects.TryGetValue("ApplyStatusOnBeingHitContact", out var value))
+                            if (relic.Effects.TryGetValue("ApplyStatusOnBeingHitContact", out var value))
                             {
-                                HandleApplyStatus(target, attacker, value, ability); // Note: target applies status to attacker
+                                HandleApplyStatus(target, attacker, value, relic);
                             }
 
-                            if (ability.Effects.TryGetValue("IronBarbsOnContact", out var barbValue) && EffectParser.TryParseFloat(barbValue, out float percent))
+                            if (relic.Effects.TryGetValue("IronBarbsOnContact", out var barbValue) && EffectParser.TryParseFloat(barbValue, out float percent))
                             {
                                 int recoilDamage = Math.Max(1, (int)(attacker.Stats.MaxHP * (percent / 100f)));
                                 attacker.ApplyDamage(recoilDamage);
-                                EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = attacker, RecoilDamage = recoilDamage, SourceAbility = ability });
-                                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability });
+                                EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = attacker, RecoilDamage = recoilDamage, SourceAbility = relic });
+                                EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = relic });
                             }
                         }
                     }
 
-                    // Target abilities (e.g. Photosynthesis heal, Pain Fuel)
                     bool wasCriticallyHit = damageResults.Any(r => r.WasCritical);
 
                     if (wasCriticallyHit)
                     {
-                        foreach (var ability in target.ActiveAbilities)
+                        foreach (var relic in target.ActiveRelics)
                         {
-                            if (ability.Effects.ContainsKey("PainFuel"))
+                            if (relic.Effects.ContainsKey("PainFuel"))
                             {
                                 var (successStr, _) = target.ModifyStatStage(OffensiveStatType.Strength, 2);
                                 if (successStr) EventBus.Publish(new GameEvents.CombatantStatStageChanged { Target = target, Stat = OffensiveStatType.Strength, Amount = 2 });
@@ -134,7 +124,7 @@ namespace ProjectVagabond.Battle
 
                                 if (successStr || successInt)
                                 {
-                                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability, NarrationText = $"{target.Name}'s {ability.AbilityName} turned pain into power!" });
+                                    EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = relic, NarrationText = $"{target.Name}'s {relic.AbilityName} turned pain into power!" });
                                 }
                             }
                         }
@@ -144,9 +134,9 @@ namespace ProjectVagabond.Battle
 
                     if (wasImmuneHit)
                     {
-                        foreach (var ability in target.ActiveAbilities)
+                        foreach (var relic in target.ActiveRelics)
                         {
-                            if (ability.Effects.TryGetValue("ElementImmunityAndHeal", out var value))
+                            if (relic.Effects.TryGetValue("ElementImmunityAndHeal", out var value))
                             {
                                 var parts = value.Split(',');
                                 if (parts.Length == 2 && EffectParser.TryParseInt(parts[0], out int immuneElementId) && EffectParser.TryParseFloat(parts[1], out float healPercent))
@@ -163,7 +153,7 @@ namespace ProjectVagabond.Battle
                                             HealAmount = healAmount,
                                             VisualHPBefore = hpBefore
                                         });
-                                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability, NarrationText = $"{target.Name}'s {ability.AbilityName} absorbed the attack!" });
+                                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = relic, NarrationText = $"{target.Name}'s {relic.AbilityName} absorbed the attack!" });
                                     }
                                 }
                             }
@@ -171,11 +161,10 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                // --- Process Reactive Status Effects on Target ---
                 if (target.HasStatusEffect(StatusEffectType.Burn) && move != null && !target.IsDefeated)
                 {
                     bool isPhysical = move.ImpactType == ImpactType.Physical;
-                    bool isFire = move.OffensiveElementIDs.Contains(2); // 2 is the ElementID for Fire
+                    bool isFire = move.OffensiveElementIDs.Contains(2);
 
                     if (isPhysical || isFire)
                     {
@@ -202,15 +191,14 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // --- Handle Momentum Activation ---
             if (finalTargets.Any(t => t.IsDefeated))
             {
-                foreach (var ability in attacker.ActiveAbilities)
+                foreach (var relic in attacker.ActiveRelics)
                 {
-                    if (ability.Effects.ContainsKey("Momentum"))
+                    if (relic.Effects.ContainsKey("Momentum"))
                     {
                         attacker.IsMomentumActive = true;
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = attacker, Ability = ability, NarrationText = $"{attacker.Name}'s {ability.AbilityName} is building!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = attacker, Ability = relic, NarrationText = $"{attacker.Name}'s {relic.AbilityName} is building!" });
                     }
                 }
             }
@@ -249,7 +237,6 @@ namespace ProjectVagabond.Battle
 
                     var (success, message) = finalTarget.ModifyStatStage(stat, amount);
 
-                    // Always publish the message, whether it succeeded or failed (e.g., "Stat won't go any higher!").
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = message });
 
                     if (success)
@@ -261,19 +248,18 @@ namespace ProjectVagabond.Battle
         }
 
 
-        private static void HandleApplyStatus(BattleCombatant actor, BattleCombatant target, string value, AbilityData sourceAbility = null)
+        private static void HandleApplyStatus(BattleCombatant actor, BattleCombatant target, string value, RelicData sourceRelic = null)
         {
             if (EffectParser.TryParseStatusEffectParams(value, out var type, out int chance, out int duration))
             {
-                // Check for Lingering Curse ability on the actor
-                foreach (var ability in actor.ActiveAbilities)
+                foreach (var relic in actor.ActiveRelics)
                 {
-                    if (ability.Effects.TryGetValue("StatusDurationBonus", out var bonusValue) && IsNegativeStatus(type))
+                    if (relic.Effects.TryGetValue("StatusDurationBonus", out var bonusValue) && IsNegativeStatus(type))
                     {
                         if (EffectParser.TryParseInt(bonusValue, out int bonusDuration))
                         {
                             duration += bonusDuration;
-                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = actor, Ability = ability });
+                            EventBus.Publish(new GameEvents.AbilityActivated { Combatant = actor, Ability = relic });
                         }
                     }
                 }
@@ -281,17 +267,16 @@ namespace ProjectVagabond.Battle
                 if (_random.Next(1, 101) <= chance)
                 {
                     bool wasNewlyApplied = target.AddStatusEffect(new StatusEffectInstance(type, duration));
-                    if (sourceAbility != null)
+                    if (sourceRelic != null)
                     {
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = actor, Ability = sourceAbility, NarrationText = $"{actor.Name}'s {sourceAbility.AbilityName} afflicted {target.Name}!" });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = actor, Ability = sourceRelic, NarrationText = $"{actor.Name}'s {sourceRelic.AbilityName} afflicted {target.Name}!" });
                     }
 
                     if (wasNewlyApplied && IsNegativeStatus(type))
                     {
-                        // --- Handle Contagion ---
-                        foreach (var ability in actor.ActiveAbilities)
+                        foreach (var relic in actor.ActiveRelics)
                         {
-                            if (ability.Effects.TryGetValue("Contagion", out var contagionValue))
+                            if (relic.Effects.TryGetValue("Contagion", out var contagionValue))
                             {
                                 if (EffectParser.TryParseIntArray(contagionValue, out int[] contagionParams) && contagionParams.Length == 2)
                                 {
@@ -304,10 +289,10 @@ namespace ProjectVagabond.Battle
                                         var allCombatants = battleManager.AllCombatants;
 
                                         var potentialTargets = allCombatants.Where(c =>
-                                            c.IsPlayerControlled != actor.IsPlayerControlled && // Must be an opponent
-                                            c != target &&                                     // Not the original target
-                                            !c.IsDefeated &&                                   // Must be alive
-                                            !c.HasStatusEffect(type)                           // Must not already have the effect
+                                            c.IsPlayerControlled != actor.IsPlayerControlled &&
+                                            c != target &&
+                                            !c.IsDefeated &&
+                                            !c.HasStatusEffect(type)
                                         ).ToList();
 
                                         if (potentialTargets.Any())
@@ -317,8 +302,8 @@ namespace ProjectVagabond.Battle
                                             EventBus.Publish(new GameEvents.AbilityActivated
                                             {
                                                 Combatant = actor,
-                                                Ability = ability,
-                                                NarrationText = $"{actor.Name}'s {ability.AbilityName} spread the effect to {contagionTarget.Name}!"
+                                                Ability = relic,
+                                                NarrationText = $"{actor.Name}'s {relic.AbilityName} spread the effect to {contagionTarget.Name}!"
                                             });
                                         }
                                     }
@@ -326,10 +311,9 @@ namespace ProjectVagabond.Battle
                             }
                         }
 
-                        // --- Handle Sadist ---
-                        foreach (var ability in actor.ActiveAbilities)
+                        foreach (var relic in actor.ActiveRelics)
                         {
-                            if (ability.Effects.ContainsKey("Sadist"))
+                            if (relic.Effects.ContainsKey("Sadist"))
                             {
                                 var (success, message) = actor.ModifyStatStage(OffensiveStatType.Strength, 1);
                                 if (success)
@@ -338,8 +322,8 @@ namespace ProjectVagabond.Battle
                                     EventBus.Publish(new GameEvents.AbilityActivated
                                     {
                                         Combatant = actor,
-                                        Ability = ability,
-                                        NarrationText = $"{actor.Name}'s {ability.AbilityName} raised their Strength!"
+                                        Ability = relic,
+                                        NarrationText = $"{actor.Name}'s {relic.AbilityName} raised their Strength!"
                                     });
                                 }
                             }
@@ -357,31 +341,27 @@ namespace ProjectVagabond.Battle
                 if (healAmount <= 0) return;
 
                 bool causticBloodTriggered = false;
-                AbilityData sourceAbility = null;
+                RelicData sourceRelic = null;
 
-                // Check if ANY target has Caustic Blood
                 foreach (var target in targets.Distinct())
                 {
-                    var cbAbility = target.ActiveAbilities.FirstOrDefault(a => a.Effects.ContainsKey("CausticBlood"));
-                    if (cbAbility != null)
+                    var cbRelic = target.ActiveRelics.FirstOrDefault(a => a.Effects.ContainsKey("CausticBlood"));
+                    if (cbRelic != null)
                     {
                         causticBloodTriggered = true;
-                        sourceAbility = cbAbility;
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = cbAbility, NarrationText = $"{target.Name}'s {cbAbility.AbilityName} burns {actor.Name}!" });
-                        // We only need one trigger to convert the heal to damage. No need to check further.
+                        sourceRelic = cbRelic;
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = cbRelic, NarrationText = $"{target.Name}'s {cbRelic.AbilityName} burns {actor.Name}!" });
                         break;
                     }
                 }
 
                 if (causticBloodTriggered)
                 {
-                    // Apply damage to the lifestealer instead of healing
                     actor.ApplyDamage(healAmount);
-                    EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = actor, RecoilDamage = healAmount, SourceAbility = sourceAbility });
+                    EventBus.Publish(new GameEvents.CombatantRecoiled { Actor = actor, RecoilDamage = healAmount, SourceAbility = sourceRelic });
                 }
                 else
                 {
-                    // Apply healing normally
                     int hpBefore = (int)actor.VisualHP;
                     actor.ApplyHealing(healAmount);
                     EventBus.Publish(new GameEvents.CombatantHealed
@@ -410,8 +390,6 @@ namespace ProjectVagabond.Battle
 
         private static void HandleCleanse(BattleCombatant actor, BattleCombatant target, string value)
         {
-            // For now, we assume "Cleanse" removes all negative status effects from the target.
-            // This could be expanded to parse specific effects or categories.
             target.ActiveStatusEffects.RemoveAll(e => IsNegativeStatus(e.EffectType));
         }
 
@@ -423,22 +401,18 @@ namespace ProjectVagabond.Battle
                 if (buff != null)
                 {
                     target.ActiveStatusEffects.Remove(buff);
-                    actor.AddStatusEffect(buff); // Adds the buff with its remaining duration
+                    actor.AddStatusEffect(buff);
                 }
             }
         }
 
         private static void HandleExecuteOnKill(BattleCombatant actor, List<BattleCombatant> allTargets, string value)
         {
-            // This is a meta-effect. It parses the effect to execute from its value.
-            // Example: "ExecuteOnKill": "ApplyStatus(StrengthUp,100,2)"
-            // For simplicity, we'll assume the target of the sub-effect is the actor.
             var parts = value.Split(new[] { '(', ')' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 2)
             {
                 string effectName = parts[0];
                 string effectParams = parts[1];
-                // This is a simplified call; a full implementation might need more context.
                 if (effectName.ToLowerInvariant().StartsWith("modifystatstage"))
                 {
                     HandleModifyStatStage(actor, actor, effectParams);

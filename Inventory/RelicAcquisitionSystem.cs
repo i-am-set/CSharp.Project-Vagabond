@@ -1,6 +1,18 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond
 {
@@ -24,11 +36,10 @@ namespace ProjectVagabond
             switch (e.Type)
             {
                 case GameEvents.AcquisitionType.Add:
-                    // Relics are added to the Relic Inventory.
                     _gameState.PlayerState.AddRelic(e.RelicID);
 
-                    if (BattleDataCache.Abilities.TryGetValue(e.RelicID, out var ability))
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {ability.RelicName}!" });
+                    if (BattleDataCache.Relics.TryGetValue(e.RelicID, out var relic))
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Obtained {relic.RelicName}!" });
                     else
                         EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Relic ID '{e.RelicID}' not found." });
 

@@ -1,75 +1,50 @@
-﻿using ProjectVagabond.Battle;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Battle
 {
-    /// <summary>
-    /// A stateless, static class to perform all damage calculations as defined in the architecture document.
-    /// </summary>
     public static class DamageCalculator
     {
         private static readonly Random _random = new Random();
 
         public enum ElementalEffectiveness { Neutral, Effective, Resisted, Immune }
 
-        /// <summary>
-        /// Contains the results of a damage calculation.
-        /// </summary>
         public struct DamageResult
         {
-            /// <summary>
-            /// The final, integer-based damage value to be applied.
-            /// </summary>
             public int DamageAmount;
-
-            /// <summary>
-            /// True if the attack was a critical hit.
-            /// </summary>
             public bool WasCritical;
-
-            /// <summary>
-            /// True if the attack was a graze (a partial hit).
-            /// </summary>
             public bool WasGraze;
-
-            /// <summary>
-            /// The elemental effectiveness of the attack.
-            /// </summary>
             public ElementalEffectiveness Effectiveness;
-
-            /// <summary>
-            /// A list of abilities from the attacker that triggered during this calculation.
-            /// </summary>
-            public List<AbilityData> AttackerAbilitiesTriggered;
-
-            /// <summary>
-            /// A list of abilities from the defender that triggered during this calculation.
-            /// </summary>
-            public List<AbilityData> DefenderAbilitiesTriggered;
+            public List<RelicData> AttackerAbilitiesTriggered;
+            public List<RelicData> DefenderAbilitiesTriggered;
         }
 
-        /// <summary>
-        /// Calculates the effective power of a move after applying static bonuses from the attacker's abilities.
-        /// This is used for both UI display and the final damage calculation.
-        /// </summary>
         public static int GetEffectiveMovePower(BattleCombatant attacker, MoveData move)
         {
             float movePower = move.Power;
 
-            foreach (var ability in attacker.ActiveAbilities)
+            foreach (var relic in attacker.ActiveRelics)
             {
-                if (ability.Effects.TryGetValue("DamageBonus", out var damageBonusValue))
+                if (relic.Effects.TryGetValue("DamageBonus", out var damageBonusValue))
                 {
                     var parts = damageBonusValue.Split(',');
                     if (parts.Length == 2 &&
                         EffectParser.TryParseInt(parts[0].Trim(), out int elementId) &&
                         EffectParser.TryParseFloat(parts[1].Trim(), out float bonusPercent))
                     {
-                        // Check if the move is a spell and has the correct element
                         if (move.MoveType == MoveType.Spell && move.OffensiveElementIDs.Contains(elementId))
                         {
                             movePower *= (1.0f + (bonusPercent / 100f));
@@ -81,34 +56,28 @@ namespace ProjectVagabond.Battle
             return (int)Math.Round(movePower);
         }
 
-        /// <summary>
-        /// Calculates the final damage an attacker will deal to a target with a specific move, including all modifiers.
-        /// </summary>
         public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f)
         {
             var attacker = action.Actor;
             var result = new DamageResult
             {
                 Effectiveness = ElementalEffectiveness.Neutral,
-                AttackerAbilitiesTriggered = new List<AbilityData>(),
-                DefenderAbilitiesTriggered = new List<AbilityData>()
+                AttackerAbilitiesTriggered = new List<RelicData>(),
+                DefenderAbilitiesTriggered = new List<RelicData>()
             };
 
-            // Step 0: Handle Fixed Damage moves immediately.
             if (move.Effects.TryGetValue("FixedDamage", out var fixedDamageValue) && EffectParser.TryParseInt(fixedDamageValue, out int fixedDamage))
             {
                 result.DamageAmount = fixedDamage;
                 return result;
             }
 
-            // Step 1: Handle non-damaging moves.
             if (move.Power == 0)
             {
                 return result;
             }
 
-            // Step 2: Accuracy Check & The Graze Mechanic
-            if (move.Accuracy != -1) // -1 is our convention for a "True Hit" that always hits.
+            if (move.Accuracy != -1)
             {
                 if (target.HasStatusEffect(StatusEffectType.Dodging))
                 {
@@ -124,23 +93,20 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // Step 3: Base Damage Calculation
             float movePower = GetEffectiveMovePower(attacker, move);
 
-            // Add bonus from Last Stand
             if (action.IsLastActionInRound)
             {
-                foreach (var ability in attacker.ActiveAbilities)
+                foreach (var relic in attacker.ActiveRelics)
                 {
-                    if (ability.Effects.TryGetValue("PowerBonusLastAct", out var value) && EffectParser.TryParseFloat(value, out float bonusPercent))
+                    if (relic.Effects.TryGetValue("PowerBonusLastAct", out var value) && EffectParser.TryParseFloat(value, out float bonusPercent))
                     {
                         movePower *= (1.0f + (bonusPercent / 100f));
-                        result.AttackerAbilitiesTriggered.Add(ability);
+                        result.AttackerAbilitiesTriggered.Add(relic);
                     }
                 }
             }
 
-            // Add bonus from Ramping Damage
             if (move.Effects.ContainsKey("RampUp") && attacker.RampingMoveCounters.TryGetValue(move.MoveID, out int useCount))
             {
                 if (EffectParser.TryParseIntArray(move.Effects["RampUp"], out int[] rampParams) && rampParams.Length == 2)
@@ -154,41 +120,27 @@ namespace ProjectVagabond.Battle
             float offensiveStat;
             switch (move.OffensiveStat)
             {
-                case OffensiveStatType.Strength:
-                    offensiveStat = attacker.GetEffectiveStrength();
-                    break;
-                case OffensiveStatType.Intelligence:
-                    offensiveStat = attacker.GetEffectiveIntelligence();
-                    break;
-                case OffensiveStatType.Tenacity:
-                    offensiveStat = attacker.GetEffectiveTenacity();
-                    break;
-                case OffensiveStatType.Agility:
-                    offensiveStat = attacker.GetEffectiveAgility();
-                    break;
-                default:
-                    offensiveStat = attacker.GetEffectiveStrength();
-                    break;
+                case OffensiveStatType.Strength: offensiveStat = attacker.GetEffectiveStrength(); break;
+                case OffensiveStatType.Intelligence: offensiveStat = attacker.GetEffectiveIntelligence(); break;
+                case OffensiveStatType.Tenacity: offensiveStat = attacker.GetEffectiveTenacity(); break;
+                case OffensiveStatType.Agility: offensiveStat = attacker.GetEffectiveAgility(); break;
+                default: offensiveStat = attacker.GetEffectiveStrength(); break;
             }
 
             float defensiveStat = target.GetEffectiveTenacity();
-            // Apply Armor Pierce
             if (move.Effects.TryGetValue("ArmorPierce", out var armorPierceValue) && EffectParser.TryParseFloat(armorPierceValue, out float piercePercent))
             {
                 defensiveStat *= (1.0f - (piercePercent / 100f));
             }
-            if (defensiveStat <= 0) defensiveStat = 1; // Prevent division by zero or negative defense
+            if (defensiveStat <= 0) defensiveStat = 1;
 
             float baseDamage = ((((2f * attacker.Stats.Level / 5f + 2f) * movePower * (offensiveStat / defensiveStat)) / 50f) + 2f);
 
-            // Step 4: Multiplicative Modifier Application
             float finalDamage = baseDamage;
 
-            // Modifier (Ability Damage Bonus)
-            foreach (var ability in attacker.ActiveAbilities)
+            foreach (var relic in attacker.ActiveRelics)
             {
-                // Adrenaline Rush
-                if (ability.Effects.TryGetValue("DamageBonusLowHP", out var adrValue))
+                if (relic.Effects.TryGetValue("DamageBonusLowHP", out var adrValue))
                 {
                     var parts = adrValue.Split(',');
                     if (parts.Length == 2 && EffectParser.TryParseFloat(parts[0], out float hpThreshold) && EffectParser.TryParseFloat(parts[1], out float bonus))
@@ -196,76 +148,68 @@ namespace ProjectVagabond.Battle
                         if ((float)attacker.Stats.CurrentHP / attacker.Stats.MaxHP * 100f < hpThreshold)
                         {
                             finalDamage *= (1.0f + (bonus / 100f));
-                            result.AttackerAbilitiesTriggered.Add(ability);
+                            result.AttackerAbilitiesTriggered.Add(relic);
                         }
                     }
                 }
 
-                // Opportunist
-                if (ability.Effects.TryGetValue("DamageBonusVsStatused", out var oppValue))
+                if (relic.Effects.TryGetValue("DamageBonusVsStatused", out var oppValue))
                 {
                     if (target.ActiveStatusEffects.Any() && EffectParser.TryParseFloat(oppValue, out float bonus))
                     {
                         finalDamage *= (1.0f + (bonus / 100f));
-                        result.AttackerAbilitiesTriggered.Add(ability);
+                        result.AttackerAbilitiesTriggered.Add(relic);
                     }
                 }
 
-                // First Blood
-                if (!attacker.HasUsedFirstAttack && ability.Effects.TryGetValue("FirstAttackBonus", out var fbValue))
+                if (!attacker.HasUsedFirstAttack && relic.Effects.TryGetValue("FirstAttackBonus", out var fbValue))
                 {
                     if (EffectParser.TryParseFloat(fbValue, out float bonus))
                     {
                         finalDamage *= (1.0f + (bonus / 100f));
-                        result.AttackerAbilitiesTriggered.Add(ability);
+                        result.AttackerAbilitiesTriggered.Add(relic);
                     }
                 }
 
-                // Bloodletter
-                if (ability.Effects.TryGetValue("Bloodletter", out var bloodletterValue) && EffectParser.TryParseFloatArray(bloodletterValue, out float[] bloodletterParams) && bloodletterParams.Length == 2)
+                if (relic.Effects.TryGetValue("Bloodletter", out var bloodletterValue) && EffectParser.TryParseFloatArray(bloodletterValue, out float[] bloodletterParams) && bloodletterParams.Length == 2)
                 {
-                    // Void element ID is 9
                     if (move.MoveType == MoveType.Spell && move.OffensiveElementIDs.Contains(9))
                     {
                         finalDamage *= (1.0f + (bloodletterParams[1] / 100f));
-                        result.AttackerAbilitiesTriggered.Add(ability);
+                        result.AttackerAbilitiesTriggered.Add(relic);
                     }
                 }
 
-                // Spellweaver
-                if (attacker.IsSpellweaverActive && ability.Effects.TryGetValue("Spellweaver", out var spellweaverValue))
+                if (attacker.IsSpellweaverActive && relic.Effects.TryGetValue("Spellweaver", out var spellweaverValue))
                 {
                     if (move.MoveType == MoveType.Spell && EffectParser.TryParseFloat(spellweaverValue, out float bonus))
                     {
                         finalDamage *= (1.0f + (bonus / 100f));
-                        result.AttackerAbilitiesTriggered.Add(ability);
+                        result.AttackerAbilitiesTriggered.Add(relic);
                     }
                 }
 
-                // Momentum
-                if (attacker.IsMomentumActive && ability.Effects.TryGetValue("Momentum", out var momentumValue))
+                if (attacker.IsMomentumActive && relic.Effects.TryGetValue("Momentum", out var momentumValue))
                 {
                     if (move.Power > 0 && EffectParser.TryParseFloat(momentumValue, out float bonus))
                     {
                         finalDamage *= (1.0f + (bonus / 100f));
-                        result.AttackerAbilitiesTriggered.Add(ability);
+                        result.AttackerAbilitiesTriggered.Add(relic);
                     }
                 }
 
-                // Escalation
-                if (attacker.EscalationStacks > 0 && ability.Effects.TryGetValue("Escalation", out var escalationValue))
+                if (attacker.EscalationStacks > 0 && relic.Effects.TryGetValue("Escalation", out var escalationValue))
                 {
                     if (EffectParser.TryParseIntArray(escalationValue, out int[] escalationParams) && escalationParams.Length == 2)
                     {
                         float bonusPerStack = escalationParams[0];
                         float totalBonus = attacker.EscalationStacks * bonusPerStack;
                         finalDamage *= (1.0f + (totalBonus / 100f));
-                        result.AttackerAbilitiesTriggered.Add(ability);
+                        result.AttackerAbilitiesTriggered.Add(relic);
                     }
                 }
             }
 
-            // Modifier (Execute)
             if (move.Effects.TryGetValue("Execute", out var executeValue) && EffectParser.TryParseFloatArray(executeValue, out float[] execParams) && execParams.Length == 2)
             {
                 float hpThreshold = execParams[0];
@@ -281,10 +225,9 @@ namespace ProjectVagabond.Battle
             if (!result.WasGraze)
             {
                 double critChance = BattleConstants.CRITICAL_HIT_CHANCE;
-                // Sniper
-                foreach (var ability in attacker.ActiveAbilities)
+                foreach (var relic in attacker.ActiveRelics)
                 {
-                    if (ability.Effects.TryGetValue("CritChanceBonus", out var value) && EffectParser.TryParseFloat(value, out float bonus))
+                    if (relic.Effects.TryGetValue("CritChanceBonus", out var value) && EffectParser.TryParseFloat(value, out float bonus))
                     {
                         critChance += bonus / 100.0;
                     }
@@ -296,21 +239,15 @@ namespace ProjectVagabond.Battle
                     result.WasCritical = true;
                     finalDamage *= BattleConstants.CRITICAL_HIT_MULTIPLIER;
 
-                    // Bulwark
-                    foreach (var ability in target.ActiveAbilities)
+                    foreach (var relic in target.ActiveRelics)
                     {
-                        if (ability.Effects.TryGetValue("CritDamageReduction", out var value) && EffectParser.TryParseFloat(value, out float reductionPercent))
+                        if (relic.Effects.TryGetValue("CritDamageReduction", out var value) && EffectParser.TryParseFloat(value, out float reductionPercent))
                         {
                             finalDamage *= (1.0f - (reductionPercent / 100f));
-                            result.DefenderAbilitiesTriggered.Add(ability);
+                            result.DefenderAbilitiesTriggered.Add(relic);
                         }
                     }
                 }
-            }
-
-            if (!result.WasCritical)
-            {
-                // Stat down/up effects are now handled in BattleCombatant.GetEffective... methods.
             }
 
             float elementalMultiplier = GetElementalMultiplier(move, target, result.DefenderAbilitiesTriggered);
@@ -325,10 +262,9 @@ namespace ProjectVagabond.Battle
                 finalDamage *= 2.0f;
             }
 
-            // Thick Skin
-            foreach (var ability in target.ActiveAbilities)
+            foreach (var relic in target.ActiveRelics)
             {
-                if (ability.Effects.TryGetValue("DamageReductionPhysical", out var value) && EffectParser.TryParseFloat(value, out float reduction))
+                if (relic.Effects.TryGetValue("DamageReductionPhysical", out var value) && EffectParser.TryParseFloat(value, out float reduction))
                 {
                     if (move.ImpactType == ImpactType.Physical)
                     {
@@ -337,10 +273,9 @@ namespace ProjectVagabond.Battle
                 }
             }
 
-            // Vigor
-            foreach (var ability in target.ActiveAbilities)
+            foreach (var relic in target.ActiveRelics)
             {
-                if (ability.Effects.TryGetValue("Vigor", out var vigorValue) && EffectParser.TryParseFloatArray(vigorValue, out float[] vigorParams) && vigorParams.Length == 2)
+                if (relic.Effects.TryGetValue("Vigor", out var vigorValue) && EffectParser.TryParseFloatArray(vigorValue, out float[] vigorParams) && vigorParams.Length == 2)
                 {
                     float hpThreshold = vigorParams[0];
                     float damageReduction = vigorParams[1];
@@ -348,7 +283,7 @@ namespace ProjectVagabond.Battle
                     if ((float)target.Stats.CurrentHP / target.Stats.MaxHP * 100f > hpThreshold)
                     {
                         finalDamage *= (1.0f - (damageReduction / 100f));
-                        result.DefenderAbilitiesTriggered.Add(ability);
+                        result.DefenderAbilitiesTriggered.Add(relic);
                     }
                 }
             }
@@ -360,7 +295,6 @@ namespace ProjectVagabond.Battle
                 finalDamage *= BattleConstants.GRAZE_MULTIPLIER;
             }
 
-            // Step 5: Final Damage & Additive Modifiers
             int finalDamageAmount = (int)Math.Floor(finalDamage);
 
             if (finalDamage > 0 && finalDamageAmount == 0)
@@ -372,44 +306,27 @@ namespace ProjectVagabond.Battle
             return result;
         }
 
-        /// <summary>
-        /// Calculates a "pure baseline" damage value, ignoring all conditional multipliers.
-        /// This is used to determine if a hit was exceptionally strong for special visual feedback.
-        /// </summary>
         public static int CalculateBaselineDamage(BattleCombatant attacker, BattleCombatant target, MoveData move)
         {
             if (move.Power == 0) return 0;
 
-            float movePower = move.Power; // Use base power, ignore RampUp
+            float movePower = move.Power;
 
-            // Use base stats, ignoring status effects
             float offensiveStat;
             switch (move.OffensiveStat)
             {
-                case OffensiveStatType.Strength:
-                    offensiveStat = attacker.Stats.Strength;
-                    break;
-                case OffensiveStatType.Intelligence:
-                    offensiveStat = attacker.Stats.Intelligence;
-                    break;
-                case OffensiveStatType.Tenacity:
-                    offensiveStat = attacker.Stats.Tenacity;
-                    break;
-                case OffensiveStatType.Agility:
-                    offensiveStat = attacker.Stats.Agility;
-                    break;
-                default:
-                    offensiveStat = attacker.Stats.Strength;
-                    break;
+                case OffensiveStatType.Strength: offensiveStat = attacker.Stats.Strength; break;
+                case OffensiveStatType.Intelligence: offensiveStat = attacker.Stats.Intelligence; break;
+                case OffensiveStatType.Tenacity: offensiveStat = attacker.Stats.Tenacity; break;
+                case OffensiveStatType.Agility: offensiveStat = attacker.Stats.Agility; break;
+                default: offensiveStat = attacker.Stats.Strength; break;
             }
 
             float defensiveStat = target.Stats.Tenacity;
             if (defensiveStat <= 0) defensiveStat = 1;
 
-            // Core damage formula
             float baseDamage = ((((2f * attacker.Stats.Level / 5f + 2f) * movePower * (offensiveStat / defensiveStat)) / 50f) + 2f);
 
-            // Apply random variance of 1.0x as requested
             baseDamage *= BattleConstants.RANDOM_VARIANCE_MAX;
 
             int finalDamageAmount = (int)Math.Floor(baseDamage);
@@ -422,46 +339,36 @@ namespace ProjectVagabond.Battle
         }
 
 
-        /// <summary>
-        /// Calculates the final elemental multiplier based on the move's offensive elements and the target's defensive elements.
-        /// This overload does not track which abilities triggered.
-        /// </summary>
         public static float GetElementalMultiplier(MoveData move, BattleCombatant target)
         {
             return GetElementalMultiplier(move, target, null);
         }
 
-        /// <summary>
-        /// Calculates the final elemental multiplier based on the move's offensive elements and the target's defensive elements.
-        /// </summary>
-        public static float GetElementalMultiplier(MoveData move, BattleCombatant target, List<AbilityData> defenderAbilitiesTriggered)
+        public static float GetElementalMultiplier(MoveData move, BattleCombatant target, List<RelicData> defenderAbilitiesTriggered)
         {
-            // Check for elemental immunities from abilities first.
-            foreach (var ability in target.ActiveAbilities)
+            foreach (var relic in target.ActiveRelics)
             {
-                // Handles abilities like Photosynthesis that grant immunity and heal.
-                if (ability.Effects.TryGetValue("ElementImmunityAndHeal", out var healValue))
+                if (relic.Effects.TryGetValue("ElementImmunityAndHeal", out var healValue))
                 {
                     var parts = healValue.Split(',');
                     if (parts.Length == 2 && EffectParser.TryParseInt(parts[0], out int immuneElementId))
                     {
                         if (move.OffensiveElementIDs.Contains(immuneElementId))
                         {
-                            defenderAbilitiesTriggered?.Add(ability);
-                            return 0f; // Grant immunity
+                            defenderAbilitiesTriggered?.Add(relic);
+                            return 0f;
                         }
                     }
                 }
 
-                // Handles abilities like Grounding that grant simple immunity.
-                if (ability.Effects.TryGetValue("ElementImmunity", out var immunityValue))
+                if (relic.Effects.TryGetValue("ElementImmunity", out var immunityValue))
                 {
                     if (EffectParser.TryParseInt(immunityValue, out int immuneElementId))
                     {
                         if (move.OffensiveElementIDs.Contains(immuneElementId))
                         {
-                            defenderAbilitiesTriggered?.Add(ability);
-                            return 0f; // Grant immunity
+                            defenderAbilitiesTriggered?.Add(relic);
+                            return 0f;
                         }
                     }
                 }

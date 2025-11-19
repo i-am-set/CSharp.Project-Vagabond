@@ -10,48 +10,20 @@ using System.Text.Json.Serialization;
 
 namespace ProjectVagabond.Battle
 {
-    /// <summary>
-    /// A static class to load and store all battle-related data from JSON and CSV files at runtime.
-    /// This creates a central, read-only repository for data that drives the battle system.
-    /// </summary>
     public static class BattleDataCache
     {
-        /// <summary>
-        /// A dictionary mapping Element IDs to their definitions.
-        /// </summary>
         public static Dictionary<int, ElementDefinition> Elements { get; private set; }
-
-        /// <summary>
-        /// A matrix storing all elemental interaction multipliers for fast lookups.
-        /// Outer Key: AttackingElementID, Inner Key: DefendingElementID, Value: Multiplier.
-        /// </summary>
         public static Dictionary<int, Dictionary<int, float>> InteractionMatrix { get; private set; }
-
-        /// <summary>
-        /// A dictionary mapping Move IDs to their definitions.
-        /// </summary>
         public static Dictionary<string, MoveData> Moves { get; private set; }
-
-        /// <summary>
-        /// A dictionary mapping Item IDs to their consumable item definitions.
-        /// </summary>
         public static Dictionary<string, ConsumableItemData> Consumables { get; private set; }
+        public static Dictionary<string, RelicData> Relics { get; private set; }
 
-        /// <summary>
-        /// A dictionary mapping Ability IDs to their definitions.
-        /// </summary>
-        public static Dictionary<string, AbilityData> Abilities { get; private set; }
-
-        /// <summary>
-        /// Loads all battle data from JSON files into memory.
-        /// </summary>
-        /// <param name="content">The game's ContentManager.</param>
         public static void LoadData(ContentManager content)
         {
             var jsonOptions = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = JsonCommentHandling.Skip, // Allow comments in JSON files
+                ReadCommentHandling = JsonCommentHandling.Skip,
                 Converters = { new JsonStringEnumConverter() }
             };
 
@@ -103,18 +75,18 @@ namespace ProjectVagabond.Battle
 
             try
             {
-                string abilitiesPath = Path.Combine(content.RootDirectory, "Data", "Abilities.json");
-                string abilitiesJson = File.ReadAllText(abilitiesPath);
-                var abilityList = JsonSerializer.Deserialize<List<AbilityData>>(abilitiesJson, jsonOptions);
-                Abilities = abilityList.ToDictionary(a => a.AbilityID, a => a);
-                ValidateWordLengths(Abilities.Values.Select(a => a.RelicName), "Relic", 11);
-                ValidateWordLengths(Abilities.Values.Select(a => a.AbilityName), "Ability", 14);
-                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Abilities.Count} ability definitions.");
+                string relicsPath = Path.Combine(content.RootDirectory, "Data", "Relics.json");
+                string relicsJson = File.ReadAllText(relicsPath);
+                var relicList = JsonSerializer.Deserialize<List<RelicData>>(relicsJson, jsonOptions);
+                Relics = relicList.ToDictionary(a => a.RelicID, a => a);
+                ValidateWordLengths(Relics.Values.Select(a => a.RelicName), "Relic", 11);
+                ValidateWordLengths(Relics.Values.Select(a => a.AbilityName), "Ability", 14);
+                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Relics.Count} relic definitions.");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load Abilities.json: {ex.Message}");
-                Abilities = new Dictionary<string, AbilityData>();
+                Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load Relics.json: {ex.Message}");
+                Relics = new Dictionary<string, RelicData>();
             }
         }
 
@@ -144,31 +116,13 @@ namespace ProjectVagabond.Battle
 
                 if (!File.Exists(matrixPath))
                 {
-                    Debug.WriteLine($"[BattleDataCache] WARNING: CSV file not found at standard runtime path '{matrixPath}'. This means its 'Copy to Output Directory' property is likely not set to 'Copy if newer'.");
-                    string fallbackPath = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "Content", "Data", "ElementalInteractionMatrix.csv"));
-                    Debug.WriteLine($"[BattleDataCache] Attempting to load from source path as a fallback: {fallbackPath}");
-
-                    if (File.Exists(fallbackPath))
-                    {
-                        matrixPath = fallbackPath;
-                        Debug.WriteLine("[BattleDataCache] SUCCESS: Found CSV at source path. The data will be loaded, but the project's 'Copy to Output Directory' setting MUST be fixed for release builds.");
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"[BattleDataCache] FATAL: Could not find CSV at source path either. The file may be missing or the path is incorrect. Aborting matrix load.");
-                        return;
-                    }
-                }
-
-                var lines = File.ReadAllLines(matrixPath);
-
-                if (lines.Length < 2) // Need at least a header and one data row
-                {
-                    Debug.WriteLine("[BattleDataCache] [ERROR] ElementalInteractionMatrix.csv is malformed. It must have at least 2 rows (header + data).");
+                    Debug.WriteLine($"[BattleDataCache] WARNING: CSV file not found at standard runtime path '{matrixPath}'.");
                     return;
                 }
 
-                // Find the header row which contains "Attacking" and the defending IDs
+                var lines = File.ReadAllLines(matrixPath);
+                if (lines.Length < 2) return;
+
                 int headerRowIndex = -1;
                 for (int i = 0; i < lines.Length; i++)
                 {
@@ -180,44 +134,26 @@ namespace ProjectVagabond.Battle
                     }
                 }
 
-                if (headerRowIndex == -1)
-                {
-                    Debug.WriteLine("[BattleDataCache] [ERROR] Could not find the header row (the one starting with 'Attacking').");
-                    return;
-                }
+                if (headerRowIndex == -1) return;
 
                 var header = lines[headerRowIndex].Split(',');
                 var defendingElementIds = new List<int>();
-                // Defending IDs start from the 3rd column (index 2)
                 for (int i = 2; i < header.Length; i++)
                 {
                     if (int.TryParse(header[i].Trim(), out int id))
                     {
                         defendingElementIds.Add(id);
                     }
-                    else
-                    {
-                        Debug.WriteLine($"[BattleDataCache] [WARNING] Could not parse defending element ID from header: '{header[i]}'");
-                    }
                 }
 
-                if (!defendingElementIds.Any())
-                {
-                    Debug.WriteLine("[BattleDataCache] [ERROR] No defending element IDs could be parsed from the header row.");
-                    return;
-                }
-
-                // Data rows start from the line after the header
                 for (int i = headerRowIndex + 1; i < lines.Length; i++)
                 {
                     var values = lines[i].Split(',');
-                    if (values.Length < 3) continue; // Need at least Name, ID, and one value
+                    if (values.Length < 3) continue;
 
-                    // Attacking ID is in the 2nd column (index 1)
                     if (int.TryParse(values[1].Trim(), out int attackingId))
                     {
                         var rowMatrix = new Dictionary<int, float>();
-                        // Multiplier values start from the 3rd column (index 2)
                         for (int j = 2; j < values.Length; j++)
                         {
                             int defendingIdIndex = j - 2;
@@ -228,17 +164,9 @@ namespace ProjectVagabond.Battle
                                 {
                                     rowMatrix[defendingId] = multiplier;
                                 }
-                                else
-                                {
-                                    Debug.WriteLine($"[BattleDataCache] [WARNING] Could not parse multiplier for AttackingID {attackingId} vs DefendingID {defendingId}. Value: '{values[j]}'");
-                                }
                             }
                         }
                         InteractionMatrix[attackingId] = rowMatrix;
-                    }
-                    else
-                    {
-                        Debug.WriteLine($"[BattleDataCache] [WARNING] Could not parse attacking element ID from row: '{lines[i]}'");
                     }
                 }
                 Debug.WriteLine($"[BattleDataCache] Successfully loaded elemental interaction matrix with {InteractionMatrix.Count} attacking types.");

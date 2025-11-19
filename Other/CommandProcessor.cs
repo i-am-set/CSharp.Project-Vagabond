@@ -4,7 +4,6 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -75,7 +74,7 @@ namespace ProjectVagabond
             _commands["giveweapon"] = new Command("giveweapon", (args) => HandleGiveItem(args, "Weapon"), "giveweapon <id> [n]");
             _commands["givearmor"] = new Command("givearmor", (args) => HandleGiveItem(args, "Armor"), "givearmor <id> [n]");
             _commands["giverelic"] = new Command("giverelic", (args) => HandleGiveItem(args, "Relic"), "giverelic <id> [n]",
-                (args) => args.Length == 0 ? BattleDataCache.Abilities.Keys.ToList() : new List<string>());
+                (args) => args.Length == 0 ? BattleDataCache.Relics.Keys.ToList() : new List<string>());
             _commands["giveconsumable"] = new Command("giveconsumable", (args) => HandleGiveItem(args, "Consumable"), "giveconsumable <id> [n]",
                 (args) => args.Length == 0 ? BattleDataCache.Consumables.Keys.ToList() : new List<string>());
 

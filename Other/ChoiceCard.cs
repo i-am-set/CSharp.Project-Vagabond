@@ -52,9 +52,9 @@ namespace ProjectVagabond.UI
         private RarityAnimationState _rarityAnimState = RarityAnimationState.Hidden;
         private float _rarityPopInTimer = 0f;
         private const float RARITY_ANIM_DURATION = 0.3f;
-        private const float BORDER_ANIM_SPEED = 250f; // pixels per second
+        private const float BORDER_ANIM_SPEED = 250f;
         private const int TRAIL_LENGTH = 250;
-        private const float TRAIL_FADE_STRENGTH = 0.45f; // 0.0 (long fade) to 1.0 (instant fade)
+        private const float TRAIL_FADE_STRENGTH = 0.45f;
         private const float AURA_PULSE_SPEED = 2f;
         private const float MIN_AURA_ALPHA = 0.1f;
         private const float MAX_AURA_ALPHA = 0.6f;
@@ -66,8 +66,8 @@ namespace ProjectVagabond.UI
         private const float HOVER_LIFT_SPEED = 25f;
         private const float CARD_BOB_SPEED = 0.8f;
         private const float CARD_BOB_AMOUNT = 1.0f;
-        private const float ICON_BOB_CYCLE_DURATION = 1.0f; // Total time for one up-and-down cycle
-        private const float ICON_BOB_AMOUNT = 1.0f; // The pixel distance to bob
+        private const float ICON_BOB_CYCLE_DURATION = 1.0f;
+        private const float ICON_BOB_AMOUNT = 1.0f;
         private const float RARITY_SWAY_SPEED = 1.2f;
         private const float RARITY_SWAY_AMOUNT = 2.0f;
 
@@ -92,17 +92,17 @@ namespace ProjectVagabond.UI
             _stats.Add(("MANA:", $"{move.ManaCost}%"));
         }
 
-        public ChoiceCard(Rectangle bounds, AbilityData ability) : base(bounds, ability.RelicName)
+        public ChoiceCard(Rectangle bounds, RelicData relic) : base(bounds, relic.RelicName)
         {
-            Data = ability;
+            Data = relic;
             _cardType = ChoiceType.Ability;
-            Title = ability.RelicName.ToUpper();
-            _abilityName = ability.AbilityName.ToUpper();
-            _relicImagePath = ability.RelicImagePath;
-            Description = ability.Description.ToUpper();
-            _rarity = ability.Rarity;
+            Title = relic.RelicName.ToUpper();
+            _abilityName = relic.AbilityName.ToUpper();
+            _relicImagePath = relic.RelicImagePath;
+            Description = relic.Description.ToUpper();
+            _rarity = relic.Rarity;
             _rarityText = GetRarityString(_rarity);
-            _elementId = 0; // Abilities have no element
+            _elementId = 0;
             _bobTimer = (float)_random.NextDouble() * MathHelper.TwoPi;
         }
 
@@ -112,7 +112,7 @@ namespace ProjectVagabond.UI
             _cardType = ChoiceType.Item;
             Title = item.ItemName.ToUpper();
             Description = item.Description.ToUpper();
-            _rarity = 0; // Items can be considered "Common" for now
+            _rarity = 0;
             _rarityText = GetRarityString(_rarity);
             _elementId = 0;
             _subTextLines.Add("CONSUMABLE ITEM");
@@ -136,7 +136,7 @@ namespace ProjectVagabond.UI
             _outroCompleteCallbackFired = false;
             if (wasSelected)
             {
-                _outroRotation = (float)(_random.NextDouble() * 2 - 1) * MathHelper.PiOver4; // Random rotation between -45 and +45 degrees.
+                _outroRotation = (float)(_random.NextDouble() * 2 - 1) * MathHelper.PiOver4;
             }
         }
 
@@ -153,7 +153,6 @@ namespace ProjectVagabond.UI
         {
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Update hover state first
             if (_cardAnimState == CardAnimationState.Idle)
             {
                 base.Update(currentMouseState);
@@ -164,13 +163,11 @@ namespace ProjectVagabond.UI
                 _isPressed = false;
             }
 
-            // Now that IsHovered is set, we can update animations based on it.
             if (!IsHovered)
             {
                 _bobTimer += deltaTime;
             }
 
-            // Animate the hover lift amount
             float targetLift = IsHovered ? -HOVER_LIFT_TARGET : 0f;
             _hoverLiftAmount = MathHelper.Lerp(_hoverLiftAmount, targetLift, HOVER_LIFT_SPEED * deltaTime);
 
@@ -190,7 +187,6 @@ namespace ProjectVagabond.UI
                 if (_cardAnimTimer >= OUTRO_SHRINK_DURATION)
                 {
                     _cardAnimTimer = OUTRO_SHRINK_DURATION;
-                    // The card is now fully shrunk/faded. Fire the callback if it hasn't been already.
                     if (!_outroCompleteCallbackFired)
                     {
                         _onOutroComplete?.Invoke();
@@ -234,7 +230,6 @@ namespace ProjectVagabond.UI
         {
             var words = text.Split(' ');
 
-            // Special wrapping rules for titles
             if (isTitle)
             {
                 bool hasMoreThanOneWord = words.Length > 1;
@@ -277,7 +272,6 @@ namespace ProjectVagabond.UI
         private Vector2 GetPositionOnPerimeter(float distance, Rectangle bounds)
         {
             float perimeter = (bounds.Width + 1) * 2 + (bounds.Height + 1) * 2;
-            // Ensure distance is always positive and wraps around
             distance = (distance % perimeter + perimeter) % perimeter;
 
             float topEdgeLength = bounds.Width + 1;
@@ -286,22 +280,22 @@ namespace ProjectVagabond.UI
 
             float x, y;
 
-            if (distance < topEdgeLength) // Top edge
+            if (distance < topEdgeLength)
             {
                 x = bounds.X - 1 + distance;
                 y = bounds.Y - 1;
             }
-            else if (distance < topEdgeLength + rightEdgeLength) // Right edge
+            else if (distance < topEdgeLength + rightEdgeLength)
             {
                 x = bounds.Right;
                 y = bounds.Y - 1 + (distance - topEdgeLength);
             }
-            else if (distance < topEdgeLength + rightEdgeLength + bottomEdgeLength) // Bottom edge
+            else if (distance < topEdgeLength + rightEdgeLength + bottomEdgeLength)
             {
                 x = bounds.Right - (distance - (topEdgeLength + rightEdgeLength));
                 y = bounds.Bottom;
             }
-            else // Left edge
+            else
             {
                 x = bounds.X - 1;
                 y = bounds.Bottom - (distance - (topEdgeLength + rightEdgeLength + bottomEdgeLength));
@@ -340,7 +334,6 @@ namespace ProjectVagabond.UI
             {
                 if (_wasSelectedForOutro)
                 {
-                    // Selected card shrinks and fades to white.
                     float progress = Math.Clamp(_cardAnimTimer / OUTRO_SHRINK_DURATION, 0f, 1f);
                     float easedProgress = Easing.EaseInQuint(progress);
                     scale = 1.0f - easedProgress;
@@ -361,7 +354,6 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    // Other cards fall down and fade out
                     float progress = Math.Clamp(_cardAnimTimer / OUTRO_SHRINK_DURATION, 0f, 1f);
                     float yOffset = Easing.EaseInQuad(progress) * 50f;
                     currentPosition = _targetPosition + new Vector2(0, yOffset);
@@ -371,7 +363,6 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                // For idle state, apply bobbing and hover lift
                 drawBounds = new Rectangle((int)currentPosition.X, (int)(currentPosition.Y + cardBobOffsetY + MathF.Round(_hoverLiftAmount)), Bounds.Width, Bounds.Height);
             }
 
@@ -379,7 +370,6 @@ namespace ProjectVagabond.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var spriteManager = ServiceLocator.Get<SpriteManager>();
 
-            // Determine colors based on state and data
             Color rarityColor = _global.RarityColors.GetValueOrDefault(_rarity, _global.Palette_Gray);
             Color titleColor;
             if (_cardType == ChoiceType.Spell)
@@ -388,65 +378,54 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                titleColor = _global.Palette_BrightWhite; // Neutral color for non-spells
+                titleColor = _global.Palette_BrightWhite;
             }
 
             Color numericColor = (_rarity == 0) ? _global.Palette_Red : rarityColor;
             Color accentColor = _global.Palette_White;
             Color baseBorderColor = _cardType == ChoiceType.Spell ? titleColor : rarityColor;
 
-            // Hover Pulse Effect for Border
             const float PULSE_SPEED = 5f;
-            float pulse = isActivated ? (MathF.Sin(_hoverTimer * PULSE_SPEED) + 1f) / 2f : 0f; // Oscillates 0..1
+            float pulse = isActivated ? (MathF.Sin(_hoverTimer * PULSE_SPEED) + 1f) / 2f : 0f;
             Color borderColor = Color.Lerp(baseBorderColor, Color.White, pulse);
-            borderColor *= 0.5f; // Apply 50% opacity
+            borderColor *= 0.5f;
 
-            // --- Pulsing Aura for Rare and above (drawn first) ---
             if (_rarity >= 2)
             {
-                float pulseValue = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * AURA_PULSE_SPEED) + 1f) / 2f; // 0 to 1
+                float pulseValue = (MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * AURA_PULSE_SPEED) + 1f) / 2f;
                 float auraAlpha = MathHelper.Lerp(MIN_AURA_ALPHA, MAX_AURA_ALPHA, pulseValue);
                 Color auraColor = rarityColor * auraAlpha;
                 var outerBorderRect = new Rectangle(drawBounds.X - 1, drawBounds.Y - 1, drawBounds.Width + 2, drawBounds.Height + 2);
                 spriteBatch.DrawSnapped(pixel, outerBorderRect, auraColor * alpha);
             }
 
-            // Draw the semi-transparent border frame first
             spriteBatch.DrawSnapped(pixel, drawBounds, borderColor * alpha);
 
-            // Draw the opaque inner background on top, creating the hollow border effect
             var innerBgRect = new Rectangle(drawBounds.X + 1, drawBounds.Y + 1, drawBounds.Width - 2, drawBounds.Height - 2);
             Color bgColor = isActivated ? _global.Palette_DarkGray : _global.Palette_Black;
             spriteBatch.DrawSnapped(pixel, innerBgRect, bgColor * alpha);
 
-            // --- Conditionally draw content ---
             if (!skipContent)
             {
-                // --- Animated Rarity Trail ---
-                if (_rarity >= 3) // Zipping Trail for Epic and above
+                if (_rarity >= 3)
                 {
-                    // Determine speed based on rarity
                     float currentSpeed = BORDER_ANIM_SPEED;
-                    if (_rarity == 3) currentSpeed *= 0.6f;      // Epic speed
-                    else if (_rarity == 4) currentSpeed *= 0.8f; // Mythic speed
-                                                                 // Legendary (_rarity == 5) uses the full BORDER_ANIM_SPEED
+                    if (_rarity == 3) currentSpeed *= 0.6f;
+                    else if (_rarity == 4) currentSpeed *= 0.8f;
 
                     float perimeter = (drawBounds.Width + 1) * 2 + (drawBounds.Height + 1) * 2;
                     float headDistance1 = ((float)gameTime.TotalGameTime.TotalSeconds * currentSpeed) % perimeter;
                     for (int i = 0; i < TRAIL_LENGTH; i++)
                     {
-                        // Common trail properties
                         float progress = (float)i / TRAIL_LENGTH;
                         float trailAlpha = 1.0f - MathF.Pow(progress, 1.0f - TRAIL_FADE_STRENGTH + 0.01f);
                         Color trailColor = Color.Lerp(rarityColor, Color.White, (float)i / (TRAIL_LENGTH * 2));
                         Color finalColor = trailColor * trailAlpha * alpha;
 
-                        // Draw first trail segment
                         float currentDistance1 = headDistance1 - i;
                         Vector2 pos1 = GetPositionOnPerimeter(currentDistance1, drawBounds);
                         spriteBatch.DrawSnapped(pixel, pos1, finalColor);
 
-                        // For Mythic and Legendary, draw a second, mirrored trail segment
                         if (_rarity >= 4)
                         {
                             float headDistance2 = (headDistance1 + perimeter / 2f);
@@ -458,7 +437,6 @@ namespace ProjectVagabond.UI
                 }
 
 
-                // Draw Rarity Text (OUTSIDE the card)
                 if (!string.IsNullOrEmpty(_rarityText) && _rarityAnimState != RarityAnimationState.Hidden)
                 {
                     float raritySwayOffsetX = 0;
@@ -475,7 +453,7 @@ namespace ProjectVagabond.UI
                         textScale = Easing.EaseOutBack(progress);
                     }
 
-                    if (_rarity >= 2 && _rarityAnimState == RarityAnimationState.Idle) // Animate for Rare and above
+                    if (_rarity >= 2 && _rarityAnimState == RarityAnimationState.Idle)
                     {
                         const float BOUNCE_DURATION = 0.1f;
                         const float CYCLE_DELAY = 0.5f;
@@ -507,10 +485,10 @@ namespace ProjectVagabond.UI
 
                             var charPos = new Vector2(currentX, rarityY + yOffset);
                             spriteBatch.DrawStringSnapped(secondaryFont, charStr, charPos, rarityColor * alpha);
-                            currentX += secondaryFont.MeasureString(charStr).Width + 1; // Add 1px gap
+                            currentX += secondaryFont.MeasureString(charStr).Width + 1;
                         }
                     }
-                    else // Draw statically or with pop-in animation
+                    else
                     {
                         var rarityTextSize = secondaryFont.MeasureString(_rarityText);
                         var rarityTextPos = new Vector2(drawBounds.Center.X + raritySwayOffsetX, rarityY + rarityTextSize.Height / 2f);
@@ -519,7 +497,6 @@ namespace ProjectVagabond.UI
                     }
                 }
 
-                // --- INTERNAL CONTENT ---
                 const int paddingX = 8;
                 const int topPadding = 4;
                 float contentWidth = drawBounds.Width - (paddingX * 2);
@@ -608,7 +585,7 @@ namespace ProjectVagabond.UI
                         currentY += secondaryFont.LineHeight + 4;
                     }
                 }
-                else // Spell or Item
+                else
                 {
                     currentY = drawBounds.Y + topPadding + headerOffset;
 
@@ -647,7 +624,6 @@ namespace ProjectVagabond.UI
                     }
                     currentY += titleAreaHeight;
 
-                    // Add the divider for spell cards
                     if (_cardType == ChoiceType.Spell)
                     {
                         currentY += 6;
@@ -658,11 +634,10 @@ namespace ProjectVagabond.UI
                     }
                     else
                     {
-                        currentY += 3; // Smaller gap for non-spell cards
+                        currentY += 3;
                     }
                 }
 
-                // Draw Description (Word Wrapped) - relative to animated bounds
                 var descLines = WrapText(Description, contentWidth, secondaryFont);
                 foreach (var line in descLines)
                 {
@@ -715,12 +690,11 @@ namespace ProjectVagabond.UI
                         }
                         currentSegment.Append(c);
                     }
-                    drawSegment(); // Draw the final segment of the line
+                    drawSegment();
 
                     currentY += secondaryFont.LineHeight + 1;
                 }
 
-                // Draw Stats at the bottom - relative to animated bounds
                 float statsBlockHeight = _stats.Count * secondaryFont.LineHeight;
                 float statsStartY = drawBounds.Bottom - paddingX - statsBlockHeight;
 
@@ -768,7 +742,6 @@ namespace ProjectVagabond.UI
                     }
                 }
 
-                // Draw Decorative Accents - relative to animated bounds
                 const int accentSize = 3;
                 const int inset = 2;
                 spriteBatch.DrawSnapped(pixel, new Rectangle(drawBounds.Left + inset, drawBounds.Top + inset, accentSize, 1), accentColor * alpha);
@@ -783,11 +756,10 @@ namespace ProjectVagabond.UI
 
             if (whiteOverlayAlpha > 0)
             {
-                Vector2 origin = new Vector2(0.5f); // Origin for a 1x1 texture is its center
+                Vector2 origin = new Vector2(0.5f);
                 Vector2 scaleVec = new Vector2(drawBounds.Width, drawBounds.Height);
                 spriteBatch.DrawSnapped(pixel, drawBounds.Center.ToVector2(), null, Color.White * whiteOverlayAlpha, currentRotation, origin, scaleVec, SpriteEffects.None, 0f);
             }
         }
     }
 }
-#nullable restore

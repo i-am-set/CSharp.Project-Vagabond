@@ -1,14 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -122,6 +115,12 @@ namespace ProjectVagabond
                         }
                     }
                 }
+
+                // Parse Starting Inventory from Component
+                foreach (var kvp in baseStats.StartingWeapons) PlayerState.AddWeapon(kvp.Key, kvp.Value);
+                foreach (var kvp in baseStats.StartingArmor) PlayerState.AddArmor(kvp.Key, kvp.Value);
+                foreach (var kvp in baseStats.StartingRelics) PlayerState.AddRelic(kvp.Key, kvp.Value);
+                foreach (var kvp in baseStats.StartingConsumables) PlayerState.AddConsumable(kvp.Key, kvp.Value);
             }
 
             // Create and add the live CombatantStatsComponent
@@ -148,10 +147,6 @@ namespace ProjectVagabond
                 _componentStore.AddComponent(PlayerEntityId, new RenderPositionComponent { WorldPosition = posComp.WorldPosition });
             }
 
-            PlayerState.AddConsumable("HealthPotion", 5);
-            PlayerState.AddConsumable("StrengthTonic", 2);
-            PlayerState.AddConsumable("FireScroll", 3);
-
             UpdateExploration(PlayerWorldPos);
         }
 
@@ -167,6 +162,7 @@ namespace ProjectVagabond
             IsPausedByConsole = false;
         }
 
+        // ... [Rest of the class remains the same] ...
         public void UpdateExploration(Vector2 centerPosition)
         {
             int radius = FOG_OF_WAR_RADIUS;

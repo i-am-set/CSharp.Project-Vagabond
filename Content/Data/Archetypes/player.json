@@ -35,16 +35,13 @@
           "Overload",
           "Leer"
         ],
-        "DefaultStrikeMoveID": "ClawRake"
-      }
-    },
-    {
-      "Type": "ProjectVagabond.Battle.PassiveAbilitiesComponent",
-      "Properties": {
-        "AbilityIDs": [
-          "Vigor",
-          "PainFuel"
-        ]
+        "DefaultStrikeMoveID": "ClawRake",
+        "StartingRelics": {
+          "Vigor": 1
+        },
+        "StartingConsumables": {
+          "FireScroll": 2
+        }
       }
     },
     {

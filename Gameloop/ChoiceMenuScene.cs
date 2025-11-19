@@ -3,13 +3,16 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Scenes
 {
@@ -34,10 +37,8 @@ namespace ProjectVagabond.Scenes
         private float _rarityStaggerTimer = 0f;
         private const float RARITY_STAGGER_DELAY = 0.1f;
 
-        // Outro State
         private ChoiceCard? _selectedCard;
 
-        // State for the final transform animation
         private object? _selectedChoiceData;
         private Vector2 _transformAnimPosition;
         private float _transformAnimTimer;
@@ -98,7 +99,7 @@ namespace ProjectVagabond.Scenes
                 ChoiceCard? card = null;
 
                 if (choice is MoveData move) card = new ChoiceCard(bounds, move);
-                else if (choice is AbilityData ability) card = new ChoiceCard(bounds, ability);
+                else if (choice is RelicData relic) card = new ChoiceCard(bounds, relic);
                 else if (choice is ConsumableItemData item) card = new ChoiceCard(bounds, item);
 
                 if (card != null)
@@ -142,7 +143,7 @@ namespace ProjectVagabond.Scenes
                 float spinDirection = (_random.Next(2) == 0) ? 1f : -1f;
                 _transformInitialRotation = initialTilt + (spinDirection * MathHelper.TwoPi);
             }
-            else if (_selectedChoiceData is AbilityData)
+            else if (_selectedChoiceData is RelicData)
             {
                 _currentPhase = AnimationPhase.RelicTransform_PopIn;
                 _transformAnimTimer = 0f;
@@ -160,13 +161,11 @@ namespace ProjectVagabond.Scenes
         {
             if (choiceData is MoveData move)
             {
-                // Fires "Add" event
                 EventBus.Publish(new GameEvents.PlayerMoveAdded { MoveID = move.MoveID, Type = GameEvents.AcquisitionType.Add });
             }
-            else if (choiceData is AbilityData ability)
+            else if (choiceData is RelicData relic)
             {
-                // Fires "Add" event for relic
-                EventBus.Publish(new GameEvents.PlayerRelicAdded { RelicID = ability.AbilityID, Type = GameEvents.AcquisitionType.Add });
+                EventBus.Publish(new GameEvents.PlayerRelicAdded { RelicID = relic.RelicID, Type = GameEvents.AcquisitionType.Add });
             }
             else if (choiceData is ConsumableItemData item)
             {
@@ -435,9 +434,9 @@ namespace ProjectVagabond.Scenes
             else if (_currentPhase >= AnimationPhase.RelicTransform_PopIn && _currentPhase <= AnimationPhase.RelicTransform_MoveOut)
             {
                 var spriteManager = ServiceLocator.Get<SpriteManager>();
-                if (_selectedChoiceData is AbilityData abilityData)
+                if (_selectedChoiceData is RelicData relicData)
                 {
-                    var relicSprite = spriteManager.GetRelicSprite(abilityData.RelicImagePath);
+                    var relicSprite = spriteManager.GetRelicSprite(relicData.RelicImagePath);
                     if (relicSprite != null)
                     {
                         float relicScale = 1f;

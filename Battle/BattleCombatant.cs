@@ -2,20 +2,20 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
 namespace ProjectVagabond.Battle
 {
-    /// <summary>
-    /// Represents a single participant in a battle, holding all their current stats and state.
-    /// </summary>
     public class BattleCombatant
     {
         public int EntityId { get; set; }
@@ -42,14 +42,11 @@ namespace ProjectVagabond.Battle
         }
         private List<MoveData> _staticMoves = new List<MoveData>();
 
-        /// <summary>
-        /// For the player, provides direct access to the MoveEntry objects in their equipped loadout.
-        /// </summary>
         public MoveEntry?[] EquippedSpells { get; set; }
 
         public string DefaultStrikeMoveID { get; set; }
         public List<StatusEffectInstance> ActiveStatusEffects { get; set; } = new List<StatusEffectInstance>();
-        public List<AbilityData> ActiveAbilities { get; set; } = new List<AbilityData>();
+        public List<RelicData> ActiveRelics { get; set; } = new List<RelicData>();
         public List<int> DefensiveElementIDs { get; set; } = new List<int>();
         public bool IsPlayerControlled { get; set; }
         public bool IsDefeated => Stats.CurrentHP <= 0;
@@ -75,8 +72,6 @@ namespace ProjectVagabond.Battle
             };
         }
 
-        // ... [Rest of class methods (ApplyDamage, etc) remain the same] ...
-
         public void ApplyDamage(int damageAmount)
         {
             Stats.CurrentHP -= damageAmount;
@@ -93,9 +88,9 @@ namespace ProjectVagabond.Battle
 
         public bool AddStatusEffect(StatusEffectInstance newEffect)
         {
-            foreach (var ability in ActiveAbilities)
+            foreach (var relic in ActiveRelics)
             {
-                if (ability.Effects.TryGetValue("StatusImmunity", out var immunityValue))
+                if (relic.Effects.TryGetValue("StatusImmunity", out var immunityValue))
                 {
                     var immuneTypes = immunityValue.Split(',');
                     foreach (var typeStr in immuneTypes)
@@ -133,9 +128,9 @@ namespace ProjectVagabond.Battle
         public List<int> GetEffectiveDefensiveElementIDs()
         {
             var effectiveElements = new List<int>(this.DefensiveElementIDs);
-            foreach (var ability in ActiveAbilities)
+            foreach (var relic in ActiveRelics)
             {
-                if (ability.Effects.TryGetValue("AddDefensiveElement", out var elementIdStr) && int.TryParse(elementIdStr, out int elementId))
+                if (relic.Effects.TryGetValue("AddDefensiveElement", out var elementIdStr) && int.TryParse(elementIdStr, out int elementId))
                 {
                     if (!effectiveElements.Contains(elementId)) effectiveElements.Add(elementId);
                 }
@@ -170,9 +165,9 @@ namespace ProjectVagabond.Battle
             if (HasStatusEffect(StatusEffectType.Freeze)) stat *= 0.5f;
             if (HasStatusEffect(StatusEffectType.Fear)) stat *= 0.8f;
 
-            foreach (var ability in ActiveAbilities)
+            foreach (var relic in ActiveRelics)
             {
-                if (ability.Effects.TryGetValue("CorneredAnimal", out var value) && EffectParser.TryParseFloatArray(value, out float[] p) && p.Length == 3)
+                if (relic.Effects.TryGetValue("CorneredAnimal", out var value) && EffectParser.TryParseFloatArray(value, out float[] p) && p.Length == 3)
                 {
                     var battleManager = ServiceLocator.Get<BattleManager>();
                     bool hpCondition = (float)Stats.CurrentHP / Stats.MaxHP * 100f < p[0];
@@ -182,7 +177,7 @@ namespace ProjectVagabond.Battle
                     if (hpCondition || enemyCountCondition)
                     {
                         stat *= (1.0f + (p[2] / 100f));
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = this, Ability = ability });
+                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = this, Ability = relic });
                     }
                 }
             }

@@ -4,14 +4,8 @@ using System.Linq;
 
 namespace ProjectVagabond.Battle
 {
-    /// <summary>
-    /// A static factory class responsible for creating BattleCombatant instances from overworld entity data.
-    /// </summary>
     public static class BattleCombatantFactory
     {
-        /// <summary>
-        /// Creates a BattleCombatant instance from a given entity ID.
-        /// </summary>
         public static BattleCombatant CreateFromEntity(int entityId, string combatantId)
         {
             var componentStore = ServiceLocator.Get<ComponentStore>();
@@ -60,7 +54,6 @@ namespace ProjectVagabond.Battle
 
             if (combatant.IsPlayerControlled)
             {
-                // Player setup from PlayerState
                 combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
                 combatant.EquippedSpells = gameState.PlayerState.EquippedSpells;
 
@@ -69,19 +62,17 @@ namespace ProjectVagabond.Battle
                 {
                     if (!string.IsNullOrEmpty(relicId))
                     {
-                        // Note: We assume RelicID matches AbilityID in data
-                        if (BattleDataCache.Abilities.TryGetValue(relicId, out var abilityData))
+                        if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
                         {
-                            combatant.ActiveAbilities.Add(abilityData);
+                            combatant.ActiveRelics.Add(relicData);
                         }
                         else
                         {
-                            Debug.WriteLine($"[BattleCombatantFactory] [WARNING] Relic/Ability ID '{relicId}' not found for player.");
+                            Debug.WriteLine($"[BattleCombatantFactory] [WARNING] Relic ID '{relicId}' not found for player.");
                         }
                     }
                 }
 
-                // Apply temporary buffs
                 var tempBuffsComp = componentStore.GetComponent<TemporaryBuffsComponent>(entityId);
                 if (tempBuffsComp != null)
                 {
@@ -93,7 +84,6 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                // Enemy setup from component
                 var staticMoves = new List<MoveData>();
                 foreach (var moveId in statsComponent.AvailableMoveIDs)
                 {
@@ -108,11 +98,11 @@ namespace ProjectVagabond.Battle
                 var abilitiesComponent = componentStore.GetComponent<PassiveAbilitiesComponent>(entityId);
                 if (abilitiesComponent != null)
                 {
-                    foreach (var abilityId in abilitiesComponent.AbilityIDs)
+                    foreach (var relicId in abilitiesComponent.RelicIDs)
                     {
-                        if (BattleDataCache.Abilities.TryGetValue(abilityId, out var abilityData))
+                        if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
                         {
-                            combatant.ActiveAbilities.Add(abilityData);
+                            combatant.ActiveRelics.Add(relicData);
                         }
                     }
                 }
