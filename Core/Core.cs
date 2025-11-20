@@ -636,6 +636,8 @@ namespace ProjectVagabond
             if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
             {
                 // Draw the main game scene first
+                // _finalRenderRectangle is calculated in OnResize based on integer scaling.
+                // This ensures the 320x180 scene is drawn at exactly 1x, 2x, 3x, etc.
                 _spriteBatch.Draw(_sceneRenderTarget, _finalRenderRectangle, Color.White);
 
                 // Draw the dice system on top of the game scene if it's active
@@ -662,6 +664,12 @@ namespace ProjectVagabond
             GraphicsDevice.Clear(_global.GameBg);
 
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
+
+            // FIX: Round the translation components of the shake matrix to the nearest integer.
+            // This prevents sub-pixel rendering of the upscaled image, which causes oblong pixels.
+            shakeMatrix.M41 = MathF.Round(shakeMatrix.M41);
+            shakeMatrix.M42 = MathF.Round(shakeMatrix.M42);
+
             _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp, null, null, null, shakeMatrix);
 
             bool applyCrtEffect = _crtEffect != null;
@@ -701,8 +709,21 @@ namespace ProjectVagabond
                 _crtEffect.CurrentTechnique.Passes[0].Apply();
             }
 
-            var fullScreenRect = new Rectangle(0, 0, GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight);
-            _spriteBatch.Draw(_finalCompositeTarget, fullScreenRect, Color.White);
+            // FIX: Draw the composite target at its native size to avoid stretching if BackBuffer differs slightly.
+            // We center it on the screen.
+            int backBufferWidth = GraphicsDevice.PresentationParameters.BackBufferWidth;
+            int backBufferHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
+
+            int targetWidth = _finalCompositeTarget.Width;
+            int targetHeight = _finalCompositeTarget.Height;
+
+            // Calculate centered destination rect
+            int drawX = (backBufferWidth - targetWidth) / 2;
+            int drawY = (backBufferHeight - targetHeight) / 2;
+
+            var destRect = new Rectangle(drawX, drawY, targetWidth, targetHeight);
+
+            _spriteBatch.Draw(_finalCompositeTarget, destRect, Color.White);
             _spriteBatch.End();
 
             // --- Phase 4: Draw UI elements that should NOT have the shader applied ---

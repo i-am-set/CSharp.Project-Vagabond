@@ -1,89 +1,161 @@
-﻿
-#nullable enable
+﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Dice;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace ProjectVagabond.UI
 {
-    /// <summary>
-    /// Represents a single slot in the inventory grid, holding its position and visual state.
-    /// </summary>
-    public class InventorySlot
+    public class InventorySlot : Button
     {
-        public Vector2 Position { get; }
-        public Rectangle SourceRectangle { get; private set; }
         public string? ItemId { get; private set; }
         public int Quantity { get; private set; }
-        public bool IsHovered { get; set; }
+        public string? IconPath { get; private set; }
+        public Color? IconTint { get; private set; }
+        public bool IsSelected { get; set; }
+        public bool HasItem => !string.IsNullOrEmpty(ItemId);
 
-
+        private Rectangle _currentIdleFrame;
+        private readonly Rectangle[] _idleFrames;
         private float _frameChangeTimer;
         private float _nextFrameChangeTime;
         private static readonly Random _random = new Random();
 
-        // --- Tuning ---
+        // Tuning
         private const float MIN_FRAME_CHANGE_SECONDS = 2.0f;
         private const float MAX_FRAME_CHANGE_SECONDS = 8.0f;
 
-        public InventorySlot(Vector2 position, Rectangle sourceRectangle)
+        public InventorySlot(Rectangle bounds, Rectangle[] idleFrames) : base(bounds, "")
         {
-            Position = position;
-            SourceRectangle = sourceRectangle;
-            ResetFrameChangeTimer();
+            _idleFrames = idleFrames;
+            RandomizeFrame();
         }
 
-        public void AssignItem(string itemId, int quantity)
+        public void AssignItem(string itemId, int quantity, string? iconPath, Color? iconTint = null)
         {
             ItemId = itemId;
             Quantity = quantity;
+            IconPath = iconPath;
+            IconTint = iconTint;
         }
 
         public void Clear()
         {
             ItemId = null;
             Quantity = 0;
+            IconPath = null;
+            IconTint = null;
+            IsSelected = false;
         }
 
-        private void ResetFrameChangeTimer()
+        public void Update(GameTime gameTime, MouseState mouseState, Matrix? transform = null)
         {
+            // Pass the transform to the base Button.Update so hit detection works in camera space
+            base.Update(mouseState, transform);
+
+            // Idle animation logic
+            _frameChangeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_frameChangeTimer >= _nextFrameChangeTime)
+            {
+                RandomizeFrame();
+            }
+        }
+
+        public void RandomizeFrame()
+        {
+            if (_idleFrames != null && _idleFrames.Length > 0)
+            {
+                _currentIdleFrame = _idleFrames[_random.Next(_idleFrames.Length)];
+            }
             _frameChangeTimer = 0f;
             _nextFrameChangeTime = (float)(_random.NextDouble() * (MAX_FRAME_CHANGE_SECONDS - MIN_FRAME_CHANGE_SECONDS) + MIN_FRAME_CHANGE_SECONDS);
         }
 
-        public void Update(GameTime gameTime, IReadOnlyList<Rectangle> allFrames)
+        public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
-            _frameChangeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+            var global = ServiceLocator.Get<Global>();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
-            if (_frameChangeTimer >= _nextFrameChangeTime)
+            // Determine Background
+            Texture2D bgTexture;
+            Rectangle? sourceRect = null;
+
+            // If selected, or if pressed (mouse held down), show the selected sprite.
+            // IsPressed is managed by the base Button class.
+            if (IsSelected || IsPressed)
             {
-                RandomizeFrame(allFrames);
+                bgTexture = spriteManager.InventorySlotSelectedSprite;
             }
-        }
-
-        public void RandomizeFrame(IReadOnlyList<Rectangle> allFrames)
-        {
-            if (allFrames.Count > 1)
+            else if (IsHovered || forceHover)
             {
-                Rectangle newFrame;
-                do
+                bgTexture = spriteManager.InventorySlotHoverSprite;
+            }
+            else
+            {
+                bgTexture = spriteManager.InventorySlotIdleSpriteSheet;
+                sourceRect = _currentIdleFrame;
+            }
+
+            Vector2 position = new Vector2(Bounds.X, Bounds.Y);
+
+            // Draw Background
+            spriteBatch.DrawSnapped(bgTexture, position, sourceRect, Color.White);
+
+            // Draw Item Content
+            if (HasItem)
+            {
+                if (!string.IsNullOrEmpty(IconPath))
                 {
-                    newFrame = allFrames[_random.Next(allFrames.Count)];
-                } while (newFrame == SourceRectangle); // Ensure the new frame is different
+                    var icon = spriteManager.GetItemSprite(IconPath);
+                    Color tint = IconTint ?? Color.White;
 
-                SourceRectangle = newFrame;
+                    if (icon != null)
+                    {
+                        // Draw Outline
+                        var silhouette = spriteManager.GetItemSpriteSilhouette(IconPath);
+                        if (silhouette != null)
+                        {
+                            // Prioritize Selected state (Color.White), then Hover (Palette_White), then Default (Palette_DarkGray)
+                            Color outlineColor = IsSelected ? Color.White : (IsHovered ? global.Palette_BrightWhite : global.Palette_Gray);
+
+                            Vector2 iconOrigin = new Vector2(icon.Width / 2f, icon.Height / 2f);
+                            Vector2 centerPos = position + new Vector2(Bounds.Width / 2f, Bounds.Height / 2f);
+
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(-1, 0), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(1, 0), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(0, -1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(0, 1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                        }
+
+                        // Draw Icon
+                        Vector2 iconCenterPos = position + new Vector2(Bounds.Width / 2f, Bounds.Height / 2f);
+                        spriteBatch.DrawSnapped(icon, iconCenterPos, null, tint, 0f, new Vector2(icon.Width / 2f, icon.Height / 2f), 1f, SpriteEffects.None, 0f);
+                    }
+                }
+                else
+                {
+                    // Fallback Text
+                    string displayName = ItemId ?? "???";
+                    if (displayName.Length > 8) displayName = displayName.Substring(0, 6) + "..";
+                    var textSize = secondaryFont.MeasureString(displayName);
+                    Vector2 textPos = position + new Vector2(Bounds.Width / 2f - textSize.Width / 2f, Bounds.Height / 2f - textSize.Height / 2f);
+                    spriteBatch.DrawStringSnapped(secondaryFont, displayName, textPos, global.Palette_BrightWhite);
+                }
+
+                // Draw Quantity
+                if (Quantity > 1)
+                {
+                    string qty = $"x{Quantity}";
+                    var qtySize = secondaryFont.MeasureString(qty);
+                    var qtyPos = position + new Vector2(Bounds.Width / 2f - qtySize.Width - 4, Bounds.Height / 2f - qtySize.Height - 4);
+                    spriteBatch.DrawStringSnapped(secondaryFont, qty, qtyPos, global.Palette_Gray);
+                }
             }
-            ResetFrameChangeTimer();
         }
     }
 }

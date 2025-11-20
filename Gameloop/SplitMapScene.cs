@@ -296,6 +296,7 @@ namespace ProjectVagabond.Scenes
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
                 button.OnClick += () => {
                     _selectedInventoryCategory = category;
+                    RefreshInventorySlots();
                 };
                 _inventoryHeaderButtons.Add(button);
                 _inventoryHeaderButtonOffsets[button] = 0f;
@@ -329,10 +330,23 @@ namespace ProjectVagabond.Scenes
                     float nodeX = _inventorySlotArea.X + (slotSize / 2f) + (col * spaceBetweenX);
                     float nodeY = _inventorySlotArea.Y + (slotSize / 2f) + (row * spaceBetweenY);
                     var position = new Vector2(MathF.Round(nodeX), MathF.Round(nodeY));
-                    var randomFrame = slotFrames[_random.Next(slotFrames.Length)];
-                    _inventorySlots.Add(new InventorySlot(position, randomFrame));
+                    var bounds = new Rectangle((int)(position.X - slotSize / 2f), (int)(position.Y - slotSize / 2f), slotSize, slotSize);
+
+                    var slot = new InventorySlot(bounds, slotFrames);
+                    slot.OnClick += () => {
+                        if (slot.HasItem)
+                        {
+                            // Deselect all others
+                            foreach (var s in _inventorySlots) s.IsSelected = false;
+                            slot.IsSelected = true;
+                            // TODO: Play selection sound
+                        }
+                    };
+                    _inventorySlots.Add(slot);
                 }
             }
+
+            RefreshInventorySlots();
 
             var leftArrowRects = _spriteManager.InventoryLeftArrowButtonSourceRects;
             var rightArrowRects = _spriteManager.InventoryRightArrowButtonSourceRects;
@@ -349,6 +363,7 @@ namespace ProjectVagabond.Scenes
                 if (currentIndex > 0)
                 {
                     _selectedInventoryCategory = (InventoryCategory)(currentIndex - 1);
+                    RefreshInventorySlots();
                 }
             };
 
@@ -365,8 +380,26 @@ namespace ProjectVagabond.Scenes
                 if (currentIndex < maxIndex)
                 {
                     _selectedInventoryCategory = (InventoryCategory)(currentIndex + 1);
+                    RefreshInventorySlots();
                 }
             };
+        }
+
+        private void RefreshInventorySlots()
+        {
+            // Clear all slots first
+            foreach (var slot in _inventorySlots)
+            {
+                slot.Clear();
+            }
+
+            var items = GetCurrentCategoryItems();
+
+            for (int i = 0; i < items.Count && i < _inventorySlots.Count; i++)
+            {
+                var item = items[i];
+                _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.IconTint);
+            }
         }
 
         public override void Exit()
@@ -393,6 +426,7 @@ namespace ProjectVagabond.Scenes
                 _targetCameraOffset = new Vector2(0, -200);
                 _cameraOffset = _targetCameraOffset; // Snap instantly
                 _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
+                RefreshInventorySlots(); // Ensure slots are up to date
             }
             else
             {
@@ -609,7 +643,7 @@ namespace ProjectVagabond.Scenes
                     {
                         foreach (var slot in _inventorySlots)
                         {
-                            slot.RandomizeFrame(slotFrames);
+                            slot.RandomizeFrame();
                         }
                     }
                 }
@@ -642,6 +676,7 @@ namespace ProjectVagabond.Scenes
                     if (currentIndex > 0)
                     {
                         _selectedInventoryCategory = (InventoryCategory)(currentIndex - 1);
+                        RefreshInventorySlots();
                     }
                 }
                 if (rightInput)
@@ -651,6 +686,7 @@ namespace ProjectVagabond.Scenes
                     if (currentIndex < maxIndex)
                     {
                         _selectedInventoryCategory = (InventoryCategory)(currentIndex + 1);
+                        RefreshInventorySlots();
                     }
                 }
 
@@ -718,35 +754,49 @@ namespace ProjectVagabond.Scenes
                     _debugButton2.IsEnabled = (int)_selectedInventoryCategory < Enum.GetValues(typeof(InventoryCategory)).Length - 1;
                 }
 
+                // --- Inventory Slot Update Logic with Overlap Handling ---
+                InventorySlot? bestSlot = null;
+                float minDistance = float.MaxValue;
 
-                if (slotFrames != null)
+                // Transform mouse to world space for distance check
+                var inverseCamera = Matrix.Invert(cameraTransform);
+                Vector2 mouseWorld = Vector2.Transform(virtualMousePos, inverseCamera);
+
+                // 1. Find the single best candidate for interaction
+                foreach (var slot in _inventorySlots)
                 {
-                    const int slotSize = 48;
-                    float radiusSq = (slotSize / 2f) * (slotSize / 2f);
-                    InventorySlot? closestSlot = null;
-                    float minDistanceSq = float.MaxValue;
-
-                    foreach (var slot in _inventorySlots)
+                    if (slot.Bounds.Contains(mouseWorld))
                     {
-                        slot.Update(gameTime, slotFrames);
-                        slot.IsHovered = false; // Reset first
-
-                        float distSq = Vector2.DistanceSquared(mouseInWorldSpace, slot.Position);
-                        if (distSq <= radiusSq)
+                        float dist = Vector2.DistanceSquared(mouseWorld, slot.Bounds.Center.ToVector2());
+                        if (dist < minDistance)
                         {
-                            // Found a candidate, check if it's closer than the previous best
-                            if (distSq < minDistanceSq)
-                            {
-                                minDistanceSq = distSq;
-                                closestSlot = slot;
-                            }
+                            minDistance = dist;
+                            bestSlot = slot;
                         }
                     }
+                }
 
-                    // Only the single closest slot gets the hover state
-                    if (closestSlot != null)
+                // 2. Update all slots, but only pass real input to the best candidate
+                foreach (var slot in _inventorySlots)
+                {
+                    if (slot == bestSlot)
                     {
-                        closestSlot.IsHovered = true;
+                        slot.Update(gameTime, currentMouseState, cameraTransform);
+                    }
+                    else
+                    {
+                        // Pass dummy mouse state with preserved button states to prevent interaction
+                        // while keeping animation logic running.
+                        var dummyMouse = new MouseState(
+                            -10000, -10000,
+                            currentMouseState.ScrollWheelValue,
+                            currentMouseState.LeftButton,
+                            currentMouseState.MiddleButton,
+                            currentMouseState.RightButton,
+                            currentMouseState.XButton1,
+                            currentMouseState.XButton2
+                        );
+                        slot.Update(gameTime, dummyMouse, cameraTransform);
                     }
                 }
             }
@@ -781,6 +831,58 @@ namespace ProjectVagabond.Scenes
 
             // At the very end, call the base update to handle input state for the NEXT frame.
             base.Update(gameTime);
+        }
+
+        private List<(string Name, int Quantity, string? IconPath, int? Uses, Color? IconTint)> GetCurrentCategoryItems()
+        {
+            var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses, Color? IconTint)>();
+            switch (_selectedInventoryCategory)
+            {
+                case InventoryCategory.Weapons:
+                    foreach (var kvp in _gameState.PlayerState.Weapons) currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, null));
+                    break;
+                case InventoryCategory.Armor:
+                    foreach (var kvp in _gameState.PlayerState.Armors) currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, null));
+                    break;
+                case InventoryCategory.Relics:
+                    foreach (var kvp in _gameState.PlayerState.Relics)
+                    {
+                        if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
+                            currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, null));
+                        else
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null, null));
+                    }
+                    break;
+                case InventoryCategory.Consumables:
+                    foreach (var kvp in _gameState.PlayerState.Consumables)
+                    {
+                        if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
+                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, null));
+                        else
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, null));
+                    }
+                    break;
+                case InventoryCategory.Spells:
+                    foreach (var entry in _gameState.PlayerState.Spells)
+                    {
+                        Color? tint = null;
+                        string name = entry.MoveID;
+                        string iconPath = $"Sprites/Items/Spells/{entry.MoveID}";
+
+                        if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
+                        {
+                            name = moveData.MoveName;
+                            int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
+                            if (_global.ElementColors.TryGetValue(elementId, out var elementColor))
+                            {
+                                tint = elementColor;
+                            }
+                        }
+                        currentItems.Add((name, 1, iconPath, null, tint));
+                    }
+                    break;
+            }
+            return currentItems;
         }
 
         private void HandleMapInput(GameTime gameTime)
@@ -1402,133 +1504,10 @@ namespace ProjectVagabond.Scenes
                     button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
 
-                // Draw the inventory slots
-                const int slotSize = 48;
-                var slotOrigin = new Vector2(slotSize / 2f);
-
-                // Populate current items based on category
-                var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses)>();
-                var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-
-                switch (_selectedInventoryCategory)
+                // Draw Inventory Slots
+                foreach (var slot in _inventorySlots)
                 {
-                    case InventoryCategory.Weapons:
-                        foreach (var kvp in _gameState.PlayerState.Weapons) currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null));
-                        break;
-                    case InventoryCategory.Armor:
-                        foreach (var kvp in _gameState.PlayerState.Armors) currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null));
-                        break;
-                    case InventoryCategory.Relics:
-                        foreach (var kvp in _gameState.PlayerState.Relics)
-                        {
-                            if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
-                                currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null));
-                            else
-                                currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null)); // Fallback to ID-based path
-                        }
-                        break;
-                    case InventoryCategory.Consumables:
-                        foreach (var kvp in _gameState.PlayerState.Consumables)
-                        {
-                            if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
-                                currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null));
-                            else
-                                currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null)); // Fallback to ID-based path
-                        }
-                        break;
-                    case InventoryCategory.Spells:
-                        // Updated logic: Iterate over Spells list
-                        foreach (var entry in _gameState.PlayerState.Spells)
-                        {
-                            if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
-                            {
-                                // Use a generic spell scroll path, but we will tint it later
-                                currentItems.Add((moveData.MoveName, 1, $"Sprites/Items/Spells/{moveData.MoveID}", null));
-                            }
-                            else
-                            {
-                                currentItems.Add((entry.MoveID, 1, $"Sprites/Items/Spells/{entry.MoveID}", null)); // Fallback to ID-based path
-                            }
-                        }
-                        break;
-                }
-
-                for (int i = 0; i < _inventorySlots.Count; i++)
-                {
-                    var slot = _inventorySlots[i];
-
-                    // Draw Slot BG
-                    Texture2D bgTexture = slot.IsHovered ? _spriteManager.InventorySlotHoverSprite : _spriteManager.InventorySlotIdleSpriteSheet;
-                    Rectangle? sourceRect = slot.IsHovered ? null : slot.SourceRectangle;
-                    spriteBatch.DrawSnapped(bgTexture, slot.Position, sourceRect, Color.White, 0f, slotOrigin, 1f, SpriteEffects.None, 0f);
-
-                    // Draw Item Content if exists
-                    if (i < currentItems.Count)
-                    {
-                        var item = currentItems[i];
-
-                        // Draw Icon (if available) or Text
-                        if (!string.IsNullOrEmpty(item.IconPath))
-                        {
-                            // Use the new generic GetItemSprite method
-                            var icon = _spriteManager.GetItemSprite(item.IconPath);
-
-                            Color tint = Color.White;
-                            // Apply tint for spells based on element if needed, or just draw white
-                            if (_selectedInventoryCategory == InventoryCategory.Spells)
-                            {
-                                // Find the move data again to get the element color
-                                var moveData = BattleDataCache.Moves.Values.FirstOrDefault(m => m.MoveName == item.Name);
-                                if (moveData != null)
-                                {
-                                    int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
-                                    if (_global.ElementColors.TryGetValue(elementId, out var elementColor))
-                                    {
-                                        tint = elementColor;
-                                    }
-                                }
-                            }
-
-                            if (icon != null)
-                            {
-                                // Always draw outline now
-                                var silhouette = _spriteManager.GetItemSpriteSilhouette(item.IconPath);
-                                if (silhouette != null)
-                                {
-                                    // Determine color based on hover state
-                                    Color outlineColor = slot.IsHovered ? _global.Palette_White : _global.Palette_DarkGray;
-                                    Vector2 origin = new Vector2(icon.Width / 2f, icon.Height / 2f);
-
-                                    // Draw 4 offsets
-                                    spriteBatch.DrawSnapped(silhouette, slot.Position + new Vector2(-1, 0), null, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, slot.Position + new Vector2(1, 0), null, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, slot.Position + new Vector2(0, -1), null, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
-                                    spriteBatch.DrawSnapped(silhouette, slot.Position + new Vector2(0, 1), null, outlineColor, 0f, origin, 1f, SpriteEffects.None, 0f);
-                                }
-
-                                spriteBatch.DrawSnapped(icon, slot.Position, null, tint, 0f, new Vector2(icon.Width / 2f, icon.Height / 2f), 1f, SpriteEffects.None, 0f);
-                            }
-                        }
-                        else
-                        {
-                            // Draw Name centered (truncated if too long)
-                            string displayName = item.Name;
-                            if (displayName.Length > 8) displayName = displayName.Substring(0, 6) + "..";
-                            var textSize = secondaryFont.MeasureString(displayName);
-                            // Fix: Access Width and Height properties of Size2/SizeF
-                            spriteBatch.DrawStringSnapped(secondaryFont, displayName, slot.Position - new Vector2(textSize.Width / 2f, textSize.Height / 2f), _global.Palette_BrightWhite);
-                        }
-
-                        // Draw Quantity (if > 1)
-                        if (item.Quantity > 1)
-                        {
-                            string qty = $"x{item.Quantity}";
-                            var qtySize = secondaryFont.MeasureString(qty);
-                            // Fix: Access Width and Height properties of Size2/SizeF
-                            var qtyPos = slot.Position + new Vector2(slotSize / 2f - qtySize.Width - 4, slotSize / 2f - qtySize.Height - 4);
-                            spriteBatch.DrawStringSnapped(secondaryFont, qty, qtyPos, _global.Palette_Gray);
-                        }
-                    }
+                    slot.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
 
                 if (_debugButton1 != null && _debugButton1.IsEnabled)
@@ -1543,15 +1522,16 @@ namespace ProjectVagabond.Scenes
                 if (_global.ShowSplitMapGrid)
                 {
                     spriteBatch.DrawSnapped(pixel, _inventorySlotArea, Color.Blue * 0.5f);
+                    const int slotSize = 48;
                     foreach (var slot in _inventorySlots)
                     {
-                        var slotRect = new Rectangle((int)(slot.Position.X - slotSize / 2f), (int)(slot.Position.Y - slotSize / 2f), slotSize, slotSize);
+                        var slotRect = new Rectangle((int)(slot.Bounds.X), (int)(slot.Bounds.Y), slotSize, slotSize);
                         spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Top), new Vector2(slotRect.Right, slotRect.Top), Color.Teal);
                         spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Bottom), new Vector2(slotRect.Right, slotRect.Bottom), Color.Teal);
                         spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Top), new Vector2(slotRect.Left, slotRect.Bottom), Color.Teal);
                         spriteBatch.DrawLineSnapped(new Vector2(slotRect.Right, slotRect.Top), new Vector2(slotRect.Right, slotRect.Bottom), Color.Teal);
 
-                        spriteBatch.DrawSnapped(pixel, new Rectangle((int)slot.Position.X - 1, (int)slot.Position.Y - 1, 3, 3), Color.Pink);
+                        spriteBatch.DrawSnapped(pixel, new Rectangle((int)slot.Bounds.X - 1, (int)slot.Bounds.Y - 1, 3, 3), Color.Pink);
                     }
                 }
             }

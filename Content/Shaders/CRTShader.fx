@@ -16,7 +16,7 @@ uniform float FlashIntensity;
 uniform float ImpactGlitchIntensity;
 
 // --- Effect Toggles ---
-// #define ENABLE_VIGNETTE // Disabled as requested
+#define ENABLE_VIGNETTE
 #define ENABLE_CHROMATIC_ABERRATION
 #define ENABLE_CONTRAST
 #define ENABLE_IMPACT_GLITCH
@@ -24,15 +24,15 @@ uniform float ImpactGlitchIntensity;
 #define ENABLE_WOBBLE
 
 // --- Effect Intensity Values ---
-// static const float VIGNETTE_INTENSITY = 0.8; // Vignette is disabled
-static const float CHROMATIC_ABERRATION_AMOUNT = 2.0;
-static const float CONTRAST_AMOUNT = 1.2;
+static const float VIGNETTE_INTENSITY = 0.15;
+static const float CHROMATIC_ABERRATION_AMOUNT = 10.0;
+static const float CONTRAST_AMOUNT = 1.1;
 // --- Scanline Parameters ---
-static const float SCANLINE_INTENSITY = 1.0;
+static const float SCANLINE_INTENSITY = 0.5f;
 static const float SCANLINE_FREQUENCY = 1.0f; // Set to 1.0f for 1:1 pixel scanlines
 // --- Wobble Parameters ---
 static const float WOBBLE_AMOUNT = 0.505;
-static const float WOBBLE_FREQUENCY = -2.0;
+static const float WOBBLE_FREQUENCY = -0.75;
 static const float WOBBLE_VERTICAL_FREQUENCY = 150.0;
 // --- Impact Glitch Parameters ---
 static const float IMPACT_GLITCH_BLOCK_HEIGHT = 0.002;
