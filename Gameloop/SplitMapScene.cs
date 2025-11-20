@@ -138,6 +138,9 @@ namespace ProjectVagabond.Scenes
         private const float INVENTORY_BOB_DURATION = 0.1f;
         private Vector2 _inventoryPositionOffset = Vector2.Zero;
 
+        // Inventory Selection State
+        private int _selectedSlotIndex = -1;
+
 
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
@@ -254,6 +257,7 @@ namespace ProjectVagabond.Scenes
             _inventoryHeaderButtonOffsets.Clear();
             _inventoryHeaderButtonBaseBounds.Clear();
             _selectedInventoryCategory = InventoryCategory.Weapons; // Default selection
+            _selectedSlotIndex = -1;
 
             var categories = Enum.GetValues(typeof(InventoryCategory)).Cast<InventoryCategory>().ToList();
             int numButtons = categories.Count;
@@ -296,6 +300,7 @@ namespace ProjectVagabond.Scenes
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
                 button.OnClick += () => {
                     _selectedInventoryCategory = category;
+                    _selectedSlotIndex = -1; // Reset slot selection on category change
                     RefreshInventorySlots();
                 };
                 _inventoryHeaderButtons.Add(button);
@@ -339,6 +344,7 @@ namespace ProjectVagabond.Scenes
                             // Deselect all others
                             foreach (var s in _inventorySlots) s.IsSelected = false;
                             slot.IsSelected = true;
+                            _selectedSlotIndex = _inventorySlots.IndexOf(slot);
                             // TODO: Play selection sound
                         }
                     };
@@ -567,7 +573,22 @@ namespace ProjectVagabond.Scenes
             }
 
             // Update top-level UI elements first, so they can consume input.
-            _inventoryButton?.Update(currentMouseState);
+            if (_inventoryButton != null)
+            {
+                // Only show and update the inventory button when the map is idle or the inventory is open.
+                bool isVisible = _currentViewState == SplitMapViewState.Inventory || _mapState == SplitMapState.Idle;
+
+                if (isVisible)
+                {
+                    _inventoryButton.IsEnabled = true;
+                    _inventoryButton.Update(currentMouseState);
+                }
+                else
+                {
+                    // Reset state so it doesn't get stuck hovered/pressed while invisible
+                    _inventoryButton.ResetAnimationState();
+                }
+            }
 
             // Handle camera logic
             if (_currentViewState == SplitMapViewState.Map)
@@ -1545,7 +1566,11 @@ namespace ProjectVagabond.Scenes
             var mapBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             _voidEdgeEffect.Draw(spriteBatch, mapBounds);
 
-            _inventoryButton?.Draw(spriteBatch, font, gameTime, transform);
+            // Only draw if idle or inventory is open
+            if (_currentViewState == SplitMapViewState.Inventory || _mapState == SplitMapState.Idle)
+            {
+                _inventoryButton?.Draw(spriteBatch, font, gameTime, transform);
+            }
 
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
             {

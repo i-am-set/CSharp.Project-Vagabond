@@ -176,6 +176,10 @@ namespace ProjectVagabond.UI
 
             // --- Color Logic ---
             Color drawColor = tintColorOverride ?? Color.White;
+            if (!IsEnabled && !_disabledSourceRect.HasValue)
+            {
+                drawColor = _global.ButtonDisableColor; // Use global disable color
+            }
 
             // --- Draw ---
             if (_spriteSheet != null && sourceRectToDraw.HasValue)

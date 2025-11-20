@@ -433,8 +433,8 @@
     "Tags": []
   },
   {
-    "RelicID": "ScorpionsStinger",
-    "RelicName": "Scorpion's Stinger",
+    "RelicID": "ScorpionStinger",
+    "RelicName": "Scorpion Stinger",
     "AbilityName": "Armor Piercer",
     "Description": "The holder's attacks ignore 25% of the target's Tenacity when calculating damage.",
     "Rarity": 2,
