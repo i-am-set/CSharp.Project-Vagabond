@@ -153,7 +153,7 @@ namespace ProjectVagabond.UI
                     string qty = $"x{Quantity}";
                     var qtySize = secondaryFont.MeasureString(qty);
                     var qtyPos = position + new Vector2(Bounds.Width / 2f - qtySize.Width - 4, Bounds.Height / 2f - qtySize.Height - 4);
-                    spriteBatch.DrawStringSnapped(secondaryFont, qty, qtyPos, global.Palette_Gray);
+                    spriteBatch.DrawStringSnapped(secondaryFont, qty, qtyPos, Color.White);
                 }
             }
         }

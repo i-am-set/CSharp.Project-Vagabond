@@ -2282,6 +2282,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_border_consumables.png;Sprites/UI/Inventory/inventory_border_consumables
 
+#begin Sprites/UI/Inventory/inventory_border_equip.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_border_equip.png;Sprites/UI/Inventory/inventory_border_equip
+
 #begin Sprites/UI/Inventory/inventory_border_header.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -2365,6 +2377,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_header_button_consumables.png;Sprites/UI/Inventory/inventory_header_button_consumables
+
+#begin Sprites/UI/Inventory/inventory_header_button_equip.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_header_button_equip.png;Sprites/UI/Inventory/inventory_header_button_equip
 
 #begin Sprites/UI/Inventory/inventory_header_button_relics.png
 /importer:TextureImporter

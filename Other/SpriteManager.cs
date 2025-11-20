@@ -117,11 +117,13 @@ namespace ProjectVagabond
         public Texture2D InventoryBorderSpells { get; private set; }
         public Texture2D InventoryBorderWeapons { get; private set; }
         public Texture2D InventoryBorderConsumables { get; private set; }
+        public Texture2D InventoryBorderEquip { get; private set; }
         public Texture2D InventoryHeaderButtonWeapons { get; private set; }
         public Texture2D InventoryHeaderButtonArmor { get; private set; }
         public Texture2D InventoryHeaderButtonSpells { get; private set; }
         public Texture2D InventoryHeaderButtonRelics { get; private set; }
         public Texture2D InventoryHeaderButtonConsumables { get; private set; }
+        public Texture2D InventoryHeaderButtonEquip { get; private set; }
         public Texture2D InventorySlotIdleSpriteSheet { get; private set; }
         public Texture2D InventorySlotHoverSprite { get; private set; }
         public Texture2D InventorySlotSelectedSprite { get; private set; }
@@ -305,6 +307,8 @@ namespace ProjectVagabond
             catch { InventoryBorderWeapons = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryBorderConsumables = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_consumables"); }
             catch { InventoryBorderConsumables = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            try { InventoryBorderEquip = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_equip"); }
+            catch { InventoryBorderEquip = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryHeaderButtonWeapons = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_weapons"); }
             catch { InventoryHeaderButtonWeapons = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventoryHeaderButtonArmor = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_armor"); }
@@ -315,6 +319,8 @@ namespace ProjectVagabond
             catch { InventoryHeaderButtonRelics = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventoryHeaderButtonConsumables = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_consumables"); }
             catch { InventoryHeaderButtonConsumables = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
+            try { InventoryHeaderButtonEquip = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_equip"); }
+            catch { InventoryHeaderButtonEquip = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventorySlotIdleSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_idle"); }
             catch { InventorySlotIdleSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }
             try { InventorySlotHoverSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_hover"); }

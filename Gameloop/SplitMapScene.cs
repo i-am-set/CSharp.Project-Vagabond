@@ -29,7 +29,7 @@ namespace ProjectVagabond.Scenes
         private enum SplitMapViewState { Map, Inventory }
         private SplitMapViewState _currentViewState = SplitMapViewState.Map;
 
-        private enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables }
+        private enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables, Equip }
         private InventoryCategory _selectedInventoryCategory;
         private InventoryCategory _previousInventoryCategory;
 
@@ -53,6 +53,7 @@ namespace ProjectVagabond.Scenes
         private readonly List<InventoryHeaderButton> _inventoryHeaderButtons = new();
         private readonly Dictionary<InventoryHeaderButton, float> _inventoryHeaderButtonOffsets = new();
         private readonly Dictionary<InventoryHeaderButton, Rectangle> _inventoryHeaderButtonBaseBounds = new();
+        private InventoryHeaderButton? _inventoryEquipButton;
         private readonly List<InventorySlot> _inventorySlots = new();
         private Rectangle _inventorySlotArea;
         private ImageButton? _debugButton1;
@@ -259,14 +260,15 @@ namespace ProjectVagabond.Scenes
             _selectedInventoryCategory = InventoryCategory.Weapons; // Default selection
             _selectedSlotIndex = -1;
 
-            var categories = Enum.GetValues(typeof(InventoryCategory)).Cast<InventoryCategory>().ToList();
+            var categories = Enum.GetValues(typeof(InventoryCategory)).Cast<InventoryCategory>().Where(c => c != InventoryCategory.Equip).ToList();
             int numButtons = categories.Count;
             const int buttonSpriteSize = 32;
-            const int containerWidth = 210;
+            const int containerWidth = 172; // Reduced width
             var buttonRects = _spriteManager.InventoryHeaderButtonSourceRects;
 
             float buttonClickableWidth = (float)containerWidth / numButtons;
-            float startX = (Global.VIRTUAL_WIDTH - containerWidth) / 2f;
+            // Shifted right by 19 pixels relative to center
+            float startX = (Global.VIRTUAL_WIDTH - containerWidth) / 2f + 19f;
             float buttonY = 200 + 6; // 200 is the inventory offset, 6 is padding from top
 
             for (int i = 0; i < numButtons; i++)
@@ -307,6 +309,19 @@ namespace ProjectVagabond.Scenes
                 _inventoryHeaderButtonOffsets[button] = 0f;
                 _inventoryHeaderButtonBaseBounds[button] = bounds;
             }
+
+            // Initialize Equip Button
+            var equipRects = _spriteManager.InventoryHeaderButtonSourceRects;
+            // Positioned to the left of the main header group, aligned vertically
+            // Moved 22 pixels further left (38 + 22 = 60)
+            float equipX = startX - 60f;
+            var equipBounds = new Rectangle((int)equipX, (int)buttonY, 32, 32);
+            _inventoryEquipButton = new InventoryHeaderButton(equipBounds, _spriteManager.InventoryHeaderButtonEquip, equipRects[0], equipRects[1], equipRects[2], (int)InventoryCategory.Equip, "Equip");
+            _inventoryEquipButton.OnClick += () => {
+                _selectedInventoryCategory = InventoryCategory.Equip;
+                _selectedSlotIndex = -1;
+                RefreshInventorySlots();
+            };
 
             // Initialize inventory slot grid
             const int slotContainerWidth = 180;
@@ -366,7 +381,7 @@ namespace ProjectVagabond.Scenes
             _debugButton1.OnClick += () =>
             {
                 int currentIndex = (int)_selectedInventoryCategory;
-                if (currentIndex > 0)
+                if (currentIndex > 0 && currentIndex <= (int)InventoryCategory.Consumables)
                 {
                     _selectedInventoryCategory = (InventoryCategory)(currentIndex - 1);
                     RefreshInventorySlots();
@@ -382,7 +397,7 @@ namespace ProjectVagabond.Scenes
             _debugButton2.OnClick += () =>
             {
                 int currentIndex = (int)_selectedInventoryCategory;
-                int maxIndex = Enum.GetValues(typeof(InventoryCategory)).Length - 1;
+                int maxIndex = (int)InventoryCategory.Consumables;
                 if (currentIndex < maxIndex)
                 {
                     _selectedInventoryCategory = (InventoryCategory)(currentIndex + 1);
@@ -694,7 +709,7 @@ namespace ProjectVagabond.Scenes
                 if (leftInput)
                 {
                     int currentIndex = (int)_selectedInventoryCategory;
-                    if (currentIndex > 0)
+                    if (currentIndex > 0 && currentIndex <= (int)InventoryCategory.Consumables)
                     {
                         _selectedInventoryCategory = (InventoryCategory)(currentIndex - 1);
                         RefreshInventorySlots();
@@ -703,7 +718,7 @@ namespace ProjectVagabond.Scenes
                 if (rightInput)
                 {
                     int currentIndex = (int)_selectedInventoryCategory;
-                    int maxIndex = Enum.GetValues(typeof(InventoryCategory)).Length - 1;
+                    int maxIndex = (int)InventoryCategory.Consumables;
                     if (currentIndex < maxIndex)
                     {
                         _selectedInventoryCategory = (InventoryCategory)(currentIndex + 1);
@@ -714,6 +729,29 @@ namespace ProjectVagabond.Scenes
                 int selectedIndex = (int)_selectedInventoryCategory;
                 const float repulsionAmount = 8f;
                 const float repulsionSpeed = 15f;
+
+                // --- Centering Logic ---
+                // Calculate the raw offsets for the first and last buttons to determine the shift needed to center the group.
+                int numButtons = _inventoryHeaderButtons.Count;
+                float rawOffsetFirst = 0f;
+                float rawOffsetLast = 0f;
+
+                if (numButtons > 0)
+                {
+                    // Logic for First Button (Index 0)
+                    if (0 < selectedIndex) rawOffsetFirst = -repulsionAmount;
+                    else if (0 > selectedIndex) rawOffsetFirst = repulsionAmount;
+                    else rawOffsetFirst = 0f;
+
+                    // Logic for Last Button (Index numButtons - 1)
+                    int lastIdx = numButtons - 1;
+                    if (lastIdx < selectedIndex) rawOffsetLast = -repulsionAmount;
+                    else if (lastIdx > selectedIndex) rawOffsetLast = repulsionAmount;
+                    else rawOffsetLast = 0f;
+                }
+
+                float centeringCorrection = -(rawOffsetFirst + rawOffsetLast) / 2f;
+                // -----------------------
 
                 InventoryHeaderButton? selectedButton = null;
 
@@ -730,6 +768,9 @@ namespace ProjectVagabond.Scenes
                     {
                         targetOffset = repulsionAmount;
                     }
+
+                    // Apply the centering correction to the target
+                    targetOffset += centeringCorrection;
 
                     float currentOffset = _inventoryHeaderButtonOffsets[button];
                     _inventoryHeaderButtonOffsets[button] = MathHelper.Lerp(currentOffset, targetOffset, repulsionSpeed * deltaTime);
@@ -748,6 +789,21 @@ namespace ProjectVagabond.Scenes
                         selectedButton = button;
                     }
                     button.Update(currentMouseState, cameraTransform);
+                }
+
+                // Update Equip Button
+                if (_inventoryEquipButton != null)
+                {
+                    float equipBaseX = (Global.VIRTUAL_WIDTH - 172) / 2f + 19f - 60f;
+                    float equipBaseY = 200 + 6;
+
+                    _inventoryEquipButton.Bounds = new Rectangle(
+                        (int)equipBaseX,
+                        (int)(equipBaseY + _inventoryPositionOffset.Y),
+                        32, 32
+                    );
+                    _inventoryEquipButton.IsSelected = _selectedInventoryCategory == InventoryCategory.Equip;
+                    _inventoryEquipButton.Update(currentMouseState, cameraTransform);
                 }
 
                 // Now update debug button positions and visibility
@@ -771,53 +827,56 @@ namespace ProjectVagabond.Scenes
                         _debugButton2.Bounds.Height
                     );
 
-                    _debugButton1.IsEnabled = (int)_selectedInventoryCategory > 0;
-                    _debugButton2.IsEnabled = (int)_selectedInventoryCategory < Enum.GetValues(typeof(InventoryCategory)).Length - 1;
+                    _debugButton1.IsEnabled = (int)_selectedInventoryCategory > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
+                    _debugButton2.IsEnabled = (int)_selectedInventoryCategory < (int)InventoryCategory.Consumables && _selectedInventoryCategory != InventoryCategory.Equip;
                 }
 
                 // --- Inventory Slot Update Logic with Overlap Handling ---
-                InventorySlot? bestSlot = null;
-                float minDistance = float.MaxValue;
-
-                // Transform mouse to world space for distance check
-                var inverseCamera = Matrix.Invert(cameraTransform);
-                Vector2 mouseWorld = Vector2.Transform(virtualMousePos, inverseCamera);
-
-                // 1. Find the single best candidate for interaction
-                foreach (var slot in _inventorySlots)
+                if (_selectedInventoryCategory != InventoryCategory.Equip)
                 {
-                    if (slot.Bounds.Contains(mouseWorld))
+                    InventorySlot? bestSlot = null;
+                    float minDistance = float.MaxValue;
+
+                    // Transform mouse to world space for distance check
+                    var inverseCamera = Matrix.Invert(cameraTransform);
+                    Vector2 mouseWorld = Vector2.Transform(virtualMousePos, inverseCamera);
+
+                    // 1. Find the single best candidate for interaction
+                    foreach (var slot in _inventorySlots)
                     {
-                        float dist = Vector2.DistanceSquared(mouseWorld, slot.Bounds.Center.ToVector2());
-                        if (dist < minDistance)
+                        if (slot.Bounds.Contains(mouseWorld))
                         {
-                            minDistance = dist;
-                            bestSlot = slot;
+                            float dist = Vector2.DistanceSquared(mouseWorld, slot.Bounds.Center.ToVector2());
+                            if (dist < minDistance)
+                            {
+                                minDistance = dist;
+                                bestSlot = slot;
+                            }
                         }
                     }
-                }
 
-                // 2. Update all slots, but only pass real input to the best candidate
-                foreach (var slot in _inventorySlots)
-                {
-                    if (slot == bestSlot)
+                    // 2. Update all slots, but only pass real input to the best candidate
+                    foreach (var slot in _inventorySlots)
                     {
-                        slot.Update(gameTime, currentMouseState, cameraTransform);
-                    }
-                    else
-                    {
-                        // Pass dummy mouse state with preserved button states to prevent interaction
-                        // while keeping animation logic running.
-                        var dummyMouse = new MouseState(
-                            -10000, -10000,
-                            currentMouseState.ScrollWheelValue,
-                            currentMouseState.LeftButton,
-                            currentMouseState.MiddleButton,
-                            currentMouseState.RightButton,
-                            currentMouseState.XButton1,
-                            currentMouseState.XButton2
-                        );
-                        slot.Update(gameTime, dummyMouse, cameraTransform);
+                        if (slot == bestSlot)
+                        {
+                            slot.Update(gameTime, currentMouseState, cameraTransform);
+                        }
+                        else
+                        {
+                            // Pass dummy mouse state with preserved button states to prevent interaction
+                            // while keeping animation logic running.
+                            var dummyMouse = new MouseState(
+                                -10000, -10000,
+                                currentMouseState.ScrollWheelValue,
+                                currentMouseState.LeftButton,
+                                currentMouseState.MiddleButton,
+                                currentMouseState.RightButton,
+                                currentMouseState.XButton1,
+                                currentMouseState.XButton2
+                            );
+                            slot.Update(gameTime, dummyMouse, cameraTransform);
+                        }
                     }
                 }
             }
@@ -901,6 +960,9 @@ namespace ProjectVagabond.Scenes
                         }
                         currentItems.Add((name, 1, iconPath, null, tint));
                     }
+                    break;
+                case InventoryCategory.Equip:
+                    // Empty for now
                     break;
             }
             return currentItems;
@@ -1514,6 +1576,9 @@ namespace ProjectVagabond.Scenes
                     case InventoryCategory.Consumables:
                         selectedBorderSprite = _spriteManager.InventoryBorderConsumables;
                         break;
+                    case InventoryCategory.Equip:
+                        selectedBorderSprite = _spriteManager.InventoryBorderEquip;
+                        break;
                     default:
                         selectedBorderSprite = _spriteManager.InventoryBorderWeapons; // Failsafe
                         break;
@@ -1526,9 +1591,12 @@ namespace ProjectVagabond.Scenes
                 }
 
                 // Draw Inventory Slots
-                foreach (var slot in _inventorySlots)
+                if (_selectedInventoryCategory != InventoryCategory.Equip)
                 {
-                    slot.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    foreach (var slot in _inventorySlots)
+                    {
+                        slot.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    }
                 }
 
                 if (_debugButton1 != null && _debugButton1.IsEnabled)
@@ -1543,18 +1611,24 @@ namespace ProjectVagabond.Scenes
                 if (_global.ShowSplitMapGrid)
                 {
                     spriteBatch.DrawSnapped(pixel, _inventorySlotArea, Color.Blue * 0.5f);
-                    const int slotSize = 48;
-                    foreach (var slot in _inventorySlots)
+                    if (_selectedInventoryCategory != InventoryCategory.Equip)
                     {
-                        var slotRect = new Rectangle((int)(slot.Bounds.X), (int)(slot.Bounds.Y), slotSize, slotSize);
-                        spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Top), new Vector2(slotRect.Right, slotRect.Top), Color.Teal);
-                        spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Bottom), new Vector2(slotRect.Right, slotRect.Bottom), Color.Teal);
-                        spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Top), new Vector2(slotRect.Left, slotRect.Bottom), Color.Teal);
-                        spriteBatch.DrawLineSnapped(new Vector2(slotRect.Right, slotRect.Top), new Vector2(slotRect.Right, slotRect.Bottom), Color.Teal);
+                        const int slotSize = 48;
+                        foreach (var slot in _inventorySlots)
+                        {
+                            var slotRect = new Rectangle((int)(slot.Bounds.X), (int)(slot.Bounds.Y), slotSize, slotSize);
+                            spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Top), new Vector2(slotRect.Right, slotRect.Top), Color.Teal);
+                            spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Bottom), new Vector2(slotRect.Right, slotRect.Bottom), Color.Teal);
+                            spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Top), new Vector2(slotRect.Left, slotRect.Bottom), Color.Teal);
+                            spriteBatch.DrawLineSnapped(new Vector2(slotRect.Right, slotRect.Top), new Vector2(slotRect.Right, slotRect.Bottom), Color.Teal);
 
-                        spriteBatch.DrawSnapped(pixel, new Rectangle((int)slot.Bounds.X - 1, (int)slot.Bounds.Y - 1, 3, 3), Color.Pink);
+                            spriteBatch.DrawSnapped(pixel, new Rectangle((int)slot.Bounds.X - 1, (int)slot.Bounds.Y - 1, 3, 3), Color.Pink);
+                        }
                     }
                 }
+
+                // Draw Equip Button in World Space
+                _inventoryEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
             }
 
 
