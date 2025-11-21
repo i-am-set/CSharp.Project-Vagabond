@@ -56,8 +56,10 @@ namespace ProjectVagabond.Scenes
         private InventoryHeaderButton? _inventoryEquipButton;
         private readonly List<InventorySlot> _inventorySlots = new();
         private Rectangle _inventorySlotArea;
+        private Rectangle _statsPanelArea;
         private ImageButton? _debugButton1;
         private ImageButton? _debugButton2;
+        private ImageButton? _relicEquipButton;
 
         // --- Animation Tuning ---
         private const float PLAYER_MOVE_SPEED = 50f; // Pixels per second
@@ -334,6 +336,13 @@ namespace ProjectVagabond.Scenes
             int containerY = 200 + 6 + 32 + 1; // 200 (offset) + 6 (padding) + 32 (button height) + 1 (gap) = 239
             _inventorySlotArea = new Rectangle(containerX, containerY, slotContainerWidth, slotContainerHeight);
 
+            // Initialize Stats Panel Area
+            const int statsPanelWidth = 116;
+            const int statsPanelHeight = 132;
+            int statsPanelX = _inventorySlotArea.Right + 4; // Small gap to the right of the slots
+            int statsPanelY = _inventorySlotArea.Y - 1; // Moved up 1 pixel as requested
+            _statsPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
+
             _inventorySlots.Clear();
 
             // Calculate the spacing between the centers of the slots
@@ -404,6 +413,14 @@ namespace ProjectVagabond.Scenes
                     RefreshInventorySlots();
                 }
             };
+
+            // Initialize Relic Equip Button
+            var equipHoverSprite = _spriteManager.InventoryEquipHoverSprite;
+            // Position: (Global.VIRTUAL_WIDTH - 180) / 2 - 60, 250 + 19
+            int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
+            int equipButtonY = 250 + 19;
+            _relicEquipButton = new ImageButton(new Rectangle(equipButtonX, equipButtonY, 180, 16), equipHoverSprite);
+            _relicEquipButton.OnClick += () => { System.Diagnostics.Debug.WriteLine("Relic Equip Button Clicked!"); };
         }
 
         private void RefreshInventorySlots()
@@ -877,6 +894,15 @@ namespace ProjectVagabond.Scenes
                             );
                             slot.Update(gameTime, dummyMouse, cameraTransform);
                         }
+                    }
+                }
+                else if (_selectedInventoryCategory == InventoryCategory.Equip)
+                {
+                    if (_relicEquipButton != null)
+                    {
+                        _relicEquipButton.Update(currentMouseState, cameraTransform);
+                        var targetTex = _relicEquipButton.IsPressed ? _spriteManager.InventoryEquipSelectedSprite : _spriteManager.InventoryEquipHoverSprite;
+                        _relicEquipButton.SetSprites(targetTex, targetTex.Bounds, targetTex.Bounds);
                     }
                 }
             }
@@ -1597,6 +1623,16 @@ namespace ProjectVagabond.Scenes
                     {
                         slot.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     }
+                }
+                else if (_selectedInventoryCategory == InventoryCategory.Equip)
+                {
+                    if (_relicEquipButton != null && _relicEquipButton.IsHovered)
+                    {
+                        _relicEquipButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    }
+
+                    // Draw Debug Stats Panel
+                    spriteBatch.DrawSnapped(pixel, _statsPanelArea, Color.HotPink);
                 }
 
                 if (_debugButton1 != null && _debugButton1.IsEnabled)

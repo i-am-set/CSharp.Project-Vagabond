@@ -2354,6 +2354,30 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_divider.png;Sprites/UI/Inventory/inventory_divider
 
+#begin Sprites/UI/Inventory/inventory_equip_hover.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_equip_hover.png;Sprites/UI/Inventory/inventory_equip_hover
+
+#begin Sprites/UI/Inventory/inventory_equip_selected.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_equip_selected.png;Sprites/UI/Inventory/inventory_equip_selected
+
 #begin Sprites/UI/Inventory/inventory_header_button_armor.png
 /importer:TextureImporter
 /processor:TextureProcessor

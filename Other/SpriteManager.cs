@@ -11,6 +11,7 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -129,6 +130,9 @@ namespace ProjectVagabond
         public Texture2D InventorySlotSelectedSprite { get; private set; }
         public Texture2D InventoryLeftArrowButton { get; private set; }
         public Texture2D InventoryRightArrowButton { get; private set; }
+        public Texture2D EquipSlotButtonSprite { get; private set; }
+        public Texture2D InventoryEquipHoverSprite { get; private set; }
+        public Texture2D InventoryEquipSelectedSprite { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -331,6 +335,12 @@ namespace ProjectVagabond
             catch { InventoryLeftArrowButton = _textureFactory.CreateColoredTexture(10, 5, Color.Magenta); }
             try { InventoryRightArrowButton = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_right_arrow_button"); }
             catch { InventoryRightArrowButton = _textureFactory.CreateColoredTexture(10, 5, Color.Magenta); }
+            try { EquipSlotButtonSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/equip_slot_button"); }
+            catch { EquipSlotButtonSprite = _textureFactory.CreateColoredTexture(180, 16, Color.HotPink); }
+            try { InventoryEquipHoverSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_equip_hover"); }
+            catch { InventoryEquipHoverSprite = _textureFactory.CreateColoredTexture(180, 16, Color.HotPink); }
+            try { InventoryEquipSelectedSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_equip_selected"); }
+            catch { InventoryEquipSelectedSprite = _textureFactory.CreateColoredTexture(180, 16, Color.Gold); }
 
 
             LoadAndCacheCursorSprite("cursor_default");
@@ -887,3 +897,4 @@ namespace ProjectVagabond
         }
     }
 }
+﻿
