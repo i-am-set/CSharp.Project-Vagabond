@@ -13,6 +13,7 @@ using System.Linq;
 namespace ProjectVagabond.UI
 {
     public enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables, Equip }
+
     public class SplitMapInventoryOverlay
     {
         public bool IsOpen { get; private set; } = false;
@@ -114,8 +115,7 @@ namespace ProjectVagabond.UI
                 int menuIndex = (int)category;
                 var bounds = new Rectangle((int)MathF.Round(startX + i * buttonClickableWidth), (int)buttonY, (int)MathF.Round(buttonClickableWidth), buttonSpriteSize);
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
-                button.OnClick += () =>
-                {
+                button.OnClick += () => {
                     _selectedInventoryCategory = category;
                     _selectedSlotIndex = -1;
                     RefreshInventorySlots();
@@ -130,8 +130,7 @@ namespace ProjectVagabond.UI
             float equipX = startX - 60f;
             var equipBounds = new Rectangle((int)equipX, (int)buttonY, 32, 32);
             _inventoryEquipButton = new InventoryHeaderButton(equipBounds, _spriteManager.InventoryHeaderButtonEquip, equipRects[0], equipRects[1], equipRects[2], (int)InventoryCategory.Equip, "Equip");
-            _inventoryEquipButton.OnClick += () =>
-            {
+            _inventoryEquipButton.OnClick += () => {
                 _selectedInventoryCategory = InventoryCategory.Equip;
                 _selectedSlotIndex = -1;
                 RefreshInventorySlots();
@@ -173,8 +172,7 @@ namespace ProjectVagabond.UI
                         var bounds = new Rectangle((int)(position.X - slotSize / 2f), (int)(position.Y - slotSize / 2f), slotSize, slotSize);
 
                         var slot = new InventorySlot(bounds, slotFrames);
-                        slot.OnClick += () =>
-                        {
+                        slot.OnClick += () => {
                             if (slot.HasItem)
                             {
                                 foreach (var s in _inventorySlots) s.IsSelected = false;
@@ -542,9 +540,7 @@ namespace ProjectVagabond.UI
                 {
                     _relicEquipButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
-                // Draw Debug Stats Panel
-                var pixel = ServiceLocator.Get<Texture2D>();
-                spriteBatch.DrawSnapped(pixel, _statsPanelArea, Color.HotPink);
+                // Stats panel area is defined in _statsPanelArea but currently invisible
             }
 
             if (_debugButton1 != null && _debugButton1.IsEnabled) _debugButton1.Draw(spriteBatch, font, gameTime, Matrix.Identity);
