@@ -25,14 +25,6 @@ namespace ProjectVagabond.Scenes
             public Vector2 Position;
             public object? Data;
         }
-
-        private enum SplitMapViewState { Map, Inventory }
-        private SplitMapViewState _currentViewState = SplitMapViewState.Map;
-
-        private enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables, Equip }
-        private InventoryCategory _selectedInventoryCategory;
-        private InventoryCategory _previousInventoryCategory;
-
         private readonly ProgressionManager _progressionManager;
         private readonly SceneManager _sceneManager;
         private readonly GameState _gameState;
@@ -43,23 +35,12 @@ namespace ProjectVagabond.Scenes
         private readonly ChoiceGenerator _choiceGenerator;
         private readonly ComponentStore _componentStore;
         private readonly VoidEdgeEffect _voidEdgeEffect;
-
+        private readonly SplitMapInventoryOverlay _inventoryOverlay;
 
         private SplitMap? _currentMap;
         private int _playerCurrentNodeId;
         private readonly PlayerMapIcon _playerIcon;
         private NarrativeDialog _narrativeDialog;
-        private ImageButton? _inventoryButton;
-        private readonly List<InventoryHeaderButton> _inventoryHeaderButtons = new();
-        private readonly Dictionary<InventoryHeaderButton, float> _inventoryHeaderButtonOffsets = new();
-        private readonly Dictionary<InventoryHeaderButton, Rectangle> _inventoryHeaderButtonBaseBounds = new();
-        private InventoryHeaderButton? _inventoryEquipButton;
-        private readonly List<InventorySlot> _inventorySlots = new();
-        private Rectangle _inventorySlotArea;
-        private Rectangle _statsPanelArea;
-        private ImageButton? _debugButton1;
-        private ImageButton? _debugButton2;
-        private ImageButton? _relicEquipButton;
 
         // --- Animation Tuning ---
         private const float PLAYER_MOVE_SPEED = 50f; // Pixels per second
@@ -70,11 +51,9 @@ namespace ProjectVagabond.Scenes
         private const float POST_EVENT_DELAY = 0.25f;
         private const float PATH_ANIMATION_DURATION = 0.75f;
 
-
         private Vector2 _cameraOffset;
         private Vector2 _targetCameraOffset;
         private Vector2 RoundedCameraOffset => new Vector2(MathF.Round(_cameraOffset.X), MathF.Round(_cameraOffset.Y));
-
 
         private float _playerMoveTimer;
         private float _playerMoveDuration;
@@ -99,7 +78,6 @@ namespace ProjectVagabond.Scenes
         private const float PATH_COLOR_NOISE_SCALE = 0.3f;
         private const float PATH_EXCLUSION_RADIUS = 10f; // Half of a 20x20 exclusion zone
         private const float PATH_FADE_DISTANCE = 12f;
-
 
         // Node pulse animation state
         private float _pulseTimer = 0f;
@@ -134,17 +112,6 @@ namespace ProjectVagabond.Scenes
         private const float SNAP_BACK_DELAY = 1f;
         private const float SCROLL_PAN_SPEED = 1f;
 
-        // Inventory Animation State
-        private float _inventoryArrowAnimTimer;
-        private const float INVENTORY_ARROW_ANIM_DURATION = 0.2f;
-        private float _inventoryBobTimer;
-        private const float INVENTORY_BOB_DURATION = 0.1f;
-        private Vector2 _inventoryPositionOffset = Vector2.Zero;
-
-        // Inventory Selection State
-        private int _selectedSlotIndex = -1;
-
-
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
 
@@ -160,6 +127,7 @@ namespace ProjectVagabond.Scenes
             _narrativeDialog = new NarrativeDialog(this);
             _choiceGenerator = new ChoiceGenerator();
             _componentStore = ServiceLocator.Get<ComponentStore>();
+            _inventoryOverlay = new SplitMapInventoryOverlay();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
             _resultNarrator = new StoryNarrator(narratorBounds);
@@ -171,6 +139,8 @@ namespace ProjectVagabond.Scenes
                 noiseScale: 0.1f,
                 noiseSpeed: 3f
             );
+
+            _inventoryOverlay.OnInventoryToggled += OnInventoryToggled;
         }
 
         public override Rectangle GetAnimatedBounds() => new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
@@ -182,11 +152,7 @@ namespace ProjectVagabond.Scenes
             _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
             _isPanning = false;
 
-            InitializeInventoryUI();
-            _previousInventoryCategory = _selectedInventoryCategory;
-            _inventoryArrowAnimTimer = INVENTORY_ARROW_ANIM_DURATION; // Start in a "completed" state
-            _inventoryBobTimer = INVENTORY_BOB_DURATION; // Start in a "completed" state
-            _inventoryPositionOffset = Vector2.Zero;
+            _inventoryOverlay.Initialize();
 
             if (_progressionManager.CurrentSplitMap == null)
             {
@@ -245,206 +211,10 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void InitializeInventoryUI()
-        {
-            if (_inventoryButton == null)
-            {
-                var inventoryIcon = _spriteManager.SplitMapInventoryButton;
-                var rects = _spriteManager.SplitMapInventoryButtonSourceRects;
-                _inventoryButton = new ImageButton(new Rectangle(7, 10, 16, 16), inventoryIcon, rects[0], rects[1]);
-                _inventoryButton.OnClick += OnInventoryButtonPressed;
-            }
-            _inventoryButton.ResetAnimationState();
-
-            _inventoryHeaderButtons.Clear();
-            _inventoryHeaderButtonOffsets.Clear();
-            _inventoryHeaderButtonBaseBounds.Clear();
-            _selectedInventoryCategory = InventoryCategory.Weapons; // Default selection
-            _selectedSlotIndex = -1;
-
-            var categories = Enum.GetValues(typeof(InventoryCategory)).Cast<InventoryCategory>().Where(c => c != InventoryCategory.Equip).ToList();
-            int numButtons = categories.Count;
-            const int buttonSpriteSize = 32;
-            const int containerWidth = 172; // Reduced width
-            var buttonRects = _spriteManager.InventoryHeaderButtonSourceRects;
-
-            float buttonClickableWidth = (float)containerWidth / numButtons;
-            // Shifted right by 19 pixels relative to center
-            float startX = (Global.VIRTUAL_WIDTH - containerWidth) / 2f + 19f;
-            float buttonY = 200 + 6; // 200 is the inventory offset, 6 is padding from top
-
-            for (int i = 0; i < numButtons; i++)
-            {
-                var category = categories[i];
-                Texture2D buttonSpriteSheet;
-                switch (category)
-                {
-                    case InventoryCategory.Weapons:
-                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonWeapons;
-                        break;
-                    case InventoryCategory.Armor:
-                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonArmor;
-                        break;
-                    case InventoryCategory.Spells:
-                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonSpells;
-                        break;
-                    case InventoryCategory.Relics:
-                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonRelics;
-                        break;
-                    case InventoryCategory.Consumables:
-                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonConsumables;
-                        break;
-                    default:
-                        buttonSpriteSheet = _spriteManager.InventoryHeaderButtonWeapons; // Failsafe
-                        break;
-                }
-
-                int menuIndex = (int)category;
-                var bounds = new Rectangle((int)MathF.Round(startX + i * buttonClickableWidth), (int)buttonY, (int)MathF.Round(buttonClickableWidth), buttonSpriteSize);
-                var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
-                button.OnClick += () => {
-                    _selectedInventoryCategory = category;
-                    _selectedSlotIndex = -1; // Reset slot selection on category change
-                    RefreshInventorySlots();
-                };
-                _inventoryHeaderButtons.Add(button);
-                _inventoryHeaderButtonOffsets[button] = 0f;
-                _inventoryHeaderButtonBaseBounds[button] = bounds;
-            }
-
-            // Initialize Equip Button
-            var equipRects = _spriteManager.InventoryHeaderButtonSourceRects;
-            // Positioned to the left of the main header group, aligned vertically
-            // Moved 22 pixels further left (38 + 22 = 60)
-            float equipX = startX - 60f;
-            var equipBounds = new Rectangle((int)equipX, (int)buttonY, 32, 32);
-            _inventoryEquipButton = new InventoryHeaderButton(equipBounds, _spriteManager.InventoryHeaderButtonEquip, equipRects[0], equipRects[1], equipRects[2], (int)InventoryCategory.Equip, "Equip");
-            _inventoryEquipButton.OnClick += () => {
-                _selectedInventoryCategory = InventoryCategory.Equip;
-                _selectedSlotIndex = -1;
-                RefreshInventorySlots();
-            };
-
-            // Initialize inventory slot grid
-            const int slotContainerWidth = 180;
-            const int slotContainerHeight = 132;
-            const int slotColumns = 4;
-            const int slotRows = 3;
-            const int slotSize = 48;
-
-            int containerX = (Global.VIRTUAL_WIDTH - slotContainerWidth) / 2 - 60;
-            int containerY = 200 + 6 + 32 + 1; // 200 (offset) + 6 (padding) + 32 (button height) + 1 (gap) = 239
-            _inventorySlotArea = new Rectangle(containerX, containerY, slotContainerWidth, slotContainerHeight);
-
-            // Initialize Stats Panel Area
-            const int statsPanelWidth = 116;
-            const int statsPanelHeight = 132;
-            int statsPanelX = _inventorySlotArea.Right + 4; // Small gap to the right of the slots
-            int statsPanelY = _inventorySlotArea.Y - 1; // Moved up 1 pixel as requested
-            _statsPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
-
-            _inventorySlots.Clear();
-
-            // Calculate the spacing between the centers of the slots
-            float spaceBetweenX = (slotColumns > 1) ? (float)(slotContainerWidth - (slotSize)) / (slotColumns - 1) : 0;
-            float spaceBetweenY = (slotRows > 1) ? (float)(slotContainerHeight - (slotSize)) / (slotRows - 1) : 0;
-
-            var slotFrames = _spriteManager.InventorySlotSourceRects;
-            if (slotFrames == null || slotFrames.Length == 0) return;
-
-            for (int row = 0; row < slotRows; row++)
-            {
-                for (int col = 0; col < slotColumns; col++)
-                {
-                    float nodeX = _inventorySlotArea.X + (slotSize / 2f) + (col * spaceBetweenX);
-                    float nodeY = _inventorySlotArea.Y + (slotSize / 2f) + (row * spaceBetweenY);
-                    var position = new Vector2(MathF.Round(nodeX), MathF.Round(nodeY));
-                    var bounds = new Rectangle((int)(position.X - slotSize / 2f), (int)(position.Y - slotSize / 2f), slotSize, slotSize);
-
-                    var slot = new InventorySlot(bounds, slotFrames);
-                    slot.OnClick += () => {
-                        if (slot.HasItem)
-                        {
-                            // Deselect all others
-                            foreach (var s in _inventorySlots) s.IsSelected = false;
-                            slot.IsSelected = true;
-                            _selectedSlotIndex = _inventorySlots.IndexOf(slot);
-                            // TODO: Play selection sound
-                        }
-                    };
-                    _inventorySlots.Add(slot);
-                }
-            }
-
-            RefreshInventorySlots();
-
-            var leftArrowRects = _spriteManager.InventoryLeftArrowButtonSourceRects;
-            var rightArrowRects = _spriteManager.InventoryRightArrowButtonSourceRects;
-
-            _debugButton1 = new ImageButton(
-                new Rectangle(0, 0, 5, 5), // Position will be set in Update
-                _spriteManager.InventoryLeftArrowButton,
-                leftArrowRects[0],
-                leftArrowRects[1]
-            );
-            _debugButton1.OnClick += () =>
-            {
-                int currentIndex = (int)_selectedInventoryCategory;
-                if (currentIndex > 0 && currentIndex <= (int)InventoryCategory.Consumables)
-                {
-                    _selectedInventoryCategory = (InventoryCategory)(currentIndex - 1);
-                    RefreshInventorySlots();
-                }
-            };
-
-            _debugButton2 = new ImageButton(
-                new Rectangle(0, 0, 5, 5), // Position will be set in Update
-                _spriteManager.InventoryRightArrowButton,
-                rightArrowRects[0],
-                rightArrowRects[1]
-            );
-            _debugButton2.OnClick += () =>
-            {
-                int currentIndex = (int)_selectedInventoryCategory;
-                int maxIndex = (int)InventoryCategory.Consumables;
-                if (currentIndex < maxIndex)
-                {
-                    _selectedInventoryCategory = (InventoryCategory)(currentIndex + 1);
-                    RefreshInventorySlots();
-                }
-            };
-
-            // Initialize Relic Equip Button
-            var equipHoverSprite = _spriteManager.InventoryEquipHoverSprite;
-            // Position: (Global.VIRTUAL_WIDTH - 180) / 2 - 60, 250 + 19
-            int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
-            int equipButtonY = 250 + 19;
-            _relicEquipButton = new ImageButton(new Rectangle(equipButtonX, equipButtonY, 180, 16), equipHoverSprite);
-            _relicEquipButton.OnClick += () => { System.Diagnostics.Debug.WriteLine("Relic Equip Button Clicked!"); };
-        }
-
-        private void RefreshInventorySlots()
-        {
-            // Clear all slots first
-            foreach (var slot in _inventorySlots)
-            {
-                slot.Clear();
-            }
-
-            var items = GetCurrentCategoryItems();
-
-            for (int i = 0; i < items.Count && i < _inventorySlots.Count; i++)
-            {
-                var item = items[i];
-                _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.IconTint);
-            }
-        }
-
         public override void Exit()
         {
             base.Exit();
             _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
-            if (_inventoryButton != null) _inventoryButton.OnClick -= OnInventoryButtonPressed;
             // Only clear the map if we are not transitioning to a scene that will return here (like Battle)
             if (BattleSetup.ReturnSceneState != GameSceneState.Split)
             {
@@ -452,19 +222,15 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void OnInventoryButtonPressed()
+        private void OnInventoryToggled(bool isOpen)
         {
-            _currentViewState = _currentViewState == SplitMapViewState.Map ? SplitMapViewState.Inventory : SplitMapViewState.Map;
-
-            if (_currentViewState == SplitMapViewState.Inventory)
+            if (isOpen)
             {
                 _isPanning = false;
                 _cameraVelocity = Vector2.Zero;
                 _snapBackDelayTimer = 0f;
                 _targetCameraOffset = new Vector2(0, -200);
                 _cameraOffset = _targetCameraOffset; // Snap instantly
-                _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
-                RefreshInventorySlots(); // Ensure slots are up to date
             }
             else
             {
@@ -473,10 +239,8 @@ namespace ProjectVagabond.Scenes
                 {
                     UpdateCameraTarget(currentNode.Position, true); // Snap back instantly
                 }
-                _inventoryButton?.SetSprites(_spriteManager.SplitMapInventoryButton, _spriteManager.SplitMapInventoryButtonSourceRects[0], _spriteManager.SplitMapInventoryButtonSourceRects[1]);
             }
         }
-
 
         private void UpdateReachableNodes()
         {
@@ -604,26 +368,12 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // Update top-level UI elements first, so they can consume input.
-            if (_inventoryButton != null)
-            {
-                // Only show and update the inventory button when the map is idle or the inventory is open.
-                bool isVisible = _currentViewState == SplitMapViewState.Inventory || _mapState == SplitMapState.Idle;
-
-                if (isVisible)
-                {
-                    _inventoryButton.IsEnabled = true;
-                    _inventoryButton.Update(currentMouseState);
-                }
-                else
-                {
-                    // Reset state so it doesn't get stuck hovered/pressed while invisible
-                    _inventoryButton.ResetAnimationState();
-                }
-            }
+            // Update Inventory Overlay
+            var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
+            _inventoryOverlay.Update(gameTime, currentMouseState, currentKeyboardState, _mapState == SplitMapState.Idle, cameraTransform);
 
             // Handle camera logic
-            if (_currentViewState == SplitMapViewState.Map)
+            if (!_inventoryOverlay.IsOpen)
             {
                 if (!_isPanning)
                 {
@@ -673,240 +423,10 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (_currentViewState == SplitMapViewState.Map)
+            if (!_inventoryOverlay.IsOpen)
             {
                 HandleMapInput(gameTime);
             }
-            else if (_currentViewState == SplitMapViewState.Inventory)
-            {
-                var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
-                var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
-                var mouseInWorldSpace = Vector2.Transform(virtualMousePos, Matrix.Invert(cameraTransform));
-
-                // UPDATE DEBUG BUTTONS FIRST
-                _debugButton1?.Update(currentMouseState, cameraTransform);
-                _debugButton2?.Update(currentMouseState, cameraTransform);
-
-                var slotFrames = _spriteManager.InventorySlotSourceRects;
-                if (_selectedInventoryCategory != _previousInventoryCategory)
-                {
-                    _inventoryArrowAnimTimer = 0f; // Reset timer on change
-                    _inventoryBobTimer = 0f; // Trigger bob animation
-                    if (slotFrames != null)
-                    {
-                        foreach (var slot in _inventorySlots)
-                        {
-                            slot.RandomizeFrame();
-                        }
-                    }
-                }
-                _previousInventoryCategory = _selectedInventoryCategory;
-
-                if (_inventoryArrowAnimTimer < INVENTORY_ARROW_ANIM_DURATION)
-                {
-                    _inventoryArrowAnimTimer += deltaTime;
-                }
-                if (_inventoryBobTimer < INVENTORY_BOB_DURATION)
-                {
-                    _inventoryBobTimer += deltaTime;
-                    float bobProgress = Math.Clamp(_inventoryBobTimer / INVENTORY_BOB_DURATION, 0f, 1f);
-                    _inventoryPositionOffset.Y = -MathF.Sin(bobProgress * MathHelper.Pi) * 1f;
-                }
-
-                // Handle Keyboard and Scroll Wheel Input for category selection
-                int scrollDelta = currentMouseState.ScrollWheelValue - previousMouseState.ScrollWheelValue;
-                var firstHeader = _inventoryHeaderButtonBaseBounds.Values.First();
-                var lastHeader = _inventoryHeaderButtonBaseBounds.Values.Last();
-                var headerArea = new Rectangle(firstHeader.Left, firstHeader.Top, lastHeader.Right - firstHeader.Left, firstHeader.Height);
-                headerArea.Y += (int)_inventoryPositionOffset.Y; // Adjust for bobbing
-
-                bool leftInput = KeyPressed(Keys.Left, currentKeyboardState, _previousKeyboardState) || (scrollDelta > 0 && headerArea.Contains(mouseInWorldSpace));
-                bool rightInput = KeyPressed(Keys.Right, currentKeyboardState, _previousKeyboardState) || (scrollDelta < 0 && headerArea.Contains(mouseInWorldSpace));
-
-                if (leftInput)
-                {
-                    int currentIndex = (int)_selectedInventoryCategory;
-                    if (currentIndex > 0 && currentIndex <= (int)InventoryCategory.Consumables)
-                    {
-                        _selectedInventoryCategory = (InventoryCategory)(currentIndex - 1);
-                        RefreshInventorySlots();
-                    }
-                }
-                if (rightInput)
-                {
-                    int currentIndex = (int)_selectedInventoryCategory;
-                    int maxIndex = (int)InventoryCategory.Consumables;
-                    if (currentIndex < maxIndex)
-                    {
-                        _selectedInventoryCategory = (InventoryCategory)(currentIndex + 1);
-                        RefreshInventorySlots();
-                    }
-                }
-
-                int selectedIndex = (int)_selectedInventoryCategory;
-                const float repulsionAmount = 8f;
-                const float repulsionSpeed = 15f;
-
-                // --- Centering Logic ---
-                // Calculate the raw offsets for the first and last buttons to determine the shift needed to center the group.
-                int numButtons = _inventoryHeaderButtons.Count;
-                float rawOffsetFirst = 0f;
-                float rawOffsetLast = 0f;
-
-                if (numButtons > 0)
-                {
-                    // Logic for First Button (Index 0)
-                    if (0 < selectedIndex) rawOffsetFirst = -repulsionAmount;
-                    else if (0 > selectedIndex) rawOffsetFirst = repulsionAmount;
-                    else rawOffsetFirst = 0f;
-
-                    // Logic for Last Button (Index numButtons - 1)
-                    int lastIdx = numButtons - 1;
-                    if (lastIdx < selectedIndex) rawOffsetLast = -repulsionAmount;
-                    else if (lastIdx > selectedIndex) rawOffsetLast = repulsionAmount;
-                    else rawOffsetLast = 0f;
-                }
-
-                float centeringCorrection = -(rawOffsetFirst + rawOffsetLast) / 2f;
-                // -----------------------
-
-                InventoryHeaderButton? selectedButton = null;
-
-                for (int i = 0; i < _inventoryHeaderButtons.Count; i++)
-                {
-                    var button = _inventoryHeaderButtons[i];
-
-                    float targetOffset = 0f;
-                    if (i < selectedIndex)
-                    {
-                        targetOffset = -repulsionAmount;
-                    }
-                    else if (i > selectedIndex)
-                    {
-                        targetOffset = repulsionAmount;
-                    }
-
-                    // Apply the centering correction to the target
-                    targetOffset += centeringCorrection;
-
-                    float currentOffset = _inventoryHeaderButtonOffsets[button];
-                    _inventoryHeaderButtonOffsets[button] = MathHelper.Lerp(currentOffset, targetOffset, repulsionSpeed * deltaTime);
-                    float finalOffset = _inventoryHeaderButtonOffsets[button];
-
-                    var baseBounds = _inventoryHeaderButtonBaseBounds[button];
-                    button.Bounds = new Rectangle(
-                        baseBounds.X + (int)MathF.Round(finalOffset),
-                        baseBounds.Y + (int)MathF.Round(_inventoryPositionOffset.Y),
-                        baseBounds.Width,
-                        baseBounds.Height);
-
-                    button.IsSelected = ((int)_selectedInventoryCategory == button.MenuIndex);
-                    if (button.IsSelected)
-                    {
-                        selectedButton = button;
-                    }
-                    button.Update(currentMouseState, cameraTransform);
-                }
-
-                // Update Equip Button
-                if (_inventoryEquipButton != null)
-                {
-                    float equipBaseX = (Global.VIRTUAL_WIDTH - 172) / 2f + 19f - 60f;
-                    float equipBaseY = 200 + 6;
-
-                    _inventoryEquipButton.Bounds = new Rectangle(
-                        (int)equipBaseX,
-                        (int)(equipBaseY + _inventoryPositionOffset.Y),
-                        32, 32
-                    );
-                    _inventoryEquipButton.IsSelected = _selectedInventoryCategory == InventoryCategory.Equip;
-                    _inventoryEquipButton.Update(currentMouseState, cameraTransform);
-                }
-
-                // Now update debug button positions and visibility
-                if (selectedButton != null && _debugButton1 != null && _debugButton2 != null)
-                {
-                    float progress = Math.Clamp(_inventoryArrowAnimTimer / INVENTORY_ARROW_ANIM_DURATION, 0f, 1f);
-                    float easedProgress = Easing.EaseOutCubic(progress);
-                    float currentOffset = MathHelper.Lerp(16f, 13f, easedProgress);
-
-                    var selectedBounds = selectedButton.Bounds;
-                    _debugButton1.Bounds = new Rectangle(
-                        selectedBounds.Center.X - (int)currentOffset - (_debugButton1.Bounds.Width / 2),
-                        selectedBounds.Center.Y - _debugButton1.Bounds.Height / 2 - 2,
-                        _debugButton1.Bounds.Width,
-                        _debugButton1.Bounds.Height
-                    );
-                    _debugButton2.Bounds = new Rectangle(
-                        selectedBounds.Center.X + (int)currentOffset - (_debugButton2.Bounds.Width / 2),
-                        selectedBounds.Center.Y - _debugButton2.Bounds.Height / 2 - 2,
-                        _debugButton2.Bounds.Width,
-                        _debugButton2.Bounds.Height
-                    );
-
-                    _debugButton1.IsEnabled = (int)_selectedInventoryCategory > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
-                    _debugButton2.IsEnabled = (int)_selectedInventoryCategory < (int)InventoryCategory.Consumables && _selectedInventoryCategory != InventoryCategory.Equip;
-                }
-
-                // --- Inventory Slot Update Logic with Overlap Handling ---
-                if (_selectedInventoryCategory != InventoryCategory.Equip)
-                {
-                    InventorySlot? bestSlot = null;
-                    float minDistance = float.MaxValue;
-
-                    // Transform mouse to world space for distance check
-                    var inverseCamera = Matrix.Invert(cameraTransform);
-                    Vector2 mouseWorld = Vector2.Transform(virtualMousePos, inverseCamera);
-
-                    // 1. Find the single best candidate for interaction
-                    foreach (var slot in _inventorySlots)
-                    {
-                        if (slot.Bounds.Contains(mouseWorld))
-                        {
-                            float dist = Vector2.DistanceSquared(mouseWorld, slot.Bounds.Center.ToVector2());
-                            if (dist < minDistance)
-                            {
-                                minDistance = dist;
-                                bestSlot = slot;
-                            }
-                        }
-                    }
-
-                    // 2. Update all slots, but only pass real input to the best candidate
-                    foreach (var slot in _inventorySlots)
-                    {
-                        if (slot == bestSlot)
-                        {
-                            slot.Update(gameTime, currentMouseState, cameraTransform);
-                        }
-                        else
-                        {
-                            // Pass dummy mouse state with preserved button states to prevent interaction
-                            // while keeping animation logic running.
-                            var dummyMouse = new MouseState(
-                                -10000, -10000,
-                                currentMouseState.ScrollWheelValue,
-                                currentMouseState.LeftButton,
-                                currentMouseState.MiddleButton,
-                                currentMouseState.RightButton,
-                                currentMouseState.XButton1,
-                                currentMouseState.XButton2
-                            );
-                            slot.Update(gameTime, dummyMouse, cameraTransform);
-                        }
-                    }
-                }
-                else if (_selectedInventoryCategory == InventoryCategory.Equip)
-                {
-                    if (_relicEquipButton != null)
-                    {
-                        _relicEquipButton.Update(currentMouseState, cameraTransform);
-                        var targetTex = _relicEquipButton.IsPressed ? _spriteManager.InventoryEquipSelectedSprite : _spriteManager.InventoryEquipHoverSprite;
-                        _relicEquipButton.SetSprites(targetTex, targetTex.Bounds, targetTex.Bounds);
-                    }
-                }
-            }
-
 
             switch (_mapState)
             {
@@ -939,61 +459,6 @@ namespace ProjectVagabond.Scenes
             base.Update(gameTime);
         }
 
-        private List<(string Name, int Quantity, string? IconPath, int? Uses, Color? IconTint)> GetCurrentCategoryItems()
-        {
-            var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses, Color? IconTint)>();
-            switch (_selectedInventoryCategory)
-            {
-                case InventoryCategory.Weapons:
-                    foreach (var kvp in _gameState.PlayerState.Weapons) currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, null));
-                    break;
-                case InventoryCategory.Armor:
-                    foreach (var kvp in _gameState.PlayerState.Armors) currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, null));
-                    break;
-                case InventoryCategory.Relics:
-                    foreach (var kvp in _gameState.PlayerState.Relics)
-                    {
-                        if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, null));
-                        else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null, null));
-                    }
-                    break;
-                case InventoryCategory.Consumables:
-                    foreach (var kvp in _gameState.PlayerState.Consumables)
-                    {
-                        if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, null));
-                        else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, null));
-                    }
-                    break;
-                case InventoryCategory.Spells:
-                    foreach (var entry in _gameState.PlayerState.Spells)
-                    {
-                        Color? tint = null;
-                        string name = entry.MoveID;
-                        string iconPath = $"Sprites/Items/Spells/{entry.MoveID}";
-
-                        if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
-                        {
-                            name = moveData.MoveName;
-                            int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
-                            if (_global.ElementColors.TryGetValue(elementId, out var elementColor))
-                            {
-                                tint = elementColor;
-                            }
-                        }
-                        currentItems.Add((name, 1, iconPath, null, tint));
-                    }
-                    break;
-                case InventoryCategory.Equip:
-                    // Empty for now
-                    break;
-            }
-            return currentItems;
-        }
-
         private void HandleMapInput(GameTime gameTime)
         {
             var cursorManager = ServiceLocator.Get<CursorManager>();
@@ -1021,13 +486,17 @@ namespace ProjectVagabond.Scenes
             {
                 cursorManager.SetState(CursorState.HoverClickable);
             }
-            else if (_mapState == SplitMapState.Idle && (_inventoryButton == null || !_inventoryButton.IsHovered))
+            else if (_mapState == SplitMapState.Idle)
             {
                 cursorManager.SetState(CursorState.HoverDraggable);
             }
 
             // 2. Handle camera panning (which depends on hover state)
-            HandleCameraPan(currentMouseState, virtualMousePos);
+            // Only allow panning if the inventory button is NOT hovered.
+            if (!_inventoryOverlay.IsHovered)
+            {
+                HandleCameraPan(currentMouseState, virtualMousePos);
+            }
 
             if (_isPanning)
             {
@@ -1060,7 +529,7 @@ namespace ProjectVagabond.Scenes
 
         private void HandleCameraPan(MouseState currentMouseState, Vector2 virtualMousePos)
         {
-            if (_currentViewState != SplitMapViewState.Map)
+            if (_inventoryOverlay.IsOpen)
             {
                 _isPanning = false;
                 return;
@@ -1083,7 +552,7 @@ namespace ProjectVagabond.Scenes
             }
 
             // Start Drag Panning
-            if (leftClickPressed && _hoveredNodeId == -1 && _mapState == SplitMapState.Idle && UIInputManager.CanProcessMouseClick() && (_inventoryButton == null || !_inventoryButton.IsHovered))
+            if (leftClickPressed && _hoveredNodeId == -1 && _mapState == SplitMapState.Idle && UIInputManager.CanProcessMouseClick())
             {
                 _isPanning = true;
                 _panStartMousePosition = currentMouseState.Position;
@@ -1360,19 +829,19 @@ namespace ProjectVagabond.Scenes
                 var dieType = numSides == 4 ? DieType.D4 : DieType.D6;
 
                 _diceRollingSystem.Roll(new List<DiceGroup>
+            {
+                new DiceGroup
                 {
-                    new DiceGroup
-                    {
-                        GroupId = "narrative_check",
-                        NumberOfDice = numDice,
-                        DieType = dieType,
-                        ResultProcessing = DiceResultProcessing.Sum,
-                        Modifier = modifier,
-                        Tint = Color.White,
-                        AnimateSum = false,
-                        ShowResultText = false
-                    }
-                });
+                    GroupId = "narrative_check",
+                    NumberOfDice = numDice,
+                    DieType = dieType,
+                    ResultProcessing = DiceResultProcessing.Sum,
+                    Modifier = modifier,
+                    Tint = Color.White,
+                    AnimateSum = false,
+                    ShowResultText = false
+                }
+            });
             }
         }
 
@@ -1570,103 +1039,7 @@ namespace ProjectVagabond.Scenes
             _playerIcon.Draw(spriteBatch);
 
             // Draw the inventory menu UI elements
-            if (_currentViewState == SplitMapViewState.Inventory)
-            {
-                float bobOffset = 0f;
-                if (_inventoryBobTimer < INVENTORY_BOB_DURATION)
-                {
-                    float bobProgress = Math.Clamp(_inventoryBobTimer / INVENTORY_BOB_DURATION, 0f, 1f);
-                    bobOffset = -MathF.Sin(bobProgress * MathHelper.Pi) * 1f;
-                }
-
-                var inventoryPosition = new Vector2(0, 200 + bobOffset);
-                var headerPosition = inventoryPosition + _inventoryPositionOffset;
-
-                spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, headerPosition, Color.White);
-
-                Texture2D selectedBorderSprite;
-                switch (_selectedInventoryCategory)
-                {
-                    case InventoryCategory.Weapons:
-                        selectedBorderSprite = _spriteManager.InventoryBorderWeapons;
-                        break;
-                    case InventoryCategory.Armor:
-                        selectedBorderSprite = _spriteManager.InventoryBorderArmor;
-                        break;
-                    case InventoryCategory.Spells:
-                        selectedBorderSprite = _spriteManager.InventoryBorderSpells;
-                        break;
-                    case InventoryCategory.Relics:
-                        selectedBorderSprite = _spriteManager.InventoryBorderRelics;
-                        break;
-                    case InventoryCategory.Consumables:
-                        selectedBorderSprite = _spriteManager.InventoryBorderConsumables;
-                        break;
-                    case InventoryCategory.Equip:
-                        selectedBorderSprite = _spriteManager.InventoryBorderEquip;
-                        break;
-                    default:
-                        selectedBorderSprite = _spriteManager.InventoryBorderWeapons; // Failsafe
-                        break;
-                }
-                spriteBatch.DrawSnapped(selectedBorderSprite, inventoryPosition, Color.White);
-
-                foreach (var button in _inventoryHeaderButtons)
-                {
-                    button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                }
-
-                // Draw Inventory Slots
-                if (_selectedInventoryCategory != InventoryCategory.Equip)
-                {
-                    foreach (var slot in _inventorySlots)
-                    {
-                        slot.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                    }
-                }
-                else if (_selectedInventoryCategory == InventoryCategory.Equip)
-                {
-                    if (_relicEquipButton != null && _relicEquipButton.IsHovered)
-                    {
-                        _relicEquipButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                    }
-
-                    // Draw Debug Stats Panel
-                    spriteBatch.DrawSnapped(pixel, _statsPanelArea, Color.HotPink);
-                }
-
-                if (_debugButton1 != null && _debugButton1.IsEnabled)
-                {
-                    _debugButton1.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                }
-                if (_debugButton2 != null && _debugButton2.IsEnabled)
-                {
-                    _debugButton2.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                }
-
-                if (_global.ShowSplitMapGrid)
-                {
-                    spriteBatch.DrawSnapped(pixel, _inventorySlotArea, Color.Blue * 0.5f);
-                    if (_selectedInventoryCategory != InventoryCategory.Equip)
-                    {
-                        const int slotSize = 48;
-                        foreach (var slot in _inventorySlots)
-                        {
-                            var slotRect = new Rectangle((int)(slot.Bounds.X), (int)(slot.Bounds.Y), slotSize, slotSize);
-                            spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Top), new Vector2(slotRect.Right, slotRect.Top), Color.Teal);
-                            spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Bottom), new Vector2(slotRect.Right, slotRect.Bottom), Color.Teal);
-                            spriteBatch.DrawLineSnapped(new Vector2(slotRect.Left, slotRect.Top), new Vector2(slotRect.Left, slotRect.Bottom), Color.Teal);
-                            spriteBatch.DrawLineSnapped(new Vector2(slotRect.Right, slotRect.Top), new Vector2(slotRect.Right, slotRect.Bottom), Color.Teal);
-
-                            spriteBatch.DrawSnapped(pixel, new Rectangle((int)slot.Bounds.X - 1, (int)slot.Bounds.Y - 1, 3, 3), Color.Pink);
-                        }
-                    }
-                }
-
-                // Draw Equip Button in World Space
-                _inventoryEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-            }
-
+            _inventoryOverlay.DrawWorld(spriteBatch, font, gameTime);
 
             spriteBatch.End();
 
@@ -1677,10 +1050,7 @@ namespace ProjectVagabond.Scenes
             _voidEdgeEffect.Draw(spriteBatch, mapBounds);
 
             // Only draw if idle or inventory is open
-            if (_currentViewState == SplitMapViewState.Inventory || _mapState == SplitMapState.Idle)
-            {
-                _inventoryButton?.Draw(spriteBatch, font, gameTime, transform);
-            }
+            _inventoryOverlay.DrawScreen(spriteBatch, font, gameTime, transform);
 
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
             {
