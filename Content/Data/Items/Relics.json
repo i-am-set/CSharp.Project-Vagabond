@@ -457,7 +457,7 @@
     "Tags": [ "Lifesteal", "Healing" ]
   },
   {
-    "RelicID": "OakenHeart",
+    "RelicID": "oakenheart",
     "RelicName": "Oaken Heart",
     "AbilityName": "Vigor",
     "Description": "While the holder is above 75% HP, they take 20% less damage from all sources.",
@@ -469,7 +469,7 @@
     "Tags": [ "Defense" ]
   },
   {
-    "RelicID": "PriestsPendant",
+    "RelicID": "priestspendant",
     "RelicName": "Priest's Pendant",
     "AbilityName": "Cornered Animal",
     "Description": "The holder's Agility is increased by 50% when their HP is below 33% or there's 4+ living enemy combatants",

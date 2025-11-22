@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.UI;
@@ -17,12 +18,11 @@ namespace ProjectVagabond.Scenes
         private int _currentTaskIndex = -1;
         private float _totalProgress = 0f;
         private float _progressPerTask = 0f;
-
         private float _ellipsisTimer = 0f;
         private int _ellipsisCount = 0;
 
         public bool IsActive { get; private set; }
-        public event Action OnComplete;
+        public event Action? OnComplete;
 
         // Progress bar animation
         private float _visualProgress = 0f;
@@ -269,7 +269,8 @@ namespace ProjectVagabond.Scenes
             {
                 // Log the error to the debug console to help diagnose loading issues.
                 Debug.WriteLine($"[ERROR] Loading task '{Description}' failed: {ex.Message}");
-                // Optionally, re-throw or handle the error in a more user-facing way.
+                // Re-throw the exception to crash the game, ensuring data integrity issues are not ignored.
+                throw;
             }
             finally
             {

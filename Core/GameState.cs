@@ -100,27 +100,56 @@ namespace ProjectVagabond
                 PlayerState.Spells = new List<MoveEntry>();
                 PlayerState.Actions = new List<MoveEntry>();
 
-                // Parse Starting Moves
-                foreach (string moveId in baseStats.StartingMoveIDs)
+                // --- VALIDATION & PARSING ---
+
+                // Validate and Parse Starting Moves
+                foreach (string rawMoveId in baseStats.StartingMoveIDs)
                 {
-                    if (!string.IsNullOrEmpty(moveId) && BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
+                    if (string.IsNullOrEmpty(rawMoveId)) continue;
+                    string moveId = rawMoveId.Trim();
+
+                    if (!BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
                     {
-                        if (moveData.MoveType == MoveType.Spell)
-                        {
-                            PlayerState.Spells.Add(new MoveEntry(moveId, 0));
-                        }
-                        else if (moveData.MoveType == MoveType.Action)
-                        {
-                            PlayerState.Actions.Add(new MoveEntry(moveId, 0));
-                        }
+                        throw new Exception($"[DATA ERROR] Player starting move '{moveId}' defined in player.json was not found in Moves.json.");
+                    }
+
+                    if (moveData.MoveType == MoveType.Spell)
+                    {
+                        PlayerState.Spells.Add(new MoveEntry(moveData.MoveID, 0)); // Use ID from cache to ensure casing
+                    }
+                    else if (moveData.MoveType == MoveType.Action)
+                    {
+                        PlayerState.Actions.Add(new MoveEntry(moveData.MoveID, 0));
                     }
                 }
 
-                // Parse Starting Inventory from Component
-                foreach (var kvp in baseStats.StartingWeapons) PlayerState.AddWeapon(kvp.Key, kvp.Value);
-                foreach (var kvp in baseStats.StartingArmor) PlayerState.AddArmor(kvp.Key, kvp.Value);
-                foreach (var kvp in baseStats.StartingRelics) PlayerState.AddRelic(kvp.Key, kvp.Value);
-                foreach (var kvp in baseStats.StartingConsumables) PlayerState.AddConsumable(kvp.Key, kvp.Value);
+                // Validate and Parse Starting Relics
+                foreach (var kvp in baseStats.StartingRelics)
+                {
+                    string relicId = kvp.Key.Trim();
+                    if (!BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
+                    {
+                        throw new Exception($"[DATA ERROR] Player starting relic '{relicId}' defined in player.json was not found in Relics.json.");
+                    }
+                    PlayerState.AddRelic(relicData.RelicID, kvp.Value); // Use ID from cache
+                }
+
+                // Validate and Parse Starting Consumables
+                foreach (var kvp in baseStats.StartingConsumables)
+                {
+                    string itemId = kvp.Key.Trim();
+                    if (!BattleDataCache.Consumables.TryGetValue(itemId, out var itemData))
+                    {
+                        throw new Exception($"[DATA ERROR] Player starting consumable '{itemId}' defined in player.json was not found in Consumables.json.");
+                    }
+                    PlayerState.AddConsumable(itemData.ItemID, kvp.Value); // Use ID from cache
+                }
+
+                // Parse Starting Weapons (Validation logic would go here if Weapons.json existed)
+                foreach (var kvp in baseStats.StartingWeapons) PlayerState.AddWeapon(kvp.Key.Trim(), kvp.Value);
+
+                // Parse Starting Armor (Validation logic would go here if Armor.json existed)
+                foreach (var kvp in baseStats.StartingArmor) PlayerState.AddArmor(kvp.Key.Trim(), kvp.Value);
             }
 
             // Create and add the live CombatantStatsComponent

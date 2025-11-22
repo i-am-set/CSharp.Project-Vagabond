@@ -228,10 +228,11 @@ namespace ProjectVagabond.UI
             var equipHoverSprite = _spriteManager.InventoryEquipHoverSprite;
             int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
             int equipButtonY = 250 + 19 + 16;
-            _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, equipButtonY, 180, 16), "NOTHING");
+            _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, equipButtonY, 180, 16), "NONE");
             _relicEquipButton.TitleText = "RELIC";
             _relicEquipButton.ShowTitleOnHoverOnly = false; // Always visible
             _relicEquipButton.Font = secondaryFont;
+            _relicEquipButton.CustomDefaultTextColor = _global.Palette_Gray; // Default to gray for NONE
             _relicEquipButton.OnClick += () => {
                 OpenEquipSubmenu();
             };
@@ -250,6 +251,13 @@ namespace ProjectVagabond.UI
                 button.IsEnabled = false; // Disabled by default
                 _equipSubmenuButtons.Add(button);
             }
+        }
+
+        private RelicData? GetRelicData(string relicId)
+        {
+            // BattleDataCache dictionaries are now case-insensitive, so direct lookup is safe.
+            if (BattleDataCache.Relics.TryGetValue(relicId, out var data)) return data;
+            return null;
         }
 
         private void OpenEquipSubmenu()
@@ -277,7 +285,9 @@ namespace ProjectVagabond.UI
                 if (relicIndex < availableRelics.Count)
                 {
                     string relicId = availableRelics[relicIndex];
-                    if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
+                    var relicData = GetRelicData(relicId);
+
+                    if (relicData != null)
                     {
                         btn.MainText = relicData.RelicName.ToUpper();
                         btn.IconTexture = _spriteManager.GetRelicSprite($"Sprites/Items/Relics/{relicData.RelicID}");
@@ -288,7 +298,7 @@ namespace ProjectVagabond.UI
                     }
                     else
                     {
-                        // Fallback if data missing
+                        // Fallback if data missing (should be caught by GameState validation, but safe to handle)
                         btn.MainText = relicId.ToUpper();
                         btn.IconTexture = null;
                         btn.IsEnabled = true;
@@ -328,16 +338,7 @@ namespace ProjectVagabond.UI
             // Close submenu
             _isEquipSubmenuOpen = false;
 
-            // Refresh the main button text
-            if (_relicEquipButton != null)
-            {
-                string name = "NOTHING";
-                if (!string.IsNullOrEmpty(itemId) && BattleDataCache.Relics.TryGetValue(itemId, out var data))
-                {
-                    name = data.RelicName.ToUpper();
-                }
-                _relicEquipButton.MainText = name;
-            }
+            // The button text/icon update is handled in the Update loop
         }
 
         private void ToggleInventory()
@@ -620,6 +621,29 @@ namespace ProjectVagabond.UI
                 {
                     if (_relicEquipButton != null)
                     {
+                        // Update text and icon based on equipped item
+                        var relicId = _gameState.PlayerState.EquippedRelics[0];
+                        if (string.IsNullOrEmpty(relicId))
+                        {
+                            _relicEquipButton.MainText = "NONE";
+                            _relicEquipButton.CustomDefaultTextColor = _global.Palette_Gray;
+                            _relicEquipButton.IconTexture = null;
+                        }
+                        else
+                        {
+                            var data = GetRelicData(relicId);
+                            if (data != null)
+                            {
+                                _relicEquipButton.MainText = data.RelicName.ToUpper();
+                                _relicEquipButton.IconTexture = _spriteManager.GetRelicSprite($"Sprites/Items/Relics/{data.RelicID}");
+                            }
+                            else
+                            {
+                                _relicEquipButton.MainText = relicId.ToUpper();
+                                _relicEquipButton.IconTexture = null;
+                            }
+                            _relicEquipButton.CustomDefaultTextColor = null; // Reset to default
+                        }
                         _relicEquipButton.Update(currentMouseState, cameraTransform);
                     }
                 }

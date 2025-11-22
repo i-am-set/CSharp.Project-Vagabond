@@ -14,6 +14,8 @@ namespace ProjectVagabond.Battle
     {
         public static Dictionary<int, ElementDefinition> Elements { get; private set; }
         public static Dictionary<int, Dictionary<int, float>> InteractionMatrix { get; private set; }
+
+        // Dictionaries now use Case-Insensitive Comparers
         public static Dictionary<string, MoveData> Moves { get; private set; }
         public static Dictionary<string, ConsumableItemData> Consumables { get; private set; }
         public static Dictionary<string, RelicData> Relics { get; private set; }
@@ -24,71 +26,54 @@ namespace ProjectVagabond.Battle
             {
                 PropertyNameCaseInsensitive = true,
                 ReadCommentHandling = JsonCommentHandling.Skip,
-                AllowTrailingCommas = true, // Added to prevent loading failures from minor JSON syntax errors
+                AllowTrailingCommas = true,
                 Converters = { new JsonStringEnumConverter() }
             };
 
-            try
-            {
-                string elementsPath = Path.Combine(content.RootDirectory, "Data", "Elements.json");
-                string elementsJson = File.ReadAllText(elementsPath);
-                var elementList = JsonSerializer.Deserialize<List<ElementDefinition>>(elementsJson, jsonOptions);
-                Elements = elementList.ToDictionary(e => e.ElementID, e => e);
-                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Elements.Count} element definitions.");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load Elements.json: {ex.Message}");
-                Elements = new Dictionary<int, ElementDefinition>();
-            }
+            // --- ELEMENTS ---
+            string elementsPath = Path.Combine(content.RootDirectory, "Data", "Elements.json");
+            if (!File.Exists(elementsPath)) throw new FileNotFoundException($"Could not find Elements.json at {elementsPath}");
 
+            string elementsJson = File.ReadAllText(elementsPath);
+            var elementList = JsonSerializer.Deserialize<List<ElementDefinition>>(elementsJson, jsonOptions);
+            Elements = elementList.ToDictionary(e => e.ElementID, e => e);
+            Debug.WriteLine($"[BattleDataCache] Successfully loaded {Elements.Count} element definitions.");
+
+            // --- INTERACTION MATRIX ---
             LoadInteractionMatrix(content);
 
-            try
-            {
-                string movesPath = Path.Combine(content.RootDirectory, "Data", "Moves.json");
-                string movesJson = File.ReadAllText(movesPath);
-                var moveList = JsonSerializer.Deserialize<List<MoveData>>(movesJson, jsonOptions);
-                Moves = moveList.ToDictionary(m => m.MoveID, m => m);
-                ValidateWordLengths(Moves.Values.Select(m => m.MoveName), "Move", 11);
-                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Moves.Count} move definitions.");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load Moves.json: {ex.Message}");
-                Moves = new Dictionary<string, MoveData>();
-            }
+            // --- MOVES ---
+            string movesPath = Path.Combine(content.RootDirectory, "Data", "Moves.json");
+            if (!File.Exists(movesPath)) throw new FileNotFoundException($"Could not find Moves.json at {movesPath}");
 
-            try
-            {
-                string consumablesPath = Path.Combine(content.RootDirectory, "Data", "items", "Consumables.json");
-                string consumablesJson = File.ReadAllText(consumablesPath);
-                var consumableList = JsonSerializer.Deserialize<List<ConsumableItemData>>(consumablesJson, jsonOptions);
-                Consumables = consumableList.ToDictionary(c => c.ItemID, c => c);
-                ValidateWordLengths(Consumables.Values.Select(c => c.ItemName), "Consumable", 11);
-                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Consumables.Count} consumable item definitions.");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load Consumables.json: {ex.Message}");
-                Consumables = new Dictionary<string, ConsumableItemData>();
-            }
+            string movesJson = File.ReadAllText(movesPath);
+            var moveList = JsonSerializer.Deserialize<List<MoveData>>(movesJson, jsonOptions);
+            Moves = moveList.ToDictionary(m => m.MoveID, m => m, StringComparer.OrdinalIgnoreCase);
+            ValidateWordLengths(Moves.Values.Select(m => m.MoveName), "Move", 11);
+            Debug.WriteLine($"[BattleDataCache] Successfully loaded {Moves.Count} move definitions.");
 
-            try
-            {
-                string relicsPath = Path.Combine(content.RootDirectory, "Data", "Relics.json");
-                string relicsJson = File.ReadAllText(relicsPath);
-                var relicList = JsonSerializer.Deserialize<List<RelicData>>(relicsJson, jsonOptions);
-                Relics = relicList.ToDictionary(a => a.RelicID, a => a);
-                ValidateWordLengths(Relics.Values.Select(a => a.RelicName), "Relic", 11);
-                ValidateWordLengths(Relics.Values.Select(a => a.AbilityName), "Ability", 14);
-                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Relics.Count} relic definitions.");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load Relics.json: {ex.Message}");
-                Relics = new Dictionary<string, RelicData>();
-            }
+            // --- CONSUMABLES ---
+            string consumablesPath = Path.Combine(content.RootDirectory, "Data", "items", "Consumables.json");
+            if (!File.Exists(consumablesPath)) throw new FileNotFoundException($"Could not find Consumables.json at {consumablesPath}");
+
+            string consumablesJson = File.ReadAllText(consumablesPath);
+            var consumableList = JsonSerializer.Deserialize<List<ConsumableItemData>>(consumablesJson, jsonOptions);
+            Consumables = consumableList.ToDictionary(c => c.ItemID, c => c, StringComparer.OrdinalIgnoreCase);
+            ValidateWordLengths(Consumables.Values.Select(c => c.ItemName), "Consumable", 11);
+            Debug.WriteLine($"[BattleDataCache] Successfully loaded {Consumables.Count} consumable item definitions.");
+
+            // --- RELICS ---
+            // FIXED PATH: Added "Items" directory
+            string relicsPath = Path.Combine(content.RootDirectory, "Data", "Items", "Relics.json");
+            if (!File.Exists(relicsPath)) throw new FileNotFoundException($"Could not find Relics.json at {relicsPath}");
+
+            string relicsJson = File.ReadAllText(relicsPath);
+            var relicList = JsonSerializer.Deserialize<List<RelicData>>(relicsJson, jsonOptions);
+            Relics = relicList.ToDictionary(a => a.RelicID, a => a, StringComparer.OrdinalIgnoreCase);
+            ValidateWordLengths(Relics.Values.Select(a => a.RelicName), "Relic", 11);
+            ValidateWordLengths(Relics.Values.Select(a => a.AbilityName), "Ability", 14);
+
+            Debug.WriteLine($"[BattleDataCache] Successfully loaded {Relics.Count} relic definitions.");
         }
 
         private static void ValidateWordLengths(IEnumerable<string> names, string dataType, int maxWordLength)
@@ -111,72 +96,64 @@ namespace ProjectVagabond.Battle
         private static void LoadInteractionMatrix(ContentManager content)
         {
             InteractionMatrix = new Dictionary<int, Dictionary<int, float>>();
-            try
+
+            string matrixPath = Path.Combine(content.RootDirectory, "Data", "ElementalInteractionMatrix.csv");
+
+            if (!File.Exists(matrixPath))
             {
-                string matrixPath = Path.Combine(content.RootDirectory, "Data", "ElementalInteractionMatrix.csv");
+                throw new FileNotFoundException($"[BattleDataCache] CSV file not found at '{matrixPath}'.");
+            }
 
-                if (!File.Exists(matrixPath))
+            var lines = File.ReadAllLines(matrixPath);
+            if (lines.Length < 2) return;
+
+            int headerRowIndex = -1;
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var parts = lines[i].Split(',');
+                if (parts.Length > 0 && parts[0].Trim().Equals("Attacking", StringComparison.OrdinalIgnoreCase))
                 {
-                    Debug.WriteLine($"[BattleDataCache] WARNING: CSV file not found at standard runtime path '{matrixPath}'.");
-                    return;
+                    headerRowIndex = i;
+                    break;
                 }
+            }
 
-                var lines = File.ReadAllLines(matrixPath);
-                if (lines.Length < 2) return;
+            if (headerRowIndex == -1) return;
 
-                int headerRowIndex = -1;
-                for (int i = 0; i < lines.Length; i++)
+            var header = lines[headerRowIndex].Split(',');
+            var defendingElementIds = new List<int>();
+            for (int i = 2; i < header.Length; i++)
+            {
+                if (int.TryParse(header[i].Trim(), out int id))
                 {
-                    var parts = lines[i].Split(',');
-                    if (parts.Length > 0 && parts[0].Trim().Equals("Attacking", StringComparison.OrdinalIgnoreCase))
-                    {
-                        headerRowIndex = i;
-                        break;
-                    }
+                    defendingElementIds.Add(id);
                 }
+            }
 
-                if (headerRowIndex == -1) return;
+            for (int i = headerRowIndex + 1; i < lines.Length; i++)
+            {
+                var values = lines[i].Split(',');
+                if (values.Length < 3) continue;
 
-                var header = lines[headerRowIndex].Split(',');
-                var defendingElementIds = new List<int>();
-                for (int i = 2; i < header.Length; i++)
+                if (int.TryParse(values[1].Trim(), out int attackingId))
                 {
-                    if (int.TryParse(header[i].Trim(), out int id))
+                    var rowMatrix = new Dictionary<int, float>();
+                    for (int j = 2; j < values.Length; j++)
                     {
-                        defendingElementIds.Add(id);
-                    }
-                }
-
-                for (int i = headerRowIndex + 1; i < lines.Length; i++)
-                {
-                    var values = lines[i].Split(',');
-                    if (values.Length < 3) continue;
-
-                    if (int.TryParse(values[1].Trim(), out int attackingId))
-                    {
-                        var rowMatrix = new Dictionary<int, float>();
-                        for (int j = 2; j < values.Length; j++)
+                        int defendingIdIndex = j - 2;
+                        if (defendingIdIndex < defendingElementIds.Count)
                         {
-                            int defendingIdIndex = j - 2;
-                            if (defendingIdIndex < defendingElementIds.Count)
+                            int defendingId = defendingElementIds[defendingIdIndex];
+                            if (float.TryParse(values[j].Trim(), CultureInfo.InvariantCulture, out float multiplier))
                             {
-                                int defendingId = defendingElementIds[defendingIdIndex];
-                                if (float.TryParse(values[j].Trim(), CultureInfo.InvariantCulture, out float multiplier))
-                                {
-                                    rowMatrix[defendingId] = multiplier;
-                                }
+                                rowMatrix[defendingId] = multiplier;
                             }
                         }
-                        InteractionMatrix[attackingId] = rowMatrix;
                     }
+                    InteractionMatrix[attackingId] = rowMatrix;
                 }
-                Debug.WriteLine($"[BattleDataCache] Successfully loaded elemental interaction matrix with {InteractionMatrix.Count} attacking types.");
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[BattleDataCache] [ERROR] Failed to load ElementalInteractionMatrix.csv: {ex.Message}");
-                InteractionMatrix = new Dictionary<int, Dictionary<int, float>>();
-            }
+            Debug.WriteLine($"[BattleDataCache] Successfully loaded elemental interaction matrix with {InteractionMatrix.Count} attacking types.");
         }
     }
 }
