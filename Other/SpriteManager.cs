@@ -11,7 +11,6 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -22,7 +21,6 @@ namespace ProjectVagabond
     {
         private readonly Core _core;
         private readonly TextureFactory _textureFactory;
-
         // UI Sprite Sheets
         public Texture2D ActionButtonsSpriteSheet { get; private set; }
         public Texture2D ActionButtonTemplateSpriteSheet { get; private set; }
@@ -119,6 +117,7 @@ namespace ProjectVagabond
         public Texture2D InventoryBorderWeapons { get; private set; }
         public Texture2D InventoryBorderConsumables { get; private set; }
         public Texture2D InventoryBorderEquip { get; private set; }
+        public Texture2D InventoryBorderEquipSubmenu { get; private set; }
         public Texture2D InventoryHeaderButtonWeapons { get; private set; }
         public Texture2D InventoryHeaderButtonArmor { get; private set; }
         public Texture2D InventoryHeaderButtonSpells { get; private set; }
@@ -313,6 +312,8 @@ namespace ProjectVagabond
             catch { InventoryBorderConsumables = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryBorderEquip = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_equip"); }
             catch { InventoryBorderEquip = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+            try { InventoryBorderEquipSubmenu = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_equip_submenu"); }
+            catch { InventoryBorderEquipSubmenu = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryHeaderButtonWeapons = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_weapons"); }
             catch { InventoryHeaderButtonWeapons = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventoryHeaderButtonArmor = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_armor"); }
@@ -454,15 +455,15 @@ namespace ProjectVagabond
             // Index 8 is the center star.
             var spriteSheetCoords = new Point[9]
             {
-                new Point(0, 1), // 0: W
-                new Point(0, 0), // 1: NW
-                new Point(1, 0), // 2: N (Up)
-                new Point(2, 0), // 3: NE
-                new Point(2, 1), // 4: E (Right)
-                new Point(2, 2), // 5: SE
-                new Point(1, 2), // 6: S (Down)
-                new Point(0, 2), // 7: SW
-                new Point(1, 1)  // 8: Center (Star)
+            new Point(0, 1), // 0: W
+            new Point(0, 0), // 1: NW
+            new Point(1, 0), // 2: N (Up)
+            new Point(2, 0), // 3: NE
+            new Point(2, 1), // 4: E (Right)
+            new Point(2, 2), // 5: SE
+            new Point(1, 2), // 6: S (Down)
+            new Point(0, 2), // 7: SW
+            new Point(1, 1)  // 8: Center (Star)
             };
 
             ArrowIconSourceRects = new Rectangle[9];
@@ -897,4 +898,3 @@ namespace ProjectVagabond
         }
     }
 }
-﻿

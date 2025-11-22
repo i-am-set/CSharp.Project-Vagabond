@@ -38,6 +38,10 @@ namespace ProjectVagabond.UI
         private ImageButton? _debugButton2;
         private ImageButton? _relicEquipButton;
 
+        // Submenu State
+        private bool _isEquipSubmenuOpen = false;
+        private Button? _nothingButton;
+
         private InventoryCategory _selectedInventoryCategory;
         private InventoryCategory _previousInventoryCategory;
         private int _selectedSlotIndex = -1;
@@ -48,6 +52,7 @@ namespace ProjectVagabond.UI
         private float _inventoryBobTimer;
         private const float INVENTORY_BOB_DURATION = 0.1f;
         private Vector2 _inventoryPositionOffset = Vector2.Zero;
+        private float _selectedHeaderBobTimer;
 
         // Input State
         private MouseState _previousMouseState;
@@ -67,6 +72,7 @@ namespace ProjectVagabond.UI
             _inventoryArrowAnimTimer = INVENTORY_ARROW_ANIM_DURATION;
             _inventoryBobTimer = INVENTORY_BOB_DURATION;
             _inventoryPositionOffset = Vector2.Zero;
+            _selectedHeaderBobTimer = 0f;
 
             _previousMouseState = Mouse.GetState();
             _previousKeyboardState = Keyboard.GetState();
@@ -116,6 +122,7 @@ namespace ProjectVagabond.UI
                 var bounds = new Rectangle((int)MathF.Round(startX + i * buttonClickableWidth), (int)buttonY, (int)MathF.Round(buttonClickableWidth), buttonSpriteSize);
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
                 button.OnClick += () => {
+                    CancelEquipSelection(); // Failsafe: Close submenu if switching categories
                     _selectedInventoryCategory = category;
                     _selectedSlotIndex = -1;
                     RefreshInventorySlots();
@@ -131,6 +138,7 @@ namespace ProjectVagabond.UI
             var equipBounds = new Rectangle((int)equipX, (int)buttonY, 32, 32);
             _inventoryEquipButton = new InventoryHeaderButton(equipBounds, _spriteManager.InventoryHeaderButtonEquip, equipRects[0], equipRects[1], equipRects[2], (int)InventoryCategory.Equip, "Equip");
             _inventoryEquipButton.OnClick += () => {
+                CancelEquipSelection(); // Failsafe: Ensure clean state when clicking main equip button
                 _selectedInventoryCategory = InventoryCategory.Equip;
                 _selectedSlotIndex = -1;
                 RefreshInventorySlots();
@@ -196,6 +204,7 @@ namespace ProjectVagabond.UI
                 int currentIndex = (int)_selectedInventoryCategory;
                 if (currentIndex > 0 && currentIndex <= (int)InventoryCategory.Consumables)
                 {
+                    CancelEquipSelection(); // Failsafe
                     _selectedInventoryCategory = (InventoryCategory)(currentIndex - 1);
                     RefreshInventorySlots();
                 }
@@ -208,6 +217,7 @@ namespace ProjectVagabond.UI
                 int maxIndex = (int)InventoryCategory.Consumables;
                 if (currentIndex < maxIndex)
                 {
+                    CancelEquipSelection(); // Failsafe
                     _selectedInventoryCategory = (InventoryCategory)(currentIndex + 1);
                     RefreshInventorySlots();
                 }
@@ -218,7 +228,36 @@ namespace ProjectVagabond.UI
             int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
             int equipButtonY = 250 + 19;
             _relicEquipButton = new ImageButton(new Rectangle(equipButtonX, equipButtonY, 180, 16), equipHoverSprite);
-            _relicEquipButton.OnClick += () => { System.Diagnostics.Debug.WriteLine("Relic Equip Button Clicked!"); };
+            _relicEquipButton.OnClick += () => {
+                _isEquipSubmenuOpen = true;
+            };
+
+            // Initialize "NOTHING" Button for Submenu
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            // Match the size and position of the relic equip button
+            _nothingButton = new Button(new Rectangle(equipButtonX, equipButtonY, 180, 16), "NOTHING", font: secondaryFont);
+            _nothingButton.OnClick += () => {
+                SelectEquipItem(null);
+            };
+        }
+
+        /// <summary>
+        /// Cancels any active equip selection submenu, reverting the UI to the standard equip view.
+        /// This acts as a failsafe when switching categories or closing the inventory.
+        /// </summary>
+        private void CancelEquipSelection()
+        {
+            if (_isEquipSubmenuOpen)
+            {
+                _isEquipSubmenuOpen = false;
+                // Future logic: Reset any temporary selection states here if needed
+            }
+        }
+
+        private void SelectEquipItem(string? itemId)
+        {
+            // Placeholder for actual equip logic
+            _isEquipSubmenuOpen = false;
         }
 
         private void ToggleInventory()
@@ -233,6 +272,7 @@ namespace ProjectVagabond.UI
             else
             {
                 _inventoryButton?.SetSprites(_spriteManager.SplitMapInventoryButton, _spriteManager.SplitMapInventoryButtonSourceRects[0], _spriteManager.SplitMapInventoryButtonSourceRects[1]);
+                CancelEquipSelection(); // Ensure submenu is closed when inventory closes
             }
 
             OnInventoryToggled?.Invoke(IsOpen);
@@ -240,6 +280,8 @@ namespace ProjectVagabond.UI
 
         private void RefreshInventorySlots()
         {
+            _selectedHeaderBobTimer = 0f; // Reset bob timer to sync animation on change
+
             foreach (var slot in _inventorySlots) slot.Clear();
 
             var items = GetCurrentCategoryItems();
@@ -354,6 +396,12 @@ namespace ProjectVagabond.UI
                 _inventoryPositionOffset.Y = -MathF.Sin(bobProgress * MathHelper.Pi) * 1f;
             }
 
+            // Update Selected Header Bob Timer
+            _selectedHeaderBobTimer += deltaTime;
+            // Speed reduced to 2.5f (half of 5f).
+            // Using (Sin + 1) / 2 ensures a smooth, symmetric 0-1 oscillation, which Round turns into an equal-duration toggle.
+            float selectedBobOffset = MathF.Round((MathF.Sin(_selectedHeaderBobTimer * 2.5f) + 1f) * 0.5f);
+
             // Handle Input for Category Switching
             int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
 
@@ -410,13 +458,16 @@ namespace ProjectVagabond.UI
                 float finalOffset = _inventoryHeaderButtonOffsets[button];
 
                 var baseBounds = _inventoryHeaderButtonBaseBounds[button];
+
+                button.IsSelected = ((int)_selectedInventoryCategory == button.MenuIndex);
+                float bobY = button.IsSelected ? selectedBobOffset : 0f;
+
                 button.Bounds = new Rectangle(
                     baseBounds.X + (int)MathF.Round(finalOffset),
-                    baseBounds.Y + (int)MathF.Round(_inventoryPositionOffset.Y),
+                    baseBounds.Y + (int)MathF.Round(_inventoryPositionOffset.Y + bobY),
                     baseBounds.Width,
                     baseBounds.Height);
 
-                button.IsSelected = ((int)_selectedInventoryCategory == button.MenuIndex);
                 if (button.IsSelected) selectedButton = button;
                 button.Update(currentMouseState, cameraTransform);
             }
@@ -426,8 +477,11 @@ namespace ProjectVagabond.UI
             {
                 float equipBaseX = (Global.VIRTUAL_WIDTH - 172) / 2f + 19f - 60f;
                 float equipBaseY = 200 + 6;
-                _inventoryEquipButton.Bounds = new Rectangle((int)equipBaseX, (int)(equipBaseY + _inventoryPositionOffset.Y), 32, 32);
+
                 _inventoryEquipButton.IsSelected = _selectedInventoryCategory == InventoryCategory.Equip;
+                float equipBobY = _inventoryEquipButton.IsSelected ? selectedBobOffset : 0f;
+
+                _inventoryEquipButton.Bounds = new Rectangle((int)equipBaseX, (int)(equipBaseY + _inventoryPositionOffset.Y + equipBobY), 32, 32);
                 _inventoryEquipButton.Update(currentMouseState, cameraTransform);
             }
 
@@ -437,10 +491,16 @@ namespace ProjectVagabond.UI
                 float progress = Math.Clamp(_inventoryArrowAnimTimer / INVENTORY_ARROW_ANIM_DURATION, 0f, 1f);
                 float easedProgress = Easing.EaseOutCubic(progress);
                 float currentOffset = MathHelper.Lerp(16f, 13f, easedProgress);
-                var selectedBounds = selectedButton.Bounds;
 
-                _debugButton1.Bounds = new Rectangle(selectedBounds.Center.X - (int)currentOffset - (_debugButton1.Bounds.Width / 2), selectedBounds.Center.Y - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
-                _debugButton2.Bounds = new Rectangle(selectedBounds.Center.X + (int)currentOffset - (_debugButton2.Bounds.Width / 2), selectedBounds.Center.Y - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
+                // Retrieve base bounds and offset to calculate position without the selection bob
+                var baseBounds = _inventoryHeaderButtonBaseBounds[selectedButton];
+                float finalOffset = _inventoryHeaderButtonOffsets[selectedButton];
+
+                int centerX = baseBounds.X + (int)MathF.Round(finalOffset) + baseBounds.Width / 2;
+                int centerY = baseBounds.Center.Y + (int)MathF.Round(_inventoryPositionOffset.Y);
+
+                _debugButton1.Bounds = new Rectangle(centerX - (int)currentOffset - (_debugButton1.Bounds.Width / 2), centerY - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
+                _debugButton2.Bounds = new Rectangle(centerX + (int)currentOffset - (_debugButton2.Bounds.Width / 2), centerY - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
 
                 _debugButton1.IsEnabled = (int)_selectedInventoryCategory > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
                 _debugButton2.IsEnabled = (int)_selectedInventoryCategory < (int)InventoryCategory.Consumables && _selectedInventoryCategory != InventoryCategory.Equip;
@@ -475,11 +535,18 @@ namespace ProjectVagabond.UI
             }
             else if (_selectedInventoryCategory == InventoryCategory.Equip)
             {
-                if (_relicEquipButton != null)
+                if (_isEquipSubmenuOpen)
                 {
-                    _relicEquipButton.Update(currentMouseState, cameraTransform);
-                    var targetTex = _relicEquipButton.IsPressed ? _spriteManager.InventoryEquipSelectedSprite : _spriteManager.InventoryEquipHoverSprite;
-                    _relicEquipButton.SetSprites(targetTex, targetTex.Bounds, targetTex.Bounds);
+                    _nothingButton?.Update(currentMouseState, cameraTransform);
+                }
+                else
+                {
+                    if (_relicEquipButton != null)
+                    {
+                        _relicEquipButton.Update(currentMouseState, cameraTransform);
+                        var targetTex = _relicEquipButton.IsPressed ? _spriteManager.InventoryEquipSelectedSprite : _spriteManager.InventoryEquipHoverSprite;
+                        _relicEquipButton.SetSprites(targetTex, targetTex.Bounds, targetTex.Bounds);
+                    }
                 }
             }
 
@@ -495,6 +562,7 @@ namespace ProjectVagabond.UI
             // Clamp to valid range [0, Consumables], excluding Equip
             if (newIndex >= 0 && newIndex <= (int)InventoryCategory.Consumables)
             {
+                CancelEquipSelection(); // Failsafe
                 _selectedInventoryCategory = (InventoryCategory)newIndex;
                 RefreshInventorySlots();
             }
@@ -516,16 +584,24 @@ namespace ProjectVagabond.UI
 
             spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, headerPosition, Color.White);
 
-            Texture2D selectedBorderSprite = _selectedInventoryCategory switch
+            Texture2D selectedBorderSprite;
+            if (_selectedInventoryCategory == InventoryCategory.Equip && _isEquipSubmenuOpen)
             {
-                InventoryCategory.Weapons => _spriteManager.InventoryBorderWeapons,
-                InventoryCategory.Armor => _spriteManager.InventoryBorderArmor,
-                InventoryCategory.Spells => _spriteManager.InventoryBorderSpells,
-                InventoryCategory.Relics => _spriteManager.InventoryBorderRelics,
-                InventoryCategory.Consumables => _spriteManager.InventoryBorderConsumables,
-                InventoryCategory.Equip => _spriteManager.InventoryBorderEquip,
-                _ => _spriteManager.InventoryBorderWeapons,
-            };
+                selectedBorderSprite = _spriteManager.InventoryBorderEquipSubmenu;
+            }
+            else
+            {
+                selectedBorderSprite = _selectedInventoryCategory switch
+                {
+                    InventoryCategory.Weapons => _spriteManager.InventoryBorderWeapons,
+                    InventoryCategory.Armor => _spriteManager.InventoryBorderArmor,
+                    InventoryCategory.Spells => _spriteManager.InventoryBorderSpells,
+                    InventoryCategory.Relics => _spriteManager.InventoryBorderRelics,
+                    InventoryCategory.Consumables => _spriteManager.InventoryBorderConsumables,
+                    InventoryCategory.Equip => _spriteManager.InventoryBorderEquip,
+                    _ => _spriteManager.InventoryBorderWeapons,
+                };
+            }
             spriteBatch.DrawSnapped(selectedBorderSprite, inventoryPosition, Color.White);
 
             foreach (var button in _inventoryHeaderButtons) button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
@@ -536,11 +612,20 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                if (_relicEquipButton != null && _relicEquipButton.IsHovered)
+                if (_isEquipSubmenuOpen)
                 {
-                    _relicEquipButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    _nothingButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
-                // Stats panel area is defined in _statsPanelArea but currently invisible
+                else
+                {
+                    if (_relicEquipButton != null && _relicEquipButton.IsHovered)
+                    {
+                        _relicEquipButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    }
+                    // Draw Debug Stats Panel (invisible now)
+                    // var pixel = ServiceLocator.Get<Texture2D>();
+                    // spriteBatch.DrawSnapped(pixel, _statsPanelArea, Color.HotPink);
+                }
             }
 
             if (_debugButton1 != null && _debugButton1.IsEnabled) _debugButton1.Draw(spriteBatch, font, gameTime, Matrix.Identity);
