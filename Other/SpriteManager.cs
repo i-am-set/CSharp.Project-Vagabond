@@ -55,6 +55,8 @@ namespace ProjectVagabond
 
         // General Item/Relic Sprite Cache
         private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _itemSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
+        // Cache for 16x16 downscaled item sprites and their silhouettes
+        private readonly Dictionary<string, (Texture2D Original, Texture2D Silhouette)> _smallItemSprites = new Dictionary<string, (Texture2D, Texture2D)>(StringComparer.OrdinalIgnoreCase);
 
         private readonly Dictionary<string, (Texture2D Texture, Rectangle[] Frames)> _cursorSprites = new Dictionary<string, (Texture2D, Rectangle[])>();
 
@@ -710,6 +712,61 @@ namespace ProjectVagabond
 
             var tuple = (originalTexture, silhouetteTexture);
             _itemSprites[cacheKey] = tuple;
+            return tuple;
+        }
+
+        public Texture2D GetSmallRelicSprite(string imagePath)
+        {
+            return LoadAndCacheSmallItem(imagePath, imagePath).Original;
+        }
+
+        public Texture2D GetSmallRelicSpriteSilhouette(string imagePath)
+        {
+            return LoadAndCacheSmallItem(imagePath, imagePath).Silhouette;
+        }
+
+        private (Texture2D Original, Texture2D Silhouette) LoadAndCacheSmallItem(string cacheKey, string? imagePath)
+        {
+            if (_smallItemSprites.TryGetValue(cacheKey, out var cachedTuple))
+            {
+                return cachedTuple;
+            }
+
+            // Get the original large texture (32x32)
+            Texture2D largeTexture = GetItemSprite(imagePath); // This handles loading/caching of the large one
+
+            // Create 16x16 texture
+            int width = 16;
+            int height = 16;
+
+            // We need to render the large texture scaled down into a new texture
+            // Since we are in Update loop usually, we can use GraphicsDevice
+
+            RenderTarget2D renderTarget = new RenderTarget2D(_core.GraphicsDevice, width, height);
+            _core.GraphicsDevice.SetRenderTarget(renderTarget);
+            _core.GraphicsDevice.Clear(Color.Transparent);
+
+            var spriteBatch = ServiceLocator.Get<SpriteBatch>();
+            spriteBatch.Begin(samplerState: SamplerState.PointClamp);
+            spriteBatch.Draw(largeTexture, new Rectangle(0, 0, width, height), Color.White);
+            spriteBatch.End();
+
+            _core.GraphicsDevice.SetRenderTarget(null);
+
+            // Extract data to create a regular Texture2D (so we don't lose it if RT is reused/lost, though RT is fine usually, Texture2D is safer for caching)
+            Color[] data = new Color[width * height];
+            renderTarget.GetData(data);
+
+            Texture2D smallTexture = new Texture2D(_core.GraphicsDevice, width, height);
+            smallTexture.SetData(data);
+
+            renderTarget.Dispose(); // Clean up RT
+
+            // Create Silhouette
+            Texture2D smallSilhouette = CreateSilhouette(smallTexture);
+
+            var tuple = (smallTexture, smallSilhouette);
+            _smallItemSprites[cacheKey] = tuple;
             return tuple;
         }
 

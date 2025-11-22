@@ -13,7 +13,6 @@ using System.Linq;
 namespace ProjectVagabond.UI
 {
     public enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables, Equip }
-
     public class SplitMapInventoryOverlay
     {
         public bool IsOpen { get; private set; } = false;
@@ -121,7 +120,8 @@ namespace ProjectVagabond.UI
                 int menuIndex = (int)category;
                 var bounds = new Rectangle((int)MathF.Round(startX + i * buttonClickableWidth), (int)buttonY, (int)MathF.Round(buttonClickableWidth), buttonSpriteSize);
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
-                button.OnClick += () => {
+                button.OnClick += () =>
+                {
                     CancelEquipSelection(); // Failsafe: Close submenu if switching categories
                     _selectedInventoryCategory = category;
                     _selectedSlotIndex = -1;
@@ -137,7 +137,8 @@ namespace ProjectVagabond.UI
             float equipX = startX - 60f;
             var equipBounds = new Rectangle((int)equipX, (int)buttonY, 32, 32);
             _inventoryEquipButton = new InventoryHeaderButton(equipBounds, _spriteManager.InventoryHeaderButtonEquip, equipRects[0], equipRects[1], equipRects[2], (int)InventoryCategory.Equip, "Equip");
-            _inventoryEquipButton.OnClick += () => {
+            _inventoryEquipButton.OnClick += () =>
+            {
                 CancelEquipSelection(); // Failsafe: Ensure clean state when clicking main equip button
                 _selectedInventoryCategory = InventoryCategory.Equip;
                 _selectedSlotIndex = -1;
@@ -180,7 +181,8 @@ namespace ProjectVagabond.UI
                         var bounds = new Rectangle((int)(position.X - slotSize / 2f), (int)(position.Y - slotSize / 2f), slotSize, slotSize);
 
                         var slot = new InventorySlot(bounds, slotFrames);
-                        slot.OnClick += () => {
+                        slot.OnClick += () =>
+                        {
                             if (slot.HasItem)
                             {
                                 foreach (var s in _inventorySlots) s.IsSelected = false;
@@ -228,12 +230,12 @@ namespace ProjectVagabond.UI
             var equipHoverSprite = _spriteManager.InventoryEquipHoverSprite;
             int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
             int equipButtonY = 250 + 19 + 16;
-            _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, equipButtonY, 180, 16), "NONE");
+            _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, equipButtonY, 180, 16), "NOTHING");
             _relicEquipButton.TitleText = "RELIC";
             _relicEquipButton.ShowTitleOnHoverOnly = false; // Always visible
             _relicEquipButton.Font = secondaryFont;
-            _relicEquipButton.CustomDefaultTextColor = _global.Palette_Gray; // Default to gray for NONE
-            _relicEquipButton.OnClick += () => {
+            _relicEquipButton.OnClick += () =>
+            {
                 OpenEquipSubmenu();
             };
 
@@ -245,7 +247,7 @@ namespace ProjectVagabond.UI
             {
                 int yPos = submenuStartY + (i * 16);
                 var button = new EquipButton(new Rectangle(equipButtonX, yPos, 180, 16), "");
-                button.TitleText = "EQUIP";
+                button.TitleText = "SELECT";
                 button.ShowTitleOnHoverOnly = true; // Only visible on hover
                 button.Font = secondaryFont;
                 button.IsEnabled = false; // Disabled by default
@@ -273,6 +275,7 @@ namespace ProjectVagabond.UI
             removeBtn.MainText = "REMOVE";
             removeBtn.CustomDefaultTextColor = _global.Palette_Gray; // Set gray color for REMOVE
             removeBtn.IconTexture = null;
+            removeBtn.IconSilhouette = null; // Clear silhouette
             removeBtn.IsEnabled = true;
             removeBtn.OnClick = () => SelectEquipItem(null);
 
@@ -290,7 +293,9 @@ namespace ProjectVagabond.UI
                     if (relicData != null)
                     {
                         btn.MainText = relicData.RelicName.ToUpper();
-                        btn.IconTexture = _spriteManager.GetRelicSprite($"Sprites/Items/Relics/{relicData.RelicID}");
+                        string path = $"Sprites/Items/Relics/{relicData.RelicID}";
+                        btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
+                        btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
                         btn.IconSourceRect = null; // Use full texture
                         btn.IsEnabled = true;
                         btn.CustomDefaultTextColor = null; // Reset to default white
@@ -301,6 +306,7 @@ namespace ProjectVagabond.UI
                         // Fallback if data missing (should be caught by GameState validation, but safe to handle)
                         btn.MainText = relicId.ToUpper();
                         btn.IconTexture = null;
+                        btn.IconSilhouette = null;
                         btn.IsEnabled = true;
                         btn.CustomDefaultTextColor = null;
                         btn.OnClick = () => SelectEquipItem(relicId);
@@ -311,6 +317,7 @@ namespace ProjectVagabond.UI
                     // No more items, disable button
                     btn.MainText = "";
                     btn.IconTexture = null;
+                    btn.IconSilhouette = null;
                     btn.IsEnabled = false;
                     btn.OnClick = null;
                 }
@@ -338,7 +345,18 @@ namespace ProjectVagabond.UI
             // Close submenu
             _isEquipSubmenuOpen = false;
 
-            // The button text/icon update is handled in the Update loop
+            // Refresh the main button text
+            if (_relicEquipButton != null)
+            {
+                string name = "NOTHING";
+                if (!string.IsNullOrEmpty(itemId))
+                {
+                    var data = GetRelicData(itemId);
+                    if (data != null) name = data.RelicName.ToUpper();
+                    else name = itemId.ToUpper();
+                }
+                _relicEquipButton.MainText = name;
+            }
         }
 
         private void ToggleInventory()
@@ -621,13 +639,14 @@ namespace ProjectVagabond.UI
                 {
                     if (_relicEquipButton != null)
                     {
-                        // Update text and icon based on equipped item
+                        // Update text based on equipped item
                         var relicId = _gameState.PlayerState.EquippedRelics[0];
                         if (string.IsNullOrEmpty(relicId))
                         {
                             _relicEquipButton.MainText = "NONE";
                             _relicEquipButton.CustomDefaultTextColor = _global.Palette_Gray;
                             _relicEquipButton.IconTexture = null;
+                            _relicEquipButton.IconSilhouette = null;
                         }
                         else
                         {
@@ -635,12 +654,15 @@ namespace ProjectVagabond.UI
                             if (data != null)
                             {
                                 _relicEquipButton.MainText = data.RelicName.ToUpper();
-                                _relicEquipButton.IconTexture = _spriteManager.GetRelicSprite($"Sprites/Items/Relics/{data.RelicID}");
+                                string path = $"Sprites/Items/Relics/{data.RelicID}";
+                                _relicEquipButton.IconTexture = _spriteManager.GetSmallRelicSprite(path);
+                                _relicEquipButton.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
                             }
                             else
                             {
                                 _relicEquipButton.MainText = relicId.ToUpper();
                                 _relicEquipButton.IconTexture = null;
+                                _relicEquipButton.IconSilhouette = null;
                             }
                             _relicEquipButton.CustomDefaultTextColor = null; // Reset to default
                         }

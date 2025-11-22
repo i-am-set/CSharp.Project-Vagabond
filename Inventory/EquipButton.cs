@@ -14,8 +14,8 @@ namespace ProjectVagabond.UI
         public string MainText { get; set; } = "";
         public string? HoverMainText { get; set; }
         public Texture2D? IconTexture { get; set; }
+        public Texture2D? IconSilhouette { get; set; } // Added property for silhouette
         public Rectangle? IconSourceRect { get; set; }
-
         /// <summary>
         /// If true, the TitleText is only drawn when the button is hovered.
         /// If false, the TitleText is always drawn (gray when idle, white when hovered).
@@ -89,9 +89,8 @@ namespace ProjectVagabond.UI
             // Logic: Draw if Title exists AND (Button is hovered OR we are configured to always show title)
             if (!string.IsNullOrEmpty(TitleText) && (isActivated || !ShowTitleOnHoverOnly))
             {
-                string titleUpper = TitleText.ToUpper();
                 // Use defaultFont for Title
-                Vector2 titleSize = defaultFont.MeasureString(titleUpper);
+                Vector2 titleSize = defaultFont.MeasureString(TitleText);
                 Vector2 titlePos = new Vector2(
                     totalX + TITLE_X + (TITLE_WIDTH - titleSize.X) / 2f,
                     totalY + (HEIGHT - titleSize.Y) / 2f
@@ -112,7 +111,7 @@ namespace ProjectVagabond.UI
                     titleColor = isActivated ? _global.Palette_BrightWhite : _global.Palette_Gray;
                 }
 
-                spriteBatch.DrawStringSnapped(defaultFont, titleUpper, titlePos, titleColor);
+                spriteBatch.DrawStringSnapped(defaultFont, TitleText, titlePos, titleColor);
             }
 
             // --- Icon (16x16) ---
@@ -126,6 +125,17 @@ namespace ProjectVagabond.UI
                 );
 
                 Rectangle src = IconSourceRect ?? IconTexture.Bounds;
+
+                // Draw Silhouette Outline if available
+                if (IconSilhouette != null)
+                {
+                    Color outlineColor = _global.Palette_Black;
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y), src, outlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y), src, outlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X, destRect.Y - 1), src, outlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X, destRect.Y + 1), src, outlineColor);
+                }
+
                 spriteBatch.DrawSnapped(IconTexture, destRect, src, Color.White);
             }
 
@@ -134,8 +144,7 @@ namespace ProjectVagabond.UI
 
             if (!string.IsNullOrEmpty(textToDraw))
             {
-                string mainUpper = textToDraw.ToUpper();
-                Vector2 mainSize = font.MeasureString(mainUpper);
+                Vector2 mainSize = font.MeasureString(textToDraw);
 
                 // Left aligned within the 109px area, but vertically centered
                 Vector2 mainPos = new Vector2(
@@ -146,20 +155,10 @@ namespace ProjectVagabond.UI
                 // Round to pixel
                 mainPos = new Vector2(MathF.Round(mainPos.X), MathF.Round(mainPos.Y));
 
-                // Use CustomDefaultTextColor if set, otherwise default to BrightWhite
-                Color defaultColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
-                Color mainColor = isActivated ? _global.ButtonHoverColor : defaultColor;
-
+                Color mainColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
                 if (!IsEnabled) mainColor = _global.ButtonDisableColor;
 
-                spriteBatch.DrawStringSnapped(font, mainUpper, mainPos, mainColor);
-            }
-
-            // 5. Debug Overlay (F1)
-            if (_global.ShowSplitMapGrid)
-            {
-                var debugRect = new Rectangle((int)totalX, (int)totalY, WIDTH, HEIGHT);
-                spriteBatch.DrawSnapped(pixel, debugRect, Color.HotPink * 0.5f);
+                spriteBatch.DrawStringSnapped(font, textToDraw, mainPos, mainColor);
             }
         }
     }
