@@ -36,11 +36,11 @@ namespace ProjectVagabond.UI
         private Rectangle _statsPanelArea;
         private ImageButton? _debugButton1;
         private ImageButton? _debugButton2;
-        private ImageButton? _relicEquipButton;
+        private EquipButton? _relicEquipButton;
 
         // Submenu State
         private bool _isEquipSubmenuOpen = false;
-        private Button? _nothingButton;
+        private readonly List<EquipButton> _equipSubmenuButtons = new();
 
         private InventoryCategory _selectedInventoryCategory;
         private InventoryCategory _previousInventoryCategory;
@@ -224,21 +224,35 @@ namespace ProjectVagabond.UI
             };
 
             // Initialize Relic Equip Button
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var equipHoverSprite = _spriteManager.InventoryEquipHoverSprite;
             int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
-            int equipButtonY = 250 + 19;
-            _relicEquipButton = new ImageButton(new Rectangle(equipButtonX, equipButtonY, 180, 16), equipHoverSprite);
+            int equipButtonY = 250 + 19 + 16;
+            _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, equipButtonY, 180, 16), "NOTHING");
+            _relicEquipButton.TitleText = "RELIC";
+            _relicEquipButton.ShowTitleOnHoverOnly = false; // Always visible
+            _relicEquipButton.Font = secondaryFont;
             _relicEquipButton.OnClick += () => {
                 _isEquipSubmenuOpen = true;
             };
 
-            // Initialize "NOTHING" Button for Submenu
-            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            // Match the size and position of the relic equip button
-            _nothingButton = new Button(new Rectangle(equipButtonX, equipButtonY, 180, 16), "NOTHING", font: secondaryFont);
-            _nothingButton.OnClick += () => {
-                SelectEquipItem(null);
-            };
+            // Initialize Submenu Buttons
+            _equipSubmenuButtons.Clear();
+            // Moved up 16 pixels from previous (equipButtonY - 16) -> (equipButtonY - 32)
+            int submenuStartY = equipButtonY - 32;
+
+            for (int i = 0; i < 7; i++)
+            {
+                int yPos = submenuStartY + (i * 16);
+                var button = new EquipButton(new Rectangle(equipButtonX, yPos, 180, 16), "NOTHING");
+                button.TitleText = "EQUIP";
+                button.ShowTitleOnHoverOnly = true; // Only visible on hover
+                button.Font = secondaryFont;
+                button.OnClick += () => {
+                    SelectEquipItem(null);
+                };
+                _equipSubmenuButtons.Add(button);
+            }
         }
 
         /// <summary>
@@ -491,16 +505,10 @@ namespace ProjectVagabond.UI
                 float progress = Math.Clamp(_inventoryArrowAnimTimer / INVENTORY_ARROW_ANIM_DURATION, 0f, 1f);
                 float easedProgress = Easing.EaseOutCubic(progress);
                 float currentOffset = MathHelper.Lerp(16f, 13f, easedProgress);
+                var selectedBounds = selectedButton.Bounds;
 
-                // Retrieve base bounds and offset to calculate position without the selection bob
-                var baseBounds = _inventoryHeaderButtonBaseBounds[selectedButton];
-                float finalOffset = _inventoryHeaderButtonOffsets[selectedButton];
-
-                int centerX = baseBounds.X + (int)MathF.Round(finalOffset) + baseBounds.Width / 2;
-                int centerY = baseBounds.Center.Y + (int)MathF.Round(_inventoryPositionOffset.Y);
-
-                _debugButton1.Bounds = new Rectangle(centerX - (int)currentOffset - (_debugButton1.Bounds.Width / 2), centerY - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
-                _debugButton2.Bounds = new Rectangle(centerX + (int)currentOffset - (_debugButton2.Bounds.Width / 2), centerY - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
+                _debugButton1.Bounds = new Rectangle(selectedBounds.Center.X - (int)currentOffset - (_debugButton1.Bounds.Width / 2), selectedBounds.Center.Y - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
+                _debugButton2.Bounds = new Rectangle(selectedBounds.Center.X + (int)currentOffset - (_debugButton2.Bounds.Width / 2), selectedBounds.Center.Y - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
 
                 _debugButton1.IsEnabled = (int)_selectedInventoryCategory > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
                 _debugButton2.IsEnabled = (int)_selectedInventoryCategory < (int)InventoryCategory.Consumables && _selectedInventoryCategory != InventoryCategory.Equip;
@@ -537,15 +545,24 @@ namespace ProjectVagabond.UI
             {
                 if (_isEquipSubmenuOpen)
                 {
-                    _nothingButton?.Update(currentMouseState, cameraTransform);
+                    foreach (var button in _equipSubmenuButtons)
+                    {
+                        button.Update(currentMouseState, cameraTransform);
+                    }
                 }
                 else
                 {
                     if (_relicEquipButton != null)
                     {
+                        // Update text based on equipped item
+                        var relicId = _gameState.PlayerState.EquippedRelics[0];
+                        string name = "NOTHING";
+                        if (!string.IsNullOrEmpty(relicId) && BattleDataCache.Relics.TryGetValue(relicId, out var data))
+                        {
+                            name = data.RelicName.ToUpper();
+                        }
+                        _relicEquipButton.MainText = name;
                         _relicEquipButton.Update(currentMouseState, cameraTransform);
-                        var targetTex = _relicEquipButton.IsPressed ? _spriteManager.InventoryEquipSelectedSprite : _spriteManager.InventoryEquipHoverSprite;
-                        _relicEquipButton.SetSprites(targetTex, targetTex.Bounds, targetTex.Bounds);
                     }
                 }
             }
@@ -614,11 +631,14 @@ namespace ProjectVagabond.UI
             {
                 if (_isEquipSubmenuOpen)
                 {
-                    _nothingButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    foreach (var button in _equipSubmenuButtons)
+                    {
+                        button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    }
                 }
                 else
                 {
-                    if (_relicEquipButton != null && _relicEquipButton.IsHovered)
+                    if (_relicEquipButton != null)
                     {
                         _relicEquipButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     }
