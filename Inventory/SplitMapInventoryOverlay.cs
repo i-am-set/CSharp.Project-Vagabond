@@ -233,25 +233,77 @@ namespace ProjectVagabond.UI
             _relicEquipButton.ShowTitleOnHoverOnly = false; // Always visible
             _relicEquipButton.Font = secondaryFont;
             _relicEquipButton.OnClick += () => {
-                _isEquipSubmenuOpen = true;
+                OpenEquipSubmenu();
             };
 
             // Initialize Submenu Buttons
             _equipSubmenuButtons.Clear();
-            // Moved up 16 pixels from previous (equipButtonY - 16) -> (equipButtonY - 32)
             int submenuStartY = equipButtonY - 32;
 
             for (int i = 0; i < 7; i++)
             {
                 int yPos = submenuStartY + (i * 16);
-                var button = new EquipButton(new Rectangle(equipButtonX, yPos, 180, 16), "NOTHING");
+                var button = new EquipButton(new Rectangle(equipButtonX, yPos, 180, 16), "");
                 button.TitleText = "EQUIP";
                 button.ShowTitleOnHoverOnly = true; // Only visible on hover
                 button.Font = secondaryFont;
-                button.OnClick += () => {
-                    SelectEquipItem(null);
-                };
+                button.IsEnabled = false; // Disabled by default
                 _equipSubmenuButtons.Add(button);
+            }
+        }
+
+        private void OpenEquipSubmenu()
+        {
+            _isEquipSubmenuOpen = true;
+
+            // 1. Get available relics from inventory
+            var availableRelics = _gameState.PlayerState.Relics.Keys.ToList();
+
+            // 2. Populate buttons
+            // Button 0 is always "REMOVE"
+            var removeBtn = _equipSubmenuButtons[0];
+            removeBtn.MainText = "REMOVE";
+            removeBtn.CustomDefaultTextColor = _global.Palette_Gray; // Set gray color for REMOVE
+            removeBtn.IconTexture = null;
+            removeBtn.IsEnabled = true;
+            removeBtn.OnClick = () => SelectEquipItem(null);
+
+            // Buttons 1..N are items
+            for (int i = 1; i < _equipSubmenuButtons.Count; i++)
+            {
+                var btn = _equipSubmenuButtons[i];
+                int relicIndex = i - 1;
+
+                if (relicIndex < availableRelics.Count)
+                {
+                    string relicId = availableRelics[relicIndex];
+                    if (BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
+                    {
+                        btn.MainText = relicData.RelicName.ToUpper();
+                        btn.IconTexture = _spriteManager.GetRelicSprite($"Sprites/Items/Relics/{relicData.RelicID}");
+                        btn.IconSourceRect = null; // Use full texture
+                        btn.IsEnabled = true;
+                        btn.CustomDefaultTextColor = null; // Reset to default white
+                        btn.OnClick = () => SelectEquipItem(relicId);
+                    }
+                    else
+                    {
+                        // Fallback if data missing
+                        btn.MainText = relicId.ToUpper();
+                        btn.IconTexture = null;
+                        btn.IsEnabled = true;
+                        btn.CustomDefaultTextColor = null;
+                        btn.OnClick = () => SelectEquipItem(relicId);
+                    }
+                }
+                else
+                {
+                    // No more items, disable button
+                    btn.MainText = "";
+                    btn.IconTexture = null;
+                    btn.IsEnabled = false;
+                    btn.OnClick = null;
+                }
             }
         }
 
@@ -270,8 +322,22 @@ namespace ProjectVagabond.UI
 
         private void SelectEquipItem(string? itemId)
         {
-            // Placeholder for actual equip logic
+            // Equip the item in slot 0 (currently hardcoded for this button)
+            _gameState.PlayerState.EquippedRelics[0] = itemId;
+
+            // Close submenu
             _isEquipSubmenuOpen = false;
+
+            // Refresh the main button text
+            if (_relicEquipButton != null)
+            {
+                string name = "NOTHING";
+                if (!string.IsNullOrEmpty(itemId) && BattleDataCache.Relics.TryGetValue(itemId, out var data))
+                {
+                    name = data.RelicName.ToUpper();
+                }
+                _relicEquipButton.MainText = name;
+            }
         }
 
         private void ToggleInventory()
@@ -554,14 +620,6 @@ namespace ProjectVagabond.UI
                 {
                     if (_relicEquipButton != null)
                     {
-                        // Update text based on equipped item
-                        var relicId = _gameState.PlayerState.EquippedRelics[0];
-                        string name = "NOTHING";
-                        if (!string.IsNullOrEmpty(relicId) && BattleDataCache.Relics.TryGetValue(relicId, out var data))
-                        {
-                            name = data.RelicName.ToUpper();
-                        }
-                        _relicEquipButton.MainText = name;
                         _relicEquipButton.Update(currentMouseState, cameraTransform);
                     }
                 }

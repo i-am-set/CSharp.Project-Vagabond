@@ -28,7 +28,6 @@ namespace ProjectVagabond.UI
         /// </summary>
         SlideAndHold
     }
-
     /// <summary>
     /// Defines the reason a button might have a strikethrough.
     /// </summary>
@@ -64,9 +63,9 @@ namespace ProjectVagabond.UI
         public Color? DebugColor { get; set; }
         public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Hop;
 
-
-        public event Action? OnClick;
-        public event Action? OnRightClick;
+        // Changed from event to property to allow reassignment (fixing CS0070)
+        public Action? OnClick { get; set; }
+        public Action? OnRightClick { get; set; }
 
         public bool HasRightClickHint { get; set; } = false;
         public bool HasLeftClickAction => OnClick != null;
@@ -378,4 +377,3 @@ namespace ProjectVagabond.UI
         }
     }
 }
-#nullable restore

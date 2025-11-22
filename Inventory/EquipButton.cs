@@ -89,8 +89,9 @@ namespace ProjectVagabond.UI
             // Logic: Draw if Title exists AND (Button is hovered OR we are configured to always show title)
             if (!string.IsNullOrEmpty(TitleText) && (isActivated || !ShowTitleOnHoverOnly))
             {
+                string titleUpper = TitleText.ToUpper();
                 // Use defaultFont for Title
-                Vector2 titleSize = defaultFont.MeasureString(TitleText);
+                Vector2 titleSize = defaultFont.MeasureString(titleUpper);
                 Vector2 titlePos = new Vector2(
                     totalX + TITLE_X + (TITLE_WIDTH - titleSize.X) / 2f,
                     totalY + (HEIGHT - titleSize.Y) / 2f
@@ -111,7 +112,7 @@ namespace ProjectVagabond.UI
                     titleColor = isActivated ? _global.Palette_BrightWhite : _global.Palette_Gray;
                 }
 
-                spriteBatch.DrawStringSnapped(defaultFont, TitleText, titlePos, titleColor);
+                spriteBatch.DrawStringSnapped(defaultFont, titleUpper, titlePos, titleColor);
             }
 
             // --- Icon (16x16) ---
@@ -133,7 +134,8 @@ namespace ProjectVagabond.UI
 
             if (!string.IsNullOrEmpty(textToDraw))
             {
-                Vector2 mainSize = font.MeasureString(textToDraw);
+                string mainUpper = textToDraw.ToUpper();
+                Vector2 mainSize = font.MeasureString(mainUpper);
 
                 // Left aligned within the 109px area, but vertically centered
                 Vector2 mainPos = new Vector2(
@@ -144,10 +146,20 @@ namespace ProjectVagabond.UI
                 // Round to pixel
                 mainPos = new Vector2(MathF.Round(mainPos.X), MathF.Round(mainPos.Y));
 
-                Color mainColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
+                // Use CustomDefaultTextColor if set, otherwise default to BrightWhite
+                Color defaultColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
+                Color mainColor = isActivated ? _global.ButtonHoverColor : defaultColor;
+
                 if (!IsEnabled) mainColor = _global.ButtonDisableColor;
 
-                spriteBatch.DrawStringSnapped(font, textToDraw, mainPos, mainColor);
+                spriteBatch.DrawStringSnapped(font, mainUpper, mainPos, mainColor);
+            }
+
+            // 5. Debug Overlay (F1)
+            if (_global.ShowSplitMapGrid)
+            {
+                var debugRect = new Rectangle((int)totalX, (int)totalY, WIDTH, HEIGHT);
+                spriteBatch.DrawSnapped(pixel, debugRect, Color.HotPink * 0.5f);
             }
         }
     }
