@@ -38,7 +38,13 @@
         "DefaultStrikeMoveID": "ClawRake",
         "StartingRelics": {
           "oakenheart": 1,
-          "priestspendant": 1
+          "priestspendant": 1,
+          "stormcallerorb": 1,
+          "cursedhourglass": 1,
+          "idolofdisease": 1,
+          "bulwarkshield": 1,
+          "pristinegem": 1,
+          "shatteredamulet": 1
         },
         "StartingConsumables": {
           "FireScroll": 2,

@@ -121,8 +121,8 @@
     "Tags": [ "Light" ]
   },
   {
-    "RelicID": "orbofthestormcaller",
-    "RelicName": "Orb of the Stormcaller",
+    "RelicID": "stormcallerorb",
+    "RelicName": "Stormcaller Orb",
     "AbilityName": "Electromancer",
     "Description": "Increases the damage of all Electric spells by 20%.",
     "Rarity": 1,
@@ -265,8 +265,8 @@
     "Tags": []
   },
   {
-    "RelicID": "hourglassofdecay",
-    "RelicName": "Hourglass of Decay",
+    "RelicID": "cursedhourglass",
+    "RelicName": "Cursed Hourglass",
     "AbilityName": "Lingering Curse",
     "Description": "All non-damaging status effects (e.g., Stun, Blind) applied by the holder last one additional turn.",
     "Rarity": 2,

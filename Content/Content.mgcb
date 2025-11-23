@@ -446,6 +446,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Relics/crackedgauntlet.png;Sprites/Items/Relics/crackedgauntlet
 
+#begin Sprites/Items/Relics/cursedhourglass.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/cursedhourglass.png;Sprites/Items/Relics/cursedhourglass
+
 #begin Sprites/Items/Relics/earthencore.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -494,7 +506,7 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Relics/gorgonsgaze.png;Sprites/Items/Relics/gorgonsgaze
 
-#begin Sprites/Items/Relics/hourglassofdecay.png
+#begin Sprites/Items/Relics/idolofdisease.png
 /importer:TextureImporter
 /processor:TextureProcessor
 /processorParam:ColorKeyColor=255,0,255,255
@@ -504,7 +516,7 @@
 /processorParam:ResizeToPowerOfTwo=False
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
-/build:Sprites/Items/Relics/hourglassofdecay.png;Sprites/Items/Relics/hourglassofdecay
+/build:Sprites/Items/Relics/idolofdisease.png;Sprites/Items/Relics/idolofdisease
 
 #begin Sprites/Items/Relics/oakenheart.png
 /importer:TextureImporter
@@ -517,18 +529,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Relics/oakenheart.png;Sprites/Items/Relics/oakenheart
-
-#begin Sprites/Items/Relics/orbofthestormcaller.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/Items/Relics/orbofthestormcaller.png;Sprites/Items/Relics/orbofthestormcaller
 
 #begin Sprites/Items/Relics/placeholder_relic.png
 /importer:TextureImporter
@@ -578,6 +578,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Relics/rustybeartrap.png;Sprites/Items/Relics/rustybeartrap
 
+#begin Sprites/Items/Relics/scorpionstinger.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/scorpionstinger.png;Sprites/Items/Relics/scorpionstinger
+
 #begin Sprites/Items/Relics/serpentsfang.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -601,6 +613,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Relics/shatteredamulet.png;Sprites/Items/Relics/shatteredamulet
+
+#begin Sprites/Items/Relics/stormcallerorb.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/stormcallerorb.png;Sprites/Items/Relics/stormcallerorb
 
 #begin Sprites/Items/Relics/vulturespendant.png
 /importer:TextureImporter
@@ -2485,6 +2509,18 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_right_arrow_button.png;Sprites/UI/Inventory/inventory_right_arrow_button
+
+#begin Sprites/UI/Inventory/inventory_scroll_arrows.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_scroll_arrows.png;Sprites/UI/Inventory/inventory_scroll_arrows
 
 #begin Sprites/UI/Inventory/inventory_slot_hover.png
 /importer:TextureImporter
