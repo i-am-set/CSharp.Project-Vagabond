@@ -11,6 +11,7 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -21,6 +22,7 @@ namespace ProjectVagabond
     {
         private readonly Core _core;
         private readonly TextureFactory _textureFactory;
+
         // UI Sprite Sheets
         public Texture2D ActionButtonsSpriteSheet { get; private set; }
         public Texture2D ActionButtonTemplateSpriteSheet { get; private set; }
@@ -43,6 +45,7 @@ namespace ProjectVagabond
         public Rectangle[] InventorySlotSourceRects { get; private set; }
         public Rectangle[] InventoryLeftArrowButtonSourceRects { get; private set; }
         public Rectangle[] InventoryRightArrowButtonSourceRects { get; private set; }
+        public Rectangle[] InventoryScrollArrowRects { get; private set; }
 
 
         // Enemy Sprite Cache
@@ -134,6 +137,7 @@ namespace ProjectVagabond
         public Texture2D EquipSlotButtonSprite { get; private set; }
         public Texture2D InventoryEquipHoverSprite { get; private set; }
         public Texture2D InventoryEquipSelectedSprite { get; private set; }
+        public Texture2D InventoryScrollArrowsSprite { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -344,6 +348,8 @@ namespace ProjectVagabond
             catch { InventoryEquipHoverSprite = _textureFactory.CreateColoredTexture(180, 16, Color.HotPink); }
             try { InventoryEquipSelectedSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_equip_selected"); }
             catch { InventoryEquipSelectedSprite = _textureFactory.CreateColoredTexture(180, 16, Color.Gold); }
+            try { InventoryScrollArrowsSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_scroll_arrows"); }
+            catch { InventoryScrollArrowsSprite = _textureFactory.CreateColoredTexture(10, 5, Color.Magenta); }
 
 
             LoadAndCacheCursorSprite("cursor_default");
@@ -361,6 +367,14 @@ namespace ProjectVagabond
             InitializeInventoryHeaderButtonRects();
             InitializeInventorySlotRects();
             InitializeInventoryArrowButtonRects();
+            InitializeInventoryScrollArrowRects();
+        }
+
+        private void InitializeInventoryScrollArrowRects()
+        {
+            InventoryScrollArrowRects = new Rectangle[2];
+            InventoryScrollArrowRects[0] = new Rectangle(0, 0, 5, 5); // Up
+            InventoryScrollArrowRects[1] = new Rectangle(5, 0, 5, 5); // Down
         }
 
         private void InitializeInventoryArrowButtonRects()
@@ -457,15 +471,15 @@ namespace ProjectVagabond
             // Index 8 is the center star.
             var spriteSheetCoords = new Point[9]
             {
-            new Point(0, 1), // 0: W
-            new Point(0, 0), // 1: NW
-            new Point(1, 0), // 2: N (Up)
-            new Point(2, 0), // 3: NE
-            new Point(2, 1), // 4: E (Right)
-            new Point(2, 2), // 5: SE
-            new Point(1, 2), // 6: S (Down)
-            new Point(0, 2), // 7: SW
-            new Point(1, 1)  // 8: Center (Star)
+                new Point(0, 1), // 0: W
+                new Point(0, 0), // 1: NW
+                new Point(1, 0), // 2: N (Up)
+                new Point(2, 0), // 3: NE
+                new Point(2, 1), // 4: E (Right)
+                new Point(2, 2), // 5: SE
+                new Point(1, 2), // 6: S (Down)
+                new Point(0, 2), // 7: SW
+                new Point(1, 1)  // 8: Center (Star)
             };
 
             ArrowIconSourceRects = new Rectangle[9];
@@ -955,3 +969,4 @@ namespace ProjectVagabond
         }
     }
 }
+﻿

@@ -41,6 +41,7 @@ namespace ProjectVagabond.UI
         // Submenu State
         private bool _isEquipSubmenuOpen = false;
         private readonly List<EquipButton> _equipSubmenuButtons = new();
+        private int _equipMenuScrollIndex = 0; // Tracks the scroll position
 
         private InventoryCategory _selectedInventoryCategory;
         private InventoryCategory _previousInventoryCategory;
@@ -248,18 +249,6 @@ namespace ProjectVagabond.UI
                 button.ShowTitleOnHoverOnly = true; // Only visible on hover
                 button.Font = secondaryFont;
                 button.IsEnabled = false; // Disabled by default
-
-                // Apply color pattern: 1st, 3rd, 5th, 7th (indices 0, 2, 4, 6) -> Palette_White
-                // 2nd, 4th, 6th (indices 1, 3, 5) -> Palette_BrightWhite
-                if (i % 2 == 0)
-                {
-                    button.CustomDefaultTextColor = _global.Palette_White;
-                }
-                else
-                {
-                    button.CustomDefaultTextColor = _global.Palette_BrightWhite;
-                }
-
                 _equipSubmenuButtons.Add(button);
             }
         }
@@ -274,33 +263,46 @@ namespace ProjectVagabond.UI
         private void OpenEquipSubmenu()
         {
             _isEquipSubmenuOpen = true;
+            _equipMenuScrollIndex = 0; // Reset scroll on open
+            RefreshEquipSubmenuButtons();
+        }
 
+        private void RefreshEquipSubmenuButtons()
+        {
             // 1. Get available relics from inventory
             var availableRelics = _gameState.PlayerState.Relics.Keys.ToList();
 
-            // 2. Populate buttons
-            // Button 0 is always "REMOVE"
-            var removeBtn = _equipSubmenuButtons[0];
-            removeBtn.MainText = "REMOVE";
-            // Override the pattern color for the REMOVE button specifically to be Gray
-            removeBtn.CustomDefaultTextColor = _global.Palette_Gray;
-            removeBtn.IconTexture = null;
-            removeBtn.IconSilhouette = null; // Clear silhouette
-            removeBtn.IsEnabled = true;
-            removeBtn.OnClick = () => SelectEquipItem(null);
+            // Total virtual items = 1 (REMOVE button) + number of relics
+            int totalItems = 1 + availableRelics.Count;
 
-            // Buttons 1..N are items
-            for (int i = 1; i < _equipSubmenuButtons.Count; i++)
+            for (int i = 0; i < _equipSubmenuButtons.Count; i++)
             {
                 var btn = _equipSubmenuButtons[i];
-                int relicIndex = i - 1;
+                int virtualIndex = _equipMenuScrollIndex + i;
 
-                // Restore the pattern color for item buttons
+                // Reset button state
+                btn.IsEnabled = false;
+                btn.MainText = "";
+                btn.IconTexture = null;
+                btn.IconSilhouette = null;
+                btn.OnClick = null;
+
+                // Apply color pattern
                 if (i % 2 == 0) btn.CustomDefaultTextColor = _global.Palette_White;
                 else btn.CustomDefaultTextColor = _global.Palette_BrightWhite;
 
-                if (relicIndex < availableRelics.Count)
+                if (virtualIndex == 0)
                 {
+                    // This is the "REMOVE" button
+                    btn.MainText = "REMOVE";
+                    btn.CustomDefaultTextColor = _global.Palette_Gray;
+                    btn.IsEnabled = true;
+                    btn.OnClick = () => SelectEquipItem(null);
+                }
+                else if (virtualIndex < totalItems)
+                {
+                    // This is a relic item
+                    int relicIndex = virtualIndex - 1;
                     string relicId = availableRelics[relicIndex];
                     var relicData = GetRelicData(relicId);
 
@@ -310,29 +312,19 @@ namespace ProjectVagabond.UI
                         string path = $"Sprites/Items/Relics/{relicData.RelicID}";
                         btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
                         btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
-                        btn.IconSourceRect = null; // Use full texture
+                        btn.IconSourceRect = null;
                         btn.IsEnabled = true;
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                     else
                     {
-                        // Fallback if data missing (should be caught by GameState validation, but safe to handle)
+                        // Fallback
                         btn.MainText = relicId.ToUpper();
-                        btn.IconTexture = null;
-                        btn.IconSilhouette = null;
                         btn.IsEnabled = true;
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                 }
-                else
-                {
-                    // No more items, disable button
-                    btn.MainText = "";
-                    btn.IconTexture = null;
-                    btn.IconSilhouette = null;
-                    btn.IsEnabled = false;
-                    btn.OnClick = null;
-                }
+                // Else: button remains disabled/blank
             }
         }
 
@@ -356,6 +348,9 @@ namespace ProjectVagabond.UI
 
             // Close submenu
             _isEquipSubmenuOpen = false;
+
+            // Trigger border bob animation
+            _inventoryBobTimer = 0f;
 
             // Refresh the main button text
             if (_relicEquipButton != null)
@@ -527,13 +522,34 @@ namespace ProjectVagabond.UI
             bool scrollUp = scrollDelta > 0 && headerArea.Contains(mouseInWorldSpace);
             bool scrollDown = scrollDelta < 0 && headerArea.Contains(mouseInWorldSpace);
 
-            if (leftPressed || scrollUp)
+            // Handle Submenu Scrolling
+            if (_isEquipSubmenuOpen && scrollDelta != 0)
             {
-                CycleCategory(-1);
+                int totalItems = 1 + _gameState.PlayerState.Relics.Count; // 1 for REMOVE
+                int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
+
+                if (scrollDelta < 0 && _equipMenuScrollIndex < maxScroll)
+                {
+                    _equipMenuScrollIndex++;
+                    RefreshEquipSubmenuButtons();
+                }
+                else if (scrollDelta > 0 && _equipMenuScrollIndex > 0)
+                {
+                    _equipMenuScrollIndex--;
+                    RefreshEquipSubmenuButtons();
+                }
             }
-            else if (rightPressed || scrollDown)
+            // Handle Category Switching (only if submenu is NOT open or scroll didn't consume input)
+            else if (!_isEquipSubmenuOpen)
             {
-                CycleCategory(1);
+                if (leftPressed || scrollUp)
+                {
+                    CycleCategory(-1);
+                }
+                else if (rightPressed || scrollDown)
+                {
+                    CycleCategory(1);
+                }
             }
 
             // Update Header Buttons
@@ -571,11 +587,11 @@ namespace ProjectVagabond.UI
                 var baseBounds = _inventoryHeaderButtonBaseBounds[button];
 
                 button.IsSelected = ((int)_selectedInventoryCategory == button.MenuIndex);
-                float bobY = button.IsSelected ? selectedBobOffset : 0f;
+                // Removed bobY from header buttons
 
                 button.Bounds = new Rectangle(
                     baseBounds.X + (int)MathF.Round(finalOffset),
-                    baseBounds.Y + (int)MathF.Round(bobY), // Removed _inventoryPositionOffset.Y
+                    baseBounds.Y + (int)MathF.Round(_inventoryPositionOffset.Y), // Only global bob
                     baseBounds.Width,
                     baseBounds.Height);
 
@@ -590,9 +606,9 @@ namespace ProjectVagabond.UI
                 float equipBaseY = 200 + 6;
 
                 _inventoryEquipButton.IsSelected = _selectedInventoryCategory == InventoryCategory.Equip;
-                float equipBobY = _inventoryEquipButton.IsSelected ? selectedBobOffset : 0f;
+                // Removed equipBobY from equip button
 
-                _inventoryEquipButton.Bounds = new Rectangle((int)equipBaseX, (int)(equipBaseY + equipBobY), 32, 32); // Removed _inventoryPositionOffset.Y
+                _inventoryEquipButton.Bounds = new Rectangle((int)equipBaseX, (int)(equipBaseY + _inventoryPositionOffset.Y), 32, 32); // Only global bob
                 _inventoryEquipButton.Update(currentMouseState, cameraTransform);
             }
 
@@ -602,10 +618,16 @@ namespace ProjectVagabond.UI
                 float progress = Math.Clamp(_inventoryArrowAnimTimer / INVENTORY_ARROW_ANIM_DURATION, 0f, 1f);
                 float easedProgress = Easing.EaseOutCubic(progress);
                 float currentOffset = MathHelper.Lerp(16f, 13f, easedProgress);
-                var selectedBounds = selectedButton.Bounds;
 
-                _debugButton1.Bounds = new Rectangle(selectedBounds.Center.X - (int)currentOffset - (_debugButton1.Bounds.Width / 2), selectedBounds.Center.Y - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
-                _debugButton2.Bounds = new Rectangle(selectedBounds.Center.X + (int)currentOffset - (_debugButton2.Bounds.Width / 2), selectedBounds.Center.Y - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
+                // Retrieve base bounds and offset to calculate position without the selection bob
+                var baseBounds = _inventoryHeaderButtonBaseBounds[selectedButton];
+                float finalOffset = _inventoryHeaderButtonOffsets[selectedButton];
+
+                int centerX = baseBounds.X + (int)MathF.Round(finalOffset) + baseBounds.Width / 2;
+                int centerY = baseBounds.Center.Y + (int)MathF.Round(_inventoryPositionOffset.Y);
+
+                _debugButton1.Bounds = new Rectangle(centerX - (int)currentOffset - (_debugButton1.Bounds.Width / 2), centerY - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
+                _debugButton2.Bounds = new Rectangle(centerX + (int)currentOffset - (_debugButton2.Bounds.Width / 2), centerY - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
 
                 _debugButton1.IsEnabled = (int)_selectedInventoryCategory > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
                 _debugButton2.IsEnabled = (int)_selectedInventoryCategory < (int)InventoryCategory.Consumables && _selectedInventoryCategory != InventoryCategory.Equip;
@@ -723,6 +745,38 @@ namespace ProjectVagabond.UI
                     foreach (var button in _equipSubmenuButtons)
                     {
                         button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    }
+
+                    // Draw Scroll Arrows
+                    var arrowTexture = _spriteManager.InventoryScrollArrowsSprite;
+                    var arrowRects = _spriteManager.InventoryScrollArrowRects;
+
+                    if (arrowTexture != null && arrowRects != null && _equipSubmenuButtons.Count > 0)
+                    {
+                        int totalItems = 1 + _gameState.PlayerState.Relics.Count;
+                        int maxScroll = Math.Max(0, totalItems - 7);
+
+                        // Up Arrow
+                        if (_equipMenuScrollIndex > 0)
+                        {
+                            var firstButton = _equipSubmenuButtons[0];
+                            var arrowPos = new Vector2(
+                                firstButton.Bounds.Center.X - arrowRects[0].Width / 2f,
+                                firstButton.Bounds.Top - arrowRects[0].Height
+                            );
+                            spriteBatch.DrawSnapped(arrowTexture, arrowPos, arrowRects[0], Color.White);
+                        }
+
+                        // Down Arrow
+                        if (_equipMenuScrollIndex < maxScroll)
+                        {
+                            var lastButton = _equipSubmenuButtons.Last();
+                            var arrowPos = new Vector2(
+                                lastButton.Bounds.Center.X - arrowRects[1].Width / 2f,
+                                lastButton.Bounds.Bottom
+                            );
+                            spriteBatch.DrawSnapped(arrowTexture, arrowPos, arrowRects[1], Color.White);
+                        }
                     }
                 }
                 else
