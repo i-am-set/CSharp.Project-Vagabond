@@ -43,6 +43,10 @@ namespace ProjectVagabond.UI
         private readonly List<EquipButton> _equipSubmenuButtons = new();
         private int _equipMenuScrollIndex = 0; // Tracks the scroll position
 
+        // Pagination State
+        private int _currentPage = 0;
+        private const int ITEMS_PER_PAGE = 12;
+
         private InventoryCategory _selectedInventoryCategory;
         private InventoryCategory _previousInventoryCategory;
         private int _selectedSlotIndex = -1;
@@ -126,6 +130,7 @@ namespace ProjectVagabond.UI
                     CancelEquipSelection(); // Failsafe: Close submenu if switching categories
                     _selectedInventoryCategory = category;
                     _selectedSlotIndex = -1;
+                    _currentPage = 0; // Reset page on category change
                     RefreshInventorySlots();
                 };
                 _inventoryHeaderButtons.Add(button);
@@ -142,6 +147,7 @@ namespace ProjectVagabond.UI
                 CancelEquipSelection(); // Failsafe: Ensure clean state when clicking main equip button
                 _selectedInventoryCategory = InventoryCategory.Equip;
                 _selectedSlotIndex = -1;
+                _currentPage = 0;
                 RefreshInventorySlots();
             };
 
@@ -202,26 +208,13 @@ namespace ProjectVagabond.UI
             _debugButton1 = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryLeftArrowButton, leftArrowRects[0], leftArrowRects[1]);
             _debugButton1.OnClick += () =>
             {
-                int currentIndex = (int)_selectedInventoryCategory;
-                if (currentIndex > 0 && currentIndex <= (int)InventoryCategory.Consumables)
-                {
-                    CancelEquipSelection(); // Failsafe
-                    _selectedInventoryCategory = (InventoryCategory)(currentIndex - 1);
-                    RefreshInventorySlots();
-                }
+                ChangePage(-1);
             };
 
             _debugButton2 = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryRightArrowButton, rightArrowRects[0], rightArrowRects[1]);
             _debugButton2.OnClick += () =>
             {
-                int currentIndex = (int)_selectedInventoryCategory;
-                int maxIndex = (int)InventoryCategory.Consumables;
-                if (currentIndex < maxIndex)
-                {
-                    CancelEquipSelection(); // Failsafe
-                    _selectedInventoryCategory = (InventoryCategory)(currentIndex + 1);
-                    RefreshInventorySlots();
-                }
+                ChangePage(1);
             };
 
             // Initialize Relic Equip Button
@@ -323,17 +316,19 @@ namespace ProjectVagabond.UI
                         string path = $"Sprites/Items/Relics/{relicData.RelicID}";
                         btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
                         btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
-                        btn.IconSourceRect = null;
+                        btn.IconSourceRect = null; // Use full texture
                         btn.IsEnabled = true;
+                        btn.CustomDefaultTextColor = null; // Reset to default white
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                     else
                     {
-                        // Fallback
+                        // Fallback if data missing (should be caught by GameState validation, but safe to handle)
                         btn.MainText = relicId.ToUpper();
                         btn.IconTexture = null;
                         btn.IconSilhouette = null;
                         btn.IsEnabled = true;
+                        btn.CustomDefaultTextColor = null;
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                 }
@@ -401,9 +396,14 @@ namespace ProjectVagabond.UI
             foreach (var slot in _inventorySlots) slot.Clear();
 
             var items = GetCurrentCategoryItems();
-            for (int i = 0; i < items.Count && i < _inventorySlots.Count; i++)
+
+            // Pagination Logic
+            int startIndex = _currentPage * ITEMS_PER_PAGE;
+            int itemsToDisplay = Math.Min(ITEMS_PER_PAGE, items.Count - startIndex);
+
+            for (int i = 0; i < itemsToDisplay; i++)
             {
-                var item = items[i];
+                var item = items[startIndex + i];
                 _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.IconTint);
             }
         }
@@ -529,6 +529,7 @@ namespace ProjectVagabond.UI
 
             bool leftPressed = currentKeyboardState.IsKeyDown(Keys.Left) && !_previousKeyboardState.IsKeyDown(Keys.Left);
             bool rightPressed = currentKeyboardState.IsKeyDown(Keys.Right) && !_previousKeyboardState.IsKeyDown(Keys.Right);
+            bool shiftHeld = currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift);
             bool scrollUp = scrollDelta > 0 && headerArea.Contains(mouseInWorldSpace);
             bool scrollDown = scrollDelta < 0 && headerArea.Contains(mouseInWorldSpace);
 
@@ -549,14 +550,24 @@ namespace ProjectVagabond.UI
                     RefreshEquipSubmenuButtons();
                 }
             }
-            // Handle Category Switching (only if submenu is NOT open or scroll didn't consume input)
+            // Handle Category Switching and Pagination
             else if (!_isEquipSubmenuOpen)
             {
-                if (leftPressed || scrollUp)
+                if (leftPressed)
+                {
+                    if (shiftHeld) CycleCategory(-1);
+                    else ChangePage(-1);
+                }
+                else if (rightPressed)
+                {
+                    if (shiftHeld) CycleCategory(1);
+                    else ChangePage(1);
+                }
+                else if (scrollUp)
                 {
                     CycleCategory(-1);
                 }
-                else if (rightPressed || scrollDown)
+                else if (scrollDown)
                 {
                     CycleCategory(1);
                 }
@@ -677,34 +688,6 @@ namespace ProjectVagabond.UI
                 {
                     if (_relicEquipButton != null)
                     {
-                        // Update text and icon based on equipped item
-                        var relicId = _gameState.PlayerState.EquippedRelics[0];
-                        string name = "NOTHING";
-
-                        if (!string.IsNullOrEmpty(relicId))
-                        {
-                            var data = GetRelicData(relicId);
-                            if (data != null)
-                            {
-                                name = data.RelicName.ToUpper();
-                                string path = $"Sprites/Items/Relics/{data.RelicID}";
-                                _relicEquipButton.IconTexture = _spriteManager.GetSmallRelicSprite(path);
-                                _relicEquipButton.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
-                            }
-                            else
-                            {
-                                name = relicId.ToUpper();
-                                _relicEquipButton.IconTexture = null;
-                                _relicEquipButton.IconSilhouette = null;
-                            }
-                        }
-                        else
-                        {
-                            _relicEquipButton.IconTexture = null;
-                            _relicEquipButton.IconSilhouette = null;
-                        }
-
-                        _relicEquipButton.MainText = name;
                         _relicEquipButton.Update(currentMouseState, cameraTransform);
                     }
                 }
@@ -712,6 +695,16 @@ namespace ProjectVagabond.UI
 
             _previousMouseState = currentMouseState;
             _previousKeyboardState = currentKeyboardState;
+        }
+
+        private void ChangePage(int direction)
+        {
+            int totalItems = GetCurrentCategoryItems().Count;
+            int maxPage = Math.Max(0, (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE) - 1);
+
+            _currentPage += direction;
+            _currentPage = Math.Clamp(_currentPage, 0, maxPage);
+            RefreshInventorySlots();
         }
 
         private void CycleCategory(int direction)
@@ -724,6 +717,7 @@ namespace ProjectVagabond.UI
             {
                 CancelEquipSelection(); // Failsafe
                 _selectedInventoryCategory = (InventoryCategory)newIndex;
+                _currentPage = 0; // Reset page on category change
                 RefreshInventorySlots();
             }
         }
