@@ -618,16 +618,10 @@ namespace ProjectVagabond.UI
                 float progress = Math.Clamp(_inventoryArrowAnimTimer / INVENTORY_ARROW_ANIM_DURATION, 0f, 1f);
                 float easedProgress = Easing.EaseOutCubic(progress);
                 float currentOffset = MathHelper.Lerp(16f, 13f, easedProgress);
+                var selectedBounds = selectedButton.Bounds;
 
-                // Retrieve base bounds and offset to calculate position without the selection bob
-                var baseBounds = _inventoryHeaderButtonBaseBounds[selectedButton];
-                float finalOffset = _inventoryHeaderButtonOffsets[selectedButton];
-
-                int centerX = baseBounds.X + (int)MathF.Round(finalOffset) + baseBounds.Width / 2;
-                int centerY = baseBounds.Center.Y + (int)MathF.Round(_inventoryPositionOffset.Y);
-
-                _debugButton1.Bounds = new Rectangle(centerX - (int)currentOffset - (_debugButton1.Bounds.Width / 2), centerY - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
-                _debugButton2.Bounds = new Rectangle(centerX + (int)currentOffset - (_debugButton2.Bounds.Width / 2), centerY - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
+                _debugButton1.Bounds = new Rectangle(selectedBounds.Center.X - (int)currentOffset - (_debugButton1.Bounds.Width / 2), selectedBounds.Center.Y - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
+                _debugButton2.Bounds = new Rectangle(selectedBounds.Center.X + (int)currentOffset - (_debugButton2.Bounds.Width / 2), selectedBounds.Center.Y - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
 
                 _debugButton1.IsEnabled = (int)_selectedInventoryCategory > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
                 _debugButton2.IsEnabled = (int)_selectedInventoryCategory < (int)InventoryCategory.Consumables && _selectedInventoryCategory != InventoryCategory.Equip;
