@@ -14,8 +14,9 @@ namespace ProjectVagabond.UI
         public string MainText { get; set; } = "";
         public string? HoverMainText { get; set; }
         public Texture2D? IconTexture { get; set; }
-        public Texture2D? IconSilhouette { get; set; } // Added property for silhouette
+        public Texture2D? IconSilhouette { get; set; }
         public Rectangle? IconSourceRect { get; set; }
+
         /// <summary>
         /// If true, the TitleText is only drawn when the button is hovered.
         /// If false, the TitleText is always drawn (gray when idle, white when hovered).
@@ -83,6 +84,9 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawSnapped(bgTexture, new Vector2(totalX, totalY), Color.White);
             }
 
+            // Determine the base color for text (handles the alternating pattern passed via CustomDefaultTextColor)
+            Color defaultTextColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
+
             // 4. Draw Content
 
             // --- Title Text (Centered in 53x16) ---
@@ -102,13 +106,13 @@ namespace ProjectVagabond.UI
                 Color titleColor;
                 if (ShowTitleOnHoverOnly)
                 {
-                    // Only visible on hover, so always bright white
-                    titleColor = _global.Palette_BrightWhite;
+                    // Only visible on hover. Use the configured default color (supports the alternating pattern).
+                    titleColor = defaultTextColor;
                 }
                 else
                 {
-                    // Always visible, change color based on state
-                    titleColor = isActivated ? _global.Palette_BrightWhite : _global.Palette_Gray;
+                    // Always visible. Gray when idle, configured default color when active.
+                    titleColor = isActivated ? defaultTextColor : _global.Palette_Gray;
                 }
 
                 spriteBatch.DrawStringSnapped(defaultFont, TitleText, titlePos, titleColor);
@@ -155,10 +159,19 @@ namespace ProjectVagabond.UI
                 // Round to pixel
                 mainPos = new Vector2(MathF.Round(mainPos.X), MathF.Round(mainPos.Y));
 
-                Color mainColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
+                // Use the configured default color, or hover color if active
+                Color mainColor = isActivated ? _global.ButtonHoverColor : defaultTextColor;
+
                 if (!IsEnabled) mainColor = _global.ButtonDisableColor;
 
                 spriteBatch.DrawStringSnapped(font, textToDraw, mainPos, mainColor);
+            }
+
+            // 5. Debug Overlay (F1)
+            if (_global.ShowSplitMapGrid)
+            {
+                var debugRect = new Rectangle((int)totalX, (int)totalY, WIDTH, HEIGHT);
+                spriteBatch.DrawSnapped(pixel, debugRect, Color.HotPink * 0.5f);
             }
         }
     }

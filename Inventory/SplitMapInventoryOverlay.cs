@@ -13,6 +13,7 @@ using System.Linq;
 namespace ProjectVagabond.UI
 {
     public enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables, Equip }
+
     public class SplitMapInventoryOverlay
     {
         public bool IsOpen { get; private set; } = false;
@@ -120,8 +121,7 @@ namespace ProjectVagabond.UI
                 int menuIndex = (int)category;
                 var bounds = new Rectangle((int)MathF.Round(startX + i * buttonClickableWidth), (int)buttonY, (int)MathF.Round(buttonClickableWidth), buttonSpriteSize);
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
-                button.OnClick += () =>
-                {
+                button.OnClick += () => {
                     CancelEquipSelection(); // Failsafe: Close submenu if switching categories
                     _selectedInventoryCategory = category;
                     _selectedSlotIndex = -1;
@@ -137,8 +137,7 @@ namespace ProjectVagabond.UI
             float equipX = startX - 60f;
             var equipBounds = new Rectangle((int)equipX, (int)buttonY, 32, 32);
             _inventoryEquipButton = new InventoryHeaderButton(equipBounds, _spriteManager.InventoryHeaderButtonEquip, equipRects[0], equipRects[1], equipRects[2], (int)InventoryCategory.Equip, "Equip");
-            _inventoryEquipButton.OnClick += () =>
-            {
+            _inventoryEquipButton.OnClick += () => {
                 CancelEquipSelection(); // Failsafe: Ensure clean state when clicking main equip button
                 _selectedInventoryCategory = InventoryCategory.Equip;
                 _selectedSlotIndex = -1;
@@ -181,8 +180,7 @@ namespace ProjectVagabond.UI
                         var bounds = new Rectangle((int)(position.X - slotSize / 2f), (int)(position.Y - slotSize / 2f), slotSize, slotSize);
 
                         var slot = new InventorySlot(bounds, slotFrames);
-                        slot.OnClick += () =>
-                        {
+                        slot.OnClick += () => {
                             if (slot.HasItem)
                             {
                                 foreach (var s in _inventorySlots) s.IsSelected = false;
@@ -234,8 +232,7 @@ namespace ProjectVagabond.UI
             _relicEquipButton.TitleText = "RELIC";
             _relicEquipButton.ShowTitleOnHoverOnly = false; // Always visible
             _relicEquipButton.Font = secondaryFont;
-            _relicEquipButton.OnClick += () =>
-            {
+            _relicEquipButton.OnClick += () => {
                 OpenEquipSubmenu();
             };
 
@@ -251,6 +248,18 @@ namespace ProjectVagabond.UI
                 button.ShowTitleOnHoverOnly = true; // Only visible on hover
                 button.Font = secondaryFont;
                 button.IsEnabled = false; // Disabled by default
+
+                // Apply color pattern: 1st, 3rd, 5th, 7th (indices 0, 2, 4, 6) -> Palette_White
+                // 2nd, 4th, 6th (indices 1, 3, 5) -> Palette_BrightWhite
+                if (i % 2 == 0)
+                {
+                    button.CustomDefaultTextColor = _global.Palette_White;
+                }
+                else
+                {
+                    button.CustomDefaultTextColor = _global.Palette_BrightWhite;
+                }
+
                 _equipSubmenuButtons.Add(button);
             }
         }
@@ -273,7 +282,8 @@ namespace ProjectVagabond.UI
             // Button 0 is always "REMOVE"
             var removeBtn = _equipSubmenuButtons[0];
             removeBtn.MainText = "REMOVE";
-            removeBtn.CustomDefaultTextColor = _global.Palette_Gray; // Set gray color for REMOVE
+            // Override the pattern color for the REMOVE button specifically to be Gray
+            removeBtn.CustomDefaultTextColor = _global.Palette_Gray;
             removeBtn.IconTexture = null;
             removeBtn.IconSilhouette = null; // Clear silhouette
             removeBtn.IsEnabled = true;
@@ -284,6 +294,10 @@ namespace ProjectVagabond.UI
             {
                 var btn = _equipSubmenuButtons[i];
                 int relicIndex = i - 1;
+
+                // Restore the pattern color for item buttons
+                if (i % 2 == 0) btn.CustomDefaultTextColor = _global.Palette_White;
+                else btn.CustomDefaultTextColor = _global.Palette_BrightWhite;
 
                 if (relicIndex < availableRelics.Count)
                 {
@@ -298,7 +312,6 @@ namespace ProjectVagabond.UI
                         btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
                         btn.IconSourceRect = null; // Use full texture
                         btn.IsEnabled = true;
-                        btn.CustomDefaultTextColor = null; // Reset to default white
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                     else
@@ -308,7 +321,6 @@ namespace ProjectVagabond.UI
                         btn.IconTexture = null;
                         btn.IconSilhouette = null;
                         btn.IsEnabled = true;
-                        btn.CustomDefaultTextColor = null;
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                 }
@@ -563,7 +575,7 @@ namespace ProjectVagabond.UI
 
                 button.Bounds = new Rectangle(
                     baseBounds.X + (int)MathF.Round(finalOffset),
-                    baseBounds.Y + (int)MathF.Round(_inventoryPositionOffset.Y + bobY),
+                    baseBounds.Y + (int)MathF.Round(bobY), // Removed _inventoryPositionOffset.Y
                     baseBounds.Width,
                     baseBounds.Height);
 
@@ -580,7 +592,7 @@ namespace ProjectVagabond.UI
                 _inventoryEquipButton.IsSelected = _selectedInventoryCategory == InventoryCategory.Equip;
                 float equipBobY = _inventoryEquipButton.IsSelected ? selectedBobOffset : 0f;
 
-                _inventoryEquipButton.Bounds = new Rectangle((int)equipBaseX, (int)(equipBaseY + _inventoryPositionOffset.Y + equipBobY), 32, 32);
+                _inventoryEquipButton.Bounds = new Rectangle((int)equipBaseX, (int)(equipBaseY + equipBobY), 32, 32); // Removed _inventoryPositionOffset.Y
                 _inventoryEquipButton.Update(currentMouseState, cameraTransform);
             }
 
@@ -639,33 +651,6 @@ namespace ProjectVagabond.UI
                 {
                     if (_relicEquipButton != null)
                     {
-                        // Update text based on equipped item
-                        var relicId = _gameState.PlayerState.EquippedRelics[0];
-                        if (string.IsNullOrEmpty(relicId))
-                        {
-                            _relicEquipButton.MainText = "NONE";
-                            _relicEquipButton.CustomDefaultTextColor = _global.Palette_Gray;
-                            _relicEquipButton.IconTexture = null;
-                            _relicEquipButton.IconSilhouette = null;
-                        }
-                        else
-                        {
-                            var data = GetRelicData(relicId);
-                            if (data != null)
-                            {
-                                _relicEquipButton.MainText = data.RelicName.ToUpper();
-                                string path = $"Sprites/Items/Relics/{data.RelicID}";
-                                _relicEquipButton.IconTexture = _spriteManager.GetSmallRelicSprite(path);
-                                _relicEquipButton.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
-                            }
-                            else
-                            {
-                                _relicEquipButton.MainText = relicId.ToUpper();
-                                _relicEquipButton.IconTexture = null;
-                                _relicEquipButton.IconSilhouette = null;
-                            }
-                            _relicEquipButton.CustomDefaultTextColor = null; // Reset to default
-                        }
                         _relicEquipButton.Update(currentMouseState, cameraTransform);
                     }
                 }
