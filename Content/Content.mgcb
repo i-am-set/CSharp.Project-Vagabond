@@ -518,6 +518,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Relics/idolofdisease.png;Sprites/Items/Relics/idolofdisease
 
+#begin Sprites/Items/Relics/leadhelmet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Relics/leadhelmet.png;Sprites/Items/Relics/leadhelmet
+
 #begin Sprites/Items/Relics/oakenheart.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -529,18 +541,6 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Relics/oakenheart.png;Sprites/Items/Relics/oakenheart
-
-#begin Sprites/Items/Relics/placeholder_relic.png
-/importer:TextureImporter
-/processor:TextureProcessor
-/processorParam:ColorKeyColor=255,0,255,255
-/processorParam:ColorKeyEnabled=True
-/processorParam:GenerateMipmaps=False
-/processorParam:PremultiplyAlpha=True
-/processorParam:ResizeToPowerOfTwo=False
-/processorParam:MakeSquare=False
-/processorParam:TextureFormat=Color
-/build:Sprites/Items/Relics/placeholder_relic.png;Sprites/Items/Relics/placeholder_relic
 
 #begin Sprites/Items/Relics/priestspendant.png
 /importer:TextureImporter

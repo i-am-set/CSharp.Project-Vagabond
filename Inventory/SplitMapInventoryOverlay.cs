@@ -41,7 +41,11 @@ namespace ProjectVagabond.UI
         // Submenu State
         private bool _isEquipSubmenuOpen = false;
         private readonly List<EquipButton> _equipSubmenuButtons = new();
-        private int _equipMenuScrollIndex = 0; // Tracks the scroll position
+        private int _equipMenuScrollIndex = 0; // Tracks the scroll position for the equip submenu
+
+        // Pagination State
+        private int _currentPage = 0;
+        private const int ITEMS_PER_PAGE = 12;
 
         private InventoryCategory _selectedInventoryCategory;
         private InventoryCategory _previousInventoryCategory;
@@ -126,6 +130,7 @@ namespace ProjectVagabond.UI
                     CancelEquipSelection(); // Failsafe: Close submenu if switching categories
                     _selectedInventoryCategory = category;
                     _selectedSlotIndex = -1;
+                    _currentPage = 0; // Reset page on category change
                     RefreshInventorySlots();
                 };
                 _inventoryHeaderButtons.Add(button);
@@ -142,6 +147,7 @@ namespace ProjectVagabond.UI
                 CancelEquipSelection(); // Failsafe: Ensure clean state when clicking main equip button
                 _selectedInventoryCategory = InventoryCategory.Equip;
                 _selectedSlotIndex = -1;
+                _currentPage = 0;
                 RefreshInventorySlots();
             };
 
@@ -207,6 +213,7 @@ namespace ProjectVagabond.UI
                 {
                     CancelEquipSelection(); // Failsafe
                     _selectedInventoryCategory = (InventoryCategory)(currentIndex - 1);
+                    _currentPage = 0;
                     RefreshInventorySlots();
                 }
             };
@@ -220,6 +227,7 @@ namespace ProjectVagabond.UI
                 {
                     CancelEquipSelection(); // Failsafe
                     _selectedInventoryCategory = (InventoryCategory)(currentIndex + 1);
+                    _currentPage = 0;
                     RefreshInventorySlots();
                 }
             };
@@ -249,19 +257,6 @@ namespace ProjectVagabond.UI
                 button.ShowTitleOnHoverOnly = true; // Only visible on hover
                 button.Font = secondaryFont;
                 button.IsEnabled = false; // Disabled by default
-
-                // Apply color pattern
-                if (i % 2 == 0)
-                {
-                    button.CustomDefaultTextColor = _global.Palette_White;
-                    button.CustomTitleTextColor = _global.Palette_White;
-                }
-                else
-                {
-                    button.CustomDefaultTextColor = _global.Palette_BrightWhite;
-                    button.CustomTitleTextColor = _global.Palette_BrightWhite;
-                }
-
                 _equipSubmenuButtons.Add(button);
             }
         }
@@ -301,9 +296,16 @@ namespace ProjectVagabond.UI
                 btn.OnClick = null;
 
                 // Apply color pattern
-                Color patternColor = (i % 2 == 0) ? _global.Palette_White : _global.Palette_BrightWhite;
-                btn.CustomDefaultTextColor = patternColor;
-                btn.CustomTitleTextColor = patternColor;
+                if (i % 2 == 0)
+                {
+                    btn.CustomDefaultTextColor = _global.Palette_White;
+                    btn.CustomTitleTextColor = _global.Palette_White;
+                }
+                else
+                {
+                    btn.CustomDefaultTextColor = _global.Palette_BrightWhite;
+                    btn.CustomTitleTextColor = _global.Palette_BrightWhite;
+                }
 
                 if (virtualIndex == 0)
                 {
@@ -329,8 +331,9 @@ namespace ProjectVagabond.UI
                         string path = $"Sprites/Items/Relics/{relicData.RelicID}";
                         btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
                         btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
-                        btn.IconSourceRect = null;
+                        btn.IconSourceRect = null; // Use full texture
                         btn.IsEnabled = true;
+                        btn.CustomDefaultTextColor = null; // Reset to default white
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                     else
@@ -340,6 +343,7 @@ namespace ProjectVagabond.UI
                         btn.IconTexture = null;
                         btn.IconSilhouette = null;
                         btn.IsEnabled = true;
+                        btn.CustomDefaultTextColor = null;
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                 }
@@ -367,9 +371,6 @@ namespace ProjectVagabond.UI
 
             // Close submenu
             _isEquipSubmenuOpen = false;
-
-            // Trigger border bob animation
-            _inventoryBobTimer = 0f;
 
             // Refresh the main button text
             if (_relicEquipButton != null)
@@ -410,9 +411,14 @@ namespace ProjectVagabond.UI
             foreach (var slot in _inventorySlots) slot.Clear();
 
             var items = GetCurrentCategoryItems();
-            for (int i = 0; i < items.Count && i < _inventorySlots.Count; i++)
+
+            // Pagination Logic
+            int startIndex = _currentPage * ITEMS_PER_PAGE;
+            int itemsToDisplay = Math.Min(ITEMS_PER_PAGE, items.Count - startIndex);
+
+            for (int i = 0; i < itemsToDisplay; i++)
             {
-                var item = items[i];
+                var item = items[startIndex + i];
                 _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.IconTint);
             }
         }
@@ -527,7 +533,7 @@ namespace ProjectVagabond.UI
             // Using (Sin + 1) / 2 ensures a smooth, symmetric 0-1 oscillation, which Round turns into an equal-duration toggle.
             float selectedBobOffset = MathF.Round((MathF.Sin(_selectedHeaderBobTimer * 2.5f) + 1f) * 0.5f);
 
-            // Handle Input for Category Switching
+            // Handle Input for Category Switching and Pagination
             int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
 
             // Calculate header area for scroll interaction
@@ -538,6 +544,7 @@ namespace ProjectVagabond.UI
 
             bool leftPressed = currentKeyboardState.IsKeyDown(Keys.Left) && !_previousKeyboardState.IsKeyDown(Keys.Left);
             bool rightPressed = currentKeyboardState.IsKeyDown(Keys.Right) && !_previousKeyboardState.IsKeyDown(Keys.Right);
+            bool shiftHeld = currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift);
             bool scrollUp = scrollDelta > 0 && headerArea.Contains(mouseInWorldSpace);
             bool scrollDown = scrollDelta < 0 && headerArea.Contains(mouseInWorldSpace);
 
@@ -558,14 +565,24 @@ namespace ProjectVagabond.UI
                     RefreshEquipSubmenuButtons();
                 }
             }
-            // Handle Category Switching (only if submenu is NOT open or scroll didn't consume input)
+            // Handle Category Switching and Pagination
             else if (!_isEquipSubmenuOpen)
             {
-                if (leftPressed || scrollUp)
+                if (leftPressed)
+                {
+                    if (shiftHeld) CycleCategory(-1);
+                    else ChangePage(-1);
+                }
+                else if (rightPressed)
+                {
+                    if (shiftHeld) CycleCategory(1);
+                    else ChangePage(1);
+                }
+                else if (scrollUp)
                 {
                     CycleCategory(-1);
                 }
-                else if (rightPressed || scrollDown)
+                else if (scrollDown)
                 {
                     CycleCategory(1);
                 }
@@ -606,11 +623,11 @@ namespace ProjectVagabond.UI
                 var baseBounds = _inventoryHeaderButtonBaseBounds[button];
 
                 button.IsSelected = ((int)_selectedInventoryCategory == button.MenuIndex);
-                // Removed bobY from header buttons
+                float bobY = button.IsSelected ? selectedBobOffset : 0f;
 
                 button.Bounds = new Rectangle(
                     baseBounds.X + (int)MathF.Round(finalOffset),
-                    baseBounds.Y + (int)MathF.Round(_inventoryPositionOffset.Y), // Only global bob
+                    baseBounds.Y + (int)MathF.Round(_inventoryPositionOffset.Y + bobY),
                     baseBounds.Width,
                     baseBounds.Height);
 
@@ -625,9 +642,9 @@ namespace ProjectVagabond.UI
                 float equipBaseY = 200 + 6;
 
                 _inventoryEquipButton.IsSelected = _selectedInventoryCategory == InventoryCategory.Equip;
-                // Removed equipBobY from equip button
+                float equipBobY = _inventoryEquipButton.IsSelected ? selectedBobOffset : 0f;
 
-                _inventoryEquipButton.Bounds = new Rectangle((int)equipBaseX, (int)(equipBaseY + _inventoryPositionOffset.Y), 32, 32); // Only global bob
+                _inventoryEquipButton.Bounds = new Rectangle((int)equipBaseX, (int)(equipBaseY + _inventoryPositionOffset.Y + equipBobY), 32, 32); // Removed _inventoryPositionOffset.Y
                 _inventoryEquipButton.Update(currentMouseState, cameraTransform);
             }
 
@@ -695,6 +712,16 @@ namespace ProjectVagabond.UI
             _previousKeyboardState = currentKeyboardState;
         }
 
+        private void ChangePage(int direction)
+        {
+            int totalItems = GetCurrentCategoryItems().Count;
+            int maxPage = Math.Max(0, (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE) - 1);
+
+            _currentPage += direction;
+            _currentPage = Math.Clamp(_currentPage, 0, maxPage);
+            RefreshInventorySlots();
+        }
+
         private void CycleCategory(int direction)
         {
             int currentIndex = (int)_selectedInventoryCategory;
@@ -705,6 +732,7 @@ namespace ProjectVagabond.UI
             {
                 CancelEquipSelection(); // Failsafe
                 _selectedInventoryCategory = (InventoryCategory)newIndex;
+                _currentPage = 0; // Reset page on category change
                 RefreshInventorySlots();
             }
         }
