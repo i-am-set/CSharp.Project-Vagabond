@@ -23,6 +23,11 @@ namespace ProjectVagabond.UI
         /// </summary>
         public bool ShowTitleOnHoverOnly { get; set; } = true;
 
+        /// <summary>
+        /// Optional custom color for the Title text. If null, falls back to CustomDefaultTextColor or default logic.
+        /// </summary>
+        public Color? CustomTitleTextColor { get; set; }
+
         // Layout Constants
         private const int WIDTH = 180;
         private const int HEIGHT = 16;
@@ -84,9 +89,6 @@ namespace ProjectVagabond.UI
                 spriteBatch.DrawSnapped(bgTexture, new Vector2(totalX, totalY), Color.White);
             }
 
-            // Determine the base color for text (handles the alternating pattern passed via CustomDefaultTextColor)
-            Color defaultTextColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
-
             // 4. Draw Content
 
             // --- Title Text (Centered in 53x16) ---
@@ -106,13 +108,13 @@ namespace ProjectVagabond.UI
                 Color titleColor;
                 if (ShowTitleOnHoverOnly)
                 {
-                    // Only visible on hover. Use the configured default color (supports the alternating pattern).
-                    titleColor = defaultTextColor;
+                    // Only visible on hover. Use CustomTitleTextColor if set, otherwise CustomDefaultTextColor, otherwise BrightWhite.
+                    titleColor = CustomTitleTextColor ?? CustomDefaultTextColor ?? _global.Palette_BrightWhite;
                 }
                 else
                 {
-                    // Always visible. Gray when idle, configured default color when active.
-                    titleColor = isActivated ? defaultTextColor : _global.Palette_Gray;
+                    // Always visible, change color based on state
+                    titleColor = isActivated ? _global.Palette_BrightWhite : _global.Palette_Gray;
                 }
 
                 spriteBatch.DrawStringSnapped(defaultFont, TitleText, titlePos, titleColor);
@@ -159,8 +161,9 @@ namespace ProjectVagabond.UI
                 // Round to pixel
                 mainPos = new Vector2(MathF.Round(mainPos.X), MathF.Round(mainPos.Y));
 
-                // Use the configured default color, or hover color if active
-                Color mainColor = isActivated ? _global.ButtonHoverColor : defaultTextColor;
+                // Use CustomDefaultTextColor if set, otherwise BrightWhite
+                Color defaultColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
+                Color mainColor = isActivated ? _global.ButtonHoverColor : defaultColor;
 
                 if (!IsEnabled) mainColor = _global.ButtonDisableColor;
 

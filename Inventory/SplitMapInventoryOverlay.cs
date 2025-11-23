@@ -249,6 +249,19 @@ namespace ProjectVagabond.UI
                 button.ShowTitleOnHoverOnly = true; // Only visible on hover
                 button.Font = secondaryFont;
                 button.IsEnabled = false; // Disabled by default
+
+                // Apply color pattern
+                if (i % 2 == 0)
+                {
+                    button.CustomDefaultTextColor = _global.Palette_White;
+                    button.CustomTitleTextColor = _global.Palette_White;
+                }
+                else
+                {
+                    button.CustomDefaultTextColor = _global.Palette_BrightWhite;
+                    button.CustomTitleTextColor = _global.Palette_BrightWhite;
+                }
+
                 _equipSubmenuButtons.Add(button);
             }
         }
@@ -288,14 +301,18 @@ namespace ProjectVagabond.UI
                 btn.OnClick = null;
 
                 // Apply color pattern
-                if (i % 2 == 0) btn.CustomDefaultTextColor = _global.Palette_White;
-                else btn.CustomDefaultTextColor = _global.Palette_BrightWhite;
+                Color patternColor = (i % 2 == 0) ? _global.Palette_White : _global.Palette_BrightWhite;
+                btn.CustomDefaultTextColor = patternColor;
+                btn.CustomTitleTextColor = patternColor;
 
                 if (virtualIndex == 0)
                 {
                     // This is the "REMOVE" button
                     btn.MainText = "REMOVE";
-                    btn.CustomDefaultTextColor = _global.Palette_Gray;
+                    btn.CustomDefaultTextColor = _global.Palette_Gray; // Override Main text only
+                    // CustomTitleTextColor remains patternColor (White)
+                    btn.IconTexture = null;
+                    btn.IconSilhouette = null; // Clear silhouette
                     btn.IsEnabled = true;
                     btn.OnClick = () => SelectEquipItem(null);
                 }
@@ -320,6 +337,8 @@ namespace ProjectVagabond.UI
                     {
                         // Fallback
                         btn.MainText = relicId.ToUpper();
+                        btn.IconTexture = null;
+                        btn.IconSilhouette = null;
                         btn.IsEnabled = true;
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
