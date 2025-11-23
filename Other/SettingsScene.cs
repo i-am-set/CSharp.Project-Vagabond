@@ -195,19 +195,29 @@ namespace ProjectVagabond.Scenes
             _uiElements.Add(new BoolSettingControl("Frame Limiter", () => _tempSettings.IsFrameLimiterEnabled, v => _tempSettings.IsFrameLimiterEnabled = v));
 
             var framerates = new List<KeyValuePair<string, int>> { new("30 FPS", 30), new("60 FPS", 60), new("75 FPS", 75), new("120 FPS", 120), new("144 FPS", 144), new("240 FPS", 240) };
-            _uiElements.Add(new OptionSettingControl<int>("Target Framerate", framerates, () => _tempSettings.TargetFramerate, v => _tempSettings.TargetFramerate = v));
+            var framerateControl = new OptionSettingControl<int>("Target Framerate", framerates, () => _tempSettings.TargetFramerate, v => _tempSettings.TargetFramerate = v);
+            // Initialize the enabled state immediately to prevent visual popping during the input block period
+            framerateControl.IsEnabled = _tempSettings.IsFrameLimiterEnabled;
+            _uiElements.Add(framerateControl);
 
-            var applyButton = new Button(new Rectangle(0, 0, 125, 10), "Apply");
+            var applyButton = new Button(new Rectangle(0, 0, 125, 10), "Apply")
+            {
+                TextRenderOffset = new Vector2(0, 1)
+            };
             applyButton.OnClick += ApplySettings;
             _uiElements.Add(applyButton);
 
-            var backButton = new Button(new Rectangle(0, 0, 125, 10), "Back");
+            var backButton = new Button(new Rectangle(0, 0, 125, 10), "Back")
+            {
+                TextRenderOffset = new Vector2(0, 1)
+            };
             backButton.OnClick += AttemptToGoBack;
             _uiElements.Add(backButton);
 
             var resetButton = new Button(new Rectangle(0, 0, 125, 10), "Restore Defaults")
             {
-                CustomDefaultTextColor = _global.Palette_LightYellow
+                CustomDefaultTextColor = _global.Palette_LightYellow,
+                TextRenderOffset = new Vector2(0, 1)
             };
             resetButton.OnClick += ConfirmResetSettings;
             _uiElements.Add(resetButton);
@@ -227,7 +237,16 @@ namespace ProjectVagabond.Scenes
 
                 if (item is Button button)
                 {
-                    button.Bounds = new Rectangle((Global.VIRTUAL_WIDTH - button.Bounds.Width) / 2, (int)currentPos.Y, button.Bounds.Width, button.Bounds.Height);
+                    // Match the visual border rectangle dimensions and position
+                    // Border Rect logic from DrawSceneContent: X = currentPos.X - 5, Y = currentPos.Y - 2, W = SETTINGS_PANEL_WIDTH + 10, H = BUTTON_VERTICAL_SPACING
+
+                    button.Bounds = new Rectangle(
+                        (int)currentPos.X - 5,
+                        (int)currentPos.Y - 2,
+                        SETTINGS_PANEL_WIDTH + 10,
+                        BUTTON_VERTICAL_SPACING
+                    );
+
                     currentPos.Y += BUTTON_VERTICAL_SPACING;
                 }
                 else if (item is ISettingControl)
@@ -438,12 +457,14 @@ namespace ProjectVagabond.Scenes
                 if (item is ISettingControl setting)
                 {
                     var hoverRect = new Rectangle((int)currentPos.X - 5, (int)currentPos.Y, SETTINGS_PANEL_WIDTH + 10, ITEM_VERTICAL_SPACING);
-                    if (hoverRect.Contains(virtualMousePos)) { _selectedIndex = i; }
+                    // Only allow selection if the setting is enabled
+                    if (hoverRect.Contains(virtualMousePos) && setting.IsEnabled) { _selectedIndex = i; }
                     if (_currentInputDelay <= 0) setting.Update(new Vector2(currentPos.X, currentPos.Y + 2), i == _selectedIndex, currentMouseState, previousMouseState, virtualMousePos, font);
                 }
                 else if (item is Button button)
                 {
-                    if (button.Bounds.Contains(virtualMousePos)) { _selectedIndex = i; }
+                    // Only allow selection if the button is enabled
+                    if (button.Bounds.Contains(virtualMousePos) && button.IsEnabled) { _selectedIndex = i; }
                     if (_currentInputDelay <= 0) button.Update(currentMouseState);
                 }
             }

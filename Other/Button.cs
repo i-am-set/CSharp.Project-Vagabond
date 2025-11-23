@@ -28,6 +28,7 @@ namespace ProjectVagabond.UI
         /// </summary>
         SlideAndHold
     }
+
     /// <summary>
     /// Defines the reason a button might have a strikethrough.
     /// </summary>
@@ -83,8 +84,6 @@ namespace ProjectVagabond.UI
         private readonly Rectangle? _disabledSourceRect;
 
         // Animation state
-        private float _squashAnimationTimer = 0f;
-        private const float SQUASH_ANIMATION_DURATION = 0.03f;
         private const int LEFT_ALIGN_PADDING = 4;
         private static readonly Random _random = new Random();
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
@@ -227,7 +226,6 @@ namespace ProjectVagabond.UI
         {
             _hoverAnimator.Reset();
             _isPressed = false;
-            _squashAnimationTimer = 0f;
             IsHovered = false;
             _slideOffset = 0f;
             _shakeTimer = 0f;
@@ -280,20 +278,8 @@ namespace ProjectVagabond.UI
             else if (_isPressed && _clickedSourceRect.HasValue) sourceRectToDraw = _clickedSourceRect;
             else if (isActivated && _hoverSourceRect.HasValue) sourceRectToDraw = _hoverSourceRect;
 
-            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_isPressed) _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
-            else _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
-
             Vector2 scale = Vector2.One;
-            Vector2 shakeOffset = Vector2.Zero;
-            if (_squashAnimationTimer > 0)
-            {
-                float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
-                scale.Y = MathHelper.Lerp(1.0f, 1.5f / Bounds.Height, progress);
-                shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_MAGNITUDE);
-            }
-
-            var position = new Vector2(Bounds.Center.X + (horizontalOffset ?? 0f), Bounds.Center.Y + (verticalOffset ?? 0f)) + shakeOffset;
+            var position = new Vector2(Bounds.Center.X + (horizontalOffset ?? 0f), Bounds.Center.Y + (verticalOffset ?? 0f));
 
             if (_spriteSheet != null && sourceRectToDraw.HasValue)
             {
@@ -324,8 +310,6 @@ namespace ProjectVagabond.UI
             }
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (_isPressed) _squashAnimationTimer = Math.Min(_squashAnimationTimer + deltaTime, SQUASH_ANIMATION_DURATION);
-            else _squashAnimationTimer = Math.Max(_squashAnimationTimer - deltaTime, 0);
 
             float xHoverOffset = 0f;
             float yHoverOffset = 0f;
@@ -347,16 +331,7 @@ namespace ProjectVagabond.UI
             float totalYOffset = yHoverOffset + (verticalOffset ?? 0f);
 
             Vector2 textSize = font.MeasureString(Text);
-
             Vector2 scale = Vector2.One;
-            Vector2 shakeOffset = Vector2.Zero;
-            if (_squashAnimationTimer > 0)
-            {
-                float progress = _squashAnimationTimer / SQUASH_ANIMATION_DURATION;
-                float targetScaleY = 1.5f / textSize.Y;
-                scale.Y = MathHelper.Lerp(1.0f, targetScaleY, progress);
-                shakeOffset.X = MathF.Round((float)(_random.NextDouble() * 2 - 1) * SHAKE_MAGNITUDE);
-            }
 
             Vector2 textOrigin = new Vector2(MathF.Round(textSize.X / 2f), MathF.Round(textSize.Y / 2f));
             Vector2 textPosition;
@@ -371,7 +346,7 @@ namespace ProjectVagabond.UI
                 textPosition = new Vector2(Bounds.Center.X + totalXOffset, Bounds.Center.Y + totalYOffset);
             }
 
-            textPosition += TextRenderOffset + shakeOffset;
+            textPosition += TextRenderOffset;
 
             spriteBatch.DrawStringSnapped(font, Text, textPosition, textColor, 0f, textOrigin, scale, SpriteEffects.None, 0f);
         }

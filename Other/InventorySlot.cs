@@ -81,30 +81,20 @@ namespace ProjectVagabond.UI
             var global = ServiceLocator.Get<Global>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
-            // Determine Background
-            Texture2D bgTexture;
-            Rectangle? sourceRect = null;
+            Vector2 position = new Vector2(Bounds.X, Bounds.Y);
 
-            // If selected, or if pressed (mouse held down), show the selected sprite.
-            // IsPressed is managed by the base Button class.
+            // 1. Always draw the idle animation frame as the base
+            spriteBatch.DrawSnapped(spriteManager.InventorySlotIdleSpriteSheet, position, _currentIdleFrame, Color.White);
+
+            // 2. Draw overlay if selected or hovered
             if (IsSelected || IsPressed)
             {
-                bgTexture = spriteManager.InventorySlotSelectedSprite;
+                spriteBatch.DrawSnapped(spriteManager.InventorySlotSelectedSprite, position, null, Color.White);
             }
             else if (IsHovered || forceHover)
             {
-                bgTexture = spriteManager.InventorySlotHoverSprite;
+                spriteBatch.DrawSnapped(spriteManager.InventorySlotHoverSprite, position, null, Color.White);
             }
-            else
-            {
-                bgTexture = spriteManager.InventorySlotIdleSpriteSheet;
-                sourceRect = _currentIdleFrame;
-            }
-
-            Vector2 position = new Vector2(Bounds.X, Bounds.Y);
-
-            // Draw Background
-            spriteBatch.DrawSnapped(bgTexture, position, sourceRect, Color.White);
 
             // Draw Item Content
             if (HasItem)

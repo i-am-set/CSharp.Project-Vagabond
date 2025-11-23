@@ -75,11 +75,8 @@ namespace ProjectVagabond.UI
             // 3. Draw Background
             Texture2D? bgTexture = null;
 
-            if (_isPressed)
-            {
-                bgTexture = spriteManager.InventoryEquipSelectedSprite;
-            }
-            else if (isActivated)
+            // Use hover sprite for both pressed and hovered states
+            if (_isPressed || isActivated)
             {
                 bgTexture = spriteManager.InventoryEquipHoverSprite;
             }
@@ -163,7 +160,9 @@ namespace ProjectVagabond.UI
 
                 // Use CustomDefaultTextColor if set, otherwise BrightWhite
                 Color defaultColor = CustomDefaultTextColor ?? _global.Palette_BrightWhite;
-                Color mainColor = isActivated ? _global.ButtonHoverColor : defaultColor;
+
+                // Change: Use Color.White when hovered instead of ButtonHoverColor (Red)
+                Color mainColor = isActivated ? Color.White : defaultColor;
 
                 if (!IsEnabled) mainColor = _global.ButtonDisableColor;
 

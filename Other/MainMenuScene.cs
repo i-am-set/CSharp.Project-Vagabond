@@ -61,15 +61,30 @@ namespace ProjectVagabond.Scenes
             const int buttonYSpacing = 0; // Vertical gap between buttons
             float currentY = 90f;
 
-            // --- PLAY Button ---
+            // Define text for buttons
             string playText = "PLAY";
-            Vector2 playTextSize = secondaryFont.MeasureString(playText);
-            int playWidth = (int)playTextSize.X + horizontalPadding * 2;
-            int playHeight = (int)playTextSize.Y + verticalPadding * 2;
+            string settingsText = "SETTINGS";
+            string exitText = "EXIT";
+
+            // Measure all texts to determine the widest button
+            Vector2 playSize = secondaryFont.MeasureString(playText);
+            Vector2 settingsSize = secondaryFont.MeasureString(settingsText);
+            Vector2 exitSize = secondaryFont.MeasureString(exitText);
+
+            // Calculate the maximum width required
+            int maxTextWidth = (int)Math.Max(playSize.X, Math.Max(settingsSize.X, exitSize.X));
+            int buttonWidth = maxTextWidth + horizontalPadding * 2;
+
+            // Calculate a common X position to center the column of buttons, then shift left by 80
+            int buttonX = ((Global.VIRTUAL_WIDTH - buttonWidth) / 2) - 3 - 80;
+
+            // --- PLAY Button ---
+            int playHeight = (int)playSize.Y + verticalPadding * 2;
             var playButton = new Button(
-                new Rectangle(((Global.VIRTUAL_WIDTH - playWidth) / 2) - 3, (int)currentY, playWidth, playHeight),
+                new Rectangle(buttonX, (int)currentY, buttonWidth, playHeight),
                 playText,
-                font: secondaryFont
+                font: secondaryFont,
+                alignLeft: true
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
@@ -117,14 +132,12 @@ namespace ProjectVagabond.Scenes
             currentY += playHeight + buttonYSpacing;
 
             // --- SETTINGS Button ---
-            string settingsText = "SETTINGS";
-            Vector2 settingsTextSize = secondaryFont.MeasureString(settingsText);
-            int settingsWidth = (int)settingsTextSize.X + horizontalPadding * 2;
-            int settingsHeight = (int)settingsTextSize.Y + verticalPadding * 2;
+            int settingsHeight = (int)settingsSize.Y + verticalPadding * 2;
             var settingsButton = new Button(
-                new Rectangle(((Global.VIRTUAL_WIDTH - settingsWidth) / 2) - 3, (int)currentY, settingsWidth, settingsHeight),
+                new Rectangle(buttonX, (int)currentY, buttonWidth, settingsHeight),
                 settingsText,
-                font: secondaryFont
+                font: secondaryFont,
+                alignLeft: true
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
@@ -135,14 +148,12 @@ namespace ProjectVagabond.Scenes
             currentY += settingsHeight + buttonYSpacing;
 
             // --- EXIT Button ---
-            string exitText = "EXIT";
-            Vector2 exitTextSize = secondaryFont.MeasureString(exitText);
-            int exitWidth = (int)exitTextSize.X + horizontalPadding * 2;
-            int exitHeight = (int)exitTextSize.Y + verticalPadding * 2;
+            int exitHeight = (int)exitSize.Y + verticalPadding * 2;
             var exitButton = new Button(
-                new Rectangle(((Global.VIRTUAL_WIDTH - exitWidth) / 2) - 3, (int)currentY, exitWidth, exitHeight),
+                new Rectangle(buttonX, (int)currentY, buttonWidth, exitHeight),
                 exitText,
-                font: secondaryFont
+                font: secondaryFont,
+                alignLeft: true
             )
             {
                 TextRenderOffset = new Vector2(0, -1),
@@ -160,8 +171,8 @@ namespace ProjectVagabond.Scenes
                 "Are you sure you want to exit?",
                 new List<Tuple<string, Action>>
                 {
-                    Tuple.Create("YES", new Action(() => _core.ExitApplication())),
-                    Tuple.Create("[gray]NO", new Action(() => _confirmationDialog.Hide()))
+                    Tuple.Create("[gray]YES", new Action(() => _core.ExitApplication())),
+                    Tuple.Create("NO", new Action(() => _confirmationDialog.Hide()))
                 }
             );
         }
@@ -368,4 +379,3 @@ namespace ProjectVagabond.Scenes
         }
     }
 }
-﻿
