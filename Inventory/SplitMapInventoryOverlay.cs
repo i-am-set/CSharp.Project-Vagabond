@@ -906,13 +906,13 @@ namespace ProjectVagabond.UI
             // --- Draw Hovered Item Details ---
             if (_hoveredRelicData != null)
             {
-                const int padding = 4;
+                const int padding = 2; // Reduced padding for "tightly against top"
                 const int spriteSize = 32;
+                const int gap = 4;
 
-                // 1. Sprite (Top Left)
-                // Center the sprite horizontally in the stats panel
+                // 1. Sprite (Top Left - Centered Horizontally)
                 int spriteX = _statsPanelArea.X + (_statsPanelArea.Width - spriteSize) / 2;
-                int spriteY = _statsPanelArea.Y + padding;
+                int spriteY = _statsPanelArea.Y; // Tightly against top
                 string path = $"Sprites/Items/Relics/{_hoveredRelicData.RelicID}";
                 var relicSprite = _spriteManager.GetRelicSprite(path);
                 if (relicSprite != null)
@@ -920,15 +920,18 @@ namespace ProjectVagabond.UI
                     spriteBatch.DrawSnapped(relicSprite, new Vector2(spriteX, spriteY), Color.White);
                 }
 
-                // 2. Title (Centered Horizontally and Vertically over Sprite)
-                string name = _hoveredRelicData.RelicName.ToUpper();
-                int maxTitleWidth = _statsPanelArea.Width - (padding * 2);
+                // 2. Title
+                // Anchor: Bottom of the title block is fixed relative to the sprite bottom.
+                float titleBottomY = spriteY + spriteSize + gap;
 
-                // Use 'font' (default font) instead of 'secondaryFont'
+                string name = _hoveredRelicData.RelicName.ToUpper();
+                int maxTitleWidth = _statsPanelArea.Width - (4 * 2); // 4px padding on sides
+
                 var titleLines = WrapText(font, name, maxTitleWidth);
                 float totalTitleHeight = titleLines.Count * font.LineHeight;
-                float spriteCenterY = spriteY + (spriteSize / 2f);
-                float currentTitleY = spriteCenterY - (totalTitleHeight / 2f);
+
+                // Calculate start Y so the block ends at titleBottomY
+                float currentTitleY = titleBottomY - totalTitleHeight;
 
                 foreach (var line in titleLines)
                 {
@@ -939,20 +942,29 @@ namespace ProjectVagabond.UI
                     currentTitleY += font.LineHeight;
                 }
 
-                // 3. Description (Below Sprite)
-                float descY = spriteY + spriteSize + 2;
-                float descWidth = _statsPanelArea.Width - (padding * 2);
+                // 3. Description
+                // Area: From titleBottomY to statsStartY
+                int statsStartY = _statsPanelArea.Y + 77; // Defined later for stats, used here for boundary
+                float descAreaTop = titleBottomY;
+                float descAreaBottom = statsStartY;
+                float descAreaHeight = descAreaBottom - descAreaTop;
+
+                float descWidth = _statsPanelArea.Width - (4 * 2); // 4px padding
                 var descLines = WrapText(secondaryFont, _hoveredRelicData.Description.ToUpper(), descWidth);
+                float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
+
+                // Center vertically in the area
+                float currentDescY = descAreaTop + (descAreaHeight - totalDescHeight) / 2f;
 
                 foreach (var line in descLines)
                 {
                     var lineSize = secondaryFont.MeasureString(line);
                     var linePos = new Vector2(
                         _statsPanelArea.X + (_statsPanelArea.Width - lineSize.Width) / 2,
-                        descY
+                        currentDescY
                     );
-                    spriteBatch.DrawStringSnapped(secondaryFont, line, linePos, _global.Palette_BrightWhite);
-                    descY += secondaryFont.LineHeight;
+                    spriteBatch.DrawStringSnapped(secondaryFont, line, linePos, _global.Palette_White);
+                    currentDescY += secondaryFont.LineHeight;
                 }
             }
 
@@ -970,8 +982,8 @@ namespace ProjectVagabond.UI
         };
 
             int startX = _statsPanelArea.X + 3;
-            int startY = _statsPanelArea.Y + 70;
-            int rowSpacing = 12;
+            int startY = _statsPanelArea.Y + 77;
+            int rowSpacing = 10; // Reduced from 12 to 10 for compactness
 
             int val1RightX = 63;
             int arrowX = 66;
