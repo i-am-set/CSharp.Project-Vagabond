@@ -799,8 +799,8 @@ namespace ProjectVagabond.UI
                     var pixel = ServiceLocator.Get<Texture2D>();
                     var bgRect = new Rectangle(
                         (int)textPos.X - 1,
-                        (int)textPos.Y,
-                        (int)textSize.Width + 3,
+                        (int)textPos.Y + 2,
+                        (int)Math.Ceiling(textSize.Width) + 5,
                         (int)textSize.Height
                     );
                     spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
