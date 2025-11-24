@@ -282,15 +282,17 @@ namespace ProjectVagabond.UI
                 btn.OnClick = null;
 
                 // Apply color pattern
+                // 1st (0), 3rd (2), 5th (4), 7th (6) -> BrightWhite
+                // 2nd (1), 4th (3), 6th (5) -> White
                 if (i % 2 == 0)
-                {
-                    btn.CustomDefaultTextColor = _global.Palette_White;
-                    btn.CustomTitleTextColor = _global.Palette_White;
-                }
-                else
                 {
                     btn.CustomDefaultTextColor = _global.Palette_BrightWhite;
                     btn.CustomTitleTextColor = _global.Palette_BrightWhite;
+                }
+                else
+                {
+                    btn.CustomDefaultTextColor = _global.Palette_White;
+                    btn.CustomTitleTextColor = _global.Palette_White;
                 }
 
                 if (virtualIndex == 0)
@@ -298,7 +300,7 @@ namespace ProjectVagabond.UI
                     // This is the "REMOVE" button
                     btn.MainText = "REMOVE";
                     btn.CustomDefaultTextColor = _global.Palette_Red; // Override Main text only
-                    // CustomTitleTextColor remains patternColor (White)
+                    // CustomTitleTextColor remains patternColor (BrightWhite)
                     btn.IconTexture = null;
                     btn.IconSilhouette = null; // Clear silhouette
                     btn.IsEnabled = true;
@@ -319,7 +321,6 @@ namespace ProjectVagabond.UI
                         btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
                         btn.IconSourceRect = null; // Use full texture
                         btn.IsEnabled = true;
-                        btn.CustomDefaultTextColor = null; // Reset to default white
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                     else
@@ -329,7 +330,6 @@ namespace ProjectVagabond.UI
                         btn.IconTexture = null;
                         btn.IconSilhouette = null;
                         btn.IsEnabled = true;
-                        btn.CustomDefaultTextColor = null;
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                 }
