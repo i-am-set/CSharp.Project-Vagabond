@@ -855,9 +855,10 @@ namespace ProjectVagabond.UI
                     {
                         _relicEquipButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     }
-
-                    DrawStatsPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont);
                 }
+
+                // Draw Stats Panel (Moved here to show in both main equip view and submenu)
+                DrawStatsPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont);
             }
 
             if (_debugButton1 != null && _debugButton1.IsEnabled) _debugButton1.Draw(spriteBatch, font, gameTime, Matrix.Identity);
@@ -886,7 +887,7 @@ namespace ProjectVagabond.UI
                 ("AGILTY", playerState.Agility)
             };
 
-            int startX = _statsPanelArea.X;
+            int startX = _statsPanelArea.X + 3;
             int startY = _statsPanelArea.Y + 10;
             int rowSpacing = 12;
 
@@ -899,17 +900,17 @@ namespace ProjectVagabond.UI
                 var stat = stats[i];
                 int y = startY + (i * rowSpacing);
 
-                spriteBatch.DrawStringSnapped(secondaryFont, stat.Label, new Vector2(startX, y + 4), _global.Palette_LightGray);
+                spriteBatch.DrawStringSnapped(secondaryFont, stat.Label, new Vector2(startX, y + 4), _global.Palette_Gray);
 
                 string valStr = stat.Value.ToString();
                 Vector2 valSize = font.MeasureString(valStr);
-                spriteBatch.DrawStringSnapped(font, valStr, new Vector2(startX + val1RightX - valSize.X, y + 4), _global.Palette_White);
+                spriteBatch.DrawStringSnapped(font, valStr, new Vector2(startX + val1RightX - valSize.X, y + 4), _global.Palette_LightGray);
 
-                spriteBatch.DrawStringSnapped(secondaryFont, ">", new Vector2(startX + arrowX, y + 4), _global.Palette_LightGray);
+                spriteBatch.DrawStringSnapped(secondaryFont, ">", new Vector2(startX + arrowX, y + 4), _global.Palette_Gray);
 
                 string projStr = stat.Value.ToString();
                 Vector2 projSize = font.MeasureString(projStr);
-                spriteBatch.DrawStringSnapped(font, projStr, new Vector2(startX + val2RightX - projSize.X, y + 4), _global.Palette_White);
+                spriteBatch.DrawStringSnapped(font, projStr, new Vector2(startX + val2RightX - projSize.X, y + 4), _global.Palette_LightGray);
             }
         }
 
