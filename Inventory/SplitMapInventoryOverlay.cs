@@ -45,6 +45,7 @@ namespace ProjectVagabond.UI
 
         // Pagination State
         private int _currentPage = 0;
+        private int _totalPages = 0;
         private const int ITEMS_PER_PAGE = 12;
 
         private InventoryCategory _selectedInventoryCategory;
@@ -397,6 +398,10 @@ namespace ProjectVagabond.UI
 
             var items = GetCurrentCategoryItems();
 
+            // Calculate total pages
+            int totalItems = items.Count;
+            _totalPages = (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE);
+
             // Pagination Logic
             int startIndex = _currentPage * ITEMS_PER_PAGE;
             int itemsToDisplay = Math.Min(ITEMS_PER_PAGE, items.Count - startIndex);
@@ -608,11 +613,17 @@ namespace ProjectVagabond.UI
                 var baseBounds = _inventoryHeaderButtonBaseBounds[button];
 
                 button.IsSelected = ((int)_selectedInventoryCategory == button.MenuIndex);
-                // Removed bobY from header buttons
+
+                float selectedBobY = 0f;
+                if (button.IsSelected)
+                {
+                    // (Sin + 1) / 2 goes 0->1->0. Rounding makes it snap 0 or 1. Negate for Up.
+                    selectedBobY = -MathF.Round((MathF.Sin(_selectedHeaderBobTimer * 5f) + 1f) * 0.5f);
+                }
 
                 button.Bounds = new Rectangle(
                     baseBounds.X + (int)MathF.Round(finalOffset),
-                    baseBounds.Y + (int)MathF.Round(_inventoryPositionOffset.Y), // Only global bob
+                    baseBounds.Y + (int)MathF.Round(_inventoryPositionOffset.Y) + (int)selectedBobY,
                     baseBounds.Width,
                     baseBounds.Height);
 
@@ -627,9 +638,14 @@ namespace ProjectVagabond.UI
                 float equipBaseY = 200 + 6;
 
                 _inventoryEquipButton.IsSelected = _selectedInventoryCategory == InventoryCategory.Equip;
-                // Removed equipBobY from equip button
 
-                _inventoryEquipButton.Bounds = new Rectangle((int)equipBaseX, (int)(equipBaseY + _inventoryPositionOffset.Y), 32, 32); // Only global bob
+                float equipBobY = 0f;
+                if (_inventoryEquipButton.IsSelected)
+                {
+                    equipBobY = -MathF.Round((MathF.Sin(_selectedHeaderBobTimer * 5f) + 1f) * 0.5f);
+                }
+
+                _inventoryEquipButton.Bounds = new Rectangle((int)equipBaseX, (int)(equipBaseY + _inventoryPositionOffset.Y + equipBobY), 32, 32);
                 _inventoryEquipButton.Update(currentMouseState, cameraTransform);
             }
 
@@ -639,10 +655,14 @@ namespace ProjectVagabond.UI
                 float progress = Math.Clamp(_inventoryArrowAnimTimer / INVENTORY_ARROW_ANIM_DURATION, 0f, 1f);
                 float easedProgress = Easing.EaseOutCubic(progress);
                 float currentOffset = MathHelper.Lerp(16f, 13f, easedProgress);
-                var selectedBounds = selectedButton.Bounds;
 
-                _debugButton1.Bounds = new Rectangle(selectedBounds.Center.X - (int)currentOffset - (_debugButton1.Bounds.Width / 2), selectedBounds.Center.Y - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
-                _debugButton2.Bounds = new Rectangle(selectedBounds.Center.X + (int)currentOffset - (_debugButton2.Bounds.Width / 2), selectedBounds.Center.Y - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
+                // Use base bounds to calculate Y position without the selection bob effect
+                var baseBounds = _inventoryHeaderButtonBaseBounds[selectedButton];
+                int centerY = baseBounds.Center.Y + (int)MathF.Round(_inventoryPositionOffset.Y);
+                int centerX = selectedButton.Bounds.Center.X;
+
+                _debugButton1.Bounds = new Rectangle(centerX - (int)currentOffset - (_debugButton1.Bounds.Width / 2), centerY - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
+                _debugButton2.Bounds = new Rectangle(centerX + (int)currentOffset - (_debugButton2.Bounds.Width / 2), centerY - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
 
                 _debugButton1.IsEnabled = (int)_selectedInventoryCategory > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
                 _debugButton2.IsEnabled = (int)_selectedInventoryCategory < (int)InventoryCategory.Consumables && _selectedInventoryCategory != InventoryCategory.Equip;
@@ -763,6 +783,19 @@ namespace ProjectVagabond.UI
             if (_selectedInventoryCategory != InventoryCategory.Equip)
             {
                 foreach (var slot in _inventorySlots) slot.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+
+                // Draw Page Counter
+                if (_totalPages > 1)
+                {
+                    var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+                    string pageText = $"{_currentPage + 1}/{_totalPages}";
+                    var textSize = secondaryFont.MeasureString(pageText);
+                    var textPos = new Vector2(
+                        _inventorySlotArea.Center.X - textSize.Width / 2f,
+                        _inventorySlotArea.Bottom - 2
+                    );
+                    spriteBatch.DrawStringSnapped(secondaryFont, pageText, textPos, _global.Palette_BrightWhite);
+                }
             }
             else
             {
