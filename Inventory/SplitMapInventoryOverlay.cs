@@ -794,6 +794,17 @@ namespace ProjectVagabond.UI
                         _inventorySlotArea.Center.X - textSize.Width / 2f,
                         _inventorySlotArea.Bottom - 2
                     );
+
+                    // Draw background rectangle
+                    var pixel = ServiceLocator.Get<Texture2D>();
+                    var bgRect = new Rectangle(
+                        (int)textPos.X - 1,
+                        (int)textPos.Y,
+                        (int)textSize.Width + 3,
+                        (int)textSize.Height
+                    );
+                    spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
+
                     spriteBatch.DrawStringSnapped(secondaryFont, pageText, textPos, _global.Palette_BrightWhite);
                 }
             }
@@ -844,9 +855,8 @@ namespace ProjectVagabond.UI
                     {
                         _relicEquipButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     }
-                    // Draw Debug Stats Panel (invisible now)
-                    // var pixel = ServiceLocator.Get<Texture2D>();
-                    // spriteBatch.DrawSnapped(pixel, _statsPanelArea, Color.HotPink);
+
+                    DrawStatsPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont);
                 }
             }
 
@@ -860,6 +870,47 @@ namespace ProjectVagabond.UI
             }
 
             _inventoryEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+        }
+
+        private void DrawStatsPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont)
+        {
+            var playerState = _gameState.PlayerState;
+            if (playerState == null) return;
+
+            var stats = new List<(string Label, int Value)>
+            {
+                ("MAX HP", playerState.MaxHP),
+                ("STRNTH", playerState.Strength),
+                ("INTELL", playerState.Intelligence),
+                ("TENACT", playerState.Tenacity),
+                ("AGILTY", playerState.Agility)
+            };
+
+            int startX = _statsPanelArea.X;
+            int startY = _statsPanelArea.Y + 10;
+            int rowSpacing = 12;
+
+            int val1RightX = 63;
+            int arrowX = 66;
+            int val2RightX = 107;
+
+            for (int i = 0; i < stats.Count; i++)
+            {
+                var stat = stats[i];
+                int y = startY + (i * rowSpacing);
+
+                spriteBatch.DrawStringSnapped(secondaryFont, stat.Label, new Vector2(startX, y + 4), _global.Palette_LightGray);
+
+                string valStr = stat.Value.ToString();
+                Vector2 valSize = font.MeasureString(valStr);
+                spriteBatch.DrawStringSnapped(font, valStr, new Vector2(startX + val1RightX - valSize.X, y + 4), _global.Palette_White);
+
+                spriteBatch.DrawStringSnapped(secondaryFont, ">", new Vector2(startX + arrowX, y + 4), _global.Palette_LightGray);
+
+                string projStr = stat.Value.ToString();
+                Vector2 projSize = font.MeasureString(projStr);
+                spriteBatch.DrawStringSnapped(font, projStr, new Vector2(startX + val2RightX - projSize.X, y + 4), _global.Palette_White);
+            }
         }
 
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
