@@ -888,7 +888,7 @@ namespace ProjectVagabond.UI
             };
 
             int startX = _statsPanelArea.X + 3;
-            int startY = _statsPanelArea.Y + 10;
+            int startY = _statsPanelArea.Y + 70;
             int rowSpacing = 12;
 
             int val1RightX = 63;
