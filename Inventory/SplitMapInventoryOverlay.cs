@@ -67,6 +67,11 @@ namespace ProjectVagabond.UI
         private Vector2 _inventoryPositionOffset = Vector2.Zero;
         private float _selectedHeaderBobTimer;
 
+        // Page Arrow Animation State
+        private float _leftPageArrowBobTimer = 0f;
+        private float _rightPageArrowBobTimer = 0f;
+        private const float PAGE_ARROW_BOB_DURATION = 0.05f;
+
         // Stat Cycle Animation State
         private float _statCycleTimer = 0f;
         private RelicData? _previousHoveredRelicData;
@@ -99,6 +104,8 @@ namespace ProjectVagabond.UI
             _selectedHeaderBobTimer = 0f;
             _statCycleTimer = 0f;
             _previousHoveredRelicData = null;
+            _leftPageArrowBobTimer = 0f;
+            _rightPageArrowBobTimer = 0f;
 
             _previousMouseState = Mouse.GetState();
             _previousKeyboardState = Keyboard.GetState();
@@ -569,6 +576,10 @@ namespace ProjectVagabond.UI
             // Using (Sin + 1) / 2 ensures a smooth, symmetric 0-1 oscillation, which Round turns into an equal-duration toggle.
             float selectedBobOffset = MathF.Round((MathF.Sin(_selectedHeaderBobTimer * 2.5f) + 1f) * 0.5f);
 
+            // Update Page Arrow Bob Timers
+            if (_leftPageArrowBobTimer > 0) _leftPageArrowBobTimer -= deltaTime;
+            if (_rightPageArrowBobTimer > 0) _rightPageArrowBobTimer -= deltaTime;
+
             // Handle Input for Category Switching
             int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
 
@@ -758,11 +769,26 @@ namespace ProjectVagabond.UI
 
                     const int buttonGap = 5;
 
+                    // Calculate bob offsets
+                    float leftBob = 0f;
+                    if (_leftPageArrowBobTimer > 0)
+                    {
+                        float progress = 1.0f - (_leftPageArrowBobTimer / PAGE_ARROW_BOB_DURATION);
+                        leftBob = -MathF.Sin(progress * MathHelper.Pi) * 1f;
+                    }
+
+                    float rightBob = 0f;
+                    if (_rightPageArrowBobTimer > 0)
+                    {
+                        float progress = 1.0f - (_rightPageArrowBobTimer / PAGE_ARROW_BOB_DURATION);
+                        rightBob = -MathF.Sin(progress * MathHelper.Pi) * 1f;
+                    }
+
                     if (_pageLeftButton != null)
                     {
                         _pageLeftButton.Bounds = new Rectangle(
-                            (int)(textCenterX - textSize.Width / 2f - _pageLeftButton.Bounds.Width - buttonGap),
-                            (int)textY,
+                            (int)(textCenterX - textSize.Width / 2f - _pageLeftButton.Bounds.Width - buttonGap + 5),
+                            (int)(textY + 1 + leftBob),
                             _pageLeftButton.Bounds.Width,
                             _pageLeftButton.Bounds.Height
                         );
@@ -773,8 +799,8 @@ namespace ProjectVagabond.UI
                     if (_pageRightButton != null)
                     {
                         _pageRightButton.Bounds = new Rectangle(
-                            (int)(textCenterX + textSize.Width / 2f + buttonGap),
-                            (int)textY,
+                            (int)(textCenterX + textSize.Width / 2f + buttonGap - 3),
+                            (int)(textY + 1 + rightBob),
                             _pageRightButton.Bounds.Width,
                             _pageRightButton.Bounds.Height
                         );
@@ -842,6 +868,10 @@ namespace ProjectVagabond.UI
             // Wrap logic
             if (_currentPage > maxPage) _currentPage = 0;
             else if (_currentPage < 0) _currentPage = maxPage;
+
+            // Trigger animation
+            if (direction < 0) _leftPageArrowBobTimer = PAGE_ARROW_BOB_DURATION;
+            else if (direction > 0) _rightPageArrowBobTimer = PAGE_ARROW_BOB_DURATION;
 
             _selectedSlotIndex = -1; // Clear selection on page change
             RefreshInventorySlots();
