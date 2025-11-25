@@ -110,8 +110,8 @@ namespace ProjectVagabond.UI
                         var silhouette = spriteManager.GetItemSpriteSilhouette(IconPath);
                         if (silhouette != null)
                         {
-                            // Prioritize Selected state (Color.White), then Hover (Palette_White), then Default (Palette_DarkGray)
-                            Color outlineColor = IsSelected ? Color.White : (IsHovered ? global.Palette_BrightWhite : global.Palette_Gray);
+                            // Use global outline colors
+                            Color outlineColor = IsSelected ? global.ItemOutlineColor_Selected : (IsHovered ? global.ItemOutlineColor_Hover : global.ItemOutlineColor_Idle);
 
                             Vector2 iconOrigin = new Vector2(icon.Width / 2f, icon.Height / 2f);
                             Vector2 centerPos = position + new Vector2(Bounds.Width / 2f, Bounds.Height / 2f);

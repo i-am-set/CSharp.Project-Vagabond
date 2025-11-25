@@ -62,6 +62,11 @@ namespace ProjectVagabond
             ColorImmune = Palette_Teal;
             ColorConditionToMeet = Palette_LightYellow;
 
+            // Initialize Item Outline Colors
+            ItemOutlineColor_Idle = Palette_DarkGray;
+            ItemOutlineColor_Hover = Palette_BrightWhite;
+            ItemOutlineColor_Selected = Color.White;
+
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
             {
@@ -245,6 +250,11 @@ namespace ProjectVagabond
         public Color ColorCrit { get; private set; }
         public Color ColorImmune { get; private set; }
         public Color ColorConditionToMeet { get; private set; }
+
+        // Item Outline Colors
+        public Color ItemOutlineColor_Idle { get; private set; }
+        public Color ItemOutlineColor_Hover { get; private set; }
+        public Color ItemOutlineColor_Selected { get; private set; }
 
         // Data-driven Colors
         public Dictionary<int, Color> ElementColors { get; private set; }

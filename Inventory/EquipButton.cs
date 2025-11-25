@@ -132,7 +132,9 @@ namespace ProjectVagabond.UI
                 // Draw Silhouette Outline if available
                 if (IconSilhouette != null)
                 {
-                    Color outlineColor = _global.Palette_Black;
+                    // Use global outline colors
+                    Color outlineColor = isActivated ? _global.ItemOutlineColor_Hover : _global.ItemOutlineColor_Idle;
+
                     // Cardinal
                     spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y), src, outlineColor);
                     spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y), src, outlineColor);
