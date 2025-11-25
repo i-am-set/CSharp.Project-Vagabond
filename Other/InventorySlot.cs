@@ -111,22 +111,23 @@ namespace ProjectVagabond.UI
                         if (silhouette != null)
                         {
                             // Use global outline colors
-                            Color outlineColor = IsSelected ? global.ItemOutlineColor_Selected : (IsHovered ? global.ItemOutlineColor_Hover : global.ItemOutlineColor_Idle);
+                            Color mainOutlineColor = IsSelected ? global.ItemOutlineColor_Selected : (IsHovered ? global.ItemOutlineColor_Hover : global.ItemOutlineColor_Idle);
+                            Color cornerOutlineColor = IsSelected ? global.ItemOutlineColor_Selected_Corner : (IsHovered ? global.ItemOutlineColor_Hover_Corner : global.ItemOutlineColor_Idle_Corner);
 
                             Vector2 iconOrigin = new Vector2(icon.Width / 2f, icon.Height / 2f);
                             Vector2 centerPos = position + new Vector2(Bounds.Width / 2f, Bounds.Height / 2f);
 
-                            // Cardinal directions
-                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(-1, 0), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(1, 0), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(0, -1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(0, 1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            // 1. Draw Diagonals (Corners) FIRST (Behind)
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(-1, -1), null, cornerOutlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(1, -1), null, cornerOutlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(-1, 1), null, cornerOutlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(1, 1), null, cornerOutlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
 
-                            // Diagonals for full cornered outline
-                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(-1, -1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(1, -1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(-1, 1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(1, 1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            // 2. Draw Cardinals (Main) SECOND (On Top)
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(-1, 0), null, mainOutlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(1, 0), null, mainOutlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(0, -1), null, mainOutlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(0, 1), null, mainOutlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
                         }
 
                         // Draw Icon

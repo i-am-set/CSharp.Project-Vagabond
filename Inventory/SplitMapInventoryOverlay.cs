@@ -1151,17 +1151,20 @@ namespace ProjectVagabond.UI
             if (iconSilhouette != null)
             {
                 // Use global outline color for Idle state
-                Color outlineColor = _global.ItemOutlineColor_Idle;
-                // Cardinal
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY), outlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY), outlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY - 1), outlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY + 1), outlineColor);
-                // Diagonal
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY - 1), outlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY - 1), outlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY + 1), outlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY + 1), outlineColor);
+                Color mainOutlineColor = _global.ItemOutlineColor_Idle;
+                Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
+
+                // 1. Draw Diagonals (Corners) FIRST (Behind)
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY - 1), cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY - 1), cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY + 1), cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY + 1), cornerOutlineColor);
+
+                // 2. Draw Cardinals (Main) SECOND (On Top)
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY), mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY), mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY - 1), mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY + 1), mainOutlineColor);
             }
 
             if (iconTexture != null)
@@ -1260,17 +1263,20 @@ namespace ProjectVagabond.UI
                 if (relicSilhouette != null)
                 {
                     // Use global outline color for Idle state
-                    Color outlineColor = _global.ItemOutlineColor_Idle;
-                    // Cardinal
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY), outlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY), outlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX, spriteY - 1), outlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX, spriteY + 1), outlineColor);
-                    // Diagonal
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY - 1), outlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY - 1), outlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY + 1), outlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY + 1), outlineColor);
+                    Color mainOutlineColor = _global.ItemOutlineColor_Idle;
+                    Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
+
+                    // 1. Draw Diagonals (Corners) FIRST (Behind)
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY - 1), cornerOutlineColor);
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY - 1), cornerOutlineColor);
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY + 1), cornerOutlineColor);
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY + 1), cornerOutlineColor);
+
+                    // 2. Draw Cardinals (Main) SECOND (On Top)
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY), mainOutlineColor);
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY), mainOutlineColor);
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX, spriteY - 1), mainOutlineColor);
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX, spriteY + 1), mainOutlineColor);
                 }
 
                 if (relicSprite != null)
@@ -1512,6 +1518,7 @@ namespace ProjectVagabond.UI
             }
         }
 
+        // ... (ParseAndWrapRichText, ParseColor, DrawScreen remain the same)
         private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor)
         {
             var lines = new List<List<ColoredText>>();

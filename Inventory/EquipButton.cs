@@ -133,18 +133,20 @@ namespace ProjectVagabond.UI
                 if (IconSilhouette != null)
                 {
                     // Use global outline colors
-                    Color outlineColor = isActivated ? _global.ItemOutlineColor_Hover : _global.ItemOutlineColor_Idle;
+                    Color mainOutlineColor = isActivated ? _global.ItemOutlineColor_Hover : _global.ItemOutlineColor_Idle;
+                    Color cornerOutlineColor = isActivated ? _global.ItemOutlineColor_Hover_Corner : _global.ItemOutlineColor_Idle_Corner;
 
-                    // Cardinal
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y), src, outlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y), src, outlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X, destRect.Y - 1), src, outlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X, destRect.Y + 1), src, outlineColor);
-                    // Diagonal
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y - 1), src, outlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y - 1), src, outlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y + 1), src, outlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y + 1), src, outlineColor);
+                    // 1. Draw Diagonals (Corners) FIRST (Behind)
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y - 1), src, cornerOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y - 1), src, cornerOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y + 1), src, cornerOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y + 1), src, cornerOutlineColor);
+
+                    // 2. Draw Cardinals (Main) SECOND (On Top)
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y), src, mainOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y), src, mainOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X, destRect.Y - 1), src, mainOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X, destRect.Y + 1), src, mainOutlineColor);
                 }
 
                 spriteBatch.DrawSnapped(IconTexture, destRect, src, Color.White);

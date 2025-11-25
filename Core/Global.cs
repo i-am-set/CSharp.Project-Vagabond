@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond
 {
@@ -63,9 +64,14 @@ namespace ProjectVagabond
             ColorConditionToMeet = Palette_LightYellow;
 
             // Initialize Item Outline Colors
-            ItemOutlineColor_Idle = Palette_DarkGray;
+            ItemOutlineColor_Idle = Palette_Gray;
             ItemOutlineColor_Hover = Palette_BrightWhite;
             ItemOutlineColor_Selected = Color.White;
+
+            // Initialize Item Outline Corner Colors (Red as requested)
+            ItemOutlineColor_Idle_Corner = Palette_DarkGray;
+            ItemOutlineColor_Hover_Corner = Palette_White;
+            ItemOutlineColor_Selected_Corner = Palette_BrightWhite;
 
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
@@ -255,6 +261,11 @@ namespace ProjectVagabond
         public Color ItemOutlineColor_Idle { get; private set; }
         public Color ItemOutlineColor_Hover { get; private set; }
         public Color ItemOutlineColor_Selected { get; private set; }
+
+        // Item Outline Corner Colors
+        public Color ItemOutlineColor_Idle_Corner { get; private set; }
+        public Color ItemOutlineColor_Hover_Corner { get; private set; }
+        public Color ItemOutlineColor_Selected_Corner { get; private set; }
 
         // Data-driven Colors
         public Dictionary<int, Color> ElementColors { get; private set; }
