@@ -13,8 +13,8 @@
     "Tags": [ "Nature", "Defense" ]
   },
   {
-    "RelicID": "charredeffigy",
-    "RelicName": "Charred Effigy",
+    "RelicID": "warmring",
+    "RelicName": "Warm Ring",
     "AbilityName": "Pyromancer",
     "Description": "[cfire]Fire[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
@@ -256,7 +256,7 @@
     "RelicID": "anchorcharm",
     "RelicName": "Anchor Charm",
     "AbilityName": "Last Stand",
-    "Description": "[cpositive]2.0x[/] power stat [cctm]when acting last in the turn[/]",
+    "Description": "[cpositive]2.0x[/] power of holder's attacks [cctm]when acting last in the turn[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
@@ -301,8 +301,8 @@
     "Tags": [ "Toxic", "StatusEffect" ]
   },
   {
-    "RelicID": "crownofserenity",
-    "RelicName": "Crown of Serenity",
+    "RelicID": "sealedenvelope",
+    "RelicName": "Sealed Envelope",
     "AbilityName": "Unwavering",
     "Description": "[cimmune]Immune[/] to [cstun]Stun[/] and [cfear]Fear[/]",
     "Rarity": 1,
