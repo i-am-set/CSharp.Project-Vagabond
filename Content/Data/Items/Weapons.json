@@ -1,0 +1,42 @@
+[
+  {
+    "WeaponID": "IronSword",
+    "WeaponName": "Iron Sword",
+    "Description": "A standard issue iron sword. Reliable and sharp.",
+    "Rarity": 0,
+    "LevelRequirement": 1,
+    "MoveID": "SwordSlash",
+    "StatModifiers": {
+      "Strength": 2
+    },
+    "Tags": [ "Metal", "Sword" ]
+  },
+  {
+    "WeaponID": "Warhammer",
+    "WeaponName": "Warhammer",
+    "Description": "A heavy hammer designed to crush armor.",
+    "Rarity": 1,
+    "LevelRequirement": 3,
+    "MoveID": "Bonecrusher",
+    "StatModifiers": {
+      "Strength": 5,
+      "Agility": -2
+    },
+    "Tags": [ "Metal", "Blunt" ]
+  },
+  {
+    "WeaponID": "PoisonDagger",
+    "WeaponName": "Poison Dagger",
+    "Description": "A wicked blade coated in a vile toxin.",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "MoveID": "VenomJab",
+    "Effects": {
+      "ApplyStatusOnContact": "Poison,30,3"
+    },
+    "StatModifiers": {
+      "Agility": 3
+    },
+    "Tags": [ "Toxic", "Dagger" ]
+  }
+]

@@ -84,7 +84,7 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Calculates the effective value of a stat by adding bonuses from equipped relics to the base value.
+        /// Calculates the effective value of a stat by adding bonuses from equipped relics AND weapons to the base value.
         /// Enforces a minimum value of 1.
         /// </summary>
         /// <param name="statName">The name of the stat (e.g., "Strength", "MaxHP"). Case-insensitive.</param>
@@ -94,6 +94,7 @@ namespace ProjectVagabond
             int baseValue = GetBaseStat(statName);
             int bonus = 0;
 
+            // 1. Relic Bonuses
             foreach (var relicId in EquippedRelics)
             {
                 if (!string.IsNullOrEmpty(relicId) && BattleDataCache.Relics.TryGetValue(relicId, out var relic))
@@ -102,6 +103,15 @@ namespace ProjectVagabond
                     {
                         bonus += mod;
                     }
+                }
+            }
+
+            // 2. Weapon Bonuses
+            if (!string.IsNullOrEmpty(EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(EquippedWeaponId, out var weapon))
+            {
+                if (weapon.StatModifiers.TryGetValue(statName, out int mod))
+                {
+                    bonus += mod;
                 }
             }
 

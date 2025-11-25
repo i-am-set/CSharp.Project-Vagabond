@@ -133,10 +133,16 @@ namespace ProjectVagabond.UI
                 if (IconSilhouette != null)
                 {
                     Color outlineColor = _global.Palette_Black;
+                    // Cardinal
                     spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y), src, outlineColor);
                     spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y), src, outlineColor);
                     spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X, destRect.Y - 1), src, outlineColor);
                     spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X, destRect.Y + 1), src, outlineColor);
+                    // Diagonal
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y - 1), src, outlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y - 1), src, outlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y + 1), src, outlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y + 1), src, outlineColor);
                 }
 
                 spriteBatch.DrawSnapped(IconTexture, destRect, src, Color.White);

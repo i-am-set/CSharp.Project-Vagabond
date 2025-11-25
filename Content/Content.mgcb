@@ -698,6 +698,42 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/Items/Relics/WarmRing.png;Sprites/Items/Relics/WarmRing
 
+#begin Sprites/Items/Weapons/ironsword.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Weapons/ironsword.png;Sprites/Items/Weapons/ironsword
+
+#begin Sprites/Items/Weapons/poisondagger.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Weapons/poisondagger.png;Sprites/Items/Weapons/poisondagger
+
+#begin Sprites/Items/Weapons/warhammer.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Weapons/warhammer.png;Sprites/Items/Weapons/warhammer
+
 #begin Sprites/logo.png
 /importer:TextureImporter
 /processor:TextureProcessor

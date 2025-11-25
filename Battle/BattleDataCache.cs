@@ -19,6 +19,7 @@ namespace ProjectVagabond.Battle
         public static Dictionary<string, MoveData> Moves { get; private set; }
         public static Dictionary<string, ConsumableItemData> Consumables { get; private set; }
         public static Dictionary<string, RelicData> Relics { get; private set; }
+        public static Dictionary<string, WeaponData> Weapons { get; private set; } // <--- Added
 
         public static void LoadData(ContentManager content)
         {
@@ -53,7 +54,7 @@ namespace ProjectVagabond.Battle
             Debug.WriteLine($"[BattleDataCache] Successfully loaded {Moves.Count} move definitions.");
 
             // --- CONSUMABLES ---
-            string consumablesPath = Path.Combine(content.RootDirectory, "Data", "items", "Consumables.json");
+            string consumablesPath = Path.Combine(content.RootDirectory, "Data", "Items", "Consumables.json");
             if (!File.Exists(consumablesPath)) throw new FileNotFoundException($"Could not find Consumables.json at {consumablesPath}");
 
             string consumablesJson = File.ReadAllText(consumablesPath);
@@ -63,7 +64,6 @@ namespace ProjectVagabond.Battle
             Debug.WriteLine($"[BattleDataCache] Successfully loaded {Consumables.Count} consumable item definitions.");
 
             // --- RELICS ---
-            // FIXED PATH: Added "Items" directory
             string relicsPath = Path.Combine(content.RootDirectory, "Data", "Items", "Relics.json");
             if (!File.Exists(relicsPath)) throw new FileNotFoundException($"Could not find Relics.json at {relicsPath}");
 
@@ -74,6 +74,32 @@ namespace ProjectVagabond.Battle
             ValidateWordLengths(Relics.Values.Select(a => a.AbilityName), "Ability", 14);
 
             Debug.WriteLine($"[BattleDataCache] Successfully loaded {Relics.Count} relic definitions.");
+
+            // --- WEAPONS --- (New Section)
+            string weaponsPath = Path.Combine(content.RootDirectory, "Data", "Items", "Weapons.json");
+            if (!File.Exists(weaponsPath))
+            {
+                Debug.WriteLine($"[BattleDataCache] WARNING: Weapons.json not found at {weaponsPath}. Creating empty dictionary.");
+                Weapons = new Dictionary<string, WeaponData>(StringComparer.OrdinalIgnoreCase);
+            }
+            else
+            {
+                string weaponsJson = File.ReadAllText(weaponsPath);
+                var weaponList = JsonSerializer.Deserialize<List<WeaponData>>(weaponsJson, jsonOptions);
+                Weapons = weaponList.ToDictionary(w => w.WeaponID, w => w, StringComparer.OrdinalIgnoreCase);
+                ValidateWordLengths(Weapons.Values.Select(w => w.WeaponName), "Weapon", 11);
+
+                // Validate that linked moves exist
+                foreach (var weapon in Weapons.Values)
+                {
+                    if (!Moves.ContainsKey(weapon.MoveID))
+                    {
+                        Debug.WriteLine($"[BattleDataCache] [ERROR] Weapon '{weapon.WeaponName}' references missing MoveID '{weapon.MoveID}'.");
+                    }
+                }
+
+                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Weapons.Count} weapon definitions.");
+            }
         }
 
         private static void ValidateWordLengths(IEnumerable<string> names, string dataType, int maxWordLength)

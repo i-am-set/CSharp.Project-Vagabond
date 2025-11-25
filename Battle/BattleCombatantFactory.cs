@@ -53,12 +53,35 @@ namespace ProjectVagabond.Battle
 
             if (combatant.IsPlayerControlled)
             {
-                combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
+                // 1. Set Default Strike Move
+                // If a weapon is equipped, use its move. Otherwise use the base default.
+                if (!string.IsNullOrEmpty(gameState.PlayerState.EquippedWeaponId) &&
+                    BattleDataCache.Weapons.TryGetValue(gameState.PlayerState.EquippedWeaponId, out var weaponData))
+                {
+                    combatant.DefaultStrikeMoveID = weaponData.MoveID;
+
+                    // 2. Apply Weapon Passives
+                    // We create a temporary RelicData object to represent the weapon's effects in combat.
+                    // This allows the existing SecondaryEffectSystem to process weapon effects seamlessly.
+                    var weaponAsRelic = new RelicData
+                    {
+                        RelicID = weaponData.WeaponID,
+                        RelicName = weaponData.WeaponName,
+                        AbilityName = "Weapon Ability", // Generic name or add specific field to WeaponData later
+                        Effects = weaponData.Effects,
+                        StatModifiers = weaponData.StatModifiers
+                    };
+                    combatant.ActiveRelics.Add(weaponAsRelic);
+                }
+                else
+                {
+                    combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
+                }
+
                 combatant.EquippedSpells = gameState.PlayerState.EquippedSpells;
 
-                // Apply Effective Stats from PlayerState (Base + Relic Modifiers)
+                // Apply Effective Stats from PlayerState (Base + Relic + Weapon Modifiers)
                 // We overwrite the stats loaded from the component with the calculated effective stats.
-                // Note: CurrentHP/CurrentMana are persistent and come from the component, so we don't overwrite those with Max values.
                 combatant.Stats.MaxHP = gameState.PlayerState.GetEffectiveStat("MaxHP");
                 combatant.Stats.MaxMana = gameState.PlayerState.GetEffectiveStat("MaxMana");
                 combatant.Stats.Strength = gameState.PlayerState.GetEffectiveStat("Strength");

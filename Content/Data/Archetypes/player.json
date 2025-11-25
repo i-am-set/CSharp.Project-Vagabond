@@ -55,6 +55,11 @@
         "StartingConsumables": {
           "FireScroll": 2,
           "HealthPotion": 3
+        },
+        "StartingWeapons": {
+          "IronSword": 1,
+          "Warhammer": 1,
+          "PoisonDagger": 1
         }
       }
     },

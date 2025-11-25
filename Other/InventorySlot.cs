@@ -116,10 +116,17 @@ namespace ProjectVagabond.UI
                             Vector2 iconOrigin = new Vector2(icon.Width / 2f, icon.Height / 2f);
                             Vector2 centerPos = position + new Vector2(Bounds.Width / 2f, Bounds.Height / 2f);
 
+                            // Cardinal directions
                             spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(-1, 0), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
                             spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(1, 0), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
                             spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(0, -1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
                             spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(0, 1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+
+                            // Diagonals for full cornered outline
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(-1, -1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(1, -1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(-1, 1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, centerPos + new Vector2(1, 1), null, outlineColor, 0f, iconOrigin, 1f, SpriteEffects.None, 0f);
                         }
 
                         // Draw Icon

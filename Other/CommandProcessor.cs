@@ -40,6 +40,8 @@ namespace ProjectVagabond
                 sb.AppendLine("  [palette_teal]Inventory & Items[/]");
                 sb.AppendLine("    inventory           - Shows all inventories (inc. spells/actions).");
                 sb.AppendLine("    giveweapon <id> [n] - Adds weapon(s).");
+                sb.AppendLine("    equipweapon <id>    - Equips a weapon.");
+                sb.AppendLine("    unequipweapon       - Unequips current weapon.");
                 sb.AppendLine("    givearmor <id> [n]  - Adds armor(s).");
                 sb.AppendLine("    giverelic <id> [n]  - Adds relic(s).");
                 sb.AppendLine("    giveconsumable <id> [n] - Adds consumable(s).");
@@ -72,6 +74,41 @@ namespace ProjectVagabond
             _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows all items and moves.");
 
             _commands["giveweapon"] = new Command("giveweapon", (args) => HandleGiveItem(args, "Weapon"), "giveweapon <id> [n]");
+
+            // NEW: Equip Weapon Command
+            _commands["equipweapon"] = new Command("equipweapon", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState == null) return;
+                if (args.Length < 2) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: equipweapon <WeaponID>" }); return; }
+
+                string weaponId = args[1];
+                if (!_gameState.PlayerState.Weapons.ContainsKey(weaponId))
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]You do not have '{weaponId}' in your inventory." });
+                    return;
+                }
+
+                if (!BattleDataCache.Weapons.ContainsKey(weaponId))
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Weapon data for '{weaponId}' not found." });
+                    return;
+                }
+
+                _gameState.PlayerState.EquippedWeaponId = weaponId;
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Equipped {weaponId}." });
+
+            }, "equipweapon <id> - Equips a weapon from inventory.",
+            (args) => _gameState?.PlayerState?.Weapons.Keys.ToList() ?? new List<string>());
+
+            _commands["unequipweapon"] = new Command("unequipweapon", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState == null) return;
+                _gameState.PlayerState.EquippedWeaponId = null;
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Unequipped weapon." });
+            }, "unequipweapon - Unequips current weapon.");
+
             _commands["givearmor"] = new Command("givearmor", (args) => HandleGiveItem(args, "Armor"), "givearmor <id> [n]");
             _commands["giverelic"] = new Command("giverelic", (args) => HandleGiveItem(args, "Relic"), "giverelic <id> [n]",
                 (args) => args.Length == 0 ? BattleDataCache.Relics.Keys.ToList() : new List<string>());
@@ -162,6 +199,12 @@ namespace ProjectVagabond
             _gameState ??= ServiceLocator.Get<GameState>();
             if (_gameState.PlayerState == null) return;
             var ps = _gameState.PlayerState;
+
+            // Show Equipped Weapon
+            if (!string.IsNullOrEmpty(ps.EquippedWeaponId))
+            {
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Equipped Weapon:[/] {ps.EquippedWeaponId}" });
+            }
 
             PrintDict(ps.Weapons, "Weapons");
             PrintDict(ps.Armors, "Armors");

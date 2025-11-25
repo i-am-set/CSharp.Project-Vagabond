@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -17,10 +16,9 @@ namespace ProjectVagabond.UI
     public enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables, Equip }
     public class SplitMapInventoryOverlay
     {
+        // ... (Fields and other methods remain unchanged)
         public bool IsOpen { get; private set; } = false;
         public event Action<bool>? OnInventoryToggled;
-
-        // Expose hover state to block map interaction
         public bool IsHovered => _inventoryButton?.IsHovered ?? false;
 
         private readonly GameState _gameState;
@@ -35,9 +33,8 @@ namespace ProjectVagabond.UI
         private readonly List<InventorySlot> _inventorySlots = new();
         private Rectangle _inventorySlotArea;
 
-        // Panels
         private Rectangle _statsPanelArea;
-        private Rectangle _infoPanelArea; // New Information Panel Area
+        private Rectangle _infoPanelArea;
 
         private ImageButton? _debugButton1;
         private ImageButton? _debugButton2;
@@ -45,12 +42,10 @@ namespace ProjectVagabond.UI
         private ImageButton? _pageRightButton;
         private EquipButton? _relicEquipButton;
 
-        // Submenu State
         private bool _isEquipSubmenuOpen = false;
         private readonly List<EquipButton> _equipSubmenuButtons = new();
-        private int _equipMenuScrollIndex = 0; // Tracks the scroll position
+        private int _equipMenuScrollIndex = 0;
 
-        // Pagination State
         private int _currentPage = 0;
         private int _totalPages = 0;
         private const int ITEMS_PER_PAGE = 12;
@@ -59,7 +54,6 @@ namespace ProjectVagabond.UI
         private InventoryCategory _previousInventoryCategory;
         private int _selectedSlotIndex = -1;
 
-        // Animation State
         private float _inventoryArrowAnimTimer;
         private const float INVENTORY_ARROW_ANIM_DURATION = 0.2f;
         private float _inventoryBobTimer;
@@ -67,24 +61,18 @@ namespace ProjectVagabond.UI
         private Vector2 _inventoryPositionOffset = Vector2.Zero;
         private float _selectedHeaderBobTimer;
 
-        // Page Arrow Animation State
         private float _leftPageArrowBobTimer = 0f;
         private float _rightPageArrowBobTimer = 0f;
         private const float PAGE_ARROW_BOB_DURATION = 0.05f;
 
-        // Stat Cycle Animation State
         private float _statCycleTimer = 0f;
         private RelicData? _previousHoveredRelicData;
         private const float STAT_CYCLE_INTERVAL = 1.0f;
 
-        // Input State
         private MouseState _previousMouseState;
         private KeyboardState _previousKeyboardState;
 
-        // Hover Data
         private RelicData? _hoveredRelicData;
-
-        // Text Formatting Tuning
         private const int SPACE_WIDTH = 5;
 
         public SplitMapInventoryOverlay()
@@ -111,6 +99,7 @@ namespace ProjectVagabond.UI
             _previousKeyboardState = Keyboard.GetState();
         }
 
+        // ... (InitializeInventoryUI, GetRelicData, OpenEquipSubmenu, RefreshEquipSubmenuButtons, CancelEquipSelection, SelectEquipItem, ToggleInventory, RefreshInventorySlots, GetCurrentCategoryItems, Update, ChangePage, CycleCategory, DrawWorld remain unchanged)
         private void InitializeInventoryUI()
         {
             if (_inventoryButton == null)
@@ -156,11 +145,11 @@ namespace ProjectVagabond.UI
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
                 button.OnClick += () =>
                 {
-                    CancelEquipSelection(); // Failsafe: Close submenu if switching categories
+                    CancelEquipSelection();
                     _selectedInventoryCategory = category;
                     _selectedSlotIndex = -1;
-                    _currentPage = 0; // Reset page on category change
-                    _selectedHeaderBobTimer = 0f; // Reset bob timer on category change
+                    _currentPage = 0;
+                    _selectedHeaderBobTimer = 0f;
                     RefreshInventorySlots();
                 };
                 _inventoryHeaderButtons.Add(button);
@@ -168,22 +157,20 @@ namespace ProjectVagabond.UI
                 _inventoryHeaderButtonBaseBounds[button] = bounds;
             }
 
-            // Initialize Equip Button
             var equipRects = _spriteManager.InventoryHeaderButtonSourceRects;
             float equipX = startX - 60f;
             var equipBounds = new Rectangle((int)equipX, (int)buttonY, 32, 32);
             _inventoryEquipButton = new InventoryHeaderButton(equipBounds, _spriteManager.InventoryHeaderButtonEquip, equipRects[0], equipRects[1], equipRects[2], (int)InventoryCategory.Equip, "Equip");
             _inventoryEquipButton.OnClick += () =>
             {
-                CancelEquipSelection(); // Failsafe: Ensure clean state when clicking main equip button
+                CancelEquipSelection();
                 _selectedInventoryCategory = InventoryCategory.Equip;
                 _selectedSlotIndex = -1;
                 _currentPage = 0;
-                _selectedHeaderBobTimer = 0f; // Reset bob timer on category change
+                _selectedHeaderBobTimer = 0f;
                 RefreshInventorySlots();
             };
 
-            // Initialize inventory slot grid
             const int slotContainerWidth = 180;
             const int slotContainerHeight = 132;
             const int slotColumns = 4;
@@ -194,14 +181,12 @@ namespace ProjectVagabond.UI
             int containerY = 200 + 6 + 32 + 1;
             _inventorySlotArea = new Rectangle(containerX, containerY, slotContainerWidth, slotContainerHeight);
 
-            // Initialize Stats Panel Area
             const int statsPanelWidth = 116;
             const int statsPanelHeight = 132;
             int statsPanelX = _inventorySlotArea.Right + 4;
             int statsPanelY = _inventorySlotArea.Y - 1;
             _statsPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
 
-            // Initialize Info Panel Area (Identical to Stats Panel)
             _infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
 
             _inventorySlots.Clear();
@@ -242,39 +227,26 @@ namespace ProjectVagabond.UI
             var rightArrowRects = _spriteManager.InventoryRightArrowButtonSourceRects;
 
             _debugButton1 = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryLeftArrowButton, leftArrowRects[0], leftArrowRects[1]);
-            _debugButton1.OnClick += () =>
-            {
-                ChangePage(-1);
-            };
+            _debugButton1.OnClick += () => { ChangePage(-1); };
 
             _debugButton2 = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryRightArrowButton, rightArrowRects[0], rightArrowRects[1]);
-            _debugButton2.OnClick += () =>
-            {
-                ChangePage(1);
-            };
+            _debugButton2.OnClick += () => { ChangePage(1); };
 
-            // Initialize Page Navigation Buttons
             _pageLeftButton = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryLeftArrowButton, leftArrowRects[0], leftArrowRects[1]);
             _pageLeftButton.OnClick += () => ChangePage(-1);
 
             _pageRightButton = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryRightArrowButton, rightArrowRects[0], rightArrowRects[1]);
             _pageRightButton.OnClick += () => ChangePage(1);
 
-            // Initialize Relic Equip Button
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var equipHoverSprite = _spriteManager.InventoryEquipHoverSprite;
             int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
             int equipButtonY = 250 + 19 + 16;
             _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, equipButtonY, 180, 16), "NOTHING");
             _relicEquipButton.TitleText = "RELIC";
-            _relicEquipButton.ShowTitleOnHoverOnly = false; // Always visible
+            _relicEquipButton.ShowTitleOnHoverOnly = false;
             _relicEquipButton.Font = secondaryFont;
-            _relicEquipButton.OnClick += () =>
-            {
-                OpenEquipSubmenu();
-            };
+            _relicEquipButton.OnClick += () => { OpenEquipSubmenu(); };
 
-            // Initialize Submenu Buttons
             _equipSubmenuButtons.Clear();
             int submenuStartY = equipButtonY - 32;
 
@@ -283,16 +255,15 @@ namespace ProjectVagabond.UI
                 int yPos = submenuStartY + (i * 16);
                 var button = new EquipButton(new Rectangle(equipButtonX, yPos, 180, 16), "");
                 button.TitleText = "SELECT";
-                button.ShowTitleOnHoverOnly = true; // Only visible on hover
+                button.ShowTitleOnHoverOnly = true;
                 button.Font = secondaryFont;
-                button.IsEnabled = false; // Disabled by default
+                button.IsEnabled = false;
                 _equipSubmenuButtons.Add(button);
             }
         }
 
         private RelicData? GetRelicData(string relicId)
         {
-            // BattleDataCache dictionaries are now case-insensitive, so direct lookup is safe.
             if (BattleDataCache.Relics.TryGetValue(relicId, out var data)) return data;
             return null;
         }
@@ -300,16 +271,13 @@ namespace ProjectVagabond.UI
         private void OpenEquipSubmenu()
         {
             _isEquipSubmenuOpen = true;
-            _equipMenuScrollIndex = 0; // Reset scroll on open
+            _equipMenuScrollIndex = 0;
             RefreshEquipSubmenuButtons();
         }
 
         private void RefreshEquipSubmenuButtons()
         {
-            // 1. Get available relics from inventory
             var availableRelics = _gameState.PlayerState.Relics.Keys.ToList();
-
-            // Total virtual items = 1 (REMOVE button) + number of relics
             int totalItems = 1 + availableRelics.Count;
 
             for (int i = 0; i < _equipSubmenuButtons.Count; i++)
@@ -317,16 +285,12 @@ namespace ProjectVagabond.UI
                 var btn = _equipSubmenuButtons[i];
                 int virtualIndex = _equipMenuScrollIndex + i;
 
-                // Reset button state
                 btn.IsEnabled = false;
                 btn.MainText = "";
                 btn.IconTexture = null;
                 btn.IconSilhouette = null;
                 btn.OnClick = null;
 
-                // Apply color pattern
-                // 1st (0), 3rd (2), 5th (4), 7th (6) -> BrightWhite
-                // 2nd (1), 4th (3), 6th (5) -> White
                 if (i % 2 == 0)
                 {
                     btn.CustomDefaultTextColor = _global.Palette_BrightWhite;
@@ -340,18 +304,15 @@ namespace ProjectVagabond.UI
 
                 if (virtualIndex == 0)
                 {
-                    // This is the "REMOVE" button
                     btn.MainText = "REMOVE";
-                    btn.CustomDefaultTextColor = _global.Palette_Red; // Override Main text only
-                                                                      // CustomTitleTextColor remains patternColor (BrightWhite)
+                    btn.CustomDefaultTextColor = _global.Palette_Red;
                     btn.IconTexture = null;
-                    btn.IconSilhouette = null; // Clear silhouette
+                    btn.IconSilhouette = null;
                     btn.IsEnabled = true;
                     btn.OnClick = () => SelectEquipItem(null);
                 }
                 else if (virtualIndex < totalItems)
                 {
-                    // This is a relic item
                     int relicIndex = virtualIndex - 1;
                     string relicId = availableRelics[relicIndex];
                     var relicData = GetRelicData(relicId);
@@ -362,13 +323,12 @@ namespace ProjectVagabond.UI
                         string path = $"Sprites/Items/Relics/{relicData.RelicID}";
                         btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
                         btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
-                        btn.IconSourceRect = null; // Use full texture
+                        btn.IconSourceRect = null;
                         btn.IsEnabled = true;
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                     else
                     {
-                        // Fallback if data missing (should be caught by GameState validation, but safe to handle)
                         btn.MainText = relicId.ToUpper();
                         btn.IconTexture = null;
                         btn.IconSilhouette = null;
@@ -376,34 +336,24 @@ namespace ProjectVagabond.UI
                         btn.OnClick = () => SelectEquipItem(relicId);
                     }
                 }
-                // Else: button remains disabled/blank
             }
         }
 
-        /// <summary>
-        /// Cancels any active equip selection submenu, reverting the UI to the standard equip view.
-        /// This acts as a failsafe when switching categories or closing the inventory.
-        /// </summary>
         private void CancelEquipSelection()
         {
             if (_isEquipSubmenuOpen)
             {
                 _isEquipSubmenuOpen = false;
                 _hoveredRelicData = null;
-                // Future logic: Reset any temporary selection states here if needed
             }
         }
 
         private void SelectEquipItem(string? itemId)
         {
-            // Equip the item in slot 0 (currently hardcoded for this button)
             _gameState.PlayerState.EquippedRelics[0] = itemId;
-
-            // Close submenu
             _isEquipSubmenuOpen = false;
             _hoveredRelicData = null;
 
-            // Refresh the main button text
             if (_relicEquipButton != null)
             {
                 string name = "NOTHING";
@@ -429,8 +379,8 @@ namespace ProjectVagabond.UI
             else
             {
                 _inventoryButton?.SetSprites(_spriteManager.SplitMapInventoryButton, _spriteManager.SplitMapInventoryButtonSourceRects[0], _spriteManager.SplitMapInventoryButtonSourceRects[1]);
-                CancelEquipSelection(); // Ensure submenu is closed when inventory closes
-                _selectedSlotIndex = -1; // Clear selection on close
+                CancelEquipSelection();
+                _selectedSlotIndex = -1;
             }
 
             OnInventoryToggled?.Invoke(IsOpen);
@@ -438,18 +388,12 @@ namespace ProjectVagabond.UI
 
         private void RefreshInventorySlots()
         {
-            // Note: _selectedHeaderBobTimer is NOT reset here anymore to prevent resetting on page change.
-            // It is reset explicitly in CycleCategory and OnClick handlers for category buttons.
-
             foreach (var slot in _inventorySlots) slot.Clear();
 
             var items = GetCurrentCategoryItems();
-
-            // Calculate total pages
             int totalItems = items.Count;
             _totalPages = (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE);
 
-            // Pagination Logic
             int startIndex = _currentPage * ITEMS_PER_PAGE;
             int itemsToDisplay = Math.Min(ITEMS_PER_PAGE, items.Count - startIndex);
 
@@ -458,7 +402,6 @@ namespace ProjectVagabond.UI
                 var item = items[startIndex + i];
                 _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.IconTint);
 
-                // Restore selection state if this slot corresponds to the selected index
                 if (_selectedSlotIndex == i)
                 {
                     _inventorySlots[i].IsSelected = true;
@@ -472,7 +415,17 @@ namespace ProjectVagabond.UI
             switch (_selectedInventoryCategory)
             {
                 case InventoryCategory.Weapons:
-                    foreach (var kvp in _gameState.PlayerState.Weapons) currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, null));
+                    foreach (var kvp in _gameState.PlayerState.Weapons)
+                    {
+                        if (BattleDataCache.Weapons.TryGetValue(kvp.Key, out var weaponData))
+                        {
+                            currentItems.Add((weaponData.WeaponName, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, null));
+                        }
+                        else
+                        {
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, null));
+                        }
+                    }
                     break;
                 case InventoryCategory.Armor:
                     foreach (var kvp in _gameState.PlayerState.Armors) currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, null));
@@ -524,7 +477,6 @@ namespace ProjectVagabond.UI
             var virtualMousePos = Core.TransformMouse(currentMouseState.Position);
             var mouseInWorldSpace = Vector2.Transform(virtualMousePos, Matrix.Invert(cameraTransform));
 
-            // Update Toggle Button
             if (_inventoryButton != null)
             {
                 bool isVisible = IsOpen || isMapIdle;
@@ -546,7 +498,6 @@ namespace ProjectVagabond.UI
                 return;
             }
 
-            // UPDATE DEBUG BUTTONS
             _debugButton1?.Update(currentMouseState, cameraTransform);
             _debugButton2?.Update(currentMouseState, cameraTransform);
 
@@ -570,20 +521,14 @@ namespace ProjectVagabond.UI
                 _inventoryPositionOffset.Y = -MathF.Sin(bobProgress * MathHelper.Pi) * 1f;
             }
 
-            // Update Selected Header Bob Timer
             _selectedHeaderBobTimer += deltaTime;
-            // Speed reduced to 2.5f (half of 5f).
-            // Using (Sin + 1) / 2 ensures a smooth, symmetric 0-1 oscillation, which Round turns into an equal-duration toggle.
             float selectedBobOffset = MathF.Round((MathF.Sin(_selectedHeaderBobTimer * 2.5f) + 1f) * 0.5f);
 
-            // Update Page Arrow Bob Timers
             if (_leftPageArrowBobTimer > 0) _leftPageArrowBobTimer -= deltaTime;
             if (_rightPageArrowBobTimer > 0) _rightPageArrowBobTimer -= deltaTime;
 
-            // Handle Input for Category Switching
             int scrollDelta = currentMouseState.ScrollWheelValue - _previousMouseState.ScrollWheelValue;
 
-            // Calculate header area for scroll interaction
             var firstHeader = _inventoryHeaderButtonBaseBounds.Values.First();
             var lastHeader = _inventoryHeaderButtonBaseBounds.Values.Last();
             var headerArea = new Rectangle(firstHeader.Left, firstHeader.Top, lastHeader.Right - firstHeader.Left, firstHeader.Height);
@@ -596,11 +541,10 @@ namespace ProjectVagabond.UI
             bool scrollDown = scrollDelta < 0;
             bool isHoveringHeader = headerArea.Contains(mouseInWorldSpace);
 
-            // Handle Submenu Scrolling
             if (_isEquipSubmenuOpen && scrollDelta != 0)
             {
-                int totalItems = 1 + _gameState.PlayerState.Relics.Count; // 1 for REMOVE
-                int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
+                int totalItems = 1 + _gameState.PlayerState.Relics.Count;
+                int maxScroll = Math.Max(0, totalItems - 7);
 
                 if (scrollDelta < 0 && _equipMenuScrollIndex < maxScroll)
                 {
@@ -613,7 +557,6 @@ namespace ProjectVagabond.UI
                     RefreshEquipSubmenuButtons();
                 }
             }
-            // Handle Category Switching and Pagination
             else if (!_isEquipSubmenuOpen)
             {
                 if (leftPressed)
@@ -638,7 +581,6 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // Update Header Buttons
             int selectedIndex = (int)_selectedInventoryCategory;
             const float repulsionAmount = 8f;
             const float repulsionSpeed = 15f;
@@ -677,7 +619,6 @@ namespace ProjectVagabond.UI
                 float selectedBobY = 0f;
                 if (button.IsSelected)
                 {
-                    // (Sin + 1) / 2 goes 0->1->0. Rounding makes it snap 0 or 1. Negate for Up.
                     selectedBobY = -MathF.Round((MathF.Sin(_selectedHeaderBobTimer * 5f) + 1f) * 0.5f);
                 }
 
@@ -691,7 +632,6 @@ namespace ProjectVagabond.UI
                 button.Update(currentMouseState, cameraTransform);
             }
 
-            // Update Equip Button
             if (_inventoryEquipButton != null)
             {
                 float equipBaseX = (Global.VIRTUAL_WIDTH - 172) / 2f + 19f - 60f;
@@ -709,14 +649,12 @@ namespace ProjectVagabond.UI
                 _inventoryEquipButton.Update(currentMouseState, cameraTransform);
             }
 
-            // Update Debug Buttons Position
             if (selectedButton != null && _debugButton1 != null && _debugButton2 != null)
             {
                 float progress = Math.Clamp(_inventoryArrowAnimTimer / INVENTORY_ARROW_ANIM_DURATION, 0f, 1f);
                 float easedProgress = Easing.EaseOutCubic(progress);
                 float currentOffset = MathHelper.Lerp(16f, 13f, easedProgress);
 
-                // Use base bounds to calculate Y position without the selection bob effect
                 var baseBounds = _inventoryHeaderButtonBaseBounds[selectedButton];
                 int centerY = baseBounds.Center.Y + (int)MathF.Round(_inventoryPositionOffset.Y);
                 int centerX = selectedButton.Bounds.Center.X;
@@ -728,10 +666,9 @@ namespace ProjectVagabond.UI
                 _debugButton2.IsEnabled = (int)_selectedInventoryCategory < (int)InventoryCategory.Consumables && _selectedInventoryCategory != InventoryCategory.Equip;
             }
 
-            // Update Slots or Equip UI
             if (_selectedInventoryCategory != InventoryCategory.Equip)
             {
-                _hoveredRelicData = null; // Ensure this is cleared when not in equip mode
+                _hoveredRelicData = null;
 
                 InventorySlot? bestSlot = null;
                 float minDistance = float.MaxValue;
@@ -757,7 +694,6 @@ namespace ProjectVagabond.UI
                     }
                 }
 
-                // Update Page Buttons
                 if (_totalPages > 1)
                 {
                     var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
@@ -769,7 +705,6 @@ namespace ProjectVagabond.UI
 
                     const int buttonGap = 5;
 
-                    // Calculate bob offsets
                     float leftBob = 0f;
                     if (_leftPageArrowBobTimer > 0)
                     {
@@ -811,7 +746,7 @@ namespace ProjectVagabond.UI
             }
             else if (_selectedInventoryCategory == InventoryCategory.Equip)
             {
-                _hoveredRelicData = null; // Reset hover data each frame
+                _hoveredRelicData = null;
 
                 if (_isEquipSubmenuOpen)
                 {
@@ -824,7 +759,6 @@ namespace ProjectVagabond.UI
                         if (button.IsHovered && button.IsEnabled)
                         {
                             int virtualIndex = _equipMenuScrollIndex + i;
-                            // Index 0 is "REMOVE", so relics start at index 1
                             if (virtualIndex > 0)
                             {
                                 int relicIndex = virtualIndex - 1;
@@ -846,7 +780,6 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // Update Stat Cycle Timer
             _statCycleTimer += deltaTime;
             if (_hoveredRelicData != _previousHoveredRelicData)
             {
@@ -865,15 +798,13 @@ namespace ProjectVagabond.UI
 
             _currentPage += direction;
 
-            // Wrap logic
             if (_currentPage > maxPage) _currentPage = 0;
             else if (_currentPage < 0) _currentPage = maxPage;
 
-            // Trigger animation
             if (direction < 0) _leftPageArrowBobTimer = PAGE_ARROW_BOB_DURATION;
             else if (direction > 0) _rightPageArrowBobTimer = PAGE_ARROW_BOB_DURATION;
 
-            _selectedSlotIndex = -1; // Clear selection on page change
+            _selectedSlotIndex = -1;
             RefreshInventorySlots();
         }
 
@@ -882,14 +813,13 @@ namespace ProjectVagabond.UI
             int currentIndex = (int)_selectedInventoryCategory;
             int newIndex = currentIndex + direction;
 
-            // Clamp to valid range [0, Consumables], excluding Equip
             if (newIndex >= 0 && newIndex <= (int)InventoryCategory.Consumables)
             {
-                CancelEquipSelection(); // Failsafe
+                CancelEquipSelection();
                 _selectedInventoryCategory = (InventoryCategory)newIndex;
-                _currentPage = 0; // Reset page on category change
-                _selectedSlotIndex = -1; // Clear selection on category change
-                _selectedHeaderBobTimer = 0f; // Reset bob timer on category change
+                _currentPage = 0;
+                _selectedSlotIndex = -1;
+                _selectedHeaderBobTimer = 0f;
                 RefreshInventorySlots();
             }
         }
@@ -936,7 +866,6 @@ namespace ProjectVagabond.UI
             {
                 foreach (var slot in _inventorySlots) slot.Draw(spriteBatch, font, gameTime, Matrix.Identity);
 
-                // Draw Page Counter
                 if (_totalPages > 1)
                 {
                     var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
@@ -947,7 +876,6 @@ namespace ProjectVagabond.UI
                         _inventorySlotArea.Bottom - 2
                     );
 
-                    // Draw background rectangle
                     var pixel = ServiceLocator.Get<Texture2D>();
                     var bgRect = new Rectangle(
                         (int)textPos.X - 1,
@@ -963,7 +891,6 @@ namespace ProjectVagabond.UI
                     _pageRightButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
 
-                // Draw Info Panel
                 DrawInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont);
             }
             else
@@ -975,7 +902,6 @@ namespace ProjectVagabond.UI
                         button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     }
 
-                    // Draw Scroll Arrows
                     var arrowTexture = _spriteManager.InventoryScrollArrowsSprite;
                     var arrowRects = _spriteManager.InventoryScrollArrowRects;
 
@@ -984,7 +910,6 @@ namespace ProjectVagabond.UI
                         int totalItems = 1 + _gameState.PlayerState.Relics.Count;
                         int maxScroll = Math.Max(0, totalItems - 7);
 
-                        // Up Arrow
                         if (_equipMenuScrollIndex > 0)
                         {
                             var firstButton = _equipSubmenuButtons[0];
@@ -995,7 +920,6 @@ namespace ProjectVagabond.UI
                             spriteBatch.DrawSnapped(arrowTexture, arrowPos, arrowRects[0], Color.White);
                         }
 
-                        // Down Arrow
                         if (_equipMenuScrollIndex < maxScroll)
                         {
                             var lastButton = _equipSubmenuButtons.Last();
@@ -1015,7 +939,6 @@ namespace ProjectVagabond.UI
                     }
                 }
 
-                // Draw Stats Panel (Moved here to show in both main equip view and submenu)
                 DrawStatsPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont);
             }
 
@@ -1027,7 +950,6 @@ namespace ProjectVagabond.UI
                 var pixel = ServiceLocator.Get<Texture2D>();
                 spriteBatch.DrawSnapped(pixel, _inventorySlotArea, Color.Blue * 0.5f);
 
-                // Debug Draw for Panels
                 if (_selectedInventoryCategory == InventoryCategory.Equip)
                 {
                     spriteBatch.DrawSnapped(pixel, _statsPanelArea, Color.HotPink * 0.5f);
@@ -1043,7 +965,6 @@ namespace ProjectVagabond.UI
 
         private void DrawInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont)
         {
-            // Find the active slot (Selected takes precedence over Hovered)
             InventorySlot? activeSlot = _inventorySlots.FirstOrDefault(s => s.IsSelected);
             if (activeSlot == null)
             {
@@ -1052,17 +973,14 @@ namespace ProjectVagabond.UI
 
             if (activeSlot == null || !activeSlot.HasItem || string.IsNullOrEmpty(activeSlot.ItemId)) return;
 
-            // Retrieve Item Data based on Category
             string name = activeSlot.ItemId.ToUpper();
             string description = "";
             string iconPath = activeSlot.IconPath ?? "";
             Texture2D? iconTexture = null;
             Texture2D? iconSilhouette = null;
 
-            // Attempt to fetch rich data
             if (_selectedInventoryCategory == InventoryCategory.Relics)
             {
-                // Try to find by name if ID lookup fails (since slot stores Name)
                 var relic = BattleDataCache.Relics.Values.FirstOrDefault(r => r.RelicName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
                 if (relic != null)
                 {
@@ -1091,19 +1009,26 @@ namespace ProjectVagabond.UI
                     iconPath = $"Sprites/Items/Spells/{move.MoveID}";
                 }
             }
+            else if (_selectedInventoryCategory == InventoryCategory.Weapons)
+            {
+                var weapon = BattleDataCache.Weapons.Values.FirstOrDefault(w => w.WeaponName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (weapon != null)
+                {
+                    name = weapon.WeaponName.ToUpper();
+                    description = weapon.Description.ToUpper();
+                    iconPath = $"Sprites/Items/Weapons/{weapon.WeaponID}";
+                }
+            }
 
-            // Load Icon
             if (!string.IsNullOrEmpty(iconPath))
             {
                 iconTexture = _spriteManager.GetItemSprite(iconPath);
                 iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath);
             }
 
-            // --- Drawing Logic ---
             const int spriteSize = 32;
             const int gap = 4;
 
-            // 1. Calculate Total Height for Centering
             int maxTitleWidth = _infoPanelArea.Width - (4 * 2);
             var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
             float totalTitleHeight = titleLines.Count * font.LineHeight;
@@ -1119,20 +1044,24 @@ namespace ProjectVagabond.UI
 
             float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0);
 
-            // 2. Calculate Start Y
             float currentY = _infoPanelArea.Y + (_infoPanelArea.Height - totalContentHeight) / 2f;
-            currentY -= 10f; // Move up 10 pixels as requested
+            currentY -= 10f;
 
-            // 3. Draw Sprite
             int spriteX = _infoPanelArea.X + (_infoPanelArea.Width - spriteSize) / 2;
 
             if (iconSilhouette != null)
             {
                 Color outlineColor = _global.Palette_Gray;
+                // Cardinal
                 spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY), outlineColor);
                 spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY), outlineColor);
                 spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY - 1), outlineColor);
                 spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY + 1), outlineColor);
+                // Diagonal
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY - 1), outlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY - 1), outlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY + 1), outlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY + 1), outlineColor);
             }
 
             if (iconTexture != null)
@@ -1143,7 +1072,6 @@ namespace ProjectVagabond.UI
 
             currentY += spriteSize + gap;
 
-            // 4. Draw Title
             foreach (var line in titleLines)
             {
                 float lineWidth = 0;
@@ -1175,7 +1103,6 @@ namespace ProjectVagabond.UI
                 currentY += font.LineHeight;
             }
 
-            // 5. Draw Description
             if (descLines.Any())
             {
                 currentY += gap;
@@ -1214,16 +1141,14 @@ namespace ProjectVagabond.UI
 
         private void DrawStatsPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont)
         {
-            // --- Draw Hovered Item Details ---
             if (_hoveredRelicData != null)
             {
-                const int padding = 2; // Reduced padding for "tightly against top"
+                const int padding = 2;
                 const int spriteSize = 32;
                 const int gap = 4;
 
-                // 1. Sprite (Top Left - Centered Horizontally)
                 int spriteX = _statsPanelArea.X + (_statsPanelArea.Width - spriteSize) / 2;
-                int spriteY = _statsPanelArea.Y; // Tightly against top
+                int spriteY = _statsPanelArea.Y;
                 string path = $"Sprites/Items/Relics/{_hoveredRelicData.RelicID}";
                 var relicSprite = _spriteManager.GetRelicSprite(path);
 
@@ -1231,10 +1156,16 @@ namespace ProjectVagabond.UI
                 if (relicSilhouette != null)
                 {
                     Color outlineColor = _global.Palette_Gray;
+                    // Cardinal
                     spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY), outlineColor);
                     spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY), outlineColor);
                     spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX, spriteY - 1), outlineColor);
                     spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX, spriteY + 1), outlineColor);
+                    // Diagonal
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY - 1), outlineColor);
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY - 1), outlineColor);
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY + 1), outlineColor);
+                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY + 1), outlineColor);
                 }
 
                 if (relicSprite != null)
@@ -1242,17 +1173,14 @@ namespace ProjectVagabond.UI
                     spriteBatch.DrawSnapped(relicSprite, new Vector2(spriteX, spriteY), Color.White);
                 }
 
-                // 2. Title
-                // Anchor: Bottom of the title block is fixed relative to the sprite bottom.
                 float titleBottomY = spriteY + spriteSize + gap;
 
                 string name = _hoveredRelicData.RelicName.ToUpper();
-                int maxTitleWidth = _statsPanelArea.Width - (4 * 2); // 4px padding on sides
+                int maxTitleWidth = _statsPanelArea.Width - (4 * 2);
 
                 var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
                 float totalTitleHeight = titleLines.Count * font.LineHeight;
 
-                // Calculate start Y so the block ends at titleBottomY
                 float currentTitleY = titleBottomY - totalTitleHeight;
 
                 foreach (var line in titleLines)
@@ -1266,7 +1194,6 @@ namespace ProjectVagabond.UI
                             lineWidth += font.MeasureString(segment.Text).Width;
                     }
 
-                    // Center horizontally within the panel
                     float lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2f;
                     float currentX = lineX;
 
@@ -1287,18 +1214,15 @@ namespace ProjectVagabond.UI
                     currentTitleY += font.LineHeight;
                 }
 
-                // 3. Description
-                // Area: From titleBottomY to statsStartY
-                int statsStartY = _statsPanelArea.Y + 77; // Defined later for stats, used here for boundary
+                int statsStartY = _statsPanelArea.Y + 77;
                 float descAreaTop = titleBottomY;
                 float descAreaBottom = statsStartY;
                 float descAreaHeight = descAreaBottom - descAreaTop;
 
-                float descWidth = _statsPanelArea.Width - (4 * 2); // 4px padding
+                float descWidth = _statsPanelArea.Width - (4 * 2);
                 var descLines = ParseAndWrapRichText(secondaryFont, _hoveredRelicData.Description.ToUpper(), descWidth, _global.Palette_White);
                 float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
 
-                // Center vertically in the area
                 float currentDescY = descAreaTop + (descAreaHeight - totalDescHeight) / 2f;
 
                 foreach (var line in descLines)
@@ -1333,7 +1257,6 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // --- Draw Stats ---
             var playerState = _gameState.PlayerState;
             if (playerState == null) return;
 
@@ -1354,7 +1277,6 @@ namespace ProjectVagabond.UI
             int arrowX = 66;
             int val2RightX = 107;
 
-            // Helper to get modifier from an equipped slot
             int GetEquippedModifier(int slotIndex, string statKey)
             {
                 if (slotIndex >= playerState.EquippedRelics.Length) return 0;
@@ -1368,7 +1290,6 @@ namespace ProjectVagabond.UI
                 return 0;
             }
 
-            // Helper to get modifier from the hovered relic data
             int GetHoveredModifier(string statKey)
             {
                 if (_hoveredRelicData == null) return 0;
@@ -1380,91 +1301,71 @@ namespace ProjectVagabond.UI
                 var stat = stats[i];
                 int y = startY + (i * rowSpacing);
 
-                // 1. Calculate Values
-                // Get the base stat directly to perform accurate math
                 int baseStat = playerState.GetBaseStat(stat.StatKey);
 
-                // Calculate total current modifier from all equipped items
                 int totalCurrentMod = 0;
                 for (int slot = 0; slot < playerState.EquippedRelics.Length; slot++)
                 {
                     totalCurrentMod += GetEquippedModifier(slot, stat.StatKey);
                 }
 
-                // Current Effective Value (Clamped)
                 int currentVal = Math.Max(1, baseStat + totalCurrentMod);
 
-                // Projected Calculation
                 int projectedVal = currentVal;
                 int diff = 0;
                 bool isComparing = _isEquipSubmenuOpen && _hoveredRelicData != null;
 
                 if (isComparing)
                 {
-                    // We are replacing slot 0
                     int currentSlotMod = GetEquippedModifier(0, stat.StatKey);
                     int newMod = GetHoveredModifier(stat.StatKey);
 
-                    // Calculate projected raw value
                     int projectedRaw = baseStat + totalCurrentMod - currentSlotMod + newMod;
 
-                    // Clamp projected value
                     projectedVal = Math.Max(1, projectedRaw);
 
-                    // Calculate difference based on clamped values
                     diff = projectedVal - currentVal;
                 }
 
-                // 2. Determine Left Text (Modifier or Current)
                 string leftText;
                 Color leftColor;
                 Color labelColor;
 
                 if (isComparing && diff != 0)
                 {
-                    // Stat is changing: Highlight label
                     labelColor = _global.Palette_BrightWhite;
 
-                    // Cycle logic
                     float cyclePos = _statCycleTimer % (STAT_CYCLE_INTERVAL * 2);
                     bool showModifier = cyclePos >= STAT_CYCLE_INTERVAL;
 
                     if (showModifier)
                     {
-                        // Show Modifier (+5)
                         leftText = (diff > 0 ? "+" : "") + diff.ToString();
                         leftColor = diff > 0 ? _global.Palette_LightGreen : _global.Palette_Red;
                     }
                     else
                     {
-                        // Show Current Value (90)
                         leftText = currentVal.ToString();
                         leftColor = _global.Palette_BrightWhite;
                     }
                 }
                 else
                 {
-                    // Stat is NOT changing or not comparing: Default label, show current value
                     labelColor = _global.Palette_Gray;
                     leftText = currentVal.ToString();
                     leftColor = _global.Palette_LightGray;
                 }
 
-                // 3. Draw Label
                 spriteBatch.DrawStringSnapped(secondaryFont, stat.Label, new Vector2(startX, y + 4), labelColor);
 
-                // 4. Draw Left Text (Current Value OR Modifier)
                 Vector2 leftSize = font.MeasureString(leftText);
                 spriteBatch.DrawStringSnapped(font, leftText, new Vector2(startX + val1RightX - leftSize.X, y + 4), leftColor);
 
-                // 5. Draw Right Side (Only if comparing)
                 if (isComparing)
                 {
-                    // Arrow
                     Color arrowColor = (diff != 0) ? _global.Palette_BrightWhite : _global.Palette_Gray;
                     spriteBatch.DrawStringSnapped(secondaryFont, ">", new Vector2(startX + arrowX, y + 4), arrowColor);
 
-                    // Projected Value
                     string projStr = projectedVal.ToString();
                     Vector2 projSize = font.MeasureString(projStr);
                     Color projColor = _global.Palette_LightGray;
@@ -1476,6 +1377,7 @@ namespace ProjectVagabond.UI
             }
         }
 
+        // ... (ParseAndWrapRichText, ParseColor, DrawScreen remain the same)
         private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor)
         {
             var lines = new List<List<ColoredText>>();
@@ -1485,7 +1387,6 @@ namespace ProjectVagabond.UI
             float currentLineWidth = 0f;
             Color currentColor = defaultColor;
 
-            // Split by tags OR whitespace (capturing both)
             var parts = Regex.Split(text, @"(\[.*?\]|\s+)");
 
             foreach (var part in parts)
@@ -1506,19 +1407,15 @@ namespace ProjectVagabond.UI
                 }
                 else if (part.Contains("\n"))
                 {
-                    // Force a new line
                     lines.Add(currentLine);
                     currentLine = new List<ColoredText>();
                     currentLineWidth = 0f;
                 }
                 else
                 {
-                    // It's a word or spaces (but not newlines)
                     bool isWhitespace = string.IsNullOrWhiteSpace(part);
                     float partWidth = isWhitespace ? (part.Length * SPACE_WIDTH) : font.MeasureString(part).Width;
 
-                    // If it's a word and it doesn't fit, wrap.
-                    // We don't wrap on whitespace; we let it trail off the edge.
                     if (!isWhitespace && currentLineWidth + partWidth > maxWidth && currentLineWidth > 0)
                     {
                         lines.Add(currentLine);
@@ -1526,7 +1423,6 @@ namespace ProjectVagabond.UI
                         currentLineWidth = 0f;
                     }
 
-                    // Optimization: Don't add leading whitespace to a new line
                     if (isWhitespace && currentLineWidth == 0)
                     {
                         continue;
@@ -1549,20 +1445,17 @@ namespace ProjectVagabond.UI
         {
             string tag = colorName.ToLowerInvariant();
 
-            // 1. Stats
             if (tag == "cstr") return _global.StatColor_Strength;
             if (tag == "cint") return _global.StatColor_Intelligence;
             if (tag == "cten") return _global.StatColor_Tenacity;
             if (tag == "cagi") return _global.StatColor_Agility;
 
-            // 2. General
             if (tag == "cpositive") return _global.ColorPositive;
             if (tag == "cnegative") return _global.ColorNegative;
             if (tag == "ccrit") return _global.ColorCrit;
             if (tag == "cimmune") return _global.ColorImmune;
             if (tag == "cctm") return _global.ColorConditionToMeet;
 
-            // 3. Elements
             if (tag == "cfire") return _global.ElementColors.GetValueOrDefault(2, Color.White);
             if (tag == "cwater") return _global.ElementColors.GetValueOrDefault(3, Color.White);
             if (tag == "carcane") return _global.ElementColors.GetValueOrDefault(4, Color.White);
@@ -1576,7 +1469,6 @@ namespace ProjectVagabond.UI
             if (tag == "cice") return _global.ElementColors.GetValueOrDefault(12, Color.White);
             if (tag == "cnature") return _global.ElementColors.GetValueOrDefault(13, Color.White);
 
-            // 4. Status Effects
             if (tag.StartsWith("c"))
             {
                 string effectName = tag.Substring(1);
@@ -1593,7 +1485,6 @@ namespace ProjectVagabond.UI
                 if (effectName == "root") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Root, Color.White);
             }
 
-            // 5. Standard Palette Colors
             switch (tag)
             {
                 case "teal": return _global.Palette_Teal;
@@ -1614,7 +1505,6 @@ namespace ProjectVagabond.UI
 
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // Only draw the toggle button here
             _inventoryButton?.Draw(spriteBatch, font, gameTime, transform);
         }
     }
