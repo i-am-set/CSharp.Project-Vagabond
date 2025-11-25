@@ -10,7 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
@@ -939,7 +938,7 @@ namespace ProjectVagabond.UI
                 string name = _hoveredRelicData.RelicName.ToUpper();
                 int maxTitleWidth = _statsPanelArea.Width - (4 * 2); // 4px padding on sides
 
-                var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
+                var titleLines = WrapText(font, name, maxTitleWidth);
                 float totalTitleHeight = titleLines.Count * font.LineHeight;
 
                 // Calculate start Y so the block ends at titleBottomY
@@ -947,18 +946,10 @@ namespace ProjectVagabond.UI
 
                 foreach (var line in titleLines)
                 {
-                    float lineWidth = 0;
-                    foreach (var segment in line) lineWidth += font.MeasureString(segment.Text).Width;
-
+                    var lineSize = font.MeasureString(line);
                     // Center horizontally within the panel
-                    float lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2f;
-                    float currentX = lineX;
-
-                    foreach (var segment in line)
-                    {
-                        spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentTitleY), segment.Color);
-                        currentX += font.MeasureString(segment.Text).Width;
-                    }
+                    float lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineSize.Width) / 2f;
+                    spriteBatch.DrawStringSnapped(font, line, new Vector2(lineX, currentTitleY), _global.Palette_BrightWhite);
                     currentTitleY += font.LineHeight;
                 }
 
@@ -970,7 +961,7 @@ namespace ProjectVagabond.UI
                 float descAreaHeight = descAreaBottom - descAreaTop;
 
                 float descWidth = _statsPanelArea.Width - (4 * 2); // 4px padding
-                var descLines = ParseAndWrapRichText(secondaryFont, _hoveredRelicData.Description.ToUpper(), descWidth, _global.Palette_White);
+                var descLines = WrapText(secondaryFont, _hoveredRelicData.Description.ToUpper(), descWidth);
                 float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
 
                 // Center vertically in the area
@@ -978,17 +969,12 @@ namespace ProjectVagabond.UI
 
                 foreach (var line in descLines)
                 {
-                    float lineWidth = 0;
-                    foreach (var segment in line) lineWidth += secondaryFont.MeasureString(segment.Text).Width;
-
-                    var lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2;
-                    float currentX = lineX;
-
-                    foreach (var segment in line)
-                    {
-                        spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentDescY), segment.Color);
-                        currentX += secondaryFont.MeasureString(segment.Text).Width;
-                    }
+                    var lineSize = secondaryFont.MeasureString(line);
+                    var linePos = new Vector2(
+                        _statsPanelArea.X + (_statsPanelArea.Width - lineSize.Width) / 2,
+                        currentDescY
+                    );
+                    spriteBatch.DrawStringSnapped(secondaryFont, line, linePos, _global.Palette_White);
                     currentDescY += secondaryFont.LineHeight;
                 }
             }
@@ -1033,131 +1019,35 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor)
+        private List<string> WrapText(BitmapFont font, string text, float maxLineWidth)
         {
-            var lines = new List<List<ColoredText>>();
+            var lines = new List<string>();
             if (string.IsNullOrEmpty(text)) return lines;
 
-            var currentLine = new List<ColoredText>();
-            float currentLineWidth = 0f;
-            Color currentColor = defaultColor;
+            var words = text.Split(' ');
+            var currentLine = new StringBuilder();
 
-            // Regex to split by tags like [color] or [/] or [default]
-            // Captures the tag including brackets
-            var parts = Regex.Split(text, @"(\[.*?\])");
-
-            foreach (var part in parts)
+            foreach (var word in words)
             {
-                if (string.IsNullOrEmpty(part)) continue;
-
-                if (part.StartsWith("[") && part.EndsWith("]"))
+                var testLine = currentLine.Length > 0 ? currentLine.ToString() + " " + word : word;
+                if (font.MeasureString(testLine).Width > maxLineWidth)
                 {
-                    // It's a tag
-                    string tagContent = part.Substring(1, part.Length - 2).ToLowerInvariant();
-                    if (tagContent == "/" || tagContent == "default")
-                    {
-                        currentColor = defaultColor;
-                    }
-                    else
-                    {
-                        currentColor = ParseColor(tagContent);
-                    }
+                    lines.Add(currentLine.ToString());
+                    currentLine.Clear();
+                    currentLine.Append(word);
                 }
                 else
                 {
-                    // It's text. Split by spaces to handle wrapping.
-                    // We keep the spaces attached to the words or handle them as separators.
-                    // Simple approach: Split by space, but re-add space when measuring/drawing if not start of line.
-                    var words = part.Split(' ');
-
-                    for (int i = 0; i < words.Length; i++)
-                    {
-                        string word = words[i];
-                        if (string.IsNullOrEmpty(word) && i > 0)
-                        {
-                            // This handles multiple spaces or trailing spaces if split creates empty entries
-                            // For simple wrapping, we can usually ignore empty entries from Split unless we want exact whitespace fidelity.
-                            // Let's just treat it as a space character if we are not at the start of a line.
-                            if (currentLineWidth > 0)
-                            {
-                                word = " ";
-                            }
-                            else
-                            {
-                                continue;
-                            }
-                        }
-                        else if (i > 0 || (currentLine.Count > 0 && !string.IsNullOrEmpty(word)))
-                        {
-                            // Add a space before the word if it's not the very first word of the block
-                            // AND not the start of a new line (unless we want leading spaces).
-                            // Actually, simpler: Just add the space to the word if it's not the first word in the *original string part*.
-                            // But wrapping logic needs to know about the space.
-                            // Let's just add a separate space segment if needed.
-                            if (currentLineWidth > 0)
-                            {
-                                float spaceWidth = font.MeasureString(" ").Width;
-                                if (currentLineWidth + spaceWidth > maxWidth)
-                                {
-                                    lines.Add(currentLine);
-                                    currentLine = new List<ColoredText>();
-                                    currentLineWidth = 0f;
-                                }
-                                else
-                                {
-                                    currentLine.Add(new ColoredText(" ", currentColor));
-                                    currentLineWidth += spaceWidth;
-                                }
-                            }
-                        }
-
-                        if (string.IsNullOrEmpty(word)) continue;
-
-                        float wordWidth = font.MeasureString(word).Width;
-
-                        // If the word itself is wider than max width, we might need to split it (not implemented here for simplicity)
-                        // or just let it overflow.
-                        // If adding the word exceeds max width, wrap to new line.
-                        if (currentLineWidth + wordWidth > maxWidth && currentLineWidth > 0)
-                        {
-                            lines.Add(currentLine);
-                            currentLine = new List<ColoredText>();
-                            currentLineWidth = 0f;
-                        }
-
-                        currentLine.Add(new ColoredText(word, currentColor));
-                        currentLineWidth += wordWidth;
-                    }
+                    if (currentLine.Length > 0)
+                        currentLine.Append(" ");
+                    currentLine.Append(word);
                 }
             }
 
-            if (currentLine.Count > 0)
-            {
-                lines.Add(currentLine);
-            }
+            if (currentLine.Length > 0)
+                lines.Add(currentLine.ToString());
 
             return lines;
-        }
-
-        private Color ParseColor(string colorName)
-        {
-            // Map string names to Global palette colors
-            switch (colorName)
-            {
-                case "teal": return _global.Palette_Teal;
-                case "red": return _global.Palette_Red;
-                case "blue": return _global.Palette_LightBlue;
-                case "green": return _global.Palette_LightGreen;
-                case "yellow": return _global.Palette_Yellow;
-                case "orange": return _global.Palette_Orange;
-                case "purple": return _global.Palette_LightPurple;
-                case "pink": return _global.Palette_Pink;
-                case "gray": return _global.Palette_Gray;
-                case "white": return _global.Palette_White;
-                case "brightwhite": return _global.Palette_BrightWhite;
-                case "darkgray": return _global.Palette_DarkGray;
-                default: return _global.Palette_White; // Fallback
-            }
         }
 
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
