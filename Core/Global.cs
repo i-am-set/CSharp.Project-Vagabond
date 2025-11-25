@@ -54,21 +54,28 @@ namespace ProjectVagabond
             StatColor_Intelligence = Color.Magenta;
             StatColor_Tenacity = Color.Lime;
             StatColor_Agility = Color.Yellow;
-             
+
+            // Initialize Generic Feedback Colors
+            ColorPositive = Palette_LightGreen;
+            ColorNegative = Palette_Red;
+            ColorCrit = Palette_Yellow;
+            ColorImmune = Palette_Teal;
+            ColorConditionToMeet = Palette_LightYellow;
+
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
             {
                 { 1, Palette_White },      // Neutral
                 { 2, Palette_Red },        // Fire
                 { 3, Palette_LightBlue },  // Water
-                { 4, Palette_Pink },// Arcane
+                { 4, Palette_Pink },       // Arcane
                 { 5, Palette_Orange },     // Earth
                 { 6, Palette_Gray },       // Metal
-                { 7, Palette_LightPurple },  // Toxic
+                { 7, Palette_LightPurple },// Toxic
                 { 8, Palette_Teal },       // Wind
                 { 9, Palette_DarkPurple }, // Void
-                { 10, Palette_LightYellow },    // Light
-                { 11, Palette_Yellow},// Electric
+                { 10, Palette_LightYellow },// Light
+                { 11, Palette_Yellow},     // Electric
                 { 12, Palette_LightBlue }, // Ice
                 { 13, Palette_LightGreen } // Nature
             };
@@ -82,6 +89,21 @@ namespace ProjectVagabond
                 { 3, Color.DarkOrchid },   // Epic
                 { 4, Color.Red },          // Mythic
                 { 5, Color.Yellow }        // Legendary
+            };
+
+            StatusEffectColors = new Dictionary<StatusEffectType, Color>
+            {
+                { StatusEffectType.Poison, Palette_LightPurple },
+                { StatusEffectType.Stun, Palette_Yellow },
+                { StatusEffectType.Regen, Palette_LightGreen },
+                { StatusEffectType.Dodging, Palette_LightBlue },
+                { StatusEffectType.Burn, Palette_Red },
+                { StatusEffectType.Freeze, Palette_DarkBlue },
+                { StatusEffectType.Blind, Palette_LightGray },
+                { StatusEffectType.Confuse, Palette_Pink },
+                { StatusEffectType.Silence, Palette_LightGray },
+                { StatusEffectType.Fear, Palette_DarkPurple },
+                { StatusEffectType.Root, Palette_Orange }
             };
         }
 
@@ -174,17 +196,17 @@ namespace ProjectVagabond
         public Color Palette_LightGray { get; set; } = new Color(85, 96, 125);
         public Color Palette_White { get; set; } = new Color(116, 125, 136);
         public Color Palette_Teal { get; set; } = new Color(65, 222, 149);
-        public Color Palette_LightBlue { get; set; } = new Color(42, 164, 170); 
-        public Color Palette_DarkBlue { get; set; } = new Color(59, 119, 166); 
-        public Color Palette_DarkGreen { get; set; } = new Color(36, 147, 55); 
-        public Color Palette_LightGreen { get; set; } = new Color(86, 190, 68); 
-        public Color Palette_LightYellow { get; set; } = new Color(198, 222, 120); 
-        public Color Palette_Yellow { get; set; } = new Color(243, 194, 32); 
+        public Color Palette_LightBlue { get; set; } = new Color(42, 164, 170);
+        public Color Palette_DarkBlue { get; set; } = new Color(59, 119, 166);
+        public Color Palette_DarkGreen { get; set; } = new Color(36, 147, 55);
+        public Color Palette_LightGreen { get; set; } = new Color(86, 190, 68);
+        public Color Palette_LightYellow { get; set; } = new Color(198, 222, 120);
+        public Color Palette_Yellow { get; set; } = new Color(243, 194, 32);
         public Color Palette_Orange { get; set; } = new Color(196, 101, 28);
-        public Color Palette_Red { get; set; } = new Color(181, 65, 49); 
-        public Color Palette_DarkPurple { get; set; } = new Color(97, 64, 122); 
+        public Color Palette_Red { get; set; } = new Color(181, 65, 49);
+        public Color Palette_DarkPurple { get; set; } = new Color(97, 64, 122);
         public Color Palette_LightPurple { get; set; } = new Color(143, 61, 167);
-        public Color Palette_Pink { get; set; } = new Color(234, 97, 157); 
+        public Color Palette_Pink { get; set; } = new Color(234, 97, 157);
         public Color Palette_BrightWhite { get; set; } = new Color(193, 229, 234);
 
         // Colors
@@ -217,9 +239,17 @@ namespace ProjectVagabond
         public Color StatColor_Tenacity { get; private set; }
         public Color StatColor_Agility { get; private set; }
 
+        // Generic Feedback Colors
+        public Color ColorPositive { get; private set; }
+        public Color ColorNegative { get; private set; }
+        public Color ColorCrit { get; private set; }
+        public Color ColorImmune { get; private set; }
+        public Color ColorConditionToMeet { get; private set; }
+
         // Data-driven Colors
         public Dictionary<int, Color> ElementColors { get; private set; }
         public Dictionary<int, Color> RarityColors { get; private set; }
+        public Dictionary<StatusEffectType, Color> StatusEffectColors { get; private set; }
 
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //

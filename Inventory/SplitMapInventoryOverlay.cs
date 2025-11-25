@@ -1137,8 +1137,54 @@ namespace ProjectVagabond.UI
 
         private Color ParseColor(string colorName)
         {
-            // Map string names to Global palette colors
-            switch (colorName)
+            string tag = colorName.ToLowerInvariant();
+
+            // 1. Stats
+            if (tag == "cstr") return _global.StatColor_Strength;
+            if (tag == "cint") return _global.StatColor_Intelligence;
+            if (tag == "cten") return _global.StatColor_Tenacity;
+            if (tag == "cagi") return _global.StatColor_Agility;
+
+            // 2. General
+            if (tag == "cpositive") return _global.ColorPositive;
+            if (tag == "cnegative") return _global.ColorNegative;
+            if (tag == "ccrit") return _global.ColorCrit;
+            if (tag == "cimmune") return _global.ColorImmune;
+            if (tag == "cctm") return _global.ColorConditionToMeet;
+
+            // 3. Elements
+            if (tag == "cfire") return _global.ElementColors.GetValueOrDefault(2, Color.White);
+            if (tag == "cwater") return _global.ElementColors.GetValueOrDefault(3, Color.White);
+            if (tag == "carcane") return _global.ElementColors.GetValueOrDefault(4, Color.White);
+            if (tag == "cearth") return _global.ElementColors.GetValueOrDefault(5, Color.White);
+            if (tag == "cmetal") return _global.ElementColors.GetValueOrDefault(6, Color.White);
+            if (tag == "ctoxic") return _global.ElementColors.GetValueOrDefault(7, Color.White);
+            if (tag == "cwind") return _global.ElementColors.GetValueOrDefault(8, Color.White);
+            if (tag == "cvoid") return _global.ElementColors.GetValueOrDefault(9, Color.White);
+            if (tag == "clight") return _global.ElementColors.GetValueOrDefault(10, Color.White);
+            if (tag == "celectric") return _global.ElementColors.GetValueOrDefault(11, Color.White);
+            if (tag == "cice") return _global.ElementColors.GetValueOrDefault(12, Color.White);
+            if (tag == "cnature") return _global.ElementColors.GetValueOrDefault(13, Color.White);
+
+            // 4. Status Effects
+            if (tag.StartsWith("c"))
+            {
+                string effectName = tag.Substring(1);
+                if (effectName == "poison") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Poison, Color.White);
+                if (effectName == "stun") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Stun, Color.White);
+                if (effectName == "regen") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Regen, Color.White);
+                if (effectName == "dodging") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Dodging, Color.White);
+                if (effectName == "burn") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Burn, Color.White);
+                if (effectName == "freeze") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Freeze, Color.White);
+                if (effectName == "blind") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Blind, Color.White);
+                if (effectName == "confuse") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Confuse, Color.White);
+                if (effectName == "silence") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Silence, Color.White);
+                if (effectName == "fear") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Fear, Color.White);
+                if (effectName == "root") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Root, Color.White);
+            }
+
+            // 5. Standard Palette Colors
+            switch (tag)
             {
                 case "teal": return _global.Palette_Teal;
                 case "red": return _global.Palette_Red;
@@ -1152,7 +1198,7 @@ namespace ProjectVagabond.UI
                 case "white": return _global.Palette_White;
                 case "brightwhite": return _global.Palette_BrightWhite;
                 case "darkgray": return _global.Palette_DarkGray;
-                default: return _global.Palette_White; // Fallback
+                default: return _global.Palette_White;
             }
         }
 

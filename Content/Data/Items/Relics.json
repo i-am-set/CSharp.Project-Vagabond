@@ -3,7 +3,7 @@
     "RelicID": "verdanttalisman",
     "RelicName": "Verdant Talisman",
     "AbilityName": "Green Thumb",
-    "Description": "Nature spells deal 20% more damage",
+    "Description": "[cnature]Nature[/] spells deal[cpositive] 1.2x[/] damage and holder has element '[cnature]Nature[/]'",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
@@ -16,7 +16,7 @@
     "RelicID": "charredeffigy",
     "RelicName": "Charred Effigy",
     "AbilityName": "Pyromancer",
-    "Description": "Fire spells deal 20% more damage",
+    "Description": "[cfire]Fire[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -28,7 +28,7 @@
     "RelicID": "tidalstone",
     "RelicName": "Tidal Stone",
     "AbilityName": "Hydromancer",
-    "Description": "Water spells deal 20% more damage",
+    "Description": "[cwater]Water[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -40,7 +40,7 @@
     "RelicID": "arcanistsring",
     "RelicName": "Arcanist's Ring",
     "AbilityName": "Thaumomancer",
-    "Description": "Arcane spells deal 20% more damage",
+    "Description": "[carcane]Arcane[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -52,7 +52,7 @@
     "RelicID": "earthencore",
     "RelicName": "Earthen Core",
     "AbilityName": "Geomancer",
-    "Description": "Earth spells deal 20% more damage",
+    "Description": "[cearth]Earth[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -64,7 +64,7 @@
     "RelicID": "lodestone",
     "RelicName": "Lodestone",
     "AbilityName": "Ferromancer",
-    "Description": "Metal spells deal 20% more damage",
+    "Description": "[cmetal]Metal[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -76,7 +76,7 @@
     "RelicID": "serpentsfang",
     "RelicName": "Serpent's Fang",
     "AbilityName": "Venommancer",
-    "Description": "Toxic spells deal 20% more damage",
+    "Description": "[ctoxic]Toxic[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -88,7 +88,7 @@
     "RelicID": "zephyrcharm",
     "RelicName": "Zephyr Charm",
     "AbilityName": "Aeromancer",
-    "Description": "Wind spells deal 20% more damage",
+    "Description": "[cwind]Wind[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -100,7 +100,7 @@
     "RelicID": "voidheartshard",
     "RelicName": "Voidheart Shard",
     "AbilityName": "Umbramancer",
-    "Description": "Void spells deal 20% more damage",
+    "Description": "[cvoid]Void[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -112,7 +112,7 @@
     "RelicID": "sunstone",
     "RelicName": "Sunstone",
     "AbilityName": "Photomancer",
-    "Description": "Light spells deal 20% more damage",
+    "Description": "[clight]Light[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -124,7 +124,7 @@
     "RelicID": "stormcallerorb",
     "RelicName": "Stormcaller Orb",
     "AbilityName": "Electromancer",
-    "Description": "Electric spells deal 20% more damage",
+    "Description": "[celectric]Electric[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -136,7 +136,7 @@
     "RelicID": "hoarfrostcrystal",
     "RelicName": "Hoarfrost Crystal",
     "AbilityName": "Cryomancer",
-    "Description": "Ice spells deal 20% more damage",
+    "Description": "[cice]Ice[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -148,7 +148,7 @@
     "RelicID": "everblossomseed",
     "RelicName": "Everblossom Seed",
     "AbilityName": "Floramancer",
-    "Description": "Nature spells deal 20% more damage",
+    "Description": "[cnature]Nature[/] spells deal[cpositive] 1.2x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -160,7 +160,7 @@
     "RelicID": "viperskiss",
     "RelicName": "Viper's Kiss",
     "AbilityName": "Venomous",
-    "Description": "50% chance to inflict poison with contact",
+    "Description": "[cpositive]50%[/] chance to inflict [cpoison]poison[/] with [cctm]contact[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
@@ -172,7 +172,7 @@
     "RelicID": "trollhidebracers",
     "RelicName": "Trollhide Bracers",
     "AbilityName": "Thick Skin",
-    "Description": "Take 20% less physical damage",
+    "Description": "Receive [cpositive]0.8x[/] physical damage",
     "Rarity": 0,
     "LevelRequirement": 0,
     "Effects": {
@@ -184,7 +184,7 @@
     "RelicID": "eagleeyescope",
     "RelicName": "Eagle-Eye Scope",
     "AbilityName": "Sniper",
-    "Description": "Increases crit chance by 10%",
+    "Description": "Increases [ccrit]crit[/] chance by [cpositive]10%[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -196,7 +196,7 @@
     "RelicID": "phoenixash",
     "RelicName": "Phoenix Ash",
     "AbilityName": "Regeneration",
-    "Description": "Restore 5% HP at end of turn",
+    "Description": "Restore [cpositive]5%[/] HP [cctm]at end of turn[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -208,7 +208,7 @@
     "RelicID": "vulturespendant",
     "RelicName": "Vulture's Pendant",
     "AbilityName": "Opportunist",
-    "Description": "Targets with status effects take 2x damage",
+    "Description": "Targets with [cctm]status effects[/] take [cpositive]2.0x[/] damage",
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
@@ -220,7 +220,7 @@
     "RelicID": "voltaicmantle",
     "RelicName": "Voltaic Mantle",
     "AbilityName": "Static Charge",
-    "Description": "30% to stun attackers that make contact",
+    "Description": "[cpositive]30%[/] chance to stun attackers that [cctm]make contact[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
@@ -232,7 +232,7 @@
     "RelicID": "berserkersheart",
     "RelicName": "Berserker's Heart",
     "AbilityName": "Adrenaline Rush",
-    "Description": "Deal 2x damage below 33% HP",
+    "Description": "Deal [cpositive]2.0x[] damage [cctm]below 33% HP[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
@@ -244,7 +244,7 @@
     "RelicID": "sunblessedleaf",
     "RelicName": "Sun-Blessed Leaf",
     "AbilityName": "Photosynthesis",
-    "Description": "Immune to Light based attacks; heal 25% HP instead",
+    "Description": "[cimmune]Immune[/] to [clight]Light[/] based moves; heal [cpositive]25%[/] HP instead",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -256,7 +256,7 @@
     "RelicID": "anchorcharm",
     "RelicName": "Anchor Charm",
     "AbilityName": "Last Stand",
-    "Description": "2x power stat when acting last",
+    "Description": "[cpositive]2.0x[/] power stat [cctm]when acting last in the turn[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
@@ -268,7 +268,7 @@
     "RelicID": "cursedhourglass",
     "RelicName": "Cursed Hourglass",
     "AbilityName": "Lingering Curse",
-    "Description": "Status effects inflicted by holder last 1 extra turn",
+    "Description": "Status effects inflicted by holder last [cpositive]+1 extra turn[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
@@ -280,7 +280,7 @@
     "RelicID": "rubbersoles",
     "RelicName": "Rubber Soles",
     "AbilityName": "Grounding",
-    "Description": "Immune to Electric based moves",
+    "Description": "[cimmune]Immune[/] to [celectric]Electric[/] based moves",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
@@ -292,7 +292,7 @@
     "RelicID": "idolofdisease",
     "RelicName": "Idol of Disease",
     "AbilityName": "Toxic Aura",
-    "Description": "50% chance to poison a random enemy at end of turn",
+    "Description": "[cpositive]50%[/] chance to [cpoison]poison[/] a random enemy [cctm]at end of turn[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -304,7 +304,7 @@
     "RelicID": "crownofserenity",
     "RelicName": "Crown of Serenity",
     "AbilityName": "Unwavering",
-    "Description": "Immune to Stun and Fear",
+    "Description": "[cimmune]Immune[/] to [cstun]Stun[/] and [cfear]Fear[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
@@ -316,11 +316,11 @@
     "RelicID": "bulwarkshield",
     "RelicName": "Bulwark Shield",
     "AbilityName": "Bulwark",
-    "Description": "Reduce crit damage taken by 30%",
+    "Description": "Receive [cpositive]0.6x[/] [ccrit]crit[/] damage",
     "Rarity": 1,
     "LevelRequirement": 3,
     "Effects": {
-      "CritDamageReduction": "30"
+      "CritDamageReduction": "40"
     },
     "Tags": [ "Defense", "Critical" ]
   },
@@ -328,7 +328,7 @@
     "RelicID": "assassinsmark",
     "RelicName": "Assassin's Mark",
     "AbilityName": "First Blood",
-    "Description": "Your first attack deals 50% more damage",
+    "Description": "Holder's [cctm]first[/] attack deals [cpositive]1.5x[/] damage",
     "Rarity": 2,
     "LevelRequirement": 1,
     "Effects": {
@@ -340,7 +340,7 @@
     "RelicID": "gorgonsgaze",
     "RelicName": "Gorgon's Gaze",
     "AbilityName": "Intimidate",
-    "Description": "Lower all enemy Strength stat by 1 on entering battle",
+    "Description": "Lower all enemy [cstr]Strength[/] stat by [cpositive]-1[/] [cctm]on entering battle[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -352,7 +352,7 @@
     "RelicID": "spikedcarapace",
     "RelicName": "Spiked Carapace",
     "AbilityName": "Iron Barbs",
-    "Description": "Attackers lose 12.5% max HP on contact",
+    "Description": "Attackers lose [cpositive]12.5%[/] max HP [cctm]on contact[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -364,7 +364,7 @@
     "RelicID": "pristinegem",
     "RelicName": "Pristine Gem",
     "AbilityName": "Full Power",
-    "Description": "Deal 50% more damage at full HP",
+    "Description": "Deal [cpositive]1.5x[/] damage [cctm]at full HP[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
@@ -376,7 +376,7 @@
     "RelicID": "allseeingeye",
     "RelicName": "All-Seeing Eye",
     "AbilityName": "Keen Eye",
-    "Description": "Moves ignore enemy dodging",
+    "Description": "Holder's moves [cpositive]ignore[/] [cdodging]dodging[/] status effect",
     "Rarity": 1,
     "LevelRequirement": 1,
     "Effects": {
@@ -388,7 +388,7 @@
     "RelicID": "ghostlyslippers",
     "RelicName": "Ghostly Slippers",
     "AbilityName": "Nimble Feet",
-    "Description": "50% chance attacks miss while dodging",
+    "Description": "WIP 50% chance attacks miss while dodging WIP",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -400,7 +400,7 @@
     "RelicID": "shatteredamulet",
     "RelicName": "Shattered Amulet",
     "AbilityName": "Glass Cannon",
-    "Description": "Deal 30% more damage but recieve 15% more damage",
+    "Description": "Deal [cpositive]1.3x[/] damage but Receive [cnegative]1.15x[/] damage",
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
@@ -412,7 +412,7 @@
     "RelicID": "dominostone",
     "RelicName": "Domino Stone",
     "AbilityName": "Chain Reaction",
-    "Description": "Multi-hit moves gain 5% damage per hit",
+    "Description": "Multi-hit moves gain [cpositive]5%[] damage per hit",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -424,7 +424,7 @@
     "RelicID": "crackedgauntlet",
     "RelicName": "Cracked Gauntlet",
     "AbilityName": "Reckless Abandon",
-    "Description": "Contact moves deal 50% more damage but lose 10% accuracy",
+    "Description": "Contact moves deal [cpositive]1.5x[/] damage but [cnegative]-10%[/] accuracy",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
@@ -436,7 +436,7 @@
     "RelicID": "scorpionstinger",
     "RelicName": "Scorpion Stinger",
     "AbilityName": "Armor Piercer",
-    "Description": "Ignore 25% of target's Tenacity",
+    "Description": "Ignore [cpositive]25%[/] of target's [cten]Tenacity[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
@@ -448,7 +448,7 @@
     "RelicID": "leechtoothnecklace",
     "RelicName": "Leech-Tooth Necklace",
     "AbilityName": "Sanguine Thirst",
-    "Description": "Heal 25% of damage dealt with contact moves",
+    "Description": "Heal [cpositive]25%[/] of damage dealt [cctm]with contact moves[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -460,11 +460,11 @@
     "RelicID": "oakenheart",
     "RelicName": "Oaken Heart",
     "AbilityName": "Vigor",
-    "Description": "Takes 20% less damage above 75% HP",
+    "Description": "Receive [cpositive]0.5x[/] damage [cctm]above 75% HP[/]",
     "Rarity": 0,
     "LevelRequirement": 0,
     "Effects": {
-      "Vigor": "75,20"
+      "Vigor": "75,50"
     },
     "Tags": [ "Defense" ]
   },
@@ -472,7 +472,7 @@
     "RelicID": "priestspendant",
     "RelicName": "Priest's Pendant",
     "AbilityName": "Cornered Animal",
-    "Description": "Agility rises by 50% below 33% HP or vs 4+ enemies",
+    "Description": "[cpositive]1.5x[/] [cagi]Agility[/] [cctm]when below 33% HP[/] [darkgray](or 4+ enemies)[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
@@ -484,7 +484,7 @@
     "RelicID": "miasmavial",
     "RelicName": "Miasma Vial",
     "AbilityName": "Contagion",
-    "Description": "Status effects spread to another enemy for 1 turn",
+    "Description": "Status effects [cpositive]spread[/] to another enemy for [cpositive]+1[/] turn",
     "Rarity": 3,
     "LevelRequirement": 5,
     "Effects": {
@@ -496,7 +496,7 @@
     "RelicID": "shadowcloak",
     "RelicName": "Shadow Cloak",
     "AbilityName": "Ambush Predator",
-    "Description": "First attack gains +1 priority but -20% damage",
+    "Description": "First attack gains [cpositive]+1[/] priority but [cnegative]0.8x[/] damage",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {
@@ -508,7 +508,7 @@
     "RelicID": "ironmaidenfragment",
     "RelicName": "Iron Maiden Fragment",
     "AbilityName": "Sadist",
-    "Description": "Applying status effects raises Strength by 1",
+    "Description": "[cctm]Applying status effects[/] raises [cstr]Strength[/] by [cpositive]+1[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -520,7 +520,7 @@
     "RelicID": "sacrificialdagger",
     "RelicName": "Sacrificial Dagger",
     "AbilityName": "Bloodletter",
-    "Description": "Void spells cost 5% HP but deal 50% more damage",
+    "Description": "[cvoid]Void[/] spells cost [cnegative]5%[/] HP but deal [cpositive]1.5x[/] damage",
     "Rarity": 3,
     "LevelRequirement": 5,
     "Effects": {
@@ -532,7 +532,7 @@
     "RelicID": "runicweave",
     "RelicName": "Runic Weave",
     "AbilityName": "Spellweaver",
-    "Description": "After an Action, your next Spell deals 50% more",
+    "Description": "[cctm]After an Action[/], holder's next Spell deals [cpositive]1.5x[/] damage",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -544,7 +544,7 @@
     "RelicID": "leadhelmet",
     "RelicName": "Lead Helmet",
     "AbilityName": "Momentum",
-    "Description": "After defeating a target, next attack deal 2x damage",
+    "Description": "[cctm]After defeating a target[/], next attack deals [cpositive]2.0x[/] damage",
     "Rarity": 3,
     "LevelRequirement": 4,
     "Effects": {
@@ -556,7 +556,7 @@
     "RelicID": "whetstone",
     "RelicName": "Whetstone",
     "AbilityName": "Escalation",
-    "Description": "Gain 10% damage each round, up to 100%",
+    "Description": "Gain [cpositive]1.1x[/] damage each round, up to [cpositive]2.0x[/]",
     "Rarity": 3,
     "LevelRequirement": 5,
     "Effects": {
@@ -568,7 +568,7 @@
     "RelicID": "masochistsmail",
     "RelicName": "Masochist's Mail",
     "AbilityName": "Pain Fuel",
-    "Description": "Taking crit damage raises Strength and Intelligence by 1",
+    "Description": "Taking [ccrit]crit[/] damage raises [cstr]Strength[/] and [cint]Intelligence[/] by [cpositive]+1[/]",
     "Rarity": 2,
     "LevelRequirement": 3,
     "Effects": {
@@ -580,7 +580,7 @@
     "RelicID": "ichorousheart",
     "RelicName": "Ichorous Heart",
     "AbilityName": "Caustic Blood",
-    "Description": "Lifesteal against you damages the attacker instead of healingx",
+    "Description": "Lifesteal against holder [cpositive]damages[/] the attacker instead of healing",
     "Rarity": 2,
     "LevelRequirement": 4,
     "Effects": {
