@@ -10,6 +10,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
@@ -66,6 +67,9 @@ namespace ProjectVagabond.UI
 
         // Hover Data
         private RelicData? _hoveredRelicData;
+
+        // Text Formatting Tuning
+        private const int SPACE_WIDTH = 5;
 
         public SplitMapInventoryOverlay()
         {
@@ -938,7 +942,7 @@ namespace ProjectVagabond.UI
                 string name = _hoveredRelicData.RelicName.ToUpper();
                 int maxTitleWidth = _statsPanelArea.Width - (4 * 2); // 4px padding on sides
 
-                var titleLines = WrapText(font, name, maxTitleWidth);
+                var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
                 float totalTitleHeight = titleLines.Count * font.LineHeight;
 
                 // Calculate start Y so the block ends at titleBottomY
@@ -946,10 +950,33 @@ namespace ProjectVagabond.UI
 
                 foreach (var line in titleLines)
                 {
-                    var lineSize = font.MeasureString(line);
+                    float lineWidth = 0;
+                    foreach (var segment in line)
+                    {
+                        if (string.IsNullOrWhiteSpace(segment.Text))
+                            lineWidth += segment.Text.Length * SPACE_WIDTH;
+                        else
+                            lineWidth += font.MeasureString(segment.Text).Width;
+                    }
+
                     // Center horizontally within the panel
-                    float lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineSize.Width) / 2f;
-                    spriteBatch.DrawStringSnapped(font, line, new Vector2(lineX, currentTitleY), _global.Palette_BrightWhite);
+                    float lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2f;
+                    float currentX = lineX;
+
+                    foreach (var segment in line)
+                    {
+                        float segWidth;
+                        if (string.IsNullOrWhiteSpace(segment.Text))
+                        {
+                            segWidth = segment.Text.Length * SPACE_WIDTH;
+                        }
+                        else
+                        {
+                            segWidth = font.MeasureString(segment.Text).Width;
+                            spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentTitleY), segment.Color);
+                        }
+                        currentX += segWidth;
+                    }
                     currentTitleY += font.LineHeight;
                 }
 
@@ -961,7 +988,7 @@ namespace ProjectVagabond.UI
                 float descAreaHeight = descAreaBottom - descAreaTop;
 
                 float descWidth = _statsPanelArea.Width - (4 * 2); // 4px padding
-                var descLines = WrapText(secondaryFont, _hoveredRelicData.Description.ToUpper(), descWidth);
+                var descLines = ParseAndWrapRichText(secondaryFont, _hoveredRelicData.Description.ToUpper(), descWidth, _global.Palette_White);
                 float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
 
                 // Center vertically in the area
@@ -969,12 +996,32 @@ namespace ProjectVagabond.UI
 
                 foreach (var line in descLines)
                 {
-                    var lineSize = secondaryFont.MeasureString(line);
-                    var linePos = new Vector2(
-                        _statsPanelArea.X + (_statsPanelArea.Width - lineSize.Width) / 2,
-                        currentDescY
-                    );
-                    spriteBatch.DrawStringSnapped(secondaryFont, line, linePos, _global.Palette_White);
+                    float lineWidth = 0;
+                    foreach (var segment in line)
+                    {
+                        if (string.IsNullOrWhiteSpace(segment.Text))
+                            lineWidth += segment.Text.Length * SPACE_WIDTH;
+                        else
+                            lineWidth += secondaryFont.MeasureString(segment.Text).Width;
+                    }
+
+                    var lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2;
+                    float currentX = lineX;
+
+                    foreach (var segment in line)
+                    {
+                        float segWidth;
+                        if (string.IsNullOrWhiteSpace(segment.Text))
+                        {
+                            segWidth = segment.Text.Length * SPACE_WIDTH;
+                        }
+                        else
+                        {
+                            segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                            spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentDescY), segment.Color);
+                        }
+                        currentX += segWidth;
+                    }
                     currentDescY += secondaryFont.LineHeight;
                 }
             }
@@ -1019,35 +1066,94 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private List<string> WrapText(BitmapFont font, string text, float maxLineWidth)
+        private List<List<ColoredText>> ParseAndWrapRichText(BitmapFont font, string text, float maxWidth, Color defaultColor)
         {
-            var lines = new List<string>();
+            var lines = new List<List<ColoredText>>();
             if (string.IsNullOrEmpty(text)) return lines;
 
-            var words = text.Split(' ');
-            var currentLine = new StringBuilder();
+            var currentLine = new List<ColoredText>();
+            float currentLineWidth = 0f;
+            Color currentColor = defaultColor;
 
-            foreach (var word in words)
+            // Split by tags OR whitespace (capturing both)
+            var parts = Regex.Split(text, @"(\[.*?\]|\s+)");
+
+            foreach (var part in parts)
             {
-                var testLine = currentLine.Length > 0 ? currentLine.ToString() + " " + word : word;
-                if (font.MeasureString(testLine).Width > maxLineWidth)
+                if (string.IsNullOrEmpty(part)) continue;
+
+                if (part.StartsWith("[") && part.EndsWith("]"))
                 {
-                    lines.Add(currentLine.ToString());
-                    currentLine.Clear();
-                    currentLine.Append(word);
+                    string tagContent = part.Substring(1, part.Length - 2).ToLowerInvariant();
+                    if (tagContent == "/" || tagContent == "default")
+                    {
+                        currentColor = defaultColor;
+                    }
+                    else
+                    {
+                        currentColor = ParseColor(tagContent);
+                    }
+                }
+                else if (part.Contains("\n"))
+                {
+                    // Force a new line
+                    lines.Add(currentLine);
+                    currentLine = new List<ColoredText>();
+                    currentLineWidth = 0f;
                 }
                 else
                 {
-                    if (currentLine.Length > 0)
-                        currentLine.Append(" ");
-                    currentLine.Append(word);
+                    // It's a word or spaces (but not newlines)
+                    bool isWhitespace = string.IsNullOrWhiteSpace(part);
+                    float partWidth = isWhitespace ? (part.Length * SPACE_WIDTH) : font.MeasureString(part).Width;
+
+                    // If it's a word and it doesn't fit, wrap.
+                    // We don't wrap on whitespace; we let it trail off the edge.
+                    if (!isWhitespace && currentLineWidth + partWidth > maxWidth && currentLineWidth > 0)
+                    {
+                        lines.Add(currentLine);
+                        currentLine = new List<ColoredText>();
+                        currentLineWidth = 0f;
+                    }
+
+                    // Optimization: Don't add leading whitespace to a new line
+                    if (isWhitespace && currentLineWidth == 0)
+                    {
+                        continue;
+                    }
+
+                    currentLine.Add(new ColoredText(part, currentColor));
+                    currentLineWidth += partWidth;
                 }
             }
 
-            if (currentLine.Length > 0)
-                lines.Add(currentLine.ToString());
+            if (currentLine.Count > 0)
+            {
+                lines.Add(currentLine);
+            }
 
             return lines;
+        }
+
+        private Color ParseColor(string colorName)
+        {
+            // Map string names to Global palette colors
+            switch (colorName)
+            {
+                case "teal": return _global.Palette_Teal;
+                case "red": return _global.Palette_Red;
+                case "blue": return _global.Palette_LightBlue;
+                case "green": return _global.Palette_LightGreen;
+                case "yellow": return _global.Palette_Yellow;
+                case "orange": return _global.Palette_Orange;
+                case "purple": return _global.Palette_LightPurple;
+                case "pink": return _global.Palette_Pink;
+                case "gray": return _global.Palette_Gray;
+                case "white": return _global.Palette_White;
+                case "brightwhite": return _global.Palette_BrightWhite;
+                case "darkgray": return _global.Palette_DarkGray;
+                default: return _global.Palette_White; // Fallback
+            }
         }
 
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
