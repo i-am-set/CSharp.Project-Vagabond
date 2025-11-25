@@ -61,6 +61,11 @@ namespace ProjectVagabond.UI
         private Vector2 _inventoryPositionOffset = Vector2.Zero;
         private float _selectedHeaderBobTimer;
 
+        // Stat Cycle Animation State
+        private float _statCycleTimer = 0f;
+        private RelicData? _previousHoveredRelicData;
+        private const float STAT_CYCLE_INTERVAL = 1.0f;
+
         // Input State
         private MouseState _previousMouseState;
         private KeyboardState _previousKeyboardState;
@@ -86,6 +91,8 @@ namespace ProjectVagabond.UI
             _inventoryBobTimer = INVENTORY_BOB_DURATION;
             _inventoryPositionOffset = Vector2.Zero;
             _selectedHeaderBobTimer = 0f;
+            _statCycleTimer = 0f;
+            _previousHoveredRelicData = null;
 
             _previousMouseState = Mouse.GetState();
             _previousKeyboardState = Keyboard.GetState();
@@ -684,6 +691,8 @@ namespace ProjectVagabond.UI
             // Update Slots or Equip UI
             if (_selectedInventoryCategory != InventoryCategory.Equip)
             {
+                _hoveredRelicData = null; // Ensure this is cleared when not in equip mode
+
                 InventorySlot? bestSlot = null;
                 float minDistance = float.MaxValue;
                 var inverseCamera = Matrix.Invert(cameraTransform);
@@ -743,6 +752,14 @@ namespace ProjectVagabond.UI
                         _relicEquipButton.Update(currentMouseState, cameraTransform);
                     }
                 }
+            }
+
+            // Update Stat Cycle Timer
+            _statCycleTimer += deltaTime;
+            if (_hoveredRelicData != _previousHoveredRelicData)
+            {
+                _statCycleTimer = 0f;
+                _previousHoveredRelicData = _hoveredRelicData;
             }
 
             _previousMouseState = currentMouseState;
@@ -1030,39 +1047,142 @@ namespace ProjectVagabond.UI
             var playerState = _gameState.PlayerState;
             if (playerState == null) return;
 
-            var stats = new List<(string Label, int Value)>
-        {
-            ("MAX HP", playerState.MaxHP),
-            ("STRNTH", playerState.Strength),
-            ("INTELL", playerState.Intelligence),
-            ("TENACT", playerState.Tenacity),
-            ("AGILTY", playerState.Agility)
-        };
+            var stats = new List<(string Label, string StatKey)>
+            {
+                ("MAX HP", "MaxHP"),
+                ("STRNTH", "Strength"),
+                ("INTELL", "Intelligence"),
+                ("TENACT", "Tenacity"),
+                ("AGILTY", "Agility")
+            };
 
             int startX = _statsPanelArea.X + 3;
             int startY = _statsPanelArea.Y + 77;
-            int rowSpacing = 10; // Reduced from 12 to 10 for compactness
+            int rowSpacing = 10;
 
             int val1RightX = 63;
             int arrowX = 66;
             int val2RightX = 107;
+
+            // Helper to get modifier from an equipped slot
+            int GetEquippedModifier(int slotIndex, string statKey)
+            {
+                if (slotIndex >= playerState.EquippedRelics.Length) return 0;
+                string? relicId = playerState.EquippedRelics[slotIndex];
+                if (string.IsNullOrEmpty(relicId)) return 0;
+
+                if (BattleDataCache.Relics.TryGetValue(relicId, out var relic))
+                {
+                    return relic.StatModifiers.GetValueOrDefault(statKey, 0);
+                }
+                return 0;
+            }
+
+            // Helper to get modifier from the hovered relic data
+            int GetHoveredModifier(string statKey)
+            {
+                if (_hoveredRelicData == null) return 0;
+                return _hoveredRelicData.StatModifiers.GetValueOrDefault(statKey, 0);
+            }
 
             for (int i = 0; i < stats.Count; i++)
             {
                 var stat = stats[i];
                 int y = startY + (i * rowSpacing);
 
-                spriteBatch.DrawStringSnapped(secondaryFont, stat.Label, new Vector2(startX, y + 4), _global.Palette_Gray);
+                // 1. Calculate Values
+                // Get the base stat directly to perform accurate math
+                int baseStat = playerState.GetBaseStat(stat.StatKey);
 
-                string valStr = stat.Value.ToString();
-                Vector2 valSize = font.MeasureString(valStr);
-                spriteBatch.DrawStringSnapped(font, valStr, new Vector2(startX + val1RightX - valSize.X, y + 4), _global.Palette_LightGray);
+                // Calculate total current modifier from all equipped items
+                int totalCurrentMod = 0;
+                for (int slot = 0; slot < playerState.EquippedRelics.Length; slot++)
+                {
+                    totalCurrentMod += GetEquippedModifier(slot, stat.StatKey);
+                }
 
-                spriteBatch.DrawStringSnapped(secondaryFont, ">", new Vector2(startX + arrowX, y + 4), _global.Palette_Gray);
+                // Current Effective Value (Clamped)
+                int currentVal = Math.Max(1, baseStat + totalCurrentMod);
 
-                string projStr = stat.Value.ToString();
-                Vector2 projSize = font.MeasureString(projStr);
-                spriteBatch.DrawStringSnapped(font, projStr, new Vector2(startX + val2RightX - projSize.X, y + 4), _global.Palette_LightGray);
+                // Projected Calculation
+                int projectedVal = currentVal;
+                int diff = 0;
+                bool isComparing = _isEquipSubmenuOpen && _hoveredRelicData != null;
+
+                if (isComparing)
+                {
+                    // We are replacing slot 0
+                    int currentSlotMod = GetEquippedModifier(0, stat.StatKey);
+                    int newMod = GetHoveredModifier(stat.StatKey);
+
+                    // Calculate projected raw value
+                    int projectedRaw = baseStat + totalCurrentMod - currentSlotMod + newMod;
+
+                    // Clamp projected value
+                    projectedVal = Math.Max(1, projectedRaw);
+
+                    // Calculate difference based on clamped values
+                    diff = projectedVal - currentVal;
+                }
+
+                // 2. Determine Left Text (Modifier or Current)
+                string leftText;
+                Color leftColor;
+                Color labelColor;
+
+                if (isComparing && diff != 0)
+                {
+                    // Stat is changing: Highlight label
+                    labelColor = _global.Palette_BrightWhite;
+
+                    // Cycle logic
+                    float cyclePos = _statCycleTimer % (STAT_CYCLE_INTERVAL * 2);
+                    bool showModifier = cyclePos >= STAT_CYCLE_INTERVAL;
+
+                    if (showModifier)
+                    {
+                        // Show Modifier (+5)
+                        leftText = (diff > 0 ? "+" : "") + diff.ToString();
+                        leftColor = diff > 0 ? _global.Palette_LightGreen : _global.Palette_Red;
+                    }
+                    else
+                    {
+                        // Show Current Value (90)
+                        leftText = currentVal.ToString();
+                        leftColor = _global.Palette_BrightWhite;
+                    }
+                }
+                else
+                {
+                    // Stat is NOT changing or not comparing: Default label, show current value
+                    labelColor = _global.Palette_Gray;
+                    leftText = currentVal.ToString();
+                    leftColor = _global.Palette_LightGray;
+                }
+
+                // 3. Draw Label
+                spriteBatch.DrawStringSnapped(secondaryFont, stat.Label, new Vector2(startX, y + 4), labelColor);
+
+                // 4. Draw Left Text (Current Value OR Modifier)
+                Vector2 leftSize = font.MeasureString(leftText);
+                spriteBatch.DrawStringSnapped(font, leftText, new Vector2(startX + val1RightX - leftSize.X, y + 4), leftColor);
+
+                // 5. Draw Right Side (Only if comparing)
+                if (isComparing)
+                {
+                    // Arrow
+                    Color arrowColor = (diff != 0) ? _global.Palette_BrightWhite : _global.Palette_Gray;
+                    spriteBatch.DrawStringSnapped(secondaryFont, ">", new Vector2(startX + arrowX, y + 4), arrowColor);
+
+                    // Projected Value
+                    string projStr = projectedVal.ToString();
+                    Vector2 projSize = font.MeasureString(projStr);
+                    Color projColor = _global.Palette_LightGray;
+                    if (diff > 0) projColor = _global.Palette_LightGreen;
+                    else if (diff < 0) projColor = _global.Palette_Red;
+
+                    spriteBatch.DrawStringSnapped(font, projStr, new Vector2(startX + val2RightX - projSize.X, y + 4), projColor);
+                }
             }
         }
 

@@ -10,6 +10,9 @@
       "AddDefensiveElement": "109",
       "DamageBonus": "13,20"
     },
+    "StatModifiers": {
+      "Tenacity": 2
+    },
     "Tags": [ "Nature", "Defense" ]
   },
   {
@@ -178,6 +181,9 @@
     "Effects": {
       "DamageReductionPhysical": "20"
     },
+    "StatModifiers": {
+      "Tenacity": 5
+    },
     "Tags": [ "Defense" ]
   },
   {
@@ -238,6 +244,10 @@
     "Effects": {
       "DamageBonusLowHP": "33,100"
     },
+    "StatModifiers": {
+      "Strength": 5,
+      "Tenacity": -5
+    },
     "Tags": [ "LowHP" ]
   },
   {
@@ -261,6 +271,10 @@
     "LevelRequirement": 2,
     "Effects": {
       "PowerBonusLastAct": "30"
+    },
+    "StatModifiers": {
+      "Agility": -10,
+      "Tenacity": 5
     },
     "Tags": []
   },
@@ -322,6 +336,9 @@
     "Effects": {
       "CritDamageReduction": "40"
     },
+    "StatModifiers": {
+      "Tenacity": 3
+    },
     "Tags": [ "Defense", "Critical" ]
   },
   {
@@ -333,6 +350,9 @@
     "LevelRequirement": 1,
     "Effects": {
       "FirstAttackBonus": "50"
+    },
+    "StatModifiers": {
+      "Agility": 5
     },
     "Tags": []
   },
@@ -382,6 +402,9 @@
     "Effects": {
       "IgnoreDodging": "true"
     },
+    "StatModifiers": {
+      "Intelligence": 2
+    },
     "Tags": []
   },
   {
@@ -394,6 +417,9 @@
     "Effects": {
       "DodgeMissChance": "50"
     },
+    "StatModifiers": {
+      "Agility": 3
+    },
     "Tags": [ "Defense" ]
   },
   {
@@ -405,6 +431,11 @@
     "LevelRequirement": 4,
     "Effects": {
       "GlassCannon": "30,15"
+    },
+    "StatModifiers": {
+      "Strength": 5,
+      "Intelligence": 5,
+      "Tenacity": -10
     },
     "Tags": []
   },
@@ -429,6 +460,9 @@
     "LevelRequirement": 2,
     "Effects": {
       "RecklessAbandon": "50,-10"
+    },
+    "StatModifiers": {
+      "Strength": 3
     },
     "Tags": []
   },
@@ -466,6 +500,9 @@
     "Effects": {
       "Vigor": "75,50"
     },
+    "StatModifiers": {
+      "MaxHP": 20
+    },
     "Tags": [ "Defense" ]
   },
   {
@@ -501,6 +538,9 @@
     "LevelRequirement": 2,
     "Effects": {
       "AmbushPredator": "1,-20"
+    },
+    "StatModifiers": {
+      "Agility": 2
     },
     "Tags": [ "Priority" ]
   },
@@ -538,6 +578,10 @@
     "Effects": {
       "Spellweaver": "50"
     },
+    "StatModifiers": {
+      "Intelligence": 3,
+      "MaxMana": 20
+    },
     "Tags": []
   },
   {
@@ -549,6 +593,10 @@
     "LevelRequirement": 4,
     "Effects": {
       "Momentum": "50"
+    },
+    "StatModifiers": {
+      "Tenacity": 5,
+      "Agility": -2
     },
     "Tags": []
   },
@@ -573,6 +621,9 @@
     "LevelRequirement": 3,
     "Effects": {
       "PainFuel": "true"
+    },
+    "StatModifiers": {
+      "MaxHP": 30
     },
     "Tags": [ "Critical", "Buff", "Defense" ]
   },

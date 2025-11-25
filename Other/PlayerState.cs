@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -65,6 +64,50 @@ namespace ProjectVagabond
         /// The player's 4 active combat move slots (Spells only).
         /// </summary>
         public MoveEntry?[] EquippedSpells { get; set; } = new MoveEntry?[4];
+
+        /// <summary>
+        /// Helper to get the raw base stat without modifiers.
+        /// </summary>
+        public int GetBaseStat(string statName)
+        {
+            switch (statName.ToLowerInvariant())
+            {
+                case "strength": return Strength;
+                case "intelligence": return Intelligence;
+                case "tenacity": return Tenacity;
+                case "agility": return Agility;
+                case "maxhp": return MaxHP;
+                case "maxmana": return MaxMana;
+                case "level": return Level;
+                default: return 0;
+            }
+        }
+
+        /// <summary>
+        /// Calculates the effective value of a stat by adding bonuses from equipped relics to the base value.
+        /// Enforces a minimum value of 1.
+        /// </summary>
+        /// <param name="statName">The name of the stat (e.g., "Strength", "MaxHP"). Case-insensitive.</param>
+        /// <returns>The total effective value.</returns>
+        public int GetEffectiveStat(string statName)
+        {
+            int baseValue = GetBaseStat(statName);
+            int bonus = 0;
+
+            foreach (var relicId in EquippedRelics)
+            {
+                if (!string.IsNullOrEmpty(relicId) && BattleDataCache.Relics.TryGetValue(relicId, out var relic))
+                {
+                    if (relic.StatModifiers.TryGetValue(statName, out int mod))
+                    {
+                        bonus += mod;
+                    }
+                }
+            }
+
+            // Ensure stats don't drop below 1
+            return Math.Max(1, baseValue + bonus);
+        }
 
         // --- WEAPON MANAGEMENT ---
         public void AddWeapon(string weaponId, int quantity = 1)

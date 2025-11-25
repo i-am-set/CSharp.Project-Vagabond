@@ -33,7 +33,6 @@ namespace ProjectVagabond.Battle
                 ArchetypeId = archetype.Id,
                 CombatantID = combatantId,
                 Name = archetype.Name,
-                IsPlayerControlled = componentStore.HasComponent<PlayerTagComponent>(entityId),
                 Stats = new CombatantStats
                 {
                     Level = statsComponent.Level,
@@ -56,6 +55,16 @@ namespace ProjectVagabond.Battle
             {
                 combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
                 combatant.EquippedSpells = gameState.PlayerState.EquippedSpells;
+
+                // Apply Effective Stats from PlayerState (Base + Relic Modifiers)
+                // We overwrite the stats loaded from the component with the calculated effective stats.
+                // Note: CurrentHP/CurrentMana are persistent and come from the component, so we don't overwrite those with Max values.
+                combatant.Stats.MaxHP = gameState.PlayerState.GetEffectiveStat("MaxHP");
+                combatant.Stats.MaxMana = gameState.PlayerState.GetEffectiveStat("MaxMana");
+                combatant.Stats.Strength = gameState.PlayerState.GetEffectiveStat("Strength");
+                combatant.Stats.Intelligence = gameState.PlayerState.GetEffectiveStat("Intelligence");
+                combatant.Stats.Tenacity = gameState.PlayerState.GetEffectiveStat("Tenacity");
+                combatant.Stats.Agility = gameState.PlayerState.GetEffectiveStat("Agility");
 
                 // Load Passive Abilities from EQUIPPED relics only
                 foreach (var relicId in gameState.PlayerState.EquippedRelics)
