@@ -34,9 +34,15 @@ namespace ProjectVagabond.UI
         private InventoryHeaderButton? _inventoryEquipButton;
         private readonly List<InventorySlot> _inventorySlots = new();
         private Rectangle _inventorySlotArea;
+
+        // Panels
         private Rectangle _statsPanelArea;
+        private Rectangle _infoPanelArea; // New Information Panel Area
+
         private ImageButton? _debugButton1;
         private ImageButton? _debugButton2;
+        private ImageButton? _pageLeftButton;
+        private ImageButton? _pageRightButton;
         private EquipButton? _relicEquipButton;
 
         // Submenu State
@@ -147,6 +153,7 @@ namespace ProjectVagabond.UI
                     _selectedInventoryCategory = category;
                     _selectedSlotIndex = -1;
                     _currentPage = 0; // Reset page on category change
+                    _selectedHeaderBobTimer = 0f; // Reset bob timer on category change
                     RefreshInventorySlots();
                 };
                 _inventoryHeaderButtons.Add(button);
@@ -165,6 +172,7 @@ namespace ProjectVagabond.UI
                 _selectedInventoryCategory = InventoryCategory.Equip;
                 _selectedSlotIndex = -1;
                 _currentPage = 0;
+                _selectedHeaderBobTimer = 0f; // Reset bob timer on category change
                 RefreshInventorySlots();
             };
 
@@ -185,6 +193,9 @@ namespace ProjectVagabond.UI
             int statsPanelX = _inventorySlotArea.Right + 4;
             int statsPanelY = _inventorySlotArea.Y - 1;
             _statsPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
+
+            // Initialize Info Panel Area (Identical to Stats Panel)
+            _infoPanelArea = new Rectangle(statsPanelX, statsPanelY, statsPanelWidth, statsPanelHeight);
 
             _inventorySlots.Clear();
 
@@ -234,6 +245,13 @@ namespace ProjectVagabond.UI
             {
                 ChangePage(1);
             };
+
+            // Initialize Page Navigation Buttons
+            _pageLeftButton = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryLeftArrowButton, leftArrowRects[0], leftArrowRects[1]);
+            _pageLeftButton.OnClick += () => ChangePage(-1);
+
+            _pageRightButton = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryRightArrowButton, rightArrowRects[0], rightArrowRects[1]);
+            _pageRightButton.OnClick += () => ChangePage(1);
 
             // Initialize Relic Equip Button
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
@@ -405,6 +423,7 @@ namespace ProjectVagabond.UI
             {
                 _inventoryButton?.SetSprites(_spriteManager.SplitMapInventoryButton, _spriteManager.SplitMapInventoryButtonSourceRects[0], _spriteManager.SplitMapInventoryButtonSourceRects[1]);
                 CancelEquipSelection(); // Ensure submenu is closed when inventory closes
+                _selectedSlotIndex = -1; // Clear selection on close
             }
 
             OnInventoryToggled?.Invoke(IsOpen);
@@ -412,7 +431,8 @@ namespace ProjectVagabond.UI
 
         private void RefreshInventorySlots()
         {
-            _selectedHeaderBobTimer = 0f; // Reset bob timer to sync animation on change
+            // Note: _selectedHeaderBobTimer is NOT reset here anymore to prevent resetting on page change.
+            // It is reset explicitly in CycleCategory and OnClick handlers for category buttons.
 
             foreach (var slot in _inventorySlots) slot.Clear();
 
@@ -430,6 +450,12 @@ namespace ProjectVagabond.UI
             {
                 var item = items[startIndex + i];
                 _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.IconTint);
+
+                // Restore selection state if this slot corresponds to the selected index
+                if (_selectedSlotIndex == i)
+                {
+                    _inventorySlots[i].IsSelected = true;
+                }
             }
         }
 
@@ -555,8 +581,9 @@ namespace ProjectVagabond.UI
             bool leftPressed = currentKeyboardState.IsKeyDown(Keys.Left) && !_previousKeyboardState.IsKeyDown(Keys.Left);
             bool rightPressed = currentKeyboardState.IsKeyDown(Keys.Right) && !_previousKeyboardState.IsKeyDown(Keys.Right);
             bool shiftHeld = currentKeyboardState.IsKeyDown(Keys.LeftShift) || currentKeyboardState.IsKeyDown(Keys.RightShift);
-            bool scrollUp = scrollDelta > 0 && headerArea.Contains(mouseInWorldSpace);
-            bool scrollDown = scrollDelta < 0 && headerArea.Contains(mouseInWorldSpace);
+            bool scrollUp = scrollDelta > 0;
+            bool scrollDown = scrollDelta < 0;
+            bool isHoveringHeader = headerArea.Contains(mouseInWorldSpace);
 
             // Handle Submenu Scrolling
             if (_isEquipSubmenuOpen && scrollDelta != 0)
@@ -590,11 +617,13 @@ namespace ProjectVagabond.UI
                 }
                 else if (scrollUp)
                 {
-                    CycleCategory(-1);
+                    if (isHoveringHeader) CycleCategory(-1);
+                    else ChangePage(-1);
                 }
                 else if (scrollDown)
                 {
-                    CycleCategory(1);
+                    if (isHoveringHeader) CycleCategory(1);
+                    else ChangePage(1);
                 }
             }
 
@@ -716,6 +745,43 @@ namespace ProjectVagabond.UI
                         slot.Update(gameTime, dummyMouse, cameraTransform);
                     }
                 }
+
+                // Update Page Buttons
+                if (_totalPages > 1)
+                {
+                    var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+                    string pageText = $"{_currentPage + 1}/{_totalPages}";
+                    var textSize = secondaryFont.MeasureString(pageText);
+
+                    float textCenterX = _inventorySlotArea.Center.X;
+                    float textY = _inventorySlotArea.Bottom - 2;
+
+                    const int buttonGap = 5;
+
+                    if (_pageLeftButton != null)
+                    {
+                        _pageLeftButton.Bounds = new Rectangle(
+                            (int)(textCenterX - textSize.Width / 2f - _pageLeftButton.Bounds.Width - buttonGap),
+                            (int)textY,
+                            _pageLeftButton.Bounds.Width,
+                            _pageLeftButton.Bounds.Height
+                        );
+                        _pageLeftButton.IsEnabled = true;
+                        _pageLeftButton.Update(currentMouseState, cameraTransform);
+                    }
+
+                    if (_pageRightButton != null)
+                    {
+                        _pageRightButton.Bounds = new Rectangle(
+                            (int)(textCenterX + textSize.Width / 2f + buttonGap),
+                            (int)textY,
+                            _pageRightButton.Bounds.Width,
+                            _pageRightButton.Bounds.Height
+                        );
+                        _pageRightButton.IsEnabled = true;
+                        _pageRightButton.Update(currentMouseState, cameraTransform);
+                    }
+                }
             }
             else if (_selectedInventoryCategory == InventoryCategory.Equip)
             {
@@ -772,7 +838,12 @@ namespace ProjectVagabond.UI
             int maxPage = Math.Max(0, (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE) - 1);
 
             _currentPage += direction;
-            _currentPage = Math.Clamp(_currentPage, 0, maxPage);
+
+            // Wrap logic
+            if (_currentPage > maxPage) _currentPage = 0;
+            else if (_currentPage < 0) _currentPage = maxPage;
+
+            _selectedSlotIndex = -1; // Clear selection on page change
             RefreshInventorySlots();
         }
 
@@ -787,6 +858,8 @@ namespace ProjectVagabond.UI
                 CancelEquipSelection(); // Failsafe
                 _selectedInventoryCategory = (InventoryCategory)newIndex;
                 _currentPage = 0; // Reset page on category change
+                _selectedSlotIndex = -1; // Clear selection on category change
+                _selectedHeaderBobTimer = 0f; // Reset bob timer on category change
                 RefreshInventorySlots();
             }
         }
@@ -855,7 +928,13 @@ namespace ProjectVagabond.UI
                     spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
 
                     spriteBatch.DrawStringSnapped(secondaryFont, pageText, textPos, _global.Palette_BrightWhite);
+
+                    _pageLeftButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    _pageRightButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
+
+                // Draw Info Panel
+                DrawInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont);
             }
             else
             {
@@ -917,9 +996,190 @@ namespace ProjectVagabond.UI
             {
                 var pixel = ServiceLocator.Get<Texture2D>();
                 spriteBatch.DrawSnapped(pixel, _inventorySlotArea, Color.Blue * 0.5f);
+
+                // Debug Draw for Panels
+                if (_selectedInventoryCategory == InventoryCategory.Equip)
+                {
+                    spriteBatch.DrawSnapped(pixel, _statsPanelArea, Color.HotPink * 0.5f);
+                }
+                else
+                {
+                    spriteBatch.DrawSnapped(pixel, _infoPanelArea, Color.Cyan * 0.5f);
+                }
             }
 
             _inventoryEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+        }
+
+        private void DrawInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont)
+        {
+            // Find the active slot (Selected takes precedence over Hovered)
+            InventorySlot? activeSlot = _inventorySlots.FirstOrDefault(s => s.IsSelected);
+            if (activeSlot == null)
+            {
+                activeSlot = _inventorySlots.FirstOrDefault(s => s.IsHovered);
+            }
+
+            if (activeSlot == null || !activeSlot.HasItem || string.IsNullOrEmpty(activeSlot.ItemId)) return;
+
+            // Retrieve Item Data based on Category
+            string name = activeSlot.ItemId.ToUpper();
+            string description = "";
+            string iconPath = activeSlot.IconPath ?? "";
+            Texture2D? iconTexture = null;
+            Texture2D? iconSilhouette = null;
+
+            // Attempt to fetch rich data
+            if (_selectedInventoryCategory == InventoryCategory.Relics)
+            {
+                // Try to find by name if ID lookup fails (since slot stores Name)
+                var relic = BattleDataCache.Relics.Values.FirstOrDefault(r => r.RelicName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (relic != null)
+                {
+                    name = relic.RelicName.ToUpper();
+                    description = relic.Description.ToUpper();
+                    iconPath = $"Sprites/Items/Relics/{relic.RelicID}";
+                }
+            }
+            else if (_selectedInventoryCategory == InventoryCategory.Consumables)
+            {
+                var item = BattleDataCache.Consumables.Values.FirstOrDefault(c => c.ItemName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (item != null)
+                {
+                    name = item.ItemName.ToUpper();
+                    description = item.Description.ToUpper();
+                    iconPath = item.ImagePath;
+                }
+            }
+            else if (_selectedInventoryCategory == InventoryCategory.Spells)
+            {
+                var move = BattleDataCache.Moves.Values.FirstOrDefault(m => m.MoveName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (move != null)
+                {
+                    name = move.MoveName.ToUpper();
+                    description = move.Description.ToUpper();
+                    iconPath = $"Sprites/Items/Spells/{move.MoveID}";
+                }
+            }
+
+            // Load Icon
+            if (!string.IsNullOrEmpty(iconPath))
+            {
+                iconTexture = _spriteManager.GetItemSprite(iconPath);
+                iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath);
+            }
+
+            // --- Drawing Logic ---
+            const int spriteSize = 32;
+            const int gap = 4;
+
+            // 1. Calculate Total Height for Centering
+            int maxTitleWidth = _infoPanelArea.Width - (4 * 2);
+            var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
+            float totalTitleHeight = titleLines.Count * font.LineHeight;
+
+            float totalDescHeight = 0f;
+            List<List<ColoredText>> descLines = new List<List<ColoredText>>();
+            if (!string.IsNullOrEmpty(description))
+            {
+                float descWidth = _infoPanelArea.Width - (4 * 2);
+                descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _global.Palette_White);
+                totalDescHeight = descLines.Count * secondaryFont.LineHeight;
+            }
+
+            float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0);
+
+            // 2. Calculate Start Y
+            float currentY = _infoPanelArea.Y + (_infoPanelArea.Height - totalContentHeight) / 2f;
+            currentY -= 10f; // Move up 10 pixels as requested
+
+            // 3. Draw Sprite
+            int spriteX = _infoPanelArea.X + (_infoPanelArea.Width - spriteSize) / 2;
+
+            if (iconSilhouette != null)
+            {
+                Color outlineColor = _global.Palette_Gray;
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY), outlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY), outlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY - 1), outlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY + 1), outlineColor);
+            }
+
+            if (iconTexture != null)
+            {
+                Color tint = activeSlot.IconTint ?? Color.White;
+                spriteBatch.DrawSnapped(iconTexture, new Vector2(spriteX, currentY), tint);
+            }
+
+            currentY += spriteSize + gap;
+
+            // 4. Draw Title
+            foreach (var line in titleLines)
+            {
+                float lineWidth = 0;
+                foreach (var segment in line)
+                {
+                    if (string.IsNullOrWhiteSpace(segment.Text))
+                        lineWidth += segment.Text.Length * SPACE_WIDTH;
+                    else
+                        lineWidth += font.MeasureString(segment.Text).Width;
+                }
+
+                float lineX = _infoPanelArea.X + (_infoPanelArea.Width - lineWidth) / 2f;
+                float currentX = lineX;
+
+                foreach (var segment in line)
+                {
+                    float segWidth;
+                    if (string.IsNullOrWhiteSpace(segment.Text))
+                    {
+                        segWidth = segment.Text.Length * SPACE_WIDTH;
+                    }
+                    else
+                    {
+                        segWidth = font.MeasureString(segment.Text).Width;
+                        spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                    }
+                    currentX += segWidth;
+                }
+                currentY += font.LineHeight;
+            }
+
+            // 5. Draw Description
+            if (descLines.Any())
+            {
+                currentY += gap;
+                foreach (var line in descLines)
+                {
+                    float lineWidth = 0;
+                    foreach (var segment in line)
+                    {
+                        if (string.IsNullOrWhiteSpace(segment.Text))
+                            lineWidth += segment.Text.Length * SPACE_WIDTH;
+                        else
+                            lineWidth += secondaryFont.MeasureString(segment.Text).Width;
+                    }
+
+                    var lineX = _infoPanelArea.X + (_infoPanelArea.Width - lineWidth) / 2;
+                    float currentX = lineX;
+
+                    foreach (var segment in line)
+                    {
+                        float segWidth;
+                        if (string.IsNullOrWhiteSpace(segment.Text))
+                        {
+                            segWidth = segment.Text.Length * SPACE_WIDTH;
+                        }
+                        else
+                        {
+                            segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                            spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                        }
+                        currentX += segWidth;
+                    }
+                    currentY += secondaryFont.LineHeight;
+                }
+            }
         }
 
         private void DrawStatsPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont)
