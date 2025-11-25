@@ -46,10 +46,11 @@
           "pristinegem": 1,
           "shatteredamulet": 1,
           "leadhelmet": 1,
-          "charredeffigy": 1,
+          "warmring": 1,
           "earthencore": 1,
           "serpentsfang": 1,
-          "gorgonsgaze": 1
+          "gorgonsgaze": 1,
+          "sealedenvelope": 1
         },
         "StartingConsumables": {
           "FireScroll": 2,
