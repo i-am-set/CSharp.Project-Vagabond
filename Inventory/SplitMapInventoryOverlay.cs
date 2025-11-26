@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -1251,7 +1250,7 @@ namespace ProjectVagabond.UI
             string iconPath = activeSlot.IconPath ?? "";
             Texture2D? iconTexture = null;
             Texture2D? iconSilhouette = null;
-            List<string> statLines = new List<string>();
+            (List<string> Positives, List<string> Negatives) statLines = (new List<string>(), new List<string>());
 
             // Attempt to fetch rich data
             if (_selectedInventoryCategory == InventoryCategory.Relics)
@@ -1334,7 +1333,7 @@ namespace ProjectVagabond.UI
                 totalDescHeight = descLines.Count * secondaryFont.LineHeight;
             }
 
-            float totalStatHeight = statLines.Count * secondaryFont.LineHeight;
+            float totalStatHeight = Math.Max(statLines.Positives.Count, statLines.Negatives.Count) * secondaryFont.LineHeight;
 
             float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0) + (totalStatHeight > 0 ? gap + totalStatHeight : 0);
 
@@ -1440,37 +1439,51 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // 6. Draw Stats (Left Aligned)
-            if (statLines.Any())
+            // 6. Draw Stats (Two Columns)
+            if (statLines.Positives.Any() || statLines.Negatives.Any())
             {
                 currentY += gap;
-                foreach (var lineStr in statLines)
+                float leftColX = _infoPanelArea.X + 8;
+                float rightColX = _infoPanelArea.X + 64; // Roughly half way plus a bit
+
+                int maxRows = Math.Max(statLines.Positives.Count, statLines.Negatives.Count);
+
+                for (int i = 0; i < maxRows; i++)
                 {
-                    // Parse the rich text string into segments
-                    var lineParts = ParseAndWrapRichText(secondaryFont, lineStr, _infoPanelArea.Width, _global.Palette_White);
-
-                    // Since these are short lines, ParseAndWrapRichText likely returns a single line list.
-                    // We iterate over the first (and likely only) line of segments.
-                    if (lineParts.Count > 0)
+                    // Draw Positive Stat (Left Column)
+                    if (i < statLines.Positives.Count)
                     {
-                        var segments = lineParts[0];
-                        float currentX = _infoPanelArea.X + 8; // Left align with padding
-
-                        foreach (var segment in segments)
+                        var lineParts = ParseAndWrapRichText(secondaryFont, statLines.Positives[i], _infoPanelArea.Width / 2, _global.Palette_White);
+                        if (lineParts.Count > 0)
                         {
-                            float segWidth;
-                            if (string.IsNullOrWhiteSpace(segment.Text))
+                            var segments = lineParts[0];
+                            float currentX = leftColX;
+                            foreach (var segment in segments)
                             {
-                                segWidth = segment.Text.Length * SPACE_WIDTH;
-                            }
-                            else
-                            {
-                                segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * SPACE_WIDTH : secondaryFont.MeasureString(segment.Text).Width;
                                 spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                                currentX += segWidth;
                             }
-                            currentX += segWidth;
                         }
                     }
+
+                    // Draw Negative Stat (Right Column)
+                    if (i < statLines.Negatives.Count)
+                    {
+                        var lineParts = ParseAndWrapRichText(secondaryFont, statLines.Negatives[i], _infoPanelArea.Width / 2, _global.Palette_White);
+                        if (lineParts.Count > 0)
+                        {
+                            var segments = lineParts[0];
+                            float currentX = rightColX;
+                            foreach (var segment in segments)
+                            {
+                                float segWidth = string.IsNullOrWhiteSpace(segment.Text) ? segment.Text.Length * SPACE_WIDTH : secondaryFont.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                                currentX += segWidth;
+                            }
+                        }
+                    }
+
                     currentY += secondaryFont.LineHeight;
                 }
             }
@@ -1959,10 +1972,11 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private List<string> GetStatModifierLines(Dictionary<string, int> mods)
+        private (List<string> Positives, List<string> Negatives) GetStatModifierLines(Dictionary<string, int> mods)
         {
-            var lines = new List<string>();
-            if (mods == null || mods.Count == 0) return lines;
+            var positives = new List<string>();
+            var negatives = new List<string>();
+            if (mods == null || mods.Count == 0) return (positives, negatives);
 
             foreach (var kvp in mods)
             {
@@ -1982,9 +1996,24 @@ namespace ProjectVagabond.UI
                     _ => kvp.Key.ToUpper().Substring(0, Math.Min(3, kvp.Key.Length)) // Fallback
                 };
 
-                lines.Add($"{statName} {colorTag}{sign}{kvp.Value}[/]");
+                // Pad short names to 3 characters
+                if (statName.Length < 3)
+                {
+                    statName += " ";
+                }
+
+                string line = $"{statName} {colorTag}{sign}{kvp.Value}[/]";
+
+                if (kvp.Value > 0)
+                {
+                    positives.Add(line);
+                }
+                else
+                {
+                    negatives.Add(line);
+                }
             }
-            return lines;
+            return (positives, negatives);
         }
 
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
