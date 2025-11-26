@@ -15,6 +15,7 @@ using System.Text.RegularExpressions;
 namespace ProjectVagabond.UI
 {
     public enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables, Equip }
+
     public class SplitMapInventoryOverlay
     {
         public bool IsOpen { get; private set; } = false;
@@ -41,9 +42,14 @@ namespace ProjectVagabond.UI
         private ImageButton? _debugButton2;
         private ImageButton? _pageLeftButton;
         private ImageButton? _pageRightButton;
+
+        // Equip Buttons
         private EquipButton? _relicEquipButton;
+        private EquipButton? _weaponEquipButton;
 
         // Submenu State
+        private enum EquipSlotType { None, Weapon, Relic }
+        private EquipSlotType _activeEquipSlotType = EquipSlotType.None;
         private bool _isEquipSubmenuOpen = false;
         private readonly List<EquipButton> _equipSubmenuButtons = new();
         private int _equipMenuScrollIndex = 0;
@@ -71,7 +77,7 @@ namespace ProjectVagabond.UI
 
         // Stat Cycle Animation State
         private float _statCycleTimer = 0f;
-        private RelicData? _previousHoveredRelicData;
+        private object? _previousHoveredItemData; // Changed to object to handle WeaponData or RelicData
         private const float STAT_CYCLE_INTERVAL = 1.0f;
 
         // Input State
@@ -79,7 +85,7 @@ namespace ProjectVagabond.UI
         private KeyboardState _previousKeyboardState;
 
         // Hover Data
-        private RelicData? _hoveredRelicData;
+        private object? _hoveredItemData; // Changed to object to handle WeaponData or RelicData
 
         // Text Formatting Tuning
         private const int SPACE_WIDTH = 5;
@@ -100,7 +106,7 @@ namespace ProjectVagabond.UI
             _inventoryPositionOffset = Vector2.Zero;
             _selectedHeaderBobTimer = 0f;
             _statCycleTimer = 0f;
-            _previousHoveredRelicData = null;
+            _previousHoveredItemData = null;
             _leftPageArrowBobTimer = 0f;
             _rightPageArrowBobTimer = 0f;
 
@@ -241,23 +247,30 @@ namespace ProjectVagabond.UI
             _pageRightButton = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryRightArrowButton, rightArrowRects[0], rightArrowRects[1]);
             _pageRightButton.OnClick += () => ChangePage(1);
 
-            // Initialize Relic Equip Button
+            // Initialize Equip Buttons
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var equipHoverSprite = _spriteManager.InventoryEquipHoverSprite;
             int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
-            int equipButtonY = 250 + 19 + 16;
-            _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, equipButtonY, 180, 16), "NOTHING");
+            int relicButtonY = 250 + 19 + 16;
+            int weaponButtonY = relicButtonY - 32; // 32 pixels above
+
+            // Weapon Button
+            _weaponEquipButton = new EquipButton(new Rectangle(equipButtonX, weaponButtonY, 180, 16), "NOTHING");
+            _weaponEquipButton.TitleText = "WEAPN";
+            _weaponEquipButton.ShowTitleOnHoverOnly = false;
+            _weaponEquipButton.Font = secondaryFont;
+            _weaponEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Weapon);
+
+            // Relic Button
+            _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, relicButtonY, 180, 16), "NOTHING");
             _relicEquipButton.TitleText = "RELIC";
-            _relicEquipButton.ShowTitleOnHoverOnly = false; // Always visible
+            _relicEquipButton.ShowTitleOnHoverOnly = false;
             _relicEquipButton.Font = secondaryFont;
-            _relicEquipButton.OnClick += () =>
-            {
-                OpenEquipSubmenu();
-            };
+            _relicEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic);
 
             // Initialize Submenu Buttons
             _equipSubmenuButtons.Clear();
-            int submenuStartY = equipButtonY - 32;
+            // Submenu starts at the weapon button Y position (moved down 32px from previous attempt)
+            int submenuStartY = weaponButtonY;
 
             for (int i = 0; i < 7; i++)
             {
@@ -277,17 +290,34 @@ namespace ProjectVagabond.UI
             return null;
         }
 
-        private void OpenEquipSubmenu()
+        private WeaponData? GetWeaponData(string weaponId)
+        {
+            if (BattleDataCache.Weapons.TryGetValue(weaponId, out var data)) return data;
+            return null;
+        }
+
+        private void OpenEquipSubmenu(EquipSlotType slotType)
         {
             _isEquipSubmenuOpen = true;
+            _activeEquipSlotType = slotType;
             _equipMenuScrollIndex = 0;
             RefreshEquipSubmenuButtons();
         }
 
         private void RefreshEquipSubmenuButtons()
         {
-            var availableRelics = _gameState.PlayerState.Relics.Keys.ToList();
-            int totalItems = 1 + availableRelics.Count;
+            List<string> availableItems = new List<string>();
+
+            if (_activeEquipSlotType == EquipSlotType.Weapon)
+            {
+                availableItems = _gameState.PlayerState.Weapons.Keys.ToList();
+            }
+            else if (_activeEquipSlotType == EquipSlotType.Relic)
+            {
+                availableItems = _gameState.PlayerState.Relics.Keys.ToList();
+            }
+
+            int totalItems = 1 + availableItems.Count; // +1 for REMOVE
 
             for (int i = 0; i < _equipSubmenuButtons.Count; i++)
             {
@@ -322,27 +352,49 @@ namespace ProjectVagabond.UI
                 }
                 else if (virtualIndex < totalItems)
                 {
-                    int relicIndex = virtualIndex - 1;
-                    string relicId = availableRelics[relicIndex];
-                    var relicData = GetRelicData(relicId);
+                    int itemIndex = virtualIndex - 1;
+                    string itemId = availableItems[itemIndex];
 
-                    if (relicData != null)
+                    if (_activeEquipSlotType == EquipSlotType.Weapon)
                     {
-                        btn.MainText = relicData.RelicName.ToUpper();
-                        string path = $"Sprites/Items/Relics/{relicData.RelicID}";
-                        btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
-                        btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
-                        btn.IconSourceRect = null;
-                        btn.IsEnabled = true;
-                        btn.OnClick = () => SelectEquipItem(relicId);
+                        var weaponData = GetWeaponData(itemId);
+                        if (weaponData != null)
+                        {
+                            btn.MainText = weaponData.WeaponName.ToUpper();
+                            string path = $"Sprites/Items/Weapons/{weaponData.WeaponID}";
+                            // Use Small sprites to fit the 16x16 icon box in the button
+                            btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
+                            btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
+                            btn.IconSourceRect = null;
+                            btn.IsEnabled = true;
+                            btn.OnClick = () => SelectEquipItem(itemId);
+                        }
+                        else
+                        {
+                            btn.MainText = itemId.ToUpper();
+                            btn.IsEnabled = true;
+                            btn.OnClick = () => SelectEquipItem(itemId);
+                        }
                     }
-                    else
+                    else // Relic
                     {
-                        btn.MainText = relicId.ToUpper();
-                        btn.IconTexture = null;
-                        btn.IconSilhouette = null;
-                        btn.IsEnabled = true;
-                        btn.OnClick = () => SelectEquipItem(relicId);
+                        var relicData = GetRelicData(itemId);
+                        if (relicData != null)
+                        {
+                            btn.MainText = relicData.RelicName.ToUpper();
+                            string path = $"Sprites/Items/Relics/{relicData.RelicID}";
+                            btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
+                            btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
+                            btn.IconSourceRect = null;
+                            btn.IsEnabled = true;
+                            btn.OnClick = () => SelectEquipItem(itemId);
+                        }
+                        else
+                        {
+                            btn.MainText = itemId.ToUpper();
+                            btn.IsEnabled = true;
+                            btn.OnClick = () => SelectEquipItem(itemId);
+                        }
                     }
                 }
             }
@@ -353,29 +405,49 @@ namespace ProjectVagabond.UI
             if (_isEquipSubmenuOpen)
             {
                 _isEquipSubmenuOpen = false;
-                _hoveredRelicData = null;
+                _activeEquipSlotType = EquipSlotType.None;
+                _hoveredItemData = null;
             }
         }
 
         private void SelectEquipItem(string? itemId)
         {
-            _gameState.PlayerState.EquippedRelics[0] = itemId;
+            if (_activeEquipSlotType == EquipSlotType.Weapon)
+            {
+                _gameState.PlayerState.EquippedWeaponId = itemId;
+                if (_weaponEquipButton != null)
+                {
+                    string name = "NOTHING";
+                    if (!string.IsNullOrEmpty(itemId))
+                    {
+                        var data = GetWeaponData(itemId);
+                        if (data != null) name = data.WeaponName.ToUpper();
+                        else name = itemId.ToUpper();
+                    }
+                    _weaponEquipButton.MainText = name;
+                }
+            }
+            else if (_activeEquipSlotType == EquipSlotType.Relic)
+            {
+                _gameState.PlayerState.EquippedRelics[0] = itemId;
+                if (_relicEquipButton != null)
+                {
+                    string name = "NOTHING";
+                    if (!string.IsNullOrEmpty(itemId))
+                    {
+                        var data = GetRelicData(itemId);
+                        if (data != null) name = data.RelicName.ToUpper();
+                        else name = itemId.ToUpper();
+                    }
+                    _relicEquipButton.MainText = name;
+                }
+            }
+
             _isEquipSubmenuOpen = false;
-            _hoveredRelicData = null;
+            _activeEquipSlotType = EquipSlotType.None;
+            _hoveredItemData = null;
 
             _hapticsManager.TriggerShake(4f, 0.1f, true, 2f);
-
-            if (_relicEquipButton != null)
-            {
-                string name = "NOTHING";
-                if (!string.IsNullOrEmpty(itemId))
-                {
-                    var data = GetRelicData(itemId);
-                    if (data != null) name = data.RelicName.ToUpper();
-                    else name = itemId.ToUpper();
-                }
-                _relicEquipButton.MainText = name;
-            }
         }
 
         private void ToggleInventory()
@@ -386,6 +458,31 @@ namespace ProjectVagabond.UI
             {
                 _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
                 RefreshInventorySlots();
+
+                // Refresh equip button texts
+                if (_weaponEquipButton != null)
+                {
+                    string wId = _gameState.PlayerState.EquippedWeaponId;
+                    string wName = "NOTHING";
+                    if (!string.IsNullOrEmpty(wId))
+                    {
+                        var wData = GetWeaponData(wId);
+                        wName = wData != null ? wData.WeaponName.ToUpper() : wId.ToUpper();
+                    }
+                    _weaponEquipButton.MainText = wName;
+                }
+                if (_relicEquipButton != null)
+                {
+                    string rId = _gameState.PlayerState.EquippedRelics[0];
+                    string rName = "NOTHING";
+                    if (!string.IsNullOrEmpty(rId))
+                    {
+                        var rData = GetRelicData(rId);
+                        rName = rData != null ? rData.RelicName.ToUpper() : rId.ToUpper();
+                    }
+                    _relicEquipButton.MainText = rName;
+                }
+
                 if (_selectedInventoryCategory != InventoryCategory.Equip)
                 {
                     TriggerSlotAnimations();
@@ -576,7 +673,10 @@ namespace ProjectVagabond.UI
             // Handle Submenu Scrolling
             if (_isEquipSubmenuOpen && scrollDelta != 0)
             {
-                int totalItems = 1 + _gameState.PlayerState.Relics.Count; // 1 for REMOVE
+                int totalItems = 1; // 1 for REMOVE
+                if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
+                else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
+
                 int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
 
                 if (scrollDelta < 0 && _equipMenuScrollIndex < maxScroll)
@@ -707,7 +807,7 @@ namespace ProjectVagabond.UI
             // Update Slots or Equip UI
             if (_selectedInventoryCategory != InventoryCategory.Equip)
             {
-                _hoveredRelicData = null; // Ensure this is cleared when not in equip mode
+                _hoveredItemData = null; // Ensure this is cleared when not in equip mode
 
                 InventorySlot? bestSlot = null;
                 float minDistance = float.MaxValue;
@@ -787,11 +887,14 @@ namespace ProjectVagabond.UI
             }
             else if (_selectedInventoryCategory == InventoryCategory.Equip)
             {
-                _hoveredRelicData = null; // Reset hover data each frame
+                _hoveredItemData = null; // Reset hover data each frame
 
                 if (_isEquipSubmenuOpen)
                 {
-                    var availableRelics = _gameState.PlayerState.Relics.Keys.ToList();
+                    List<string> availableItems = new List<string>();
+                    if (_activeEquipSlotType == EquipSlotType.Weapon) availableItems = _gameState.PlayerState.Weapons.Keys.ToList();
+                    else if (_activeEquipSlotType == EquipSlotType.Relic) availableItems = _gameState.PlayerState.Relics.Keys.ToList();
+
                     for (int i = 0; i < _equipSubmenuButtons.Count; i++)
                     {
                         var button = _equipSubmenuButtons[i];
@@ -800,14 +903,15 @@ namespace ProjectVagabond.UI
                         if (button.IsHovered && button.IsEnabled)
                         {
                             int virtualIndex = _equipMenuScrollIndex + i;
-                            // Index 0 is "REMOVE", so relics start at index 1
+                            // Index 0 is "REMOVE", so items start at index 1
                             if (virtualIndex > 0)
                             {
-                                int relicIndex = virtualIndex - 1;
-                                if (relicIndex < availableRelics.Count)
+                                int itemIndex = virtualIndex - 1;
+                                if (itemIndex < availableItems.Count)
                                 {
-                                    string relicId = availableRelics[relicIndex];
-                                    _hoveredRelicData = GetRelicData(relicId);
+                                    string itemId = availableItems[itemIndex];
+                                    if (_activeEquipSlotType == EquipSlotType.Weapon) _hoveredItemData = GetWeaponData(itemId);
+                                    else if (_activeEquipSlotType == EquipSlotType.Relic) _hoveredItemData = GetRelicData(itemId);
                                 }
                             }
                         }
@@ -815,19 +919,17 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    if (_relicEquipButton != null)
-                    {
-                        _relicEquipButton.Update(currentMouseState, cameraTransform);
-                    }
+                    _relicEquipButton?.Update(currentMouseState, cameraTransform);
+                    _weaponEquipButton?.Update(currentMouseState, cameraTransform);
                 }
             }
 
             // Update Stat Cycle Timer
             _statCycleTimer += deltaTime;
-            if (_hoveredRelicData != _previousHoveredRelicData)
+            if (_hoveredItemData != _previousHoveredItemData)
             {
                 _statCycleTimer = 0f;
-                _previousHoveredRelicData = _hoveredRelicData;
+                _previousHoveredItemData = _hoveredItemData;
             }
 
             _previousMouseState = currentMouseState;
@@ -973,7 +1075,10 @@ namespace ProjectVagabond.UI
 
                     if (arrowTexture != null && arrowRects != null && _equipSubmenuButtons.Count > 0)
                     {
-                        int totalItems = 1 + _gameState.PlayerState.Relics.Count;
+                        int totalItems = 1;
+                        if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
+                        else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
+
                         int maxScroll = Math.Max(0, totalItems - 7);
 
                         // Up Arrow
@@ -1001,10 +1106,8 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    if (_relicEquipButton != null)
-                    {
-                        _relicEquipButton.Draw(spriteBatch, font, gameTime, Matrix.Identity);
-                    }
+                    _relicEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    _weaponEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
 
                 // Draw Stats Panel (Moved here to show in both main equip view and submenu)
@@ -1228,7 +1331,7 @@ namespace ProjectVagabond.UI
         private void DrawStatsPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont)
         {
             // --- Draw Hovered Item Details ---
-            if (_hoveredRelicData != null)
+            if (_hoveredItemData != null)
             {
                 const int padding = 2; // Reduced padding for "tightly against top"
                 const int spriteSize = 32;
@@ -1237,39 +1340,58 @@ namespace ProjectVagabond.UI
                 // 1. Sprite (Top Left - Centered Horizontally)
                 int spriteX = _statsPanelArea.X + (_statsPanelArea.Width - spriteSize) / 2;
                 int spriteY = _statsPanelArea.Y; // Tightly against top
-                string path = $"Sprites/Items/Relics/{_hoveredRelicData.RelicID}";
-                var relicSprite = _spriteManager.GetRelicSprite(path);
 
-                var relicSilhouette = _spriteManager.GetRelicSpriteSilhouette(path);
-                if (relicSilhouette != null)
+                string name = "";
+                string description = "";
+                string path = "";
+                Texture2D? itemSprite = null;
+                Texture2D? itemSilhouette = null;
+
+                if (_hoveredItemData is RelicData relic)
+                {
+                    name = relic.RelicName.ToUpper();
+                    description = relic.Description.ToUpper();
+                    path = $"Sprites/Items/Relics/{relic.RelicID}";
+                    itemSprite = _spriteManager.GetRelicSprite(path);
+                    itemSilhouette = _spriteManager.GetRelicSpriteSilhouette(path);
+                }
+                else if (_hoveredItemData is WeaponData weapon)
+                {
+                    name = weapon.WeaponName.ToUpper();
+                    description = weapon.Description.ToUpper();
+                    path = $"Sprites/Items/Weapons/{weapon.WeaponID}";
+                    itemSprite = _spriteManager.GetItemSprite(path);
+                    itemSilhouette = _spriteManager.GetItemSpriteSilhouette(path);
+                }
+
+                if (itemSilhouette != null)
                 {
                     // Use global outline color for Idle state
                     Color mainOutlineColor = _global.ItemOutlineColor_Idle;
                     Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
 
                     // 1. Draw Diagonals (Corners) FIRST (Behind)
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY - 1), cornerOutlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY - 1), cornerOutlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY + 1), cornerOutlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY + 1), cornerOutlineColor);
+                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY - 1), cornerOutlineColor);
+                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY - 1), cornerOutlineColor);
+                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY + 1), cornerOutlineColor);
+                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY + 1), cornerOutlineColor);
 
                     // 2. Draw Cardinals (Main) SECOND (On Top)
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX - 1, spriteY), mainOutlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX + 1, spriteY), mainOutlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX, spriteY - 1), mainOutlineColor);
-                    spriteBatch.DrawSnapped(relicSilhouette, new Vector2(spriteX, spriteY + 1), mainOutlineColor);
+                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY), mainOutlineColor);
+                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY), mainOutlineColor);
+                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX, spriteY - 1), mainOutlineColor);
+                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX, spriteY + 1), mainOutlineColor);
                 }
 
-                if (relicSprite != null)
+                if (itemSprite != null)
                 {
-                    spriteBatch.DrawSnapped(relicSprite, new Vector2(spriteX, spriteY), Color.White);
+                    spriteBatch.DrawSnapped(itemSprite, new Vector2(spriteX, spriteY), Color.White);
                 }
 
                 // 2. Title
                 // Anchor: Bottom of the title block is fixed relative to the sprite bottom.
                 float titleBottomY = spriteY + spriteSize + gap;
 
-                string name = _hoveredRelicData.RelicName.ToUpper();
                 int maxTitleWidth = _statsPanelArea.Width - (4 * 2); // 4px padding on sides
 
                 var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
@@ -1318,7 +1440,7 @@ namespace ProjectVagabond.UI
                 float descAreaHeight = descAreaBottom - descAreaTop;
 
                 float descWidth = _statsPanelArea.Width - (4 * 2); // 4px padding
-                var descLines = ParseAndWrapRichText(secondaryFont, _hoveredRelicData.Description.ToUpper(), descWidth, _global.Palette_White);
+                var descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _global.Palette_White);
                 float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
 
                 // Center vertically in the area
@@ -1361,13 +1483,13 @@ namespace ProjectVagabond.UI
             if (playerState == null) return;
 
             var stats = new List<(string Label, string StatKey)>
-{
-    ("MAX HP", "MaxHP"),
-    ("STRNTH", "Strength"),
-    ("INTELL", "Intelligence"),
-    ("TENACT", "Tenacity"),
-    ("AGILTY", "Agility")
-};
+            {
+                ("MAX HP", "MaxHP"),
+                ("STRNTH", "Strength"),
+                ("INTELL", "Intelligence"),
+                ("TENACT", "Tenacity"),
+                ("AGILTY", "Agility")
+            };
 
             int startX = _statsPanelArea.X + 3;
             int startY = _statsPanelArea.Y + 77;
@@ -1391,11 +1513,27 @@ namespace ProjectVagabond.UI
                 return 0;
             }
 
-            // Helper to get modifier from the hovered relic data
+            int GetEquippedWeaponModifier(string statKey)
+            {
+                if (string.IsNullOrEmpty(playerState.EquippedWeaponId)) return 0;
+                if (BattleDataCache.Weapons.TryGetValue(playerState.EquippedWeaponId, out var weapon))
+                {
+                    return weapon.StatModifiers.GetValueOrDefault(statKey, 0);
+                }
+                return 0;
+            }
+
+            // Helper to get modifier from the hovered item data
             int GetHoveredModifier(string statKey)
             {
-                if (_hoveredRelicData == null) return 0;
-                return _hoveredRelicData.StatModifiers.GetValueOrDefault(statKey, 0);
+                if (_hoveredItemData == null) return 0;
+
+                if (_hoveredItemData is RelicData relic)
+                    return relic.StatModifiers.GetValueOrDefault(statKey, 0);
+                if (_hoveredItemData is WeaponData weapon)
+                    return weapon.StatModifiers.GetValueOrDefault(statKey, 0);
+
+                return 0;
             }
 
             for (int i = 0; i < stats.Count; i++)
@@ -1407,12 +1545,13 @@ namespace ProjectVagabond.UI
                 // Get the base stat directly to perform accurate math
                 int baseStat = playerState.GetBaseStat(stat.StatKey);
 
-                // Calculate total current modifier from all equipped items
+                // Calculate total current modifier from all equipped items (Relics + Weapon)
                 int totalCurrentMod = 0;
                 for (int slot = 0; slot < playerState.EquippedRelics.Length; slot++)
                 {
                     totalCurrentMod += GetEquippedModifier(slot, stat.StatKey);
                 }
+                totalCurrentMod += GetEquippedWeaponModifier(stat.StatKey);
 
                 // Current Effective Value (Clamped)
                 int currentVal = Math.Max(1, baseStat + totalCurrentMod);
@@ -1420,12 +1559,22 @@ namespace ProjectVagabond.UI
                 // Projected Calculation
                 int projectedVal = currentVal;
                 int diff = 0;
-                bool isComparing = _isEquipSubmenuOpen && _hoveredRelicData != null;
+                bool isComparing = _isEquipSubmenuOpen && _hoveredItemData != null;
 
                 if (isComparing)
                 {
-                    // We are replacing slot 0
-                    int currentSlotMod = GetEquippedModifier(0, stat.StatKey);
+                    int currentSlotMod = 0;
+
+                    if (_activeEquipSlotType == EquipSlotType.Weapon)
+                    {
+                        currentSlotMod = GetEquippedWeaponModifier(stat.StatKey);
+                    }
+                    else if (_activeEquipSlotType == EquipSlotType.Relic)
+                    {
+                        // We are replacing slot 0 for relics
+                        currentSlotMod = GetEquippedModifier(0, stat.StatKey);
+                    }
+
                     int newMod = GetHoveredModifier(stat.StatKey);
 
                     // Calculate projected raw value
