@@ -18,10 +18,8 @@ namespace ProjectVagabond.UI
     {
         public bool IsOpen { get; private set; } = false;
         public event Action<bool>? OnInventoryToggled;
-
         // Expose hover state to block map interaction
         public bool IsHovered => _inventoryButton?.IsHovered ?? false;
-
         private readonly GameState _gameState;
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
@@ -153,15 +151,7 @@ namespace ProjectVagabond.UI
                 int menuIndex = (int)category;
                 var bounds = new Rectangle((int)MathF.Round(startX + i * buttonClickableWidth), (int)buttonY, (int)MathF.Round(buttonClickableWidth), buttonSpriteSize);
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
-                button.OnClick += () =>
-                {
-                    CancelEquipSelection();
-                    _selectedInventoryCategory = category;
-                    _selectedSlotIndex = -1;
-                    _currentPage = 0;
-                    _selectedHeaderBobTimer = 0f;
-                    RefreshInventorySlots();
-                };
+                button.OnClick += () => SwitchToCategory(category);
                 _inventoryHeaderButtons.Add(button);
                 _inventoryHeaderButtonOffsets[button] = 0f;
                 _inventoryHeaderButtonBaseBounds[button] = bounds;
@@ -172,15 +162,7 @@ namespace ProjectVagabond.UI
             float equipX = startX - 60f;
             var equipBounds = new Rectangle((int)equipX, (int)buttonY, 32, 32);
             _inventoryEquipButton = new InventoryHeaderButton(equipBounds, _spriteManager.InventoryHeaderButtonEquip, equipRects[0], equipRects[1], equipRects[2], (int)InventoryCategory.Equip, "Equip");
-            _inventoryEquipButton.OnClick += () =>
-            {
-                CancelEquipSelection();
-                _selectedInventoryCategory = InventoryCategory.Equip;
-                _selectedSlotIndex = -1;
-                _currentPage = 0;
-                _selectedHeaderBobTimer = 0f;
-                RefreshInventorySlots();
-            };
+            _inventoryEquipButton.OnClick += () => SwitchToCategory(InventoryCategory.Equip);
 
             // Initialize inventory slot grid
             const int slotContainerWidth = 180;
@@ -243,13 +225,13 @@ namespace ProjectVagabond.UI
             _debugButton1 = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryLeftArrowButton, leftArrowRects[0], leftArrowRects[1]);
             _debugButton1.OnClick += () =>
             {
-                CycleCategory(-1); // Changed from ChangePage to CycleCategory
+                CycleCategory(-1);
             };
 
             _debugButton2 = new ImageButton(new Rectangle(0, 0, 5, 5), _spriteManager.InventoryRightArrowButton, rightArrowRects[0], rightArrowRects[1]);
             _debugButton2.OnClick += () =>
             {
-                CycleCategory(1); // Changed from ChangePage to CycleCategory
+                CycleCategory(1);
             };
 
             // Initialize Page Navigation Buttons
@@ -380,6 +362,8 @@ namespace ProjectVagabond.UI
             _gameState.PlayerState.EquippedRelics[0] = itemId;
             _isEquipSubmenuOpen = false;
             _hoveredRelicData = null;
+
+            _hapticsManager.TriggerShake(4f, 0.1f, true, 2f);
 
             if (_relicEquipButton != null)
             {
@@ -536,7 +520,7 @@ namespace ProjectVagabond.UI
             {
                 _inventoryArrowAnimTimer = 0f;
 
-                _hapticsManager.TriggerShake(6f, 0.1f, true, 5f);
+                _hapticsManager.TriggerShake(4f, 0.1f, true, 2f);
 
                 if (slotFrames != null)
                 {
@@ -853,19 +837,37 @@ namespace ProjectVagabond.UI
 
         private void CycleCategory(int direction)
         {
+            // Handle Equip Category (Index 5)
+            if (_selectedInventoryCategory == InventoryCategory.Equip)
+            {
+                // Scroll Down/Right (1) -> Go to Weapons (0)
+                if (direction > 0)
+                {
+                    SwitchToCategory(InventoryCategory.Weapons);
+                }
+                // Scroll Up/Left (-1) -> Do nothing
+                return;
+            }
+
+            // Handle Main Categories (0-4)
             int currentIndex = (int)_selectedInventoryCategory;
             int newIndex = currentIndex + direction;
 
-            // Clamp to valid range [0, Consumables], excluding Equip
+            // Standard navigation within Weapons-Consumables
             if (newIndex >= 0 && newIndex <= (int)InventoryCategory.Consumables)
             {
-                CancelEquipSelection(); // Failsafe
-                _selectedInventoryCategory = (InventoryCategory)newIndex;
-                _currentPage = 0; // Reset page on category change
-                _selectedSlotIndex = -1; // Clear selection on category change
-                _selectedHeaderBobTimer = 0f; // Reset bob timer on category change
-                RefreshInventorySlots();
+                SwitchToCategory((InventoryCategory)newIndex);
             }
+        }
+
+        private void SwitchToCategory(InventoryCategory category)
+        {
+            CancelEquipSelection();
+            _selectedInventoryCategory = category;
+            _currentPage = 0;
+            _selectedSlotIndex = -1;
+            _selectedHeaderBobTimer = 0f;
+            RefreshInventorySlots();
         }
 
         public void DrawWorld(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -1336,13 +1338,13 @@ namespace ProjectVagabond.UI
             if (playerState == null) return;
 
             var stats = new List<(string Label, string StatKey)>
-            {
-                ("MAX HP", "MaxHP"),
-                ("STRNTH", "Strength"),
-                ("INTELL", "Intelligence"),
-                ("TENACT", "Tenacity"),
-                ("AGILTY", "Agility")
-            };
+    {
+        ("MAX HP", "MaxHP"),
+        ("STRNTH", "Strength"),
+        ("INTELL", "Intelligence"),
+        ("TENACT", "Tenacity"),
+        ("AGILTY", "Agility")
+    };
 
             int startX = _statsPanelArea.X + 3;
             int startY = _statsPanelArea.Y + 77;
