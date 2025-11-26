@@ -46,10 +46,10 @@ namespace ProjectVagabond.UI
         // Equip Buttons
         private EquipButton? _relicEquipButton;
         private EquipButton? _weaponEquipButton;
-        private EquipButton? _armorEquipButton; // Added Armor Button
+        private EquipButton? _armorEquipButton;
 
         // Submenu State
-        private enum EquipSlotType { None, Weapon, Armor, Relic } // Added Armor
+        private enum EquipSlotType { None, Weapon, Armor, Relic }
         private EquipSlotType _activeEquipSlotType = EquipSlotType.None;
         private bool _isEquipSubmenuOpen = false;
         private readonly List<EquipButton> _equipSubmenuButtons = new();
@@ -63,6 +63,16 @@ namespace ProjectVagabond.UI
         private InventoryCategory _selectedInventoryCategory;
         private InventoryCategory _previousInventoryCategory;
         private int _selectedSlotIndex = -1;
+
+        // Navigation Order Definition
+        private readonly List<InventoryCategory> _categoryOrder = new()
+        {
+            InventoryCategory.Weapons,
+            InventoryCategory.Armor,
+            InventoryCategory.Relics,
+            InventoryCategory.Spells,
+            InventoryCategory.Consumables
+        };
 
         // Animation State
         private float _inventoryArrowAnimTimer;
@@ -132,8 +142,8 @@ namespace ProjectVagabond.UI
             _selectedInventoryCategory = InventoryCategory.Weapons;
             _selectedSlotIndex = -1;
 
-            var categories = Enum.GetValues(typeof(InventoryCategory)).Cast<InventoryCategory>().Where(c => c != InventoryCategory.Equip).ToList();
-            int numButtons = categories.Count;
+            // Use the defined order for button creation
+            int numButtons = _categoryOrder.Count;
             const int buttonSpriteSize = 32;
             const int containerWidth = 172;
             var buttonRects = _spriteManager.InventoryHeaderButtonSourceRects;
@@ -144,7 +154,7 @@ namespace ProjectVagabond.UI
 
             for (int i = 0; i < numButtons; i++)
             {
-                var category = categories[i];
+                var category = _categoryOrder[i];
                 Texture2D buttonSpriteSheet = category switch
                 {
                     InventoryCategory.Weapons => _spriteManager.InventoryHeaderButtonWeapons,
@@ -158,7 +168,16 @@ namespace ProjectVagabond.UI
                 int menuIndex = (int)category;
                 var bounds = new Rectangle((int)MathF.Round(startX + i * buttonClickableWidth), (int)buttonY, (int)MathF.Round(buttonClickableWidth), buttonSpriteSize);
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
-                button.OnClick += () => SwitchToCategory(category);
+
+                // Only switch if it's a different category to prevent re-animation
+                button.OnClick += () =>
+                {
+                    if (_selectedInventoryCategory != category)
+                    {
+                        SwitchToCategory(category);
+                    }
+                };
+
                 _inventoryHeaderButtons.Add(button);
                 _inventoryHeaderButtonOffsets[button] = 0f;
                 _inventoryHeaderButtonBaseBounds[button] = bounds;
@@ -453,54 +472,67 @@ namespace ProjectVagabond.UI
             if (_activeEquipSlotType == EquipSlotType.Weapon)
             {
                 _gameState.PlayerState.EquippedWeaponId = itemId;
-                if (_weaponEquipButton != null)
-                {
-                    string name = "NOTHING";
-                    if (!string.IsNullOrEmpty(itemId))
-                    {
-                        var data = GetWeaponData(itemId);
-                        if (data != null) name = data.WeaponName.ToUpper();
-                        else name = itemId.ToUpper();
-                    }
-                    _weaponEquipButton.MainText = name;
-                }
             }
             else if (_activeEquipSlotType == EquipSlotType.Armor)
             {
                 _gameState.PlayerState.EquippedArmorId = itemId;
-                if (_armorEquipButton != null)
-                {
-                    string name = "NOTHING";
-                    if (!string.IsNullOrEmpty(itemId))
-                    {
-                        var data = GetArmorData(itemId);
-                        if (data != null) name = data.ArmorName.ToUpper();
-                        else name = itemId.ToUpper();
-                    }
-                    _armorEquipButton.MainText = name;
-                }
             }
             else if (_activeEquipSlotType == EquipSlotType.Relic)
             {
                 _gameState.PlayerState.EquippedRelics[0] = itemId;
-                if (_relicEquipButton != null)
-                {
-                    string name = "NOTHING";
-                    if (!string.IsNullOrEmpty(itemId))
-                    {
-                        var data = GetRelicData(itemId);
-                        if (data != null) name = data.RelicName.ToUpper();
-                        else name = itemId.ToUpper();
-                    }
-                    _relicEquipButton.MainText = name;
-                }
             }
 
             _isEquipSubmenuOpen = false;
             _activeEquipSlotType = EquipSlotType.None;
             _hoveredItemData = null;
 
+            // Refresh the main equip buttons to show the new item
+            UpdateEquipButtonState(_weaponEquipButton!, _gameState.PlayerState.EquippedWeaponId, EquipSlotType.Weapon);
+            UpdateEquipButtonState(_armorEquipButton!, _gameState.PlayerState.EquippedArmorId, EquipSlotType.Armor);
+            UpdateEquipButtonState(_relicEquipButton!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic);
+
             _hapticsManager.TriggerShake(4f, 0.1f, true, 2f);
+        }
+
+        private void UpdateEquipButtonState(EquipButton button, string? itemId, EquipSlotType type)
+        {
+            string name = "NOTHING";
+            Texture2D? icon = null;
+            Texture2D? silhouette = null;
+
+            if (!string.IsNullOrEmpty(itemId))
+            {
+                string path = "";
+                if (type == EquipSlotType.Weapon)
+                {
+                    var data = GetWeaponData(itemId);
+                    if (data != null) { name = data.WeaponName.ToUpper(); path = $"Sprites/Items/Weapons/{data.WeaponID}"; }
+                    else name = itemId.ToUpper();
+                }
+                else if (type == EquipSlotType.Armor)
+                {
+                    var data = GetArmorData(itemId);
+                    if (data != null) { name = data.ArmorName.ToUpper(); path = $"Sprites/Items/Armor/{data.ArmorID}"; }
+                    else name = itemId.ToUpper();
+                }
+                else if (type == EquipSlotType.Relic)
+                {
+                    var data = GetRelicData(itemId);
+                    if (data != null) { name = data.RelicName.ToUpper(); path = $"Sprites/Items/Relics/{data.RelicID}"; }
+                    else name = itemId.ToUpper();
+                }
+
+                if (!string.IsNullOrEmpty(path))
+                {
+                    icon = _spriteManager.GetSmallRelicSprite(path);
+                    silhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
+                }
+            }
+
+            button.MainText = name;
+            button.IconTexture = icon;
+            button.IconSilhouette = silhouette;
+            button.IconSourceRect = null; // Use full texture
         }
 
         private void ToggleInventory()
@@ -512,40 +544,10 @@ namespace ProjectVagabond.UI
                 _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
                 RefreshInventorySlots();
 
-                // Refresh equip button texts
-                if (_weaponEquipButton != null)
-                {
-                    string wId = _gameState.PlayerState.EquippedWeaponId;
-                    string wName = "NOTHING";
-                    if (!string.IsNullOrEmpty(wId))
-                    {
-                        var wData = GetWeaponData(wId);
-                        wName = wData != null ? wData.WeaponName.ToUpper() : wId.ToUpper();
-                    }
-                    _weaponEquipButton.MainText = wName;
-                }
-                if (_armorEquipButton != null)
-                {
-                    string aId = _gameState.PlayerState.EquippedArmorId;
-                    string aName = "NOTHING";
-                    if (!string.IsNullOrEmpty(aId))
-                    {
-                        var aData = GetArmorData(aId);
-                        aName = aData != null ? aData.ArmorName.ToUpper() : aId.ToUpper();
-                    }
-                    _armorEquipButton.MainText = aName;
-                }
-                if (_relicEquipButton != null)
-                {
-                    string rId = _gameState.PlayerState.EquippedRelics[0];
-                    string rName = "NOTHING";
-                    if (!string.IsNullOrEmpty(rId))
-                    {
-                        var rData = GetRelicData(rId);
-                        rName = rData != null ? rData.RelicName.ToUpper() : rId.ToUpper();
-                    }
-                    _relicEquipButton.MainText = rName;
-                }
+                // Refresh equip button texts and icons
+                UpdateEquipButtonState(_weaponEquipButton!, _gameState.PlayerState.EquippedWeaponId, EquipSlotType.Weapon);
+                UpdateEquipButtonState(_armorEquipButton!, _gameState.PlayerState.EquippedArmorId, EquipSlotType.Armor);
+                UpdateEquipButtonState(_relicEquipButton!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic);
 
                 if (_selectedInventoryCategory != InventoryCategory.Equip)
                 {
@@ -743,26 +745,34 @@ namespace ProjectVagabond.UI
             bool scrollUp = scrollDelta > 0;
             bool scrollDown = scrollDelta < 0;
             bool isHoveringHeader = headerArea.Contains(mouseInWorldSpace);
+            bool rightClickReleased = currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
 
-            // Handle Submenu Scrolling
-            if (_isEquipSubmenuOpen && scrollDelta != 0)
+            // Handle Submenu Scrolling and Cancellation
+            if (_isEquipSubmenuOpen)
             {
-                int totalItems = 1; // 1 for REMOVE
-                if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
-                else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
-                else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
-
-                int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
-
-                if (scrollDelta < 0 && _equipMenuScrollIndex < maxScroll)
+                if (rightClickReleased)
                 {
-                    _equipMenuScrollIndex++;
-                    RefreshEquipSubmenuButtons();
+                    CancelEquipSelection();
                 }
-                else if (scrollDelta > 0 && _equipMenuScrollIndex > 0)
+                else if (scrollDelta != 0)
                 {
-                    _equipMenuScrollIndex--;
-                    RefreshEquipSubmenuButtons();
+                    int totalItems = 1; // 1 for REMOVE
+                    if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
+                    else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
+                    else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
+
+                    int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
+
+                    if (scrollDelta < 0 && _equipMenuScrollIndex < maxScroll)
+                    {
+                        _equipMenuScrollIndex++;
+                        RefreshEquipSubmenuButtons();
+                    }
+                    else if (scrollDelta > 0 && _equipMenuScrollIndex > 0)
+                    {
+                        _equipMenuScrollIndex--;
+                        RefreshEquipSubmenuButtons();
+                    }
                 }
             }
             // Handle Category Switching and Pagination
@@ -791,14 +801,16 @@ namespace ProjectVagabond.UI
             }
 
             // Update Header Buttons
-            int selectedIndex = (int)_selectedInventoryCategory;
+            int selectedIndex = _categoryOrder.IndexOf(_selectedInventoryCategory);
+            if (_selectedInventoryCategory == InventoryCategory.Equip) selectedIndex = -1; // Equip is separate
+
             const float repulsionAmount = 8f;
             const float repulsionSpeed = 15f;
             int numButtons = _inventoryHeaderButtons.Count;
             float rawOffsetFirst = 0f;
             float rawOffsetLast = 0f;
 
-            if (numButtons > 0)
+            if (numButtons > 0 && selectedIndex != -1)
             {
                 if (0 < selectedIndex) rawOffsetFirst = -repulsionAmount;
                 else if (0 > selectedIndex) rawOffsetFirst = repulsionAmount;
@@ -814,8 +826,11 @@ namespace ProjectVagabond.UI
             {
                 var button = _inventoryHeaderButtons[i];
                 float targetOffset = 0f;
-                if (i < selectedIndex) targetOffset = -repulsionAmount;
-                else if (i > selectedIndex) targetOffset = repulsionAmount;
+                if (selectedIndex != -1)
+                {
+                    if (i < selectedIndex) targetOffset = -repulsionAmount;
+                    else if (i > selectedIndex) targetOffset = repulsionAmount;
+                }
                 targetOffset += centeringCorrection;
 
                 float currentOffset = _inventoryHeaderButtonOffsets[button];
@@ -875,8 +890,10 @@ namespace ProjectVagabond.UI
                 _debugButton1.Bounds = new Rectangle(centerX - (int)currentOffset - (_debugButton1.Bounds.Width / 2), centerY - _debugButton1.Bounds.Height / 2 - 2, _debugButton1.Bounds.Width, _debugButton1.Bounds.Height);
                 _debugButton2.Bounds = new Rectangle(centerX + (int)currentOffset - (_debugButton2.Bounds.Width / 2), centerY - _debugButton2.Bounds.Height / 2 - 2, _debugButton2.Bounds.Width, _debugButton2.Bounds.Height);
 
-                _debugButton1.IsEnabled = (int)_selectedInventoryCategory > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
-                _debugButton2.IsEnabled = (int)_selectedInventoryCategory < (int)InventoryCategory.Consumables && _selectedInventoryCategory != InventoryCategory.Equip;
+                // Determine if arrows should be enabled based on the ordered list
+                int currentIndex = _categoryOrder.IndexOf(_selectedInventoryCategory);
+                _debugButton1.IsEnabled = currentIndex > 0 && _selectedInventoryCategory != InventoryCategory.Equip;
+                _debugButton2.IsEnabled = currentIndex < _categoryOrder.Count - 1 && _selectedInventoryCategory != InventoryCategory.Equip;
             }
 
             // Update Slots or Equip UI
@@ -1016,6 +1033,8 @@ namespace ProjectVagabond.UI
 
         private void ChangePage(int direction)
         {
+            if (_totalPages <= 1) return;
+
             int totalItems = GetCurrentCategoryItems().Count;
             int maxPage = Math.Max(0, (int)Math.Ceiling((double)totalItems / ITEMS_PER_PAGE) - 1);
 
@@ -1048,14 +1067,13 @@ namespace ProjectVagabond.UI
                 return;
             }
 
-            // Handle Main Categories (0-4)
-            int currentIndex = (int)_selectedInventoryCategory;
+            // Handle Main Categories using the ordered list
+            int currentIndex = _categoryOrder.IndexOf(_selectedInventoryCategory);
             int newIndex = currentIndex + direction;
 
-            // Standard navigation within Weapons-Consumables
-            if (newIndex >= 0 && newIndex <= (int)InventoryCategory.Consumables)
+            if (newIndex >= 0 && newIndex < _categoryOrder.Count)
             {
-                SwitchToCategory((InventoryCategory)newIndex);
+                SwitchToCategory(_categoryOrder[newIndex]);
             }
         }
 
@@ -1976,4 +1994,3 @@ namespace ProjectVagabond.UI
         }
     }
 }
-#nullable restore
