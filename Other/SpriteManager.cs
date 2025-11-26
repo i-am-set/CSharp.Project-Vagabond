@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -32,6 +31,7 @@ namespace ProjectVagabond
         public Texture2D ElementIconsSpriteSheet { get; private set; }
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
+        public Texture2D RarityIconsSpriteSheet { get; private set; } // <--- Added
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; }
@@ -236,6 +236,9 @@ namespace ProjectVagabond
 
             try { ActionButtonUsesSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_uses_spritesheet"); }
             catch { ActionButtonUsesSpriteSheet = _textureFactory.CreateColoredTexture(471, 17, Color.Magenta); }
+
+            try { RarityIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet"); }
+            catch { RarityIconsSpriteSheet = _textureFactory.CreateColoredTexture(16, 48, Color.Magenta); }
 
             // Load Mouse Prompt Sprites
             try { MousePromptBlank = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_blank"); }
@@ -967,6 +970,17 @@ namespace ProjectVagabond
             LoadEssentialContent();
             LoadGameContent();
         }
+
+        public Rectangle GetRarityIconSourceRect(int rarity, GameTime gameTime)
+        {
+            // Clamp rarity to valid rows (0 to 5)
+            rarity = Math.Clamp(rarity, 0, 5);
+
+            // Animation settings
+            const float frameDuration = 0.5f; // Adjust speed here
+            int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / frameDuration) % 2;
+
+            return new Rectangle(frameIndex * 8, rarity * 8, 8, 8);
+        }
     }
 }
-﻿

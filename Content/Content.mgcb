@@ -2018,6 +2018,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/arrow_icon_spritesheet.png;Sprites/UI/BasicIcons/arrow_icon_spritesheet
 
+#begin Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet.png;Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet
+
 #begin Sprites/UI/BasicIcons/StatusEffects/agilitydown_status_icon.png
 /importer:TextureImporter
 /processor:TextureProcessor

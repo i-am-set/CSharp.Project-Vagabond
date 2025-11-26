@@ -16,6 +16,7 @@ namespace ProjectVagabond.UI
         public Texture2D? IconTexture { get; set; }
         public Texture2D? IconSilhouette { get; set; }
         public Rectangle? IconSourceRect { get; set; }
+        public int Rarity { get; set; } = -1; // -1 means no rarity icon
 
         /// <summary>
         /// If true, the TitleText is only drawn when the button is hovered.
@@ -150,6 +151,19 @@ namespace ProjectVagabond.UI
                 }
 
                 spriteBatch.DrawSnapped(IconTexture, destRect, src, Color.White);
+
+                // Draw Rarity Icon
+                if (Rarity >= 0 && spriteManager.RarityIconsSpriteSheet != null)
+                {
+                    var rarityRect = spriteManager.GetRarityIconSourceRect(Rarity, gameTime);
+                    // Position at top-right of the icon area.
+                    // destRect is 16x16.
+                    // Rarity icon is 8x8.
+                    // We want the rarity icon's top-right to align with destRect's top-right.
+                    // Rarity Pos = (destRect.Right - 8, destRect.Top).
+                    Vector2 rarityPos = new Vector2(destRect.Right - 8, destRect.Top);
+                    spriteBatch.DrawSnapped(spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White);
+                }
             }
 
             // --- Main Text (Left Aligned in 109x16) ---

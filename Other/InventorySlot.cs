@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -16,6 +15,7 @@ namespace ProjectVagabond.UI
         public int Quantity { get; private set; }
         public string? IconPath { get; private set; }
         public Color? IconTint { get; private set; }
+        public int Rarity { get; private set; } = -1; // -1 means no rarity icon
         public bool IsSelected { get; set; }
         public bool HasItem => !string.IsNullOrEmpty(ItemId);
         private Rectangle _currentIdleFrame;
@@ -41,11 +41,12 @@ namespace ProjectVagabond.UI
             RandomizeFrame();
         }
 
-        public void AssignItem(string itemId, int quantity, string? iconPath, Color? iconTint = null)
+        public void AssignItem(string itemId, int quantity, string? iconPath, int rarity, Color? iconTint = null)
         {
             ItemId = itemId;
             Quantity = quantity;
             IconPath = iconPath;
+            Rarity = rarity;
             IconTint = iconTint;
         }
 
@@ -54,6 +55,7 @@ namespace ProjectVagabond.UI
             ItemId = null;
             Quantity = 0;
             IconPath = null;
+            Rarity = -1;
             IconTint = null;
             IsSelected = false;
             // Reset visual scale so empty slots don't get stuck in an invisible state if animation was interrupted
@@ -172,6 +174,24 @@ namespace ProjectVagabond.UI
 
                         // Draw Icon
                         spriteBatch.DrawSnapped(icon, center, null, tint, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
+
+                        // Draw Rarity Icon
+                        if (Rarity >= 0 && spriteManager.RarityIconsSpriteSheet != null)
+                        {
+                            var rarityRect = spriteManager.GetRarityIconSourceRect(Rarity, gameTime);
+                            // Position at top-right of the item sprite.
+                            // Item sprite is centered. Top-right relative to center is (Width/2, -Height/2).
+                            // We want the rarity icon's center to be slightly inside the corner.
+                            // Let's align the top-right of the rarity icon with the top-right of the item.
+                            // Rarity icon is 8x8. Origin is (4,4).
+                            // Item Top-Right is (W/2, -H/2).
+                            // Rarity Pos = Center + (W/2 - 4, -H/2 + 4) * Scale.
+                            Vector2 rarityOffset = new Vector2(icon.Width / 2f - 4, -icon.Height / 2f + 4) * _visualScale;
+                            Vector2 rarityPos = center + rarityOffset;
+                            Vector2 rarityOrigin = new Vector2(4, 4);
+
+                            spriteBatch.DrawSnapped(spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White, 0f, rarityOrigin, _visualScale, SpriteEffects.None, 0f);
+                        }
                     }
                 }
                 else

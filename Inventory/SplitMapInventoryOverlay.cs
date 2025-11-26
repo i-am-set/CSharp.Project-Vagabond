@@ -390,6 +390,7 @@ namespace ProjectVagabond.UI
                 btn.IconTexture = null;
                 btn.IconSilhouette = null;
                 btn.OnClick = null;
+                btn.Rarity = -1; // Reset rarity
 
                 if (i % 2 == 0)
                 {
@@ -426,6 +427,7 @@ namespace ProjectVagabond.UI
                             btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
                             btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
                             btn.IconSourceRect = null;
+                            btn.Rarity = weaponData.Rarity;
                             btn.IsEnabled = true;
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
@@ -446,6 +448,7 @@ namespace ProjectVagabond.UI
                             btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
                             btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
                             btn.IconSourceRect = null;
+                            btn.Rarity = armorData.Rarity;
                             btn.IsEnabled = true;
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
@@ -466,6 +469,7 @@ namespace ProjectVagabond.UI
                             btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
                             btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
                             btn.IconSourceRect = null;
+                            btn.Rarity = relicData.Rarity;
                             btn.IsEnabled = true;
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
@@ -532,6 +536,7 @@ namespace ProjectVagabond.UI
             string name = "NOTHING";
             Texture2D? icon = null;
             Texture2D? silhouette = null;
+            int rarity = -1;
 
             if (!string.IsNullOrEmpty(itemId))
             {
@@ -539,19 +544,19 @@ namespace ProjectVagabond.UI
                 if (type == EquipSlotType.Weapon)
                 {
                     var data = GetWeaponData(itemId);
-                    if (data != null) { name = data.WeaponName.ToUpper(); path = $"Sprites/Items/Weapons/{data.WeaponID}"; }
+                    if (data != null) { name = data.WeaponName.ToUpper(); path = $"Sprites/Items/Weapons/{data.WeaponID}"; rarity = data.Rarity; }
                     else name = itemId.ToUpper();
                 }
                 else if (type == EquipSlotType.Armor)
                 {
                     var data = GetArmorData(itemId);
-                    if (data != null) { name = data.ArmorName.ToUpper(); path = $"Sprites/Items/Armor/{data.ArmorID}"; }
+                    if (data != null) { name = data.ArmorName.ToUpper(); path = $"Sprites/Items/Armor/{data.ArmorID}"; rarity = data.Rarity; }
                     else name = itemId.ToUpper();
                 }
                 else if (type == EquipSlotType.Relic1 || type == EquipSlotType.Relic2 || type == EquipSlotType.Relic3)
                 {
                     var data = GetRelicData(itemId);
-                    if (data != null) { name = data.RelicName.ToUpper(); path = $"Sprites/Items/Relics/{data.RelicID}"; }
+                    if (data != null) { name = data.RelicName.ToUpper(); path = $"Sprites/Items/Relics/{data.RelicID}"; rarity = data.Rarity; }
                     else name = itemId.ToUpper();
                 }
 
@@ -566,6 +571,7 @@ namespace ProjectVagabond.UI
             button.IconTexture = icon;
             button.IconSilhouette = silhouette;
             button.IconSourceRect = null; // Use full texture
+            button.Rarity = rarity;
         }
 
         private void ToggleInventory()
@@ -628,7 +634,7 @@ namespace ProjectVagabond.UI
             for (int i = 0; i < itemsToDisplay; i++)
             {
                 var item = items[startIndex + i];
-                _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.IconTint);
+                _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.Rarity, item.IconTint);
 
                 if (_selectedSlotIndex == i)
                 {
@@ -637,9 +643,9 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private List<(string Name, int Quantity, string? IconPath, int? Uses, Color? IconTint)> GetCurrentCategoryItems()
+        private List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint)> GetCurrentCategoryItems()
         {
-            var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses, Color? IconTint)>();
+            var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint)>();
             switch (_selectedInventoryCategory)
             {
                 case InventoryCategory.Weapons:
@@ -647,11 +653,11 @@ namespace ProjectVagabond.UI
                     {
                         if (BattleDataCache.Weapons.TryGetValue(kvp.Key, out var weaponData))
                         {
-                            currentItems.Add((weaponData.WeaponName, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, null));
+                            currentItems.Add((weaponData.WeaponName, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, weaponData.Rarity, null));
                         }
                         else
                         {
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, 0, null));
                         }
                     }
                     break;
@@ -660,11 +666,11 @@ namespace ProjectVagabond.UI
                     {
                         if (BattleDataCache.Armors.TryGetValue(kvp.Key, out var armorData))
                         {
-                            currentItems.Add((armorData.ArmorName, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, null));
+                            currentItems.Add((armorData.ArmorName, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, armorData.Rarity, null));
                         }
                         else
                         {
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, 0, null));
                         }
                     }
                     break;
@@ -672,18 +678,18 @@ namespace ProjectVagabond.UI
                     foreach (var kvp in _gameState.PlayerState.Relics)
                     {
                         if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, null));
+                            currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, data.Rarity, null));
                         else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null, 0, null));
                     }
                     break;
                 case InventoryCategory.Consumables:
                     foreach (var kvp in _gameState.PlayerState.Consumables)
                     {
                         if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, null));
+                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, 0, null)); // Consumables default to 0 rarity
                         else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, 0, null));
                     }
                     break;
                 case InventoryCategory.Spells:
@@ -692,17 +698,19 @@ namespace ProjectVagabond.UI
                         Color? tint = null;
                         string name = entry.MoveID;
                         string iconPath = $"Sprites/Items/Spells/{entry.MoveID}";
+                        int rarity = 0;
 
                         if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
                         {
                             name = moveData.MoveName;
+                            rarity = moveData.Rarity;
                             int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
                             if (_global.ElementColors.TryGetValue(elementId, out var elementColor))
                             {
                                 tint = elementColor;
                             }
                         }
-                        currentItems.Add((name, 1, iconPath, null, tint));
+                        currentItems.Add((name, 1, iconPath, null, rarity, tint));
                     }
                     break;
             }
@@ -1159,6 +1167,50 @@ namespace ProjectVagabond.UI
 
             foreach (var button in _inventoryHeaderButtons) button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
 
+            // --- NEW: Draw Category Title ---
+            if (_selectedInventoryCategory == InventoryCategory.Equip)
+            {
+                // 1. Draw "STATS" on the right panel
+                if (!_isEquipSubmenuOpen) // <--- Added check to hide STATS when submenu is open
+                {
+                    string statsTitle = "STATS";
+                    Vector2 statsTitleSize = font.MeasureString(statsTitle);
+                    Vector2 statsTitlePos = new Vector2(
+                        _infoPanelArea.X + (_infoPanelArea.Width - statsTitleSize.X) / 2f,
+                        _infoPanelArea.Y + 5 + _inventoryPositionOffset.Y
+                    );
+                    spriteBatch.DrawStringSnapped(font, statsTitle, statsTitlePos, _global.Palette_DarkGray);
+                }
+
+                // 2. Draw "EQUIP" on the left panel (centered over equip buttons)
+                if (_weaponEquipButton != null)
+                {
+                    string equipTitle = "EQUIP";
+                    Vector2 equipTitleSize = font.MeasureString(equipTitle);
+                    // Center over the weapon button's width (180px)
+                    float equipCenterX = _weaponEquipButton.Bounds.X + (_weaponEquipButton.Bounds.Width / 2f);
+                    // Align vertically with where "STATS" would be (or is)
+                    float titleY = _infoPanelArea.Y + 5 + _inventoryPositionOffset.Y;
+                    Vector2 equipTitlePos = new Vector2(
+                        equipCenterX - (equipTitleSize.X / 2f),
+                        titleY
+                    );
+                    spriteBatch.DrawStringSnapped(font, equipTitle, equipTitlePos, _global.Palette_DarkGray);
+                }
+            }
+            else
+            {
+                // Standard behavior for other categories
+                string categoryTitle = _selectedInventoryCategory.ToString().ToUpper();
+                Vector2 titleSize = font.MeasureString(categoryTitle);
+                Vector2 titlePos = new Vector2(
+                    _infoPanelArea.X + (_infoPanelArea.Width - titleSize.X) / 2f,
+                    _infoPanelArea.Y + 5 + _inventoryPositionOffset.Y
+                );
+                spriteBatch.DrawStringSnapped(font, categoryTitle, titlePos, _global.Palette_DarkGray);
+            }
+            // --------------------------------
+
             if (_selectedInventoryCategory != InventoryCategory.Equip)
             {
                 foreach (var slot in _inventorySlots) slot.Draw(spriteBatch, font, gameTime, Matrix.Identity);
@@ -1527,6 +1579,50 @@ namespace ProjectVagabond.UI
                     currentY += secondaryFont.LineHeight;
                 }
             }
+        }
+
+        private (List<string> Positives, List<string> Negatives) GetStatModifierLines(Dictionary<string, int> mods)
+        {
+            var positives = new List<string>();
+            var negatives = new List<string>();
+            if (mods == null || mods.Count == 0) return (positives, negatives);
+
+            foreach (var kvp in mods)
+            {
+                if (kvp.Value == 0) continue;
+                string colorTag = kvp.Value > 0 ? "[cpositive]" : "[cnegative]";
+                string sign = kvp.Value > 0 ? "+" : "";
+
+                // Map full names to abbreviations
+                string statName = kvp.Key.ToLowerInvariant() switch
+                {
+                    "strength" => "STR",
+                    "intelligence" => "INT",
+                    "tenacity" => "TEN",
+                    "agility" => "AGI",
+                    "maxhp" => "HP",
+                    "maxmana" => "MP",
+                    _ => kvp.Key.ToUpper().Substring(0, Math.Min(3, kvp.Key.Length)) // Fallback
+                };
+
+                // Pad short names to 3 characters
+                if (statName.Length < 3)
+                {
+                    statName += " ";
+                }
+
+                string line = $"{statName} {colorTag}{sign}{kvp.Value}[/]";
+
+                if (kvp.Value > 0)
+                {
+                    positives.Add(line);
+                }
+                else
+                {
+                    negatives.Add(line);
+                }
+            }
+            return (positives, negatives);
         }
 
         private void DrawStatsPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont)
@@ -2017,50 +2113,6 @@ namespace ProjectVagabond.UI
                 case "darkgray": return _global.Palette_DarkGray;
                 default: return _global.Palette_White;
             }
-        }
-
-        private (List<string> Positives, List<string> Negatives) GetStatModifierLines(Dictionary<string, int> mods)
-        {
-            var positives = new List<string>();
-            var negatives = new List<string>();
-            if (mods == null || mods.Count == 0) return (positives, negatives);
-
-            foreach (var kvp in mods)
-            {
-                if (kvp.Value == 0) continue;
-                string colorTag = kvp.Value > 0 ? "[cpositive]" : "[cnegative]";
-                string sign = kvp.Value > 0 ? "+" : "";
-
-                // Map full names to abbreviations
-                string statName = kvp.Key.ToLowerInvariant() switch
-                {
-                    "strength" => "STR",
-                    "intelligence" => "INT",
-                    "tenacity" => "TEN",
-                    "agility" => "AGI",
-                    "maxhp" => "HP",
-                    "maxmana" => "MP",
-                    _ => kvp.Key.ToUpper().Substring(0, Math.Min(3, kvp.Key.Length)) // Fallback
-                };
-
-                // Pad short names to 3 characters
-                if (statName.Length < 3)
-                {
-                    statName += " ";
-                }
-
-                string line = $"{statName} {colorTag}{sign}{kvp.Value}[/]";
-
-                if (kvp.Value > 0)
-                {
-                    positives.Add(line);
-                }
-                else
-                {
-                    negatives.Add(line);
-                }
-            }
-            return (positives, negatives);
         }
 
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)

@@ -114,7 +114,7 @@ namespace ProjectVagabond.UI
             _cardType = ChoiceType.Item;
             Title = item.ItemName.ToUpper();
             Description = item.Description.ToUpper();
-            _rarity = 0;
+            _rarity = 0; // Default to Common for consumables
             _rarityText = GetRarityString(_rarity);
             _elementId = 0;
             _subTextLines.Add("CONSUMABLE ITEM");
@@ -545,6 +545,18 @@ namespace ProjectVagabond.UI
                     }
 
                     spriteBatch.DrawSnapped(relicTexture, relicRect, Color.White * alpha);
+
+                    // Draw Rarity Icon for Relic
+                    if (_rarity >= 0 && spriteManager.RarityIconsSpriteSheet != null)
+                    {
+                        var rarityRect = spriteManager.GetRarityIconSourceRect(_rarity, gameTime);
+                        // Position at top-right of the relic icon.
+                        // Relic icon is 32x32. Rarity icon is 8x8.
+                        // Align top-right of rarity icon with top-right of relic icon.
+                        // Rarity Pos = (relicRect.Right - 8, relicRect.Top).
+                        Vector2 rarityPos = new Vector2(relicRect.Right - 8, relicRect.Top);
+                        spriteBatch.DrawSnapped(spriteManager.RarityIconsSpriteSheet, rarityPos, rarityRect, Color.White * alpha);
+                    }
 
                     float titleBlockStartY = currentY + relicIconSize - 4;
 
