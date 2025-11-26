@@ -350,6 +350,54 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/hill.png
 
+#begin Sprites/Items/Armor/archmagerobes.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Armor/archmagerobes.png;Sprites/Items/Armor/archmagerobes
+
+#begin Sprites/Items/Armor/berserkerscloak.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Armor/berserkerscloak.png;Sprites/Items/Armor/berserkerscloak
+
+#begin Sprites/Items/Armor/IronPlate.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Armor/IronPlate.png;Sprites/Items/Armor/IronPlate
+
+#begin Sprites/Items/Armor/LeatherTunic.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Items/Armor/LeatherTunic.png;Sprites/Items/Armor/LeatherTunic
+
 #begin Sprites/Items/Consumables/fire_scroll.png
 /importer:TextureImporter
 /processor:TextureProcessor

@@ -1,0 +1,64 @@
+[
+  {
+    "ArmorID": "leathertunic",
+    "ArmorName": "Leather Tunic",
+    "AbilityName": null,
+    "Description": "[cetc]A simple tunic made of cured hide[/]",
+    "Rarity": 0,
+    "LevelRequirement": 1,
+    "StatModifiers": {
+      "Tenacity": 3,
+      "Agility": 1
+    },
+    "Tags": [ "Leather", "Light" ]
+  },
+  {
+    "ArmorID": "ironplate",
+    "ArmorName": "Iron Plate",
+    "AbilityName": "Heavy Plating",
+    "Description": "[cetc]Iron sheets riveted together[/]",
+    "Rarity": 1,
+    "LevelRequirement": 3,
+    "Effects": {
+      "DamageReductionPhysical": "5"
+    },
+    "StatModifiers": {
+      "Tenacity": 8,
+      "Agility": -2
+    },
+    "Tags": [ "Metal", "Heavy" ]
+  },
+  {
+    "ArmorID": "archmagerobes",
+    "ArmorName": "Arch-Mage Robes",
+    "AbilityName": "Mana Well",
+    "Description": "[cetc]Silk robes enchanted to channel mage[/]",
+    "Rarity": 2,
+    "LevelRequirement": 4,
+    "Effects": {
+      "RegenEndOfTurn": "2"
+    },
+    "StatModifiers": {
+      "Intelligence": 4,
+      "MaxMana": 20
+    },
+    "Tags": [ "Cloth", "Magic" ]
+  },
+  {
+    "ArmorID": "berserkerscloak",
+    "ArmorName": "Berserker's Cloak",
+    "AbilityName": "Savage Fury",
+    "Description": "[cetc]A cloak made from the hide of a great beast[/]",
+    "Rarity": 2,
+    "LevelRequirement": 5,
+    "Effects": {
+      "DamageBonusLowHP": "50,20"
+    },
+    "StatModifiers": {
+      "Strength": 5,
+      "Tenacity": 3,
+      "Intelligence": -5
+    },
+    "Tags": [ "Leather", "Offensive" ]
+  }
+]

@@ -60,6 +60,12 @@
           "IronSword": 1,
           "Warhammer": 1,
           "PoisonDagger": 1
+        },
+        "StartingArmor": {
+          "leathertunic": 1,
+          "ironplate": 1,
+          "archmagerobes": 1,
+          "berserkerscloak": 1
         }
       }
     },

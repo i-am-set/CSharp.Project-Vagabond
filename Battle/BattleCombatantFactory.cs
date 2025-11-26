@@ -78,9 +78,28 @@ namespace ProjectVagabond.Battle
                     combatant.DefaultStrikeMoveID = gameState.PlayerState.DefaultStrikeMoveID;
                 }
 
+                // 3. Apply Armor Passives
+                if (!string.IsNullOrEmpty(gameState.PlayerState.EquippedArmorId) &&
+                    BattleDataCache.Armors.TryGetValue(gameState.PlayerState.EquippedArmorId, out var armorData))
+                {
+                    // Only create a passive effect entry if the armor actually has effects or a named ability
+                    if (armorData.Effects != null && armorData.Effects.Count > 0)
+                    {
+                        var armorAsRelic = new RelicData
+                        {
+                            RelicID = armorData.ArmorID,
+                            RelicName = armorData.ArmorName,
+                            AbilityName = armorData.AbilityName ?? "Armor Ability",
+                            Effects = armorData.Effects,
+                            StatModifiers = armorData.StatModifiers
+                        };
+                        combatant.ActiveRelics.Add(armorAsRelic);
+                    }
+                }
+
                 combatant.EquippedSpells = gameState.PlayerState.EquippedSpells;
 
-                // Apply Effective Stats from PlayerState (Base + Relic + Weapon Modifiers)
+                // Apply Effective Stats from PlayerState (Base + Relic + Weapon + Armor Modifiers)
                 // We overwrite the stats loaded from the component with the calculated effective stats.
                 combatant.Stats.MaxHP = gameState.PlayerState.GetEffectiveStat("MaxHP");
                 combatant.Stats.MaxMana = gameState.PlayerState.GetEffectiveStat("MaxMana");

@@ -509,7 +509,7 @@
     "RelicID": "priestspendant",
     "RelicName": "Priest's Pendant",
     "AbilityName": "Cornered Animal",
-    "Description": "[cpositive]1.5x[/] [cagi]Agility[/] [cctm]when below 33% HP[/] [darkgray](or 4+ enemies)[/]",
+    "Description": "[cpositive]1.5x[/] [cagi]Agility[/] [cctm]when below 33% HP[/] [cetc](or 4+ enemies)[/]",
     "Rarity": 1,
     "LevelRequirement": 2,
     "Effects": {

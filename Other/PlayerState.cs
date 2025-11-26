@@ -32,7 +32,6 @@ namespace ProjectVagabond
         public int Agility { get; set; }
         public List<int> DefensiveElementIDs { get; set; } = new List<int>();
         public string DefaultStrikeMoveID { get; set; }
-
         // --- INVENTORIES ---
         // String ID -> Quantity
         public Dictionary<string, int> Weapons { get; set; } = new Dictionary<string, int>();
@@ -84,7 +83,7 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Calculates the effective value of a stat by adding bonuses from equipped relics AND weapons to the base value.
+        /// Calculates the effective value of a stat by adding bonuses from equipped relics, weapons, AND armor to the base value.
         /// Enforces a minimum value of 1.
         /// </summary>
         /// <param name="statName">The name of the stat (e.g., "Strength", "MaxHP"). Case-insensitive.</param>
@@ -110,6 +109,15 @@ namespace ProjectVagabond
             if (!string.IsNullOrEmpty(EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(EquippedWeaponId, out var weapon))
             {
                 if (weapon.StatModifiers.TryGetValue(statName, out int mod))
+                {
+                    bonus += mod;
+                }
+            }
+
+            // 3. Armor Bonuses
+            if (!string.IsNullOrEmpty(EquippedArmorId) && BattleDataCache.Armors.TryGetValue(EquippedArmorId, out var armor))
+            {
+                if (armor.StatModifiers.TryGetValue(statName, out int mod))
                 {
                     bonus += mod;
                 }

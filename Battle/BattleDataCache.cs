@@ -14,12 +14,12 @@ namespace ProjectVagabond.Battle
     {
         public static Dictionary<int, ElementDefinition> Elements { get; private set; }
         public static Dictionary<int, Dictionary<int, float>> InteractionMatrix { get; private set; }
-
         // Dictionaries now use Case-Insensitive Comparers
         public static Dictionary<string, MoveData> Moves { get; private set; }
         public static Dictionary<string, ConsumableItemData> Consumables { get; private set; }
         public static Dictionary<string, RelicData> Relics { get; private set; }
-        public static Dictionary<string, WeaponData> Weapons { get; private set; } // <--- Added
+        public static Dictionary<string, WeaponData> Weapons { get; private set; }
+        public static Dictionary<string, ArmorData> Armors { get; private set; } // <--- Added
 
         public static void LoadData(ContentManager content)
         {
@@ -75,7 +75,7 @@ namespace ProjectVagabond.Battle
 
             Debug.WriteLine($"[BattleDataCache] Successfully loaded {Relics.Count} relic definitions.");
 
-            // --- WEAPONS --- (New Section)
+            // --- WEAPONS ---
             string weaponsPath = Path.Combine(content.RootDirectory, "Data", "Items", "Weapons.json");
             if (!File.Exists(weaponsPath))
             {
@@ -89,7 +89,6 @@ namespace ProjectVagabond.Battle
                 Weapons = weaponList.ToDictionary(w => w.WeaponID, w => w, StringComparer.OrdinalIgnoreCase);
                 ValidateWordLengths(Weapons.Values.Select(w => w.WeaponName), "Weapon", 11);
 
-                // Validate that linked moves exist
                 foreach (var weapon in Weapons.Values)
                 {
                     if (!Moves.ContainsKey(weapon.MoveID))
@@ -97,8 +96,32 @@ namespace ProjectVagabond.Battle
                         Debug.WriteLine($"[BattleDataCache] [ERROR] Weapon '{weapon.WeaponName}' references missing MoveID '{weapon.MoveID}'.");
                     }
                 }
-
                 Debug.WriteLine($"[BattleDataCache] Successfully loaded {Weapons.Count} weapon definitions.");
+            }
+
+            // --- ARMOR --- (New Section)
+            string armorPath = Path.Combine(content.RootDirectory, "Data", "Items", "Armor.json");
+            if (!File.Exists(armorPath))
+            {
+                Debug.WriteLine($"[BattleDataCache] WARNING: Armor.json not found at {armorPath}. Creating empty dictionary.");
+                Armors = new Dictionary<string, ArmorData>(StringComparer.OrdinalIgnoreCase);
+            }
+            else
+            {
+                string armorJson = File.ReadAllText(armorPath);
+                var armorList = JsonSerializer.Deserialize<List<ArmorData>>(armorJson, jsonOptions);
+                Armors = armorList.ToDictionary(a => a.ArmorID, a => a, StringComparer.OrdinalIgnoreCase);
+                ValidateWordLengths(Armors.Values.Select(a => a.ArmorName), "Armor", 11);
+
+                // Validate that all armors have stat modifiers
+                foreach (var armor in Armors.Values)
+                {
+                    if (armor.StatModifiers == null || armor.StatModifiers.Count == 0)
+                    {
+                        Debug.WriteLine($"[BattleDataCache] [ERROR] Armor '{armor.ArmorName}' (ID: {armor.ArmorID}) has no StatModifiers. All armor must modify stats.");
+                    }
+                }
+                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Armors.Count} armor definitions.");
             }
         }
 

@@ -46,9 +46,10 @@ namespace ProjectVagabond.UI
         // Equip Buttons
         private EquipButton? _relicEquipButton;
         private EquipButton? _weaponEquipButton;
+        private EquipButton? _armorEquipButton; // Added Armor Button
 
         // Submenu State
-        private enum EquipSlotType { None, Weapon, Relic }
+        private enum EquipSlotType { None, Weapon, Armor, Relic } // Added Armor
         private EquipSlotType _activeEquipSlotType = EquipSlotType.None;
         private bool _isEquipSubmenuOpen = false;
         private readonly List<EquipButton> _equipSubmenuButtons = new();
@@ -77,7 +78,7 @@ namespace ProjectVagabond.UI
 
         // Stat Cycle Animation State
         private float _statCycleTimer = 0f;
-        private object? _previousHoveredItemData; // Changed to object to handle WeaponData or RelicData
+        private object? _previousHoveredItemData;
         private const float STAT_CYCLE_INTERVAL = 1.0f;
 
         // Input State
@@ -85,7 +86,7 @@ namespace ProjectVagabond.UI
         private KeyboardState _previousKeyboardState;
 
         // Hover Data
-        private object? _hoveredItemData; // Changed to object to handle WeaponData or RelicData
+        private object? _hoveredItemData;
 
         // Text Formatting Tuning
         private const int SPACE_WIDTH = 5;
@@ -251,7 +252,8 @@ namespace ProjectVagabond.UI
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             int equipButtonX = (Global.VIRTUAL_WIDTH - 180) / 2 - 60;
             int relicButtonY = 250 + 19 + 16;
-            int weaponButtonY = relicButtonY - 32; // 32 pixels above
+            int armorButtonY = relicButtonY - 16; // Middle
+            int weaponButtonY = relicButtonY - 32; // Top
 
             // Weapon Button
             _weaponEquipButton = new EquipButton(new Rectangle(equipButtonX, weaponButtonY, 180, 16), "NOTHING");
@@ -259,6 +261,13 @@ namespace ProjectVagabond.UI
             _weaponEquipButton.ShowTitleOnHoverOnly = false;
             _weaponEquipButton.Font = secondaryFont;
             _weaponEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Weapon);
+
+            // Armor Button
+            _armorEquipButton = new EquipButton(new Rectangle(equipButtonX, armorButtonY, 180, 16), "NOTHING");
+            _armorEquipButton.TitleText = "ARMOR";
+            _armorEquipButton.ShowTitleOnHoverOnly = false;
+            _armorEquipButton.Font = secondaryFont;
+            _armorEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Armor);
 
             // Relic Button
             _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, relicButtonY, 180, 16), "NOTHING");
@@ -269,7 +278,7 @@ namespace ProjectVagabond.UI
 
             // Initialize Submenu Buttons
             _equipSubmenuButtons.Clear();
-            // Submenu starts at the weapon button Y position (moved down 32px from previous attempt)
+            // Submenu starts at the weapon button Y position
             int submenuStartY = weaponButtonY;
 
             for (int i = 0; i < 7; i++)
@@ -296,6 +305,12 @@ namespace ProjectVagabond.UI
             return null;
         }
 
+        private ArmorData? GetArmorData(string armorId)
+        {
+            if (BattleDataCache.Armors.TryGetValue(armorId, out var data)) return data;
+            return null;
+        }
+
         private void OpenEquipSubmenu(EquipSlotType slotType)
         {
             _isEquipSubmenuOpen = true;
@@ -311,6 +326,10 @@ namespace ProjectVagabond.UI
             if (_activeEquipSlotType == EquipSlotType.Weapon)
             {
                 availableItems = _gameState.PlayerState.Weapons.Keys.ToList();
+            }
+            else if (_activeEquipSlotType == EquipSlotType.Armor)
+            {
+                availableItems = _gameState.PlayerState.Armors.Keys.ToList();
             }
             else if (_activeEquipSlotType == EquipSlotType.Relic)
             {
@@ -362,7 +381,26 @@ namespace ProjectVagabond.UI
                         {
                             btn.MainText = weaponData.WeaponName.ToUpper();
                             string path = $"Sprites/Items/Weapons/{weaponData.WeaponID}";
-                            // Use Small sprites to fit the 16x16 icon box in the button
+                            btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
+                            btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
+                            btn.IconSourceRect = null;
+                            btn.IsEnabled = true;
+                            btn.OnClick = () => SelectEquipItem(itemId);
+                        }
+                        else
+                        {
+                            btn.MainText = itemId.ToUpper();
+                            btn.IsEnabled = true;
+                            btn.OnClick = () => SelectEquipItem(itemId);
+                        }
+                    }
+                    else if (_activeEquipSlotType == EquipSlotType.Armor)
+                    {
+                        var armorData = GetArmorData(itemId);
+                        if (armorData != null)
+                        {
+                            btn.MainText = armorData.ArmorName.ToUpper();
+                            string path = $"Sprites/Items/Armor/{armorData.ArmorID}";
                             btn.IconTexture = _spriteManager.GetSmallRelicSprite(path);
                             btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
                             btn.IconSourceRect = null;
@@ -427,6 +465,21 @@ namespace ProjectVagabond.UI
                     _weaponEquipButton.MainText = name;
                 }
             }
+            else if (_activeEquipSlotType == EquipSlotType.Armor)
+            {
+                _gameState.PlayerState.EquippedArmorId = itemId;
+                if (_armorEquipButton != null)
+                {
+                    string name = "NOTHING";
+                    if (!string.IsNullOrEmpty(itemId))
+                    {
+                        var data = GetArmorData(itemId);
+                        if (data != null) name = data.ArmorName.ToUpper();
+                        else name = itemId.ToUpper();
+                    }
+                    _armorEquipButton.MainText = name;
+                }
+            }
             else if (_activeEquipSlotType == EquipSlotType.Relic)
             {
                 _gameState.PlayerState.EquippedRelics[0] = itemId;
@@ -470,6 +523,17 @@ namespace ProjectVagabond.UI
                         wName = wData != null ? wData.WeaponName.ToUpper() : wId.ToUpper();
                     }
                     _weaponEquipButton.MainText = wName;
+                }
+                if (_armorEquipButton != null)
+                {
+                    string aId = _gameState.PlayerState.EquippedArmorId;
+                    string aName = "NOTHING";
+                    if (!string.IsNullOrEmpty(aId))
+                    {
+                        var aData = GetArmorData(aId);
+                        aName = aData != null ? aData.ArmorName.ToUpper() : aId.ToUpper();
+                    }
+                    _armorEquipButton.MainText = aName;
                 }
                 if (_relicEquipButton != null)
                 {
@@ -555,7 +619,17 @@ namespace ProjectVagabond.UI
                     }
                     break;
                 case InventoryCategory.Armor:
-                    foreach (var kvp in _gameState.PlayerState.Armors) currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, null));
+                    foreach (var kvp in _gameState.PlayerState.Armors)
+                    {
+                        if (BattleDataCache.Armors.TryGetValue(kvp.Key, out var armorData))
+                        {
+                            currentItems.Add((armorData.ArmorName, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, null));
+                        }
+                        else
+                        {
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, null));
+                        }
+                    }
                     break;
                 case InventoryCategory.Relics:
                     foreach (var kvp in _gameState.PlayerState.Relics)
@@ -675,6 +749,7 @@ namespace ProjectVagabond.UI
             {
                 int totalItems = 1; // 1 for REMOVE
                 if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
+                else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
                 else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
 
                 int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
@@ -893,6 +968,7 @@ namespace ProjectVagabond.UI
                 {
                     List<string> availableItems = new List<string>();
                     if (_activeEquipSlotType == EquipSlotType.Weapon) availableItems = _gameState.PlayerState.Weapons.Keys.ToList();
+                    else if (_activeEquipSlotType == EquipSlotType.Armor) availableItems = _gameState.PlayerState.Armors.Keys.ToList();
                     else if (_activeEquipSlotType == EquipSlotType.Relic) availableItems = _gameState.PlayerState.Relics.Keys.ToList();
 
                     for (int i = 0; i < _equipSubmenuButtons.Count; i++)
@@ -911,6 +987,7 @@ namespace ProjectVagabond.UI
                                 {
                                     string itemId = availableItems[itemIndex];
                                     if (_activeEquipSlotType == EquipSlotType.Weapon) _hoveredItemData = GetWeaponData(itemId);
+                                    else if (_activeEquipSlotType == EquipSlotType.Armor) _hoveredItemData = GetArmorData(itemId);
                                     else if (_activeEquipSlotType == EquipSlotType.Relic) _hoveredItemData = GetRelicData(itemId);
                                 }
                             }
@@ -920,6 +997,7 @@ namespace ProjectVagabond.UI
                 else
                 {
                     _relicEquipButton?.Update(currentMouseState, cameraTransform);
+                    _armorEquipButton?.Update(currentMouseState, cameraTransform);
                     _weaponEquipButton?.Update(currentMouseState, cameraTransform);
                 }
             }
@@ -1077,6 +1155,7 @@ namespace ProjectVagabond.UI
                     {
                         int totalItems = 1;
                         if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
+                        else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
                         else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
 
                         int maxScroll = Math.Max(0, totalItems - 7);
@@ -1107,6 +1186,7 @@ namespace ProjectVagabond.UI
                 else
                 {
                     _relicEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    _armorEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     _weaponEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
 
@@ -1186,7 +1266,6 @@ namespace ProjectVagabond.UI
                     iconPath = $"Sprites/Items/Spells/{move.MoveID}";
                 }
             }
-            // UPDATED: Handle Weapons Category
             else if (_selectedInventoryCategory == InventoryCategory.Weapons)
             {
                 var weapon = BattleDataCache.Weapons.Values.FirstOrDefault(w => w.WeaponName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
@@ -1195,6 +1274,16 @@ namespace ProjectVagabond.UI
                     name = weapon.WeaponName.ToUpper();
                     description = weapon.Description.ToUpper();
                     iconPath = $"Sprites/Items/Weapons/{weapon.WeaponID}";
+                }
+            }
+            else if (_selectedInventoryCategory == InventoryCategory.Armor)
+            {
+                var armor = BattleDataCache.Armors.Values.FirstOrDefault(a => a.ArmorName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (armor != null)
+                {
+                    name = armor.ArmorName.ToUpper();
+                    description = armor.Description.ToUpper();
+                    iconPath = $"Sprites/Items/Armor/{armor.ArmorID}";
                 }
             }
 
@@ -1363,6 +1452,14 @@ namespace ProjectVagabond.UI
                     itemSprite = _spriteManager.GetItemSprite(path);
                     itemSilhouette = _spriteManager.GetItemSpriteSilhouette(path);
                 }
+                else if (_hoveredItemData is ArmorData armor)
+                {
+                    name = armor.ArmorName.ToUpper();
+                    description = armor.Description.ToUpper();
+                    path = $"Sprites/Items/Armor/{armor.ArmorID}";
+                    itemSprite = _spriteManager.GetItemSprite(path);
+                    itemSilhouette = _spriteManager.GetItemSpriteSilhouette(path);
+                }
 
                 if (itemSilhouette != null)
                 {
@@ -1523,6 +1620,16 @@ namespace ProjectVagabond.UI
                 return 0;
             }
 
+            int GetEquippedArmorModifier(string statKey)
+            {
+                if (string.IsNullOrEmpty(playerState.EquippedArmorId)) return 0;
+                if (BattleDataCache.Armors.TryGetValue(playerState.EquippedArmorId, out var armor))
+                {
+                    return armor.StatModifiers.GetValueOrDefault(statKey, 0);
+                }
+                return 0;
+            }
+
             // Helper to get modifier from the hovered item data
             int GetHoveredModifier(string statKey)
             {
@@ -1532,6 +1639,8 @@ namespace ProjectVagabond.UI
                     return relic.StatModifiers.GetValueOrDefault(statKey, 0);
                 if (_hoveredItemData is WeaponData weapon)
                     return weapon.StatModifiers.GetValueOrDefault(statKey, 0);
+                if (_hoveredItemData is ArmorData armor)
+                    return armor.StatModifiers.GetValueOrDefault(statKey, 0);
 
                 return 0;
             }
@@ -1545,13 +1654,14 @@ namespace ProjectVagabond.UI
                 // Get the base stat directly to perform accurate math
                 int baseStat = playerState.GetBaseStat(stat.StatKey);
 
-                // Calculate total current modifier from all equipped items (Relics + Weapon)
+                // Calculate total current modifier from all equipped items (Relics + Weapon + Armor)
                 int totalCurrentMod = 0;
                 for (int slot = 0; slot < playerState.EquippedRelics.Length; slot++)
                 {
                     totalCurrentMod += GetEquippedModifier(slot, stat.StatKey);
                 }
                 totalCurrentMod += GetEquippedWeaponModifier(stat.StatKey);
+                totalCurrentMod += GetEquippedArmorModifier(stat.StatKey);
 
                 // Current Effective Value (Clamped)
                 int currentVal = Math.Max(1, baseStat + totalCurrentMod);
@@ -1568,6 +1678,10 @@ namespace ProjectVagabond.UI
                     if (_activeEquipSlotType == EquipSlotType.Weapon)
                     {
                         currentSlotMod = GetEquippedWeaponModifier(stat.StatKey);
+                    }
+                    else if (_activeEquipSlotType == EquipSlotType.Armor)
+                    {
+                        currentSlotMod = GetEquippedArmorModifier(stat.StatKey);
                     }
                     else if (_activeEquipSlotType == EquipSlotType.Relic)
                     {
@@ -1733,6 +1847,7 @@ namespace ProjectVagabond.UI
             if (tag == "ccrit") return _global.ColorCrit;
             if (tag == "cimmune") return _global.ColorImmune;
             if (tag == "cctm") return _global.ColorConditionToMeet;
+            if (tag == "cetc") return _global.Palette_DarkGray;
 
             // 3. Elements
             if (tag == "cfire") return _global.ElementColors.GetValueOrDefault(2, Color.White);
@@ -1791,4 +1906,3 @@ namespace ProjectVagabond.UI
         }
     }
 }
-#nullable restore
