@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -24,7 +25,6 @@ namespace ProjectVagabond.UI
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
         private readonly HapticsManager _hapticsManager;
-
         private ImageButton? _inventoryButton;
         private readonly List<InventoryHeaderButton> _inventoryHeaderButtons = new();
         private readonly Dictionary<InventoryHeaderButton, float> _inventoryHeaderButtonOffsets = new();
@@ -386,6 +386,10 @@ namespace ProjectVagabond.UI
             {
                 _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
                 RefreshInventorySlots();
+                if (_selectedInventoryCategory != InventoryCategory.Equip)
+                {
+                    TriggerSlotAnimations();
+                }
             }
             else
             {
@@ -395,6 +399,20 @@ namespace ProjectVagabond.UI
             }
 
             OnInventoryToggled?.Invoke(IsOpen);
+        }
+
+        private void TriggerSlotAnimations()
+        {
+            float delay = 0f;
+            const float stagger = 0.015f;
+            foreach (var slot in _inventorySlots)
+            {
+                if (slot.HasItem) // Only animate if it has an item
+                {
+                    slot.TriggerPopInAnimation(delay);
+                    delay += stagger;
+                }
+            }
         }
 
         private void RefreshInventorySlots()
@@ -520,7 +538,7 @@ namespace ProjectVagabond.UI
             {
                 _inventoryArrowAnimTimer = 0f;
 
-                _hapticsManager.TriggerShake(4f, 0.1f, true, 2f);
+                _hapticsManager.TriggerShake(2f, 0.1f, true, 2f);
 
                 if (slotFrames != null)
                 {
@@ -833,6 +851,7 @@ namespace ProjectVagabond.UI
 
             _selectedSlotIndex = -1; // Clear selection on page change
             RefreshInventorySlots();
+            TriggerSlotAnimations();
         }
 
         private void CycleCategory(int direction)
@@ -868,6 +887,10 @@ namespace ProjectVagabond.UI
             _selectedSlotIndex = -1;
             _selectedHeaderBobTimer = 0f;
             RefreshInventorySlots();
+            if (category != InventoryCategory.Equip)
+            {
+                TriggerSlotAnimations();
+            }
         }
 
         public void DrawWorld(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -1338,13 +1361,13 @@ namespace ProjectVagabond.UI
             if (playerState == null) return;
 
             var stats = new List<(string Label, string StatKey)>
-    {
-        ("MAX HP", "MaxHP"),
-        ("STRNTH", "Strength"),
-        ("INTELL", "Intelligence"),
-        ("TENACT", "Tenacity"),
-        ("AGILTY", "Agility")
-    };
+{
+    ("MAX HP", "MaxHP"),
+    ("STRNTH", "Strength"),
+    ("INTELL", "Intelligence"),
+    ("TENACT", "Tenacity"),
+    ("AGILTY", "Agility")
+};
 
             int startX = _statsPanelArea.X + 3;
             int startY = _statsPanelArea.Y + 77;
@@ -1619,3 +1642,4 @@ namespace ProjectVagabond.UI
         }
     }
 }
+#nullable restore

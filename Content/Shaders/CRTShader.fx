@@ -24,7 +24,7 @@ uniform float ImpactGlitchIntensity;
 #define ENABLE_WOBBLE
 
 // --- Effect Intensity Values ---
-static const float VIGNETTE_INTENSITY = 0.15;
+static const float VIGNETTE_INTENSITY = 0.35;
 static const float CHROMATIC_ABERRATION_AMOUNT = 10.0;
 static const float CONTRAST_AMOUNT = 1.1;
 // --- Scanline Parameters ---
