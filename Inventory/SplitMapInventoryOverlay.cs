@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -43,12 +44,14 @@ namespace ProjectVagabond.UI
         private ImageButton? _pageRightButton;
 
         // Equip Buttons
-        private EquipButton? _relicEquipButton;
+        private EquipButton? _relicEquipButton1;
+        private EquipButton? _relicEquipButton2;
+        private EquipButton? _relicEquipButton3;
         private EquipButton? _weaponEquipButton;
         private EquipButton? _armorEquipButton;
 
         // Submenu State
-        private enum EquipSlotType { None, Weapon, Armor, Relic }
+        private enum EquipSlotType { None, Weapon, Armor, Relic1, Relic2, Relic3 }
         private EquipSlotType _activeEquipSlotType = EquipSlotType.None;
         private bool _isEquipSubmenuOpen = false;
         private readonly List<EquipButton> _equipSubmenuButtons = new();
@@ -287,12 +290,26 @@ namespace ProjectVagabond.UI
             _armorEquipButton.Font = secondaryFont;
             _armorEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Armor);
 
-            // Relic Button
-            _relicEquipButton = new EquipButton(new Rectangle(equipButtonX, relicButtonY, 180, 16), "NOTHING");
-            _relicEquipButton.TitleText = "RELIC";
-            _relicEquipButton.ShowTitleOnHoverOnly = false;
-            _relicEquipButton.Font = secondaryFont;
-            _relicEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic);
+            // Relic Button 1
+            _relicEquipButton1 = new EquipButton(new Rectangle(equipButtonX, relicButtonY, 180, 16), "NOTHING");
+            _relicEquipButton1.TitleText = "RELIC";
+            _relicEquipButton1.ShowTitleOnHoverOnly = false;
+            _relicEquipButton1.Font = secondaryFont;
+            _relicEquipButton1.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic1);
+
+            // Relic Button 2
+            _relicEquipButton2 = new EquipButton(new Rectangle(equipButtonX, relicButtonY + 16, 180, 16), "NOTHING");
+            _relicEquipButton2.TitleText = "RELIC";
+            _relicEquipButton2.ShowTitleOnHoverOnly = false;
+            _relicEquipButton2.Font = secondaryFont;
+            _relicEquipButton2.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic2);
+
+            // Relic Button 3
+            _relicEquipButton3 = new EquipButton(new Rectangle(equipButtonX, relicButtonY + 32, 180, 16), "NOTHING");
+            _relicEquipButton3.TitleText = "RELIC";
+            _relicEquipButton3.ShowTitleOnHoverOnly = false;
+            _relicEquipButton3.Font = secondaryFont;
+            _relicEquipButton3.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic3);
 
             // Initialize Submenu Buttons
             _equipSubmenuButtons.Clear();
@@ -349,9 +366,16 @@ namespace ProjectVagabond.UI
             {
                 availableItems = _gameState.PlayerState.Armors.Keys.ToList();
             }
-            else if (_activeEquipSlotType == EquipSlotType.Relic)
+            else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3)
             {
-                availableItems = _gameState.PlayerState.Relics.Keys.ToList();
+                // Get all owned relics
+                var allRelics = _gameState.PlayerState.Relics.Keys.ToList();
+
+                // Get set of currently equipped relics to filter them out
+                var equippedRelics = new HashSet<string>(_gameState.PlayerState.EquippedRelics.Where(r => !string.IsNullOrEmpty(r)));
+
+                // Filter out any relic that is currently equipped in ANY slot
+                availableItems = allRelics.Where(r => !equippedRelics.Contains(r)).ToList();
             }
 
             int totalItems = 1 + availableItems.Count; // +1 for REMOVE
@@ -476,9 +500,17 @@ namespace ProjectVagabond.UI
             {
                 _gameState.PlayerState.EquippedArmorId = itemId;
             }
-            else if (_activeEquipSlotType == EquipSlotType.Relic)
+            else if (_activeEquipSlotType == EquipSlotType.Relic1)
             {
                 _gameState.PlayerState.EquippedRelics[0] = itemId;
+            }
+            else if (_activeEquipSlotType == EquipSlotType.Relic2)
+            {
+                _gameState.PlayerState.EquippedRelics[1] = itemId;
+            }
+            else if (_activeEquipSlotType == EquipSlotType.Relic3)
+            {
+                _gameState.PlayerState.EquippedRelics[2] = itemId;
             }
 
             _isEquipSubmenuOpen = false;
@@ -488,7 +520,9 @@ namespace ProjectVagabond.UI
             // Refresh the main equip buttons to show the new item
             UpdateEquipButtonState(_weaponEquipButton!, _gameState.PlayerState.EquippedWeaponId, EquipSlotType.Weapon);
             UpdateEquipButtonState(_armorEquipButton!, _gameState.PlayerState.EquippedArmorId, EquipSlotType.Armor);
-            UpdateEquipButtonState(_relicEquipButton!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic);
+            UpdateEquipButtonState(_relicEquipButton1!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic1);
+            UpdateEquipButtonState(_relicEquipButton2!, _gameState.PlayerState.EquippedRelics[1], EquipSlotType.Relic2);
+            UpdateEquipButtonState(_relicEquipButton3!, _gameState.PlayerState.EquippedRelics[2], EquipSlotType.Relic3);
 
             _hapticsManager.TriggerShake(4f, 0.1f, true, 2f);
         }
@@ -514,7 +548,7 @@ namespace ProjectVagabond.UI
                     if (data != null) { name = data.ArmorName.ToUpper(); path = $"Sprites/Items/Armor/{data.ArmorID}"; }
                     else name = itemId.ToUpper();
                 }
-                else if (type == EquipSlotType.Relic)
+                else if (type == EquipSlotType.Relic1 || type == EquipSlotType.Relic2 || type == EquipSlotType.Relic3)
                 {
                     var data = GetRelicData(itemId);
                     if (data != null) { name = data.RelicName.ToUpper(); path = $"Sprites/Items/Relics/{data.RelicID}"; }
@@ -546,7 +580,9 @@ namespace ProjectVagabond.UI
                 // Refresh equip button texts and icons
                 UpdateEquipButtonState(_weaponEquipButton!, _gameState.PlayerState.EquippedWeaponId, EquipSlotType.Weapon);
                 UpdateEquipButtonState(_armorEquipButton!, _gameState.PlayerState.EquippedArmorId, EquipSlotType.Armor);
-                UpdateEquipButtonState(_relicEquipButton!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic);
+                UpdateEquipButtonState(_relicEquipButton1!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic1);
+                UpdateEquipButtonState(_relicEquipButton2!, _gameState.PlayerState.EquippedRelics[1], EquipSlotType.Relic2);
+                UpdateEquipButtonState(_relicEquipButton3!, _gameState.PlayerState.EquippedRelics[2], EquipSlotType.Relic3);
 
                 if (_selectedInventoryCategory != InventoryCategory.Equip)
                 {
@@ -758,7 +794,7 @@ namespace ProjectVagabond.UI
                     int totalItems = 1; // 1 for REMOVE
                     if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
                     else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
-                    else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
+                    else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) totalItems += _gameState.PlayerState.Relics.Count;
 
                     int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
 
@@ -985,7 +1021,7 @@ namespace ProjectVagabond.UI
                     List<string> availableItems = new List<string>();
                     if (_activeEquipSlotType == EquipSlotType.Weapon) availableItems = _gameState.PlayerState.Weapons.Keys.ToList();
                     else if (_activeEquipSlotType == EquipSlotType.Armor) availableItems = _gameState.PlayerState.Armors.Keys.ToList();
-                    else if (_activeEquipSlotType == EquipSlotType.Relic) availableItems = _gameState.PlayerState.Relics.Keys.ToList();
+                    else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) availableItems = _gameState.PlayerState.Relics.Keys.ToList();
 
                     for (int i = 0; i < _equipSubmenuButtons.Count; i++)
                     {
@@ -1004,7 +1040,7 @@ namespace ProjectVagabond.UI
                                     string itemId = availableItems[itemIndex];
                                     if (_activeEquipSlotType == EquipSlotType.Weapon) _hoveredItemData = GetWeaponData(itemId);
                                     else if (_activeEquipSlotType == EquipSlotType.Armor) _hoveredItemData = GetArmorData(itemId);
-                                    else if (_activeEquipSlotType == EquipSlotType.Relic) _hoveredItemData = GetRelicData(itemId);
+                                    else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) _hoveredItemData = GetRelicData(itemId);
                                 }
                             }
                         }
@@ -1012,7 +1048,9 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    _relicEquipButton?.Update(currentMouseState, cameraTransform);
+                    _relicEquipButton1?.Update(currentMouseState, cameraTransform);
+                    _relicEquipButton2?.Update(currentMouseState, cameraTransform);
+                    _relicEquipButton3?.Update(currentMouseState, cameraTransform);
                     _armorEquipButton?.Update(currentMouseState, cameraTransform);
                     _weaponEquipButton?.Update(currentMouseState, cameraTransform);
                 }
@@ -1173,7 +1211,7 @@ namespace ProjectVagabond.UI
                         int totalItems = 1;
                         if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
                         else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
-                        else if (_activeEquipSlotType == EquipSlotType.Relic) totalItems += _gameState.PlayerState.Relics.Count;
+                        else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) totalItems += _gameState.PlayerState.Relics.Count;
 
                         int maxScroll = Math.Max(0, totalItems - 7);
 
@@ -1202,7 +1240,9 @@ namespace ProjectVagabond.UI
                 }
                 else
                 {
-                    _relicEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    _relicEquipButton1?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    _relicEquipButton2?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    _relicEquipButton3?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     _armorEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     _weaponEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
@@ -1755,10 +1795,17 @@ namespace ProjectVagabond.UI
                     {
                         currentSlotMod = GetEquippedArmorModifier(stat.StatKey);
                     }
-                    else if (_activeEquipSlotType == EquipSlotType.Relic)
+                    else if (_activeEquipSlotType == EquipSlotType.Relic1)
                     {
-                        // We are replacing slot 0 for relics
                         currentSlotMod = GetEquippedModifier(0, stat.StatKey);
+                    }
+                    else if (_activeEquipSlotType == EquipSlotType.Relic2)
+                    {
+                        currentSlotMod = GetEquippedModifier(1, stat.StatKey);
+                    }
+                    else if (_activeEquipSlotType == EquipSlotType.Relic3)
+                    {
+                        currentSlotMod = GetEquippedModifier(2, stat.StatKey);
                     }
 
                     int newMod = GetHoveredModifier(stat.StatKey);
