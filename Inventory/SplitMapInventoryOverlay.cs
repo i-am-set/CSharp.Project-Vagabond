@@ -1233,6 +1233,7 @@ namespace ProjectVagabond.UI
             string iconPath = activeSlot.IconPath ?? "";
             Texture2D? iconTexture = null;
             Texture2D? iconSilhouette = null;
+            List<string> statLines = new List<string>();
 
             // Attempt to fetch rich data
             if (_selectedInventoryCategory == InventoryCategory.Relics)
@@ -1244,6 +1245,7 @@ namespace ProjectVagabond.UI
                     name = relic.RelicName.ToUpper();
                     description = relic.Description.ToUpper();
                     iconPath = $"Sprites/Items/Relics/{relic.RelicID}";
+                    statLines = GetStatModifierLines(relic.StatModifiers);
                 }
             }
             else if (_selectedInventoryCategory == InventoryCategory.Consumables)
@@ -1274,6 +1276,7 @@ namespace ProjectVagabond.UI
                     name = weapon.WeaponName.ToUpper();
                     description = weapon.Description.ToUpper();
                     iconPath = $"Sprites/Items/Weapons/{weapon.WeaponID}";
+                    statLines = GetStatModifierLines(weapon.StatModifiers);
                 }
             }
             else if (_selectedInventoryCategory == InventoryCategory.Armor)
@@ -1284,6 +1287,7 @@ namespace ProjectVagabond.UI
                     name = armor.ArmorName.ToUpper();
                     description = armor.Description.ToUpper();
                     iconPath = $"Sprites/Items/Armor/{armor.ArmorID}";
+                    statLines = GetStatModifierLines(armor.StatModifiers);
                 }
             }
 
@@ -1312,7 +1316,9 @@ namespace ProjectVagabond.UI
                 totalDescHeight = descLines.Count * secondaryFont.LineHeight;
             }
 
-            float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0);
+            float totalStatHeight = statLines.Count * secondaryFont.LineHeight;
+
+            float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0) + (totalStatHeight > 0 ? gap + totalStatHeight : 0);
 
             // 2. Calculate Start Y
             float currentY = _infoPanelArea.Y + (_infoPanelArea.Height - totalContentHeight) / 2f;
@@ -1411,6 +1417,41 @@ namespace ProjectVagabond.UI
                             spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
                         }
                         currentX += segWidth;
+                    }
+                    currentY += secondaryFont.LineHeight;
+                }
+            }
+
+            // 6. Draw Stats (Left Aligned)
+            if (statLines.Any())
+            {
+                currentY += gap;
+                foreach (var lineStr in statLines)
+                {
+                    // Parse the rich text string into segments
+                    var lineParts = ParseAndWrapRichText(secondaryFont, lineStr, _infoPanelArea.Width, _global.Palette_White);
+
+                    // Since these are short lines, ParseAndWrapRichText likely returns a single line list.
+                    // We iterate over the first (and likely only) line of segments.
+                    if (lineParts.Count > 0)
+                    {
+                        var segments = lineParts[0];
+                        float currentX = _infoPanelArea.X + 8; // Left align with padding
+
+                        foreach (var segment in segments)
+                        {
+                            float segWidth;
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                            {
+                                segWidth = segment.Text.Length * SPACE_WIDTH;
+                            }
+                            else
+                            {
+                                segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentY), segment.Color);
+                            }
+                            currentX += segWidth;
+                        }
                     }
                     currentY += secondaryFont.LineHeight;
                 }
@@ -1713,7 +1754,8 @@ namespace ProjectVagabond.UI
 
                     // Cycle logic
                     float cyclePos = _statCycleTimer % (STAT_CYCLE_INTERVAL * 2);
-                    bool showModifier = cyclePos >= STAT_CYCLE_INTERVAL;
+                    // Inverted logic: Start with Modifier (True), then Base (False)
+                    bool showModifier = cyclePos < STAT_CYCLE_INTERVAL;
 
                     if (showModifier)
                     {
@@ -1899,6 +1941,34 @@ namespace ProjectVagabond.UI
             }
         }
 
+        private List<string> GetStatModifierLines(Dictionary<string, int> mods)
+        {
+            var lines = new List<string>();
+            if (mods == null || mods.Count == 0) return lines;
+
+            foreach (var kvp in mods)
+            {
+                if (kvp.Value == 0) continue;
+                string colorTag = kvp.Value > 0 ? "[cpositive]" : "[cnegative]";
+                string sign = kvp.Value > 0 ? "+" : "";
+
+                // Map full names to abbreviations
+                string statName = kvp.Key.ToLowerInvariant() switch
+                {
+                    "strength" => "STR",
+                    "intelligence" => "INT",
+                    "tenacity" => "TEN",
+                    "agility" => "AGI",
+                    "maxhp" => "HP",
+                    "maxmana" => "MP",
+                    _ => kvp.Key.ToUpper().Substring(0, Math.Min(3, kvp.Key.Length)) // Fallback
+                };
+
+                lines.Add($"{statName} {colorTag}{sign}{kvp.Value}[/]");
+            }
+            return lines;
+        }
+
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             // Only draw the toggle button here
@@ -1906,3 +1976,4 @@ namespace ProjectVagabond.UI
         }
     }
 }
+#nullable restore

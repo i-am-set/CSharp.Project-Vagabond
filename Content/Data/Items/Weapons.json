@@ -2,7 +2,7 @@
   {
     "WeaponID": "IronSword",
     "WeaponName": "Iron Sword",
-    "Description": "A standard issue iron sword. Reliable and sharp.",
+    "Description": "[cetc]A standard issue iron sword[/]",
     "Rarity": 0,
     "LevelRequirement": 1,
     "MoveID": "SwordSlash",
@@ -14,7 +14,7 @@
   {
     "WeaponID": "Warhammer",
     "WeaponName": "Warhammer",
-    "Description": "A heavy hammer designed to crush armor.",
+    "Description": "[cetc]A heavy hammer designed to crush armor[/]",
     "Rarity": 1,
     "LevelRequirement": 3,
     "MoveID": "Bonecrusher",
@@ -27,7 +27,7 @@
   {
     "WeaponID": "PoisonDagger",
     "WeaponName": "Poison Dagger",
-    "Description": "A wicked blade coated in a vile toxin.",
+    "Description": "[cetc]Small blade coated in a toxin.[/]\nMay inflict [cpoison]poison[/]",
     "Rarity": 2,
     "LevelRequirement": 4,
     "MoveID": "VenomJab",
