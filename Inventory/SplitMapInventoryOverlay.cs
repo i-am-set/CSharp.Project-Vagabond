@@ -279,35 +279,30 @@ namespace ProjectVagabond.UI
             // Weapon Button
             _weaponEquipButton = new EquipButton(new Rectangle(equipButtonX, weaponButtonY, 180, 16), "NOTHING");
             _weaponEquipButton.TitleText = "WEAPN";
-            _weaponEquipButton.ShowTitleOnHoverOnly = false;
             _weaponEquipButton.Font = secondaryFont;
             _weaponEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Weapon);
 
             // Armor Button
             _armorEquipButton = new EquipButton(new Rectangle(equipButtonX, armorButtonY, 180, 16), "NOTHING");
             _armorEquipButton.TitleText = "ARMOR";
-            _armorEquipButton.ShowTitleOnHoverOnly = false;
             _armorEquipButton.Font = secondaryFont;
             _armorEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Armor);
 
             // Relic Button 1
             _relicEquipButton1 = new EquipButton(new Rectangle(equipButtonX, relicButtonY, 180, 16), "NOTHING");
             _relicEquipButton1.TitleText = "RELIC";
-            _relicEquipButton1.ShowTitleOnHoverOnly = false;
             _relicEquipButton1.Font = secondaryFont;
             _relicEquipButton1.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic1);
 
             // Relic Button 2
             _relicEquipButton2 = new EquipButton(new Rectangle(equipButtonX, relicButtonY + 16, 180, 16), "NOTHING");
             _relicEquipButton2.TitleText = "RELIC";
-            _relicEquipButton2.ShowTitleOnHoverOnly = false;
             _relicEquipButton2.Font = secondaryFont;
             _relicEquipButton2.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic2);
 
             // Relic Button 3
             _relicEquipButton3 = new EquipButton(new Rectangle(equipButtonX, relicButtonY + 32, 180, 16), "NOTHING");
             _relicEquipButton3.TitleText = "RELIC";
-            _relicEquipButton3.ShowTitleOnHoverOnly = false;
             _relicEquipButton3.Font = secondaryFont;
             _relicEquipButton3.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic3);
 
@@ -320,8 +315,7 @@ namespace ProjectVagabond.UI
             {
                 int yPos = submenuStartY + (i * 16);
                 var button = new EquipButton(new Rectangle(equipButtonX, yPos, 180, 16), "");
-                button.TitleText = "SELECT";
-                button.ShowTitleOnHoverOnly = true; // Only visible on hover
+                button.TitleText = ""; // Initialize as empty
                 button.Font = secondaryFont;
                 button.IsEnabled = false; // Disabled by default
                 _equipSubmenuButtons.Add(button);
@@ -406,6 +400,7 @@ namespace ProjectVagabond.UI
                 if (virtualIndex == 0)
                 {
                     btn.MainText = "REMOVE";
+                    btn.TitleText = "SELECT";
                     btn.CustomDefaultTextColor = _global.Palette_Red;
                     btn.IconTexture = _spriteManager.InventoryEmptySlotSprite;
                     btn.IconSilhouette = null;
@@ -414,6 +409,7 @@ namespace ProjectVagabond.UI
                 }
                 else if (virtualIndex < totalItems)
                 {
+                    btn.TitleText = "SELECT";
                     int itemIndex = virtualIndex - 1;
                     string itemId = availableItems[itemIndex];
 
@@ -480,6 +476,11 @@ namespace ProjectVagabond.UI
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
                     }
+                }
+                else
+                {
+                    // Empty slot
+                    btn.TitleText = "";
                 }
             }
         }
@@ -793,12 +794,12 @@ namespace ProjectVagabond.UI
             bool scrollUp = scrollDelta > 0;
             bool scrollDown = scrollDelta < 0;
             bool isHoveringHeader = headerArea.Contains(mouseInWorldSpace);
-            bool rightClickReleased = currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
+            bool rightClickPressed = currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released;
 
             // Handle Submenu Scrolling and Cancellation
             if (_isEquipSubmenuOpen)
             {
-                if (rightClickReleased)
+                if (rightClickPressed)
                 {
                     CancelEquipSelection();
                 }
@@ -2127,3 +2128,4 @@ namespace ProjectVagabond.UI
         }
     }
 }
+#nullable restore

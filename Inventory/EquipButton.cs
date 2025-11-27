@@ -1,10 +1,14 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
@@ -19,13 +23,7 @@ namespace ProjectVagabond.UI
         public int Rarity { get; set; } = -1; // -1 means no rarity icon
 
         /// <summary>
-        /// If true, the TitleText is only drawn when the button is hovered.
-        /// If false, the TitleText is always drawn (gray when idle, white when hovered).
-        /// </summary>
-        public bool ShowTitleOnHoverOnly { get; set; } = true;
-
-        /// <summary>
-        /// Optional custom color for the Title text. If null, falls back to CustomDefaultTextColor or default logic.
+        /// Optional custom color for the Title text. If null, falls back to Gray (idle) -> White (hover).
         /// </summary>
         public Color? CustomTitleTextColor { get; set; }
 
@@ -90,8 +88,7 @@ namespace ProjectVagabond.UI
             // 4. Draw Content
 
             // --- Title Text (Centered in 53x16) ---
-            // Logic: Draw if Title exists AND (Button is hovered OR we are configured to always show title)
-            if (!string.IsNullOrEmpty(TitleText) && (isActivated || !ShowTitleOnHoverOnly))
+            if (!string.IsNullOrEmpty(TitleText))
             {
                 // Use defaultFont for Title
                 Vector2 titleSize = defaultFont.MeasureString(TitleText);
@@ -104,15 +101,14 @@ namespace ProjectVagabond.UI
                 titlePos = new Vector2(MathF.Round(titlePos.X), MathF.Round(titlePos.Y));
 
                 Color titleColor;
-                if (ShowTitleOnHoverOnly)
+                if (isActivated)
                 {
-                    // Only visible on hover. Use CustomTitleTextColor if set, otherwise CustomDefaultTextColor, otherwise BrightWhite.
-                    titleColor = CustomTitleTextColor ?? CustomDefaultTextColor ?? _global.Palette_BrightWhite;
+                    titleColor = _global.Palette_BrightWhite;
                 }
                 else
                 {
-                    // Always visible, change color based on state
-                    titleColor = isActivated ? _global.Palette_BrightWhite : _global.Palette_Gray;
+                    // Use custom color if set (e.g. for submenu striping), otherwise default to Gray
+                    titleColor = CustomTitleTextColor ?? _global.Palette_Gray;
                 }
 
                 spriteBatch.DrawStringSnapped(defaultFont, TitleText, titlePos, titleColor);
