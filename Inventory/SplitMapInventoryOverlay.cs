@@ -276,34 +276,44 @@ namespace ProjectVagabond.UI
             int armorButtonY = relicButtonY - 16; // Middle
             int weaponButtonY = relicButtonY - 32; // Top
 
-            // Weapon Button
+            // Weapon Button (Even)
             _weaponEquipButton = new EquipButton(new Rectangle(equipButtonX, weaponButtonY, 180, 16), "NOTHING");
             _weaponEquipButton.TitleText = "WEAPN";
             _weaponEquipButton.Font = secondaryFont;
+            _weaponEquipButton.CustomDefaultTextColor = _global.Palette_BrightWhite;
+            _weaponEquipButton.CustomTitleTextColor = _global.Palette_DarkGray;
             _weaponEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Weapon);
 
-            // Armor Button
+            // Armor Button (Odd)
             _armorEquipButton = new EquipButton(new Rectangle(equipButtonX, armorButtonY, 180, 16), "NOTHING");
             _armorEquipButton.TitleText = "ARMOR";
             _armorEquipButton.Font = secondaryFont;
+            _armorEquipButton.CustomDefaultTextColor = _global.Palette_White;
+            _armorEquipButton.CustomTitleTextColor = _global.Palette_DarkerGray;
             _armorEquipButton.OnClick += () => OpenEquipSubmenu(EquipSlotType.Armor);
 
-            // Relic Button 1
+            // Relic Button 1 (Even)
             _relicEquipButton1 = new EquipButton(new Rectangle(equipButtonX, relicButtonY, 180, 16), "NOTHING");
             _relicEquipButton1.TitleText = "RELIC";
             _relicEquipButton1.Font = secondaryFont;
+            _relicEquipButton1.CustomDefaultTextColor = _global.Palette_BrightWhite;
+            _relicEquipButton1.CustomTitleTextColor = _global.Palette_DarkGray;
             _relicEquipButton1.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic1);
 
-            // Relic Button 2
+            // Relic Button 2 (Odd)
             _relicEquipButton2 = new EquipButton(new Rectangle(equipButtonX, relicButtonY + 16, 180, 16), "NOTHING");
             _relicEquipButton2.TitleText = "RELIC";
             _relicEquipButton2.Font = secondaryFont;
+            _relicEquipButton2.CustomDefaultTextColor = _global.Palette_White;
+            _relicEquipButton2.CustomTitleTextColor = _global.Palette_DarkerGray;
             _relicEquipButton2.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic2);
 
-            // Relic Button 3
+            // Relic Button 3 (Even)
             _relicEquipButton3 = new EquipButton(new Rectangle(equipButtonX, relicButtonY + 32, 180, 16), "NOTHING");
             _relicEquipButton3.TitleText = "RELIC";
             _relicEquipButton3.Font = secondaryFont;
+            _relicEquipButton3.CustomDefaultTextColor = _global.Palette_BrightWhite;
+            _relicEquipButton3.CustomTitleTextColor = _global.Palette_DarkGray;
             _relicEquipButton3.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic3);
 
             // Initialize Submenu Buttons
