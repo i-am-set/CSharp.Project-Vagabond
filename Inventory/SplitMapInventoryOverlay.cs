@@ -407,7 +407,7 @@ namespace ProjectVagabond.UI
                 {
                     btn.MainText = "REMOVE";
                     btn.CustomDefaultTextColor = _global.Palette_Red;
-                    btn.IconTexture = null;
+                    btn.IconTexture = _spriteManager.InventoryEmptySlotSprite;
                     btn.IconSilhouette = null;
                     btn.IsEnabled = true;
                     btn.OnClick = () => SelectEquipItem(null);
@@ -565,6 +565,11 @@ namespace ProjectVagabond.UI
                     icon = _spriteManager.GetSmallRelicSprite(path);
                     silhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
                 }
+            }
+            else
+            {
+                icon = _spriteManager.InventoryEmptySlotSprite;
+                silhouette = null;
             }
 
             button.MainText = name;

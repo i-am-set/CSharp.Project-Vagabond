@@ -14,6 +14,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond
 {
@@ -138,6 +139,7 @@ namespace ProjectVagabond
         public Texture2D InventoryEquipHoverSprite { get; private set; }
         public Texture2D InventoryEquipSelectedSprite { get; private set; }
         public Texture2D InventoryScrollArrowsSprite { get; private set; }
+        public Texture2D InventoryEmptySlotSprite { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -353,6 +355,8 @@ namespace ProjectVagabond
             catch { InventoryEquipSelectedSprite = _textureFactory.CreateColoredTexture(180, 16, Color.Gold); }
             try { InventoryScrollArrowsSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_scroll_arrows"); }
             catch { InventoryScrollArrowsSprite = _textureFactory.CreateColoredTexture(10, 5, Color.Magenta); }
+            try { InventoryEmptySlotSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_16x16_empty_slot_sprite"); }
+            catch { InventoryEmptySlotSprite = _textureFactory.CreateColoredTexture(16, 16, Color.DarkGray); }
 
 
             LoadAndCacheCursorSprite("cursor_default");
