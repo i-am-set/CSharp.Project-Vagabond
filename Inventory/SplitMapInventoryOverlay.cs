@@ -389,12 +389,12 @@ namespace ProjectVagabond.UI
                 if (i % 2 == 0)
                 {
                     btn.CustomDefaultTextColor = _global.Palette_BrightWhite;
-                    btn.CustomTitleTextColor = _global.Palette_BrightWhite;
+                    btn.CustomTitleTextColor = _global.Palette_DarkGray;
                 }
                 else
                 {
                     btn.CustomDefaultTextColor = _global.Palette_White;
-                    btn.CustomTitleTextColor = _global.Palette_White;
+                    btn.CustomTitleTextColor = _global.Palette_DarkerGray;
                 }
 
                 if (virtualIndex == 0)
