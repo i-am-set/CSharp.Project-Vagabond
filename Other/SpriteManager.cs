@@ -652,7 +652,7 @@ namespace ProjectVagabond
             return GetItemSpriteSilhouette(imagePath);
         }
 
-        public Texture2D GetItemSpriteSilhouette(string imagePath)
+        public Texture2D GetItemSpriteSilhouette(string imagePath, string? fallbackPath = null)
         {
             if (string.IsNullOrEmpty(imagePath))
             {
@@ -665,10 +665,10 @@ namespace ProjectVagabond
                 return cachedSprite.Silhouette;
             }
 
-            return LoadAndCacheItem(imagePath, imagePath).Silhouette;
+            return LoadAndCacheItem(imagePath, imagePath, fallbackPath).Silhouette;
         }
 
-        public Texture2D GetItemSprite(string imagePath)
+        public Texture2D GetItemSprite(string imagePath, string? fallbackPath = null)
         {
             if (string.IsNullOrEmpty(imagePath))
             {
@@ -681,10 +681,10 @@ namespace ProjectVagabond
                 return cachedSprite.Original;
             }
 
-            return LoadAndCacheItem(imagePath, imagePath).Original;
+            return LoadAndCacheItem(imagePath, imagePath, fallbackPath).Original;
         }
 
-        private (Texture2D Original, Texture2D Silhouette) LoadAndCacheItem(string cacheKey, string? imagePath)
+        private (Texture2D Original, Texture2D Silhouette) LoadAndCacheItem(string cacheKey, string? imagePath, string? fallbackPath = null)
         {
             if (_itemSprites.TryGetValue(cacheKey, out var cachedTuple))
             {
@@ -702,14 +702,32 @@ namespace ProjectVagabond
                 }
                 else
                 {
-                    originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
+                    throw new Exception("Image path is null");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[SpriteManager] [ERROR] FAILED to load: '{imagePath}'. Exception: {ex.Message}");
-                Debug.WriteLine($"[SpriteManager] Content Root Directory: '{_core.Content.RootDirectory}'");
-                originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
+                Debug.WriteLine($"[SpriteManager] [WARNING] FAILED to load: '{imagePath}'. Exception: {ex.Message}");
+
+                // Try fallback
+                if (!string.IsNullOrEmpty(fallbackPath))
+                {
+                    try
+                    {
+                        Debug.WriteLine($"[SpriteManager] Attempting fallback: '{fallbackPath}'");
+                        originalTexture = _core.Content.Load<Texture2D>(fallbackPath);
+                    }
+                    catch
+                    {
+                        Debug.WriteLine($"[SpriteManager] [ERROR] Fallback failed too. Using placeholder.");
+                        originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"[SpriteManager] No fallback provided. Using placeholder.");
+                    originalTexture = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
+                }
             }
 
             var originalData = new Color[originalTexture.Width * originalTexture.Height];
@@ -986,5 +1004,23 @@ namespace ProjectVagabond
 
             return new Rectangle(frameIndex * 8, rarity * 8, 8, 8);
         }
+
+        public Rectangle GetAnimatedIconSourceRect(Texture2D texture, GameTime gameTime)
+        {
+            if (texture == null) return Rectangle.Empty;
+
+            // Assume square frames
+            int frameSize = texture.Height;
+            if (frameSize == 0) return Rectangle.Empty;
+
+            int frameCount = texture.Width / frameSize;
+            if (frameCount <= 1) return new Rectangle(0, 0, texture.Width, texture.Height);
+
+            const float frameDuration = 0.15f; // Standard animation speed
+            int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / frameDuration) % frameCount;
+
+            return new Rectangle(frameIndex * frameSize, 0, frameSize, frameSize);
+        }
     }
 }
+﻿

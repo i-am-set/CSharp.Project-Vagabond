@@ -122,7 +122,7 @@ namespace ProjectVagabond.UI
                 }
 
                 // Draw Info Panel
-                DrawInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont);
+                DrawInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
             }
             else
             {
@@ -210,7 +210,7 @@ namespace ProjectVagabond.UI
             _inventoryButton?.Draw(spriteBatch, font, gameTime, transform);
         }
 
-        private void DrawInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont)
+        private void DrawInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime)
         {
             // Find the active slot (Selected takes precedence over Hovered)
             InventorySlot? activeSlot = _inventorySlots.FirstOrDefault(s => s.IsSelected);
@@ -228,6 +228,7 @@ namespace ProjectVagabond.UI
             Texture2D? iconTexture = null;
             Texture2D? iconSilhouette = null;
             (List<string> Positives, List<string> Negatives) statLines = (new List<string>(), new List<string>());
+            string? fallbackPath = null;
 
             // Attempt to fetch rich data
             if (_selectedInventoryCategory == InventoryCategory.Relics)
@@ -260,6 +261,14 @@ namespace ProjectVagabond.UI
                     name = move.MoveName.ToUpper();
                     description = move.Description.ToUpper();
                     iconPath = $"Sprites/Items/Spells/{move.MoveID}";
+
+                    int elementId = move.OffensiveElementIDs.FirstOrDefault();
+                    if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
+                    {
+                        string elName = elementDef.ElementName.ToLowerInvariant();
+                        if (elName == "---") elName = "neutral";
+                        fallbackPath = $"Sprites/Items/Spells/default_{elName}";
+                    }
                 }
             }
             else if (_selectedInventoryCategory == InventoryCategory.Weapons)
@@ -288,8 +297,15 @@ namespace ProjectVagabond.UI
             // Load Icon
             if (!string.IsNullOrEmpty(iconPath))
             {
-                iconTexture = _spriteManager.GetItemSprite(iconPath);
-                iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath);
+                iconTexture = _spriteManager.GetItemSprite(iconPath, fallbackPath);
+                iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath, fallbackPath);
+            }
+
+            // Determine Source Rectangle for Animation
+            Rectangle? sourceRect = null;
+            if (activeSlot.IsAnimated && iconTexture != null)
+            {
+                sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
             }
 
             // --- Drawing Logic ---
@@ -328,22 +344,22 @@ namespace ProjectVagabond.UI
                 Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
 
                 // 1. Draw Diagonals (Corners) FIRST (Behind)
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY - 1), cornerOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY - 1), cornerOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY + 1), cornerOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY + 1), cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY - 1), sourceRect, cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY - 1), sourceRect, cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY + 1), sourceRect, cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY + 1), sourceRect, cornerOutlineColor);
 
                 // 2. Draw Cardinals (Main) SECOND (On Top)
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY), mainOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY), mainOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY - 1), mainOutlineColor);
-                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY + 1), mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY), sourceRect, mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY), sourceRect, mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY - 1), sourceRect, mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY + 1), sourceRect, mainOutlineColor);
             }
 
             if (iconTexture != null)
             {
                 Color tint = activeSlot.IconTint ?? Color.White;
-                spriteBatch.DrawSnapped(iconTexture, new Vector2(spriteX, currentY), tint);
+                spriteBatch.DrawSnapped(iconTexture, new Vector2(spriteX, currentY), sourceRect, tint);
             }
 
             currentY += spriteSize + gap;

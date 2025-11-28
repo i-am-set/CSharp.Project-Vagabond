@@ -6,6 +6,9 @@ using ProjectVagabond.Battle;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
@@ -14,10 +17,13 @@ namespace ProjectVagabond.UI
         public string? ItemId { get; private set; }
         public int Quantity { get; private set; }
         public string? IconPath { get; private set; }
+        public string? FallbackIconPath { get; private set; } // New property
         public Color? IconTint { get; private set; }
         public int Rarity { get; private set; } = -1; // -1 means no rarity icon
         public bool IsSelected { get; set; }
         public bool HasItem => !string.IsNullOrEmpty(ItemId);
+        public bool IsAnimated { get; private set; } = false;
+
         private Rectangle _currentIdleFrame;
         private readonly Rectangle[] _idleFrames;
         private float _frameChangeTimer;
@@ -41,13 +47,15 @@ namespace ProjectVagabond.UI
             RandomizeFrame();
         }
 
-        public void AssignItem(string itemId, int quantity, string? iconPath, int rarity, Color? iconTint = null)
+        public void AssignItem(string itemId, int quantity, string? iconPath, int rarity, Color? iconTint = null, bool isAnimated = false, string? fallbackIconPath = null)
         {
             ItemId = itemId;
             Quantity = quantity;
             IconPath = iconPath;
+            FallbackIconPath = fallbackIconPath;
             Rarity = rarity;
             IconTint = iconTint;
+            IsAnimated = isAnimated;
         }
 
         public void Clear()
@@ -55,9 +63,11 @@ namespace ProjectVagabond.UI
             ItemId = null;
             Quantity = 0;
             IconPath = null;
+            FallbackIconPath = null;
             Rarity = -1;
             IconTint = null;
             IsSelected = false;
+            IsAnimated = false;
             // Reset visual scale so empty slots don't get stuck in an invisible state if animation was interrupted
             _visualScale = 1f;
             _isPoppingIn = false;
@@ -144,15 +154,26 @@ namespace ProjectVagabond.UI
             {
                 if (!string.IsNullOrEmpty(IconPath))
                 {
-                    var icon = spriteManager.GetItemSprite(IconPath);
+                    var icon = spriteManager.GetItemSprite(IconPath, FallbackIconPath);
                     Color tint = IconTint ?? Color.White;
 
                     if (icon != null)
                     {
-                        Vector2 iconOrigin = new Vector2(icon.Width / 2f, icon.Height / 2f);
+                        Rectangle? sourceRect = null;
+                        Vector2 iconOrigin;
+
+                        if (IsAnimated)
+                        {
+                            sourceRect = spriteManager.GetAnimatedIconSourceRect(icon, gameTime);
+                            iconOrigin = new Vector2(sourceRect.Value.Width / 2f, sourceRect.Value.Height / 2f);
+                        }
+                        else
+                        {
+                            iconOrigin = new Vector2(icon.Width / 2f, icon.Height / 2f);
+                        }
 
                         // Draw Outline
-                        var silhouette = spriteManager.GetItemSpriteSilhouette(IconPath);
+                        var silhouette = spriteManager.GetItemSpriteSilhouette(IconPath, FallbackIconPath);
                         if (silhouette != null)
                         {
                             // Use global outline colors
@@ -160,20 +181,20 @@ namespace ProjectVagabond.UI
                             Color cornerOutlineColor = IsSelected ? global.ItemOutlineColor_Selected_Corner : (IsHovered ? global.ItemOutlineColor_Hover_Corner : global.ItemOutlineColor_Idle_Corner);
 
                             // 1. Draw Diagonals (Corners) FIRST (Behind)
-                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(-1, -1) * _visualScale, null, cornerOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(1, -1) * _visualScale, null, cornerOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(-1, 1) * _visualScale, null, cornerOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(1, 1) * _visualScale, null, cornerOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(-1, -1) * _visualScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(1, -1) * _visualScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(-1, 1) * _visualScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(1, 1) * _visualScale, sourceRect, cornerOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
 
                             // 2. Draw Cardinals (Main) SECOND (On Top)
-                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(-1, 0) * _visualScale, null, mainOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(1, 0) * _visualScale, null, mainOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(0, -1) * _visualScale, null, mainOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
-                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(0, 1) * _visualScale, null, mainOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(-1, 0) * _visualScale, sourceRect, mainOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(1, 0) * _visualScale, sourceRect, mainOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(0, -1) * _visualScale, sourceRect, mainOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
+                            spriteBatch.DrawSnapped(silhouette, center + new Vector2(0, 1) * _visualScale, sourceRect, mainOutlineColor, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
                         }
 
                         // Draw Icon
-                        spriteBatch.DrawSnapped(icon, center, null, tint, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
+                        spriteBatch.DrawSnapped(icon, center, sourceRect, tint, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
 
                         // Draw Rarity Icon
                         if (Rarity >= 0 && spriteManager.RarityIconsSpriteSheet != null)
@@ -186,7 +207,10 @@ namespace ProjectVagabond.UI
                             // Rarity icon is 8x8. Origin is (4,4).
                             // Item Top-Right is (W/2, -H/2).
                             // Rarity Pos = Center + (W/2 - 4, -H/2 + 4) * Scale.
-                            Vector2 rarityOffset = new Vector2(icon.Width / 2f - 4, -icon.Height / 2f + 4) * _visualScale;
+                            float width = IsAnimated ? sourceRect.Value.Width : icon.Width;
+                            float height = IsAnimated ? sourceRect.Value.Height : icon.Height;
+
+                            Vector2 rarityOffset = new Vector2(width / 2f - 4, -height / 2f + 4) * _visualScale;
                             Vector2 rarityPos = center + rarityOffset;
                             Vector2 rarityOrigin = new Vector2(4, 4);
 
@@ -220,3 +244,4 @@ namespace ProjectVagabond.UI
         }
     }
 }
+﻿

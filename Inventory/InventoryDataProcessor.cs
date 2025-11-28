@@ -47,7 +47,7 @@ namespace ProjectVagabond.UI
             for (int i = 0; i < itemsToDisplay; i++)
             {
                 var item = items[startIndex + i];
-                _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.Rarity, item.IconTint);
+                _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.Rarity, item.IconTint, item.IsAnimated, item.FallbackIconPath);
 
                 if (_selectedSlotIndex == i)
                 {
@@ -56,9 +56,9 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint)> GetCurrentCategoryItems()
+        private List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint, bool IsAnimated, string? FallbackIconPath)> GetCurrentCategoryItems()
         {
-            var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint)>();
+            var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint, bool IsAnimated, string? FallbackIconPath)>();
             switch (_selectedInventoryCategory)
             {
                 case InventoryCategory.Weapons:
@@ -66,11 +66,11 @@ namespace ProjectVagabond.UI
                     {
                         if (BattleDataCache.Weapons.TryGetValue(kvp.Key, out var weaponData))
                         {
-                            currentItems.Add((weaponData.WeaponName, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, weaponData.Rarity, null));
+                            currentItems.Add((weaponData.WeaponName, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, weaponData.Rarity, null, false, null));
                         }
                         else
                         {
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, 0, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, 0, null, false, null));
                         }
                     }
                     break;
@@ -79,11 +79,11 @@ namespace ProjectVagabond.UI
                     {
                         if (BattleDataCache.Armors.TryGetValue(kvp.Key, out var armorData))
                         {
-                            currentItems.Add((armorData.ArmorName, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, armorData.Rarity, null));
+                            currentItems.Add((armorData.ArmorName, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, armorData.Rarity, null, false, null));
                         }
                         else
                         {
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, 0, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, 0, null, false, null));
                         }
                     }
                     break;
@@ -91,18 +91,18 @@ namespace ProjectVagabond.UI
                     foreach (var kvp in _gameState.PlayerState.Relics)
                     {
                         if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, data.Rarity, null));
+                            currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, data.Rarity, null, false, null));
                         else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null, 0, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null, 0, null, false, null));
                     }
                     break;
                 case InventoryCategory.Consumables:
                     foreach (var kvp in _gameState.PlayerState.Consumables)
                     {
                         if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, 0, null)); // Consumables default to 0 rarity
+                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, 0, null, false, null)); // Consumables default to 0 rarity
                         else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, 0, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, 0, null, false, null));
                     }
                     break;
                 case InventoryCategory.Spells:
@@ -112,18 +112,22 @@ namespace ProjectVagabond.UI
                         string name = entry.MoveID;
                         string iconPath = $"Sprites/Items/Spells/{entry.MoveID}";
                         int rarity = 0;
+                        string? fallbackPath = null;
 
                         if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
                         {
                             name = moveData.MoveName;
                             rarity = moveData.Rarity;
+
                             int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
-                            if (_global.ElementColors.TryGetValue(elementId, out var elementColor))
+                            if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
                             {
-                                tint = elementColor;
+                                string elName = elementDef.ElementName.ToLowerInvariant();
+                                if (elName == "---") elName = "neutral";
+                                fallbackPath = $"Sprites/Items/Spells/default_{elName}";
                             }
                         }
-                        currentItems.Add((name, 1, iconPath, null, rarity, tint));
+                        currentItems.Add((name, 1, iconPath, null, rarity, tint, true, fallbackPath));
                     }
                     break;
             }
@@ -175,3 +179,4 @@ namespace ProjectVagabond.UI
         }
     }
 }
+﻿
