@@ -141,7 +141,7 @@ namespace ProjectVagabond.UI
             _inventoryHeaderButtons.Clear();
             _inventoryHeaderButtonOffsets.Clear();
             _inventoryHeaderButtonBaseBounds.Clear();
-            _selectedInventoryCategory = InventoryCategory.Weapons;
+            _selectedInventoryCategory = InventoryCategory.Equip; // Default to Equip
             _selectedSlotIndex = -1;
 
             // Use the defined order for button creation
@@ -339,7 +339,9 @@ namespace ProjectVagabond.UI
             if (IsOpen)
             {
                 _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
-                RefreshInventorySlots();
+
+                // Force open to Equip menu
+                SwitchToCategory(InventoryCategory.Equip);
 
                 // Refresh equip button texts and icons
                 UpdateEquipButtonState(_weaponEquipButton!, _gameState.PlayerState.EquippedWeaponId, EquipSlotType.Weapon);
@@ -347,11 +349,6 @@ namespace ProjectVagabond.UI
                 UpdateEquipButtonState(_relicEquipButton1!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic1);
                 UpdateEquipButtonState(_relicEquipButton2!, _gameState.PlayerState.EquippedRelics[1], EquipSlotType.Relic2);
                 UpdateEquipButtonState(_relicEquipButton3!, _gameState.PlayerState.EquippedRelics[2], EquipSlotType.Relic3);
-
-                if (_selectedInventoryCategory != InventoryCategory.Equip)
-                {
-                    TriggerSlotAnimations();
-                }
             }
             else
             {
