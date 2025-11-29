@@ -22,6 +22,13 @@ namespace ProjectVagabond.UI
             var inventoryPosition = new Vector2(0, 200);
             var headerPosition = inventoryPosition + _inventoryPositionOffset;
 
+            // --- PASS 1: Draw Info Panel Background (Idle Slot) BEFORE Borders ---
+            // This ensures the idle slot sprite renders underneath the inventory border and title text.
+            if (_selectedInventoryCategory != InventoryCategory.Equip)
+            {
+                DrawInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime, true);
+            }
+
             spriteBatch.DrawSnapped(_spriteManager.InventoryBorderHeader, headerPosition, Color.White);
 
             Texture2D selectedBorderSprite;
@@ -113,7 +120,8 @@ namespace ProjectVagabond.UI
                     _pageRightButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
 
-                DrawInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
+                // --- PASS 2: Draw Info Panel Content (Foreground) ---
+                DrawInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime, false);
             }
             else
             {
@@ -195,15 +203,43 @@ namespace ProjectVagabond.UI
             _inventoryButton?.Draw(spriteBatch, font, gameTime, transform);
         }
 
-        private void DrawInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime)
+        private void DrawInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime, bool drawBackground)
         {
+            // --- Prepare Idle Slot Background ---
+            var slotFrames = _spriteManager.InventorySlotSourceRects;
+            Rectangle idleFrame = Rectangle.Empty;
+            Vector2 idleOrigin = Vector2.Zero;
+            if (slotFrames != null && slotFrames.Length > 0)
+            {
+                // Cycle frames slowly to simulate the idle animation
+                int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / 2.0) % slotFrames.Length;
+                idleFrame = slotFrames[frameIndex];
+                idleOrigin = new Vector2(idleFrame.Width / 2f, idleFrame.Height / 2f);
+            }
+
             InventorySlot? activeSlot = _inventorySlots.FirstOrDefault(s => s.IsSelected);
             if (activeSlot == null)
             {
                 activeSlot = _inventorySlots.FirstOrDefault(s => s.IsHovered);
             }
 
-            if (activeSlot == null || !activeSlot.HasItem || string.IsNullOrEmpty(activeSlot.ItemId)) return;
+            // --- Empty State: Draw Idle Slot ---
+            if (activeSlot == null || !activeSlot.HasItem || string.IsNullOrEmpty(activeSlot.ItemId))
+            {
+                if (drawBackground && idleFrame != Rectangle.Empty)
+                {
+                    // Calculate position to match the "hovered" state as closely as possible.
+                    // Standardized to 18f for all categories to align them.
+                    float spriteYOffset = 18f;
+
+                    int idleSpriteX = _infoPanelArea.X + (_infoPanelArea.Width - 32) / 2;
+                    float spriteY = _infoPanelArea.Y + spriteYOffset;
+
+                    Vector2 itemCenter = new Vector2(idleSpriteX + 16, spriteY + 16);
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1f, SpriteEffects.None, 0f);
+                }
+                return;
+            }
 
             string name = activeSlot.ItemId.ToUpper();
             string description = "";
@@ -292,7 +328,7 @@ namespace ProjectVagabond.UI
             // --- SPECIAL RENDERING FOR SPELLS ---
             if (_selectedInventoryCategory == InventoryCategory.Spells && spellData != null)
             {
-                DrawSpellInfoPanel(spriteBatch, font, secondaryFont, spellData, iconTexture, iconSilhouette, sourceRect, activeSlot.IconTint);
+                DrawSpellInfoPanel(spriteBatch, font, secondaryFont, spellData, iconTexture, iconSilhouette, sourceRect, activeSlot.IconTint, idleFrame, idleOrigin, drawBackground);
                 return;
             }
 
@@ -320,6 +356,17 @@ namespace ProjectVagabond.UI
             currentY -= 10f;
 
             int spriteX = _infoPanelArea.X + (_infoPanelArea.Width - spriteSize) / 2;
+
+            if (drawBackground)
+            {
+                // Draw Idle Background Behind Item
+                if (idleFrame != Rectangle.Empty)
+                {
+                    Vector2 itemCenter = new Vector2(spriteX + 16, currentY + 16);
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1f, SpriteEffects.None, 0f);
+                }
+                return; // Exit if only drawing background
+            }
 
             if (iconSilhouette != null)
             {
@@ -457,7 +504,7 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private void DrawSpellInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, MoveData move, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle? sourceRect, Color? iconTint)
+        private void DrawSpellInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, MoveData move, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle? sourceRect, Color? iconTint, Rectangle idleFrame, Vector2 idleOrigin, bool drawBackground)
         {
             const int spriteSize = 32;
             const int padding = 4;
@@ -466,6 +513,17 @@ namespace ProjectVagabond.UI
             // 1. Draw Sprite (Centered Horizontally, Top of Panel)
             int spriteX = _infoPanelArea.X + (_infoPanelArea.Width - spriteSize) / 2;
             int spriteY = _infoPanelArea.Y + 2; // Moved up from 18 to 2
+
+            if (drawBackground)
+            {
+                // Draw Idle Background Behind Item
+                if (idleFrame != Rectangle.Empty)
+                {
+                    Vector2 itemCenter = new Vector2(spriteX + 16, spriteY + 16);
+                    spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, itemCenter, idleFrame, Color.White, 0f, idleOrigin, 1f, SpriteEffects.None, 0f);
+                }
+                return; // Exit if only drawing background
+            }
 
             if (iconSilhouette != null)
             {
