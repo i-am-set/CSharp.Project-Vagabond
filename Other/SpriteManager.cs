@@ -32,7 +32,8 @@ namespace ProjectVagabond
         public Texture2D ElementIconsSpriteSheet { get; private set; }
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
-        public Texture2D RarityIconsSpriteSheet { get; private set; } // <--- Added
+        public Texture2D RarityIconsSpriteSheet { get; private set; }
+        public Texture2D InventorySlotEquipIconSprite { get; private set; } // <--- Added
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; }
@@ -357,6 +358,8 @@ namespace ProjectVagabond
             catch { InventoryScrollArrowsSprite = _textureFactory.CreateColoredTexture(10, 5, Color.Magenta); }
             try { InventoryEmptySlotSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_16x16_empty_slot_sprite"); }
             catch { InventoryEmptySlotSprite = _textureFactory.CreateColoredTexture(16, 16, Color.DarkGray); }
+            try { InventorySlotEquipIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_equip_icon"); }
+            catch { InventorySlotEquipIconSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Magenta); }
 
 
             LoadAndCacheCursorSprite("cursor_default");
@@ -1021,6 +1024,12 @@ namespace ProjectVagabond
 
             return new Rectangle(frameIndex * frameSize, 0, frameSize, frameSize);
         }
+
+        public Rectangle GetEquipIconSourceRect(GameTime gameTime)
+        {
+            const float frameDuration = 0.5f;
+            int frameIndex = (int)(gameTime.TotalGameTime.TotalSeconds / frameDuration) % 2;
+            return new Rectangle(frameIndex * 32, 0, 32, 32);
+        }
     }
 }
-﻿

@@ -23,6 +23,7 @@ namespace ProjectVagabond.UI
         public bool IsSelected { get; set; }
         public bool HasItem => !string.IsNullOrEmpty(ItemId);
         public bool IsAnimated { get; private set; } = false;
+        public bool IsEquipped { get; private set; }
 
         private Rectangle _currentIdleFrame;
         private readonly Rectangle[] _idleFrames;
@@ -47,7 +48,7 @@ namespace ProjectVagabond.UI
             RandomizeFrame();
         }
 
-        public void AssignItem(string itemId, int quantity, string? iconPath, int rarity, Color? iconTint = null, bool isAnimated = false, string? fallbackIconPath = null)
+        public void AssignItem(string itemId, int quantity, string? iconPath, int rarity, Color? iconTint = null, bool isAnimated = false, string? fallbackIconPath = null, bool isEquipped = false)
         {
             ItemId = itemId;
             Quantity = quantity;
@@ -56,6 +57,7 @@ namespace ProjectVagabond.UI
             Rarity = rarity;
             IconTint = iconTint;
             IsAnimated = isAnimated;
+            IsEquipped = isEquipped;
         }
 
         public void Clear()
@@ -68,6 +70,7 @@ namespace ProjectVagabond.UI
             IconTint = null;
             IsSelected = false;
             IsAnimated = false;
+            IsEquipped = false;
             // Reset visual scale so empty slots don't get stuck in an invisible state if animation was interrupted
             _visualScale = 1f;
             _isPoppingIn = false;
@@ -196,6 +199,23 @@ namespace ProjectVagabond.UI
                         // Draw Icon
                         spriteBatch.DrawSnapped(icon, center, sourceRect, tint, 0f, iconOrigin, _visualScale, SpriteEffects.None, 0f);
 
+                        // Draw Equipped Icon
+                        if (IsEquipped && spriteManager.InventorySlotEquipIconSprite != null)
+                        {
+                            var equipRect = spriteManager.GetEquipIconSourceRect(gameTime);
+                            // Draw at top-left of the slot (Bounds.X, Bounds.Y).
+                            // Since we are using center for other things, we can just use Bounds.Location.
+                            // We scale it with _visualScale to match the pop-in.
+                            // The icon is 32x32, slot is 48x48.
+                            // If we draw at Bounds.X, Bounds.Y, it aligns to top-left.
+                            // To scale from center of the icon (16,16), we need to adjust position.
+                            // Center of icon relative to slot top-left is (16, 16).
+                            // Target pos = Bounds.Location + (16, 16).
+                            Vector2 equipCenter = new Vector2(Bounds.X + 16, Bounds.Y + 16);
+                            Vector2 equipOrigin = new Vector2(16, 16);
+                            spriteBatch.DrawSnapped(spriteManager.InventorySlotEquipIconSprite, equipCenter, equipRect, Color.White, 0f, equipOrigin, _visualScale, SpriteEffects.None, 0f);
+                        }
+
                         // Draw Rarity Icon
                         if (Rarity >= 0 && spriteManager.RarityIconsSpriteSheet != null)
                         {
@@ -244,4 +264,3 @@ namespace ProjectVagabond.UI
         }
     }
 }
-﻿

@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -47,7 +46,7 @@ namespace ProjectVagabond.UI
             for (int i = 0; i < itemsToDisplay; i++)
             {
                 var item = items[startIndex + i];
-                _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.Rarity, item.IconTint, item.IsAnimated, item.FallbackIconPath);
+                _inventorySlots[i].AssignItem(item.Name, item.Quantity, item.IconPath, item.Rarity, item.IconTint, item.IsAnimated, item.FallbackIconPath, item.IsEquipped);
 
                 if (_selectedSlotIndex == i)
                 {
@@ -56,53 +55,56 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint, bool IsAnimated, string? FallbackIconPath)> GetCurrentCategoryItems()
+        private List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint, bool IsAnimated, string? FallbackIconPath, bool IsEquipped)> GetCurrentCategoryItems()
         {
-            var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint, bool IsAnimated, string? FallbackIconPath)>();
+            var currentItems = new List<(string Name, int Quantity, string? IconPath, int? Uses, int Rarity, Color? IconTint, bool IsAnimated, string? FallbackIconPath, bool IsEquipped)>();
             switch (_selectedInventoryCategory)
             {
                 case InventoryCategory.Weapons:
                     foreach (var kvp in _gameState.PlayerState.Weapons)
                     {
+                        bool isEquipped = kvp.Key == _gameState.PlayerState.EquippedWeaponId;
                         if (BattleDataCache.Weapons.TryGetValue(kvp.Key, out var weaponData))
                         {
-                            currentItems.Add((weaponData.WeaponName, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, weaponData.Rarity, null, false, null));
+                            currentItems.Add((weaponData.WeaponName, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, weaponData.Rarity, null, false, null, isEquipped));
                         }
                         else
                         {
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, 0, null, false, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Weapons/{kvp.Key}", null, 0, null, false, null, isEquipped));
                         }
                     }
                     break;
                 case InventoryCategory.Armor:
                     foreach (var kvp in _gameState.PlayerState.Armors)
                     {
+                        bool isEquipped = kvp.Key == _gameState.PlayerState.EquippedArmorId;
                         if (BattleDataCache.Armors.TryGetValue(kvp.Key, out var armorData))
                         {
-                            currentItems.Add((armorData.ArmorName, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, armorData.Rarity, null, false, null));
+                            currentItems.Add((armorData.ArmorName, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, armorData.Rarity, null, false, null, isEquipped));
                         }
                         else
                         {
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, 0, null, false, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Armor/{kvp.Key}", null, 0, null, false, null, isEquipped));
                         }
                     }
                     break;
                 case InventoryCategory.Relics:
                     foreach (var kvp in _gameState.PlayerState.Relics)
                     {
+                        bool isEquipped = _gameState.PlayerState.EquippedRelics.Contains(kvp.Key);
                         if (BattleDataCache.Relics.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, data.Rarity, null, false, null));
+                            currentItems.Add((data.RelicName, kvp.Value, $"Sprites/Items/Relics/{data.RelicID}", null, data.Rarity, null, false, null, isEquipped));
                         else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null, 0, null, false, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Relics/{kvp.Key}", null, 0, null, false, null, isEquipped));
                     }
                     break;
                 case InventoryCategory.Consumables:
                     foreach (var kvp in _gameState.PlayerState.Consumables)
                     {
                         if (BattleDataCache.Consumables.TryGetValue(kvp.Key, out var data))
-                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, 0, null, false, null)); // Consumables default to 0 rarity
+                            currentItems.Add((data.ItemName, kvp.Value, data.ImagePath, null, 0, null, false, null, false)); // Consumables default to 0 rarity, never equipped
                         else
-                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, 0, null, false, null));
+                            currentItems.Add((kvp.Key, kvp.Value, $"Sprites/Items/Consumables/{kvp.Key}", null, 0, null, false, null, false));
                     }
                     break;
                 case InventoryCategory.Spells:
@@ -113,6 +115,7 @@ namespace ProjectVagabond.UI
                         string iconPath = $"Sprites/Items/Spells/{entry.MoveID}";
                         int rarity = 0;
                         string? fallbackPath = null;
+                        bool isEquipped = _gameState.PlayerState.EquippedSpells.Contains(entry);
 
                         if (BattleDataCache.Moves.TryGetValue(entry.MoveID, out var moveData))
                         {
@@ -127,7 +130,7 @@ namespace ProjectVagabond.UI
                                 fallbackPath = $"Sprites/Items/Spells/default_{elName}";
                             }
                         }
-                        currentItems.Add((name, 1, iconPath, null, rarity, tint, true, fallbackPath));
+                        currentItems.Add((name, 1, iconPath, null, rarity, tint, true, fallbackPath, isEquipped));
                     }
                     break;
             }
@@ -179,4 +182,3 @@ namespace ProjectVagabond.UI
         }
     }
 }
-﻿
