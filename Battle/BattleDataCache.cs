@@ -19,7 +19,8 @@ namespace ProjectVagabond.Battle
         public static Dictionary<string, ConsumableItemData> Consumables { get; private set; }
         public static Dictionary<string, RelicData> Relics { get; private set; }
         public static Dictionary<string, WeaponData> Weapons { get; private set; }
-        public static Dictionary<string, ArmorData> Armors { get; private set; } // <--- Added
+        public static Dictionary<string, ArmorData> Armors { get; private set; }
+        public static Dictionary<string, MiscItemData> MiscItems { get; private set; } // <--- Added
 
         public static void LoadData(ContentManager content)
         {
@@ -99,7 +100,7 @@ namespace ProjectVagabond.Battle
                 Debug.WriteLine($"[BattleDataCache] Successfully loaded {Weapons.Count} weapon definitions.");
             }
 
-            // --- ARMOR --- (New Section)
+            // --- ARMOR ---
             string armorPath = Path.Combine(content.RootDirectory, "Data", "Items", "Armor.json");
             if (!File.Exists(armorPath))
             {
@@ -113,7 +114,6 @@ namespace ProjectVagabond.Battle
                 Armors = armorList.ToDictionary(a => a.ArmorID, a => a, StringComparer.OrdinalIgnoreCase);
                 ValidateWordLengths(Armors.Values.Select(a => a.ArmorName), "Armor", 11);
 
-                // Validate that all armors have stat modifiers
                 foreach (var armor in Armors.Values)
                 {
                     if (armor.StatModifiers == null || armor.StatModifiers.Count == 0)
@@ -122,6 +122,22 @@ namespace ProjectVagabond.Battle
                     }
                 }
                 Debug.WriteLine($"[BattleDataCache] Successfully loaded {Armors.Count} armor definitions.");
+            }
+
+            // --- MISC ITEMS --- (New Section)
+            string miscPath = Path.Combine(content.RootDirectory, "Data", "Items", "Misc.json");
+            if (!File.Exists(miscPath))
+            {
+                // Non-critical, just create empty dict
+                MiscItems = new Dictionary<string, MiscItemData>(StringComparer.OrdinalIgnoreCase);
+            }
+            else
+            {
+                string miscJson = File.ReadAllText(miscPath);
+                var miscList = JsonSerializer.Deserialize<List<MiscItemData>>(miscJson, jsonOptions);
+                MiscItems = miscList.ToDictionary(m => m.ItemID, m => m, StringComparer.OrdinalIgnoreCase);
+                ValidateWordLengths(MiscItems.Values.Select(m => m.ItemName), "Misc", 11);
+                Debug.WriteLine($"[BattleDataCache] Successfully loaded {MiscItems.Count} misc item definitions.");
             }
         }
 

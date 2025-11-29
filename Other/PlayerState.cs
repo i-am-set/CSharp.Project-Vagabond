@@ -11,8 +11,10 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ProjectVagabond
 {
@@ -38,6 +40,7 @@ namespace ProjectVagabond
         public Dictionary<string, int> Armors { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> Relics { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> Consumables { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, int> MiscItems { get; set; } = new Dictionary<string, int>(); // <--- Added
 
         // --- MOVES ---
         /// <summary>
@@ -202,6 +205,24 @@ namespace ProjectVagabond
             {
                 Consumables[itemId] -= quantity;
                 if (Consumables[itemId] <= 0) Consumables.Remove(itemId);
+                return true;
+            }
+            return false;
+        }
+
+        // --- MISC MANAGEMENT ---
+        public void AddMiscItem(string itemId, int quantity = 1)
+        {
+            if (MiscItems.ContainsKey(itemId)) MiscItems[itemId] += quantity;
+            else MiscItems[itemId] = quantity;
+        }
+
+        public bool RemoveMiscItem(string itemId, int quantity = 1)
+        {
+            if (MiscItems.TryGetValue(itemId, out int current) && current >= quantity)
+            {
+                MiscItems[itemId] -= quantity;
+                if (MiscItems[itemId] <= 0) MiscItems.Remove(itemId);
                 return true;
             }
             return false;

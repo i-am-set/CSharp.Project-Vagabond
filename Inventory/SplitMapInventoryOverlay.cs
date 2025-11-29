@@ -14,7 +14,7 @@ using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.UI
 {
-    public enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables, Equip }
+    public enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables, Misc, Equip }
 
     public partial class SplitMapInventoryOverlay
     {
@@ -73,7 +73,8 @@ namespace ProjectVagabond.UI
             InventoryCategory.Armor,
             InventoryCategory.Relics,
             InventoryCategory.Spells,
-            InventoryCategory.Consumables
+            InventoryCategory.Consumables,
+            InventoryCategory.Misc
         };
 
         // Animation State
@@ -147,11 +148,14 @@ namespace ProjectVagabond.UI
             // Use the defined order for button creation
             int numButtons = _categoryOrder.Count;
             const int buttonSpriteSize = 32;
-            const int containerWidth = 172;
+            const int spacing = 0; // Added spacing between buttons
             var buttonRects = _spriteManager.InventoryHeaderButtonSourceRects;
 
-            float buttonClickableWidth = (float)containerWidth / numButtons;
-            float startX = (Global.VIRTUAL_WIDTH - containerWidth) / 2f + 19f;
+            // Calculate total width dynamically based on button count and spacing
+            int totalWidth = (numButtons * buttonSpriteSize) + ((numButtons - 1) * spacing);
+
+            // Center the group, maintaining the +19f offset for the background art alignment
+            float startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2f + 19f;
             float buttonY = 200 + 6;
 
             for (int i = 0; i < numButtons; i++)
@@ -164,11 +168,16 @@ namespace ProjectVagabond.UI
                     InventoryCategory.Spells => _spriteManager.InventoryHeaderButtonSpells,
                     InventoryCategory.Relics => _spriteManager.InventoryHeaderButtonRelics,
                     InventoryCategory.Consumables => _spriteManager.InventoryHeaderButtonConsumables,
+                    InventoryCategory.Misc => _spriteManager.InventoryHeaderButtonMisc,
                     _ => _spriteManager.InventoryHeaderButtonWeapons,
                 };
 
                 int menuIndex = (int)category;
-                var bounds = new Rectangle((int)MathF.Round(startX + i * buttonClickableWidth), (int)buttonY, (int)MathF.Round(buttonClickableWidth), buttonSpriteSize);
+
+                // Calculate X position with spacing
+                float xPos = startX + i * (buttonSpriteSize + spacing);
+                var bounds = new Rectangle((int)MathF.Round(xPos), (int)buttonY, buttonSpriteSize, buttonSpriteSize);
+
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
 
                 // Only switch if it's a different category to prevent re-animation

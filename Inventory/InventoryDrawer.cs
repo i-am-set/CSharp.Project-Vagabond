@@ -45,6 +45,7 @@ namespace ProjectVagabond.UI
                     InventoryCategory.Spells => _spriteManager.InventoryBorderSpells,
                     InventoryCategory.Relics => _spriteManager.InventoryBorderRelics,
                     InventoryCategory.Consumables => _spriteManager.InventoryBorderConsumables,
+                    InventoryCategory.Misc => _spriteManager.InventoryBorderMisc, // <--- Added
                     InventoryCategory.Equip => _spriteManager.InventoryBorderEquip,
                     _ => _spriteManager.InventoryBorderWeapons,
                 };
@@ -265,6 +266,16 @@ namespace ProjectVagabond.UI
             else if (_selectedInventoryCategory == InventoryCategory.Consumables)
             {
                 var item = BattleDataCache.Consumables.Values.FirstOrDefault(c => c.ItemName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (item != null)
+                {
+                    name = item.ItemName.ToUpper();
+                    description = item.Description.ToUpper();
+                    iconPath = item.ImagePath;
+                }
+            }
+            else if (_selectedInventoryCategory == InventoryCategory.Misc) // <--- Added
+            {
+                var item = BattleDataCache.MiscItems.Values.FirstOrDefault(m => m.ItemName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
                 if (item != null)
                 {
                     name = item.ItemName.ToUpper();
