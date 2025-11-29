@@ -46,11 +46,10 @@ namespace ProjectVagabond.UI
 
             foreach (var button in _inventoryHeaderButtons) button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
 
-            // --- NEW: Draw Category Title ---
+            // --- Draw Category Title ---
             if (_selectedInventoryCategory == InventoryCategory.Equip)
             {
-                // 1. Draw "STATS" on the right panel
-                if (!_isEquipSubmenuOpen) // <--- Added check to hide STATS when submenu is open
+                if (!_isEquipSubmenuOpen)
                 {
                     string statsTitle = "STATS";
                     Vector2 statsTitleSize = font.MeasureString(statsTitle);
@@ -61,14 +60,11 @@ namespace ProjectVagabond.UI
                     spriteBatch.DrawStringSnapped(font, statsTitle, statsTitlePos, _global.Palette_DarkGray);
                 }
 
-                // 2. Draw "EQUIP" on the left panel (centered over equip buttons)
                 if (_weaponEquipButton != null)
                 {
                     string equipTitle = "EQUIP";
                     Vector2 equipTitleSize = font.MeasureString(equipTitle);
-                    // Center over the weapon button's width (180px)
                     float equipCenterX = _weaponEquipButton.Bounds.X + (_weaponEquipButton.Bounds.Width / 2f);
-                    // Align vertically with where "STATS" would be (or is)
                     float titleY = _infoPanelArea.Y + 5 + _inventoryPositionOffset.Y;
                     Vector2 equipTitlePos = new Vector2(
                         equipCenterX - (equipTitleSize.X / 2f),
@@ -79,7 +75,6 @@ namespace ProjectVagabond.UI
             }
             else
             {
-                // Standard behavior for other categories
                 string categoryTitle = _selectedInventoryCategory.ToString().ToUpper();
                 Vector2 titleSize = font.MeasureString(categoryTitle);
                 Vector2 titlePos = new Vector2(
@@ -88,13 +83,11 @@ namespace ProjectVagabond.UI
                 );
                 spriteBatch.DrawStringSnapped(font, categoryTitle, titlePos, _global.Palette_DarkGray);
             }
-            // --------------------------------
 
             if (_selectedInventoryCategory != InventoryCategory.Equip)
             {
                 foreach (var slot in _inventorySlots) slot.Draw(spriteBatch, font, gameTime, Matrix.Identity);
 
-                // Draw Page Counter
                 if (_totalPages > 1)
                 {
                     var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
@@ -105,7 +98,6 @@ namespace ProjectVagabond.UI
                         _inventorySlotArea.Bottom - 2
                     );
 
-                    // Draw background rectangle
                     var pixel = ServiceLocator.Get<Texture2D>();
                     var bgRect = new Rectangle(
                         (int)textPos.X - 1,
@@ -121,7 +113,6 @@ namespace ProjectVagabond.UI
                     _pageRightButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
 
-                // Draw Info Panel
                 DrawInfoPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
             }
             else
@@ -133,7 +124,6 @@ namespace ProjectVagabond.UI
                         button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     }
 
-                    // Draw Scroll Arrows
                     var arrowTexture = _spriteManager.InventoryScrollArrowsSprite;
                     var arrowRects = _spriteManager.InventoryScrollArrowRects;
 
@@ -146,7 +136,6 @@ namespace ProjectVagabond.UI
 
                         int maxScroll = Math.Max(0, totalItems - 7);
 
-                        // Up Arrow
                         if (_equipMenuScrollIndex > 0)
                         {
                             var firstButton = _equipSubmenuButtons[0];
@@ -157,7 +146,6 @@ namespace ProjectVagabond.UI
                             spriteBatch.DrawSnapped(arrowTexture, arrowPos, arrowRects[0], Color.White);
                         }
 
-                        // Down Arrow
                         if (_equipMenuScrollIndex < maxScroll)
                         {
                             var lastButton = _equipSubmenuButtons.Last();
@@ -178,7 +166,6 @@ namespace ProjectVagabond.UI
                     _weaponEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                 }
 
-                // Draw Stats Panel (Moved here to show in both main equip view and submenu)
                 DrawStatsPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont);
             }
 
@@ -190,7 +177,6 @@ namespace ProjectVagabond.UI
                 var pixel = ServiceLocator.Get<Texture2D>();
                 spriteBatch.DrawSnapped(pixel, _inventorySlotArea, Color.Blue * 0.5f);
 
-                // Debug Draw for Panels
                 if (_selectedInventoryCategory == InventoryCategory.Equip)
                 {
                     spriteBatch.DrawSnapped(pixel, _statsPanelArea, Color.HotPink * 0.5f);
@@ -206,13 +192,11 @@ namespace ProjectVagabond.UI
 
         public void DrawScreen(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // Only draw the toggle button here
             _inventoryButton?.Draw(spriteBatch, font, gameTime, transform);
         }
 
         private void DrawInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime)
         {
-            // Find the active slot (Selected takes precedence over Hovered)
             InventorySlot? activeSlot = _inventorySlots.FirstOrDefault(s => s.IsSelected);
             if (activeSlot == null)
             {
@@ -221,7 +205,6 @@ namespace ProjectVagabond.UI
 
             if (activeSlot == null || !activeSlot.HasItem || string.IsNullOrEmpty(activeSlot.ItemId)) return;
 
-            // Retrieve Item Data based on Category
             string name = activeSlot.ItemId.ToUpper();
             string description = "";
             string iconPath = activeSlot.IconPath ?? "";
@@ -229,11 +212,11 @@ namespace ProjectVagabond.UI
             Texture2D? iconSilhouette = null;
             (List<string> Positives, List<string> Negatives) statLines = (new List<string>(), new List<string>());
             string? fallbackPath = null;
+            MoveData? spellData = null;
 
-            // Attempt to fetch rich data
+            // --- Data Retrieval ---
             if (_selectedInventoryCategory == InventoryCategory.Relics)
             {
-                // Try to find by name if ID lookup fails (since slot stores Name)
                 var relic = BattleDataCache.Relics.Values.FirstOrDefault(r => r.RelicName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
                 if (relic != null)
                 {
@@ -255,14 +238,14 @@ namespace ProjectVagabond.UI
             }
             else if (_selectedInventoryCategory == InventoryCategory.Spells)
             {
-                var move = BattleDataCache.Moves.Values.FirstOrDefault(m => m.MoveName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
-                if (move != null)
+                spellData = BattleDataCache.Moves.Values.FirstOrDefault(m => m.MoveName.Equals(activeSlot.ItemId, StringComparison.OrdinalIgnoreCase));
+                if (spellData != null)
                 {
-                    name = move.MoveName.ToUpper();
-                    description = move.Description.ToUpper();
-                    iconPath = $"Sprites/Items/Spells/{move.MoveID}";
+                    name = spellData.MoveName.ToUpper();
+                    description = spellData.Description.ToUpper();
+                    iconPath = $"Sprites/Items/Spells/{spellData.MoveID}";
 
-                    int elementId = move.OffensiveElementIDs.FirstOrDefault();
+                    int elementId = spellData.OffensiveElementIDs.FirstOrDefault();
                     if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
                     {
                         string elName = elementDef.ElementName.ToLowerInvariant();
@@ -294,25 +277,29 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // Load Icon
             if (!string.IsNullOrEmpty(iconPath))
             {
                 iconTexture = _spriteManager.GetItemSprite(iconPath, fallbackPath);
                 iconSilhouette = _spriteManager.GetItemSpriteSilhouette(iconPath, fallbackPath);
             }
 
-            // Determine Source Rectangle for Animation
             Rectangle? sourceRect = null;
             if (activeSlot.IsAnimated && iconTexture != null)
             {
                 sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
             }
 
-            // --- Drawing Logic ---
+            // --- SPECIAL RENDERING FOR SPELLS ---
+            if (_selectedInventoryCategory == InventoryCategory.Spells && spellData != null)
+            {
+                DrawSpellInfoPanel(spriteBatch, font, secondaryFont, spellData, iconTexture, iconSilhouette, sourceRect, activeSlot.IconTint);
+                return;
+            }
+
+            // --- STANDARD RENDERING FOR OTHER CATEGORIES ---
             const int spriteSize = 32;
             const int gap = 4;
 
-            // 1. Calculate Total Height for Centering
             int maxTitleWidth = _infoPanelArea.Width - (4 * 2);
             var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
             float totalTitleHeight = titleLines.Count * font.LineHeight;
@@ -327,29 +314,23 @@ namespace ProjectVagabond.UI
             }
 
             float totalStatHeight = Math.Max(statLines.Positives.Count, statLines.Negatives.Count) * secondaryFont.LineHeight;
-
             float totalContentHeight = spriteSize + gap + totalTitleHeight + (totalDescHeight > 0 ? gap + totalDescHeight : 0) + (totalStatHeight > 0 ? gap + totalStatHeight : 0);
 
-            // 2. Calculate Start Y
             float currentY = _infoPanelArea.Y + (_infoPanelArea.Height - totalContentHeight) / 2f;
-            currentY -= 10f; // Move up 10 pixels as requested
+            currentY -= 10f;
 
-            // 3. Draw Sprite
             int spriteX = _infoPanelArea.X + (_infoPanelArea.Width - spriteSize) / 2;
 
             if (iconSilhouette != null)
             {
-                // Use global outline color for Idle state
                 Color mainOutlineColor = _global.ItemOutlineColor_Idle;
                 Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
 
-                // 1. Draw Diagonals (Corners) FIRST (Behind)
                 spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY - 1), sourceRect, cornerOutlineColor);
                 spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY - 1), sourceRect, cornerOutlineColor);
                 spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY + 1), sourceRect, cornerOutlineColor);
                 spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY + 1), sourceRect, cornerOutlineColor);
 
-                // 2. Draw Cardinals (Main) SECOND (On Top)
                 spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, currentY), sourceRect, mainOutlineColor);
                 spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, currentY), sourceRect, mainOutlineColor);
                 spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, currentY - 1), sourceRect, mainOutlineColor);
@@ -364,7 +345,6 @@ namespace ProjectVagabond.UI
 
             currentY += spriteSize + gap;
 
-            // 4. Draw Title
             foreach (var line in titleLines)
             {
                 float lineWidth = 0;
@@ -396,7 +376,6 @@ namespace ProjectVagabond.UI
                 currentY += font.LineHeight;
             }
 
-            // 5. Draw Description
             if (descLines.Any())
             {
                 currentY += gap;
@@ -432,18 +411,16 @@ namespace ProjectVagabond.UI
                 }
             }
 
-            // 6. Draw Stats (Two Columns)
             if (statLines.Positives.Any() || statLines.Negatives.Any())
             {
                 currentY += gap;
                 float leftColX = _infoPanelArea.X + 8;
-                float rightColX = _infoPanelArea.X + 64; // Roughly half way plus a bit
+                float rightColX = _infoPanelArea.X + 64;
 
                 int maxRows = Math.Max(statLines.Positives.Count, statLines.Negatives.Count);
 
                 for (int i = 0; i < maxRows; i++)
                 {
-                    // Draw Positive Stat (Left Column)
                     if (i < statLines.Positives.Count)
                     {
                         var lineParts = ParseAndWrapRichText(secondaryFont, statLines.Positives[i], _infoPanelArea.Width / 2, _global.Palette_White);
@@ -460,7 +437,6 @@ namespace ProjectVagabond.UI
                         }
                     }
 
-                    // Draw Negative Stat (Right Column)
                     if (i < statLines.Negatives.Count)
                     {
                         var lineParts = ParseAndWrapRichText(secondaryFont, statLines.Negatives[i], _infoPanelArea.Width / 2, _global.Palette_White);
@@ -476,8 +452,185 @@ namespace ProjectVagabond.UI
                             }
                         }
                     }
-
                     currentY += secondaryFont.LineHeight;
+                }
+            }
+        }
+
+        private void DrawSpellInfoPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, MoveData move, Texture2D? iconTexture, Texture2D? iconSilhouette, Rectangle? sourceRect, Color? iconTint)
+        {
+            const int spriteSize = 32;
+            const int padding = 4;
+            const int gap = 2;
+
+            // 1. Draw Sprite (Centered Horizontally, Top of Panel)
+            int spriteX = _infoPanelArea.X + (_infoPanelArea.Width - spriteSize) / 2;
+            int spriteY = _infoPanelArea.Y + 2; // Moved up from 18 to 2
+
+            if (iconSilhouette != null)
+            {
+                Color mainOutlineColor = _global.ItemOutlineColor_Idle;
+                Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
+
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, spriteY - 1), sourceRect, cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, spriteY - 1), sourceRect, cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, spriteY + 1), sourceRect, cornerOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, spriteY + 1), sourceRect, cornerOutlineColor);
+
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX - 1, spriteY), sourceRect, mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX + 1, spriteY), sourceRect, mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, spriteY - 1), sourceRect, mainOutlineColor);
+                spriteBatch.DrawSnapped(iconSilhouette, new Vector2(spriteX, spriteY + 1), sourceRect, mainOutlineColor);
+            }
+
+            if (iconTexture != null)
+            {
+                Color tint = iconTint ?? Color.White;
+                spriteBatch.DrawSnapped(iconTexture, new Vector2(spriteX, spriteY), sourceRect, tint);
+            }
+
+            // 2. Draw Name (Overlapping Bottom of Sprite)
+            string name = move.MoveName.ToUpper();
+            Vector2 nameSize = font.MeasureString(name);
+            Vector2 namePos = new Vector2(
+                _infoPanelArea.X + (_infoPanelArea.Width - nameSize.X) / 2f,
+                spriteY + spriteSize - (font.LineHeight / 2f) + 2
+            );
+
+            // Draw outline for readability
+            spriteBatch.DrawStringOutlinedSnapped(font, name, namePos, _global.Palette_BrightWhite, _global.Palette_Black);
+
+            float currentY = namePos.Y + font.LineHeight + 2;
+
+            // 3. Draw Stats Grid
+            // Columns
+            float leftLabelX = _infoPanelArea.X + 8;
+            float leftValueRightX = _infoPanelArea.X + 51; // Moved left by 5
+
+            float rightLabelX = _infoPanelArea.X + 59; // Moved left by 5
+            float rightValueRightX = _infoPanelArea.X + 112;
+
+            // Helper to draw stat pair with fixed alignment
+            void DrawStatPair(string label, string value, float labelX, float valueRightX, float y, Color valColor)
+            {
+                // Draw Label (Left Aligned)
+                spriteBatch.DrawStringSnapped(secondaryFont, label, new Vector2(labelX, y), _global.Palette_Gray);
+
+                // Draw Value (Right Aligned)
+                float valWidth = secondaryFont.MeasureString(value).Width;
+                spriteBatch.DrawStringSnapped(secondaryFont, value, new Vector2(valueRightX - valWidth, y), valColor);
+            }
+
+            // Row 1: Power | Accuracy
+            string powVal = move.Power > 0 ? move.Power.ToString() : "---";
+            string accVal = move.Accuracy >= 0 ? $"{move.Accuracy}%" : "---";
+            DrawStatPair("POW", powVal, leftLabelX, leftValueRightX, currentY, _global.Palette_White);
+            DrawStatPair("ACC", accVal, rightLabelX, rightValueRightX, currentY, _global.Palette_White);
+            currentY += secondaryFont.LineHeight + gap;
+
+            // Row 2: Mana | Target
+            string mpVal = move.ManaCost > 0 ? move.ManaCost.ToString() : "0";
+            string targetVal = move.Target switch
+            {
+                TargetType.Single => "SINGL",
+                TargetType.Every => "EVERY",
+                TargetType.SingleAll => "S ALL",
+                TargetType.EveryAll => "E ALL",
+                TargetType.Self => "SELF",
+                TargetType.None => "NONE",
+                _ => "---"
+            };
+            DrawStatPair("MP ", mpVal, leftLabelX, leftValueRightX, currentY, _global.Palette_LightBlue);
+            DrawStatPair("TGT", targetVal, rightLabelX, rightValueRightX, currentY, _global.Palette_White);
+            currentY += secondaryFont.LineHeight + gap;
+
+            // Row 3: Off. Stat | Impact
+            string offStatVal = move.OffensiveStat switch
+            {
+                OffensiveStatType.Strength => "STR",
+                OffensiveStatType.Intelligence => "INT",
+                OffensiveStatType.Tenacity => "TEN",
+                OffensiveStatType.Agility => "AGI",
+                _ => "---"
+            };
+
+            Color offColor = move.OffensiveStat switch
+            {
+                OffensiveStatType.Strength => _global.StatColor_Strength,
+                OffensiveStatType.Intelligence => _global.StatColor_Intelligence,
+                OffensiveStatType.Tenacity => _global.StatColor_Tenacity,
+                OffensiveStatType.Agility => _global.StatColor_Agility,
+                _ => _global.Palette_White
+            };
+
+            string impactVal = move.ImpactType.ToString().ToUpper().Substring(0, Math.Min(4, move.ImpactType.ToString().Length)); // PHYS, MAGI, STAT
+            Color impactColor = move.ImpactType == ImpactType.Magical ? _global.Palette_LightBlue : (move.ImpactType == ImpactType.Physical ? _global.Palette_Orange : _global.Palette_Gray);
+
+            DrawStatPair("USE", offStatVal, leftLabelX, leftValueRightX, currentY, offColor);
+            DrawStatPair("TYP", impactVal, rightLabelX, rightValueRightX, currentY, impactColor);
+            currentY += secondaryFont.LineHeight + gap;
+
+            // Row 4: Contact (Centered if true)
+            if (move.MakesContact)
+            {
+                string contactText = "[MAKES CONTACT]";
+                Vector2 contactSize = secondaryFont.MeasureString(contactText);
+                Vector2 contactPos = new Vector2(_infoPanelArea.X + (_infoPanelArea.Width - contactSize.X) / 2f, currentY);
+                spriteBatch.DrawStringSnapped(secondaryFont, contactText, contactPos, _global.Palette_Red);
+                currentY += secondaryFont.LineHeight + gap;
+            }
+
+            // 4. Draw Description
+            string description = move.Description.ToUpper();
+            if (!string.IsNullOrEmpty(description))
+            {
+                float descWidth = _infoPanelArea.Width - (padding * 2);
+                var descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _global.Palette_White);
+
+                // Limit to 8 lines
+                int maxLines = 8;
+                if (descLines.Count > maxLines)
+                {
+                    descLines = descLines.Take(maxLines).ToList();
+                }
+
+                // Calculate height
+                float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
+
+                // Anchor to bottom
+                float bottomPadding = 8f;
+                float startY = _infoPanelArea.Bottom - bottomPadding - totalDescHeight;
+
+                float lineY = startY;
+                foreach (var line in descLines)
+                {
+                    float lineWidth = 0;
+                    foreach (var segment in line)
+                    {
+                        if (string.IsNullOrWhiteSpace(segment.Text))
+                            lineWidth += segment.Text.Length * SPACE_WIDTH;
+                        else
+                            lineWidth += secondaryFont.MeasureString(segment.Text).Width;
+                    }
+
+                    float lineX = _infoPanelArea.X + (_infoPanelArea.Width - lineWidth) / 2;
+                    float currentX = lineX;
+
+                    foreach (var segment in line)
+                    {
+                        float segWidth;
+                        if (string.IsNullOrWhiteSpace(segment.Text))
+                        {
+                            segWidth = segment.Text.Length * SPACE_WIDTH;
+                        }
+                        else
+                        {
+                            segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                            spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, lineY), segment.Color);
+                        }
+                        currentX += segWidth;
+                    }
+                    lineY += secondaryFont.LineHeight;
                 }
             }
         }
@@ -487,13 +640,13 @@ namespace ProjectVagabond.UI
             // --- Draw Hovered Item Details ---
             if (_hoveredItemData != null)
             {
-                const int padding = 2; // Reduced padding for "tightly against top"
+                const int padding = 2;
                 const int spriteSize = 32;
                 const int gap = 4;
 
                 // 1. Sprite (Top Left - Centered Horizontally)
                 int spriteX = _statsPanelArea.X + (_statsPanelArea.Width - spriteSize) / 2;
-                int spriteY = _statsPanelArea.Y; // Tightly against top
+                int spriteY = _statsPanelArea.Y;
 
                 string name = "";
                 string description = "";
@@ -528,17 +681,14 @@ namespace ProjectVagabond.UI
 
                 if (itemSilhouette != null)
                 {
-                    // Use global outline color for Idle state
                     Color mainOutlineColor = _global.ItemOutlineColor_Idle;
                     Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
 
-                    // 1. Draw Diagonals (Corners) FIRST (Behind)
                     spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY - 1), cornerOutlineColor);
                     spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY - 1), cornerOutlineColor);
                     spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY + 1), cornerOutlineColor);
                     spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY + 1), cornerOutlineColor);
 
-                    // 2. Draw Cardinals (Main) SECOND (On Top)
                     spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY), mainOutlineColor);
                     spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY), mainOutlineColor);
                     spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX, spriteY - 1), mainOutlineColor);
@@ -551,15 +701,12 @@ namespace ProjectVagabond.UI
                 }
 
                 // 2. Title
-                // Anchor: Bottom of the title block is fixed relative to the sprite bottom.
                 float titleBottomY = spriteY + spriteSize + gap;
-
-                int maxTitleWidth = _statsPanelArea.Width - (4 * 2); // 4px padding on sides
+                int maxTitleWidth = _statsPanelArea.Width - (4 * 2);
 
                 var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
                 float totalTitleHeight = titleLines.Count * font.LineHeight;
 
-                // Calculate start Y so the block ends at titleBottomY
                 float currentTitleY = titleBottomY - totalTitleHeight;
 
                 foreach (var line in titleLines)
@@ -573,7 +720,6 @@ namespace ProjectVagabond.UI
                             lineWidth += font.MeasureString(segment.Text).Width;
                     }
 
-                    // Center horizontally within the panel
                     float lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2f;
                     float currentX = lineX;
 
@@ -595,17 +741,15 @@ namespace ProjectVagabond.UI
                 }
 
                 // 3. Description
-                // Area: From titleBottomY to statsStartY
-                int statsStartY = _statsPanelArea.Y + 77; // Defined later for stats, used here for boundary
+                int statsStartY = _statsPanelArea.Y + 77;
                 float descAreaTop = titleBottomY;
                 float descAreaBottom = statsStartY;
                 float descAreaHeight = descAreaBottom - descAreaTop;
 
-                float descWidth = _statsPanelArea.Width - (4 * 2); // 4px padding
+                float descWidth = _statsPanelArea.Width - (4 * 2);
                 var descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _global.Palette_White);
                 float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
 
-                // Center vertically in the area
                 float currentDescY = descAreaTop + (descAreaHeight - totalDescHeight) / 2f;
 
                 foreach (var line in descLines)
@@ -661,7 +805,6 @@ namespace ProjectVagabond.UI
             int arrowX = 66;
             int val2RightX = 107;
 
-            // Helper to get modifier from an equipped slot
             int GetEquippedModifier(int slotIndex, string statKey)
             {
                 if (slotIndex >= playerState.EquippedRelics.Length) return 0;
@@ -695,7 +838,6 @@ namespace ProjectVagabond.UI
                 return 0;
             }
 
-            // Helper to get modifier from the hovered item data
             int GetHoveredModifier(string statKey)
             {
                 if (_hoveredItemData == null) return 0;
@@ -715,11 +857,8 @@ namespace ProjectVagabond.UI
                 var stat = stats[i];
                 int y = startY + (i * rowSpacing);
 
-                // 1. Calculate Values
-                // Get the base stat directly to perform accurate math
                 int baseStat = playerState.GetBaseStat(stat.StatKey);
 
-                // Calculate total current modifier from all equipped items (Relics + Weapon + Armor)
                 int totalCurrentMod = 0;
                 for (int slot = 0; slot < playerState.EquippedRelics.Length; slot++)
                 {
@@ -728,10 +867,8 @@ namespace ProjectVagabond.UI
                 totalCurrentMod += GetEquippedWeaponModifier(stat.StatKey);
                 totalCurrentMod += GetEquippedArmorModifier(stat.StatKey);
 
-                // Current Effective Value (Clamped)
                 int currentVal = Math.Max(1, baseStat + totalCurrentMod);
 
-                // Projected Calculation
                 int projectedVal = currentVal;
                 int diff = 0;
                 bool isComparing = _isEquipSubmenuOpen && _hoveredItemData != null;
@@ -762,68 +899,49 @@ namespace ProjectVagabond.UI
                     }
 
                     int newMod = GetHoveredModifier(stat.StatKey);
-
-                    // Calculate projected raw value
                     int projectedRaw = baseStat + totalCurrentMod - currentSlotMod + newMod;
-
-                    // Clamp projected value
                     projectedVal = Math.Max(1, projectedRaw);
-
-                    // Calculate difference based on clamped values
                     diff = projectedVal - currentVal;
                 }
 
-                // 2. Determine Left Text (Modifier or Current)
                 string leftText;
                 Color leftColor;
                 Color labelColor;
 
                 if (isComparing && diff != 0)
                 {
-                    // Stat is changing: Highlight label
                     labelColor = _global.Palette_BrightWhite;
-
-                    // Cycle logic
                     float cyclePos = _statCycleTimer % (STAT_CYCLE_INTERVAL * 2);
-                    // Inverted logic: Start with Modifier (True), then Base (False)
                     bool showModifier = cyclePos < STAT_CYCLE_INTERVAL;
 
                     if (showModifier)
                     {
-                        // Show Modifier (+5)
                         leftText = (diff > 0 ? "+" : "") + diff.ToString();
                         leftColor = diff > 0 ? _global.Palette_LightGreen : _global.Palette_Red;
                     }
                     else
                     {
-                        // Show Current Value (90)
                         leftText = currentVal.ToString();
                         leftColor = _global.Palette_BrightWhite;
                     }
                 }
                 else
                 {
-                    // Stat is NOT changing or not comparing: Default label, show current value
                     labelColor = _global.Palette_Gray;
                     leftText = currentVal.ToString();
                     leftColor = _global.Palette_LightGray;
                 }
 
-                // 3. Draw Label
                 spriteBatch.DrawStringSnapped(secondaryFont, stat.Label, new Vector2(startX, y + 4), labelColor);
 
-                // 4. Draw Left Text (Current Value OR Modifier)
                 Vector2 leftSize = font.MeasureString(leftText);
                 spriteBatch.DrawStringSnapped(font, leftText, new Vector2(startX + val1RightX - leftSize.X, y + 4), leftColor);
 
-                // 5. Draw Right Side (Only if comparing)
                 if (isComparing)
                 {
-                    // Arrow
                     Color arrowColor = (diff != 0) ? _global.Palette_BrightWhite : _global.Palette_Gray;
                     spriteBatch.DrawStringSnapped(secondaryFont, ">", new Vector2(startX + arrowX, y + 4), arrowColor);
 
-                    // Projected Value
                     string projStr = projectedVal.ToString();
                     Vector2 projSize = font.MeasureString(projStr);
                     Color projColor = _global.Palette_LightGray;
@@ -844,7 +962,6 @@ namespace ProjectVagabond.UI
             float currentLineWidth = 0f;
             Color currentColor = defaultColor;
 
-            // Split by tags OR whitespace (capturing both)
             var parts = Regex.Split(text, @"(\[.*?\]|\s+)");
 
             foreach (var part in parts)
@@ -865,19 +982,15 @@ namespace ProjectVagabond.UI
                 }
                 else if (part.Contains("\n"))
                 {
-                    // Force a new line
                     lines.Add(currentLine);
                     currentLine = new List<ColoredText>();
                     currentLineWidth = 0f;
                 }
                 else
                 {
-                    // It's a word or spaces (but not newlines)
                     bool isWhitespace = string.IsNullOrWhiteSpace(part);
                     float partWidth = isWhitespace ? (part.Length * SPACE_WIDTH) : font.MeasureString(part).Width;
 
-                    // If it's a word and it doesn't fit, wrap.
-                    // We don't wrap on whitespace; we let it trail off the edge.
                     if (!isWhitespace && currentLineWidth + partWidth > maxWidth && currentLineWidth > 0)
                     {
                         lines.Add(currentLine);
@@ -885,7 +998,6 @@ namespace ProjectVagabond.UI
                         currentLineWidth = 0f;
                     }
 
-                    // Optimization: Don't add leading whitespace to a new line
                     if (isWhitespace && currentLineWidth == 0)
                     {
                         continue;
@@ -908,13 +1020,11 @@ namespace ProjectVagabond.UI
         {
             string tag = colorName.ToLowerInvariant();
 
-            // 1. Stats
             if (tag == "cstr") return _global.StatColor_Strength;
             if (tag == "cint") return _global.StatColor_Intelligence;
             if (tag == "cten") return _global.StatColor_Tenacity;
             if (tag == "cagi") return _global.StatColor_Agility;
 
-            // 2. General
             if (tag == "cpositive") return _global.ColorPositive;
             if (tag == "cnegative") return _global.ColorNegative;
             if (tag == "ccrit") return _global.ColorCrit;
@@ -922,7 +1032,6 @@ namespace ProjectVagabond.UI
             if (tag == "cctm") return _global.ColorConditionToMeet;
             if (tag == "cetc") return _global.Palette_DarkGray;
 
-            // 3. Elements
             if (tag == "cfire") return _global.ElementColors.GetValueOrDefault(2, Color.White);
             if (tag == "cwater") return _global.ElementColors.GetValueOrDefault(3, Color.White);
             if (tag == "carcane") return _global.ElementColors.GetValueOrDefault(4, Color.White);
@@ -936,7 +1045,6 @@ namespace ProjectVagabond.UI
             if (tag == "cice") return _global.ElementColors.GetValueOrDefault(12, Color.White);
             if (tag == "cnature") return _global.ElementColors.GetValueOrDefault(13, Color.White);
 
-            // 4. Status Effects
             if (tag.StartsWith("c"))
             {
                 string effectName = tag.Substring(1);
@@ -953,7 +1061,6 @@ namespace ProjectVagabond.UI
                 if (effectName == "root") return _global.StatusEffectColors.GetValueOrDefault(StatusEffectType.Root, Color.White);
             }
 
-            // 5. Standard Palette Colors
             switch (tag)
             {
                 case "teal": return _global.Palette_Teal;
