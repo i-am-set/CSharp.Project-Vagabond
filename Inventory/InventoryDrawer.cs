@@ -998,7 +998,7 @@ namespace ProjectVagabond.UI
                 {
                     labelColor = _global.Palette_Gray;
                     leftText = currentVal.ToString();
-                    leftColor = _global.Palette_LightGray;
+                    leftColor = _global.Palette_White;
                 }
 
                 spriteBatch.DrawStringSnapped(secondaryFont, stat.Label, new Vector2(startX, y + 4), labelColor);
@@ -1006,19 +1006,26 @@ namespace ProjectVagabond.UI
                 Vector2 leftSize = font.MeasureString(leftText);
                 spriteBatch.DrawStringSnapped(font, leftText, new Vector2(startX + val1RightX - leftSize.X, y + 4), leftColor);
 
+                Color arrowColor;
+                Color projColor;
+                string projStr = projectedVal.ToString();
+
                 if (isComparing)
                 {
-                    Color arrowColor = (diff != 0) ? _global.Palette_BrightWhite : _global.Palette_Gray;
-                    spriteBatch.DrawStringSnapped(secondaryFont, ">", new Vector2(startX + arrowX, y + 4), arrowColor);
-
-                    string projStr = projectedVal.ToString();
-                    Vector2 projSize = font.MeasureString(projStr);
-                    Color projColor = _global.Palette_LightGray;
+                    arrowColor = (diff != 0) ? _global.Palette_BrightWhite : _global.Palette_Gray;
                     if (diff > 0) projColor = _global.Palette_LightGreen;
                     else if (diff < 0) projColor = _global.Palette_Red;
-
-                    spriteBatch.DrawStringSnapped(font, projStr, new Vector2(startX + val2RightX - projSize.X, y + 4), projColor);
+                    else projColor = _global.Palette_LightGray;
                 }
+                else
+                {
+                    arrowColor = _global.Palette_DarkerGray;
+                    projColor = _global.Palette_DarkerGray;
+                }
+
+                spriteBatch.DrawStringSnapped(secondaryFont, ">", new Vector2(startX + arrowX, y + 4), arrowColor);
+                Vector2 projSize = font.MeasureString(projStr);
+                spriteBatch.DrawStringSnapped(font, projStr, new Vector2(startX + val2RightX - projSize.X, y + 4), projColor);
             }
         }
 
