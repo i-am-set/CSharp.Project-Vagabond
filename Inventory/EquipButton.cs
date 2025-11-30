@@ -134,16 +134,17 @@ namespace ProjectVagabond.UI
                     Color cornerOutlineColor = isActivated ? _global.ItemOutlineColor_Hover_Corner : _global.ItemOutlineColor_Idle_Corner;
 
                     // 1. Draw Diagonals (Corners) FIRST (Behind)
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y - 1), src, cornerOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y - 1), src, cornerOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y + 1), src, cornerOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y + 1), src, cornerOutlineColor);
+                    // Use Rectangle overload to ensure the silhouette is scaled to match the icon size (16x16)
+                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X - 1, destRect.Y - 1, destRect.Width, destRect.Height), src, cornerOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X + 1, destRect.Y - 1, destRect.Width, destRect.Height), src, cornerOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X - 1, destRect.Y + 1, destRect.Width, destRect.Height), src, cornerOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X + 1, destRect.Y + 1, destRect.Width, destRect.Height), src, cornerOutlineColor);
 
                     // 2. Draw Cardinals (Main) SECOND (On Top)
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X - 1, destRect.Y), src, mainOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X + 1, destRect.Y), src, mainOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X, destRect.Y - 1), src, mainOutlineColor);
-                    spriteBatch.DrawSnapped(IconSilhouette, new Vector2(destRect.X, destRect.Y + 1), src, mainOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X - 1, destRect.Y, destRect.Width, destRect.Height), src, mainOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X + 1, destRect.Y, destRect.Width, destRect.Height), src, mainOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X, destRect.Y - 1, destRect.Width, destRect.Height), src, mainOutlineColor);
+                    spriteBatch.DrawSnapped(IconSilhouette, new Rectangle(destRect.X, destRect.Y + 1, destRect.Width, destRect.Height), src, mainOutlineColor);
                 }
 
                 spriteBatch.DrawSnapped(IconTexture, destRect, src, Color.White);

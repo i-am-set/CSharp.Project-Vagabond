@@ -21,7 +21,6 @@ namespace ProjectVagabond.UI
             _equipMenuScrollIndex = 0;
             RefreshEquipSubmenuButtons();
         }
-
         private void RefreshEquipSubmenuButtons()
         {
             List<string> availableItems = new List<string>();
@@ -44,6 +43,17 @@ namespace ProjectVagabond.UI
 
                 // Filter out any relic that is currently equipped in ANY slot
                 availableItems = allRelics.Where(r => !equippedRelics.Contains(r)).ToList();
+            }
+            else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
+            {
+                // Get all owned spells
+                var allSpells = _gameState.PlayerState.Spells.Select(s => s.MoveID).ToList();
+
+                // Get set of currently equipped spells to filter them out
+                var equippedSpells = new HashSet<string>(_gameState.PlayerState.EquippedSpells.Where(s => s != null).Select(s => s!.MoveID));
+
+                // Filter out any spell that is currently equipped in ANY slot
+                availableItems = allSpells.Where(s => !equippedSpells.Contains(s)).ToList();
             }
 
             int totalItems = 1 + availableItems.Count; // +1 for REMOVE
@@ -129,7 +139,7 @@ namespace ProjectVagabond.UI
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
                     }
-                    else // Relic
+                    else if (_activeEquipSlotType >= EquipSlotType.Relic1 && _activeEquipSlotType <= EquipSlotType.Relic3)
                     {
                         var relicData = GetRelicData(itemId);
                         if (relicData != null)
@@ -140,6 +150,39 @@ namespace ProjectVagabond.UI
                             btn.IconSilhouette = _spriteManager.GetSmallRelicSpriteSilhouette(path);
                             btn.IconSourceRect = null;
                             btn.Rarity = relicData.Rarity;
+                            btn.IsEnabled = true;
+                            btn.OnClick = () => SelectEquipItem(itemId);
+                        }
+                        else
+                        {
+                            btn.MainText = itemId.ToUpper();
+                            btn.IsEnabled = true;
+                            btn.OnClick = () => SelectEquipItem(itemId);
+                        }
+                    }
+                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
+                    {
+                        if (BattleDataCache.Moves.TryGetValue(itemId, out var moveData))
+                        {
+                            btn.MainText = moveData.MoveName.ToUpper();
+                            string path = $"Sprites/Items/Spells/{moveData.MoveID}";
+
+                            // Fallback logic for spell icons
+                            int elementId = moveData.OffensiveElementIDs.FirstOrDefault();
+                            string? fallbackPath = null;
+                            if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
+                            {
+                                string elName = elementDef.ElementName.ToLowerInvariant();
+                                if (elName == "---") elName = "neutral";
+                                fallbackPath = $"Sprites/Items/Spells/default_{elName}";
+                            }
+
+                            // Use the animated spell sprite
+                            btn.IconTexture = _spriteManager.GetItemSprite(path, fallbackPath);
+                            btn.IconSilhouette = _spriteManager.GetItemSpriteSilhouette(path, fallbackPath);
+                            btn.IconSourceRect = null; // Will be updated in Update loop for animation
+
+                            btn.Rarity = moveData.Rarity;
                             btn.IsEnabled = true;
                             btn.OnClick = () => SelectEquipItem(itemId);
                         }
@@ -191,6 +234,22 @@ namespace ProjectVagabond.UI
             {
                 _gameState.PlayerState.EquippedRelics[2] = itemId;
             }
+            else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
+            {
+                int slotIndex = _activeEquipSlotType - EquipSlotType.Spell1;
+                if (itemId == null)
+                {
+                    _gameState.PlayerState.EquippedSpells[slotIndex] = null;
+                }
+                else
+                {
+                    var spellEntry = _gameState.PlayerState.Spells.FirstOrDefault(s => s.MoveID == itemId);
+                    if (spellEntry != null)
+                    {
+                        _gameState.PlayerState.EquippedSpells[slotIndex] = spellEntry;
+                    }
+                }
+            }
 
             _isEquipSubmenuOpen = false;
             _activeEquipSlotType = EquipSlotType.None;
@@ -202,6 +261,12 @@ namespace ProjectVagabond.UI
             UpdateEquipButtonState(_relicEquipButton1!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic1);
             UpdateEquipButtonState(_relicEquipButton2!, _gameState.PlayerState.EquippedRelics[1], EquipSlotType.Relic2);
             UpdateEquipButtonState(_relicEquipButton3!, _gameState.PlayerState.EquippedRelics[2], EquipSlotType.Relic3);
+
+            // Refresh spell buttons
+            for (int i = 0; i < 4; i++)
+            {
+                UpdateSpellEquipButtonState(_spellEquipButtons[i], _gameState.PlayerState.EquippedSpells[i]);
+            }
 
             _hapticsManager.TriggerShake(4f, 0.1f, true, 2f);
         }
@@ -252,6 +317,20 @@ namespace ProjectVagabond.UI
             button.IconSilhouette = silhouette;
             button.IconSourceRect = null; // Use full texture
             button.Rarity = rarity;
+        }
+
+        private void UpdateSpellEquipButtonState(SpellEquipButton button, MoveEntry? spellEntry)
+        {
+            if (spellEntry != null && BattleDataCache.Moves.TryGetValue(spellEntry.MoveID, out var moveData))
+            {
+                button.SpellName = moveData.MoveName;
+                button.IsEquipped = true;
+            }
+            else
+            {
+                button.SpellName = "EMPTY";
+                button.IsEquipped = false;
+            }
         }
     }
 }

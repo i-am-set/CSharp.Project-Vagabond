@@ -3,10 +3,12 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using MonoGame.Extended.Timers;
 using ProjectVagabond.Battle;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -101,6 +103,7 @@ namespace ProjectVagabond.UI
                     if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
                     else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
                     else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) totalItems += _gameState.PlayerState.Relics.Count;
+                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) totalItems += _gameState.PlayerState.Spells.Count;
 
                     int maxScroll = Math.Max(0, totalItems - 7); // 7 visible slots
 
@@ -328,6 +331,7 @@ namespace ProjectVagabond.UI
                     if (_activeEquipSlotType == EquipSlotType.Weapon) availableItems = _gameState.PlayerState.Weapons.Keys.ToList();
                     else if (_activeEquipSlotType == EquipSlotType.Armor) availableItems = _gameState.PlayerState.Armors.Keys.ToList();
                     else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) availableItems = _gameState.PlayerState.Relics.Keys.ToList();
+                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) availableItems = _gameState.PlayerState.Spells.Select(s => s.MoveID).ToList();
 
                     for (int i = 0; i < _equipSubmenuButtons.Count; i++)
                     {
@@ -347,7 +351,26 @@ namespace ProjectVagabond.UI
                                     if (_activeEquipSlotType == EquipSlotType.Weapon) _hoveredItemData = GetWeaponData(itemId);
                                     else if (_activeEquipSlotType == EquipSlotType.Armor) _hoveredItemData = GetArmorData(itemId);
                                     else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) _hoveredItemData = GetRelicData(itemId);
+                                    else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
+                                    {
+                                        if (BattleDataCache.Moves.TryGetValue(itemId, out var move))
+                                        {
+                                            _hoveredItemData = move;
+                                        }
+                                    }
                                 }
+                            }
+                        }
+                    }
+
+                    // Animate icons for spells in submenu
+                    if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4)
+                    {
+                        foreach (var btn in _equipSubmenuButtons)
+                        {
+                            if (btn.IconTexture != null)
+                            {
+                                btn.IconSourceRect = _spriteManager.GetAnimatedIconSourceRect(btn.IconTexture, gameTime);
                             }
                         }
                     }
@@ -359,6 +382,11 @@ namespace ProjectVagabond.UI
                     _relicEquipButton3?.Update(currentMouseState, cameraTransform);
                     _armorEquipButton?.Update(currentMouseState, cameraTransform);
                     _weaponEquipButton?.Update(currentMouseState, cameraTransform);
+
+                    foreach (var button in _spellEquipButtons)
+                    {
+                        button.Update(currentMouseState, cameraTransform);
+                    }
                 }
             }
 
@@ -449,3 +477,4 @@ namespace ProjectVagabond.UI
         }
     }
 }
+﻿

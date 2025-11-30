@@ -15,7 +15,6 @@ using System.Text.RegularExpressions;
 namespace ProjectVagabond.UI
 {
     public enum InventoryCategory { Weapons, Armor, Spells, Relics, Consumables, Misc, Equip }
-
     public partial class SplitMapInventoryOverlay
     {
         public bool IsOpen { get; private set; } = false;
@@ -50,8 +49,11 @@ namespace ProjectVagabond.UI
         private EquipButton? _weaponEquipButton;
         private EquipButton? _armorEquipButton;
 
+        // Spell Equip Buttons
+        private readonly List<SpellEquipButton> _spellEquipButtons = new();
+
         // Submenu State
-        private enum EquipSlotType { None, Weapon, Armor, Relic1, Relic2, Relic3 }
+        private enum EquipSlotType { None, Weapon, Armor, Relic1, Relic2, Relic3, Spell1, Spell2, Spell3, Spell4 }
         private EquipSlotType _activeEquipSlotType = EquipSlotType.None;
         private bool _isEquipSubmenuOpen = false;
         private readonly List<EquipButton> _equipSubmenuButtons = new();
@@ -68,14 +70,14 @@ namespace ProjectVagabond.UI
 
         // Navigation Order Definition
         private readonly List<InventoryCategory> _categoryOrder = new()
-        {
-            InventoryCategory.Weapons,
-            InventoryCategory.Armor,
-            InventoryCategory.Relics,
-            InventoryCategory.Spells,
-            InventoryCategory.Consumables,
-            InventoryCategory.Misc
-        };
+    {
+        InventoryCategory.Weapons,
+        InventoryCategory.Armor,
+        InventoryCategory.Relics,
+        InventoryCategory.Spells,
+        InventoryCategory.Consumables,
+        InventoryCategory.Misc
+    };
 
         // Animation State
         private float _inventoryArrowAnimTimer;
@@ -325,6 +327,24 @@ namespace ProjectVagabond.UI
             _relicEquipButton3.CustomTitleTextColor = _global.Palette_DarkGray;
             _relicEquipButton3.OnClick += () => OpenEquipSubmenu(EquipSlotType.Relic3);
 
+            // Initialize Spell Equip Buttons
+            _spellEquipButtons.Clear();
+            // Center the spell buttons relative to the equip buttons (180px wide)
+            // Spell buttons are 107px wide.
+            int spellButtonX = equipButtonX + (180 - 107) / 2 + 36; // Shifted 36px right
+                                                                    // Position below the last relic button (Relic 3 is at relicButtonY + 32, height 16)
+                                                                    // Start Y = relicButtonY + 32 + 16 + 0 (gap)
+            int spellButtonStartY = relicButtonY + 48; // Moved down 1 pixel
+
+            for (int i = 0; i < 4; i++)
+            {
+                int yPos = spellButtonStartY + (i * (8 + 1)); // 8px height + 1px gap
+                var button = new SpellEquipButton(new Rectangle(spellButtonX, yPos, 107, 8));
+                int slotIndex = i; // Capture for closure
+                button.OnClick += () => OpenEquipSubmenu(EquipSlotType.Spell1 + slotIndex);
+                _spellEquipButtons.Add(button);
+            }
+
             // Initialize Submenu Buttons
             _equipSubmenuButtons.Clear();
             // Submenu starts at the weapon button Y position
@@ -358,6 +378,12 @@ namespace ProjectVagabond.UI
                 UpdateEquipButtonState(_relicEquipButton1!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic1);
                 UpdateEquipButtonState(_relicEquipButton2!, _gameState.PlayerState.EquippedRelics[1], EquipSlotType.Relic2);
                 UpdateEquipButtonState(_relicEquipButton3!, _gameState.PlayerState.EquippedRelics[2], EquipSlotType.Relic3);
+
+                // Refresh spell buttons
+                for (int i = 0; i < 4; i++)
+                {
+                    UpdateSpellEquipButtonState(_spellEquipButtons[i], _gameState.PlayerState.EquippedSpells[i]);
+                }
             }
             else
             {

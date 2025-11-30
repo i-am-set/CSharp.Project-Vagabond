@@ -18,7 +18,6 @@ namespace ProjectVagabond.UI
         public void DrawWorld(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (!IsOpen) return;
-
             var inventoryPosition = new Vector2(0, 200);
             var headerPosition = inventoryPosition + _inventoryPositionOffset;
 
@@ -142,6 +141,7 @@ namespace ProjectVagabond.UI
                         if (_activeEquipSlotType == EquipSlotType.Weapon) totalItems += _gameState.PlayerState.Weapons.Count;
                         else if (_activeEquipSlotType == EquipSlotType.Armor) totalItems += _gameState.PlayerState.Armors.Count;
                         else if (_activeEquipSlotType == EquipSlotType.Relic1 || _activeEquipSlotType == EquipSlotType.Relic2 || _activeEquipSlotType == EquipSlotType.Relic3) totalItems += _gameState.PlayerState.Relics.Count;
+                        else if (_activeEquipSlotType >= EquipSlotType.Spell1 && _activeEquipSlotType <= EquipSlotType.Spell4) totalItems += _gameState.PlayerState.Spells.Count;
 
                         int maxScroll = Math.Max(0, totalItems - 7);
 
@@ -173,9 +173,42 @@ namespace ProjectVagabond.UI
                     _relicEquipButton3?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     _armorEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
                     _weaponEquipButton?.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+
+                    foreach (var button in _spellEquipButtons)
+                    {
+                        button.Draw(spriteBatch, font, gameTime, Matrix.Identity);
+                    }
+
+                    // --- Draw "SPELL LIST" Label ---
+                    if (_spellEquipButtons.Count > 0 && _weaponEquipButton != null)
+                    {
+                        var first = _spellEquipButtons[0];
+                        var last = _spellEquipButtons[_spellEquipButtons.Count - 1];
+                        float centerY = (first.Bounds.Top + last.Bounds.Bottom) / 2f;
+
+                        // Align with the title column of the main equip buttons (53px wide)
+                        float labelX = _weaponEquipButton.Bounds.X;
+                        float labelWidth = 53f;
+
+                        string[] lines = { "SPELL", "LIST" };
+                        float totalHeight = lines.Length * font.LineHeight;
+                        float currentY = centerY - (totalHeight / 2f);
+
+                        foreach (var line in lines)
+                        {
+                            Vector2 lineSize = font.MeasureString(line);
+                            // Center horizontally within the label width
+                            float lineX = labelX + (labelWidth - lineSize.X) / 2f;
+
+                            Vector2 linePos = new Vector2(MathF.Round(lineX), MathF.Round(currentY));
+                            spriteBatch.DrawStringSnapped(font, line, linePos, _global.Palette_Gray);
+
+                            currentY += font.LineHeight;
+                        }
+                    }
                 }
 
-                DrawStatsPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont);
+                DrawStatsPanel(spriteBatch, font, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
             }
 
             if (_debugButton1 != null && _debugButton1.IsEnabled) _debugButton1.Draw(spriteBatch, font, gameTime, Matrix.Identity);
@@ -704,160 +737,187 @@ namespace ProjectVagabond.UI
             }
         }
 
-        private void DrawStatsPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont)
+        private void DrawStatsPanel(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, GameTime gameTime)
         {
             // --- Draw Hovered Item Details ---
             if (_hoveredItemData != null)
             {
-                const int padding = 2;
-                const int spriteSize = 32;
-                const int gap = 4;
-
-                // 1. Sprite (Top Left - Centered Horizontally)
-                int spriteX = _statsPanelArea.X + (_statsPanelArea.Width - spriteSize) / 2;
-                int spriteY = _statsPanelArea.Y;
-
-                string name = "";
-                string description = "";
-                string path = "";
-                Texture2D? itemSprite = null;
-                Texture2D? itemSilhouette = null;
-
-                if (_hoveredItemData is RelicData relic)
+                // --- SPECIAL HANDLING FOR SPELLS ---
+                if (_hoveredItemData is MoveData move)
                 {
-                    name = relic.RelicName.ToUpper();
-                    description = relic.Description.ToUpper();
-                    path = $"Sprites/Items/Relics/{relic.RelicID}";
-                    itemSprite = _spriteManager.GetRelicSprite(path);
-                    itemSilhouette = _spriteManager.GetRelicSpriteSilhouette(path);
-                }
-                else if (_hoveredItemData is WeaponData weapon)
-                {
-                    name = weapon.WeaponName.ToUpper();
-                    description = weapon.Description.ToUpper();
-                    path = $"Sprites/Items/Weapons/{weapon.WeaponID}";
-                    itemSprite = _spriteManager.GetItemSprite(path);
-                    itemSilhouette = _spriteManager.GetItemSpriteSilhouette(path);
-                }
-                else if (_hoveredItemData is ArmorData armor)
-                {
-                    name = armor.ArmorName.ToUpper();
-                    description = armor.Description.ToUpper();
-                    path = $"Sprites/Items/Armor/{armor.ArmorID}";
-                    itemSprite = _spriteManager.GetItemSprite(path);
-                    itemSilhouette = _spriteManager.GetItemSpriteSilhouette(path);
-                }
+                    string path = $"Sprites/Items/Spells/{move.MoveID}";
 
-                if (itemSilhouette != null)
-                {
-                    Color mainOutlineColor = _global.ItemOutlineColor_Idle;
-                    Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
-
-                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY - 1), cornerOutlineColor);
-                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY - 1), cornerOutlineColor);
-                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY + 1), cornerOutlineColor);
-                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY + 1), cornerOutlineColor);
-
-                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY), mainOutlineColor);
-                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY), mainOutlineColor);
-                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX, spriteY - 1), mainOutlineColor);
-                    spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX, spriteY + 1), mainOutlineColor);
-                }
-
-                if (itemSprite != null)
-                {
-                    spriteBatch.DrawSnapped(itemSprite, new Vector2(spriteX, spriteY), Color.White);
-                }
-
-                // 2. Title
-                float titleBottomY = spriteY + spriteSize + gap;
-                int maxTitleWidth = _statsPanelArea.Width - (4 * 2);
-
-                var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
-                float totalTitleHeight = titleLines.Count * font.LineHeight;
-
-                float currentTitleY = titleBottomY - totalTitleHeight;
-
-                foreach (var line in titleLines)
-                {
-                    float lineWidth = 0;
-                    foreach (var segment in line)
+                    // Fallback logic for spell icons
+                    int elementId = move.OffensiveElementIDs.FirstOrDefault();
+                    string? fallbackPath = null;
+                    if (BattleDataCache.Elements.TryGetValue(elementId, out var elementDef))
                     {
-                        if (string.IsNullOrWhiteSpace(segment.Text))
-                            lineWidth += segment.Text.Length * SPACE_WIDTH;
-                        else
-                            lineWidth += font.MeasureString(segment.Text).Width;
+                        string elName = elementDef.ElementName.ToLowerInvariant();
+                        if (elName == "---") elName = "neutral";
+                        fallbackPath = $"Sprites/Items/Spells/default_{elName}";
                     }
 
-                    float lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2f;
-                    float currentX = lineX;
+                    var iconTexture = _spriteManager.GetItemSprite(path, fallbackPath);
+                    var iconSilhouette = _spriteManager.GetItemSpriteSilhouette(path, fallbackPath);
+                    var sourceRect = _spriteManager.GetAnimatedIconSourceRect(iconTexture, gameTime);
 
-                    foreach (var segment in line)
-                    {
-                        float segWidth;
-                        if (string.IsNullOrWhiteSpace(segment.Text))
-                        {
-                            segWidth = segment.Text.Length * SPACE_WIDTH;
-                        }
-                        else
-                        {
-                            segWidth = font.MeasureString(segment.Text).Width;
-                            spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentTitleY), segment.Color);
-                        }
-                        currentX += segWidth;
-                    }
-                    currentTitleY += font.LineHeight;
+                    DrawSpellInfoPanel(spriteBatch, font, secondaryFont, move, iconTexture, iconSilhouette, sourceRect, null, Rectangle.Empty, Vector2.Zero, false);
                 }
-
-                // 3. Description
-                int statsStartY = _statsPanelArea.Y + 77;
-                float descAreaTop = titleBottomY;
-                float descAreaBottom = statsStartY;
-                float descAreaHeight = descAreaBottom - descAreaTop;
-
-                float descWidth = _statsPanelArea.Width - (4 * 2);
-                var descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _global.Palette_White);
-                float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
-
-                float currentDescY = descAreaTop + (descAreaHeight - totalDescHeight) / 2f;
-
-                foreach (var line in descLines)
+                else
                 {
-                    float lineWidth = 0;
-                    foreach (var segment in line)
+                    const int padding = 2;
+                    const int spriteSize = 32;
+                    const int gap = 4;
+
+                    // 1. Sprite (Top Left - Centered Horizontally)
+                    int spriteX = _statsPanelArea.X + (_statsPanelArea.Width - spriteSize) / 2;
+                    int spriteY = _statsPanelArea.Y;
+
+                    string name = "";
+                    string description = "";
+                    string path = "";
+                    Texture2D? itemSprite = null;
+                    Texture2D? itemSilhouette = null;
+
+                    if (_hoveredItemData is RelicData relic)
                     {
-                        if (string.IsNullOrWhiteSpace(segment.Text))
-                            lineWidth += segment.Text.Length * SPACE_WIDTH;
-                        else
-                            lineWidth += secondaryFont.MeasureString(segment.Text).Width;
+                        name = relic.RelicName.ToUpper();
+                        description = relic.Description.ToUpper();
+                        path = $"Sprites/Items/Relics/{relic.RelicID}";
+                        itemSprite = _spriteManager.GetRelicSprite(path);
+                        itemSilhouette = _spriteManager.GetRelicSpriteSilhouette(path);
+                    }
+                    else if (_hoveredItemData is WeaponData weapon)
+                    {
+                        name = weapon.WeaponName.ToUpper();
+                        description = weapon.Description.ToUpper();
+                        path = $"Sprites/Items/Weapons/{weapon.WeaponID}";
+                        itemSprite = _spriteManager.GetItemSprite(path);
+                        itemSilhouette = _spriteManager.GetItemSpriteSilhouette(path);
+                    }
+                    else if (_hoveredItemData is ArmorData armor)
+                    {
+                        name = armor.ArmorName.ToUpper();
+                        description = armor.Description.ToUpper();
+                        path = $"Sprites/Items/Armor/{armor.ArmorID}";
+                        itemSprite = _spriteManager.GetItemSprite(path);
+                        itemSilhouette = _spriteManager.GetItemSpriteSilhouette(path);
                     }
 
-                    var lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2;
-                    float currentX = lineX;
-
-                    foreach (var segment in line)
+                    if (itemSilhouette != null)
                     {
-                        float segWidth;
-                        if (string.IsNullOrWhiteSpace(segment.Text))
-                        {
-                            segWidth = segment.Text.Length * SPACE_WIDTH;
-                        }
-                        else
-                        {
-                            segWidth = secondaryFont.MeasureString(segment.Text).Width;
-                            spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentDescY), segment.Color);
-                        }
-                        currentX += segWidth;
+                        Color mainOutlineColor = _global.ItemOutlineColor_Idle;
+                        Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
+
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY - 1), cornerOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY - 1), cornerOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY + 1), cornerOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY + 1), cornerOutlineColor);
+
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX - 1, spriteY), mainOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX + 1, spriteY), mainOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX, spriteY - 1), mainOutlineColor);
+                        spriteBatch.DrawSnapped(itemSilhouette, new Vector2(spriteX, spriteY + 1), mainOutlineColor);
                     }
-                    currentDescY += secondaryFont.LineHeight;
+
+                    if (itemSprite != null)
+                    {
+                        spriteBatch.DrawSnapped(itemSprite, new Vector2(spriteX, spriteY), Color.White);
+                    }
+
+                    // 2. Title
+                    float titleBottomY = spriteY + spriteSize + gap;
+                    int maxTitleWidth = _statsPanelArea.Width - (4 * 2);
+
+                    var titleLines = ParseAndWrapRichText(font, name, maxTitleWidth, _global.Palette_BrightWhite);
+                    float totalTitleHeight = titleLines.Count * font.LineHeight;
+
+                    float currentTitleY = titleBottomY - totalTitleHeight;
+
+                    foreach (var line in titleLines)
+                    {
+                        float lineWidth = 0;
+                        foreach (var segment in line)
+                        {
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                                lineWidth += segment.Text.Length * SPACE_WIDTH;
+                            else
+                                lineWidth += font.MeasureString(segment.Text).Width;
+                        }
+
+                        float lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2f;
+                        float currentX = lineX;
+
+                        foreach (var segment in line)
+                        {
+                            float segWidth;
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                            {
+                                segWidth = segment.Text.Length * SPACE_WIDTH;
+                            }
+                            else
+                            {
+                                segWidth = font.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentTitleY), segment.Color);
+                            }
+                            currentX += segWidth;
+                        }
+                        currentTitleY += font.LineHeight;
+                    }
+
+                    // 3. Description
+                    int statsStartY = _statsPanelArea.Y + 77;
+                    float descAreaTop = titleBottomY;
+                    float descAreaBottom = statsStartY;
+                    float descAreaHeight = descAreaBottom - descAreaTop;
+
+                    float descWidth = _statsPanelArea.Width - (4 * 2);
+                    var descLines = ParseAndWrapRichText(secondaryFont, description, descWidth, _global.Palette_White);
+                    float totalDescHeight = descLines.Count * secondaryFont.LineHeight;
+
+                    float currentDescY = descAreaTop + (descAreaHeight - totalDescHeight) / 2f;
+
+                    foreach (var line in descLines)
+                    {
+                        float lineWidth = 0;
+                        foreach (var segment in line)
+                        {
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                                lineWidth += segment.Text.Length * SPACE_WIDTH;
+                            else
+                                lineWidth += secondaryFont.MeasureString(segment.Text).Width;
+                        }
+
+                        var lineX = _statsPanelArea.X + (_statsPanelArea.Width - lineWidth) / 2;
+                        float currentX = lineX;
+
+                        foreach (var segment in line)
+                        {
+                            float segWidth;
+                            if (string.IsNullOrWhiteSpace(segment.Text))
+                            {
+                                segWidth = segment.Text.Length * SPACE_WIDTH;
+                            }
+                            else
+                            {
+                                segWidth = secondaryFont.MeasureString(segment.Text).Width;
+                                spriteBatch.DrawStringSnapped(secondaryFont, segment.Text, new Vector2(currentX, currentDescY), segment.Color);
+                            }
+                            currentX += segWidth;
+                        }
+                        currentDescY += secondaryFont.LineHeight;
+                    }
                 }
             }
 
             // --- Draw Stats ---
-            var playerState = _gameState.PlayerState;
-            if (playerState == null) return;
+            // Only draw stats if NOT a spell, because spells use the whole panel for their info
+            if (!(_hoveredItemData is MoveData))
+            {
+                var playerState = _gameState.PlayerState;
+                if (playerState == null) return;
 
-            var stats = new List<(string Label, string StatKey)>
+                var stats = new List<(string Label, string StatKey)>
             {
                 ("MAX HP", "MaxHP"),
                 ("STRNTH", "Strength"),
@@ -866,166 +926,167 @@ namespace ProjectVagabond.UI
                 ("AGILTY", "Agility")
             };
 
-            int startX = _statsPanelArea.X + 3;
-            int startY = _statsPanelArea.Y + 77;
-            int rowSpacing = 10;
+                int startX = _statsPanelArea.X + 3;
+                int startY = _statsPanelArea.Y + 77;
+                int rowSpacing = 10;
 
-            int val1RightX = 63;
-            int arrowX = 66;
-            int val2RightX = 107;
+                int val1RightX = 63;
+                int arrowX = 66;
+                int val2RightX = 107;
 
-            int GetEquippedModifier(int slotIndex, string statKey)
-            {
-                if (slotIndex >= playerState.EquippedRelics.Length) return 0;
-                string? relicId = playerState.EquippedRelics[slotIndex];
-                if (string.IsNullOrEmpty(relicId)) return 0;
-
-                if (BattleDataCache.Relics.TryGetValue(relicId, out var relic))
+                int GetEquippedModifier(int slotIndex, string statKey)
                 {
-                    return relic.StatModifiers.GetValueOrDefault(statKey, 0);
-                }
-                return 0;
-            }
+                    if (slotIndex >= playerState.EquippedRelics.Length) return 0;
+                    string? relicId = playerState.EquippedRelics[slotIndex];
+                    if (string.IsNullOrEmpty(relicId)) return 0;
 
-            int GetEquippedWeaponModifier(string statKey)
-            {
-                if (string.IsNullOrEmpty(playerState.EquippedWeaponId)) return 0;
-                if (BattleDataCache.Weapons.TryGetValue(playerState.EquippedWeaponId, out var weapon))
-                {
-                    return weapon.StatModifiers.GetValueOrDefault(statKey, 0);
-                }
-                return 0;
-            }
-
-            int GetEquippedArmorModifier(string statKey)
-            {
-                if (string.IsNullOrEmpty(playerState.EquippedArmorId)) return 0;
-                if (BattleDataCache.Armors.TryGetValue(playerState.EquippedArmorId, out var armor))
-                {
-                    return armor.StatModifiers.GetValueOrDefault(statKey, 0);
-                }
-                return 0;
-            }
-
-            int GetHoveredModifier(string statKey)
-            {
-                if (_hoveredItemData == null) return 0;
-
-                if (_hoveredItemData is RelicData relic)
-                    return relic.StatModifiers.GetValueOrDefault(statKey, 0);
-                if (_hoveredItemData is WeaponData weapon)
-                    return weapon.StatModifiers.GetValueOrDefault(statKey, 0);
-                if (_hoveredItemData is ArmorData armor)
-                    return armor.StatModifiers.GetValueOrDefault(statKey, 0);
-
-                return 0;
-            }
-
-            for (int i = 0; i < stats.Count; i++)
-            {
-                var stat = stats[i];
-                int y = startY + (i * rowSpacing);
-
-                int baseStat = playerState.GetBaseStat(stat.StatKey);
-
-                int totalCurrentMod = 0;
-                for (int slot = 0; slot < playerState.EquippedRelics.Length; slot++)
-                {
-                    totalCurrentMod += GetEquippedModifier(slot, stat.StatKey);
-                }
-                totalCurrentMod += GetEquippedWeaponModifier(stat.StatKey);
-                totalCurrentMod += GetEquippedArmorModifier(stat.StatKey);
-
-                int currentVal = Math.Max(1, baseStat + totalCurrentMod);
-
-                int projectedVal = currentVal;
-                int diff = 0;
-                bool isComparing = _isEquipSubmenuOpen && _hoveredItemData != null;
-
-                if (isComparing)
-                {
-                    int currentSlotMod = 0;
-
-                    if (_activeEquipSlotType == EquipSlotType.Weapon)
+                    if (BattleDataCache.Relics.TryGetValue(relicId, out var relic))
                     {
-                        currentSlotMod = GetEquippedWeaponModifier(stat.StatKey);
+                        return relic.StatModifiers.GetValueOrDefault(statKey, 0);
                     }
-                    else if (_activeEquipSlotType == EquipSlotType.Armor)
-                    {
-                        currentSlotMod = GetEquippedArmorModifier(stat.StatKey);
-                    }
-                    else if (_activeEquipSlotType == EquipSlotType.Relic1)
-                    {
-                        currentSlotMod = GetEquippedModifier(0, stat.StatKey);
-                    }
-                    else if (_activeEquipSlotType == EquipSlotType.Relic2)
-                    {
-                        currentSlotMod = GetEquippedModifier(1, stat.StatKey);
-                    }
-                    else if (_activeEquipSlotType == EquipSlotType.Relic3)
-                    {
-                        currentSlotMod = GetEquippedModifier(2, stat.StatKey);
-                    }
-
-                    int newMod = GetHoveredModifier(stat.StatKey);
-                    int projectedRaw = baseStat + totalCurrentMod - currentSlotMod + newMod;
-                    projectedVal = Math.Max(1, projectedRaw);
-                    diff = projectedVal - currentVal;
+                    return 0;
                 }
 
-                string leftText;
-                Color leftColor;
-                Color labelColor;
-
-                if (isComparing && diff != 0)
+                int GetEquippedWeaponModifier(string statKey)
                 {
-                    labelColor = _global.Palette_BrightWhite;
-                    float cyclePos = _statCycleTimer % (STAT_CYCLE_INTERVAL * 2);
-                    bool showModifier = cyclePos < STAT_CYCLE_INTERVAL;
-
-                    if (showModifier)
+                    if (string.IsNullOrEmpty(playerState.EquippedWeaponId)) return 0;
+                    if (BattleDataCache.Weapons.TryGetValue(playerState.EquippedWeaponId, out var weapon))
                     {
-                        leftText = (diff > 0 ? "+" : "") + diff.ToString();
-                        leftColor = diff > 0 ? _global.Palette_LightGreen : _global.Palette_Red;
+                        return weapon.StatModifiers.GetValueOrDefault(statKey, 0);
+                    }
+                    return 0;
+                }
+
+                int GetEquippedArmorModifier(string statKey)
+                {
+                    if (string.IsNullOrEmpty(playerState.EquippedArmorId)) return 0;
+                    if (BattleDataCache.Armors.TryGetValue(playerState.EquippedArmorId, out var armor))
+                    {
+                        return armor.StatModifiers.GetValueOrDefault(statKey, 0);
+                    }
+                    return 0;
+                }
+
+                int GetHoveredModifier(string statKey)
+                {
+                    if (_hoveredItemData == null) return 0;
+
+                    if (_hoveredItemData is RelicData relic)
+                        return relic.StatModifiers.GetValueOrDefault(statKey, 0);
+                    if (_hoveredItemData is WeaponData weapon)
+                        return weapon.StatModifiers.GetValueOrDefault(statKey, 0);
+                    if (_hoveredItemData is ArmorData armor)
+                        return armor.StatModifiers.GetValueOrDefault(statKey, 0);
+
+                    return 0;
+                }
+
+                for (int i = 0; i < stats.Count; i++)
+                {
+                    var stat = stats[i];
+                    int y = startY + (i * rowSpacing);
+
+                    int baseStat = playerState.GetBaseStat(stat.StatKey);
+
+                    int totalCurrentMod = 0;
+                    for (int slot = 0; slot < playerState.EquippedRelics.Length; slot++)
+                    {
+                        totalCurrentMod += GetEquippedModifier(slot, stat.StatKey);
+                    }
+                    totalCurrentMod += GetEquippedWeaponModifier(stat.StatKey);
+                    totalCurrentMod += GetEquippedArmorModifier(stat.StatKey);
+
+                    int currentVal = Math.Max(1, baseStat + totalCurrentMod);
+
+                    int projectedVal = currentVal;
+                    int diff = 0;
+                    bool isComparing = _isEquipSubmenuOpen && _hoveredItemData != null;
+
+                    if (isComparing)
+                    {
+                        int currentSlotMod = 0;
+
+                        if (_activeEquipSlotType == EquipSlotType.Weapon)
+                        {
+                            currentSlotMod = GetEquippedWeaponModifier(stat.StatKey);
+                        }
+                        else if (_activeEquipSlotType == EquipSlotType.Armor)
+                        {
+                            currentSlotMod = GetEquippedArmorModifier(stat.StatKey);
+                        }
+                        else if (_activeEquipSlotType == EquipSlotType.Relic1)
+                        {
+                            currentSlotMod = GetEquippedModifier(0, stat.StatKey);
+                        }
+                        else if (_activeEquipSlotType == EquipSlotType.Relic2)
+                        {
+                            currentSlotMod = GetEquippedModifier(1, stat.StatKey);
+                        }
+                        else if (_activeEquipSlotType == EquipSlotType.Relic3)
+                        {
+                            currentSlotMod = GetEquippedModifier(2, stat.StatKey);
+                        }
+
+                        int newMod = GetHoveredModifier(stat.StatKey);
+                        int projectedRaw = baseStat + totalCurrentMod - currentSlotMod + newMod;
+                        projectedVal = Math.Max(1, projectedRaw);
+                        diff = projectedVal - currentVal;
+                    }
+
+                    string leftText;
+                    Color leftColor;
+                    Color labelColor;
+
+                    if (isComparing && diff != 0)
+                    {
+                        labelColor = _global.Palette_BrightWhite;
+                        float cyclePos = _statCycleTimer % (STAT_CYCLE_INTERVAL * 2);
+                        bool showModifier = cyclePos < STAT_CYCLE_INTERVAL;
+
+                        if (showModifier)
+                        {
+                            leftText = (diff > 0 ? "+" : "") + diff.ToString();
+                            leftColor = diff > 0 ? _global.Palette_LightGreen : _global.Palette_Red;
+                        }
+                        else
+                        {
+                            leftText = currentVal.ToString();
+                            leftColor = _global.Palette_BrightWhite;
+                        }
                     }
                     else
                     {
+                        labelColor = _global.Palette_Gray;
                         leftText = currentVal.ToString();
-                        leftColor = _global.Palette_BrightWhite;
+                        leftColor = _global.Palette_White;
                     }
+
+                    spriteBatch.DrawStringSnapped(secondaryFont, stat.Label, new Vector2(startX, y + 4), labelColor);
+
+                    Vector2 leftSize = font.MeasureString(leftText);
+                    spriteBatch.DrawStringSnapped(font, leftText, new Vector2(startX + val1RightX - leftSize.X, y + 4), leftColor);
+
+                    Color arrowColor;
+                    Color projColor;
+                    string projStr = projectedVal.ToString();
+
+                    if (isComparing)
+                    {
+                        arrowColor = (diff != 0) ? _global.Palette_BrightWhite : _global.Palette_Gray;
+                        if (diff > 0) projColor = _global.Palette_LightGreen;
+                        else if (diff < 0) projColor = _global.Palette_Red;
+                        else projColor = _global.Palette_LightGray;
+                    }
+                    else
+                    {
+                        arrowColor = _global.Palette_DarkerGray;
+                        projColor = _global.Palette_DarkerGray;
+                    }
+
+                    spriteBatch.DrawStringSnapped(secondaryFont, ">", new Vector2(startX + arrowX, y + 4), arrowColor);
+                    Vector2 projSize = font.MeasureString(projStr);
+                    spriteBatch.DrawStringSnapped(font, projStr, new Vector2(startX + val2RightX - projSize.X, y + 4), projColor);
                 }
-                else
-                {
-                    labelColor = _global.Palette_Gray;
-                    leftText = currentVal.ToString();
-                    leftColor = _global.Palette_White;
-                }
-
-                spriteBatch.DrawStringSnapped(secondaryFont, stat.Label, new Vector2(startX, y + 4), labelColor);
-
-                Vector2 leftSize = font.MeasureString(leftText);
-                spriteBatch.DrawStringSnapped(font, leftText, new Vector2(startX + val1RightX - leftSize.X, y + 4), leftColor);
-
-                Color arrowColor;
-                Color projColor;
-                string projStr = projectedVal.ToString();
-
-                if (isComparing)
-                {
-                    arrowColor = (diff != 0) ? _global.Palette_BrightWhite : _global.Palette_Gray;
-                    if (diff > 0) projColor = _global.Palette_LightGreen;
-                    else if (diff < 0) projColor = _global.Palette_Red;
-                    else projColor = _global.Palette_LightGray;
-                }
-                else
-                {
-                    arrowColor = _global.Palette_DarkerGray;
-                    projColor = _global.Palette_DarkerGray;
-                }
-
-                spriteBatch.DrawStringSnapped(secondaryFont, ">", new Vector2(startX + arrowX, y + 4), arrowColor);
-                Vector2 projSize = font.MeasureString(projStr);
-                spriteBatch.DrawStringSnapped(font, projStr, new Vector2(startX + val2RightX - projSize.X, y + 4), projColor);
             }
         }
 
