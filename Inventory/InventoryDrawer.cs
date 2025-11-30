@@ -932,7 +932,7 @@ namespace ProjectVagabond.UI
                     int portraitBaseY = _statsPanelArea.Y + 18;
 
                     // Animation logic: 2 frames, 2 flips per second
-                    float animSpeed = 2f;
+                    float animSpeed = 1f;
                     int frame = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2;
                     Texture2D textureToDraw = frame == 0 ? _spriteManager.PlayerPortraitsSpriteSheet : _spriteManager.PlayerPortraitsAltSpriteSheet;
                     Texture2D silhouetteToDraw = frame == 0 ? _spriteManager.PlayerPortraitsSpriteSheetSilhouette : _spriteManager.PlayerPortraitsAltSpriteSheetSilhouette;
