@@ -22,7 +22,6 @@ namespace ProjectVagabond
         private GameState _gameState;
         private Dictionary<string, Command> _commands;
         public Dictionary<string, Command> Commands => _commands;
-
         public CommandProcessor(PlayerInputSystem playerInputSystem)
         {
             _playerInputSystem = playerInputSystem;
@@ -61,6 +60,7 @@ namespace ProjectVagabond
                 sb.AppendLine("  [palette_teal]System[/]");
                 sb.AppendLine("    clear               - Clears console.");
                 sb.AppendLine("    exit                - Exits game.");
+                sb.AppendLine("    debugcombat         - Starts a random forest combat (SplitMap only).");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
                 {
@@ -148,6 +148,32 @@ namespace ProjectVagabond
             // --- EQUIP SPELL ---
             _commands["equip"] = new Command("equip", (args) => HandleEquipSpell(args), "equip <moveId> <slot> - Equips a spell.");
             _commands["unequip"] = new Command("unequip", (args) => HandleUnequipSpell(args), "unequip <slot>");
+
+            // --- DEBUG COMBAT ---
+            _commands["debugcombat"] = new Command("debugcombat", (args) =>
+            {
+                var sceneManager = ServiceLocator.Get<SceneManager>();
+                if (sceneManager.CurrentActiveScene is not SplitMapScene)
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Command only available in Split Map Scene." });
+                    return;
+                }
+
+                var progressionManager = ServiceLocator.Get<ProgressionManager>();
+                var encounter = progressionManager.GetRandomBattleFromSplit("Forest");
+
+                if (encounter != null && encounter.Any())
+                {
+                    BattleSetup.EnemyArchetypes = encounter;
+                    BattleSetup.ReturnSceneState = GameSceneState.Split;
+                    sceneManager.ChangeScene(GameSceneState.Battle);
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[palette_teal]Starting debug combat (Forest)..." });
+                }
+                else
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Could not load Forest encounter data." });
+                }
+            }, "debugcombat - Starts a random forest encounter (SplitMap only).");
 
             _commands["exit"] = new Command("exit", (args) => ServiceLocator.Get<Core>().ExitApplication(), "exit");
         }

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using ProjectVagabond;
 
 namespace ProjectVagabond.Battle
 {
@@ -11,7 +12,6 @@ namespace ProjectVagabond.Battle
             var componentStore = ServiceLocator.Get<ComponentStore>();
             var archetypeManager = ServiceLocator.Get<ArchetypeManager>();
             var gameState = ServiceLocator.Get<GameState>();
-
             var statsComponent = componentStore.GetComponent<CombatantStatsComponent>(entityId);
             if (statsComponent == null)
             {
@@ -46,7 +46,8 @@ namespace ProjectVagabond.Battle
                     Agility = statsComponent.Agility
                 },
                 DefensiveElementIDs = new List<int>(statsComponent.DefensiveElementIDs),
-                EscalationStacks = 0
+                EscalationStacks = 0,
+                IsPlayerControlled = componentStore.HasComponent<PlayerTagComponent>(entityId)
             };
 
             combatant.VisualHP = combatant.Stats.CurrentHP;
