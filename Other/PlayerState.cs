@@ -10,7 +10,6 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -28,14 +27,15 @@ namespace ProjectVagabond
         // Persistent Stats
         public int Level { get; set; }
         public int MaxHP { get; set; }
+        public int CurrentHP { get; set; } // Added to fix CS1061
         public int MaxMana { get; set; } = 100;
+        public int CurrentMana { get; set; } // Added for consistency
         public int Strength { get; set; }
         public int Intelligence { get; set; }
         public int Tenacity { get; set; }
         public int Agility { get; set; }
         public List<int> DefensiveElementIDs { get; set; } = new List<int>();
         public string DefaultStrikeMoveID { get; set; }
-
         // Visual Customization
         public int PortraitIndex { get; set; } = 0;
 

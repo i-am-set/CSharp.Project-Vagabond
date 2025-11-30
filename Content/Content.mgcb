@@ -2102,6 +2102,30 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/peak.png
 
+#begin Sprites/Player/cat_portraits_32x32_altsprites.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Player/cat_portraits_32x32_altsprites.png;Sprites/Player/cat_portraits_32x32_altsprites
+
+#begin Sprites/Player/cat_portraits_32x32.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/Player/cat_portraits_32x32.png;Sprites/Player/cat_portraits_32x32
+
 #begin Sprites/Player/cat_portraits.png
 /importer:TextureImporter
 /processor:TextureProcessor
@@ -2869,6 +2893,30 @@
 /processorParam:MakeSquare=False
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/Inventory/inventory_left_arrow_button.png;Sprites/UI/Inventory/inventory_left_arrow_button
+
+#begin Sprites/UI/Inventory/inventory_player_health_bar_empty.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_player_health_bar_empty.png;Sprites/UI/Inventory/inventory_player_health_bar_empty
+
+#begin Sprites/UI/Inventory/inventory_player_health_bar_full.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/Inventory/inventory_player_health_bar_full.png;Sprites/UI/Inventory/inventory_player_health_bar_full
 
 #begin Sprites/UI/Inventory/inventory_right_arrow_button.png
 /importer:TextureImporter

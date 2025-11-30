@@ -15,11 +15,18 @@ namespace ProjectVagabond.UI
 {
     public partial class SplitMapInventoryOverlay
     {
+        // Fields for portrait background animation
+        private Rectangle _portraitBgFrame;
+        private float _portraitBgTimer;
+        private float _portraitBgDuration;
+        private static readonly Random _rng = new Random();
+
         public void DrawWorld(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
             if (!IsOpen) return;
             var inventoryPosition = new Vector2(0, 200);
             var headerPosition = inventoryPosition + _inventoryPositionOffset;
+
             // --- PASS 1: Draw Info Panel Background (Idle Slot) BEFORE Borders ---
             // This ensures the idle slot sprite renders underneath the inventory border and title text.
             if (_selectedInventoryCategory != InventoryCategory.Equip)
@@ -911,29 +918,124 @@ namespace ProjectVagabond.UI
             else
             {
                 // --- DRAW PLAYER PORTRAIT WHEN NO ITEM IS HOVERED ---
-                if (_spriteManager.PlayerPortraitsSpriteSheet != null && _spriteManager.PlayerPortraitSourceRects.Count > 0)
+                // Only draw if NOT in the equip submenu
+                if (!_isEquipSubmenuOpen && _spriteManager.PlayerPortraitsSpriteSheet != null && _spriteManager.PlayerPortraitSourceRects.Count > 0)
                 {
                     int portraitIndex = Math.Clamp(_gameState.PlayerState.PortraitIndex, 0, _spriteManager.PlayerPortraitSourceRects.Count - 1);
                     var sourceRect = _spriteManager.PlayerPortraitSourceRects[portraitIndex];
 
                     // Center the portrait at the top of the stats panel
-                    const int portraitSize = 16; // Native size
-                    int portraitX = _statsPanelArea.X + (_statsPanelArea.Width - portraitSize) / 2;
-                    int portraitY = _statsPanelArea.Y + 2;
+                    const int portraitSize = 32; // Native size
+                    int portraitX = _statsPanelArea.X + (_statsPanelArea.Width - portraitSize) / 2 - 32;
 
-                    var destRect = new Rectangle(portraitX, portraitY, portraitSize, portraitSize);
+                    // Move down 16 pixels from original +2
+                    int portraitBaseY = _statsPanelArea.Y + 18;
+
+                    // Animation logic: 2 frames, 2 flips per second
+                    float animSpeed = 2f;
+                    int frame = (int)(gameTime.TotalGameTime.TotalSeconds * animSpeed) % 2;
+                    Texture2D textureToDraw = frame == 0 ? _spriteManager.PlayerPortraitsSpriteSheet : _spriteManager.PlayerPortraitsAltSpriteSheet;
+                    Texture2D silhouetteToDraw = frame == 0 ? _spriteManager.PlayerPortraitsSpriteSheetSilhouette : _spriteManager.PlayerPortraitsAltSpriteSheetSilhouette;
+
+                    var destRect = new Rectangle(portraitX, portraitBaseY, portraitSize, portraitSize);
+
+                    // --- NEW: Update and Draw Background Frame ---
+                    float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    _portraitBgTimer += dt;
+                    if (_portraitBgTimer >= _portraitBgDuration)
+                    {
+                        _portraitBgTimer = 0f;
+                        _portraitBgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
+                        var frames = _spriteManager.InventorySlotSourceRects;
+                        if (frames != null && frames.Length > 0)
+                        {
+                            _portraitBgFrame = frames[_rng.Next(frames.Length)];
+                        }
+                    }
+
+                    // Initialize if empty (first run)
+                    if (_portraitBgFrame == Rectangle.Empty)
+                    {
+                        var frames = _spriteManager.InventorySlotSourceRects;
+                        if (frames != null && frames.Length > 0)
+                        {
+                            _portraitBgFrame = frames[_rng.Next(frames.Length)];
+                            _portraitBgDuration = (float)(_rng.NextDouble() * (8.0 - 2.0) + 2.0);
+                        }
+                    }
+
+                    if (_portraitBgFrame != Rectangle.Empty)
+                    {
+                        Vector2 center = destRect.Center.ToVector2();
+                        Vector2 origin = new Vector2(_portraitBgFrame.Width / 2f, _portraitBgFrame.Height / 2f);
+                        spriteBatch.DrawSnapped(_spriteManager.InventorySlotIdleSpriteSheet, center, _portraitBgFrame, Color.White, 0f, origin, 1f, SpriteEffects.None, 0f);
+                    }
+
+                    // Draw Outline
+                    if (silhouetteToDraw != null)
+                    {
+                        Color mainOutlineColor = _global.ItemOutlineColor_Idle;
+                        Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
+
+                        // Corners
+                        spriteBatch.DrawSnapped(silhouetteToDraw, new Rectangle(destRect.X - 1, destRect.Y - 1, destRect.Width, destRect.Height), sourceRect, cornerOutlineColor);
+                        spriteBatch.DrawSnapped(silhouetteToDraw, new Rectangle(destRect.X + 1, destRect.Y - 1, destRect.Width, destRect.Height), sourceRect, cornerOutlineColor);
+                        spriteBatch.DrawSnapped(silhouetteToDraw, new Rectangle(destRect.X - 1, destRect.Y + 1, destRect.Width, destRect.Height), sourceRect, cornerOutlineColor);
+                        spriteBatch.DrawSnapped(silhouetteToDraw, new Rectangle(destRect.X + 1, destRect.Y + 1, destRect.Width, destRect.Height), sourceRect, cornerOutlineColor);
+
+                        // Cardinals
+                        spriteBatch.DrawSnapped(silhouetteToDraw, new Rectangle(destRect.X - 1, destRect.Y, destRect.Width, destRect.Height), sourceRect, mainOutlineColor);
+                        spriteBatch.DrawSnapped(silhouetteToDraw, new Rectangle(destRect.X + 1, destRect.Y, destRect.Width, destRect.Height), sourceRect, mainOutlineColor);
+                        spriteBatch.DrawSnapped(silhouetteToDraw, new Rectangle(destRect.X, destRect.Y - 1, destRect.Width, destRect.Height), sourceRect, mainOutlineColor);
+                        spriteBatch.DrawSnapped(silhouetteToDraw, new Rectangle(destRect.X, destRect.Y + 1, destRect.Width, destRect.Height), sourceRect, mainOutlineColor);
+                    }
 
                     // Draw Portrait (No border/background)
-                    spriteBatch.DrawSnapped(_spriteManager.PlayerPortraitsSpriteSheet, destRect, sourceRect, Color.White);
+                    spriteBatch.DrawSnapped(textureToDraw, destRect, sourceRect, Color.White);
 
-                    // Draw Name
-                    string playerName = "PLAYER";
-                    Vector2 nameSize = font.MeasureString(playerName);
-                    Vector2 namePos = new Vector2(
-                        _statsPanelArea.X + (_statsPanelArea.Width - nameSize.X) / 2f,
-                        portraitY + portraitSize + 4
-                    );
-                    spriteBatch.DrawStringSnapped(font, playerName, namePos, _global.Palette_BrightWhite);
+                    // Health Bar
+                    if (_spriteManager.InventoryPlayerHealthBarEmpty != null && _spriteManager.InventoryPlayerHealthBarFull != null)
+                    {
+                        int barX = portraitX + portraitSize + 2; // Small gap
+                        // Center vertically with portrait
+                        int barY = portraitBaseY + (portraitSize - _spriteManager.InventoryPlayerHealthBarEmpty.Height) / 2;
+
+                        // Draw Empty
+                        spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarEmpty, new Vector2(barX, barY), Color.White);
+
+                        // Get HP from Component
+                        var stats = _componentStore.GetComponent<CombatantStatsComponent>(_gameState.PlayerEntityId);
+                        int currentHP = stats != null ? stats.CurrentHP : _gameState.PlayerState.CurrentHP;
+                        int maxHP = stats != null ? stats.MaxHP : _gameState.PlayerState.MaxHP;
+
+                        // Draw Full (Cropped)
+                        float hpPercent = (float)currentHP / Math.Max(1, maxHP);
+                        int fullWidth = _spriteManager.InventoryPlayerHealthBarFull.Width;
+                        int visibleWidth = (int)(fullWidth * hpPercent);
+
+                        var srcRect = new Rectangle(0, 0, visibleWidth, _spriteManager.InventoryPlayerHealthBarFull.Height);
+                        // Offset by 1 to center 70px inside 72px
+                        spriteBatch.DrawSnapped(_spriteManager.InventoryPlayerHealthBarFull, new Vector2(barX + 1, barY), srcRect, Color.White);
+
+                        // Draw Name (Now above bar)
+                        string playerName = "PLAYER";
+                        Vector2 nameSize = secondaryFont.MeasureString(playerName);
+                        Vector2 namePos = new Vector2(
+                            barX,
+                            barY - nameSize.Y - 2
+                        );
+                        spriteBatch.DrawStringSnapped(secondaryFont, playerName, namePos, _global.Palette_BrightWhite);
+
+                        // Draw HP Text (Now below bar)
+                        string hpText = $"{currentHP}/{maxHP} HP";
+                        Vector2 hpTextSize = secondaryFont.MeasureString(hpText);
+                        // Left aligned with the health bar
+                        Vector2 hpTextPos = new Vector2(
+                            barX - 2,
+                            barY + _spriteManager.InventoryPlayerHealthBarEmpty.Height
+                        );
+                        spriteBatch.DrawStringSnapped(secondaryFont, hpText, hpTextPos, _global.Palette_DarkGray);
+                    }
                 }
             }
 
@@ -945,13 +1047,13 @@ namespace ProjectVagabond.UI
                 if (playerState == null) return;
 
                 var stats = new List<(string Label, string StatKey)>
-        {
-            ("MAX HP", "MaxHP"),
-            ("STRNTH", "Strength"),
-            ("INTELL", "Intelligence"),
-            ("TENACT", "Tenacity"),
-            ("AGILTY", "Agility")
-        };
+            {
+                ("MAX HP", "MaxHP"),
+                ("STRNTH", "Strength"),
+                ("INTELL", "Intelligence"),
+                ("TENACT", "Tenacity"),
+                ("AGILTY", "Agility")
+            };
 
                 int startX = _statsPanelArea.X + 3;
                 int startY = _statsPanelArea.Y + 77;

@@ -37,7 +37,14 @@ namespace ProjectVagabond
 
         // Player Portraits
         public Texture2D PlayerPortraitsSpriteSheet { get; private set; }
+        public Texture2D PlayerPortraitsAltSpriteSheet { get; private set; }
+        public Texture2D PlayerPortraitsSpriteSheetSilhouette { get; private set; }
+        public Texture2D PlayerPortraitsAltSpriteSheetSilhouette { get; private set; }
         public List<Rectangle> PlayerPortraitSourceRects { get; private set; } = new List<Rectangle>();
+
+        // Inventory UI
+        public Texture2D InventoryPlayerHealthBarEmpty { get; private set; }
+        public Texture2D InventoryPlayerHealthBarFull { get; private set; }
 
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; }
@@ -370,6 +377,12 @@ namespace ProjectVagabond
             catch { InventoryEmptySlotSprite = _textureFactory.CreateColoredTexture(16, 16, Color.DarkGray); }
             try { InventorySlotEquipIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_equip_icon"); }
             catch { InventorySlotEquipIconSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Magenta); }
+
+            // Load Health Bar Sprites
+            try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
+            catch { InventoryPlayerHealthBarEmpty = _textureFactory.CreateColoredTexture(72, 7, Color.DarkGray); }
+            try { InventoryPlayerHealthBarFull = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_full"); }
+            catch { InventoryPlayerHealthBarFull = _textureFactory.CreateColoredTexture(70, 7, Color.Red); }
 
 
             LoadAndCacheCursorSprite("cursor_default");
@@ -1005,14 +1018,19 @@ namespace ProjectVagabond
         {
             try
             {
-                PlayerPortraitsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits");
+                PlayerPortraitsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits_32x32");
+                PlayerPortraitsAltSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits_32x32_altsprites");
+
+                // Generate Silhouettes
+                PlayerPortraitsSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsSpriteSheet);
+                PlayerPortraitsAltSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsAltSpriteSheet);
 
                 // Parse the sprite sheet to find valid frames
                 Color[] data = new Color[PlayerPortraitsSpriteSheet.Width * PlayerPortraitsSpriteSheet.Height];
                 PlayerPortraitsSpriteSheet.GetData(data);
 
-                int cols = PlayerPortraitsSpriteSheet.Width / 16;
-                int rows = PlayerPortraitsSpriteSheet.Height / 16;
+                int cols = PlayerPortraitsSpriteSheet.Width / 32;
+                int rows = PlayerPortraitsSpriteSheet.Height / 32;
 
                 PlayerPortraitSourceRects.Clear();
 
@@ -1020,9 +1038,9 @@ namespace ProjectVagabond
                 {
                     for (int x = 0; x < cols; x++)
                     {
-                        if (IsFrameNotEmpty(data, PlayerPortraitsSpriteSheet.Width, x * 16, y * 16, 16, 16))
+                        if (IsFrameNotEmpty(data, PlayerPortraitsSpriteSheet.Width, x * 32, y * 32, 32, 32))
                         {
-                            PlayerPortraitSourceRects.Add(new Rectangle(x * 16, y * 16, 16, 16));
+                            PlayerPortraitSourceRects.Add(new Rectangle(x * 32, y * 32, 32, 32));
                         }
                     }
                 }
@@ -1030,9 +1048,15 @@ namespace ProjectVagabond
             catch
             {
                 // Fallback if texture fails to load
-                PlayerPortraitsSpriteSheet = _textureFactory.CreateColoredTexture(16, 16, Color.Magenta);
+                PlayerPortraitsSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
+                PlayerPortraitsAltSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.Magenta);
+
+                // Fallback Silhouettes
+                PlayerPortraitsSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsSpriteSheet);
+                PlayerPortraitsAltSpriteSheetSilhouette = CreateSilhouette(PlayerPortraitsAltSpriteSheet);
+
                 PlayerPortraitSourceRects.Clear();
-                PlayerPortraitSourceRects.Add(new Rectangle(0, 0, 16, 16));
+                PlayerPortraitSourceRects.Add(new Rectangle(0, 0, 32, 32));
             }
         }
 

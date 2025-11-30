@@ -25,6 +25,7 @@ namespace ProjectVagabond.UI
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
         private readonly HapticsManager _hapticsManager;
+        private readonly ComponentStore _componentStore; // Added ComponentStore
         private ImageButton? _inventoryButton;
         private readonly List<InventoryHeaderButton> _inventoryHeaderButtons = new();
         private readonly Dictionary<InventoryHeaderButton, float> _inventoryHeaderButtonOffsets = new();
@@ -70,14 +71,14 @@ namespace ProjectVagabond.UI
 
         // Navigation Order Definition
         private readonly List<InventoryCategory> _categoryOrder = new()
-    {
-        InventoryCategory.Weapons,
-        InventoryCategory.Armor,
-        InventoryCategory.Relics,
-        InventoryCategory.Spells,
-        InventoryCategory.Consumables,
-        InventoryCategory.Misc
-    };
+{
+    InventoryCategory.Weapons,
+    InventoryCategory.Armor,
+    InventoryCategory.Relics,
+    InventoryCategory.Spells,
+    InventoryCategory.Consumables,
+    InventoryCategory.Misc
+};
 
         // Animation State
         private float _inventoryArrowAnimTimer;
@@ -112,6 +113,7 @@ namespace ProjectVagabond.UI
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
+            _componentStore = ServiceLocator.Get<ComponentStore>(); // Initialize ComponentStore
         }
 
         public void Initialize()
