@@ -16,12 +16,13 @@ namespace ProjectVagabond.UI
         public bool IsEquipped { get; set; } = false;
         // Layout Constants
         private const int WIDTH = 107;
-        private const int HEIGHT = 8;
+        private const int VISUAL_HEIGHT = 8;
+        private const int HITBOX_HEIGHT = 9; // Increased by 1 pixel downwards
 
         public SpellEquipButton(Rectangle bounds) : base(bounds, "")
         {
             // Enforce width and height
-            Bounds = new Rectangle(bounds.X, bounds.Y, WIDTH, HEIGHT);
+            Bounds = new Rectangle(bounds.X, bounds.Y, WIDTH, HITBOX_HEIGHT);
             EnableHoverSway = false;
         }
 
@@ -43,12 +44,12 @@ namespace ProjectVagabond.UI
                 Color borderColor = _global.Palette_Red;
                 // Top
                 spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX, (int)totalY, WIDTH, 1), borderColor);
-                // Bottom (Extended down by 1 pixel)
-                spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX, (int)totalY + HEIGHT, WIDTH, 1), borderColor);
-                // Left (Extended height by 1)
-                spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX, (int)totalY, 1, HEIGHT + 1), borderColor);
-                // Right (Extended height by 1)
-                spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX + WIDTH - 1, (int)totalY, 1, HEIGHT + 1), borderColor);
+                // Bottom (Extended down by 1 pixel relative to VISUAL_HEIGHT)
+                spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX, (int)totalY + VISUAL_HEIGHT, WIDTH, 1), borderColor);
+                // Left (Extended height by 1 relative to VISUAL_HEIGHT)
+                spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX, (int)totalY, 1, VISUAL_HEIGHT + 1), borderColor);
+                // Right (Extended height by 1 relative to VISUAL_HEIGHT)
+                spriteBatch.DrawSnapped(pixel, new Rectangle((int)totalX + WIDTH - 1, (int)totalY, 1, VISUAL_HEIGHT + 1), borderColor);
             }
 
             // 3. Draw Text
@@ -79,11 +80,11 @@ namespace ProjectVagabond.UI
                 textColor = Color.Lerp(textColor, flashTint.Value, flashTint.Value.A / 255f);
             }
 
-            // Center text both horizontally and vertically
+            // Center text both horizontally and vertically based on VISUAL_HEIGHT
             Vector2 textSize = secondaryFont.MeasureString(textToDraw);
             Vector2 textPos = new Vector2(
                 totalX + (WIDTH - textSize.X) / 2f,
-                totalY + (HEIGHT - textSize.Y) / 2f
+                totalY + (VISUAL_HEIGHT - textSize.Y) / 2f
             );
 
             spriteBatch.DrawStringSnapped(secondaryFont, textToDraw, textPos, textColor);
