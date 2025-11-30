@@ -926,7 +926,7 @@ namespace ProjectVagabond.UI
 
                     // Center the portrait at the top of the stats panel
                     const int portraitSize = 32; // Native size
-                    int portraitX = _statsPanelArea.X + (_statsPanelArea.Width - portraitSize) / 2 - 32;
+                    int portraitX = _statsPanelArea.X + (_statsPanelArea.Width - portraitSize) / 2 - 38;
 
                     // Move down 16 pixels from original +2
                     int portraitBaseY = _statsPanelArea.Y + 18;
