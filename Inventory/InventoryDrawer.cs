@@ -20,7 +20,6 @@ namespace ProjectVagabond.UI
             if (!IsOpen) return;
             var inventoryPosition = new Vector2(0, 200);
             var headerPosition = inventoryPosition + _inventoryPositionOffset;
-
             // --- PASS 1: Draw Info Panel Background (Idle Slot) BEFORE Borders ---
             // This ensures the idle slot sprite renders underneath the inventory border and title text.
             if (_selectedInventoryCategory != InventoryCategory.Equip)
@@ -909,6 +908,34 @@ namespace ProjectVagabond.UI
                     }
                 }
             }
+            else
+            {
+                // --- DRAW PLAYER PORTRAIT WHEN NO ITEM IS HOVERED ---
+                if (_spriteManager.PlayerPortraitsSpriteSheet != null && _spriteManager.PlayerPortraitSourceRects.Count > 0)
+                {
+                    int portraitIndex = Math.Clamp(_gameState.PlayerState.PortraitIndex, 0, _spriteManager.PlayerPortraitSourceRects.Count - 1);
+                    var sourceRect = _spriteManager.PlayerPortraitSourceRects[portraitIndex];
+
+                    // Center the portrait at the top of the stats panel
+                    const int portraitSize = 16; // Native size
+                    int portraitX = _statsPanelArea.X + (_statsPanelArea.Width - portraitSize) / 2;
+                    int portraitY = _statsPanelArea.Y + 2;
+
+                    var destRect = new Rectangle(portraitX, portraitY, portraitSize, portraitSize);
+
+                    // Draw Portrait (No border/background)
+                    spriteBatch.DrawSnapped(_spriteManager.PlayerPortraitsSpriteSheet, destRect, sourceRect, Color.White);
+
+                    // Draw Name
+                    string playerName = "PLAYER";
+                    Vector2 nameSize = font.MeasureString(playerName);
+                    Vector2 namePos = new Vector2(
+                        _statsPanelArea.X + (_statsPanelArea.Width - nameSize.X) / 2f,
+                        portraitY + portraitSize + 4
+                    );
+                    spriteBatch.DrawStringSnapped(font, playerName, namePos, _global.Palette_BrightWhite);
+                }
+            }
 
             // --- Draw Stats ---
             // Only draw stats if NOT a spell, because spells use the whole panel for their info
@@ -918,13 +945,13 @@ namespace ProjectVagabond.UI
                 if (playerState == null) return;
 
                 var stats = new List<(string Label, string StatKey)>
-            {
-                ("MAX HP", "MaxHP"),
-                ("STRNTH", "Strength"),
-                ("INTELL", "Intelligence"),
-                ("TENACT", "Tenacity"),
-                ("AGILTY", "Agility")
-            };
+        {
+            ("MAX HP", "MaxHP"),
+            ("STRNTH", "Strength"),
+            ("INTELL", "Intelligence"),
+            ("TENACT", "Tenacity"),
+            ("AGILTY", "Agility")
+        };
 
                 int startX = _statsPanelArea.X + 3;
                 int startY = _statsPanelArea.Y + 77;

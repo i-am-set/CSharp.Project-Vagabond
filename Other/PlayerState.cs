@@ -10,6 +10,7 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -34,6 +35,10 @@ namespace ProjectVagabond
         public int Agility { get; set; }
         public List<int> DefensiveElementIDs { get; set; } = new List<int>();
         public string DefaultStrikeMoveID { get; set; }
+
+        // Visual Customization
+        public int PortraitIndex { get; set; } = 0;
+
         // --- INVENTORIES ---
         // String ID -> Quantity
         public Dictionary<string, int> Weapons { get; set; } = new Dictionary<string, int>();

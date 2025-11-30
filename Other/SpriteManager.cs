@@ -35,6 +35,10 @@ namespace ProjectVagabond
         public Texture2D RarityIconsSpriteSheet { get; private set; }
         public Texture2D InventorySlotEquipIconSprite { get; private set; }
 
+        // Player Portraits
+        public Texture2D PlayerPortraitsSpriteSheet { get; private set; }
+        public List<Rectangle> PlayerPortraitSourceRects { get; private set; } = new List<Rectangle>();
+
         // Source Rectangles for UI elements
         public Rectangle[] ActionButtonSourceRects { get; private set; }
         public Dictionary<int, Rectangle> ElementIconSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
@@ -993,6 +997,55 @@ namespace ProjectVagabond
                 PlayerHeartSpriteSheet = _textureFactory.CreateColoredTexture(32, 32, Color.DeepPink);
                 PlayerHeartSpriteSheetSilhouette = _textureFactory.CreateColoredTexture(32, 32, Color.White);
             }
+
+            LoadPlayerPortraits();
+        }
+
+        private void LoadPlayerPortraits()
+        {
+            try
+            {
+                PlayerPortraitsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/cat_portraits");
+
+                // Parse the sprite sheet to find valid frames
+                Color[] data = new Color[PlayerPortraitsSpriteSheet.Width * PlayerPortraitsSpriteSheet.Height];
+                PlayerPortraitsSpriteSheet.GetData(data);
+
+                int cols = PlayerPortraitsSpriteSheet.Width / 16;
+                int rows = PlayerPortraitsSpriteSheet.Height / 16;
+
+                PlayerPortraitSourceRects.Clear();
+
+                for (int y = 0; y < rows; y++)
+                {
+                    for (int x = 0; x < cols; x++)
+                    {
+                        if (IsFrameNotEmpty(data, PlayerPortraitsSpriteSheet.Width, x * 16, y * 16, 16, 16))
+                        {
+                            PlayerPortraitSourceRects.Add(new Rectangle(x * 16, y * 16, 16, 16));
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Fallback if texture fails to load
+                PlayerPortraitsSpriteSheet = _textureFactory.CreateColoredTexture(16, 16, Color.Magenta);
+                PlayerPortraitSourceRects.Clear();
+                PlayerPortraitSourceRects.Add(new Rectangle(0, 0, 16, 16));
+            }
+        }
+
+        private bool IsFrameNotEmpty(Color[] data, int texWidth, int x, int y, int w, int h)
+        {
+            for (int py = y; py < y + h; py++)
+            {
+                for (int px = x; px < x + w; px++)
+                {
+                    if (data[py * texWidth + px].A > 0) return true;
+                }
+            }
+            return false;
         }
 
         [Obsolete("LoadSpriteContent is deprecated, please use LoadEssentialContent and LoadGameContent instead.")]
