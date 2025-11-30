@@ -18,7 +18,7 @@ namespace ProjectVagabond.Battle.UI
         public MoveEntry Entry { get; }
         public int DisplayPower { get; }
         private readonly BitmapFont _moveFont;
-        private readonly Texture2D _backgroundSpriteSheet;
+        private readonly Texture2D? _backgroundSpriteSheet; // Made nullable
         public bool IsAnimating => _animState == AnimationState.Appearing;
 
 
@@ -48,7 +48,7 @@ namespace ProjectVagabond.Battle.UI
         private const float OVERLAY_FADE_SPEED = 2.0f;
 
 
-        public MoveButton(MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
+        public MoveButton(MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D? backgroundSpriteSheet, Texture2D iconTexture, Rectangle? iconSourceRect, bool startVisible = true)
             : base(Rectangle.Empty, move.MoveName.ToUpper(), function: move.MoveID)
         {
             Move = move;
@@ -173,6 +173,15 @@ namespace ProjectVagabond.Battle.UI
             if (scaleX > 0.1f && scaleY > 0.1f)
             {
                 float contentAlpha = finalTintColor.A / 255f;
+
+                // Draw background only if texture is provided
+                if (_backgroundSpriteSheet != null)
+                {
+                    // Assuming the background sprite sheet logic was here, but for now we just draw it if it exists.
+                    // If it's a 9-slice or similar, that logic would be here.
+                    // For this specific button, it seems it was just drawing the texture stretched or snapped.
+                    spriteBatch.DrawSnapped(_backgroundSpriteSheet, animatedBounds, finalTintColor);
+                }
 
                 const int iconSize = 9;
                 const int iconPadding = 4;

@@ -156,7 +156,14 @@ namespace ProjectVagabond.Battle.UI
             _actionButtons.Add(fleeButton);
 
             // Secondary Action Buttons
-            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0]) { HasRightClickHint = true };
+            // Updated initialization to disable sway, set white hover text, disable background tint, and enable border drawing.
+            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: Color.White)
+            {
+                HasRightClickHint = true,
+                TintBackgroundOnHover = false,
+                DrawBorderOnHover = true,
+                HoverBorderColor = _global.Palette_Red
+            };
             strikeButton.OnClick += () => {
                 if (_player != null && !string.IsNullOrEmpty(_player.DefaultStrikeMoveID) && BattleDataCache.Moves.TryGetValue(_player.DefaultStrikeMoveID, out var strikeMove))
                 {
@@ -165,7 +172,13 @@ namespace ProjectVagabond.Battle.UI
             };
             _secondaryActionButtons.Add(strikeButton);
 
-            var attuneButton = new TextOverImageButton(Rectangle.Empty, "ATTUNE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[3]) { HasRightClickHint = true };
+            var attuneButton = new TextOverImageButton(Rectangle.Empty, "ATTUNE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[3], enableHoverSway: false, customHoverTextColor: Color.White)
+            {
+                HasRightClickHint = true,
+                TintBackgroundOnHover = false,
+                DrawBorderOnHover = true,
+                HoverBorderColor = _global.Palette_Red
+            };
             attuneButton.OnClick += () => {
                 if (BattleDataCache.Moves.TryGetValue("Attune", out var attuneMove))
                 {
@@ -174,7 +187,13 @@ namespace ProjectVagabond.Battle.UI
             };
             _secondaryActionButtons.Add(attuneButton);
 
-            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2]) { HasRightClickHint = true };
+            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2], enableHoverSway: false, customHoverTextColor: Color.White)
+            {
+                HasRightClickHint = true,
+                TintBackgroundOnHover = false,
+                DrawBorderOnHover = true,
+                HoverBorderColor = _global.Palette_Red
+            };
             stallButton.OnClick += () => {
                 if (BattleDataCache.Moves.TryGetValue("Stall", out var stallMove))
                 {
@@ -290,13 +309,14 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 int effectivePower = DamageCalculator.GetEffectiveMovePower(_player, move);
-                var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, spriteManager.ActionButtonTemplateSpriteSheet, true);
+                // Pass null for background to make it transparent
+                var moveButton = CreateMoveButton(move, entry, effectivePower, secondaryFont, null, true);
                 _moveButtons[i] = moveButton;
                 moveButton.ShowInstantly();
             }
         }
 
-        private MoveButton CreateMoveButton(MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D background, bool startVisible)
+        private MoveButton CreateMoveButton(MoveData move, MoveEntry entry, int displayPower, BitmapFont font, Texture2D? background, bool startVisible)
         {
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             int elementId = move.OffensiveElementIDs.FirstOrDefault();
@@ -682,7 +702,7 @@ namespace ProjectVagabond.Battle.UI
             InitializeButtons();
 
             var pixel = ServiceLocator.Get<Texture2D>();
-            var bgColor = _global.Palette_Black * 0.8f;
+            var bgColor = _global.Palette_Black; // Changed to fully opaque black
             const int dividerY = 123;
             var bgRect = new Rectangle(0, dividerY, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - dividerY);
             spriteBatch.DrawSnapped(pixel, bgRect, bgColor);
@@ -910,7 +930,7 @@ namespace ProjectVagabond.Battle.UI
 
                 if (button == null)
                 {
-                    var placeholderFillColor = Color.Black;
+                    var placeholderFillColor = Color.Transparent; // Changed from Black to Transparent
                     spriteBatch.DrawSnapped(pixel, visualBounds, placeholderFillColor);
                     var placeholderBorderColor = _global.Palette_DarkGray;
 

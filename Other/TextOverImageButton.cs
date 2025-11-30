@@ -17,6 +17,11 @@ namespace ProjectVagabond.UI
         public Texture2D? IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
 
+        // New properties for visual customization
+        public bool TintBackgroundOnHover { get; set; } = true;
+        public bool DrawBorderOnHover { get; set; } = false;
+        public Color? HoverBorderColor { get; set; }
+
         // Animation State
         private enum AnimationState { Hidden, Idle, Appearing }
         private AnimationState _animState = AnimationState.Idle;
@@ -64,6 +69,7 @@ namespace ProjectVagabond.UI
 
             bool isActivated = IsEnabled && (IsHovered || forceHover);
             BitmapFont font = this.Font ?? defaultFont;
+            var pixel = ServiceLocator.Get<Texture2D>();
 
             // --- Animation Scaling ---
             float verticalScale = 1.0f;
@@ -81,7 +87,19 @@ namespace ProjectVagabond.UI
 
             // 1. Calculate animation offsets
             var (shakeOffset, flashTint) = UpdateFeedbackAnimations(gameTime);
-            float yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+
+            // FIX: Respect EnableHoverSway property
+            float yOffset = 0f;
+            if (EnableHoverSway)
+            {
+                yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            }
+            else
+            {
+                // Update the animator state without using the offset, so it doesn't get stuck
+                _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+            }
+
             int animatedHeight = (int)(Bounds.Height * verticalScale);
             var animatedBounds = new Rectangle(
                 Bounds.X + (int)MathF.Round(horizontalOffset ?? 0f) + (int)MathF.Round(shakeOffset.X),
@@ -113,13 +131,14 @@ namespace ProjectVagabond.UI
                 {
                     backgroundTintColor = Color.Gray;
                     textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
-                    iconColor = _global.ButtonHoverColor;
+                    iconColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
                 }
                 else if (isActivated)
                 {
-                    backgroundTintColor = _global.ButtonHoverColor;
+                    // Only tint background if allowed
+                    backgroundTintColor = TintBackgroundOnHover ? _global.ButtonHoverColor : Color.White;
                     textColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
-                    iconColor = _global.ButtonHoverColor;
+                    iconColor = CustomHoverTextColor ?? _global.ButtonHoverColor;
                 }
                 else
                 {
@@ -140,6 +159,23 @@ namespace ProjectVagabond.UI
 
             // 4. Draw background with animation offset
             spriteBatch.DrawSnapped(_backgroundTexture, animatedBounds, backgroundTintColor);
+
+            // 4b. Draw Border if enabled and activated
+            // Drawn AFTER background to ensure it's visible on top
+            if (isActivated && DrawBorderOnHover)
+            {
+                Color borderColor = HoverBorderColor ?? _global.Palette_Red;
+
+                // Draw strictly within the bounds (0 to Width-1)
+                // Top
+                spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Left, animatedBounds.Top, animatedBounds.Width, 1), borderColor);
+                // Bottom
+                spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Left, animatedBounds.Bottom - 1, animatedBounds.Width, 1), borderColor);
+                // Left
+                spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Left, animatedBounds.Top, 1, animatedBounds.Height), borderColor);
+                // Right
+                spriteBatch.DrawSnapped(pixel, new Rectangle(animatedBounds.Right - 1, animatedBounds.Top, 1, animatedBounds.Height), borderColor);
+            }
 
             // Only draw contents if mostly visible
             if (verticalScale > 0.8f)
@@ -189,4 +225,3 @@ namespace ProjectVagabond.UI
         }
     }
 }
-#nullable restore
