@@ -399,8 +399,6 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        // ... [Rest of class remains unchanged] ...
-
         private void UpdateTooltipScrolling(GameTime gameTime)
         {
             if (!_isTooltipScrollingInitialized) return;
@@ -521,7 +519,7 @@ namespace ProjectVagabond.Battle.UI
                     const int secBlockHeight = secRows * (secButtonHeight + secRowSpacing) - secRowSpacing;
                     const int borderWidth = 120;
                     const int layoutGap = 2;
-                    int moveGridStartY = 128;
+                    int moveGridStartY = 124; // Moved up from 128 to fit larger back button
                     int moveGridStartX = 75; // Shifted right by 10
                     int secGridStartX = moveGridStartX - layoutGap - secButtonWidth;
                     int secGridStartY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (secBlockHeight / 2);
@@ -771,7 +769,7 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.Targeting:
                     {
                         const int backButtonPadding = 8;
-                        const int backButtonHeight = 7; // Increased from 5
+                        const int backButtonHeight = 15; // Increased from 7 to match ItemMenu
                         const int backButtonTopMargin = 1;
                         const int horizontalPadding = 10;
                         const int verticalPadding = 2;
@@ -796,7 +794,7 @@ namespace ProjectVagabond.Battle.UI
                         int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
                             horizontalPadding + (availableWidth - backButtonWidth) / 2 + 1, // Added +1 to X
-                            gridStartY + gridAreaHeight + backButtonTopMargin - 9, // Moved up by 1 pixel (was -8)
+                            165, // Fixed Y position to fit at bottom
                             backButtonWidth,
                             backButtonHeight
                         );
@@ -869,7 +867,7 @@ namespace ProjectVagabond.Battle.UI
 
             const int boxWidth = 294;
             const int boxHeight = 47;
-            const int boxY = 117;
+            const int boxY = 113; // Moved up from 117 to fit larger back button
             int boxX = (Global.VIRTUAL_WIDTH - boxWidth) / 2;
             var tooltipBounds = new Rectangle(boxX, boxY, boxWidth, boxHeight);
             _tooltipBounds = tooltipBounds; // Store for debug
@@ -912,14 +910,14 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            int backButtonY = tooltipBounds.Bottom + 5; // Moved down by 2 pixels (was +3)
+            int backButtonY = tooltipBounds.Bottom + 5;
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
                 (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1, // Added +1 to X
                 backButtonY,
                 backWidth,
-                7 // Increased from 5
+                15 // Increased from 7 to match ItemMenu
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }
@@ -937,7 +935,7 @@ namespace ProjectVagabond.Battle.UI
             int totalGridWidth = (moveButtonWidth * columns) + columnSpacing;
             const int gridHeight = 40;
             int gridStartX = (Global.VIRTUAL_WIDTH - totalGridWidth) / 2;
-            int gridStartY = dividerY + 2 + 12;
+            int gridStartY = 123; // Adjusted from 128 to fit larger back button
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
@@ -962,7 +960,7 @@ namespace ProjectVagabond.Battle.UI
                 (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1, // Added +1 to X
                 backButtonY,
                 backWidth,
-                7 // Increased from 5
+                15 // Increased from 7 to match ItemMenu
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }
@@ -978,7 +976,7 @@ namespace ProjectVagabond.Battle.UI
             const int borderHeight = 37;
             const int layoutGap = 2;
 
-            int moveGridStartY = 128;
+            int moveGridStartY = 124; // Moved up from 128 to fit larger back button
             int moveGridStartX = 75; // Shifted right by 10
             int borderX = moveGridStartX + MOVE_BUTTON_WIDTH + layoutGap;
             int borderY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (borderHeight / 2);
@@ -1065,14 +1063,14 @@ namespace ProjectVagabond.Battle.UI
 
 
             int layoutBottomY = Math.Max(borderRect.Bottom, moveGridStartY + MOVE_BLOCK_HEIGHT);
-            int backButtonY = layoutBottomY + 3; // Moved up by 1 pixel (was +4)
+            int backButtonY = layoutBottomY + 2; // Adjusted to +2
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
                 (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1, // Added +1 to X
                 backButtonY,
                 backWidth,
-                7 // Increased from 5
+                15 // Increased from 7 to match ItemMenu
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }
@@ -1332,4 +1330,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-﻿
