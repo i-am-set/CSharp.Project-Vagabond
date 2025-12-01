@@ -20,6 +20,12 @@ namespace ProjectVagabond.Battle
     {
         private static readonly Random _random = new Random();
 
+        // This scalar controls the overall lethality of the game.
+        // 0.5f means an attack with equal stats (10 vs 10) deals 50% of the Move's Power.
+        // With 40 Power, that's 20 damage. Against 100 HP, that's a 5-hit kill (Average).
+        private const float GLOBAL_DAMAGE_SCALAR = 0.25f;
+        private const int FLAT_DAMAGE_BONUS = 2; // Ensures attacks always do at least a tiny bit of chip damage
+
         public enum ElementalEffectiveness { Neutral, Effective, Resisted, Immune }
 
         public struct DamageResult
@@ -132,9 +138,22 @@ namespace ProjectVagabond.Battle
             {
                 defensiveStat *= (1.0f - (piercePercent / 100f));
             }
-            if (defensiveStat <= 0) defensiveStat = 1;
 
-            float baseDamage = ((((2f * attacker.Stats.Level / 5f + 2f) * movePower * (offensiveStat / defensiveStat)) / 50f) + 2f);
+            // Ensure we never divide by zero. 1 is the absolute floor for defense.
+            if (defensiveStat < 1) defensiveStat = 1;
+
+            // --- DEBUG LOGGING ---
+            Debug.WriteLine($"[DamageCalc] {attacker.Name} uses {move.MoveName} on {target.Name}");
+            Debug.WriteLine($"   -> Power: {movePower}");
+            Debug.WriteLine($"   -> OffStat ({move.OffensiveStat}): {offensiveStat}");
+            Debug.WriteLine($"   -> DefStat (Tenacity): {defensiveStat}");
+            // ---------------------
+
+            // Damage = (Power * (Attack / Defense) * Scalar) + FlatBonus
+            float statRatio = offensiveStat / defensiveStat;
+            float baseDamage = (movePower * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
+
+            Debug.WriteLine($"   -> Calculation: ({movePower} * ({offensiveStat}/{defensiveStat}) * {GLOBAL_DAMAGE_SCALAR}) + {FLAT_DAMAGE_BONUS} = {baseDamage:F2}");
 
             float finalDamage = baseDamage;
 
@@ -303,6 +322,7 @@ namespace ProjectVagabond.Battle
             }
 
             result.DamageAmount = finalDamageAmount;
+            Debug.WriteLine($"   -> Final Damage: {finalDamageAmount}");
             return result;
         }
 
@@ -325,7 +345,8 @@ namespace ProjectVagabond.Battle
             float defensiveStat = target.Stats.Tenacity;
             if (defensiveStat <= 0) defensiveStat = 1;
 
-            float baseDamage = ((((2f * attacker.Stats.Level / 5f + 2f) * movePower * (offensiveStat / defensiveStat)) / 50f) + 2f);
+            float statRatio = offensiveStat / defensiveStat;
+            float baseDamage = (movePower * statRatio * GLOBAL_DAMAGE_SCALAR) + FLAT_DAMAGE_BONUS;
 
             baseDamage *= BattleConstants.RANDOM_VARIANCE_MAX;
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -39,6 +40,13 @@ namespace ProjectVagabond.Battle.UI
         // Tuning constants
         private const float TYPEWRITER_SPEED = 0.01f; // Seconds per character
         private const float AUTO_ADVANCE_SECONDS = 5.0f; // Seconds to wait for input
+
+        /// <summary>
+        /// If true, the narrator will automatically advance after a delay.
+        /// If false, it waits indefinitely for user input.
+        /// Defaults to false.
+        /// </summary>
+        public bool IsAutoProgressEnabled { get; set; } = false;
 
         public bool IsBusy => _messageQueue.Count > 0 || !string.IsNullOrEmpty(_currentSegment);
 
@@ -146,8 +154,14 @@ namespace ProjectVagabond.Battle.UI
 
             if (_isWaitingForInput)
             {
-                _timeoutTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-                if (advance || _timeoutTimer <= 0)
+                // Only tick the timer if auto-progress is enabled
+                if (IsAutoProgressEnabled)
+                {
+                    _timeoutTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                }
+
+                // Advance if input received OR (auto-progress is on AND timer expired)
+                if (advance || (IsAutoProgressEnabled && _timeoutTimer <= 0))
                 {
                     if (mouseJustReleased) UIInputManager.ConsumeMouseClick();
                     ProcessNextSegment();
@@ -244,11 +258,6 @@ namespace ProjectVagabond.Battle.UI
             // Draw "next" indicator
             if (_isWaitingForInput)
             {
-                string ellipsisToShow;
-                if (_timeoutTimer > (AUTO_ADVANCE_SECONDS * 2 / 3f)) ellipsisToShow = "...";
-                else if (_timeoutTimer > (AUTO_ADVANCE_SECONDS / 3f)) ellipsisToShow = "..";
-                else ellipsisToShow = ".";
-
                 const string arrow = "v";
                 const string gap = " ";
                 const string widestEllipsis = "...";
@@ -261,12 +270,22 @@ namespace ProjectVagabond.Battle.UI
                 float startX = panelBounds.Right - 3 - totalIndicatorWidth;
                 float yPos = panelBounds.Bottom - 10;
 
-                Vector2 currentEllipsisSize = font.MeasureString(ellipsisToShow);
-                float ellipsisX = startX + (widestEllipsisSize.X - currentEllipsisSize.X);
-                var ellipsisPosition = new Vector2(ellipsisX, yPos);
-                spriteBatch.DrawStringSnapped(font, ellipsisToShow, ellipsisPosition, _global.Palette_Yellow);
+                // Only draw the ellipsis countdown if auto-progress is enabled
+                if (IsAutoProgressEnabled)
+                {
+                    string ellipsisToShow;
+                    if (_timeoutTimer > (AUTO_ADVANCE_SECONDS * 2 / 3f)) ellipsisToShow = "...";
+                    else if (_timeoutTimer > (AUTO_ADVANCE_SECONDS / 3f)) ellipsisToShow = "..";
+                    else ellipsisToShow = ".";
 
-                float yOffset = ((_timeoutTimer - MathF.Floor(_timeoutTimer)) > 0.5f) ? -1f : 0f;
+                    Vector2 currentEllipsisSize = font.MeasureString(ellipsisToShow);
+                    float ellipsisX = startX + (widestEllipsisSize.X - currentEllipsisSize.X);
+                    var ellipsisPosition = new Vector2(ellipsisX, yPos);
+                    spriteBatch.DrawStringSnapped(font, ellipsisToShow, ellipsisPosition, _global.Palette_Yellow);
+                }
+
+                // Always draw the arrow to indicate input is required/accepted
+                float yOffset = ((float)gameTime.TotalGameTime.TotalSeconds * 4 % 1.0f > 0.5f) ? -1f : 0f;
                 var indicatorPosition = new Vector2(startX + widestEllipsisSize.X + gapSize.X, yPos + yOffset);
                 spriteBatch.DrawStringSnapped(font, arrow, indicatorPosition, _global.Palette_Yellow);
             }
