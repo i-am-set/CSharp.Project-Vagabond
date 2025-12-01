@@ -59,7 +59,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant player, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f)
+        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant player, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null)
         {
             Initialize();
             if (_texture == null || player == null) return;
@@ -80,9 +80,16 @@ namespace ProjectVagabond.Battle.UI
                 (int)MathF.Round(_position.Y - _origin.Y + shakeOffset.Y)
             );
 
+            // --- Silhouette Mode ---
+            if (asSilhouette && silhouette != null)
+            {
+                var mainRect = new Rectangle(topLeftPosition.X, topLeftPosition.Y, FRAME_WIDTH, FRAME_HEIGHT);
+                spriteBatch.Draw(silhouette, mainRect, sourceRectangle, silhouetteColor ?? Color.Gray, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
+                return;
+            }
+
             Color mainColor = tintColorOverride ?? Color.White;
             Color outlineColor = isHighlighted ? Color.Yellow : (tintColorOverride ?? global.Palette_DarkGray);
-
 
             if (silhouette != null)
             {
@@ -103,19 +110,19 @@ namespace ProjectVagabond.Battle.UI
             }
 
             // Draw main sprite
-            var mainRect = new Rectangle(topLeftPosition.X, topLeftPosition.Y, FRAME_WIDTH, FRAME_HEIGHT);
-            spriteBatch.Draw(_texture, mainRect, sourceRectangle, mainColor, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
+            var mainRectDraw = new Rectangle(topLeftPosition.X, topLeftPosition.Y, FRAME_WIDTH, FRAME_HEIGHT);
+            spriteBatch.Draw(_texture, mainRectDraw, sourceRectangle, mainColor, 0f, Vector2.Zero, SpriteEffects.None, 0.5f);
 
             // Draw highlight overlay
             if (isHighlighted && silhouette != null)
             {
-                spriteBatch.Draw(silhouette, mainRect, sourceRectangle, Color.Yellow * pulseAlpha, 0f, Vector2.Zero, SpriteEffects.None, 0.505f);
+                spriteBatch.Draw(silhouette, mainRectDraw, sourceRectangle, Color.Yellow * pulseAlpha, 0f, Vector2.Zero, SpriteEffects.None, 0.505f);
             }
 
             // Draw flash overlay
             if (isFlashingWhite && silhouette != null)
             {
-                spriteBatch.Draw(silhouette, mainRect, sourceRectangle, Color.White * 0.8f, 0f, Vector2.Zero, SpriteEffects.None, 0.51f);
+                spriteBatch.Draw(silhouette, mainRectDraw, sourceRectangle, Color.White * 0.8f, 0f, Vector2.Zero, SpriteEffects.None, 0.51f);
             }
         }
     }

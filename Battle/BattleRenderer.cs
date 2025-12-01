@@ -239,6 +239,9 @@ namespace ProjectVagabond.Battle.UI
             Color? playerSpriteTint = null;
             bool isPlayerHighlighted = false;
             bool isTurnInProgress = (currentActor != null && !currentActor.IsPlayerControlled);
+            bool playerIsSilhouette = false;
+            Color? playerSilhouetteColor = null;
+
             if (isTurnInProgress && player != currentActor)
             {
                 playerSpriteTint = _turnInactiveTintColor;
@@ -255,14 +258,15 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    playerSpriteTint = _global.ButtonDisableColor;
+                    playerIsSilhouette = true;
+                    playerSilhouetteColor = _global.Palette_DarkerGray;
                 }
             }
             _playerCombatSprite.SetPosition(PlayerSpritePosition);
-            _playerCombatSprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isPlayerHighlighted, pulseAlpha);
+            _playerCombatSprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isPlayerHighlighted, pulseAlpha, playerIsSilhouette, playerSilhouetteColor);
 
             // --- Draw Player HUD ---
-            DrawPlayerHud(spriteBatch, font, secondaryFont, player, currentActor, gameTime, animationManager, uiManager, uiManager.HoverHighlightState);
+            DrawPlayerHud(spriteBatch, font, secondaryFont, player, currentActor, gameTime, animationManager, uiManager, uiManager.HoverHighlightState, playerIsSilhouette);
 
             // --- Draw UI Title ---
             DrawUITitle(spriteBatch, secondaryFont, gameTime, uiManager.SubMenuState);
@@ -313,28 +317,31 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, BattleCombatant currentActor, GameTime gameTime, BattleAnimationManager animationManager, BattleUIManager uiManager, HoverHighlightState hoverHighlightState)
+        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, BattleCombatant currentActor, GameTime gameTime, BattleAnimationManager animationManager, BattleUIManager uiManager, HoverHighlightState hoverHighlightState, bool isSilhouetted)
         {
             if (player == null) return;
 
             const int playerHudY = DIVIDER_Y - 10;
             const int playerHudPaddingX = 10;
 
-            Color nameColor = Color.White;
-            bool isTurnInProgress = (currentActor != null && !currentActor.IsPlayerControlled);
-            if (isTurnInProgress)
+            if (!isSilhouetted)
             {
-                nameColor = _turnInactiveTintColor;
-            }
+                Color nameColor = Color.White;
+                bool isTurnInProgress = (currentActor != null && !currentActor.IsPlayerControlled);
+                if (isTurnInProgress)
+                {
+                    nameColor = _turnInactiveTintColor;
+                }
 
-            if (hoverHighlightState.Targets.Contains(player))
-            {
-                nameColor = _global.Palette_Yellow;
-            }
-            spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight - 2), nameColor);
+                if (hoverHighlightState.Targets.Contains(player))
+                {
+                    nameColor = _global.Palette_Yellow;
+                }
+                spriteBatch.DrawStringSnapped(font, player.Name, new Vector2(playerHudPaddingX, playerHudY - font.LineHeight - 2), nameColor);
 
-            var offsetVector = Vector2.Zero; // No bobbing for bars
-            DrawPlayerResourceBars(spriteBatch, player, offsetVector, uiManager);
+                var offsetVector = Vector2.Zero; // No bobbing for bars
+                DrawPlayerResourceBars(spriteBatch, player, offsetVector, uiManager);
+            }
 
             DrawPlayerStatusIcons(spriteBatch, player, secondaryFont, playerHudY);
 
@@ -763,6 +770,8 @@ namespace ProjectVagabond.Battle.UI
             }
 
             bool isSelectable = selectableTargets.Contains(combatant);
+            bool drawAsSilhouette = false;
+
             if (shouldGrayOutUnselectable)
             {
                 if (isSelectable && !isTargetingPhase)
@@ -771,8 +780,8 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else if (!isSelectable)
                 {
-                    tintColor = _global.ButtonDisableColor * combatant.VisualAlpha;
-                    outlineColor = _global.ButtonDisableColor * combatant.VisualAlpha * 0.5f;
+                    drawAsSilhouette = true;
+                    tintColor = _global.Palette_DarkerGray * combatant.VisualAlpha;
                 }
             }
 
@@ -798,7 +807,7 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
 
                     // --- Outline Pass ---
-                    if (enemySilhouette != null)
+                    if (enemySilhouette != null && !drawAsSilhouette)
                     {
                         for (int i = 0; i < numParts; i++)
                         {
@@ -821,7 +830,15 @@ namespace ProjectVagabond.Battle.UI
                         var partOffset = offsets[i];
                         var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
                         var drawRect = new Rectangle((int)drawPosition.X, (int)drawPosition.Y, spriteRect.Width, spriteRect.Height);
-                        spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
+
+                        if (drawAsSilhouette && enemySilhouette != null)
+                        {
+                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, tintColor);
+                        }
+                        else
+                        {
+                            spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
+                        }
 
                         if (isSelectable && shouldGrayOutUnselectable && !isTargetingPhase)
                         {
@@ -842,20 +859,23 @@ namespace ProjectVagabond.Battle.UI
 
             DrawEnemyStatusIcons(spriteBatch, combatant, spriteRect);
 
-            float hudY = spriteRect.Bottom + 12;
-            var hudCenterPosition = new Vector2(slotCenter.X, hudY);
-
-            Vector2 nameSize = nameFont.MeasureString(combatant.Name);
-            Vector2 namePos = new Vector2(hudCenterPosition.X - nameSize.X / 2, hudCenterPosition.Y - 8);
-
-            Color nameColor = tintColor;
-            if (hoverHighlightState.Targets.Contains(combatant))
+            if (!drawAsSilhouette)
             {
-                nameColor = _global.Palette_Yellow * combatant.VisualAlpha;
-            }
-            spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, nameColor);
+                float hudY = spriteRect.Bottom + 12;
+                var hudCenterPosition = new Vector2(slotCenter.X, hudY);
 
-            DrawEnemyHealthBar(spriteBatch, combatant, hudCenterPosition);
+                Vector2 nameSize = nameFont.MeasureString(combatant.Name);
+                Vector2 namePos = new Vector2(hudCenterPosition.X - nameSize.X / 2, hudCenterPosition.Y - 8);
+
+                Color nameColor = tintColor;
+                if (hoverHighlightState.Targets.Contains(combatant))
+                {
+                    nameColor = _global.Palette_Yellow * combatant.VisualAlpha;
+                }
+                spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, nameColor);
+
+                DrawEnemyHealthBar(spriteBatch, combatant, hudCenterPosition);
+            }
         }
 
         private void DrawEnemyHealthBar(SpriteBatch spriteBatch, BattleCombatant combatant, Vector2 centerPosition)
@@ -1223,4 +1243,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-#nullable restore
