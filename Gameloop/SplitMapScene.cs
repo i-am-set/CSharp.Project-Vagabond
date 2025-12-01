@@ -112,6 +112,12 @@ namespace ProjectVagabond.Scenes
         private const float SNAP_BACK_DELAY = 1f;
         private const float SCROLL_PAN_SPEED = 1f;
 
+        // Combat Transition State
+        private List<string>? _pendingCombatArchetypes;
+        private bool _waitingForCombatCameraSettle = false;
+        private int _framesToWaitAfterSettle = 0;
+        private const float CAMERA_SETTLE_THRESHOLD = 0.5f;
+
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
 
@@ -151,6 +157,8 @@ namespace ProjectVagabond.Scenes
             _playerIcon.SetIsMoving(false);
             _diceRollingSystem.OnRollCompleted += OnDiceRollCompleted;
             _isPanning = false;
+            _waitingForCombatCameraSettle = false;
+            _pendingCombatArchetypes = null;
 
             _inventoryOverlay.Initialize();
 
@@ -237,7 +245,8 @@ namespace ProjectVagabond.Scenes
                 var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                 if (currentNode != null)
                 {
-                    UpdateCameraTarget(currentNode.Position, true); // Snap back instantly
+                    // Snap instantly (true) to avoid easing animation when closing inventory
+                    UpdateCameraTarget(currentNode.Position, true);
                 }
             }
         }
@@ -411,6 +420,22 @@ namespace ProjectVagabond.Scenes
             // When snap-back triggers, target is updated to player, and LERP takes over.
             _cameraOffset = Vector2.Lerp(_cameraOffset, _targetCameraOffset, deltaTime * CAMERA_LERP_SPEED);
 
+            // --- Combat Transition Logic ---
+            if (_waitingForCombatCameraSettle)
+            {
+                // Check if camera is close enough to the target (map position)
+                if (Vector2.Distance(_cameraOffset, _targetCameraOffset) < CAMERA_SETTLE_THRESHOLD)
+                {
+                    if (_framesToWaitAfterSettle > 0)
+                    {
+                        _framesToWaitAfterSettle--;
+                    }
+                    else
+                    {
+                        ExecuteCombatTransition();
+                    }
+                }
+            }
 
             // Update active path animations
             var appearingKeys = _pathAnimationProgress.Keys.ToList();
@@ -760,6 +785,31 @@ namespace ProjectVagabond.Scenes
             }
         }
 
+        public void InitiateCombat(List<string> enemyArchetypes)
+        {
+            _pendingCombatArchetypes = enemyArchetypes;
+
+            if (_inventoryOverlay.IsOpen)
+            {
+                _inventoryOverlay.ForceClose();
+                _waitingForCombatCameraSettle = true;
+                _framesToWaitAfterSettle = 1; // Wait 1 frame after settling
+            }
+            else
+            {
+                ExecuteCombatTransition();
+            }
+        }
+
+        private void ExecuteCombatTransition()
+        {
+            _waitingForCombatCameraSettle = false;
+            BattleSetup.EnemyArchetypes = _pendingCombatArchetypes;
+            BattleSetup.ReturnSceneState = GameSceneState.Split;
+            _sceneManager.ChangeScene(GameSceneState.Battle);
+            _pendingCombatArchetypes = null;
+        }
+
         private void TriggerNodeEvent(int nodeId)
         {
             if (_currentMap == null || !_currentMap.Nodes.TryGetValue(nodeId, out var node)) return;
@@ -771,9 +821,7 @@ namespace ProjectVagabond.Scenes
                 case SplitNodeType.Battle:
                 case SplitNodeType.MajorBattle:
                     WasMajorBattle = node.NodeType == SplitNodeType.MajorBattle;
-                    BattleSetup.EnemyArchetypes = node.EventData as List<string>;
-                    BattleSetup.ReturnSceneState = GameSceneState.Split;
-                    _sceneManager.ChangeScene(GameSceneState.Battle);
+                    InitiateCombat(node.EventData as List<string> ?? new List<string>());
                     break;
 
                 case SplitNodeType.Narrative:

@@ -153,25 +153,24 @@ namespace ProjectVagabond
             _commands["debugcombat"] = new Command("debugcombat", (args) =>
             {
                 var sceneManager = ServiceLocator.Get<SceneManager>();
-                if (sceneManager.CurrentActiveScene is not SplitMapScene)
+                if (sceneManager.CurrentActiveScene is SplitMapScene splitScene)
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Command only available in Split Map Scene." });
-                    return;
-                }
+                    var progressionManager = ServiceLocator.Get<ProgressionManager>();
+                    var encounter = progressionManager.GetRandomBattleFromSplit("Forest");
 
-                var progressionManager = ServiceLocator.Get<ProgressionManager>();
-                var encounter = progressionManager.GetRandomBattleFromSplit("Forest");
-
-                if (encounter != null && encounter.Any())
-                {
-                    BattleSetup.EnemyArchetypes = encounter;
-                    BattleSetup.ReturnSceneState = GameSceneState.Split;
-                    sceneManager.ChangeScene(GameSceneState.Battle);
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[palette_teal]Starting debug combat (Forest)..." });
+                    if (encounter != null && encounter.Any())
+                    {
+                        splitScene.InitiateCombat(encounter);
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[palette_teal]Starting debug combat (Forest)..." });
+                    }
+                    else
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Could not load Forest encounter data." });
+                    }
                 }
                 else
                 {
-                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Could not load Forest encounter data." });
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Command only available in Split Map Scene." });
                 }
             }, "debugcombat - Starts a random forest encounter (SplitMap only).");
 

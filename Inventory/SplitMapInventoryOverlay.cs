@@ -363,6 +363,14 @@ namespace ProjectVagabond.UI
             }
         }
 
+        public void ForceClose()
+        {
+            if (IsOpen)
+            {
+                ToggleInventory();
+            }
+        }
+
         private void ToggleInventory()
         {
             IsOpen = !IsOpen;
