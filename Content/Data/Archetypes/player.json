@@ -24,7 +24,7 @@
       "Type": "ProjectVagabond.Battle.PlayerBaseStatsComponent",
       "Properties": {
         "MaxHP": 100,
-        "Strength": 15,
+        "Strength": 55,
         "Intelligence": 15,
         "Tenacity": 30,
         "Agility": 1,

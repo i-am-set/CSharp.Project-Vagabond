@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -25,6 +26,8 @@ namespace ProjectVagabond.Battle
         public CombatantStats Stats { get; set; }
         public float VisualHP { get; set; }
         public float VisualAlpha { get; set; } = 1.0f;
+        public float VisualSilhouetteAmount { get; set; } = 0f; // 0 = Normal, 1 = Full Silhouette
+        public Color? VisualSilhouetteColorOverride { get; set; } = null; // If null, defaults to DarkGray
 
         public List<MoveData> AvailableMoves
         {

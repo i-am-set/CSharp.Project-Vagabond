@@ -22,6 +22,19 @@ namespace ProjectVagabond.Battle.UI
         // Internal animation state structs
         public class HealthAnimationState { public string CombatantID; public float StartHP; public float TargetHP; public float Timer; }
         public class AlphaAnimationState { public string CombatantID; public float StartAlpha; public float TargetAlpha; public float Timer; public const float Duration = 0.167f; }
+
+        public class DeathAnimationState
+        {
+            public string CombatantID;
+            public float Timer;
+            public enum Phase { FlashWhite1, FlashGray, FlashWhite2, FadeOut }
+            public Phase CurrentPhase;
+
+            // Tuning
+            public const float FLASH_DURATION = 0.1f;
+            public const float FADE_DURATION = 0.25f;
+        }
+
         public class HitFlashAnimationState
         {
             public string CombatantID;
@@ -114,6 +127,7 @@ namespace ProjectVagabond.Battle.UI
 
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
+        private readonly List<DeathAnimationState> _activeDeathAnimations = new List<DeathAnimationState>();
         private readonly List<HitFlashAnimationState> _activeHitFlashAnimations = new List<HitFlashAnimationState>();
         private readonly List<HealBounceAnimationState> _activeHealBounceAnimations = new List<HealBounceAnimationState>();
         private readonly List<HealFlashAnimationState> _activeHealFlashAnimations = new List<HealFlashAnimationState>();
@@ -133,7 +147,7 @@ namespace ProjectVagabond.Battle.UI
         // Layout Constants mirrored from BattleRenderer for pixel-perfect alignment
         private const int DIVIDER_Y = 123;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any();
 
         public BattleAnimationManager()
         {
@@ -144,6 +158,7 @@ namespace ProjectVagabond.Battle.UI
         {
             _activeHealthAnimations.Clear();
             _activeAlphaAnimations.Clear();
+            _activeDeathAnimations.Clear();
             _activeHitFlashAnimations.Clear();
             _activeHealBounceAnimations.Clear();
             _activeHealFlashAnimations.Clear();
@@ -236,6 +251,17 @@ namespace ProjectVagabond.Battle.UI
                 StartAlpha = alphaBefore,
                 TargetAlpha = alphaAfter,
                 Timer = 0f
+            });
+        }
+
+        public void StartDeathAnimation(string combatantId)
+        {
+            _activeDeathAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeDeathAnimations.Add(new DeathAnimationState
+            {
+                CombatantID = combatantId,
+                Timer = 0f,
+                CurrentPhase = DeathAnimationState.Phase.FlashWhite1
             });
         }
 
@@ -455,6 +481,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateIndicatorQueue(gameTime);
             UpdateHealthAnimations(gameTime, combatants);
             UpdateAlphaAnimations(gameTime, combatants);
+            UpdateDeathAnimations(gameTime, combatants);
             UpdateHitFlashAnimations(gameTime);
             UpdateHealAnimations(gameTime);
             UpdatePoisonEffectAnimations(gameTime);
@@ -577,6 +604,65 @@ namespace ProjectVagabond.Battle.UI
                 {
                     float progress = anim.Timer / AlphaAnimationState.Duration;
                     combatant.VisualAlpha = MathHelper.Lerp(anim.StartAlpha, anim.TargetAlpha, Easing.EaseOutQuad(progress));
+                }
+            }
+        }
+
+        private void UpdateDeathAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeDeathAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeDeathAnimations[i];
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant == null)
+                {
+                    _activeDeathAnimations.RemoveAt(i);
+                    continue;
+                }
+
+                // Ensure silhouette is fully active
+                combatant.VisualSilhouetteAmount = 1.0f;
+
+                anim.Timer += deltaTime;
+
+                switch (anim.CurrentPhase)
+                {
+                    case DeathAnimationState.Phase.FlashWhite1:
+                        combatant.VisualSilhouetteColorOverride = Color.White;
+                        if (anim.Timer >= DeathAnimationState.FLASH_DURATION)
+                        {
+                            anim.Timer = 0f;
+                            anim.CurrentPhase = DeathAnimationState.Phase.FlashGray;
+                        }
+                        break;
+                    case DeathAnimationState.Phase.FlashGray:
+                        combatant.VisualSilhouetteColorOverride = _global.Palette_DarkGray;
+                        if (anim.Timer >= DeathAnimationState.FLASH_DURATION)
+                        {
+                            anim.Timer = 0f;
+                            anim.CurrentPhase = DeathAnimationState.Phase.FlashWhite2;
+                        }
+                        break;
+                    case DeathAnimationState.Phase.FlashWhite2:
+                        combatant.VisualSilhouetteColorOverride = Color.White;
+                        if (anim.Timer >= DeathAnimationState.FLASH_DURATION)
+                        {
+                            anim.Timer = 0f;
+                            anim.CurrentPhase = DeathAnimationState.Phase.FadeOut;
+                        }
+                        break;
+                    case DeathAnimationState.Phase.FadeOut:
+                        combatant.VisualSilhouetteColorOverride = Color.White;
+                        float progress = Math.Clamp(anim.Timer / DeathAnimationState.FADE_DURATION, 0f, 1f);
+                        combatant.VisualAlpha = 1.0f - progress;
+
+                        if (anim.Timer >= DeathAnimationState.FADE_DURATION)
+                        {
+                            combatant.VisualAlpha = 0f;
+                            _activeDeathAnimations.RemoveAt(i);
+                        }
+                        break;
                 }
             }
         }
@@ -1108,4 +1194,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-#nullable restore

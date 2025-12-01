@@ -785,7 +785,12 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
             _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was defeated!");
-            _animationManager.StartAlphaAnimation(e.DefeatedCombatant.CombatantID, e.DefeatedCombatant.VisualAlpha, 0.1f);
+
+            // Trigger the silhouette fade animation (0 -> 1)
+            _animationManager.StartDeathAnimation(e.DefeatedCombatant.CombatantID);
+
+            // Ensure alpha stays fully opaque so the silhouette is visible
+            e.DefeatedCombatant.VisualAlpha = 1.0f;
         }
 
         private void OnActionFailed(GameEvents.ActionFailed e)

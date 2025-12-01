@@ -805,17 +805,17 @@ namespace ProjectVagabond.Battle.UI
             bool isSelectable = selectableTargets.Contains(combatant);
             bool drawAsSilhouette = false;
 
-            if (shouldGrayOutUnselectable)
+            // --- NEW SILHOUETTE LOGIC ---
+            float silhouetteFactor = combatant.VisualSilhouetteAmount;
+            Color silhouetteColor = combatant.VisualSilhouetteColorOverride ?? _global.Palette_DarkGray;
+
+            if (shouldGrayOutUnselectable && !isSelectable)
             {
-                if (isSelectable && !isTargetingPhase)
-                {
-                    outlineColor = Color.Yellow * combatant.VisualAlpha;
-                }
-                else if (!isSelectable)
-                {
-                    drawAsSilhouette = true;
-                    tintColor = _global.Palette_DarkerGray * combatant.VisualAlpha;
-                }
+                silhouetteFactor = 1.0f;
+            }
+            else if (isSelectable && shouldGrayOutUnselectable && !isTargetingPhase)
+            {
+                outlineColor = Color.Yellow * combatant.VisualAlpha;
             }
 
             Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
@@ -840,7 +840,7 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
 
                     // --- Outline Pass ---
-                    if (enemySilhouette != null && !drawAsSilhouette)
+                    if (enemySilhouette != null && silhouetteFactor < 1.0f)
                     {
                         for (int i = 0; i < numParts; i++)
                         {
@@ -864,13 +864,17 @@ namespace ProjectVagabond.Battle.UI
                         var drawPosition = new Vector2(spriteRect.X + partOffset.X, spriteRect.Y + partOffset.Y) + shakeOffset;
                         var drawRect = new Rectangle((int)drawPosition.X, (int)drawPosition.Y, spriteRect.Width, spriteRect.Height);
 
-                        if (drawAsSilhouette && enemySilhouette != null)
+                        if (silhouetteFactor >= 1.0f && enemySilhouette != null)
                         {
-                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, tintColor);
+                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * combatant.VisualAlpha);
                         }
                         else
                         {
                             spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
+                            if (silhouetteFactor > 0f && enemySilhouette != null)
+                            {
+                                spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * silhouetteFactor * combatant.VisualAlpha);
+                            }
                         }
 
                         if (isSelectable && shouldGrayOutUnselectable && !isTargetingPhase)
@@ -892,7 +896,7 @@ namespace ProjectVagabond.Battle.UI
 
             DrawEnemyStatusIcons(spriteBatch, combatant, spriteRect);
 
-            if (!drawAsSilhouette)
+            if (silhouetteFactor < 1.0f)
             {
                 float hudY = spriteRect.Bottom + 12;
                 var hudCenterPosition = new Vector2(slotCenter.X, hudY);
@@ -988,22 +992,32 @@ namespace ProjectVagabond.Battle.UI
             foreach (var id in combatantIds)
             {
                 var combatant = combatants.FirstOrDefault(c => c.CombatantID == id);
-                if (combatant == null || combatant.IsDefeated)
+                if (combatant == null)
                 {
-                    continue; // Skip animation updates for defeated or non-existent enemies
+                    continue;
+                }
+
+                // If defeated, force offsets to zero for a static corpse
+                if (combatant.IsDefeated)
+                {
+                    if (_enemySpritePartOffsets.TryGetValue(id, out var offsets))
+                    {
+                        for (int k = 0; k < offsets.Length; k++) offsets[k] = Vector2.Zero;
+                    }
+                    continue;
                 }
 
                 var timers = _enemyAnimationTimers[id];
                 var intervals = _enemyAnimationIntervals[id];
-                var offsets = _enemySpritePartOffsets[id];
-                for (int i = 1; i < offsets.Length; i++)
+                var currentOffsets = _enemySpritePartOffsets[id];
+                for (int i = 1; i < currentOffsets.Length; i++)
                 {
                     timers[i] += deltaTime;
                     if (timers[i] >= intervals[i])
                     {
                         timers[i] = 0f;
                         intervals[i] = (float)(_random.NextDouble() * (ENEMY_ANIM_MAX_INTERVAL - ENEMY_ANIM_MIN_INTERVAL) + ENEMY_ANIM_MIN_INTERVAL);
-                        offsets[i] = new Vector2(_random.Next(-1, 1), _random.Next(-1, 1));
+                        currentOffsets[i] = new Vector2(_random.Next(-1, 1), _random.Next(-1, 1));
                     }
                 }
             }
@@ -1276,4 +1290,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-﻿
