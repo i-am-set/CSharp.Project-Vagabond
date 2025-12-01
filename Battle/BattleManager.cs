@@ -1,10 +1,12 @@
 ﻿#nullable enable
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
@@ -291,7 +293,10 @@ namespace ProjectVagabond.Battle
                     var targets = ResolveTargets(action);
 
                     MoveData animMove = action.ChosenMove;
-                    if (!action.Actor.IsPlayerControlled)
+
+                    // Only centralize enemy animations if they are NOT targeting themselves.
+                    // This ensures attacks play on the player (center), but buffs play on the enemy.
+                    if (!action.Actor.IsPlayerControlled && action.ChosenMove.Target != TargetType.Self)
                     {
                         animMove = action.ChosenMove.Clone();
                         animMove.IsAnimationCentralized = true;

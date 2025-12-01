@@ -617,12 +617,8 @@ namespace ProjectVagabond.Scenes
             _actionJustDeclared = true;
             _currentActor = e.Actor;
             string actionName = e.Item != null ? e.Item.ItemName : e.Move.MoveName;
-            var targetType = e.Item?.Target ?? e.Move?.Target ?? TargetType.None;
 
-            if (targetType != TargetType.None)
-            {
-                _uiManager.ShowNarration($"{e.Actor.Name} uses {actionName}!");
-            }
+            _uiManager.ShowNarration($"{e.Actor.Name} uses {actionName}!");
         }
 
         private void OnMoveAnimationTriggered(GameEvents.MoveAnimationTriggered e)

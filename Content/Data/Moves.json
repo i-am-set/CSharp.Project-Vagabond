@@ -801,7 +801,7 @@
     "ImpactType": "Status",
     "OffensiveStat": "Agility",
     "MakesContact": false,
-    "Target": "None",
+    "Target": "Self",
     "Accuracy": -1,
     "Priority": 0,
     "Rarity": -1,
@@ -809,7 +809,7 @@
     "OffensiveElementIDs": [ 1 ],
     "Tags": [],
     "AnimationSpriteSheet": "stall",
-    "AnimationSpeed": 1.0,
+    "AnimationSpeed": 0.2,
     "IsAnimationCentralized": false
   },
   {

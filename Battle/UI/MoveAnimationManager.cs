@@ -87,11 +87,6 @@ namespace ProjectVagabond.Battle.UI
 
                     var position = renderer.GetCombatantVisualCenterPosition(target, ServiceLocator.Get<BattleManager>().AllCombatants);
 
-                    // If the target is the player, move the animation off-screen.
-                    if (target.IsPlayerControlled)
-                    {
-                        position.Y += 300;
-                    }
 
                     var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed);
                     _activeAnimations.Add(instance);
@@ -126,4 +121,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-#nullable restore

@@ -19,7 +19,7 @@
         "MinAgility": 6,
         "MaxAgility": 8,
         "DefensiveElementIDs": [ 101, 106 ],
-        "MoveLearnset": [ "MireSplash", "ShoulderBash" ],
+        "MoveLearnset": [ "MagicMud", "ShoulderBash" ],
         "MinNumberOfMoves": 1,
         "MaxNumberOfMoves": 2
       }
