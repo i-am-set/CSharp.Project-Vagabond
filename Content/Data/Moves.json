@@ -358,7 +358,7 @@
     "OffensiveElementIDs": [ 5 ],
     "Tags": [ "Earth" ],
     "AnimationSpriteSheet": "earth_mud_splat",
-    "AnimationSpeed": 2.0,
+    "AnimationSpeed": 1.0,
     "IsAnimationCentralized": false
   },
   // --- Metal ---
