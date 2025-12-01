@@ -372,7 +372,8 @@ namespace ProjectVagabond.Scenes
                                 uiBusy != _wasUiBusyLastFrame ||
                                 animBusy != _wasAnimatingLastFrame;
 
-            if (!stateChanged && !canAdvance && !_isBattleOver)
+            // Don't tick watchdog if we are simply waiting for the user to read narration
+            if (!stateChanged && !canAdvance && !_isBattleOver && !_uiManager.IsWaitingForInput)
             {
                 _watchdogTimer += dt;
             }

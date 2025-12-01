@@ -49,6 +49,11 @@ namespace ProjectVagabond.Battle.UI
 
         public bool IsBusy => _messageQueue.Count > 0 || !string.IsNullOrEmpty(_currentSegment);
 
+        /// <summary>
+        /// Returns true if the narrator has finished typing the current segment and is waiting for the user to proceed.
+        /// </summary>
+        public bool IsWaitingForInput => _isWaitingForInput;
+
         public BattleNarrator(Rectangle bounds)
         {
             _global = ServiceLocator.Get<Global>();

@@ -48,6 +48,7 @@ namespace ProjectVagabond.Battle.UI
         public float SharedPulseTimer { get; private set; } = 0f;
 
         public bool IsBusy => _battleNarrator.IsBusy || _narrationQueue.Any();
+        public bool IsWaitingForInput => _battleNarrator.IsWaitingForInput;
 
         private bool _isPromptVisible;
         private readonly List<Texture2D> _promptTextures = new List<Texture2D>();
