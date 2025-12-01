@@ -2,13 +2,14 @@
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
 using System.Text;
 
 namespace ProjectVagabond.Battle.UI
@@ -377,7 +378,7 @@ namespace ProjectVagabond.Battle.UI
 
             const int horizontalPadding = 10;
             const int dividerY = 122;
-            const int menuVerticalOffset = 4;
+            const int menuVerticalOffset = 8; // Changed from 4 to 8
             const int itemListHeight = 37;
             const int bottomBarTopPadding = 3;
             const int bottomBarHeight = 15;
@@ -459,7 +460,8 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            int bottomBarY = _itemListBounds.Bottom + bottomBarTopPadding;
+            // Fixed Y position to match ActionMenu and ensure visibility
+            int bottomBarY = 165;
             var backSize = secondaryFont.MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(_itemListBounds.Center.X - backWidth / 2, bottomBarY, backWidth, bottomBarHeight);
