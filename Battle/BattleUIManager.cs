@@ -217,13 +217,15 @@ namespace ProjectVagabond.Battle.UI
                 if (_lastHoveredButton != null)
                 {
                     _promptTextures.Clear();
-                    _promptTextures.Add(spriteManager.MousePromptDisabled);
+                    // Use MousePromptBlank instead of MousePromptDisabled to avoid darkening
+                    _promptTextures.Add(spriteManager.MousePromptBlank);
                     _promptTextureIndex = 0;
                     _lastHoveredButton = null;
                 }
                 else if (!_promptTextures.Any())
                 {
-                    _promptTextures.Add(spriteManager.MousePromptDisabled);
+                    // Use MousePromptBlank instead of MousePromptDisabled to avoid darkening
+                    _promptTextures.Add(spriteManager.MousePromptBlank);
                 }
                 return;
             }
@@ -273,6 +275,15 @@ namespace ProjectVagabond.Battle.UI
                 Global.VIRTUAL_WIDTH - textureToDraw.Width - padding,
                 Global.VIRTUAL_HEIGHT - textureToDraw.Height - padding
             );
+
+            var global = ServiceLocator.Get<Global>();
+            var outlineColor = global.Palette_Black;
+
+            // Draw Outline
+            spriteBatch.DrawSnapped(textureToDraw, position + new Vector2(-1, 0), outlineColor);
+            spriteBatch.DrawSnapped(textureToDraw, position + new Vector2(1, 0), outlineColor);
+            spriteBatch.DrawSnapped(textureToDraw, position + new Vector2(0, -1), outlineColor);
+            spriteBatch.DrawSnapped(textureToDraw, position + new Vector2(0, 1), outlineColor);
 
             spriteBatch.DrawSnapped(textureToDraw, position, Color.White);
         }

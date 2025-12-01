@@ -35,6 +35,11 @@ namespace ProjectVagabond
         public Texture2D RarityIconsSpriteSheet { get; private set; }
         public Texture2D InventorySlotEquipIconSprite { get; private set; }
 
+        // Battle Borders
+        public Texture2D BattleBorderMain { get; private set; }
+        public Texture2D BattleBorderAction { get; private set; }
+        public Texture2D BattleBorderItem { get; private set; }
+
         // Player Portraits
         public Texture2D PlayerPortraitsSpriteSheet { get; private set; }
         public Texture2D PlayerPortraitsAltSpriteSheet { get; private set; }
@@ -255,6 +260,16 @@ namespace ProjectVagabond
 
             try { RarityIconsSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/rarity_icons_8x8_spritesheet"); }
             catch { RarityIconsSpriteSheet = _textureFactory.CreateColoredTexture(16, 48, Color.Magenta); }
+
+            // Load Battle Borders
+            try { BattleBorderMain = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_main"); }
+            catch { BattleBorderMain = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+
+            try { BattleBorderAction = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_action"); }
+            catch { BattleBorderAction = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+
+            try { BattleBorderItem = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_item"); }
+            catch { BattleBorderItem = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
 
             // Load Mouse Prompt Sprites
             try { MousePromptBlank = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_blank"); }

@@ -97,7 +97,7 @@ namespace ProjectVagabond.Battle.UI
         private bool _shouldAttuneButtonPulse = false;
 
         // --- Moves Menu Layout Constants ---
-        private const int MOVE_BUTTON_WIDTH = 128;
+        private const int MOVE_BUTTON_WIDTH = 118; // Reduced from 128
         private const int MOVE_BUTTON_HEIGHT = 9;
         private const int MOVE_ROW_SPACING = 1;
         private const int MOVE_ROWS = 4;
@@ -107,7 +107,7 @@ namespace ProjectVagabond.Battle.UI
         public ActionMenu()
         {
             _global = ServiceLocator.Get<Global>();
-            _backButton = new Button(Rectangle.Empty, "BACK") { CustomDefaultTextColor = _global.Palette_Gray };
+            _backButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
             _backButton.OnClick += () => {
                 if (_currentState == MenuState.Targeting || _currentState == MenuState.Tooltip)
                 {
@@ -156,7 +156,6 @@ namespace ProjectVagabond.Battle.UI
             _actionButtons.Add(fleeButton);
 
             // Secondary Action Buttons
-            // Updated initialization to disable sway, set white hover text, disable background tint, and enable border drawing.
             var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: Color.White)
             {
                 HasRightClickHint = true,
@@ -518,7 +517,7 @@ namespace ProjectVagabond.Battle.UI
                     const int borderWidth = 120;
                     const int layoutGap = 2;
                     int moveGridStartY = 128;
-                    int moveGridStartX = 65;
+                    int moveGridStartX = 75; // Shifted right by 10
                     int secGridStartX = moveGridStartX - layoutGap - secButtonWidth;
                     int secGridStartY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (secBlockHeight / 2);
 
@@ -667,6 +666,15 @@ namespace ProjectVagabond.Battle.UI
                         SetState(MenuState.Tooltip);
                     }
 
+                    // --- Right Click to Back Logic ---
+                    if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
+                    {
+                        if (!rightClickHeldOnAButton)
+                        {
+                            GoBack();
+                        }
+                    }
+
                     if (HoveredMove != _lastHoveredMoveForScrolling)
                     {
                         _isHoverInfoScrollingInitialized = false;
@@ -701,6 +709,7 @@ namespace ProjectVagabond.Battle.UI
         {
             InitializeButtons();
 
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
             var pixel = ServiceLocator.Get<Texture2D>();
             var bgColor = _global.Palette_Black; // Changed to fully opaque black
             const int dividerY = 123;
@@ -708,6 +717,16 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawSnapped(pixel, bgRect, bgColor);
 
             if (!_isVisible) return;
+
+            // Draw the specific border based on state
+            if (_currentState == MenuState.Main)
+            {
+                spriteBatch.DrawSnapped(spriteManager.BattleBorderMain, Vector2.Zero, Color.White);
+            }
+            else if (_currentState == MenuState.Moves || _currentState == MenuState.Targeting || _currentState == MenuState.Tooltip)
+            {
+                spriteBatch.DrawSnapped(spriteManager.BattleBorderAction, Vector2.Zero, Color.White);
+            }
 
             switch (_currentState)
             {
@@ -747,7 +766,7 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.Targeting:
                     {
                         const int backButtonPadding = 8;
-                        const int backButtonHeight = 5;
+                        const int backButtonHeight = 7; // Increased from 5
                         const int backButtonTopMargin = 1;
                         const int horizontalPadding = 10;
                         const int verticalPadding = 2;
@@ -771,8 +790,8 @@ namespace ProjectVagabond.Battle.UI
 
                         int backButtonWidth = (int)(_backButton.Font ?? font).MeasureString(_backButton.Text).Width + backButtonPadding * 2;
                         _backButton.Bounds = new Rectangle(
-                            horizontalPadding + (availableWidth - backButtonWidth) / 2,
-                            gridStartY + gridAreaHeight + backButtonTopMargin - 5,
+                            horizontalPadding + (availableWidth - backButtonWidth) / 2 + 1, // Added +1 to X
+                            gridStartY + gridAreaHeight + backButtonTopMargin - 9, // Moved up by 1 pixel (was -8)
                             backButtonWidth,
                             backButtonHeight
                         );
@@ -804,6 +823,9 @@ namespace ProjectVagabond.Battle.UI
             const int boxY = 117;
             int boxX = (Global.VIRTUAL_WIDTH - boxWidth) / 2;
             var tooltipBounds = new Rectangle(boxX, boxY, boxWidth, boxHeight);
+
+            // Draw opaque black background
+            spriteBatch.DrawSnapped(pixel, tooltipBounds, _global.Palette_Black);
 
             var borderColor = _global.Palette_White;
             spriteBatch.DrawSnapped(pixel, new Rectangle(tooltipBounds.Left, tooltipBounds.Top, tooltipBounds.Width, 1), borderColor);
@@ -840,14 +862,14 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            int backButtonY = tooltipBounds.Bottom + 7;
+            int backButtonY = tooltipBounds.Bottom + 5; // Moved down by 2 pixels (was +3)
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2,
+                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1, // Added +1 to X
                 backButtonY,
                 backWidth,
-                5
+                7 // Increased from 5
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }
@@ -855,6 +877,8 @@ namespace ProjectVagabond.Battle.UI
         private void DrawComplexTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var pixel = ServiceLocator.Get<Texture2D>(); // Added pixel retrieval
+
             const int dividerY = 114;
             const int moveButtonWidth = 157;
             const int columns = 2;
@@ -868,6 +892,10 @@ namespace ProjectVagabond.Battle.UI
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
             var tooltipBgRect = new Rectangle(gridStartX, gridStartY, totalGridWidth, gridHeight);
+
+            // Draw opaque black background
+            spriteBatch.DrawSnapped(pixel, tooltipBgRect, _global.Palette_Black);
+
             spriteBatch.DrawSnapped(tooltipBg, tooltipBgRect, Color.White);
 
             if (_tooltipMove != null)
@@ -876,14 +904,14 @@ namespace ProjectVagabond.Battle.UI
             }
 
             const int backButtonTopMargin = 0;
-            int backButtonY = gridStartY + gridHeight + backButtonTopMargin + 4;
+            int backButtonY = gridStartY + gridHeight + backButtonTopMargin + 2; // Moved down by 2 pixels (was +0)
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2,
+                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1, // Added +1 to X
                 backButtonY,
                 backWidth,
-                5
+                7 // Increased from 5
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }
@@ -900,17 +928,13 @@ namespace ProjectVagabond.Battle.UI
             const int layoutGap = 2;
 
             int moveGridStartY = 128;
-            int moveGridStartX = 65;
+            int moveGridStartX = 75; // Shifted right by 10
             int borderX = moveGridStartX + MOVE_BUTTON_WIDTH + layoutGap;
             int borderY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (borderHeight / 2);
 
 
             var borderRect = new Rectangle(borderX, borderY, borderWidth, borderHeight);
-            var borderColor = _global.Palette_DarkGray;
-            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Top, borderRect.Width, 1), borderColor); // Top
-            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Bottom - 1, borderRect.Width, 1), borderColor); // Bottom
-            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Top, 1, borderRect.Height), borderColor); // Left
-            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Right - 1, borderRect.Top, 1, borderRect.Height), borderColor); // Right
+            // Removed manual border drawing here as it's now handled by the background sprite
 
             DrawMoveInfoPanelContent(spriteBatch, HoveredMove, borderRect, font, secondaryFont, transform, false);
 
@@ -988,14 +1012,14 @@ namespace ProjectVagabond.Battle.UI
 
 
             int layoutBottomY = Math.Max(borderRect.Bottom, moveGridStartY + MOVE_BLOCK_HEIGHT);
-            int backButtonY = layoutBottomY + 7;
+            int backButtonY = layoutBottomY + 3; // Moved up by 1 pixel (was +4)
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2,
+                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1, // Added +1 to X
                 backButtonY,
                 backWidth,
-                5
+                7 // Increased from 5
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }

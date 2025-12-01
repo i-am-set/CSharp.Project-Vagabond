@@ -46,9 +46,11 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
             _sortContextMenu = new ContextMenu();
-            _backButton = new Button(Rectangle.Empty, "BACK", function: "Back") { CustomDefaultTextColor = _global.Palette_Gray };
+            _backButton = new Button(Rectangle.Empty, "BACK", function: "Back", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
             _backButton.OnClick += HandleBack;
-            _sortButton = new Button(Rectangle.Empty, "SORT", function: "Sort");
+
+            // Updated: Disable hover sway for Sort button
+            _sortButton = new Button(Rectangle.Empty, "SORT", function: "Sort", enableHoverSway: false);
             _sortButton.OnClick += OpenSortMenu;
 
             _yesButton = new Button(Rectangle.Empty, "YES");
@@ -239,19 +241,46 @@ namespace ProjectVagabond.Battle.UI
 
             int startIndex = _scrollIndex * 2;
             int endIndex = Math.Min(_displayItems.Count, startIndex + _maxVisibleRows * 2);
+
+            bool rightClickHeldOnItem = false;
+            ConsumableItemData? itemForTooltip = null;
+
             for (int i = 0; i < _displayItems.Count; i++)
             {
-                if (_displayItems[i] is Button button)
+                if (_displayItems[i] is InventoryItemButton button)
                 {
                     if (i >= startIndex && i < endIndex)
                     {
                         button.Update(currentMouseState);
-                        if (button.IsHovered) HoveredButton = button;
+                        if (button.IsHovered)
+                        {
+                            HoveredButton = button;
+                            if (currentMouseState.RightButton == ButtonState.Pressed)
+                            {
+                                rightClickHeldOnItem = true;
+                                itemForTooltip = button.Item;
+                            }
+                        }
                     }
                     else
                     {
                         button.IsHovered = false;
                     }
+                }
+            }
+
+            if (rightClickHeldOnItem)
+            {
+                _itemForTooltip = itemForTooltip;
+                _currentState = MenuState.Tooltip;
+            }
+
+            // Right click to back logic
+            if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
+            {
+                if (!rightClickHeldOnItem)
+                {
+                    HandleBack();
                 }
             }
 
@@ -264,16 +293,12 @@ namespace ProjectVagabond.Battle.UI
 
         private void UpdateTooltip(MouseState currentMouseState)
         {
-            bool leftClick = currentMouseState.LeftButton == ButtonState.Released && _previousMouseState.LeftButton == ButtonState.Pressed;
-            bool rightClick = currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
-            if (leftClick || rightClick)
+            // Release right click to exit tooltip
+            if (currentMouseState.RightButton == ButtonState.Released)
             {
-                if (UIInputManager.CanProcessMouseClick())
-                {
-                    _currentState = MenuState.List;
-                    UIInputManager.ConsumeMouseClick();
-                }
+                _currentState = MenuState.List;
             }
+
             _backButton.Update(currentMouseState);
             if (_backButton.IsHovered) HoveredButton = _backButton;
         }
@@ -315,8 +340,8 @@ namespace ProjectVagabond.Battle.UI
             const int dividerY = 122;
             const int menuVerticalOffset = 4;
             const int itemListHeight = 37;
-            const int bottomBarTopPadding = 5;
-            const int bottomBarHeight = 13;
+            const int bottomBarTopPadding = 3;
+            const int bottomBarHeight = 15;
             const int itemWidth = 145;
             const int itemHeight = 9;
             const int columnSpacing = 2;
@@ -325,9 +350,15 @@ namespace ProjectVagabond.Battle.UI
             int totalGridWidth = (itemWidth * columns) + columnSpacing;
             int gridStartX = horizontalPadding + (Global.VIRTUAL_WIDTH - (horizontalPadding * 2) - totalGridWidth) / 2;
 
-            var bgSprite = spriteManager.ActionMovesBackgroundSprite;
-            var bgRect = new Rectangle(gridStartX - 1, dividerY + menuVerticalOffset - 1, 294, itemListHeight + 2);
-            spriteBatch.DrawSnapped(bgSprite, bgRect, Color.White);
+            // Draw opaque black background
+            var pixel = ServiceLocator.Get<Texture2D>();
+            var bgColor = _global.Palette_Black;
+            const int bgY = 123;
+            var bgRect = new Rectangle(0, bgY, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - bgY);
+            spriteBatch.DrawSnapped(pixel, bgRect, bgColor);
+
+            // Draw Border
+            spriteBatch.DrawSnapped(spriteManager.BattleBorderItem, Vector2.Zero, Color.White);
 
             int gridStartY = dividerY + menuVerticalOffset;
             _itemListBounds = new Rectangle(gridStartX, gridStartY, totalGridWidth, itemListHeight);
@@ -373,7 +404,6 @@ namespace ProjectVagabond.Battle.UI
 
                 if (_totalRows > _maxVisibleRows)
                 {
-                    var pixel = ServiceLocator.Get<Texture2D>();
                     int scrollbarX = _itemListBounds.Right + 2;
                     var scrollbarBgRect = new Rectangle(scrollbarX, _itemListBounds.Y, 1, _itemListBounds.Height);
                     spriteBatch.DrawSnapped(pixel, scrollbarBgRect, _global.Palette_DarkGray);
@@ -408,53 +438,80 @@ namespace ProjectVagabond.Battle.UI
         {
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var pixel = ServiceLocator.Get<Texture2D>();
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
 
-            const int boxWidth = 294;
-            const int boxHeight = 47;
-            const int boxY = 125;
-            int boxX = (Global.VIRTUAL_WIDTH - boxWidth) / 2;
+            // Layout constants matching ActionMenu
+            const int dividerY = 114;
+            const int moveButtonWidth = 157;
+            const int columns = 2;
+            const int columnSpacing = 0;
+            int totalGridWidth = (moveButtonWidth * columns) + columnSpacing; // 314
+            const int gridHeight = 40;
+            int gridStartX = (Global.VIRTUAL_WIDTH - totalGridWidth) / 2;
+            int gridStartY = dividerY + 2 + 12; // 128
 
-            var tooltipBounds = new Rectangle(boxX, boxY, boxWidth, boxHeight);
+            var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
+            var tooltipBgRect = new Rectangle(gridStartX, gridStartY, totalGridWidth, gridHeight);
 
-            spriteBatch.DrawLineSnapped(new Vector2(tooltipBounds.Left, tooltipBounds.Top), new Vector2(tooltipBounds.Right, tooltipBounds.Top), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(tooltipBounds.Left, tooltipBounds.Bottom), new Vector2(tooltipBounds.Right, tooltipBounds.Bottom), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(tooltipBounds.Left, tooltipBounds.Top), new Vector2(tooltipBounds.Left, tooltipBounds.Bottom), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(tooltipBounds.Right, tooltipBounds.Top), new Vector2(tooltipBounds.Right, tooltipBounds.Bottom), _global.Palette_White);
+            // Draw opaque black background
+            spriteBatch.DrawSnapped(pixel, tooltipBgRect, _global.Palette_Black);
+            // Draw sprite background
+            spriteBatch.DrawSnapped(tooltipBg, tooltipBgRect, Color.White);
 
             if (_itemForTooltip != null)
             {
+                // Draw Content
+                const int horizontalPadding = 4;
+                const int verticalPadding = 3;
+                float currentY = tooltipBgRect.Y + verticalPadding;
+
+                // Name
                 var itemName = _itemForTooltip.ItemName.ToUpper();
-                var nameSize = font.MeasureString(itemName);
-                var namePos = new Vector2(
-                    tooltipBounds.Center.X - nameSize.Width / 2,
-                    tooltipBounds.Y + 8
-                );
+                var namePos = new Vector2(tooltipBgRect.X + horizontalPadding, currentY);
                 spriteBatch.DrawStringSnapped(font, itemName, namePos, _global.Palette_BrightWhite);
 
-                string effectText = _itemForTooltip.Description.ToUpper();
-                var wrappedLines = WrapTextByCharCount(effectText, 46);
-                float currentY = namePos.Y + nameSize.Height + 6;
+                // Type (Right aligned)
+                string typeText = "CONSUMABLE";
+                var typeSize = secondaryFont.MeasureString(typeText);
+                var typePos = new Vector2(tooltipBgRect.Right - horizontalPadding - typeSize.Width, currentY + (font.LineHeight - secondaryFont.LineHeight) / 2);
+                spriteBatch.DrawStringSnapped(secondaryFont, typeText, typePos, _global.Palette_LightBlue);
 
-                foreach (var line in wrappedLines)
+                currentY += font.LineHeight + 1;
+
+                // Underline
+                var underlineStart = new Vector2(tooltipBgRect.X + horizontalPadding, currentY);
+                var underlineEnd = new Vector2(tooltipBgRect.Right - horizontalPadding, currentY);
+                spriteBatch.DrawLineSnapped(underlineStart, underlineEnd, _global.Palette_DarkGray);
+                currentY += 3;
+
+                // Description
+                if (!string.IsNullOrEmpty(_itemForTooltip.Description))
                 {
-                    var lineSize = secondaryFont.MeasureString(line);
-                    var linePos = new Vector2(
-                        tooltipBounds.Center.X - lineSize.Width / 2,
-                        currentY
-                    );
-                    spriteBatch.DrawStringSnapped(secondaryFont, line, linePos, _global.Palette_White);
-                    currentY += secondaryFont.LineHeight;
+                    float availableWidth = tooltipBgRect.Width - (horizontalPadding * 2);
+                    var wrappedLines = WrapText(_itemForTooltip.Description.ToUpper(), availableWidth, secondaryFont);
+                    foreach (var line in wrappedLines)
+                    {
+                        if (currentY + secondaryFont.LineHeight > tooltipBgRect.Bottom - verticalPadding) break;
+                        var descPos = new Vector2(tooltipBgRect.X + horizontalPadding, currentY);
+                        spriteBatch.DrawStringSnapped(secondaryFont, line, descPos, _global.Palette_White);
+                        currentY += secondaryFont.LineHeight;
+                    }
                 }
             }
 
-            int backButtonY = tooltipBounds.Bottom + 4;
-            var backSize = secondaryFont.MeasureString(_backButton.Text);
+            // Back Button
+            const int backButtonTopMargin = 0;
+            int backButtonY = gridStartY + gridHeight + backButtonTopMargin + 2;
+
+            // Ensure button size matches ActionMenu
+            var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
+
             _backButton.Bounds = new Rectangle(
-                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
+                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1, // +1 X from ActionMenu adjustment
                 backButtonY,
                 backWidth,
-                13
+                7 // Height from ActionMenu
             );
             _backButton.Draw(spriteBatch, font, gameTime, transform);
         }
@@ -501,6 +558,37 @@ namespace ProjectVagabond.Battle.UI
 
             _yesButton.Draw(spriteBatch, font, gameTime, transform);
             _noButton.Draw(spriteBatch, font, gameTime, transform);
+        }
+
+        private List<string> WrapText(string text, float maxLineWidth, BitmapFont font)
+        {
+            var lines = new List<string>();
+            if (string.IsNullOrEmpty(text)) return lines;
+
+            var words = text.Split(' ');
+            var currentLine = new StringBuilder();
+
+            foreach (var word in words)
+            {
+                var testLine = currentLine.Length > 0 ? currentLine.ToString() + " " + word : word;
+                if (font.MeasureString(testLine).Width > maxLineWidth)
+                {
+                    lines.Add(currentLine.ToString());
+                    currentLine.Clear();
+                    currentLine.Append(word);
+                }
+                else
+                {
+                    if (currentLine.Length > 0)
+                        currentLine.Append(" ");
+                    currentLine.Append(word);
+                }
+            }
+
+            if (currentLine.Length > 0)
+                lines.Add(currentLine.ToString());
+
+            return lines;
         }
 
         private List<string> WrapTextByCharCount(string text, int maxCharsPerLine)
