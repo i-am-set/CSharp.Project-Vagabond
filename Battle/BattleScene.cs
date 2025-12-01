@@ -303,7 +303,7 @@ namespace ProjectVagabond.Scenes
                         if (!_rewardScreenShown)
                         {
                             _rewardScreenShown = true;
-                            ShowRewardScreen();
+                            FinalizeVictory();
                         }
                     }
                     else // Player lost or fled

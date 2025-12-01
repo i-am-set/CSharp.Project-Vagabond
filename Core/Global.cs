@@ -49,6 +49,7 @@ namespace ProjectVagabond
             ToolTipBorderColor = Palette_BrightWhite;
             TerminalDarkGray = Palette_DarkGray;
             InputCaratColor = Color.Khaki;
+            AlertColor = Color.Red;
 
             // Initialize Stat Colors
             StatColor_Strength = Color.Crimson;
@@ -243,6 +244,7 @@ namespace ProjectVagabond
         public Color ToolTipBorderColor { get; private set; }
         public Color TerminalDarkGray { get; set; }
         public Color InputCaratColor { get; set; }
+        public Color AlertColor { get; private set; }
 
         // Stat-specific Colors
         public Color StatColor_Strength { get; private set; }

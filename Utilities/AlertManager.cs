@@ -101,7 +101,7 @@ namespace ProjectVagabond.Battle.UI
                     alert.CurrentPosition.Y
                 );
 
-                spriteBatch.DrawStringOutlinedSnapped(font, alert.Text, textPosition, _global.Palette_Red, Color.Black);
+                spriteBatch.DrawStringOutlinedSnapped(font, alert.Text, textPosition, _global.AlertColor, _global.Palette_Black);
             }
         }
     }
