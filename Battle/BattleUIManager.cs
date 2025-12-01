@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -98,6 +97,12 @@ namespace ProjectVagabond.Battle.UI
             UIState = BattleUIState.Default;
             SubMenuState = BattleSubMenuState.None;
             _narrationQueue.Clear();
+        }
+
+        public void ForceClearNarration()
+        {
+            _narrationQueue.Clear();
+            _battleNarrator.ForceClear();
         }
 
         public void ShowActionMenu(BattleCombatant player, List<BattleCombatant> allCombatants)
@@ -417,4 +422,3 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
-﻿

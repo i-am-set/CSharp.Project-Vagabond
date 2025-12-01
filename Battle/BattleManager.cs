@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -81,6 +80,33 @@ namespace ProjectVagabond.Battle
             HandleOnEnterAbilities();
         }
 
+        /// <summary>
+        /// Emergency method called by the Watchdog to force the battle state forward if stuck.
+        /// </summary>
+        public void ForceAdvance()
+        {
+            // Clear any pending internal state that might be blocking progress
+            _actionToExecute = null;
+            _actionPendingAnimation = null;
+            _currentMultiHitAction = null;
+
+            // If we were stuck animating or resolving, move to checking defeat to clean up the turn
+            if (_currentPhase == BattlePhase.AnimatingMove ||
+                _currentPhase == BattlePhase.ActionResolution ||
+                _currentPhase == BattlePhase.SecondaryEffectResolution)
+            {
+                _currentPhase = BattlePhase.CheckForDefeat;
+            }
+            // If we were stuck in check for defeat or end of turn, force a new round
+            else if (_currentPhase == BattlePhase.CheckForDefeat || _currentPhase == BattlePhase.EndOfTurn)
+            {
+                RoundNumber++;
+                _currentPhase = BattlePhase.StartOfTurn;
+            }
+
+            CanAdvance = true;
+        }
+
         private void OnSecondaryEffectComplete(GameEvents.SecondaryEffectComplete e)
         {
             if (_currentPhase == BattlePhase.SecondaryEffectResolution)
@@ -91,6 +117,8 @@ namespace ProjectVagabond.Battle
 
         private void OnMoveAnimationCompleted(GameEvents.MoveAnimationCompleted e)
         {
+            // Only process this event if we are actually waiting for an animation.
+            // This prevents double-firing from the "Skip Animation" logic in BattleScene.
             if (_currentPhase == BattlePhase.AnimatingMove && _actionPendingAnimation != null)
             {
                 ProcessMoveAction(_actionPendingAnimation);
@@ -122,7 +150,7 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.StartOfTurn: HandleStartOfTurn(); break;
                 case BattlePhase.ActionSelection: HandleActionSelection(); break;
                 case BattlePhase.ActionResolution: HandleActionResolution(); break;
-                case BattlePhase.AnimatingMove: break;
+                case BattlePhase.AnimatingMove: break; // Waiting for event
                 case BattlePhase.SecondaryEffectResolution: HandleSecondaryEffectResolution(); break;
                 case BattlePhase.CheckForDefeat: HandleCheckForDefeat(); break;
                 case BattlePhase.EndOfTurn: HandleEndOfTurn(); break;
@@ -286,6 +314,7 @@ namespace ProjectVagabond.Battle
             }
             else if (action.ChosenMove != null)
             {
+                // Check if animation exists. If not, skip straight to processing.
                 if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
                 {
                     _actionPendingAnimation = action;
@@ -294,8 +323,6 @@ namespace ProjectVagabond.Battle
 
                     MoveData animMove = action.ChosenMove;
 
-                    // Only centralize enemy animations if they are NOT targeting themselves.
-                    // This ensures attacks play on the player (center), but buffs play on the enemy.
                     if (!action.Actor.IsPlayerControlled && action.ChosenMove.Target != TargetType.Self)
                     {
                         animMove = action.ChosenMove.Clone();

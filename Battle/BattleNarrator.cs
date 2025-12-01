@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -56,6 +55,15 @@ namespace ProjectVagabond.Battle.UI
             _bounds = bounds;
             _previousMouseState = Mouse.GetState();
             _previousKeyboardState = Keyboard.GetState();
+        }
+
+        public void ForceClear()
+        {
+            _messageQueue.Clear();
+            _currentSegment = "";
+            _words.Clear();
+            _displayLines.Clear();
+            _isWaitingForInput = false;
         }
 
         public void Show(string message, BitmapFont font)

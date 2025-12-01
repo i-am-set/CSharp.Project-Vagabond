@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle.UI;
@@ -155,6 +154,11 @@ namespace ProjectVagabond.Battle.UI
         }
 
         public void Reset()
+        {
+            ForceClearAll();
+        }
+
+        public void ForceClearAll()
         {
             _activeHealthAnimations.Clear();
             _activeAlphaAnimations.Clear();

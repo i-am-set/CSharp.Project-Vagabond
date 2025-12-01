@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -62,10 +61,12 @@ namespace ProjectVagabond.Scenes
         private readonly Random _random = new Random();
         private bool _actionJustDeclared = false;
 
-        // Failsafe State
-        private float _softLockFailsafeTimer = 0f;
-        private const float SOFT_LOCK_TIMEOUT = 3.0f;
-
+        // --- FAILSAFE / WATCHDOG STATE ---
+        private float _watchdogTimer = 0f;
+        private const float WATCHDOG_TIMEOUT = 4.0f; // If no state change in 4 seconds, force advance.
+        private BattleManager.BattlePhase _lastFramePhase;
+        private bool _wasUiBusyLastFrame;
+        private bool _wasAnimatingLastFrame;
 
         public BattleAnimationManager AnimationManager => _animationManager;
 
@@ -118,7 +119,9 @@ namespace ProjectVagabond.Scenes
             _pendingAnimations.Clear();
             _rewardScreenShown = false;
             _actionJustDeclared = false;
-            _softLockFailsafeTimer = 0f;
+
+            // Reset Watchdog
+            _watchdogTimer = 0f;
 
             // Subscribe to events
             SubscribeToEvents();
@@ -202,10 +205,7 @@ namespace ProjectVagabond.Scenes
                     UseScreenCoordinates = true
                 };
             }
-            // The event is unsubscribed in Exit(), so it must be re-subscribed every time the scene is entered.
             _settingsButton.OnClick += OpenSettings;
-
-            // Reset animation states
             _settingsButton.ResetAnimationState();
         }
 
@@ -244,7 +244,7 @@ namespace ProjectVagabond.Scenes
             }
 
             _battleManager = new BattleManager(playerParty, enemyParty);
-            ServiceLocator.Register<BattleManager>(_battleManager); // Register the instance
+            ServiceLocator.Register<BattleManager>(_battleManager);
             _previousBattlePhase = _battleManager.CurrentPhase;
         }
 
@@ -262,12 +262,7 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void CleanupPlayerState()
-        {
-            // This method is now intentionally left empty.
-            // The player's master spellbook state should not be modified upon exiting combat.
-            // It should only change through explicit learn/forget events.
-        }
+        private void CleanupPlayerState() { }
 
         public override void Update(GameTime gameTime)
         {
@@ -279,8 +274,9 @@ namespace ProjectVagabond.Scenes
 
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Update managers
+            // --- 1. Update Sub-Systems ---
             _animationManager.Update(gameTime, _battleManager.AllCombatants);
             _moveAnimationManager.Update(gameTime);
             _uiManager.Update(gameTime, currentMouseState, currentKeyboardState);
@@ -290,7 +286,7 @@ namespace ProjectVagabond.Scenes
             _settingsButton?.Update(currentMouseState);
             _tooltipManager.Update(gameTime);
 
-            // Handle end of battle state
+            // --- 2. Handle End of Battle ---
             if (_isBattleOver)
             {
                 if (!_uiManager.IsBusy && !_animationManager.IsAnimating)
@@ -303,12 +299,12 @@ namespace ProjectVagabond.Scenes
                         if (!_rewardScreenShown)
                         {
                             _rewardScreenShown = true;
-                            FinalizeVictory();
+                            ShowRewardScreen();
                         }
                     }
-                    else // Player lost or fled
+                    else
                     {
-                        _endOfBattleTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                        _endOfBattleTimer += dt;
                         if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
                         {
                             SplitMapScene.PlayerWonLastBattle = false;
@@ -320,77 +316,97 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // Animation Skip Logic
-            if ((_animationManager.IsAnimating || _moveAnimationManager.IsAnimating) && (UIInputManager.CanProcessMouseClick() && currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed))
+            // --- 3. Animation Skipping Logic ---
+            // If the user clicks while animations are playing, skip them.
+            bool isAnimating = _animationManager.IsAnimating || _moveAnimationManager.IsAnimating;
+            bool clickDetected = UIInputManager.CanProcessMouseClick() &&
+                                 currentMouseState.LeftButton == ButtonState.Released &&
+                                 previousMouseState.LeftButton == ButtonState.Pressed;
+
+            if (isAnimating && clickDetected)
             {
-                // If we are waiting for a move animation, skipping should immediately trigger the completion event.
+                // If we are specifically waiting for a move animation, signal completion immediately.
                 if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingMove)
                 {
                     _moveAnimationManager.SkipAll();
                     EventBus.Publish(new GameEvents.MoveAnimationCompleted());
                 }
 
-                // Also skip any damage/health animations that might be playing concurrently or from a previous action.
+                // Skip other visual flair
                 _animationManager.SkipAllHealthAnimations(_battleManager.AllCombatants);
                 _animationManager.SkipAllBarAnimations();
 
+                // Consume the click so it doesn't trigger UI buttons in the same frame
                 UIInputManager.ConsumeMouseClick();
             }
 
-            // Process pending animations only when the UI is free
+            // --- 4. Process Pending Animations ---
+            // Only process one pending animation per frame, and only if UI isn't busy.
             if (!_uiManager.IsBusy && !_animationManager.IsAnimating && _pendingAnimations.Any())
             {
                 var nextAnimation = _pendingAnimations.Dequeue();
                 nextAnimation.Invoke();
             }
 
-            // Battle Manager Advancement Logic
-            bool canAdvance = !_uiManager.IsBusy && !_animationManager.IsAnimating && !_moveAnimationManager.IsAnimating && !_pendingAnimations.Any();
+            // --- 5. Determine if Battle Can Advance ---
+            bool uiBusy = _uiManager.IsBusy;
+            bool animBusy = _animationManager.IsAnimating;
+            bool moveAnimBusy = _moveAnimationManager.IsAnimating;
+            bool pendingBusy = _pendingAnimations.Any();
 
+            bool canAdvance = !uiBusy && !animBusy && !moveAnimBusy && !pendingBusy;
+
+            // Handle Multi-Hit Delay
             if (_isWaitingForMultiHitDelay && canAdvance)
             {
-                if (_multiHitDelayTimer <= 0)
-                {
-                    _multiHitDelayTimer = MULTI_HIT_DELAY;
-                }
+                if (_multiHitDelayTimer <= 0) _multiHitDelayTimer = MULTI_HIT_DELAY;
+                _multiHitDelayTimer -= dt;
 
-                _multiHitDelayTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-
-                if (_multiHitDelayTimer > 0)
-                {
-                    canAdvance = false;
-                }
-                else
-                {
-                    _multiHitDelayTimer = 0f;
-                }
+                if (_multiHitDelayTimer > 0) canAdvance = false;
+                else _multiHitDelayTimer = 0f;
             }
 
-            // --- Soft-Lock Failsafe ---
-            // If the battle manager can't advance, but no UI or animations are busy,
-            // it indicates a potential soft-lock. We start a timer.
-            if (!canAdvance && !_uiManager.IsBusy && !_animationManager.IsAnimating && !_moveAnimationManager.IsAnimating)
+            // --- 6. WATCHDOG FAILSAFE ---
+            // Detect if the state has been stagnant for too long.
+            bool stateChanged = _battleManager.CurrentPhase != _lastFramePhase ||
+                                uiBusy != _wasUiBusyLastFrame ||
+                                animBusy != _wasAnimatingLastFrame;
+
+            if (!stateChanged && !canAdvance && !_isBattleOver)
             {
-                _softLockFailsafeTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _watchdogTimer += dt;
             }
             else
             {
-                // If we can advance or something is busy, reset the timer.
-                _softLockFailsafeTimer = 0f;
+                _watchdogTimer = 0f;
             }
 
-            // If the timer exceeds the timeout, force the battle to advance.
-            if (_softLockFailsafeTimer > SOFT_LOCK_TIMEOUT)
+            if (_watchdogTimer > WATCHDOG_TIMEOUT)
             {
-                Debug.WriteLine("[BATTLESCENE] [FAILSAFE TRIGGERED] A soft-lock was detected. Forcing battle to advance.");
-                Debug.WriteLine($" -> Current Phase: {_battleManager.CurrentPhase}");
-                Debug.WriteLine($" -> UI Busy: {_uiManager.IsBusy}, Animating: {_animationManager.IsAnimating}, Move Animating: {_moveAnimationManager.IsAnimating}, Pending Anims: {_pendingAnimations.Any()}");
+                Debug.WriteLine($"[BATTLE WATCHDOG] Softlock detected! Force advancing state.");
+                Debug.WriteLine($"Phase: {_battleManager.CurrentPhase} | UI: {uiBusy} | Anim: {animBusy} | MoveAnim: {moveAnimBusy} | Pending: {pendingBusy}");
 
-                canAdvance = true; // Force advancement
-                _pendingAnimations.Clear(); // Clear any potentially stuck animation requests
-                _softLockFailsafeTimer = 0f; // Reset the timer
+                // Force clear all locks
+                _uiManager.ForceClearNarration();
+                _animationManager.ForceClearAll();
+                _moveAnimationManager.SkipAll();
+                _pendingAnimations.Clear();
+                _isWaitingForMultiHitDelay = false;
+
+                // Force the battle manager to try and move on
+                _battleManager.ForceAdvance();
+
+                EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[warning]Combat stalled. Watchdog forced advance." });
+                _watchdogTimer = 0f;
+                canAdvance = true;
             }
 
+            // Update tracking vars for next frame
+            _lastFramePhase = _battleManager.CurrentPhase;
+            _wasUiBusyLastFrame = uiBusy;
+            _wasAnimatingLastFrame = animBusy;
+
+            // --- 7. Update Battle Manager ---
             _battleManager.CanAdvance = canAdvance;
             _battleManager.Update();
 
@@ -400,7 +416,7 @@ namespace ProjectVagabond.Scenes
                 _battleManager.ExecuteDeclaredAction();
             }
 
-            // Handle Phase Changes
+            // --- 8. Handle Phase Changes ---
             var currentPhase = _battleManager.CurrentPhase;
             if (currentPhase != _previousBattlePhase)
             {
@@ -408,7 +424,7 @@ namespace ProjectVagabond.Scenes
                 _previousBattlePhase = currentPhase;
             }
 
-            // Check for battle over condition
+            // --- 9. Check Battle Over ---
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.BattleOver && !_isBattleOver)
             {
                 _isBattleOver = true;
@@ -417,7 +433,8 @@ namespace ProjectVagabond.Scenes
                 _uiManager.ShowNarration(player != null && player.IsDefeated ? "Player Loses!" : "Player Wins!");
             }
 
-            // After all updates, check if a move animation has completed to signal the BattleManager.
+            // --- 10. Failsafe for Move Animation Completion ---
+            // If we are in AnimatingMove phase but no animation is actually playing, force completion.
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingMove && !_moveAnimationManager.IsAnimating)
             {
                 EventBus.Publish(new GameEvents.MoveAnimationCompleted());
@@ -437,18 +454,16 @@ namespace ProjectVagabond.Scenes
 
             var choices = new List<object>();
             const int numberOfChoices = 3;
-            int gameStage = 1; // TODO: Use actual game stage from ProgressionManager
+            int gameStage = 1;
 
             if (SplitMapScene.WasMajorBattle)
             {
-                // Boss battle rewards relics (abilities)
                 var playerAbilities = _componentStore.GetComponent<PassiveAbilitiesComponent>(_gameState.PlayerEntityId)?.RelicIDs;
                 var excludeIds = playerAbilities != null ? new HashSet<string>(playerAbilities) : null;
                 choices.AddRange(_choiceGenerator.GenerateAbilityChoices(gameStage, numberOfChoices, excludeIds));
             }
             else
             {
-                // Normal battle rewards spells
                 var playerSpells = _gameState.PlayerState?.Spells.Select(p => p.MoveID);
                 var excludeIds = playerSpells != null ? new HashSet<string>(playerSpells) : null;
                 choices.AddRange(_choiceGenerator.GenerateSpellChoices(gameStage, numberOfChoices, excludeIds));
@@ -513,12 +528,10 @@ namespace ProjectVagabond.Scenes
 
         public override void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
-            // Draw the main scene content
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             DrawSceneContent(spriteBatch, font, gameTime, transform);
             spriteBatch.End();
 
-            // Draw the overlay content (tooltips, ability indicators, alerts) on top, using the same transform
             spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: transform);
             _renderer.DrawOverlay(spriteBatch, font);
             _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
@@ -527,7 +540,6 @@ namespace ProjectVagabond.Scenes
             _alertManager.Draw(spriteBatch);
             spriteBatch.End();
         }
-
 
         protected override void DrawSceneContent(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
@@ -568,11 +580,7 @@ namespace ProjectVagabond.Scenes
             spriteBatch.End();
         }
 
-        public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
-        {
-            // This is now empty, as the tooltip is part of the virtual scene space.
-            // This method is for screen-space UI that should NOT be scaled.
-        }
+        public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime) { }
 
         #region Event Handlers
         private void OnPlayerMoveSelected(MoveData move, MoveEntry entry, BattleCombatant target)
@@ -581,7 +589,7 @@ namespace ProjectVagabond.Scenes
             if (player != null)
             {
                 var action = _battleManager.CreateActionFromMove(player, move, target);
-                action.SpellbookEntry = entry; // Attach the specific entry to the action
+                action.SpellbookEntry = entry;
                 _battleManager.SetPlayerAction(action);
             }
         }
@@ -617,7 +625,6 @@ namespace ProjectVagabond.Scenes
             _actionJustDeclared = true;
             _currentActor = e.Actor;
             string actionName = e.Item != null ? e.Item.ItemName : e.Move.MoveName;
-
             _uiManager.ShowNarration($"{e.Actor.Name} uses {actionName}!");
         }
 
@@ -631,14 +638,8 @@ namespace ProjectVagabond.Scenes
             _uiManager.ShowNarration($"Hit {e.HitCount} times!");
             if (e.CriticalHitCount > 0)
             {
-                if (e.CriticalHitCount == 1)
-                {
-                    _uiManager.ShowNarration("Landed a critical hit!");
-                }
-                else
-                {
-                    _uiManager.ShowNarration($"Landed {e.CriticalHitCount} critical hits!");
-                }
+                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a critical hit!");
+                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount} critical hits!");
             }
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
@@ -648,10 +649,7 @@ namespace ProjectVagabond.Scenes
         {
             _currentActor = e.Actor;
             bool isMultiHit = e.ChosenMove != null && e.ChosenMove.Effects.ContainsKey("MultiHit");
-            if (isMultiHit)
-            {
-                _isWaitingForMultiHitDelay = true;
-            }
+            if (isMultiHit) _isWaitingForMultiHitDelay = true;
 
             for (int i = 0; i < e.Targets.Count; i++)
             {
@@ -660,19 +658,10 @@ namespace ProjectVagabond.Scenes
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(target, _battleManager.AllCombatants);
 
                 if (result.AttackerAbilitiesTriggered != null)
-                {
-                    foreach (var ability in result.AttackerAbilitiesTriggered)
-                    {
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = e.Actor, Ability = ability });
-                    }
-                }
+                    foreach (var ability in result.AttackerAbilitiesTriggered) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = e.Actor, Ability = ability });
+
                 if (result.DefenderAbilitiesTriggered != null)
-                {
-                    foreach (var ability in result.DefenderAbilitiesTriggered)
-                    {
-                        EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability });
-                    }
-                }
+                    foreach (var ability in result.DefenderAbilitiesTriggered) EventBus.Publish(new GameEvents.AbilityActivated { Combatant = target, Ability = ability });
 
                 if (result.DamageAmount > 0)
                 {
@@ -687,42 +676,26 @@ namespace ProjectVagabond.Scenes
 
                     int baselineDamage = DamageCalculator.CalculateBaselineDamage(e.Actor, target, e.ChosenMove);
                     if (result.WasCritical || (result.DamageAmount >= baselineDamage * 1.5f && baselineDamage > 0))
-                    {
                         _animationManager.StartEmphasizedDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
-                    }
                     else
-                    {
                         _animationManager.StartDamageNumberIndicator(target.CombatantID, result.DamageAmount, hudPosition);
-                    }
                 }
 
-                if (result.WasGraze)
-                {
-                    _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, ServiceLocator.Get<Global>().Palette_LightGray);
-                }
+                if (result.WasGraze) _animationManager.StartDamageIndicator(target.CombatantID, "GRAZE", hudPosition, ServiceLocator.Get<Global>().Palette_LightGray);
 
                 if (result.WasCritical)
                 {
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().Palette_Yellow);
-                    if (!isMultiHit)
-                    {
-                        _uiManager.ShowNarration($"A critical hit on {target.Name}!");
-                    }
+                    if (!isMultiHit) _uiManager.ShowNarration($"A critical hit on {target.Name}!");
                 }
 
                 var font = ServiceLocator.Get<Core>().SecondaryFont;
                 Vector2 effectivenessPosition = hudPosition + new Vector2(0, font.LineHeight / 2f + 10);
                 switch (result.Effectiveness)
                 {
-                    case DamageCalculator.ElementalEffectiveness.Effective:
-                        _animationManager.StartEffectivenessIndicator(target.CombatantID, "EFFECTIVE", effectivenessPosition);
-                        break;
-                    case DamageCalculator.ElementalEffectiveness.Resisted:
-                        _animationManager.StartEffectivenessIndicator(target.CombatantID, "RESISTED", effectivenessPosition);
-                        break;
-                    case DamageCalculator.ElementalEffectiveness.Immune:
-                        _animationManager.StartEffectivenessIndicator(target.CombatantID, "IMMUNE", effectivenessPosition);
-                        break;
+                    case DamageCalculator.ElementalEffectiveness.Effective: _animationManager.StartEffectivenessIndicator(target.CombatantID, "EFFECTIVE", effectivenessPosition); break;
+                    case DamageCalculator.ElementalEffectiveness.Resisted: _animationManager.StartEffectivenessIndicator(target.CombatantID, "RESISTED", effectivenessPosition); break;
+                    case DamageCalculator.ElementalEffectiveness.Immune: _animationManager.StartEffectivenessIndicator(target.CombatantID, "IMMUNE", effectivenessPosition); break;
                 }
             }
         }
@@ -746,8 +719,6 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantManaConsumed(GameEvents.CombatantManaConsumed e)
         {
-            // Trigger the animation immediately, without waiting for the narration queue.
-            // The visual representation of the cost should be concurrent with the action declaration.
             _animationManager.StartManaLossAnimation(e.Actor.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 
@@ -759,21 +730,13 @@ namespace ProjectVagabond.Scenes
                 _hapticsManager.TriggerShake(magnitude: 10.0f, duration: 0.75f, frequency: 120f);
             }
 
-            if (e.SourceAbility != null)
-            {
-                _uiManager.ShowNarration($"{e.Actor.Name} was hurt by {e.SourceAbility.AbilityName}!");
-            }
-            else
-            {
-                _uiManager.ShowNarration($"{e.Actor.Name} is damaged by recoil!");
-            }
+            if (e.SourceAbility != null) _uiManager.ShowNarration($"{e.Actor.Name} was hurt by {e.SourceAbility.AbilityName}!");
+            else _uiManager.ShowNarration($"{e.Actor.Name} is damaged by recoil!");
 
             _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
             _animationManager.StartHealthAnimation(e.Actor.CombatantID, (int)e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
-            if (!e.Actor.IsPlayerControlled)
-            {
-                _animationManager.StartHitFlashAnimation(e.Actor.CombatantID);
-            }
+            if (!e.Actor.IsPlayerControlled) _animationManager.StartHitFlashAnimation(e.Actor.CombatantID);
+
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Actor, _battleManager.AllCombatants);
             _animationManager.StartDamageNumberIndicator(e.Actor.CombatantID, e.RecoilDamage, hudPosition);
         }
@@ -781,25 +744,15 @@ namespace ProjectVagabond.Scenes
         private void OnCombatantDefeated(GameEvents.CombatantDefeated e)
         {
             _uiManager.ShowNarration($"{e.DefeatedCombatant.Name} was defeated!");
-
-            // Trigger the silhouette fade animation (0 -> 1)
             _animationManager.StartDeathAnimation(e.DefeatedCombatant.CombatantID);
-
-            // Ensure alpha stays fully opaque so the silhouette is visible
             e.DefeatedCombatant.VisualAlpha = 1.0f;
         }
 
         private void OnActionFailed(GameEvents.ActionFailed e)
         {
             _currentActor = e.Actor;
-            if (e.Reason.StartsWith("charging"))
-            {
-                _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason}!");
-            }
-            else
-            {
-                _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason} and cannot move!");
-            }
+            if (e.Reason.StartsWith("charging")) _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason}!");
+            else _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason} and cannot move!");
         }
 
         private void OnStatusEffectTriggered(GameEvents.StatusEffectTriggered e)
@@ -817,17 +770,9 @@ namespace ProjectVagabond.Scenes
 
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
-                if (e.EffectType == StatusEffectType.Poison)
-                {
-                    _animationManager.StartPoisonEffectAnimation(e.Combatant.CombatantID);
-                }
-                else if (e.EffectType == StatusEffectType.Burn)
-                {
-                    if (!e.Combatant.IsPlayerControlled)
-                    {
-                        _animationManager.StartHitFlashAnimation(e.Combatant.CombatantID);
-                    }
-                }
+                if (e.EffectType == StatusEffectType.Poison) _animationManager.StartPoisonEffectAnimation(e.Combatant.CombatantID);
+                else if (e.EffectType == StatusEffectType.Burn && !e.Combatant.IsPlayerControlled) _animationManager.StartHitFlashAnimation(e.Combatant.CombatantID);
+
                 Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Combatant, _battleManager.AllCombatants);
                 _animationManager.StartDamageNumberIndicator(e.Combatant.CombatantID, e.Damage, hudPosition);
             }
@@ -835,20 +780,10 @@ namespace ProjectVagabond.Scenes
 
         private void OnAbilityActivated(GameEvents.AbilityActivated e)
         {
-            // Direct debug output to the IDE console for guaranteed visibility during testing.
             System.Diagnostics.Debug.WriteLine($"[ABILITY TRIGGERED] Combatant: {e.Combatant.Name}, Ability: {e.Ability.AbilityName}");
-
-            // Publish a message to the in-game terminal.
             EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[debug]Ability Activated: {e.Ability.AbilityName} ({e.Combatant.Name})" });
-
-            // Start the visual indicator animation
             _animationManager.StartAbilityIndicator(e.Ability.AbilityName);
-
-            // If narration text is provided, show it to the player.
-            if (!string.IsNullOrEmpty(e.NarrationText))
-            {
-                _uiManager.ShowNarration(e.NarrationText);
-            }
+            if (!string.IsNullOrEmpty(e.NarrationText)) _uiManager.ShowNarration(e.NarrationText);
         }
 
         private void OnAlertPublished(GameEvents.AlertPublished e)
@@ -861,22 +796,10 @@ namespace ProjectVagabond.Scenes
             string statText = e.Stat.ToString().ToUpper();
             string verb = e.Amount > 0 ? "UP" : "DOWN";
             int absAmount = Math.Abs(e.Amount);
-
-            string prefixText = "";
-            string suffixText;
-
-            if (absAmount > 1)
-            {
-                prefixText = $"{absAmount}x ";
-                suffixText = $" {verb}";
-            }
-            else
-            {
-                suffixText = $" {verb}";
-            }
+            string prefixText = absAmount > 1 ? $"{absAmount}x " : "";
+            string suffixText = $" {verb}";
 
             Color changeColor = e.Amount > 0 ? _global.Palette_LightBlue : _global.Palette_Red;
-
             Color statColor = e.Stat switch
             {
                 OffensiveStatType.Strength => _global.StatColor_Strength,
@@ -886,11 +809,8 @@ namespace ProjectVagabond.Scenes
                 _ => _global.Palette_White
             };
 
-            Color prefixColor = changeColor;
-            Color suffixColor = changeColor;
-
             Vector2 hudPosition = _renderer.GetCombatantHudCenterPosition(e.Target, _battleManager.AllCombatants);
-            _animationManager.StartStatStageIndicator(e.Target.CombatantID, prefixText, statText, suffixText, prefixColor, statColor, suffixColor, hudPosition);
+            _animationManager.StartStatStageIndicator(e.Target.CombatantID, prefixText, statText, suffixText, changeColor, statColor, changeColor, hudPosition);
         }
 
         private void FleeBattle()
