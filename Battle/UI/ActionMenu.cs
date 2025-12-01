@@ -519,7 +519,7 @@ namespace ProjectVagabond.Battle.UI
                     const int secBlockHeight = secRows * (secButtonHeight + secRowSpacing) - secRowSpacing;
                     const int borderWidth = 120;
                     const int layoutGap = 2;
-                    int moveGridStartY = 124; // Moved up from 128 to fit larger back button
+                    int moveGridStartY = 128; // Moved down 4px (was 124)
                     int moveGridStartX = 75; // Shifted right by 10
                     int secGridStartX = moveGridStartX - layoutGap - secButtonWidth;
                     int secGridStartY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (secBlockHeight / 2);
@@ -976,8 +976,8 @@ namespace ProjectVagabond.Battle.UI
             const int borderHeight = 37;
             const int layoutGap = 2;
 
-            int moveGridStartY = 124; // Moved up from 128 to fit larger back button
-            int moveGridStartX = 75; // Shifted right by 10
+            int moveGridStartY = 128;
+            int moveGridStartX = 73;
             int borderX = moveGridStartX + MOVE_BUTTON_WIDTH + layoutGap;
             int borderY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (borderHeight / 2);
 
@@ -1063,7 +1063,7 @@ namespace ProjectVagabond.Battle.UI
 
 
             int layoutBottomY = Math.Max(borderRect.Bottom, moveGridStartY + MOVE_BLOCK_HEIGHT);
-            int backButtonY = layoutBottomY + 2; // Adjusted to +2
+            int backButtonY = layoutBottomY - 2; // Adjusted to -2 to keep back button fixed at Y=165
             var backSize = (_backButton.Font ?? font).MeasureString(_backButton.Text);
             int backWidth = (int)backSize.Width + 16;
             _backButton.Bounds = new Rectangle(
