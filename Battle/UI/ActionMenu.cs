@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -726,7 +725,11 @@ namespace ProjectVagabond.Battle.UI
             {
                 spriteBatch.DrawSnapped(spriteManager.BattleBorderMain, Vector2.Zero, Color.White);
             }
-            else if (_currentState == MenuState.Moves || _currentState == MenuState.Targeting || _currentState == MenuState.Tooltip)
+            else if (_currentState == MenuState.Targeting)
+            {
+                spriteBatch.DrawSnapped(spriteManager.BattleBorderTarget, Vector2.Zero, Color.White);
+            }
+            else if (_currentState == MenuState.Moves || _currentState == MenuState.Tooltip)
             {
                 spriteBatch.DrawSnapped(spriteManager.BattleBorderAction, Vector2.Zero, Color.White);
             }
@@ -787,7 +790,7 @@ namespace ProjectVagabond.Battle.UI
 
                         Vector2 textPos = new Vector2(
                             horizontalPadding + (availableWidth - textSize.X) / 2,
-                            gridStartY + (gridAreaHeight - textSize.Y) / 2 - 10
+                            gridStartY + (gridAreaHeight - textSize.Y) / 2
                         ) + animOffset;
                         spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
 

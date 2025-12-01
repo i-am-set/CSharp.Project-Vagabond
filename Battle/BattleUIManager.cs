@@ -322,10 +322,20 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawItemTargetingOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
+
+            // Draw Background
+            const int dividerY = 123;
+            var bgRect = new Rectangle(0, dividerY, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - dividerY);
+            spriteBatch.DrawSnapped(pixel, bgRect, _global.Palette_Black);
+
+            // Draw Border
+            spriteBatch.DrawSnapped(spriteManager.BattleBorderTarget, Vector2.Zero, Color.White);
+
             const int backButtonPadding = 8;
             const int backButtonHeight = 13;
             const int backButtonTopMargin = 1;
-            const int dividerY = 123;
             const int horizontalPadding = 10;
             const int verticalPadding = 2;
             int availableWidth = Global.VIRTUAL_WIDTH - (horizontalPadding * 2);
@@ -342,7 +352,7 @@ namespace ProjectVagabond.Battle.UI
 
             Vector2 textPos = new Vector2(
                 horizontalPadding + (availableWidth - textSize.X) / 2,
-                gridStartY + (gridAreaHeight - textSize.Y) / 2 - 10
+                gridStartY + (gridAreaHeight - textSize.Y) / 2
             ) + animOffset;
             spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
 

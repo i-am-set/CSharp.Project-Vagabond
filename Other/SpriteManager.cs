@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
@@ -14,6 +15,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 
 namespace ProjectVagabond
@@ -39,6 +41,7 @@ namespace ProjectVagabond
         public Texture2D BattleBorderMain { get; private set; }
         public Texture2D BattleBorderAction { get; private set; }
         public Texture2D BattleBorderItem { get; private set; }
+        public Texture2D BattleBorderTarget { get; private set; }
 
         // Player Portraits
         public Texture2D PlayerPortraitsSpriteSheet { get; private set; }
@@ -270,6 +273,9 @@ namespace ProjectVagabond
 
             try { BattleBorderItem = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_item"); }
             catch { BattleBorderItem = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+
+            try { BattleBorderTarget = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_target"); }
+            catch { BattleBorderTarget = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
 
             // Load Mouse Prompt Sprites
             try { MousePromptBlank = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_blank"); }
