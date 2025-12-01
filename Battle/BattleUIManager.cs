@@ -8,8 +8,10 @@ using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Battle.UI
 {
@@ -27,6 +29,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly ActionMenu _actionMenu;
         private readonly ItemMenu _itemMenu;
         private readonly Button _itemTargetingBackButton;
+        private readonly Global _global;
 
         public BattleUIState UIState { get; private set; } = BattleUIState.Default;
         public BattleSubMenuState SubMenuState { get; private set; } = BattleSubMenuState.None;
@@ -54,15 +57,20 @@ namespace ProjectVagabond.Battle.UI
         private const float PROMPT_CYCLE_INTERVAL = 0.5f;
         private Button? _lastHoveredButton;
 
+        // Debug Bounds
+        private Rectangle _narratorBounds;
+        private Rectangle _controlPromptBounds;
+
         public BattleUIManager()
         {
+            _global = ServiceLocator.Get<Global>();
             const int narratorWidth = 314;
             const int narratorHeight = 50;
             int narratorX = (Global.VIRTUAL_WIDTH - narratorWidth) / 2;
             const int narratorY = 123;
-            var narratorBounds = new Rectangle(narratorX, narratorY, narratorWidth, narratorHeight);
+            _narratorBounds = new Rectangle(narratorX, narratorY, narratorWidth, narratorHeight);
 
-            _battleNarrator = new BattleNarrator(narratorBounds);
+            _battleNarrator = new BattleNarrator(_narratorBounds);
             _actionMenu = new ActionMenu();
             _itemMenu = new ItemMenu();
 
@@ -187,6 +195,21 @@ namespace ProjectVagabond.Battle.UI
             _battleNarrator.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont, gameTime);
 
             DrawControlPrompt(spriteBatch);
+
+            // --- DEBUG DRAWING (F1) ---
+            if (_global.ShowSplitMapGrid)
+            {
+                var pixel = ServiceLocator.Get<Texture2D>();
+
+                // Narrator
+                spriteBatch.DrawSnapped(pixel, _narratorBounds, Color.Purple * 0.5f);
+
+                // Control Prompt
+                if (_isPromptVisible && _promptTextures.Any())
+                {
+                    spriteBatch.DrawSnapped(pixel, _controlPromptBounds, Color.Purple * 0.5f);
+                }
+            }
         }
 
         private void UpdateControlPrompt(GameTime gameTime)
@@ -275,6 +298,9 @@ namespace ProjectVagabond.Battle.UI
                 Global.VIRTUAL_WIDTH - textureToDraw.Width - padding,
                 Global.VIRTUAL_HEIGHT - textureToDraw.Height - padding
             );
+
+            // Update debug bounds
+            _controlPromptBounds = new Rectangle((int)position.X, (int)position.Y, textureToDraw.Width, textureToDraw.Height);
 
             var global = ServiceLocator.Get<Global>();
             var outlineColor = global.Palette_Black;
@@ -391,3 +417,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+﻿

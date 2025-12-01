@@ -42,6 +42,10 @@ namespace ProjectVagabond.Battle.UI
         private List<BattleCombatant>? _allCombatants;
         public Button? HoveredButton { get; private set; }
 
+        // Debug Bounds
+        private Rectangle _tooltipBounds;
+        private Rectangle _confirmBounds;
+
         public ItemMenu()
         {
             _global = ServiceLocator.Get<Global>();
@@ -329,6 +333,41 @@ namespace ProjectVagabond.Battle.UI
                     DrawConfirm(spriteBatch, font, gameTime, transform);
                     break;
             }
+
+            // --- DEBUG DRAWING (F1) ---
+            if (_global.ShowSplitMapGrid)
+            {
+                var pixel = ServiceLocator.Get<Texture2D>();
+
+                if (_currentState == MenuState.List)
+                {
+                    spriteBatch.DrawSnapped(pixel, _itemListBounds, Color.Blue * 0.2f);
+                    spriteBatch.DrawSnapped(pixel, _backButton.Bounds, Color.Red * 0.5f);
+                    spriteBatch.DrawSnapped(pixel, _sortButton.Bounds, Color.Red * 0.5f);
+
+                    // Draw visible item buttons
+                    int startIndex = _scrollIndex * 2;
+                    int endIndex = Math.Min(_displayItems.Count, startIndex + _maxVisibleRows * 2);
+                    for (int i = startIndex; i < endIndex; i++)
+                    {
+                        if (_displayItems[i] is InventoryItemButton button)
+                        {
+                            spriteBatch.DrawSnapped(pixel, button.Bounds, Color.LightBlue * 0.5f);
+                        }
+                    }
+                }
+                else if (_currentState == MenuState.Tooltip)
+                {
+                    spriteBatch.DrawSnapped(pixel, _tooltipBounds, Color.Magenta * 0.5f);
+                    spriteBatch.DrawSnapped(pixel, _backButton.Bounds, Color.Red * 0.5f);
+                }
+                else if (_currentState == MenuState.Confirm)
+                {
+                    spriteBatch.DrawSnapped(pixel, _confirmBounds, Color.Magenta * 0.5f);
+                    spriteBatch.DrawSnapped(pixel, _yesButton.Bounds, Color.Red * 0.5f);
+                    spriteBatch.DrawSnapped(pixel, _noButton.Bounds, Color.Red * 0.5f);
+                }
+            }
         }
 
         private void DrawList(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -452,6 +491,7 @@ namespace ProjectVagabond.Battle.UI
 
             var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
             var tooltipBgRect = new Rectangle(gridStartX, gridStartY, totalGridWidth, gridHeight);
+            _tooltipBounds = tooltipBgRect; // Store for debug
 
             // Draw opaque black background
             spriteBatch.DrawSnapped(pixel, tooltipBgRect, _global.Palette_Black);
@@ -533,6 +573,8 @@ namespace ProjectVagabond.Battle.UI
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
             var tooltipBgRect = new Rectangle(gridStartX - 1, gridStartY - 1, 294, 47);
+            _confirmBounds = tooltipBgRect; // Store for debug
+
             spriteBatch.DrawSnapped(tooltipBg, tooltipBgRect, Color.White);
 
             if (_itemForConfirmation != null)

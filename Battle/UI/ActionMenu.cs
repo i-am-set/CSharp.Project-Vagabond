@@ -7,6 +7,7 @@ using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -102,6 +103,10 @@ namespace ProjectVagabond.Battle.UI
         private const int MOVE_ROW_SPACING = 1;
         private const int MOVE_ROWS = 4;
         private const int MOVE_BLOCK_HEIGHT = MOVE_ROWS * (MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING) - MOVE_ROW_SPACING;
+
+        // Debug Bounds
+        private Rectangle _tooltipBounds;
+        private Rectangle _moveInfoPanelBounds;
 
 
         public ActionMenu()
@@ -811,6 +816,50 @@ namespace ProjectVagabond.Battle.UI
                         break;
                     }
             }
+
+            // --- DEBUG DRAWING (F1) ---
+            if (_global.ShowSplitMapGrid)
+            {
+                // Main Menu Buttons
+                if (_currentState == MenuState.Main)
+                {
+                    foreach (var button in _actionButtons)
+                    {
+                        spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Green * 0.5f);
+                    }
+                }
+
+                // Moves Menu
+                if (_currentState == MenuState.Moves)
+                {
+                    foreach (var button in _moveButtons)
+                    {
+                        if (button != null)
+                        {
+                            spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Yellow * 0.5f);
+                        }
+                    }
+                    foreach (var button in _secondaryActionButtons)
+                    {
+                        spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Orange * 0.5f);
+                    }
+                    spriteBatch.DrawSnapped(pixel, _backButton.Bounds, Color.Red * 0.5f);
+                    spriteBatch.DrawSnapped(pixel, _moveInfoPanelBounds, Color.Magenta * 0.5f);
+                }
+
+                // Tooltip
+                if (_currentState == MenuState.Tooltip)
+                {
+                    spriteBatch.DrawSnapped(pixel, _tooltipBounds, Color.Magenta * 0.5f);
+                    spriteBatch.DrawSnapped(pixel, _backButton.Bounds, Color.Red * 0.5f);
+                }
+
+                // Targeting
+                if (_currentState == MenuState.Targeting)
+                {
+                    spriteBatch.DrawSnapped(pixel, _backButton.Bounds, Color.Red * 0.5f);
+                }
+            }
         }
 
         private void DrawSimpleTooltip(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
@@ -823,6 +872,7 @@ namespace ProjectVagabond.Battle.UI
             const int boxY = 117;
             int boxX = (Global.VIRTUAL_WIDTH - boxWidth) / 2;
             var tooltipBounds = new Rectangle(boxX, boxY, boxWidth, boxHeight);
+            _tooltipBounds = tooltipBounds; // Store for debug
 
             // Draw opaque black background
             spriteBatch.DrawSnapped(pixel, tooltipBounds, _global.Palette_Black);
@@ -892,6 +942,7 @@ namespace ProjectVagabond.Battle.UI
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var tooltipBg = spriteManager.ActionTooltipBackgroundSprite;
             var tooltipBgRect = new Rectangle(gridStartX, gridStartY, totalGridWidth, gridHeight);
+            _tooltipBounds = tooltipBgRect; // Store for debug
 
             // Draw opaque black background
             spriteBatch.DrawSnapped(pixel, tooltipBgRect, _global.Palette_Black);
@@ -934,6 +985,8 @@ namespace ProjectVagabond.Battle.UI
 
 
             var borderRect = new Rectangle(borderX, borderY, borderWidth, borderHeight);
+            _moveInfoPanelBounds = borderRect; // Store for debug
+
             // Removed manual border drawing here as it's now handled by the background sprite
 
             DrawMoveInfoPanelContent(spriteBatch, HoveredMove, borderRect, font, secondaryFont, transform, false);
@@ -1279,3 +1332,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+﻿

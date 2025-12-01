@@ -5,8 +5,10 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -278,6 +280,37 @@ namespace ProjectVagabond.Battle.UI
 
             // --- Draw Divider ---
             spriteBatch.DrawSnapped(pixel, new Rectangle(0, DIVIDER_Y, Global.VIRTUAL_WIDTH, 1), Color.White);
+
+            // --- DEBUG DRAWING (F1) ---
+            if (_global.ShowSplitMapGrid)
+            {
+                // Draw debug boxes for Enemy HUDs
+                if (enemies.Any())
+                {
+                    const int enemyAreaPadding = 40;
+                    int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
+                    int slotWidth = availableWidth / enemies.Count;
+
+                    for (int i = 0; i < enemies.Count; i++)
+                    {
+                        var enemy = enemies[i];
+                        var slotCenter = new Vector2(enemyAreaPadding + (i * slotWidth) + (slotWidth / 2), 0);
+                        bool isMajor = _spriteManager.IsMajorEnemySprite(enemy.ArchetypeId);
+                        int spritePartSize = isMajor ? 96 : 64;
+                        float hudY = spritePartSize + 12;
+                        var hudCenterForBounds = new Vector2(slotCenter.X, hudY);
+                        var bounds = GetCombatantInteractionBounds(enemy, hudCenterForBounds, font, secondaryFont);
+                        spriteBatch.DrawSnapped(pixel, bounds, Color.Cyan * 0.5f);
+                    }
+                }
+
+                // Draw debug box for Player HUD
+                if (player != null)
+                {
+                    var bounds = GetPlayerInteractionBounds(font, secondaryFont, player);
+                    spriteBatch.DrawSnapped(pixel, bounds, Color.Cyan * 0.5f);
+                }
+            }
         }
 
         public void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font)
@@ -1243,3 +1276,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+﻿
