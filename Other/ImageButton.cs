@@ -112,6 +112,12 @@ namespace ProjectVagabond.UI
             if (EnableHoverSway)
             {
                 hoverYOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
+
+                // FIX: If using screen coordinates, scale the offset to match virtual pixels
+                if (UseScreenCoordinates)
+                {
+                    hoverYOffset *= ServiceLocator.Get<Core>().FinalScale;
+                }
             }
             else
             {

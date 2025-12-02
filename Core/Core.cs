@@ -650,14 +650,15 @@ namespace ProjectVagabond
             }
             _spriteBatch.End();
 
+            Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
+            _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, screenScaleMatrix);
+
             // Draw the custom cursor onto the composite target so it gets post-processing effects.
             // This pass uses the special invert blend state and NO transformation matrix, so it works in screen space.
+            // It is drawn AFTER FullscreenUI to ensure it appears on top of elements like the settings icon.
             _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp);
             _cursorManager.Draw(_spriteBatch, Mouse.GetState().Position.ToVector2(), _finalScale);
             _spriteBatch.End();
-
-            Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
-            _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, screenScaleMatrix);
 
             // --- Phase 3: Render the final composite to the screen with the CRT shader ---
             GraphicsDevice.SetRenderTarget(null);
