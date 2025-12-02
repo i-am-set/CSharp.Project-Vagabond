@@ -165,6 +165,9 @@ namespace ProjectVagabond.Scenes
                     SetView(SplitMapView.Inventory, snap: true);
                 }
             };
+
+            // Subscribe to Settings Overlay Close Request
+            _settingsOverlay.OnCloseRequested += () => SetView(SplitMapView.Map, snap: true);
         }
 
         public override Rectangle GetAnimatedBounds() => new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
@@ -196,7 +199,8 @@ namespace ProjectVagabond.Scenes
                 {
                     if (_currentView == SplitMapView.Settings)
                     {
-                        SetView(SplitMapView.Map, snap: true);
+                        // Attempt to close settings safely (prompts if dirty)
+                        _settingsOverlay.AttemptClose(() => SetView(SplitMapView.Map, snap: true));
                     }
                     else
                     {

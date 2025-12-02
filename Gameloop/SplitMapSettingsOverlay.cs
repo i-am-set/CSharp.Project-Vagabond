@@ -15,6 +15,7 @@ namespace ProjectVagabond.UI
     public class SplitMapSettingsOverlay
     {
         public bool IsOpen { get; private set; } = false;
+        public event Action? OnCloseRequested;
         private readonly GameSettings _settings;
         private readonly GraphicsDeviceManager _graphics;
         private readonly Global _global;
@@ -92,6 +93,32 @@ namespace ProjectVagabond.UI
             IsOpen = false;
             _confirmationDialog.Hide();
             _revertDialog.Hide();
+        }
+
+        public bool IsDirty() => _uiElements.OfType<ISettingControl>().Any(s => s.IsDirty);
+
+        public void AttemptClose(Action onClose)
+        {
+            if (IsDirty())
+            {
+                _confirmationDialog.Show(
+                    "Discard unsaved changes?",
+                    new List<Tuple<string, Action>> {
+                    Tuple.Create("YES", new Action(() => {
+                        RevertChanges();
+                        _confirmationDialog.Hide();
+                        onClose?.Invoke();
+                    })),
+                    Tuple.Create("[gray]NO", new Action(() => {
+                        _confirmationDialog.Hide();
+                    }))
+                    }
+                );
+            }
+            else
+            {
+                onClose?.Invoke();
+            }
         }
 
         public void RefreshUIFromSettings()
@@ -180,8 +207,6 @@ namespace ProjectVagabond.UI
             _uiElements.Add(framerateControl);
 
             // IMPORTANT: Set UseScreenCoordinates = true for these buttons.
-            // This tells the Button class NOT to apply Core.TransformMouse() internally,
-            // allowing us to pass in our pre-transformed world-space mouse coordinates.
             var applyButton = new Button(new Rectangle(0, 0, 125, 10), "Apply")
             {
                 TextRenderOffset = new Vector2(0, 1),
@@ -189,6 +214,14 @@ namespace ProjectVagabond.UI
             };
             applyButton.OnClick += ApplySettings;
             _uiElements.Add(applyButton);
+
+            var discardButton = new Button(new Rectangle(0, 0, 125, 10), "Discard")
+            {
+                TextRenderOffset = new Vector2(0, 1),
+                UseScreenCoordinates = true
+            };
+            discardButton.OnClick += () => AttemptClose(() => OnCloseRequested?.Invoke());
+            _uiElements.Add(discardButton);
 
             var resetButton = new Button(new Rectangle(0, 0, 125, 10), "Restore Defaults")
             {
@@ -326,7 +359,6 @@ namespace ProjectVagabond.UI
             _confirmationTimer = 5f;
         }
 
-        private bool IsDirty() => _uiElements.OfType<ISettingControl>().Any(s => s.IsDirty);
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
 
         public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, Matrix cameraTransform)
