@@ -15,6 +15,13 @@ namespace ProjectVagabond.Progression
     /// </summary>
     public static class SplitMapGenerator
     {
+        // --- Configuration ---
+        /// <summary>
+        /// If true, node columns will be shifted vertically so their center of mass aligns with the screen center.
+        /// If false, nodes are placed purely randomly within valid slots.
+        /// </summary>
+        private const bool ENABLE_VERTICAL_CENTERING = true;
+
         private static readonly Random _random = new Random();
         private static readonly SeededPerlin _baldSpotNoise;
         private static readonly SeededPerlin _nodeExclusionNoise;
@@ -107,6 +114,12 @@ namespace ProjectVagabond.Progression
             var startNodePosition = new Vector2(HORIZONTAL_PADDING, Global.VIRTUAL_HEIGHT / 2f);
             var startNodes = PlaceNodesForColumn(0, totalColumns, mapWidth, 0, startNodePosition);
             startNodes.First().NodeType = SplitNodeType.Origin;
+
+            if (ENABLE_VERTICAL_CENTERING)
+            {
+                CenterColumnNodes(startNodes);
+            }
+
             allNodesByColumn.Add(startNodes);
 
             // --- Intermediate Columns ---
@@ -115,6 +128,12 @@ namespace ProjectVagabond.Progression
                 var previousColumn = allNodesByColumn[i - 1];
                 Vector2 previousColumnAvgPos = previousColumn.Any() ? new Vector2(previousColumn.Average(n => n.Position.X), previousColumn.Average(n => n.Position.Y)) : startNodePosition;
                 var newNodes = PlaceNodesForColumn(i, totalColumns, mapWidth, previousColumn.Count, previousColumnAvgPos);
+
+                if (ENABLE_VERTICAL_CENTERING)
+                {
+                    CenterColumnNodes(newNodes);
+                }
+
                 allNodesByColumn.Add(newNodes);
                 AssignEvents(newNodes, splitData, totalColumns);
             }
@@ -129,6 +148,12 @@ namespace ProjectVagabond.Progression
             {
                 endNode.EventData = splitData.PossibleMajorBattles[_random.Next(splitData.PossibleMajorBattles.Count)];
             }
+
+            if (ENABLE_VERTICAL_CENTERING)
+            {
+                CenterColumnNodes(endNodes);
+            }
+
             allNodesByColumn.Add(endNodes);
 
             // --- Connect All Columns ---
@@ -152,6 +177,39 @@ namespace ProjectVagabond.Progression
             var bakedScenery = BakeTreesToTexture(allNodes, allPaths, mapWidth);
 
             return new SplitMap(allNodes, allPaths, bakedScenery, totalColumns, startNodeId, mapWidth);
+        }
+
+        /// <summary>
+        /// Shifts the nodes in a column vertically so that their collective center aligns with the screen center.
+        /// </summary>
+        private static void CenterColumnNodes(List<SplitMapNode> nodes)
+        {
+            if (!nodes.Any()) return;
+
+            // 1. Calculate the vertical bounds of the current node clump
+            float minY = nodes.Min(n => n.Position.Y);
+            float maxY = nodes.Max(n => n.Position.Y);
+            float currentCenterY = (minY + maxY) / 2f;
+
+            // 2. Determine the target center (middle of the screen)
+            float screenCenterY = Global.VIRTUAL_HEIGHT / 2f;
+
+            // 3. Calculate the shift needed
+            float shiftY = screenCenterY - currentCenterY;
+
+            // 4. Snap the shift to the grid size to maintain pixel-perfect alignment
+            int gridSize = Global.SPLIT_MAP_GRID_SIZE;
+            float snappedShift = MathF.Round(shiftY / gridSize) * gridSize;
+
+            // 5. Apply the shift to all nodes in the column
+            foreach (var node in nodes)
+            {
+                float newY = node.Position.Y + snappedShift;
+                // Clamp to ensure nodes don't go off-screen, respecting a margin
+                float margin = gridSize * 2;
+                newY = Math.Clamp(newY, margin, Global.VIRTUAL_HEIGHT - margin);
+                node.Position = new Vector2(node.Position.X, newY);
+            }
         }
 
         /// <summary>

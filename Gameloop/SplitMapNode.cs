@@ -44,7 +44,7 @@ namespace ProjectVagabond.Progression
     {
         public int Id { get; }
         public int Floor { get; }
-        public Vector2 Position { get; } // Relative position within a virtual map area
+        public Vector2 Position { get; set; } // Changed to get; set; to allow post-generation centering
         public SplitNodeType NodeType { get; set; }
         public BattleDifficulty Difficulty { get; set; } = BattleDifficulty.Normal;
         public object? EventData { get; set; } // List<string> for battles, NarrativeEvent for narrative
