@@ -39,6 +39,7 @@ namespace ProjectVagabond.Scenes
         private readonly VoidEdgeEffect _voidEdgeEffect;
         private readonly SplitMapInventoryOverlay _inventoryOverlay;
         private readonly SplitMapSettingsOverlay _settingsOverlay;
+        private readonly BirdManager _birdManager;
 
         private SplitMap? _currentMap;
         private int _playerCurrentNodeId;
@@ -141,6 +142,7 @@ namespace ProjectVagabond.Scenes
             _componentStore = ServiceLocator.Get<ComponentStore>();
             _inventoryOverlay = new SplitMapInventoryOverlay();
             _settingsOverlay = new SplitMapSettingsOverlay(this);
+            _birdManager = new BirdManager();
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
             _resultNarrator = new StoryNarrator(narratorBounds);
@@ -247,6 +249,10 @@ namespace ProjectVagabond.Scenes
                     UpdateCameraTarget(startNode.Position, true);
                     UpdateReachableNodes();
                     StartPathRevealAnimation();
+
+                    // Initialize birds
+                    if (_currentMap != null)
+                        _birdManager.Initialize(_currentMap, _playerIcon.Position);
                 }
                 SetView(SplitMapView.Map, snap: true); // Default view
             }
@@ -271,6 +277,10 @@ namespace ProjectVagabond.Scenes
                     _nodeLiftTimer = 0f;
                 }
                 SetView(SplitMapView.Map, snap: true); // Default view
+
+                // Ensure birds are initialized when returning
+                if (_currentMap != null)
+                    _birdManager.Initialize(_currentMap, _playerIcon.Position);
             }
         }
 
@@ -413,6 +423,9 @@ namespace ProjectVagabond.Scenes
             var currentKeyboardState = Keyboard.GetState();
 
             _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
+
+            // Update Birds
+            _birdManager.Update(gameTime, _currentMap, _playerIcon.Position);
 
             if (_hoveredNodeId != -1)
             {
@@ -1133,6 +1146,9 @@ namespace ProjectVagabond.Scenes
 
             _playerIcon.Draw(spriteBatch);
 
+            // Draw Birds (World Space)
+            _birdManager.Draw(spriteBatch, _cameraOffset);
+
             // Draw Overlays in World Space
             _inventoryOverlay.DrawWorld(spriteBatch, font, gameTime);
             // Pass the finalTransform to the settings overlay so it can restore it after drawing dialogs
@@ -1407,3 +1423,4 @@ namespace ProjectVagabond.Scenes
         }
     }
 }
+#nullable restore

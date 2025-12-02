@@ -19,7 +19,6 @@ namespace ProjectVagabond
     public class TextureFactory
     {
         public TextureFactory() { }
-
         public Texture2D CreateColoredTexture(int width, int height, Color color)
         {
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
@@ -300,12 +299,12 @@ namespace ProjectVagabond
             // A 6x6 pixel circle pattern
             bool[,] pattern = new bool[6, 6]
             {
-                { false, false, true,  true,  false, false },
-                { false, true,  true,  true,  true,  false },
-                { true,  true,  true,  true,  true,  true  },
-                { true,  true,  true,  true,  true,  true  },
-                { false, true,  true,  true,  true,  false },
-                { false, false, true,  true,  false, false }
+            { false, false, true,  true,  false, false },
+            { false, true,  true,  true,  true,  false },
+            { true,  true,  true,  true,  true,  true  },
+            { true,  true,  true,  true,  true,  true  },
+            { false, true,  true,  true,  true,  false },
+            { false, false, true,  true,  false, false }
             };
 
             for (int y = 0; y < size; y++)
@@ -368,4 +367,3 @@ namespace ProjectVagabond
         }
     }
 }
-﻿﻿
