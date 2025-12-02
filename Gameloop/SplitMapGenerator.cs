@@ -1,4 +1,4 @@
-﻿﻿#nullable enable
+﻿#nullable enable
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Battle;
@@ -18,7 +18,6 @@ namespace ProjectVagabond.Progression
         private static readonly Random _random = new Random();
         private static readonly SeededPerlin _baldSpotNoise;
         private static readonly SeededPerlin _nodeExclusionNoise;
-
         // --- Generation Tuning ---
         private const int MIN_NODES_PER_COLUMN = 2;
         private const int MAX_NODES_PER_COLUMN = 3;
@@ -28,26 +27,29 @@ namespace ProjectVagabond.Progression
         private const float PATH_MAX_OFFSET = 5f; // Max perpendicular deviation
         private const float SECONDARY_PATH_CHANCE = 0.4f; // Chance for a node to have a second outgoing path
         private const float NODE_HORIZONTAL_VARIANCE_PIXELS = 20f;
-        private const float MAX_CONNECTION_DISTANCE = 120f; // Max distance for a path to be considered "close"
-        private const float PATH_SPLIT_POINT_MIN = 0.2f;
-        private const float PATH_SPLIT_POINT_MAX = 0.8f;
         private const float NODE_REPULSION_RADIUS = 30f;
         private const float NODE_REPULSION_STRENGTH = 15f;
         public static readonly List<int> _validYPositions = new List<int>();
 
+        // --- Force-Directed Layout Tuning ---
+        private const int PHYSICS_ITERATIONS = 50;
+        private const float PATH_REPULSION_RADIUS = 20f; // Minimum desired distance between paths
+        private const float PATH_REPULSION_FORCE = 2.5f; // Strength of the push
+        private const float PATH_SMOOTHING_FACTOR = 0.25f; // Tries to straighten the line slightly to fix kinks
+
         private static readonly List<(SplitNodeType type, float weight)> _nodeTypeWeights = new()
-        {
-            (SplitNodeType.Narrative, 20f),
-            (SplitNodeType.Village, 8f),
-            (SplitNodeType.Cottage, 10f),
-            (SplitNodeType.WatchPost, 4f),
-            (SplitNodeType.Farm, 5f),
-            (SplitNodeType.Church, 3f),
-            (SplitNodeType.Town, 2f),
-            (SplitNodeType.WizardTower, 1f),
-            (SplitNodeType.GuardOutpost, 2f),
-            (SplitNodeType.Kingdom, 0.5f)
-        };
+    {
+        (SplitNodeType.Narrative, 20f),
+        (SplitNodeType.Village, 8f),
+        (SplitNodeType.Cottage, 10f),
+        (SplitNodeType.WatchPost, 4f),
+        (SplitNodeType.Farm, 5f),
+        (SplitNodeType.Church, 3f),
+        (SplitNodeType.Town, 2f),
+        (SplitNodeType.WizardTower, 1f),
+        (SplitNodeType.GuardOutpost, 2f),
+        (SplitNodeType.Kingdom, 0.5f)
+    };
 
         // --- Tree Generation Tuning ---
         private const int TREE_DENSITY_STEP = 2; // Check for a tree every pixel for max density.
@@ -68,6 +70,12 @@ namespace ProjectVagabond.Progression
         private const int NODE_SPREAD_BIAS_START_INDEX = 2; // Index of the first slot in the central bias zone (inclusive)
         private const int NODE_SPREAD_BIAS_END_INDEX = 6;   // Index of the last slot in the central bias zone (inclusive)
 
+        // Helper class for topological sorting
+        private class Connection
+        {
+            public SplitMapNode From;
+            public SplitMapNode To;
+        }
 
         static SplitMapGenerator()
         {
@@ -131,6 +139,10 @@ namespace ProjectVagabond.Progression
                 allPaths.AddRange(newPaths);
             }
 
+            // --- Post-Processing: Force-Directed Repulsion ---
+            // This pushes paths apart to prevent ugly tangents and overlaps.
+            ApplyForceDirectedLayout(allPaths, allNodes);
+
             // --- Final Assembly ---
             int startNodeId = allNodes.FirstOrDefault(n => n.Floor == 0)?.Id ?? -1;
 
@@ -140,6 +152,88 @@ namespace ProjectVagabond.Progression
             var bakedScenery = BakeTreesToTexture(allNodes, allPaths, mapWidth);
 
             return new SplitMap(allNodes, allPaths, bakedScenery, totalColumns, startNodeId, mapWidth);
+        }
+
+        /// <summary>
+        /// Applies a physics-based simulation to push path segments away from each other.
+        /// </summary>
+        private static void ApplyForceDirectedLayout(List<SplitMapPath> allPaths, List<SplitMapNode> allNodes)
+        {
+            // Group paths by the column index (Floor) of their starting node.
+            // Paths only interact with other paths in the same column group to save performance.
+            var pathsByColumn = allPaths
+                .GroupBy(p => allNodes.First(n => n.Id == p.FromNodeId).Floor)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            for (int iter = 0; iter < PHYSICS_ITERATIONS; iter++)
+            {
+                var forces = new Dictionary<SplitMapPath, Vector2[]>();
+
+                // Initialize force arrays
+                foreach (var path in allPaths)
+                {
+                    forces[path] = new Vector2[path.RenderPoints.Count];
+                }
+
+                // 1. Calculate Repulsion Forces (Between different paths in the same column)
+                foreach (var columnGroup in pathsByColumn.Values)
+                {
+                    for (int i = 0; i < columnGroup.Count; i++)
+                    {
+                        var pathA = columnGroup[i];
+                        for (int j = i + 1; j < columnGroup.Count; j++)
+                        {
+                            var pathB = columnGroup[j];
+
+                            // Check every point against every point (excluding start/end anchors)
+                            for (int a = 1; a < pathA.RenderPoints.Count - 1; a++)
+                            {
+                                for (int b = 1; b < pathB.RenderPoints.Count - 1; b++)
+                                {
+                                    Vector2 posA = pathA.RenderPoints[a];
+                                    Vector2 posB = pathB.RenderPoints[b];
+
+                                    float distSq = Vector2.DistanceSquared(posA, posB);
+                                    if (distSq < PATH_REPULSION_RADIUS * PATH_REPULSION_RADIUS && distSq > 0.001f)
+                                    {
+                                        float dist = MathF.Sqrt(distSq);
+                                        Vector2 dir = (posA - posB) / dist;
+                                        float force = (PATH_REPULSION_RADIUS - dist) / PATH_REPULSION_RADIUS * PATH_REPULSION_FORCE;
+
+                                        forces[pathA][a] += dir * force;
+                                        forces[pathB][b] -= dir * force;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Calculate Smoothing Forces (Internal tension to fix kinks)
+                foreach (var path in allPaths)
+                {
+                    for (int k = 1; k < path.RenderPoints.Count - 1; k++)
+                    {
+                        Vector2 current = path.RenderPoints[k];
+                        Vector2 prev = path.RenderPoints[k - 1];
+                        Vector2 next = path.RenderPoints[k + 1];
+
+                        // Move towards the midpoint of neighbors (Laplacian smoothing)
+                        Vector2 target = (prev + next) / 2f;
+                        Vector2 force = (target - current) * PATH_SMOOTHING_FACTOR;
+                        forces[path][k] += force;
+                    }
+                }
+
+                // 3. Apply Forces
+                foreach (var path in allPaths)
+                {
+                    for (int k = 1; k < path.RenderPoints.Count - 1; k++)
+                    {
+                        path.RenderPoints[k] += forces[path][k];
+                    }
+                }
+            }
         }
 
         public static void GenerateNextFloor(SplitMap map, SplitData splitData, int parentNodeId)
@@ -220,126 +314,109 @@ namespace ProjectVagabond.Progression
 
         private static List<SplitMapPath> ConnectColumnPair(List<SplitMapNode> previousColumn, List<SplitMapNode> nextColumn, List<SplitMapPath> allExistingPaths, List<SplitMapNode> allNodes)
         {
-            var newPathsInThisColumn = new List<SplitMapPath>();
+            var connections = new List<Connection>();
             var sortedPrev = previousColumn.OrderBy(n => n.Position.Y).ToList();
             var sortedNext = nextColumn.OrderBy(n => n.Position.Y).ToList();
 
-            // Pass 1: Primary connections
-            foreach (var prevNode in sortedPrev)
+            // 1. Primary Connections: Ensure every previous node connects to at least one next node
+            foreach (var prev in sortedPrev)
             {
-                var potentialTargets = sortedNext
-                    .OrderBy(target => Vector2.DistanceSquared(prevNode.Position, target.Position));
+                var target = sortedNext.OrderBy(n => Vector2.DistanceSquared(prev.Position, n.Position)).First();
+                connections.Add(new Connection { From = prev, To = target });
+            }
 
-                foreach (var targetNode in potentialTargets)
+            // 2. Reachability: Ensure every next node has at least one incoming connection
+            foreach (var next in sortedNext)
+            {
+                if (!connections.Any(c => c.To == next))
                 {
-                    var tentativePathPoints = GenerateWigglyPathPoints(prevNode.Position, targetNode.Position, new List<int> { prevNode.Id, targetNode.Id }, allNodes);
-
-                    bool intersects = allExistingPaths.Any(existing => PathSegmentsIntersect(tentativePathPoints, existing.RenderPoints)) ||
-                                      newPathsInThisColumn.Any(newPath => PathSegmentsIntersect(tentativePathPoints, newPath.RenderPoints));
-
-                    if (!intersects)
-                    {
-                        var path = new SplitMapPath(prevNode.Id, targetNode.Id);
-                        path.RenderPoints = tentativePathPoints;
-                        newPathsInThisColumn.Add(path);
-                        prevNode.OutgoingPathIds.Add(path.Id);
-                        targetNode.IncomingPathIds.Add(path.Id);
-                        break; // Move to the next prevNode
-                    }
+                    var source = sortedPrev.OrderBy(n => Vector2.DistanceSquared(n.Position, next.Position)).First();
+                    connections.Add(new Connection { From = source, To = next });
                 }
             }
 
-            // Pass 2: Ensure reachability
-            foreach (var nextNode in sortedNext)
-            {
-                if (nextNode.IncomingPathIds.Any()) continue;
-
-                var potentialSources = sortedPrev
-                    .OrderBy(source => Vector2.DistanceSquared(source.Position, nextNode.Position));
-
-                foreach (var sourceNode in potentialSources)
-                {
-                    var tentativePathPoints = GenerateWigglyPathPoints(sourceNode.Position, nextNode.Position, new List<int> { sourceNode.Id, nextNode.Id }, allNodes);
-
-                    bool intersects = allExistingPaths.Any(existing => PathSegmentsIntersect(tentativePathPoints, existing.RenderPoints)) ||
-                                      newPathsInThisColumn.Any(newPath => PathSegmentsIntersect(tentativePathPoints, newPath.RenderPoints));
-
-                    if (!intersects)
-                    {
-                        var path = new SplitMapPath(sourceNode.Id, nextNode.Id);
-                        path.RenderPoints = tentativePathPoints;
-                        newPathsInThisColumn.Add(path);
-                        sourceNode.OutgoingPathIds.Add(path.Id);
-                        nextNode.IncomingPathIds.Add(path.Id);
-                        break; // Move to the next unreachable nextNode
-                    }
-                }
-            }
-
-            // Pass 3: Secondary connections (branching)
-            foreach (var prevNode in sortedPrev)
+            // 3. Branching: Randomly add extra connections for variety
+            foreach (var prev in sortedPrev)
             {
                 if (_random.NextDouble() < SECONDARY_PATH_CHANCE)
                 {
-                    var primaryPathsFromNode = newPathsInThisColumn.Where(p => p.FromNodeId == prevNode.Id).ToList();
-                    if (!primaryPathsFromNode.Any()) continue;
+                    // Find potential targets that aren't already connected to this node
+                    var existingTargets = connections.Where(c => c.From == prev).Select(c => c.To).ToHashSet();
+                    var potentialTargets = sortedNext.Where(n => !existingTargets.Contains(n)).ToList();
 
-                    var connectedNextNodeIds = prevNode.OutgoingPathIds
-                        .Select(id => allExistingPaths.Concat(newPathsInThisColumn).FirstOrDefault(p => p.Id == id)?.ToNodeId)
-                        .Where(id => id.HasValue)
-                        .Select(id => id.Value)
-                        .ToHashSet();
-
-                    var shuffledPrimaryPaths = primaryPathsFromNode.OrderBy(p => _random.Next()).ToList();
-
-                    foreach (var primaryPath in shuffledPrimaryPaths)
+                    if (potentialTargets.Any())
                     {
-                        var primaryTargetNode = sortedNext.FirstOrDefault(n => n.Id == primaryPath.ToNodeId);
-                        if (primaryTargetNode == null) continue;
+                        // Pick a random target from the remaining ones
+                        var extraTarget = potentialTargets[_random.Next(potentialTargets.Count)];
+                        connections.Add(new Connection { From = prev, To = extraTarget });
+                    }
+                }
+            }
 
-                        int primaryTargetIndex = sortedNext.IndexOf(primaryTargetNode);
-                        var potentialBranchTargets = new List<SplitMapNode>();
-                        if (primaryTargetIndex > 0) potentialBranchTargets.Add(sortedNext[primaryTargetIndex - 1]);
-                        if (primaryTargetIndex < sortedNext.Count - 1) potentialBranchTargets.Add(sortedNext[primaryTargetIndex + 1]);
+            // 4. Untangle: Topological Sort / Swap Destinations
+            // This loop detects crossing paths and swaps their destinations to uncross them.
+            bool changed = true;
+            int iterations = 0;
+            while (changed && iterations < 50)
+            {
+                changed = false;
+                iterations++;
+                // Sort connections by the Y position of the starting node
+                connections.Sort((a, b) => a.From.Position.Y.CompareTo(b.From.Position.Y));
 
-                        var validBranchTargets = potentialBranchTargets
-                            .Where(n => !connectedNextNodeIds.Contains(n.Id))
-                            .OrderBy(n => _random.Next())
-                            .ToList();
+                for (int i = 0; i < connections.Count; i++)
+                {
+                    for (int j = i + 1; j < connections.Count; j++)
+                    {
+                        var c1 = connections[i];
+                        var c2 = connections[j];
 
-                        if (!validBranchTargets.Any()) continue;
+                        // Ignore if they share a start or end node (diverging/converging is fine)
+                        if (c1.From == c2.From || c1.To == c2.To) continue;
 
-                        foreach (var targetNode in validBranchTargets)
+                        // Check for crossing:
+                        // Since list is sorted by From.Y, we know c1.From is "above" (or equal to) c2.From.
+                        // If c1.To is "below" c2.To, then the lines must cross.
+                        if (c1.To.Position.Y > c2.To.Position.Y)
                         {
-                            var tentativePathPoints = GenerateWigglyPathPoints(prevNode.Position, targetNode.Position, new List<int> { prevNode.Id, targetNode.Id }, allNodes);
-
-                            bool intersects = allExistingPaths.Any(existing => PathSegmentsIntersect(tentativePathPoints, existing.RenderPoints)) ||
-                                              newPathsInThisColumn.Any(newPath => PathSegmentsIntersect(tentativePathPoints, newPath.RenderPoints));
-
-                            if (!intersects)
-                            {
-                                var path = new SplitMapPath(prevNode.Id, targetNode.Id);
-                                path.RenderPoints = tentativePathPoints;
-                                newPathsInThisColumn.Add(path);
-                                prevNode.OutgoingPathIds.Add(path.Id);
-                                targetNode.IncomingPathIds.Add(path.Id);
-                                goto nextPrevNode;
-                            }
+                            // Swap targets to uncross
+                            var temp = c1.To;
+                            c1.To = c2.To;
+                            c2.To = temp;
+                            changed = true;
                         }
                     }
                 }
-            nextPrevNode:;
             }
 
-            // Pass 4: Pruning - Remove any nodes in the next column that are still unreachable.
-            var unreachableNodes = sortedNext.Where(n => !n.IncomingPathIds.Any()).ToList();
-            foreach (var unreachable in unreachableNodes)
+            // 5. Remove Duplicates (created by swapping)
+            // We use a HashSet of tuples to filter unique connections
+            var uniqueConnections = new HashSet<(int FromId, int ToId)>();
+            var finalConnections = new List<Connection>();
+
+            foreach (var conn in connections)
             {
-                nextColumn.Remove(unreachable);
-                allNodes.Remove(unreachable);
+                if (uniqueConnections.Add((conn.From.Id, conn.To.Id)))
+                {
+                    finalConnections.Add(conn);
+                }
             }
 
-            return newPathsInThisColumn;
+            // 6. Generate Geometry
+            var newPaths = new List<SplitMapPath>();
+            foreach (var conn in finalConnections)
+            {
+                var path = new SplitMapPath(conn.From.Id, conn.To.Id);
+                // Generate wiggly points now that topology is clean
+                path.RenderPoints = GenerateWigglyPathPoints(conn.From.Position, conn.To.Position, new List<int> { conn.From.Id, conn.To.Id }, allNodes);
+                newPaths.Add(path);
+
+                // Update node connectivity
+                conn.From.OutgoingPathIds.Add(path.Id);
+                conn.To.IncomingPathIds.Add(path.Id);
+            }
+
+            return newPaths;
         }
 
         private static void GeneratePathRenderPoints(List<SplitMapPath> paths, List<SplitMapNode> allNodes)
