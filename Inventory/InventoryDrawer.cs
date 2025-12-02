@@ -864,7 +864,7 @@ namespace ProjectVagabond.UI
                             else
                             {
                                 segWidth = font.MeasureString(segment.Text).Width;
-                                spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentTitleY), segment.Color);
+                                spriteBatch.DrawStringOutlinedSnapped(font, segment.Text, new Vector2(currentX, currentTitleY), segment.Color, _global.Palette_Black);
                             }
                             currentX += segWidth;
                         }
@@ -974,8 +974,8 @@ namespace ProjectVagabond.UI
                     // Draw Outline
                     if (silhouetteToDraw != null)
                     {
-                        Color mainOutlineColor = _global.ItemOutlineColor_Idle;
-                        Color cornerOutlineColor = _global.ItemOutlineColor_Idle_Corner;
+                        Color mainOutlineColor = _global.Palette_DarkGray;
+                        Color cornerOutlineColor = _global.Palette_DarkerGray;
 
                         // Corners
                         spriteBatch.DrawSnapped(silhouetteToDraw, new Rectangle(destRect.X - 1, destRect.Y - 1, destRect.Width, destRect.Height), sourceRect, cornerOutlineColor);

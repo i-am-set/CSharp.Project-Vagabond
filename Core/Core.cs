@@ -18,17 +18,6 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-// TODO: generate different noise maps to generate different map things
-// TODO: add a way to generate different map elements based on the noise map
-// TODO: make the map generation more complex, e.g. add rivers, lakes, etc.
-// TODO: player customization; backgrounds, stats, bodyfat, muscle (both of which effect stat spread as well as gives buffs and needs at their extremes)
-// TODO: Ctrl-Z undo previous path queued
-// TODO: Brainstorm a way to add POIs (think rust, darkwood, the long dark, tarkov)
-// TODO: Add a way to save and load the game state
-// TODO: Finish entity implimentation
-// TODO: Add a 1d8, 1d10, 1d12, and 1d20 to the dice rolling system; one at a time since its complex to impliment
-// TODO: Make hit marker number that appears on map entity
-
 namespace ProjectVagabond
 {
     public class Core : Game
@@ -43,7 +32,6 @@ namespace ProjectVagabond
         private Matrix _mouseTransformMatrix;
         private Point _previousResolution;
         private float _finalScale = 1f;
-
         // --- Post-Processing Members ---
         private RenderTarget2D _sceneRenderTarget;
         private RenderTarget2D _finalCompositeTarget;
@@ -54,7 +42,6 @@ namespace ProjectVagabond
         private float _glitchTimer;
         private float _glitchDuration;
         private BlendState _cursorInvertBlendState;
-
         private class ScreenFlashState
         {
             public float Timer;
@@ -114,8 +101,21 @@ namespace ProjectVagabond
 
         public Core()
         {
+            // --- CRASH SAFETY HOOK ---
+            // Catch unhandled exceptions before the app dies to log them to file.
+            AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
+            {
+                if (args.ExceptionObject is Exception ex)
+                {
+                    GameLogger.Log(LogSeverity.Critical, $"UNHANDLED EXCEPTION: {ex.Message}");
+                    GameLogger.Log(LogSeverity.Critical, ex.StackTrace);
+                    GameLogger.Close(); // Flush to disk
+                }
+            };
+
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
+
             IsMouseVisible = false;
 
             _graphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
@@ -126,6 +126,9 @@ namespace ProjectVagabond
 
         protected override void Initialize()
         {
+            // Phase 0: Initialize Console Redirection
+            ConsoleRedirection.Initialize();
+
             // Phase 1: Register Core Services & Settings
             ServiceLocator.Register<Core>(this);
             ServiceLocator.Register<GraphicsDeviceManager>(_graphics);
@@ -294,6 +297,13 @@ namespace ProjectVagabond
             base.Initialize();
         }
 
+        protected override void OnExiting(object sender, ExitingEventArgs args)
+        {
+            // Ensure logs are flushed when closing normally
+            GameLogger.Close();
+            base.OnExiting(sender, args);
+        }
+
         protected override void LoadContent()
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
@@ -411,8 +421,8 @@ namespace ProjectVagabond
 
         protected override void Update(GameTime gameTime)
         {
-            // Enforce cursor invisibility every frame as a failsafe.
-            IsMouseVisible = false;
+            // FIX: Show OS cursor only when debug console is open
+            IsMouseVisible = _debugConsole.IsVisible;
 
             // Pause the entire game update loop if the window is not focused.
             if (!IsActive)
@@ -562,7 +572,7 @@ namespace ProjectVagabond
             {
                 _loadingScreen.Update(gameTime);
                 _sceneManager.Update(gameTime); // Allow scene manager to update its transition state
-                // The dice system might be warming up, so it needs updates.
+                                                // The dice system might be warming up, so it needs updates.
                 if (!_isGameLoaded)
                 {
                     _diceRollingSystem.Update(gameTime);
@@ -573,6 +583,8 @@ namespace ProjectVagabond
             // The debug console is the next highest priority modal state.
             if (_debugConsole.IsVisible)
             {
+                UIInputManager.Update(gameTime);
+
                 _debugConsole.Update(gameTime);
                 _hapticsManager.Update(gameTime); // Allow haptics to continue for feedback
                 base.Update(gameTime);

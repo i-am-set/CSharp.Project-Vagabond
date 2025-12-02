@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -10,6 +9,7 @@ using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Text;
 
 namespace ProjectVagabond.UI
@@ -63,6 +63,12 @@ namespace ProjectVagabond.UI
         public Vector2 TextRenderOffset { get; set; } = Vector2.Zero;
         public Color? DebugColor { get; set; }
         public HoverAnimationType HoverAnimation { get; set; } = HoverAnimationType.Hop;
+
+        /// <summary>
+        /// If true (default), clicks are throttled by the global UIInputManager to prevent double-clicks.
+        /// If false, the button can be clicked as fast as the update loop runs (useful for debug tools).
+        /// </summary>
+        public bool UseInputDebounce { get; set; } = true;
 
         // Changed from event to property to allow reassignment (fixing CS0070)
         public Action? OnClick { get; set; }
@@ -162,11 +168,21 @@ namespace ProjectVagabond.UI
             bool mousePressedThisFrame = currentMouseState.LeftButton == ButtonState.Pressed && _previousMouseState.LeftButton == ButtonState.Released;
             bool mouseIsDown = currentMouseState.LeftButton == ButtonState.Pressed;
 
-            // Click-on-press is now the only behavior.
-            if (UIInputManager.CanProcessMouseClick() && IsHovered && mousePressedThisFrame)
+            // Click Logic
+            if (IsHovered && mousePressedThisFrame)
             {
-                TriggerClick();
-                UIInputManager.ConsumeMouseClick();
+                // If debounce is enabled, check the manager. If disabled, allow click immediately.
+                if (!UseInputDebounce || UIInputManager.CanProcessMouseClick())
+                {
+                    TriggerClick();
+
+                    // Only consume the global click if debounce is enabled. 
+                    // Otherwise, we leave the manager alone so other non-debounced things can fire (or just to avoid the timer).
+                    if (UseInputDebounce)
+                    {
+                        UIInputManager.ConsumeMouseClick();
+                    }
+                }
             }
 
             // Visual pressed state is active as long as mouse is down over the button.
@@ -175,10 +191,13 @@ namespace ProjectVagabond.UI
             bool rightMouseReleasedOverButton = IsHovered && currentMouseState.RightButton == ButtonState.Released && _previousMouseState.RightButton == ButtonState.Pressed;
             if (rightMouseReleasedOverButton)
             {
-                if (UIInputManager.CanProcessMouseClick())
+                if (!UseInputDebounce || UIInputManager.CanProcessMouseClick())
                 {
                     OnRightClick?.Invoke();
-                    UIInputManager.ConsumeMouseClick();
+                    if (UseInputDebounce)
+                    {
+                        UIInputManager.ConsumeMouseClick();
+                    }
                 }
             }
 
