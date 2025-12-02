@@ -5,6 +5,7 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,8 +36,6 @@ namespace ProjectVagabond.Scenes
         private float _currentInputDelay = 0f;
 
         private float _titleBobTimer = 0f;
-        private const float TitleBobAmount = 1.5f;
-        private const float TitleBobSpeed = 2f;
 
         private GameSettings _tempSettings;
         private ConfirmationDialog _confirmationDialog;
@@ -526,12 +525,17 @@ namespace ProjectVagabond.Scenes
             var virtualMousePos = Core.TransformMouse(Mouse.GetState().Position);
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            string title = "Settings";
+            string title = "SETTINGS";
             Vector2 titleSize = font.MeasureString(title);
-            float yOffset = (float)Math.Sin(_titleBobTimer * TitleBobSpeed) * TitleBobAmount;
+
+            // Pixel-perfect bob: 0 or -1
+            float yOffset = (MathF.Sin(_titleBobTimer * 4f) > 0) ? -1f : 0f;
+
             float titleBaseY = 10f; // Moved up 5px (was 15f)
             Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, titleBaseY + yOffset);
-            spriteBatch.DrawString(font, title, titlePosition, _global.Palette_BrightWhite, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
+
+            // Use DrawStringSnapped for pixel perfection
+            spriteBatch.DrawStringSnapped(font, title, titlePosition, _global.Palette_BrightWhite);
 
             // Draw divider line
             int dividerY = (int)(titleBaseY + titleSize.Y + 5);

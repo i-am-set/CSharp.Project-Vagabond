@@ -39,8 +39,6 @@ namespace ProjectVagabond.UI
         private float _currentInputDelay = 0f;
 
         private float _titleBobTimer = 0f;
-        private const float TitleBobAmount = 1.5f;
-        private const float TitleBobSpeed = 2f;
 
         private GameSettings _tempSettings;
         private ConfirmationDialog _confirmationDialog;
@@ -484,12 +482,17 @@ namespace ProjectVagabond.UI
             var bgRect = new Rectangle(0, (int)WORLD_Y_OFFSET, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             spriteBatch.DrawSnapped(pixel, bgRect, _global.GameBg);
 
-            string title = "Settings";
+            string title = "SETTINGS";
             Vector2 titleSize = font.MeasureString(title);
-            float yOffset = (float)Math.Sin(_titleBobTimer * TitleBobSpeed) * TitleBobAmount;
+
+            // Pixel-perfect bob: 0 or -1
+            float yOffset = (MathF.Sin(_titleBobTimer * 4f) > 0) ? -1f : 0f;
+
             float titleBaseY = 10f + WORLD_Y_OFFSET; // Moved up 5px (was 15f)
             Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, titleBaseY + yOffset);
-            spriteBatch.DrawString(font, title, titlePosition, _global.Palette_BrightWhite);
+
+            // Use DrawStringSnapped for pixel perfection
+            spriteBatch.DrawStringSnapped(font, title, titlePosition, _global.Palette_BrightWhite);
 
             int dividerY = (int)(titleBaseY + titleSize.Y + 5);
             spriteBatch.Draw(pixel, new Rectangle(screenWidth / 2 - 90, dividerY, 180, 1), _global.Palette_Gray);
