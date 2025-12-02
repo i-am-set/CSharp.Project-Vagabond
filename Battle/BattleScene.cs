@@ -296,11 +296,7 @@ namespace ProjectVagabond.Scenes
 
                     if (playerWon)
                     {
-                        if (!_rewardScreenShown)
-                        {
-                            _rewardScreenShown = true;
-                            ShowRewardScreen();
-                        }
+                        FinalizeVictory();
                     }
                     else
                     {

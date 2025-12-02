@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -17,7 +18,6 @@ namespace ProjectVagabond.Battle.UI
     public enum BattleUIState { Default, Targeting, ItemTargeting }
     public enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item }
     public class HoverHighlightState { public MoveData? CurrentMove; public List<BattleCombatant> Targets = new List<BattleCombatant>(); public float Timer = 0f; public const float SingleTargetFlashOnDuration = 0.4f; public const float SingleTargetFlashOffDuration = 0.2f; public const float MultiTargetFlashOnDuration = 0.4f; public const float MultiTargetFlashOffDuration = 0.4f; }
-
     public class BattleUIManager
     {
         public event Action<MoveData, MoveEntry, BattleCombatant>? OnMoveSelected;
@@ -74,7 +74,8 @@ namespace ProjectVagabond.Battle.UI
             _actionMenu = new ActionMenu();
             _itemMenu = new ItemMenu();
 
-            _itemTargetingBackButton = new Button(Rectangle.Empty, "BACK");
+            // Initialize with correct style
+            _itemTargetingBackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
             _itemTargetingBackButton.OnClick += () =>
             {
                 UIState = BattleUIState.Default;
@@ -324,6 +325,7 @@ namespace ProjectVagabond.Battle.UI
         {
             var pixel = ServiceLocator.Get<Texture2D>();
             var spriteManager = ServiceLocator.Get<SpriteManager>();
+            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
             // Draw Background
             const int dividerY = 123;
@@ -334,7 +336,7 @@ namespace ProjectVagabond.Battle.UI
             spriteBatch.DrawSnapped(spriteManager.BattleBorderTarget, Vector2.Zero, Color.White);
 
             const int backButtonPadding = 8;
-            const int backButtonHeight = 13;
+            const int backButtonHeight = 15; // Match ItemMenu
             const int backButtonTopMargin = 1;
             const int horizontalPadding = 10;
             const int verticalPadding = 2;
@@ -356,13 +358,21 @@ namespace ProjectVagabond.Battle.UI
             ) + animOffset;
             spriteBatch.DrawStringSnapped(font, text, textPos, Color.Red);
 
-            int backButtonWidth = (int)(_itemTargetingBackButton.Font ?? font).MeasureString(_itemTargetingBackButton.Text).Width + backButtonPadding * 2;
+            // Ensure button size matches ItemMenu
+            var backSize = (_itemTargetingBackButton.Font ?? secondaryFont).MeasureString(_itemTargetingBackButton.Text);
+            int backWidth = (int)backSize.Width + 16;
+
+            // Position: Y=165, Centered + 1px
             _itemTargetingBackButton.Bounds = new Rectangle(
-                horizontalPadding + (availableWidth - backButtonWidth) / 2,
-                gridStartY + gridAreaHeight + backButtonTopMargin - 7,
-                backButtonWidth,
+                (Global.VIRTUAL_WIDTH - backWidth) / 2 + 1,
+                165,
+                backWidth,
                 backButtonHeight
             );
+
+            // Ensure font is set if not already
+            if (_itemTargetingBackButton.Font == null) _itemTargetingBackButton.Font = secondaryFont;
+
             _itemTargetingBackButton.Draw(spriteBatch, font, gameTime, transform);
         }
 

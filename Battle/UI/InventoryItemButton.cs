@@ -12,9 +12,8 @@ namespace ProjectVagabond.Battle.UI
         private readonly BitmapFont _itemFont;
         public ConsumableItemData Item { get; }
         public int Quantity { get; }
-
         public InventoryItemButton(ConsumableItemData item, int quantity, BitmapFont font)
-            : base(Rectangle.Empty, item.ItemName.ToUpper())
+        : base(Rectangle.Empty, item.ItemName.ToUpper())
         {
             _itemFont = font;
             Item = item;
@@ -29,6 +28,7 @@ namespace ProjectVagabond.Battle.UI
         public override void Draw(SpriteBatch spriteBatch, BitmapFont defaultFont, GameTime gameTime, Matrix transform, bool forceHover = false, float? horizontalOffset = null, float? verticalOffset = null, Color? tintColorOverride = null)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
+            var spriteManager = ServiceLocator.Get<SpriteManager>();
             bool isActivated = IsEnabled && (IsHovered || forceHover);
 
             float yOffset = _hoverAnimator.UpdateAndGetOffset(gameTime, isActivated);
@@ -41,13 +41,39 @@ namespace ProjectVagabond.Battle.UI
 
             const int iconSize = 5;
             const int iconPadding = 2;
-            var iconRect = new Rectangle(
+
+            // The base layout rectangle for the icon (5x5)
+            var layoutIconRect = new Rectangle(
                 animatedBounds.X + iconPadding,
                 animatedBounds.Y + (animatedBounds.Height - iconSize) / 2,
                 iconSize,
                 iconSize
             );
-            spriteBatch.DrawSnapped(pixel, iconRect, _global.Palette_Pink);
+
+            // Determine the actual drawing rectangle for the sprite
+            Rectangle drawRect = layoutIconRect;
+            if (isActivated)
+            {
+                // Upscale to 32x32 centered on the original 5x5 position
+                const int expandedSize = 32;
+                drawRect = new Rectangle(
+                    layoutIconRect.Center.X - expandedSize / 2,
+                    layoutIconRect.Center.Y - expandedSize / 2,
+                    expandedSize,
+                    expandedSize
+                );
+            }
+
+            var itemTexture = spriteManager.GetItemSprite(Item.ImagePath);
+
+            if (itemTexture != null)
+            {
+                spriteBatch.DrawSnapped(itemTexture, drawRect, Color.White);
+            }
+            else
+            {
+                spriteBatch.DrawSnapped(pixel, drawRect, _global.Palette_Pink);
+            }
 
             // --- Item Name Drawing ---
             var nameColor = isActivated ? _global.ButtonHoverColor : _global.Palette_BrightWhite;
@@ -56,8 +82,9 @@ namespace ProjectVagabond.Battle.UI
                 nameColor = _global.ButtonDisableColor;
             }
 
+            // Use layoutIconRect for text positioning to keep text stable even when icon scales up
             var namePosition = new Vector2(
-                iconRect.Right + iconPadding + 1,
+                layoutIconRect.Right + iconPadding + 1,
                 animatedBounds.Y + (animatedBounds.Height - _itemFont.LineHeight) / 2
             );
 
