@@ -35,7 +35,7 @@ namespace ProjectVagabond
         public Texture2D ActionIconsSpriteSheet { get; private set; }
         public Texture2D ActionButtonUsesSpriteSheet { get; private set; }
         public Texture2D RarityIconsSpriteSheet { get; private set; }
-        public Texture2D InventorySlotEquipIconSprite { get; private set; }
+        // Removed duplicate InventorySlotEquipIconSprite here
 
         // Battle Borders
         public Texture2D BattleBorderMain { get; private set; }
@@ -62,6 +62,7 @@ namespace ProjectVagabond
         public Dictionary<int, Rectangle> SpellUsesSourceRects { get; private set; } = new Dictionary<int, Rectangle>();
         public Rectangle[] SplitMapInventoryButtonSourceRects { get; private set; }
         public Rectangle[] SplitMapCloseInventoryButtonSourceRects { get; private set; }
+        public Rectangle[] SplitMapSettingsButtonSourceRects { get; private set; }
         public Rectangle[] InventoryHeaderButtonSourceRects { get; private set; }
         public Rectangle[] InventorySlotSourceRects { get; private set; }
         public Rectangle[] InventoryLeftArrowButtonSourceRects { get; private set; }
@@ -136,13 +137,14 @@ namespace ProjectVagabond
         public Texture2D SplitMapInventoryButton { get; private set; }
         public Texture2D SplitMapHeaderBorder { get; private set; }
         public Texture2D SplitMapCloseInventoryButton { get; private set; }
+        public Texture2D SplitMapSettingsButton { get; private set; }
         public Texture2D InventoryBorderArmor { get; private set; }
         public Texture2D InventoryBorderHeader { get; private set; }
         public Texture2D InventoryBorderRelics { get; private set; }
         public Texture2D InventoryBorderSpells { get; private set; }
         public Texture2D InventoryBorderWeapons { get; private set; }
         public Texture2D InventoryBorderConsumables { get; private set; }
-        public Texture2D InventoryBorderMisc { get; private set; } // <--- Added
+        public Texture2D InventoryBorderMisc { get; private set; }
         public Texture2D InventoryBorderEquip { get; private set; }
         public Texture2D InventoryBorderEquipSubmenu { get; private set; }
         public Texture2D InventoryHeaderButtonWeapons { get; private set; }
@@ -150,7 +152,7 @@ namespace ProjectVagabond
         public Texture2D InventoryHeaderButtonSpells { get; private set; }
         public Texture2D InventoryHeaderButtonRelics { get; private set; }
         public Texture2D InventoryHeaderButtonConsumables { get; private set; }
-        public Texture2D InventoryHeaderButtonMisc { get; private set; } // <--- Added
+        public Texture2D InventoryHeaderButtonMisc { get; private set; }
         public Texture2D InventoryHeaderButtonEquip { get; private set; }
         public Texture2D InventorySlotIdleSpriteSheet { get; private set; }
         public Texture2D InventorySlotHoverSprite { get; private set; }
@@ -162,6 +164,7 @@ namespace ProjectVagabond
         public Texture2D InventoryEquipSelectedSprite { get; private set; }
         public Texture2D InventoryScrollArrowsSprite { get; private set; }
         public Texture2D InventoryEmptySlotSprite { get; private set; }
+        public Texture2D InventorySlotEquipIconSprite { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -344,6 +347,8 @@ namespace ProjectVagabond
             catch { SplitMapHeaderBorder = _textureFactory.CreateColoredTexture(320, 28, Color.Magenta); }
             try { SplitMapCloseInventoryButton = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/SplitMap_Close_Inventory_Button"); }
             catch { SplitMapCloseInventoryButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
+            try { SplitMapSettingsButton = _core.Content.Load<Texture2D>("Sprites/UI/SplitMap/SplitMap_Settings_Button"); }
+            catch { SplitMapSettingsButton = _textureFactory.CreateColoredTexture(32, 16, Color.Magenta); }
             try { InventoryBorderArmor = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_armor"); }
             catch { InventoryBorderArmor = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryBorderHeader = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_header"); }
@@ -356,8 +361,8 @@ namespace ProjectVagabond
             catch { InventoryBorderWeapons = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryBorderConsumables = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_consumables"); }
             catch { InventoryBorderConsumables = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
-            try { InventoryBorderMisc = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_misc"); } // <--- Added
-            catch { InventoryBorderMisc = _textureFactory.CreateColoredTexture(320, 180, Color.MediumPurple); } // Placeholder
+            try { InventoryBorderMisc = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_misc"); }
+            catch { InventoryBorderMisc = _textureFactory.CreateColoredTexture(320, 180, Color.MediumPurple); }
             try { InventoryBorderEquip = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_equip"); }
             catch { InventoryBorderEquip = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
             try { InventoryBorderEquipSubmenu = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_border_equip_submenu"); }
@@ -372,8 +377,8 @@ namespace ProjectVagabond
             catch { InventoryHeaderButtonRelics = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventoryHeaderButtonConsumables = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_consumables"); }
             catch { InventoryHeaderButtonConsumables = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
-            try { InventoryHeaderButtonMisc = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_misc"); } // <--- Added
-            catch { InventoryHeaderButtonMisc = _textureFactory.CreateColoredTexture(96, 32, Color.MediumPurple); } // Placeholder
+            try { InventoryHeaderButtonMisc = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_misc"); }
+            catch { InventoryHeaderButtonMisc = _textureFactory.CreateColoredTexture(96, 32, Color.MediumPurple); }
             try { InventoryHeaderButtonEquip = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_header_button_equip"); }
             catch { InventoryHeaderButtonEquip = _textureFactory.CreateColoredTexture(96, 32, Color.Magenta); }
             try { InventorySlotIdleSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_idle"); }
@@ -418,6 +423,7 @@ namespace ProjectVagabond
             InitializeSpellUsesRects();
             InitializeSplitMapInventoryButtonRects();
             InitializeSplitMapCloseInventoryButtonRects();
+            InitializeSplitMapSettingsButtonRects();
             InitializeInventoryHeaderButtonRects();
             InitializeInventorySlotRects();
             InitializeInventoryArrowButtonRects();
@@ -490,6 +496,17 @@ namespace ProjectVagabond
             SplitMapCloseInventoryButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
             // Frame 1: Hover
             SplitMapCloseInventoryButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
+        }
+
+        private void InitializeSplitMapSettingsButtonRects()
+        {
+            SplitMapSettingsButtonSourceRects = new Rectangle[2];
+            const int frameWidth = 16;
+            const int frameHeight = 16;
+            // Frame 0: Idle
+            SplitMapSettingsButtonSourceRects[0] = new Rectangle(0, 0, frameWidth, frameHeight);
+            // Frame 1: Hover
+            SplitMapSettingsButtonSourceRects[1] = new Rectangle(frameWidth, 0, frameWidth, frameHeight);
         }
 
         private void InitializeRarityBackgrounds()

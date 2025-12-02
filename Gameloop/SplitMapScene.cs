@@ -18,6 +18,8 @@ namespace ProjectVagabond.Scenes
 {
     public class SplitMapScene : GameScene
     {
+        private enum SplitMapView { Map, Inventory, Settings }
+        private SplitMapView _currentView = SplitMapView.Map;
         private struct DrawableMapObject
         {
             public enum ObjectType { Node, Player }
@@ -36,6 +38,7 @@ namespace ProjectVagabond.Scenes
         private readonly ComponentStore _componentStore;
         private readonly VoidEdgeEffect _voidEdgeEffect;
         private readonly SplitMapInventoryOverlay _inventoryOverlay;
+        private readonly SplitMapSettingsOverlay _settingsOverlay;
 
         private SplitMap? _currentMap;
         private int _playerCurrentNodeId;
@@ -121,6 +124,9 @@ namespace ProjectVagabond.Scenes
         public static bool PlayerWonLastBattle { get; set; } = true;
         public static bool WasMajorBattle { get; set; } = false;
 
+        // UI Buttons
+        private ImageButton? _settingsButton;
+
         public SplitMapScene()
         {
             _progressionManager = ServiceLocator.Get<ProgressionManager>();
@@ -134,6 +140,7 @@ namespace ProjectVagabond.Scenes
             _choiceGenerator = new ChoiceGenerator();
             _componentStore = ServiceLocator.Get<ComponentStore>();
             _inventoryOverlay = new SplitMapInventoryOverlay();
+            _settingsOverlay = new SplitMapSettingsOverlay(this);
 
             var narratorBounds = new Rectangle(0, Global.VIRTUAL_HEIGHT - 50, Global.VIRTUAL_WIDTH, 50);
             _resultNarrator = new StoryNarrator(narratorBounds);
@@ -146,7 +153,18 @@ namespace ProjectVagabond.Scenes
                 noiseSpeed: 3f
             );
 
-            _inventoryOverlay.OnInventoryToggled += OnInventoryToggled;
+            // Toggle Logic for Inventory Button
+            _inventoryOverlay.OnInventoryButtonClicked += () =>
+            {
+                if (_currentView == SplitMapView.Inventory)
+                {
+                    SetView(SplitMapView.Map, snap: true);
+                }
+                else
+                {
+                    SetView(SplitMapView.Inventory, snap: true);
+                }
+            };
         }
 
         public override Rectangle GetAnimatedBounds() => new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
@@ -161,10 +179,36 @@ namespace ProjectVagabond.Scenes
             _pendingCombatArchetypes = null;
 
             _inventoryOverlay.Initialize();
+            _settingsOverlay.Initialize();
+
+            // Initialize Settings Button
+            if (_settingsButton == null)
+            {
+                var settingsSheet = _spriteManager.SplitMapSettingsButton;
+                var settingsRects = _spriteManager.SplitMapSettingsButtonSourceRects;
+                int buttonSize = 16;
+                int settingsX = Global.VIRTUAL_WIDTH - 7 - buttonSize;
+
+                _settingsButton = new ImageButton(new Rectangle(settingsX, 10, buttonSize, buttonSize), settingsSheet, settingsRects[0], settingsRects[1], enableHoverSway: true);
+
+                // Toggle Logic for Settings Button
+                _settingsButton.OnClick += () =>
+                {
+                    if (_currentView == SplitMapView.Settings)
+                    {
+                        SetView(SplitMapView.Map, snap: true);
+                    }
+                    else
+                    {
+                        SetView(SplitMapView.Settings, snap: true);
+                    }
+                };
+            }
+            _settingsButton.ResetAnimationState();
 
             if (_progressionManager.CurrentSplitMap == null)
             {
-                // This is a full reset of the scene's state for a new run
+                // Full reset
                 _mapState = SplitMapState.Idle;
                 _eventState = EventState.Idle;
                 _playerMoveTimer = 0f;
@@ -195,10 +239,11 @@ namespace ProjectVagabond.Scenes
                     UpdateReachableNodes();
                     StartPathRevealAnimation();
                 }
+                SetView(SplitMapView.Map, snap: true); // Default view
             }
             else
             {
-                // This handles returning from a battle/event within the same run
+                // Returning from battle
                 _currentMap = _progressionManager.CurrentSplitMap;
                 if (WasMajorBattle && PlayerWonLastBattle)
                 {
@@ -216,6 +261,7 @@ namespace ProjectVagabond.Scenes
                     _mapState = SplitMapState.LoweringNode;
                     _nodeLiftTimer = 0f;
                 }
+                SetView(SplitMapView.Map, snap: true); // Default view
             }
         }
 
@@ -223,31 +269,65 @@ namespace ProjectVagabond.Scenes
         {
             base.Exit();
             _diceRollingSystem.OnRollCompleted -= OnDiceRollCompleted;
-            // Only clear the map if we are not transitioning to a scene that will return here (like Battle)
             if (BattleSetup.ReturnSceneState != GameSceneState.Split)
             {
                 _progressionManager.ClearCurrentSplitMap();
             }
         }
 
-        private void OnInventoryToggled(bool isOpen)
+        private void SetView(SplitMapView view, bool snap = true)
         {
-            if (isOpen)
+            _currentView = view;
+            _isPanning = false;
+            _cameraVelocity = Vector2.Zero;
+            _snapBackDelayTimer = 0f;
+
+            // Update Settings Button Sprite based on view
+            if (_settingsButton != null)
             {
-                _isPanning = false;
-                _cameraVelocity = Vector2.Zero;
-                _snapBackDelayTimer = 0f;
-                _targetCameraOffset = new Vector2(0, -200);
-                _cameraOffset = _targetCameraOffset; // Snap instantly
-            }
-            else
-            {
-                var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
-                if (currentNode != null)
+                if (view == SplitMapView.Settings)
                 {
-                    // Snap instantly (true) to avoid easing animation when closing inventory
-                    UpdateCameraTarget(currentNode.Position, true);
+                    // Show "Map" icon (Close Settings)
+                    _settingsButton.SetSprites(
+                        _spriteManager.SplitMapCloseInventoryButton,
+                        _spriteManager.SplitMapCloseInventoryButtonSourceRects[0],
+                        _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]
+                    );
                 }
+                else
+                {
+                    // Show "Gear" icon (Open Settings)
+                    _settingsButton.SetSprites(
+                        _spriteManager.SplitMapSettingsButton,
+                        _spriteManager.SplitMapSettingsButtonSourceRects[0],
+                        _spriteManager.SplitMapSettingsButtonSourceRects[1]
+                    );
+                }
+            }
+
+            switch (_currentView)
+            {
+                case SplitMapView.Map:
+                    _inventoryOverlay.Hide();
+                    _settingsOverlay.Hide();
+                    var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
+                    if (currentNode != null)
+                    {
+                        UpdateCameraTarget(currentNode.Position, snap);
+                    }
+                    break;
+                case SplitMapView.Inventory:
+                    _inventoryOverlay.Show();
+                    _settingsOverlay.Hide();
+                    _targetCameraOffset = new Vector2(0, -200);
+                    if (snap) _cameraOffset = _targetCameraOffset;
+                    break;
+                case SplitMapView.Settings:
+                    _inventoryOverlay.Hide();
+                    _settingsOverlay.Show();
+                    _targetCameraOffset = new Vector2(0, -400);
+                    if (snap) _cameraOffset = _targetCameraOffset;
+                    break;
             }
         }
 
@@ -292,13 +372,11 @@ namespace ProjectVagabond.Scenes
             _playerMoveTimer = 0f;
             _playerMoveTargetNodeId = targetNodeId;
 
-            // Find all currently reachable nodes from the player's current position.
             var currentNode = _currentMap.Nodes[_playerCurrentNodeId];
             var reachableNodeIds = currentNode.OutgoingPathIds
                 .Select(pathId => _currentMap.Paths[pathId].ToNodeId)
                 .ToList();
 
-            // Mark only the unselected reachable nodes as unreachable.
             foreach (var nodeId in reachableNodeIds)
             {
                 if (nodeId != targetNodeId)
@@ -306,22 +384,17 @@ namespace ProjectVagabond.Scenes
                     _currentMap.Nodes[nodeId].IsReachable = false;
                 }
             }
-            // The selected targetNodeId remains IsReachable = true, so it and its path will be drawn correctly.
         }
 
         public override void Update(GameTime gameTime)
         {
-            // Manually handle the logic that needs to run at the start of the frame.
             if (_inputBlockTimer > 0)
             {
                 _inputBlockTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             }
 
-            // Now check the input block timer.
             if (IsInputBlocked)
             {
-                // We must still call base.Update to keep the input states ticking over,
-                // otherwise the first click after the block ends will be missed.
                 base.Update(gameTime);
                 return;
             }
@@ -337,7 +410,6 @@ namespace ProjectVagabond.Scenes
                 _nodeHoverTextBobTimer += deltaTime;
             }
 
-            // Handle modal dialogs first, as they pause the main scene logic
             if (_narrativeDialog.IsActive || _sceneManager.IsModalActive)
             {
                 if (_narrativeDialog.IsActive)
@@ -345,12 +417,10 @@ namespace ProjectVagabond.Scenes
                     _narrativeDialog.Update(gameTime);
                 }
                 _wasModalActiveLastFrame = true;
-                // Call base.Update at the end before returning
                 base.Update(gameTime);
                 return;
             }
 
-            // Check if a modal was just closed
             if (_wasModalActiveLastFrame)
             {
                 _wasModalActiveLastFrame = false;
@@ -364,7 +434,6 @@ namespace ProjectVagabond.Scenes
                 _nodeLiftTimer = 0f;
             }
 
-            // Handle event states that pause map interaction
             if (_eventState == EventState.AwaitingDiceRoll)
             {
                 base.Update(gameTime);
@@ -377,30 +446,31 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
-            // Update Inventory Overlay
             var cameraTransform = Matrix.CreateTranslation(RoundedCameraOffset.X, RoundedCameraOffset.Y, 0);
+
+            // Update Overlays
             _inventoryOverlay.Update(gameTime, currentMouseState, currentKeyboardState, _mapState == SplitMapState.Idle, cameraTransform);
+            _settingsOverlay.Update(gameTime, currentMouseState, currentKeyboardState, cameraTransform);
+
+            // Update Settings Button
+            _settingsButton?.Update(currentMouseState);
 
             // Handle camera logic
-            if (!_inventoryOverlay.IsOpen)
+            if (_currentView == SplitMapView.Map)
             {
                 if (!_isPanning)
                 {
                     if (_cameraVelocity.LengthSquared() > 0.1f)
                     {
-                        // Apply inertia
                         _cameraOffset += _cameraVelocity;
                         _cameraVelocity = Vector2.Lerp(_cameraVelocity, Vector2.Zero, PAN_FRICTION * deltaTime);
                         ClampCameraOffset();
                         _targetCameraOffset.X = _cameraOffset.X;
-                        _snapBackDelayTimer = SNAP_BACK_DELAY; // Reset timer while sliding
+                        _snapBackDelayTimer = SNAP_BACK_DELAY;
                     }
                     else
                     {
-                        // Stop tiny movements and officially end the slide
                         _cameraVelocity = Vector2.Zero;
-
-                        // Countdown to snap back
                         if (_snapBackDelayTimer > 0)
                         {
                             _snapBackDelayTimer -= deltaTime;
@@ -416,14 +486,11 @@ namespace ProjectVagabond.Scenes
                     }
                 }
             }
-            // Always LERP towards the target. When panning/sliding, target is updated to current, so LERP does nothing.
-            // When snap-back triggers, target is updated to player, and LERP takes over.
+
             _cameraOffset = Vector2.Lerp(_cameraOffset, _targetCameraOffset, deltaTime * CAMERA_LERP_SPEED);
 
-            // --- Combat Transition Logic ---
             if (_waitingForCombatCameraSettle)
             {
-                // Check if camera is close enough to the target (map position)
                 if (Vector2.Distance(_cameraOffset, _targetCameraOffset) < CAMERA_SETTLE_THRESHOLD)
                 {
                     if (_framesToWaitAfterSettle > 0)
@@ -437,7 +504,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Update active path animations
             var appearingKeys = _pathAnimationProgress.Keys.ToList();
             foreach (var pathId in appearingKeys)
             {
@@ -448,7 +514,7 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            if (!_inventoryOverlay.IsOpen)
+            if (_currentView == SplitMapView.Map)
             {
                 HandleMapInput(gameTime);
             }
@@ -479,8 +545,6 @@ namespace ProjectVagabond.Scenes
             }
 
             _playerIcon.Update(gameTime);
-
-            // At the very end, call the base update to handle input state for the NEXT frame.
             base.Update(gameTime);
         }
 
@@ -493,7 +557,6 @@ namespace ProjectVagabond.Scenes
             Matrix.Invert(ref cameraTransform, out var inverseCameraTransform);
             var mouseInMapSpace = Vector2.Transform(virtualMousePos, inverseCameraTransform);
 
-            // 1. Update hover state and cursor
             _hoveredNodeId = -1;
             if (_currentMap != null)
             {
@@ -516,9 +579,9 @@ namespace ProjectVagabond.Scenes
                 cursorManager.SetState(CursorState.HoverDraggable);
             }
 
-            // 2. Handle camera panning (which depends on hover state)
-            // Only allow panning if the inventory button is NOT hovered.
-            if (!_inventoryOverlay.IsHovered)
+            // Only allow panning if not hovering buttons
+            bool hoveringButtons = (_inventoryOverlay.IsHovered || (_settingsButton?.IsHovered ?? false));
+            if (!hoveringButtons)
             {
                 HandleCameraPan(currentMouseState, virtualMousePos);
             }
@@ -528,25 +591,22 @@ namespace ProjectVagabond.Scenes
                 cursorManager.SetState(CursorState.Dragging);
             }
 
-            // 3. Handle node input (which is skipped if panning)
             if (!_isPanning && _mapState == SplitMapState.Idle)
             {
                 bool leftClickPressed = currentMouseState.LeftButton == ButtonState.Pressed && previousMouseState.LeftButton == ButtonState.Released;
 
                 if (leftClickPressed && _hoveredNodeId != -1 && UIInputManager.CanProcessMouseClick())
                 {
-                    // If the camera is panned away, start snapping it back to the current player node immediately.
                     var currentNode = _currentMap?.Nodes[_playerCurrentNodeId];
                     if (currentNode != null)
                     {
-                        UpdateCameraTarget(currentNode.Position, false); // This sets the LERP target.
+                        UpdateCameraTarget(currentNode.Position, false);
                     }
-                    // Cancel any pending delay and stop any inertial slide.
                     _snapBackDelayTimer = 0f;
                     _cameraVelocity = Vector2.Zero;
 
                     StartPlayerMove(_hoveredNodeId);
-                    _hoveredNodeId = -1; // Clear hover state immediately on click
+                    _hoveredNodeId = -1;
                     UIInputManager.ConsumeMouseClick();
                 }
             }
@@ -554,7 +614,7 @@ namespace ProjectVagabond.Scenes
 
         private void HandleCameraPan(MouseState currentMouseState, Vector2 virtualMousePos)
         {
-            if (_inventoryOverlay.IsOpen)
+            if (_currentView != SplitMapView.Map)
             {
                 _isPanning = false;
                 return;
@@ -564,19 +624,14 @@ namespace ProjectVagabond.Scenes
             bool leftClickHeld = currentMouseState.LeftButton == ButtonState.Pressed;
             bool leftClickReleased = currentMouseState.LeftButton == ButtonState.Released && previousMouseState.LeftButton == ButtonState.Pressed;
 
-            // Handle Scroll Wheel Panning
             int scrollDelta = currentMouseState.ScrollWheelValue - previousMouseState.ScrollWheelValue;
             if (scrollDelta != 0 && _mapState == SplitMapState.Idle)
             {
-                // Add to the camera's velocity instead of directly setting its position.
                 _cameraVelocity.X -= Math.Sign(scrollDelta) * SCROLL_PAN_SPEED;
-
-                // Stop any LERPing towards a target and reset the snap-back timer.
                 _targetCameraOffset.X = _cameraOffset.X;
                 _snapBackDelayTimer = SNAP_BACK_DELAY;
             }
 
-            // Start Drag Panning
             if (leftClickPressed && _hoveredNodeId == -1 && _mapState == SplitMapState.Idle && UIInputManager.CanProcessMouseClick())
             {
                 _isPanning = true;
@@ -587,46 +642,37 @@ namespace ProjectVagabond.Scenes
                 UIInputManager.ConsumeMouseClick();
             }
 
-            // End Drag Panning
             if (leftClickReleased)
             {
                 if (_isPanning)
                 {
                     _isPanning = false;
-                    // The snap-back timer is now handled in Update after the slide finishes.
                 }
             }
 
-            // Update Drag Panning
             if (_isPanning && leftClickHeld)
             {
-                // Explicitly stop panning if the player starts moving or an event occurs.
                 if (_mapState != SplitMapState.Idle)
                 {
                     _isPanning = false;
                     return;
                 }
 
-                _snapBackDelayTimer = SNAP_BACK_DELAY; // Keep resetting the timer while actively panning.
+                _snapBackDelayTimer = SNAP_BACK_DELAY;
 
-                // Convert current and last mouse positions to virtual space to get a resolution-independent delta.
                 Vector2 virtualCurrentPos = Core.TransformMouse(currentMouseState.Position);
                 Vector2 virtualLastPos = Core.TransformMouse(_lastPanMousePosition);
                 Vector2 virtualDelta = virtualCurrentPos - virtualLastPos;
 
-                // The velocity is now based on virtual pixel movement.
                 _cameraVelocity.X = virtualDelta.X * PAN_SENSITIVITY;
                 _cameraVelocity.Y = 0;
 
-                // Update camera position directly by the same amount
                 _cameraOffset.X += _cameraVelocity.X;
-
                 ClampCameraOffset();
 
-                _targetCameraOffset.X = _cameraOffset.X; // Make LERP target the current X position
+                _targetCameraOffset.X = _cameraOffset.X;
                 _lastPanMousePosition = currentMouseState.Position;
 
-                // Lock the cursor's Y position
                 Mouse.SetPosition(currentMouseState.Position.X, _panStartMousePosition.Y);
             }
         }
@@ -646,10 +692,8 @@ namespace ProjectVagabond.Scenes
                 }
                 else
                 {
-                    // If map is smaller, force it to be centered.
                     _cameraOffset.X = (screenWidth - mapContentWidth) / 2;
                 }
-                // Do not clamp Y here to allow vertical panning
             }
         }
 
@@ -719,17 +763,14 @@ namespace ProjectVagabond.Scenes
             if (currentNode != null)
             {
                 float progress = Math.Clamp(_nodeLiftTimer / NODE_LOWERING_DURATION, 0f, 1f);
-                // Animate from lifted position back to zero
                 currentNode.VisualOffset = new Vector2(0, MathHelper.Lerp(-NODE_LIFT_AMOUNT, 0, Easing.EaseOutCubic(progress)));
             }
 
             if (_nodeLiftTimer >= NODE_LOWERING_DURATION)
             {
-                // Snap to final position and transition to the next state
                 if (currentNode != null)
                 {
                     currentNode.VisualOffset = Vector2.Zero;
-                    // Update the camera target to the new node position
                     UpdateCameraTarget(currentNode.Position, false);
                 }
                 _mapState = SplitMapState.PostEventDelay;
@@ -755,7 +796,6 @@ namespace ProjectVagabond.Scenes
             }
             else
             {
-                // Center the map horizontally if it's smaller than the screen
                 targetX = (screenWidth - mapContentWidth) / 2;
             }
 
@@ -777,7 +817,6 @@ namespace ProjectVagabond.Scenes
             {
                 foreach (var pathId in nodeForPaths.OutgoingPathIds)
                 {
-                    // Reset or start animation for newly reachable paths
                     _pathAnimationProgress[pathId] = 0f;
                     float duration = PATH_ANIMATION_DURATION + (float)(_random.NextDouble() * 0.5 - 0.25);
                     _pathAnimationDurations[pathId] = Math.Max(0.5f, duration);
@@ -789,11 +828,11 @@ namespace ProjectVagabond.Scenes
         {
             _pendingCombatArchetypes = enemyArchetypes;
 
-            if (_inventoryOverlay.IsOpen)
+            if (_currentView != SplitMapView.Map)
             {
-                _inventoryOverlay.ForceClose();
+                SetView(SplitMapView.Map, snap: true);
                 _waitingForCombatCameraSettle = true;
-                _framesToWaitAfterSettle = 1; // Wait 1 frame after settling
+                _framesToWaitAfterSettle = 1;
             }
             else
             {
@@ -833,7 +872,7 @@ namespace ProjectVagabond.Scenes
                             _narrativeDialog.Show(narrativeEvent, OnNarrativeChoiceSelected);
                             _wasModalActiveLastFrame = true;
                         }
-                        else // Failsafe for invalid event ID
+                        else
                         {
                             node.IsCompleted = true;
                             UpdateCameraTarget(node.Position, false);
@@ -841,7 +880,7 @@ namespace ProjectVagabond.Scenes
                             _nodeLiftTimer = 0f;
                         }
                     }
-                    else // Failsafe for missing event data
+                    else
                     {
                         node.IsCompleted = true;
                         UpdateCameraTarget(node.Position, false);
@@ -854,7 +893,7 @@ namespace ProjectVagabond.Scenes
                     TriggerReward();
                     break;
 
-                default: // Failsafe for all other node types without events
+                default:
                     node.IsCompleted = true;
                     UpdateCameraTarget(node.Position, false);
                     _mapState = SplitMapState.LoweringNode;
@@ -877,19 +916,19 @@ namespace ProjectVagabond.Scenes
                 var dieType = numSides == 4 ? DieType.D4 : DieType.D6;
 
                 _diceRollingSystem.Roll(new List<DiceGroup>
+        {
+            new DiceGroup
             {
-                new DiceGroup
-                {
-                    GroupId = "narrative_check",
-                    NumberOfDice = numDice,
-                    DieType = dieType,
-                    ResultProcessing = DiceResultProcessing.Sum,
-                    Modifier = modifier,
-                    Tint = Color.White,
-                    AnimateSum = false,
-                    ShowResultText = false
-                }
-            });
+                GroupId = "narrative_check",
+                NumberOfDice = numDice,
+                DieType = dieType,
+                ResultProcessing = DiceResultProcessing.Sum,
+                Modifier = modifier,
+                Tint = Color.White,
+                AnimateSum = false,
+                ShowResultText = false
+            }
+        });
             }
         }
 
@@ -1083,11 +1122,12 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // Draw player icon last to ensure it's on top of nodes
             _playerIcon.Draw(spriteBatch);
 
-            // Draw the inventory menu UI elements
+            // Draw Overlays in World Space
             _inventoryOverlay.DrawWorld(spriteBatch, font, gameTime);
+            // Pass the finalTransform to the settings overlay so it can restore it after drawing dialogs
+            _settingsOverlay.Draw(spriteBatch, font, gameTime, finalTransform);
 
             spriteBatch.End();
 
@@ -1097,8 +1137,8 @@ namespace ProjectVagabond.Scenes
             var mapBounds = new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT);
             _voidEdgeEffect.Draw(spriteBatch, mapBounds);
 
-            // Only draw if idle or inventory is open
             _inventoryOverlay.DrawScreen(spriteBatch, font, gameTime, transform);
+            _settingsButton?.Draw(spriteBatch, font, gameTime, transform);
 
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
             {
@@ -1146,13 +1186,11 @@ namespace ProjectVagabond.Scenes
         {
             if (_currentMap == null) return;
 
-            // --- Pass 1: Draw all paths as gray underlays ---
             foreach (var path in _currentMap.Paths.Values)
             {
                 DrawPath(spriteBatch, pixel, path, _global.Palette_Gray, false);
             }
 
-            // --- Pass 2: Draw visited and animating paths (non-highlighted) ---
             SplitMapPath? highlightedPath = null;
             if (_hoveredNodeId != -1 && _mapState == SplitMapState.Idle)
             {
@@ -1177,7 +1215,6 @@ namespace ProjectVagabond.Scenes
                 }
             }
 
-            // --- Pass 3: Draw the highlighted path on top of everything ---
             if (highlightedPath != null)
             {
                 DrawPath(spriteBatch, pixel, highlightedPath, _global.Palette_Red, false);
@@ -1344,7 +1381,7 @@ namespace ProjectVagabond.Scenes
                     texture = _spriteManager.SplitNodeTower3;
                     break;
                 default:
-                    texture = _spriteManager.CombatNodeNormalSprite; // Fallback
+                    texture = _spriteManager.CombatNodeNormalSprite;
                     break;
             }
 

@@ -4,9 +4,12 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,14 +21,15 @@ namespace ProjectVagabond.UI
     public partial class SplitMapInventoryOverlay
     {
         public bool IsOpen { get; private set; } = false;
-        public event Action<bool>? OnInventoryToggled;
+        // Removed OnInventoryToggled event as control is now external
+
         // Expose hover state to block map interaction
         public bool IsHovered => _inventoryButton?.IsHovered ?? false;
         private readonly GameState _gameState;
         private readonly SpriteManager _spriteManager;
         private readonly Global _global;
         private readonly HapticsManager _hapticsManager;
-        private readonly ComponentStore _componentStore; // Added ComponentStore
+        private readonly ComponentStore _componentStore;
         private ImageButton? _inventoryButton;
         private readonly List<InventoryHeaderButton> _inventoryHeaderButtons = new();
         private readonly Dictionary<InventoryHeaderButton, float> _inventoryHeaderButtonOffsets = new();
@@ -71,14 +75,14 @@ namespace ProjectVagabond.UI
 
         // Navigation Order Definition
         private readonly List<InventoryCategory> _categoryOrder = new()
-{
-    InventoryCategory.Weapons,
-    InventoryCategory.Armor,
-    InventoryCategory.Relics,
-    InventoryCategory.Spells,
-    InventoryCategory.Consumables,
-    InventoryCategory.Misc
-};
+        {
+            InventoryCategory.Weapons,
+            InventoryCategory.Armor,
+            InventoryCategory.Relics,
+            InventoryCategory.Spells,
+            InventoryCategory.Consumables,
+            InventoryCategory.Misc
+        };
 
         // Animation State
         private float _inventoryArrowAnimTimer;
@@ -107,13 +111,16 @@ namespace ProjectVagabond.UI
         // Text Formatting Tuning
         private const int SPACE_WIDTH = 5;
 
+        // External Control Event
+        public event Action? OnInventoryButtonClicked;
+
         public SplitMapInventoryOverlay()
         {
             _gameState = ServiceLocator.Get<GameState>();
             _spriteManager = ServiceLocator.Get<SpriteManager>();
             _global = ServiceLocator.Get<Global>();
             _hapticsManager = ServiceLocator.Get<HapticsManager>();
-            _componentStore = ServiceLocator.Get<ComponentStore>(); // Initialize ComponentStore
+            _componentStore = ServiceLocator.Get<ComponentStore>();
         }
 
         public void Initialize()
@@ -138,8 +145,9 @@ namespace ProjectVagabond.UI
             {
                 var inventoryIcon = _spriteManager.SplitMapInventoryButton;
                 var rects = _spriteManager.SplitMapInventoryButtonSourceRects;
-                _inventoryButton = new ImageButton(new Rectangle(7, 10, 16, 16), inventoryIcon, rects[0], rects[1]);
-                _inventoryButton.OnClick += ToggleInventory;
+                _inventoryButton = new ImageButton(new Rectangle(7, 10, 16, 16), inventoryIcon, rects[0], rects[1], enableHoverSway: true);
+                // Instead of toggling internally, fire event
+                _inventoryButton.OnClick += () => OnInventoryButtonClicked?.Invoke();
             }
             _inventoryButton.ResetAnimationState();
 
@@ -152,13 +160,10 @@ namespace ProjectVagabond.UI
             // Use the defined order for button creation
             int numButtons = _categoryOrder.Count;
             const int buttonSpriteSize = 32;
-            const int spacing = 0; // Added spacing between buttons
+            const int spacing = 0;
             var buttonRects = _spriteManager.InventoryHeaderButtonSourceRects;
 
-            // Calculate total width dynamically based on button count and spacing
             int totalWidth = (numButtons * buttonSpriteSize) + ((numButtons - 1) * spacing);
-
-            // Center the group, maintaining the +19f offset for the background art alignment
             float startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2f + 19f;
             float buttonY = 200 + 6;
 
@@ -177,14 +182,11 @@ namespace ProjectVagabond.UI
                 };
 
                 int menuIndex = (int)category;
-
-                // Calculate X position with spacing
                 float xPos = startX + i * (buttonSpriteSize + spacing);
                 var bounds = new Rectangle((int)MathF.Round(xPos), (int)buttonY, buttonSpriteSize, buttonSpriteSize);
 
                 var button = new InventoryHeaderButton(bounds, buttonSpriteSheet, buttonRects[0], buttonRects[1], buttonRects[2], menuIndex, category.ToString());
 
-                // Only switch if it's a different category to prevent re-animation
                 button.OnClick += () =>
                 {
                     if (_selectedInventoryCategory != category)
@@ -331,78 +333,69 @@ namespace ProjectVagabond.UI
 
             // Initialize Spell Equip Buttons
             _spellEquipButtons.Clear();
-            // Center the spell buttons relative to the equip buttons (180px wide)
-            // Spell buttons are 107px wide.
-            int spellButtonX = equipButtonX + (180 - 107) / 2 + 36; // Shifted 36px right
-                                                                    // Position below the last relic button (Relic 3 is at relicButtonY + 32, height 16)
-                                                                    // Start Y = relicButtonY + 32 + 16 + 0 (gap)
-            int spellButtonStartY = relicButtonY + 48; // Moved down 1 pixel
+            int spellButtonX = equipButtonX + (180 - 107) / 2 + 36;
+            int spellButtonStartY = relicButtonY + 48;
 
             for (int i = 0; i < 4; i++)
             {
-                int yPos = spellButtonStartY + (i * (8 + 1)); // 8px height + 1px gap
+                int yPos = spellButtonStartY + (i * (8 + 1));
                 var button = new SpellEquipButton(new Rectangle(spellButtonX, yPos, 107, 8));
-                int slotIndex = i; // Capture for closure
+                int slotIndex = i;
                 button.OnClick += () => OpenEquipSubmenu(EquipSlotType.Spell1 + slotIndex);
                 _spellEquipButtons.Add(button);
             }
 
             // Initialize Submenu Buttons
             _equipSubmenuButtons.Clear();
-            // Submenu starts at the weapon button Y position
             int submenuStartY = weaponButtonY;
 
             for (int i = 0; i < 7; i++)
             {
                 int yPos = submenuStartY + (i * 16);
                 var button = new EquipButton(new Rectangle(equipButtonX, yPos, 180, 16), "");
-                button.TitleText = ""; // Initialize as empty
+                button.TitleText = "";
                 button.Font = secondaryFont;
-                button.IsEnabled = false; // Disabled by default
+                button.IsEnabled = false;
                 _equipSubmenuButtons.Add(button);
             }
+        }
+
+        public void Show()
+        {
+            IsOpen = true;
+            _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
+
+            // Force open to Equip menu
+            SwitchToCategory(InventoryCategory.Equip);
+
+            // Refresh equip button texts and icons
+            UpdateEquipButtonState(_weaponEquipButton!, _gameState.PlayerState.EquippedWeaponId, EquipSlotType.Weapon);
+            UpdateEquipButtonState(_armorEquipButton!, _gameState.PlayerState.EquippedArmorId, EquipSlotType.Armor);
+            UpdateEquipButtonState(_relicEquipButton1!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic1);
+            UpdateEquipButtonState(_relicEquipButton2!, _gameState.PlayerState.EquippedRelics[1], EquipSlotType.Relic2);
+            UpdateEquipButtonState(_relicEquipButton3!, _gameState.PlayerState.EquippedRelics[2], EquipSlotType.Relic3);
+
+            // Refresh spell buttons
+            for (int i = 0; i < 4; i++)
+            {
+                UpdateSpellEquipButtonState(_spellEquipButtons[i], _gameState.PlayerState.EquippedSpells[i]);
+            }
+        }
+
+        public void Hide()
+        {
+            IsOpen = false;
+            _inventoryButton?.SetSprites(_spriteManager.SplitMapInventoryButton, _spriteManager.SplitMapInventoryButtonSourceRects[0], _spriteManager.SplitMapInventoryButtonSourceRects[1]);
+            CancelEquipSelection();
+            _selectedSlotIndex = -1;
         }
 
         public void ForceClose()
         {
             if (IsOpen)
             {
-                ToggleInventory();
+                Hide();
             }
-        }
-
-        private void ToggleInventory()
-        {
-            IsOpen = !IsOpen;
-
-            if (IsOpen)
-            {
-                _inventoryButton?.SetSprites(_spriteManager.SplitMapCloseInventoryButton, _spriteManager.SplitMapCloseInventoryButtonSourceRects[0], _spriteManager.SplitMapCloseInventoryButtonSourceRects[1]);
-
-                // Force open to Equip menu
-                SwitchToCategory(InventoryCategory.Equip);
-
-                // Refresh equip button texts and icons
-                UpdateEquipButtonState(_weaponEquipButton!, _gameState.PlayerState.EquippedWeaponId, EquipSlotType.Weapon);
-                UpdateEquipButtonState(_armorEquipButton!, _gameState.PlayerState.EquippedArmorId, EquipSlotType.Armor);
-                UpdateEquipButtonState(_relicEquipButton1!, _gameState.PlayerState.EquippedRelics[0], EquipSlotType.Relic1);
-                UpdateEquipButtonState(_relicEquipButton2!, _gameState.PlayerState.EquippedRelics[1], EquipSlotType.Relic2);
-                UpdateEquipButtonState(_relicEquipButton3!, _gameState.PlayerState.EquippedRelics[2], EquipSlotType.Relic3);
-
-                // Refresh spell buttons
-                for (int i = 0; i < 4; i++)
-                {
-                    UpdateSpellEquipButtonState(_spellEquipButtons[i], _gameState.PlayerState.EquippedSpells[i]);
-                }
-            }
-            else
-            {
-                _inventoryButton?.SetSprites(_spriteManager.SplitMapInventoryButton, _spriteManager.SplitMapInventoryButtonSourceRects[0], _spriteManager.SplitMapInventoryButtonSourceRects[1]);
-                CancelEquipSelection();
-                _selectedSlotIndex = -1;
-            }
-
-            OnInventoryToggled?.Invoke(IsOpen);
         }
     }
 }
