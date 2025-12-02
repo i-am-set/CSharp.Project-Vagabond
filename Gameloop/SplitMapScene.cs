@@ -156,7 +156,12 @@ namespace ProjectVagabond.Scenes
             // Toggle Logic for Inventory Button
             _inventoryOverlay.OnInventoryButtonClicked += () =>
             {
-                if (_currentView == SplitMapView.Inventory)
+                // If currently in Settings, try to close safely first
+                if (_currentView == SplitMapView.Settings)
+                {
+                    _settingsOverlay.AttemptClose(() => SetView(SplitMapView.Inventory, snap: true));
+                }
+                else if (_currentView == SplitMapView.Inventory)
                 {
                     SetView(SplitMapView.Map, snap: true);
                 }

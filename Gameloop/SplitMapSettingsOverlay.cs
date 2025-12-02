@@ -29,7 +29,7 @@ namespace ProjectVagabond.UI
         private float _confirmationTimer = 0f;
 
         // --- Layout Tuning (Identical to SettingsScene) ---
-        private const int SETTINGS_START_Y = 35;
+        private const int SETTINGS_START_Y = 30; // Moved up 5px (was 35)
         private const int ITEM_VERTICAL_SPACING = 15;
         private const int BUTTON_VERTICAL_SPACING = 14;
         private const int SETTINGS_PANEL_WIDTH = 280;
@@ -234,6 +234,7 @@ namespace ProjectVagabond.UI
 
             CalculateLayoutPositions();
             applyButton.IsEnabled = IsDirty();
+            discardButton.IsEnabled = IsDirty();
         }
 
         private void CalculateLayoutPositions()
@@ -426,8 +427,14 @@ namespace ProjectVagabond.UI
             }
 
             if (_currentInputDelay <= 0) HandleKeyboardInput(currentKeyboardState);
+
+            // Update button enabled states based on dirty status
+            bool isDirty = IsDirty();
             var applyButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Apply");
-            if (applyButton != null) applyButton.IsEnabled = IsDirty();
+            if (applyButton != null) applyButton.IsEnabled = isDirty;
+
+            var discardButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Discard");
+            if (discardButton != null) discardButton.IsEnabled = isDirty;
 
             _previousMouseState = currentMouseState;
             _previousKeyboardState = currentKeyboardState;
@@ -480,7 +487,7 @@ namespace ProjectVagabond.UI
             string title = "Settings";
             Vector2 titleSize = font.MeasureString(title);
             float yOffset = (float)Math.Sin(_titleBobTimer * TitleBobSpeed) * TitleBobAmount;
-            float titleBaseY = 15f + WORLD_Y_OFFSET;
+            float titleBaseY = 10f + WORLD_Y_OFFSET; // Moved up 5px (was 15f)
             Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, titleBaseY + yOffset);
             spriteBatch.DrawString(font, title, titlePosition, _global.Palette_BrightWhite);
 

@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -16,7 +17,6 @@ namespace ProjectVagabond.Scenes
         private readonly SceneManager _sceneManager;
         private readonly GraphicsDeviceManager _graphics;
         private readonly Global _global;
-
         private List<object> _uiElements = new();
         private List<Vector2> _uiElementPositions = new(); // To store calculated positions
         private int _selectedIndex = -1;
@@ -24,7 +24,7 @@ namespace ProjectVagabond.Scenes
         private float _confirmationTimer = 0f;
 
         // --- Layout Tuning ---
-        private const int SETTINGS_START_Y = 35;
+        private const int SETTINGS_START_Y = 30; // Moved up 5px (was 35)
         private const int ITEM_VERTICAL_SPACING = 15;
         private const int BUTTON_VERTICAL_SPACING = 14;
         private const int SETTINGS_PANEL_WIDTH = 280;
@@ -149,11 +149,11 @@ namespace ProjectVagabond.Scenes
             }
 
             var windowModes = new List<KeyValuePair<string, WindowMode>>
-            {
-                new("Windowed", WindowMode.Windowed),
-                new("Borderless", WindowMode.Borderless),
-                new("Fullscreen", WindowMode.Fullscreen)
-            };
+        {
+            new("Windowed", WindowMode.Windowed),
+            new("Borderless", WindowMode.Borderless),
+            new("Fullscreen", WindowMode.Fullscreen)
+        };
 
             var resolutionControl = new OptionSettingControl<Point>("Resolution", resolutionDisplayList, () => _tempSettings.Resolution, v => _tempSettings.Resolution = v);
 
@@ -183,7 +183,8 @@ namespace ProjectVagabond.Scenes
             };
             _uiElements.Add(resolutionControl);
 
-            var windowModeControl = new OptionSettingControl<WindowMode>("Window Mode", windowModes, () => _tempSettings.Mode, v => {
+            var windowModeControl = new OptionSettingControl<WindowMode>("Window Mode", windowModes, () => _tempSettings.Mode, v =>
+            {
                 _tempSettings.Mode = v;
                 if (v == WindowMode.Borderless) SetResolutionToNative();
             });
@@ -285,10 +286,12 @@ namespace ProjectVagabond.Scenes
 
                 _revertDialog.Show(
                     "Keep these display settings?",
-                    onConfirm: () => {
+                    onConfirm: () =>
+                    {
                         FinalizeAndSaveAllSettings();
                     },
-                    onRevert: () => {
+                    onRevert: () =>
+                    {
                         revertState.ApplyGraphicsSettings(_graphics, _core);
                         RevertChanges();
                     },
@@ -526,7 +529,7 @@ namespace ProjectVagabond.Scenes
             string title = "Settings";
             Vector2 titleSize = font.MeasureString(title);
             float yOffset = (float)Math.Sin(_titleBobTimer * TitleBobSpeed) * TitleBobAmount;
-            float titleBaseY = 15f;
+            float titleBaseY = 10f; // Moved up 5px (was 15f)
             Vector2 titlePosition = new Vector2(screenWidth / 2 - titleSize.X / 2, titleBaseY + yOffset);
             spriteBatch.DrawString(font, title, titlePosition, _global.Palette_BrightWhite, 0f, Vector2.Zero, 1f, SpriteEffects.None, 0f);
 
