@@ -133,15 +133,23 @@ namespace ProjectVagabond
         private TimeSpan _targetElapsedTimeSpan;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        // NATIVE METHODS (WINDOWS TIMER RESOLUTION FIX)
+        // NATIVE METHODS (WINDOWS TIMER RESOLUTION FIX & WINDOW MANAGEMENT)
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        // These imports allow us to set the Windows timer resolution to 1ms.
-        // Without this, Thread.Sleep is inaccurate (~15ms), causing stutter in Windowed mode.
+
         [DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]
         private static extern uint TimeBeginPeriod(uint uMilliseconds);
 
         [DllImport("winmm.dll", EntryPoint = "timeEndPeriod")]
         private static extern uint TimeEndPeriod(uint uMilliseconds);
+
+        // SDL2 Import for DesktopGL
+        [DllImport("SDL2.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern void SDL_MaximizeWindow(IntPtr window);
+
+        // User32 Import for WindowsDX Fallback
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+        private const int SW_MAXIMIZE = 3;
 
         /// <summary>
         /// Attempts to set the OS timer resolution to 1ms for high-precision sleep.
@@ -152,6 +160,33 @@ namespace ProjectVagabond
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
                 try { TimeBeginPeriod(1); } catch { }
+            }
+        }
+
+        private void MaximizeWindow()
+        {
+            // 1. Try SDL2 (DesktopGL)
+            try
+            {
+                SDL_MaximizeWindow(Window.Handle);
+                return; // If successful or library exists, return.
+            }
+            catch
+            {
+                // SDL2 failed or not present, fall through to Windows API
+            }
+
+            // 2. Fallback to User32 (WindowsDX)
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                try
+                {
+                    ShowWindow(Window.Handle, SW_MAXIMIZE);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Core] Failed to maximize window via User32: {ex.Message}");
+                }
             }
         }
 
@@ -325,6 +360,13 @@ namespace ProjectVagabond
             // IMPORTANT: Do NOT re-apply these in Update(), as setting TargetElapsedTime resets the game timer accumulator.
             _settings.ApplyGraphicsSettings(_graphics, this);
             _settings.ApplyGameSettings();
+
+            // --- FORCE MAXIMIZE STARTUP ---
+            // If the game is in Windowed mode, force it to maximize on startup using Windows API.
+            if (_settings.Mode == WindowMode.Windowed)
+            {
+                MaximizeWindow();
+            }
 
             _pixel = new Texture2D(GraphicsDevice, 1, 1);
             _pixel.SetData(new[] { Color.White });
@@ -533,6 +575,7 @@ namespace ProjectVagabond
                 _sceneManager.ChangeScene(GameSceneState.MainMenu);
             }
             if (KeyPressed(Keys.F9, currentKeyboardState, _previousKeyboardState)) BattleDebugHelper.RunDamageCalculationTestSuite();
+            if (KeyPressed(Keys.F10, currentKeyboardState, _previousKeyboardState)) MaximizeWindow(); // F10 to Maximize
             if (KeyPressed(Keys.F12, currentKeyboardState, _previousKeyboardState)) _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
 
             _previousKeyboardState = currentKeyboardState;
