@@ -16,28 +16,49 @@ namespace ProjectVagabond.Scenes
             public Vector2 Position; // World Space
             public float Speed;
             public float Depth; // Parallax factor
-            public int Direction; // 1 for right, -1 for left
             public float BobTimer;
             public float BobFrequency;
+            public bool IsActive;
+
+            public void Reset()
+            {
+                Position = Vector2.Zero;
+                Speed = 0;
+                Depth = 1;
+                BobTimer = 0;
+                BobFrequency = 1;
+                IsActive = false;
+            }
         }
 
         private class Flock
         {
             public List<Bird> Birds = new List<Bird>();
+            public bool IsActive;
+            public int Direction; // 1 for right, -1 for left
+
+            public Flock()
+            {
+                // Pre-allocate max birds per flock to avoid resizing
+                for (int i = 0; i < 10; i++) Birds.Add(new Bird());
+            }
+
+            public void Reset()
+            {
+                IsActive = false;
+                Direction = 0;
+                foreach (var bird in Birds) bird.Reset();
+            }
         }
 
-        private readonly List<Flock> _flocks = new List<Flock>();
+        private readonly List<Flock> _flockPool = new List<Flock>();
+        private readonly Queue<int> _spawnSideDeck = new Queue<int>();
         private readonly Random _random = new Random();
         private readonly Global _global;
 
         // --- Tuning ---
-        private const int TARGET_FLOCK_COUNT = 6;
-
-        // Despawn buffer: 10 pixels passed the edge as requested.
-        private const float DESPAWN_BUFFER = 10f;
-
-        // Spawn buffer: Spawn further out so they don't "pop" in if the camera is near the edge.
-        private const float SPAWN_BUFFER = 150f;
+        private const int POOL_SIZE = 6; // Fixed number of flocks
+        private const float MAP_EDGE_BUFFER = 50f; // Pixels off-map (world space) before spawning/despawning
 
         // Speed Tuning
         private const float MIN_SPEED = 10f;
@@ -53,7 +74,7 @@ namespace ProjectVagabond.Scenes
         private const float MAX_BOB_FREQ = 12f;
 
         // Spawn Tuning
-        private const float VERTICAL_SPAWN_BUFFER = 10f;
+        private const float VERTICAL_SPAWN_BUFFER = 20f;
 
         public BirdManager()
         {
@@ -62,106 +83,138 @@ namespace ProjectVagabond.Scenes
 
         public void Initialize(SplitMap map, Vector2 playerPosition)
         {
-            _flocks.Clear();
+            _flockPool.Clear();
+            _spawnSideDeck.Clear();
 
-            // Initial Spawn: Spread evenly across the entire map
-            for (int i = 0; i < TARGET_FLOCK_COUNT; i++)
+            // 1. Create the Object Pool
+            for (int i = 0; i < POOL_SIZE; i++)
+            {
+                _flockPool.Add(new Flock());
+            }
+
+            // 2. Initial Scatter Spawn
+            // Spawn them randomly across the map width so the sky isn't empty at start.
+            foreach (var flock in _flockPool)
             {
                 float randomX = (float)_random.NextDouble() * map.MapWidth;
-                SpawnFlock(map, playerPosition, randomX);
+                // Random direction for initial spawn
+                int direction = _random.Next(2) == 0 ? 1 : -1;
+                ActivateFlock(flock, playerPosition, Vector2.Zero, direction, worldXOverride: randomX);
             }
         }
 
-        public void Update(GameTime gameTime, SplitMap? map, Vector2 playerPosition)
+        public void Update(GameTime gameTime, SplitMap? map, Vector2 playerPosition, Vector2 cameraOffset)
         {
             if (map == null) return;
 
             float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // 1. Update existing flocks
-            for (int i = _flocks.Count - 1; i >= 0; i--)
+            foreach (var flock in _flockPool)
             {
-                var flock = _flocks[i];
-                bool flockFinished = true;
+                if (!flock.IsActive)
+                {
+                    // Respawn Logic
+                    int direction = GetNextSpawnDirection();
+
+                    // Calculate World Spawn X
+                    // If moving Right (1), spawn on Left map edge (-Buffer)
+                    // If moving Left (-1), spawn on Right map edge (MapWidth + Buffer)
+                    float worldSpawnX = (direction == 1) ? -MAP_EDGE_BUFFER : (map.MapWidth + MAP_EDGE_BUFFER);
+
+                    ActivateFlock(flock, playerPosition, cameraOffset, direction, worldXOverride: worldSpawnX);
+                    continue;
+                }
+
+                bool anyBirdVisible = false;
 
                 foreach (var bird in flock.Birds)
                 {
+                    if (!bird.IsActive) continue;
+
                     // Move
-                    bird.Position.X += bird.Speed * bird.Direction * dt;
+                    bird.Position.X += bird.Speed * flock.Direction * dt;
                     bird.BobTimer += dt;
 
-                    // Check if THIS bird is still valid based on its direction
-                    bool birdFinished = false;
-                    if (bird.Direction > 0) // Moving Right
+                    // --- CULLING LOGIC ---
+                    // Check if bird is still within the WORLD MAP bounds (plus buffer).
+                    // We do NOT check against the camera/screen width here, allowing them to fly off-screen
+                    // and continue traversing the map.
+                    bool isValid;
+                    if (flock.Direction > 0) // Moving Right
                     {
-                        if (bird.Position.X > map.MapWidth + DESPAWN_BUFFER) birdFinished = true;
+                        // Valid if it hasn't passed the far right edge of the map
+                        isValid = bird.Position.X < (map.MapWidth + MAP_EDGE_BUFFER);
                     }
                     else // Moving Left
                     {
-                        if (bird.Position.X < -DESPAWN_BUFFER) birdFinished = true;
+                        // Valid if it hasn't passed the far left edge of the map
+                        isValid = bird.Position.X > -MAP_EDGE_BUFFER;
                     }
 
-                    // If any bird is still flying, the flock is not finished
-                    if (!birdFinished)
+                    if (isValid)
                     {
-                        flockFinished = false;
+                        anyBirdVisible = true;
+                    }
+                    else
+                    {
+                        bird.IsActive = false; // Cull individual bird
                     }
                 }
 
-                if (flockFinished)
+                // If all birds in the flock have left the map boundaries, deactivate the flock so it can be respawned
+                if (!anyBirdVisible)
                 {
-                    _flocks.RemoveAt(i);
+                    flock.IsActive = false;
                 }
             }
-
-            // 2. Maintain Population
-            while (_flocks.Count < TARGET_FLOCK_COUNT)
-            {
-                SpawnFlockAtMapEdge(map, playerPosition);
-            }
         }
 
-        private void SpawnFlockAtMapEdge(SplitMap map, Vector2 playerPosition)
+        private void ActivateFlock(Flock flock, Vector2 playerPosition, Vector2 cameraOffset, int direction, float? worldXOverride = null, float? visualXOverride = null)
         {
-            // Randomly pick left or right side of the *entire map*
-            bool spawnLeft = _random.Next(2) == 0;
+            flock.Reset();
+            flock.IsActive = true;
+            flock.Direction = direction;
 
-            // Spawn well outside the map boundaries so they fly in
-            float spawnX = spawnLeft ? -SPAWN_BUFFER : map.MapWidth + SPAWN_BUFFER;
-
-            SpawnFlock(map, playerPosition, spawnX);
-        }
-
-        private void SpawnFlock(SplitMap map, Vector2 playerPosition, float spawnX)
-        {
             int flockSize = _random.Next(3, 9);
             bool isVShape = _random.NextDouble() > 0.3;
-
             float flockBaseDepth = (float)(_random.NextDouble() * (MAX_DEPTH - MIN_DEPTH) + MIN_DEPTH);
 
-            // Speed based on depth
+            // Speed based on depth (further away = slower parallax movement, but we scale speed to look consistent)
             float depthRatio = (flockBaseDepth - MIN_DEPTH) / (MAX_DEPTH - MIN_DEPTH);
             float flockBaseSpeed = MathHelper.Lerp(MIN_SPEED, MAX_SPEED, depthRatio);
-
-            // Direction Logic: Move towards the furthest end
-            float distToLeft = spawnX;
-            float distToRight = map.MapWidth - spawnX;
-            int direction = (distToRight > distToLeft) ? 1 : -1;
 
             // Calculate safe spawn height range
             float safeHeight = Global.VIRTUAL_HEIGHT - (VERTICAL_SPAWN_BUFFER * 2);
             float halfSafeHeight = safeHeight / 2f;
             float spawnY = playerPosition.Y + (float)(_random.NextDouble() * safeHeight - halfSafeHeight);
 
-            Vector2 leaderPos = new Vector2(spawnX, spawnY);
-            var newFlock = new Flock();
+            // Determine Leader Position
+            float leaderWorldX;
+
+            if (worldXOverride.HasValue)
+            {
+                // Direct world spawn (used for map edge spawning and initialization)
+                leaderWorldX = worldXOverride.Value;
+            }
+            else if (visualXOverride.HasValue)
+            {
+                // Reverse parallax calculation (kept for compatibility, though unused in full-map mode)
+                float parallaxOffset = cameraOffset.X * (flockBaseDepth - 1.0f);
+                leaderWorldX = visualXOverride.Value - parallaxOffset;
+            }
+            else
+            {
+                leaderWorldX = 0; // Fallback
+            }
+
+            Vector2 leaderPos = new Vector2(leaderWorldX, spawnY);
 
             for (int i = 0; i < flockSize; i++)
             {
-                var bird = new Bird();
+                var bird = flock.Birds[i];
+                bird.IsActive = true;
                 bird.Depth = flockBaseDepth + (float)(_random.NextDouble() * INTRA_FLOCK_DEPTH_VARIANCE * 2 - INTRA_FLOCK_DEPTH_VARIANCE);
                 bird.Speed = flockBaseSpeed * (float)(1.0 + (_random.NextDouble() * 0.1 - 0.05));
-                bird.Direction = direction;
                 bird.BobFrequency = (float)(_random.NextDouble() * (MAX_BOB_FREQ - MIN_BOB_FREQ) + MIN_BOB_FREQ);
                 bird.BobTimer = (float)(_random.NextDouble() * Math.PI * 2);
 
@@ -193,20 +246,45 @@ namespace ProjectVagabond.Scenes
                 }
 
                 bird.Position = leaderPos + offset;
-                newFlock.Birds.Add(bird);
+            }
+        }
+
+        private int GetNextSpawnDirection()
+        {
+            if (_spawnSideDeck.Count == 0)
+            {
+                // Refill deck with balanced options (e.g., 2 Left, 2 Right)
+                var options = new List<int> { -1, -1, 1, 1 };
+
+                // Shuffle
+                int n = options.Count;
+                while (n > 1)
+                {
+                    n--;
+                    int k = _random.Next(n + 1);
+                    int value = options[k];
+                    options[k] = options[n];
+                    options[n] = value;
+                }
+
+                foreach (var opt in options) _spawnSideDeck.Enqueue(opt);
             }
 
-            _flocks.Add(newFlock);
+            return _spawnSideDeck.Dequeue();
         }
 
         public void Draw(SpriteBatch spriteBatch, Vector2 cameraOffset)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
 
-            foreach (var flock in _flocks)
+            foreach (var flock in _flockPool)
             {
+                if (!flock.IsActive) continue;
+
                 foreach (var bird in flock.Birds)
                 {
+                    if (!bird.IsActive) continue;
+
                     // Parallax Calculation
                     Vector2 parallaxOffset = cameraOffset * (bird.Depth - 1.0f);
 
@@ -223,4 +301,3 @@ namespace ProjectVagabond.Scenes
         }
     }
 }
-#nullable restore

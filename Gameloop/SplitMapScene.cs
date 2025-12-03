@@ -424,8 +424,8 @@ namespace ProjectVagabond.Scenes
 
             _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
 
-            // Update Birds
-            _birdManager.Update(gameTime, _currentMap, _playerIcon.Position);
+            // Update Birds - Pass camera offset for parallax
+            _birdManager.Update(gameTime, _currentMap, _playerIcon.Position, _cameraOffset);
 
             if (_hoveredNodeId != -1)
             {
@@ -1423,4 +1423,3 @@ namespace ProjectVagabond.Scenes
         }
     }
 }
-#nullable restore
