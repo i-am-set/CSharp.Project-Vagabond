@@ -23,7 +23,7 @@ namespace ProjectVagabond.Scenes
     public class BattleScene : GameScene
     {
         // --- Tuning ---
-        private const float MULTI_HIT_DELAY = 0.05f; // Reduced from 0.1f for faster barrage
+        private const float MULTI_HIT_DELAY = 0.25f; // Increased to 0.2f for better pacing
 
         // Core Battle Logic
         private BattleManager _battleManager;
@@ -330,16 +330,12 @@ namespace ProjectVagabond.Scenes
                                  currentMouseState.LeftButton == ButtonState.Released &&
                                  previousMouseState.LeftButton == ButtonState.Pressed;
 
-            if (isAnimating && clickDetected)
-            {
-                // If we are specifically waiting for a move animation, signal completion immediately.
-                if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingMove)
-                {
-                    _moveAnimationManager.SkipAll();
-                    EventBus.Publish(new GameEvents.MoveAnimationCompleted());
-                }
+            // FIX: Prevent skipping if a move animation is playing or a multi-hit sequence is active.
+            bool isAttackAnimationPlaying = _moveAnimationManager.IsAnimating || _battleManager.IsProcessingMultiHit;
 
-                // Skip other visual flair
+            if (isAnimating && clickDetected && !isAttackAnimationPlaying)
+            {
+                // Skip other visual flair (health bars, etc.)
                 _animationManager.SkipAllHealthAnimations(_battleManager.AllCombatants);
                 _animationManager.SkipAllBarAnimations();
 
@@ -362,10 +358,20 @@ namespace ProjectVagabond.Scenes
             bool pendingBusy = _pendingAnimations.Any();
             bool isMultiHitActive = _battleManager.IsProcessingMultiHit;
 
-            // FIX: If multi-hit is active, we IGNORE uiBusy. This allows the hits to keep processing
-            // even if the "Player uses Fury Swipes!" text is still on screen.
-            // We still respect animation busy flags so we don't overlap animations too crazily.
-            bool canAdvance = (!uiBusy || isMultiHitActive) && !animBusy && !moveAnimBusy && !pendingBusy;
+            bool canAdvance;
+
+            if (isMultiHitActive)
+            {
+                // FIX: If multi-hit is active, we IGNORE uiBusy.
+                // This allows the hits to keep processing even if the "Player uses Fury Swipes!" text is still on screen.
+                // We also ignore moveAnimBusy to allow overlapping animations.
+                canAdvance = !pendingBusy;
+            }
+            else
+            {
+                // Normal turn logic: Wait for everything to finish.
+                canAdvance = !uiBusy && !animBusy && !moveAnimBusy && !pendingBusy;
+            }
 
             // Handle Multi-Hit Delay
             if (_isWaitingForMultiHitDelay && canAdvance)
