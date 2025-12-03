@@ -16,6 +16,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace ProjectVagabond
@@ -98,6 +99,28 @@ namespace ProjectVagabond
         private readonly Random _random = new Random();
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        // NATIVE METHODS FOR TIMER RESOLUTION
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        [DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]
+        private static extern uint TimeBeginPeriod(uint uMilliseconds);
+
+        [DllImport("winmm.dll", EntryPoint = "timeEndPeriod")]
+        private static extern uint TimeEndPeriod(uint uMilliseconds);
+
+        private void SetHighPrecisionTimer()
+        {
+            // Only attempt this on Windows
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                try
+                {
+                    TimeBeginPeriod(1);
+                }
+                catch { /* Ignore if fails (e.g. not on Windows or permissions issue) */ }
+            }
+        }
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public Core()
         {
@@ -118,6 +141,8 @@ namespace ProjectVagabond
 
             IsMouseVisible = false;
 
+            // Ensure we use HiDef profile for best shader/performance support
+            _graphics.GraphicsProfile = GraphicsProfile.HiDef;
             _graphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
             _graphics.PreferredBackBufferHeight = Global.VIRTUAL_HEIGHT;
             Window.AllowUserResizing = true;
@@ -126,8 +151,9 @@ namespace ProjectVagabond
 
         protected override void Initialize()
         {
-            // Phase 0: Initialize Console Redirection
+            // Phase 0: Initialize Console Redirection & High Precision Timer
             ConsoleRedirection.Initialize();
+            SetHighPrecisionTimer();
 
             // Phase 1: Register Core Services & Settings
             ServiceLocator.Register<Core>(this);
@@ -254,7 +280,6 @@ namespace ProjectVagabond
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
 
             // Apply settings once at startup. 
-            // IMPORTANT: Do NOT re-apply these in Update(), as setting TargetElapsedTime resets the game timer accumulator.
             _settings.ApplyGraphicsSettings(_graphics, this);
             _settings.ApplyGameSettings();
 
@@ -304,6 +329,13 @@ namespace ProjectVagabond
         {
             // Ensure logs are flushed when closing normally
             GameLogger.Close();
+
+            // Reset timer resolution on exit
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                try { TimeEndPeriod(1); } catch { }
+            }
+
             base.OnExiting(sender, args);
         }
 

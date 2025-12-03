@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Linq;
@@ -54,6 +54,9 @@ namespace ProjectVagabond
         /// </summary>
         public void ApplyGraphicsSettings(GraphicsDeviceManager gdm, Core game)
         {
+            // Ensure HiDef profile for best performance/compatibility
+            gdm.GraphicsProfile = GraphicsProfile.HiDef;
+
             game.IsFixedTimeStep = IsFrameLimiterEnabled;
             if (IsFrameLimiterEnabled)
             {
