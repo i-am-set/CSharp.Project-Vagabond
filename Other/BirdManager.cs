@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Progression;
 using ProjectVagabond.Utils;
@@ -302,6 +301,12 @@ namespace ProjectVagabond.Scenes
 
                     Vector2 drawPos = bird.Position + parallaxOffset;
                     drawPos.Y += bobOffset;
+
+                    // Draw Outline (Black)
+                    spriteBatch.DrawSnapped(pixel, drawPos + new Vector2(0, -1), _global.Palette_Black); // Top
+                    spriteBatch.DrawSnapped(pixel, drawPos + new Vector2(0, 1), _global.Palette_Black);  // Bottom
+                    spriteBatch.DrawSnapped(pixel, drawPos + new Vector2(-1, 0), _global.Palette_Black); // Left
+                    spriteBatch.DrawSnapped(pixel, drawPos + new Vector2(1, 0), _global.Palette_Black);  // Right
 
                     // 1x1 Bright White Dot
                     spriteBatch.DrawSnapped(pixel, drawPos, _global.Palette_BrightWhite);
