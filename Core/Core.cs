@@ -128,6 +128,9 @@ namespace ProjectVagabond
         private bool _isCustomResolutionSavePending = false;
         private readonly Random _random = new Random();
 
+        // Startup Maximize Logic
+        private int _startupMaximizeCheckFrames = 0;
+
         // Manual Frame Limiter
         private Stopwatch _frameStopwatch;
         private TimeSpan _targetElapsedTimeSpan;
@@ -373,6 +376,9 @@ namespace ProjectVagabond
                 if (widthRatio >= 0.8f || heightRatio >= 0.8f)
                 {
                     MaximizeWindow();
+                    // Set a flag to check the actual window size after a few frames
+                    // to sync the resolution settings with the maximized window size.
+                    _startupMaximizeCheckFrames = 15;
                 }
             }
 
@@ -545,6 +551,25 @@ namespace ProjectVagabond
             }
             _frameStopwatch.Restart();
 
+            // --- STARTUP MAXIMIZE SYNC ---
+            // If we requested a maximize on startup, wait a few frames for the OS to finish the animation,
+            // then capture the actual window size and update the settings.
+            if (_startupMaximizeCheckFrames > 0)
+            {
+                _startupMaximizeCheckFrames--;
+                if (_startupMaximizeCheckFrames == 0)
+                {
+                    var currentClientBounds = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
+                    if (_settings.Resolution != currentClientBounds)
+                    {
+                        Debug.WriteLine($"[Core] Syncing resolution to maximized window: {currentClientBounds}");
+                        _settings.Resolution = currentClientBounds;
+                        SettingsManager.SaveSettings(_settings);
+                        OnResize(null, null); // Force layout update
+                    }
+                }
+            }
+
             IsMouseVisible = _debugConsole.IsVisible;
 
             if (!IsActive) return;
@@ -595,7 +620,6 @@ namespace ProjectVagabond
                 if (_customResolutionSaveTimer <= 0f)
                 {
                     _isCustomResolutionSavePending = false;
-                    // Save the current window size as the preferred resolution
                     _settings.Resolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
                     SettingsManager.SaveSettings(_settings);
                     Debug.WriteLine($"[Settings] Custom resolution {_settings.Resolution} saved.");
