@@ -422,6 +422,9 @@ namespace ProjectVagabond.Scenes
             var currentMouseState = Mouse.GetState();
             var currentKeyboardState = Keyboard.GetState();
 
+            // Capture the view state at the start of the frame to detect changes by overlays
+            var viewAtStartOfFrame = _currentView;
+
             _voidEdgeEffect.Update(gameTime, new Rectangle(0, 0, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT), _cameraOffset);
 
             // Update Birds - Pass camera offset for parallax
@@ -476,6 +479,24 @@ namespace ProjectVagabond.Scenes
 
             // Update Settings Button
             _settingsButton?.Update(currentMouseState);
+
+            // Handle Escape Key for Navigation
+            if (KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+            {
+                // Only act if the view hasn't already changed this frame (e.g., by an overlay closing itself)
+                if (_currentView == viewAtStartOfFrame)
+                {
+                    if (_currentView == SplitMapView.Inventory)
+                    {
+                        SetView(SplitMapView.Map, snap: true);
+                    }
+                    else if (_currentView == SplitMapView.Map)
+                    {
+                        SetView(SplitMapView.Settings, snap: true);
+                    }
+                    // If in Settings view, do nothing here. The overlay handles its own Escape logic (checking for dirty state).
+                }
+            }
 
             // Handle camera logic
             if (_currentView == SplitMapView.Map)

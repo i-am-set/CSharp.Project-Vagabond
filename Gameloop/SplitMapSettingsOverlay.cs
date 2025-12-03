@@ -3,6 +3,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Progression;
 using ProjectVagabond.Scenes;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
@@ -29,7 +32,7 @@ namespace ProjectVagabond.UI
         private float _confirmationTimer = 0f;
 
         // --- Layout Tuning (Identical to SettingsScene) ---
-        private const int SETTINGS_START_Y = 30; // Moved up 5px (was 35)
+        private const int SETTINGS_START_Y = 30;
         private const int ITEM_VERTICAL_SPACING = 15;
         private const int BUTTON_VERTICAL_SPACING = 14;
         private const int SETTINGS_PANEL_WIDTH = 280;
@@ -93,6 +96,7 @@ namespace ProjectVagabond.UI
             _revertDialog.Hide();
         }
 
+        // Public definition of IsDirty - checks if any control has changed
         public bool IsDirty() => _uiElements.OfType<ISettingControl>().Any(s => s.IsDirty);
 
         public void AttemptClose(Action onClose)
@@ -358,6 +362,25 @@ namespace ProjectVagabond.UI
             _confirmationTimer = 5f;
         }
 
+        private void AttemptToGoBack()
+        {
+            if (IsDirty())
+            {
+                _confirmationDialog.Show(
+                    "You have unsaved changes.",
+                    new List<Tuple<string, Action>> {
+                        Tuple.Create("APPLY", new Action(() => { ApplySettings(); OnCloseRequested?.Invoke(); })),
+                        Tuple.Create("DISCARD", new Action(() => { RevertChanges(); OnCloseRequested?.Invoke(); })),
+                        Tuple.Create("[gray]CANCEL", new Action(() => _confirmationDialog.Hide()))
+                    }
+                );
+            }
+            else
+            {
+                OnCloseRequested?.Invoke();
+            }
+        }
+
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
 
         public void Update(GameTime gameTime, MouseState currentMouseState, KeyboardState currentKeyboardState, Matrix cameraTransform)
@@ -433,6 +456,12 @@ namespace ProjectVagabond.UI
 
             var discardButton = _uiElements.OfType<Button>().FirstOrDefault(b => b.Text == "Discard");
             if (discardButton != null) discardButton.IsEnabled = isDirty;
+
+            // Handle Escape to close
+            if (_currentInputDelay <= 0 && KeyPressed(Keys.Escape, currentKeyboardState, _previousKeyboardState))
+            {
+                AttemptToGoBack();
+            }
 
             _previousMouseState = currentMouseState;
             _previousKeyboardState = currentKeyboardState;
