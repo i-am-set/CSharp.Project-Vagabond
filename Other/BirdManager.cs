@@ -57,7 +57,10 @@ namespace ProjectVagabond.Scenes
         private readonly Global _global;
 
         // --- Tuning ---
-        private const int POOL_SIZE = 6; // Fixed number of flocks
+        // Calculated based on Forest Split: (10 columns * 96 width) + (128 padding) = 992px
+        private const float BASELINE_MAP_WIDTH = 992f;
+        private const int BASELINE_FLOCK_COUNT = 6;
+
         private const float MAP_EDGE_BUFFER = 50f; // Pixels off-map (world space) before spawning/despawning
 
         // Speed Tuning
@@ -86,8 +89,16 @@ namespace ProjectVagabond.Scenes
             _flockPool.Clear();
             _spawnSideDeck.Clear();
 
-            // 1. Create the Object Pool
-            for (int i = 0; i < POOL_SIZE; i++)
+            // --- DYNAMIC POOL SIZING ---
+            // Calculate how many flocks we need to maintain the same density as the Forest split.
+            float widthRatio = map.MapWidth / BASELINE_MAP_WIDTH;
+            int targetFlockCount = (int)Math.Ceiling(BASELINE_FLOCK_COUNT * widthRatio);
+
+            // Ensure at least one flock exists
+            targetFlockCount = Math.Max(1, targetFlockCount);
+
+            // 1. Create the Object Pool based on dynamic size
+            for (int i = 0; i < targetFlockCount; i++)
             {
                 _flockPool.Add(new Flock());
             }
@@ -137,8 +148,6 @@ namespace ProjectVagabond.Scenes
 
                     // --- CULLING LOGIC ---
                     // Check if bird is still within the WORLD MAP bounds (plus buffer).
-                    // We do NOT check against the camera/screen width here, allowing them to fly off-screen
-                    // and continue traversing the map.
                     bool isValid;
                     if (flock.Direction > 0) // Moving Right
                     {
