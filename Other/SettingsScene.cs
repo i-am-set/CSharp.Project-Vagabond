@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -65,6 +64,9 @@ namespace ProjectVagabond.Scenes
 
             RefreshUIFromSettings();
 
+            // Subscribe to resolution changes to update UI dynamically
+            EventBus.Subscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
+
             // Reset animation states after they are built
             foreach (var item in _uiElements)
             {
@@ -90,6 +92,17 @@ namespace ProjectVagabond.Scenes
 
             _previousKeyboardState = Keyboard.GetState();
             _currentInputDelay = _inputDelay;
+        }
+
+        public override void Exit()
+        {
+            base.Exit();
+            EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
+        }
+
+        private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)
+        {
+            RefreshUIFromSettings();
         }
 
         /// <summary>

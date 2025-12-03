@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -81,6 +80,9 @@ namespace ProjectVagabond.UI
             _currentInputDelay = _inputDelay;
             RefreshUIFromSettings();
 
+            // Subscribe to resolution changes
+            EventBus.Subscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
+
             // Reset animation states
             foreach (var item in _uiElements)
             {
@@ -94,6 +96,12 @@ namespace ProjectVagabond.UI
             IsOpen = false;
             _confirmationDialog.Hide();
             _revertDialog.Hide();
+            EventBus.Unsubscribe<GameEvents.UIThemeOrResolutionChanged>(OnResolutionChanged);
+        }
+
+        private void OnResolutionChanged(GameEvents.UIThemeOrResolutionChanged e)
+        {
+            RefreshUIFromSettings();
         }
 
         // Public definition of IsDirty - checks if any control has changed

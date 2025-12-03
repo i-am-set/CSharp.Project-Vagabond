@@ -361,11 +361,19 @@ namespace ProjectVagabond
             _settings.ApplyGraphicsSettings(_graphics, this);
             _settings.ApplyGameSettings();
 
-            // --- FORCE MAXIMIZE STARTUP ---
-            // If the game is in Windowed mode, force it to maximize on startup using Windows API.
+            // --- SMART MAXIMIZE STARTUP ---
+            // If the game is in Windowed mode, check if the saved resolution is >= 80% of the native screen size.
+            // If so, force maximize. Otherwise, respect the saved window size.
             if (_settings.Mode == WindowMode.Windowed)
             {
-                MaximizeWindow();
+                var displayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+                float widthRatio = (float)_settings.Resolution.X / displayMode.Width;
+                float heightRatio = (float)_settings.Resolution.Y / displayMode.Height;
+
+                if (widthRatio >= 0.8f || heightRatio >= 0.8f)
+                {
+                    MaximizeWindow();
+                }
             }
 
             _pixel = new Texture2D(GraphicsDevice, 1, 1);
@@ -587,6 +595,7 @@ namespace ProjectVagabond
                 if (_customResolutionSaveTimer <= 0f)
                 {
                     _isCustomResolutionSavePending = false;
+                    // Save the current window size as the preferred resolution
                     _settings.Resolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
                     SettingsManager.SaveSettings(_settings);
                     Debug.WriteLine($"[Settings] Custom resolution {_settings.Resolution} saved.");
@@ -784,15 +793,27 @@ namespace ProjectVagabond
                 _previousResolution = newResolution;
             }
 
+            // --- DYNAMIC RESOLUTION SYNC ---
+            // If in Windowed mode, update the settings to match the new window size.
+            // This handles both manual resizing and maximizing.
+            if (_settings.Mode == WindowMode.Windowed)
+            {
+                if (_settings.Resolution != newResolution)
+                {
+                    _settings.Resolution = newResolution;
+                    // Trigger the save timer to persist this change after a short delay
+                    _isCustomResolutionSavePending = true;
+                    _customResolutionSaveTimer = 0.5f;
+                }
+            }
+
             bool isStandard = SettingsManager.GetResolutions().Any(r => r.Value == newResolution);
             if (!isStandard)
             {
                 _isCustomResolutionSavePending = true;
                 _customResolutionSaveTimer = 0.5f;
             }
-            else _isCustomResolutionSavePending = false;
 
-            _settings.Resolution = newResolution;
             if (_sceneManager.CurrentActiveScene is SettingsScene settingsScene) settingsScene.RefreshUIFromSettings();
 
             var screenWidth = GraphicsDevice.PresentationParameters.BackBufferWidth;
