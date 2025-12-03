@@ -57,13 +57,24 @@ namespace ProjectVagabond
             // Ensure HiDef profile for best performance/compatibility
             gdm.GraphicsProfile = GraphicsProfile.HiDef;
 
-            game.IsFixedTimeStep = IsFrameLimiterEnabled;
-            if (IsFrameLimiterEnabled)
-            {
-                game.TargetElapsedTime = TimeSpan.FromSeconds(1.0 / TargetFramerate);
-            }
+            // NOTE: IsFixedTimeStep is now ALWAYS false in Core.cs to prevent windowed mode stutter.
+            // The frame limiter is handled manually in Core.Update.
 
-            gdm.SynchronizeWithVerticalRetrace = IsVsync;
+            // VSync Logic:
+            // In Windowed/Borderless, DWM enforces VSync. Enabling MonoGame's VSync often causes stutter due to double-waiting.
+            // In Fullscreen, MonoGame's VSync works as expected.
+            if (Mode == WindowMode.Fullscreen)
+            {
+                gdm.SynchronizeWithVerticalRetrace = IsVsync;
+            }
+            else
+            {
+                // In windowed mode, we generally want this OFF to let DWM handle composition timing.
+                // However, if the user specifically requested VSync, we can try to honor it, 
+                // but usually 'false' is smoother on Windows 10/11.
+                // For now, we force it false in windowed mode to solve the "choppy" report.
+                gdm.SynchronizeWithVerticalRetrace = false;
+            }
 
             var displayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
 

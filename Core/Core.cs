@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
 namespace ProjectVagabond
 {
@@ -98,6 +99,10 @@ namespace ProjectVagabond
         private bool _isCustomResolutionSavePending = false;
         private readonly Random _random = new Random();
 
+        // --- Manual Frame Limiter State ---
+        private Stopwatch _frameStopwatch;
+        private TimeSpan _targetElapsedTimeSpan;
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // NATIVE METHODS FOR TIMER RESOLUTION
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -109,14 +114,9 @@ namespace ProjectVagabond
 
         private void SetHighPrecisionTimer()
         {
-            // Only attempt this on Windows
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
-                try
-                {
-                    TimeBeginPeriod(1);
-                }
-                catch { /* Ignore if fails (e.g. not on Windows or permissions issue) */ }
+                try { TimeBeginPeriod(1); } catch { }
             }
         }
 
@@ -125,14 +125,13 @@ namespace ProjectVagabond
         public Core()
         {
             // --- CRASH SAFETY HOOK ---
-            // Catch unhandled exceptions before the app dies to log them to file.
             AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
             {
                 if (args.ExceptionObject is Exception ex)
                 {
                     GameLogger.Log(LogSeverity.Critical, $"UNHANDLED EXCEPTION: {ex.Message}");
                     GameLogger.Log(LogSeverity.Critical, ex.StackTrace);
-                    GameLogger.Close(); // Flush to disk
+                    GameLogger.Close();
                 }
             };
 
@@ -141,19 +140,26 @@ namespace ProjectVagabond
 
             IsMouseVisible = false;
 
-            // Ensure we use HiDef profile for best shader/performance support
             _graphics.GraphicsProfile = GraphicsProfile.HiDef;
             _graphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
             _graphics.PreferredBackBufferHeight = Global.VIRTUAL_HEIGHT;
             Window.AllowUserResizing = true;
             Window.ClientSizeChanged += OnResize;
+
+            // CRITICAL FIX: Disable MonoGame's built-in fixed step.
+            // We will handle timing manually to prevent windowed mode stutter.
+            IsFixedTimeStep = false;
+            _graphics.SynchronizeWithVerticalRetrace = false; // We will manage this via settings
         }
 
         protected override void Initialize()
         {
-            // Phase 0: Initialize Console Redirection & High Precision Timer
             ConsoleRedirection.Initialize();
             SetHighPrecisionTimer();
+
+            // Initialize Frame Limiter
+            _frameStopwatch = new Stopwatch();
+            _frameStopwatch.Start();
 
             // Phase 1: Register Core Services & Settings
             ServiceLocator.Register<Core>(this);
@@ -168,7 +174,6 @@ namespace ProjectVagabond
             // Phase 2: GraphicsDevice Registration
             ServiceLocator.Register<GraphicsDevice>(GraphicsDevice);
 
-            // Initialize the virtual resolution render target
             _sceneRenderTarget = new RenderTarget2D(
                 GraphicsDevice,
                 Global.VIRTUAL_WIDTH,
@@ -177,8 +182,7 @@ namespace ProjectVagabond
                 GraphicsDevice.PresentationParameters.BackBufferFormat,
                 DepthFormat.Depth24);
 
-
-            // Phase 3: Instantiate and Register Managers & Systems in Dependency Order
+            // Phase 3: Instantiate and Register Managers
             var entityManager = new EntityManager();
             ServiceLocator.Register<EntityManager>(entityManager);
 
@@ -200,8 +204,6 @@ namespace ProjectVagabond
             var noiseManager = new NoiseMapManager();
             ServiceLocator.Register<NoiseMapManager>(noiseManager);
 
-
-
             var textureFactory = new TextureFactory();
             ServiceLocator.Register<TextureFactory>(textureFactory);
 
@@ -220,19 +222,16 @@ namespace ProjectVagabond
             _particleSystemManager = new ParticleSystemManager();
             ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
 
-            // Instantiate and register the individual dice controllers first.
             ServiceLocator.Register<DicePhysicsController>(new DicePhysicsController());
             ServiceLocator.Register<DiceSceneRenderer>(new DiceSceneRenderer());
             ServiceLocator.Register<DiceAnimationController>(new DiceAnimationController());
 
-            // Now the DiceRollingSystem can be created and it will fetch its dependencies.
             _diceRollingSystem = new DiceRollingSystem();
             ServiceLocator.Register<DiceRollingSystem>(_diceRollingSystem);
 
             _backgroundManager = new BackgroundManager();
             ServiceLocator.Register<BackgroundManager>(_backgroundManager);
 
-            // GameState must be registered before systems that depend on it in their constructor.
             _gameState = new GameState(noiseManager, componentStore, chunkManager, _global, _spriteManager);
             ServiceLocator.Register<GameState>(_gameState);
 
@@ -279,7 +278,6 @@ namespace ProjectVagabond
             // Phase 4: Final Setup
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
 
-            // Apply settings once at startup. 
             _settings.ApplyGraphicsSettings(_graphics, this);
             _settings.ApplyGameSettings();
 
@@ -292,7 +290,7 @@ namespace ProjectVagabond
             _systemManager.RegisterSystem(_relicAcquisitionSystem, 0f);
 
             _sceneManager.AddScene(GameSceneState.MainMenu, new MainMenuScene());
-            _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene()); // Changed to GameMapScene
+            _sceneManager.AddScene(GameSceneState.TerminalMap, new GameMapScene());
             _sceneManager.AddScene(GameSceneState.Settings, new SettingsScene());
             _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
             _sceneManager.AddScene(GameSceneState.ChoiceMenu, new ChoiceMenuScene());
@@ -301,7 +299,6 @@ namespace ProjectVagabond
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
 
-            // Initialize the full-screen composite render target
             _finalCompositeTarget = new RenderTarget2D(
                 GraphicsDevice,
                 Window.ClientBounds.Width,
@@ -310,13 +307,11 @@ namespace ProjectVagabond
                 GraphicsDevice.PresentationParameters.BackBufferFormat,
                 DepthFormat.Depth24);
 
-            // Initialize the custom blend state for the inverted cursor
             _cursorInvertBlendState = new BlendState
             {
                 ColorBlendFunction = BlendFunction.Add,
                 ColorSourceBlend = Blend.InverseDestinationColor,
                 ColorDestinationBlend = Blend.InverseSourceAlpha,
-
                 AlphaBlendFunction = BlendFunction.Add,
                 AlphaSourceBlend = Blend.Zero,
                 AlphaDestinationBlend = Blend.One
@@ -327,15 +322,11 @@ namespace ProjectVagabond
 
         protected override void OnExiting(object sender, ExitingEventArgs args)
         {
-            // Ensure logs are flushed when closing normally
             GameLogger.Close();
-
-            // Reset timer resolution on exit
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
                 try { TimeEndPeriod(1); } catch { }
             }
-
             base.OnExiting(sender, args);
         }
 
@@ -344,136 +335,57 @@ namespace ProjectVagabond
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             ServiceLocator.Register<SpriteBatch>(_spriteBatch);
 
-            // Load the CRT shader
-            try
-            {
-                _crtEffect = Content.Load<Effect>("Shaders/CRTShader");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[FATAL ERROR] Could not load CRT Shader: {ex.Message}");
-                _crtEffect = null;
-            }
+            try { _crtEffect = Content.Load<Effect>("Shaders/CRTShader"); }
+            catch (Exception ex) { Debug.WriteLine($"[FATAL ERROR] Could not load CRT Shader: {ex.Message}"); _crtEffect = null; }
 
-            try
-            {
-                _defaultFont = Content.Load<BitmapFont>("Fonts/Px437_IBM_BIOS");
-                ServiceLocator.Register<BitmapFont>(_defaultFont);
-            }
-            catch
-            {
-                throw new Exception("Please add a BitmapFont to your 'Content/Fonts' folder");
-            }
+            try { _defaultFont = Content.Load<BitmapFont>("Fonts/Px437_IBM_BIOS"); ServiceLocator.Register<BitmapFont>(_defaultFont); }
+            catch { throw new Exception("Please add a BitmapFont to your 'Content/Fonts' folder"); }
 
-            try
-            {
-                _secondaryFont = Content.Load<BitmapFont>("Fonts/5x5_pixel");
-                // Not registering with ServiceLocator to avoid type collision.
-                // Access via ServiceLocator.Get<Core>().SecondaryFont
-            }
-            catch
-            {
-                // If the secondary font fails, we can fall back to the default font.
-                // This prevents a crash if the asset is missing.
-                Debug.WriteLine("[WARNING] Could not load secondary font 'Fonts/5x5_pixel'. Using default font as fallback.");
-                _secondaryFont = _defaultFont;
-            }
+            try { _secondaryFont = Content.Load<BitmapFont>("Fonts/5x5_pixel"); }
+            catch { Debug.WriteLine("[WARNING] Could not load secondary font 'Fonts/5x5_pixel'. Using default font as fallback."); _secondaryFont = _defaultFont; }
 
-            // Load only essential assets needed for the main menu and global UI.
             _spriteManager.LoadEssentialContent();
             _backgroundManager.LoadContent();
-
-            // Load data for battle system
             BattleDataCache.LoadData(Content);
             _progressionManager.LoadSplits();
-
-            // Initialize core systems that require content but should always be available.
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
-
-            // The rest of the loading is deferred until the player clicks "Play".
-
-            // Set the initial scene to the main menu.
             _sceneManager.ChangeScene(GameSceneState.MainMenu);
         }
 
-        /// <summary>
-        /// Sets the flag indicating whether the main game assets have been loaded.
-        /// </summary>
-        public void SetGameLoaded(bool isLoaded)
-        {
-            _isGameLoaded = isLoaded;
-        }
-
-        /// <summary>
-        /// Triggers a full-screen color flash that fades out over the specified duration.
-        /// </summary>
-        public void TriggerFullscreenFlash(Color color, float duration)
-        {
-            _flashColor = color;
-            _flashDuration = duration;
-            _flashTimer = duration;
-        }
-
-        /// <summary>
-        /// Triggers a sequence of full-screen color flashes.
-        /// </summary>
-        public void TriggerScreenFlashSequence(Color color)
-        {
-            _screenFlashState = new ScreenFlashState
-            {
-                Timer = 0f,
-                FlashesRemaining = ScreenFlashState.TOTAL_FLASHES,
-                IsCurrentlyWhite = true,
-                FlashColor = color
-            };
-        }
-
-        /// <summary>
-        /// Triggers a full-screen glitch effect that fades out over the specified duration.
-        /// </summary>
-        public void TriggerFullscreenGlitch(float duration)
-        {
-            _glitchDuration = duration;
-            _glitchTimer = duration;
-        }
-
-        /// <summary>
-        /// Handles the result of a completed dice roll.
-        /// </summary>
-        /// <param name="result">The structured result of the roll.</param>
-        private void HandleRollCompleted(DiceRollResult result)
-        {
-            Debug.WriteLine("---------- ROLL COMPLETED ----------");
-            var sb = new StringBuilder();
-            foreach (var groupResult in result.ResultsByGroup)
-            {
-                sb.Clear();
-                sb.Append(string.Join(", ", groupResult.Value));
-                Debug.WriteLine($"Group '{groupResult.Key}' Results: [ {sb} ]");
-            }
-            Debug.WriteLine("------------------------------------");
-        }
+        public void SetGameLoaded(bool isLoaded) => _isGameLoaded = isLoaded;
+        public void TriggerFullscreenFlash(Color color, float duration) { _flashColor = color; _flashDuration = duration; _flashTimer = duration; }
+        public void TriggerScreenFlashSequence(Color color) { _screenFlashState = new ScreenFlashState { Timer = 0f, FlashesRemaining = ScreenFlashState.TOTAL_FLASHES, IsCurrentlyWhite = true, FlashColor = color }; }
+        public void TriggerFullscreenGlitch(float duration) { _glitchDuration = duration; _glitchTimer = duration; }
 
         protected override void Update(GameTime gameTime)
         {
-            // FIX: Show OS cursor only when debug console is open
+            // --- MANUAL FRAME LIMITER ---
+            // This replaces MonoGame's IsFixedTimeStep to prevent windowed mode stutter.
+            if (_settings.IsFrameLimiterEnabled)
+            {
+                // Calculate how much time we *should* have spent to hit the target FPS
+                _targetElapsedTimeSpan = TimeSpan.FromSeconds(1.0 / _settings.TargetFramerate);
+
+                // If we are running faster than the target, sleep off the difference
+                while (_frameStopwatch.Elapsed < _targetElapsedTimeSpan)
+                {
+                    // Use a spin-wait for the last millisecond for precision, sleep for the rest
+                    var remaining = _targetElapsedTimeSpan - _frameStopwatch.Elapsed;
+                    if (remaining.TotalMilliseconds > 1)
+                    {
+                        Thread.Sleep(1);
+                    }
+                }
+            }
+            _frameStopwatch.Restart();
+
             IsMouseVisible = _debugConsole.IsVisible;
 
-            // Pause the entire game update loop if the window is not focused.
-            if (!IsActive)
-            {
-                return;
-            }
+            if (!IsActive) return;
 
-            // Update the flash and glitch timers
-            if (_flashTimer > 0)
-            {
-                _flashTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-            }
-            if (_glitchTimer > 0)
-            {
-                _glitchTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-            }
+            // Update timers
+            if (_flashTimer > 0) _flashTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+            if (_glitchTimer > 0) _glitchTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_screenFlashState != null)
             {
                 _screenFlashState.Timer += (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -481,90 +393,30 @@ namespace ProjectVagabond
                 {
                     _screenFlashState.Timer -= ScreenFlashState.TOTAL_FLASH_CYCLE_DURATION;
                     _screenFlashState.FlashesRemaining--;
-                    if (_screenFlashState.FlashesRemaining <= 0)
-                    {
-                        _screenFlashState = null;
-                    }
+                    if (_screenFlashState.FlashesRemaining <= 0) _screenFlashState = null;
                 }
-
-                if (_screenFlashState != null)
-                {
-                    _screenFlashState.IsCurrentlyWhite = _screenFlashState.Timer < ScreenFlashState.FLASH_ON_DURATION;
-                }
+                if (_screenFlashState != null) _screenFlashState.IsCurrentlyWhite = _screenFlashState.Timer < ScreenFlashState.FLASH_ON_DURATION;
             }
 
-            // Handle debug input
             KeyboardState currentKeyboardState = Keyboard.GetState();
 
-            // --- Console Toggle ---
+            // Debug Toggles
             if (currentKeyboardState.IsKeyDown(Keys.OemTilde) && _previousKeyboardState.IsKeyUp(Keys.OemTilde))
             {
-                if (_debugConsole.IsVisible) _debugConsole.Hide();
-                else _debugConsole.Show();
+                if (_debugConsole.IsVisible) _debugConsole.Hide(); else _debugConsole.Show();
             }
-
-            // --- Debug Overlays (Hold to show) ---
             _global.ShowSplitMapGrid = currentKeyboardState.IsKeyDown(Keys.F1);
             _drawMouseDebugDot = currentKeyboardState.IsKeyDown(Keys.F2);
             _global.ShowDebugOverlays = currentKeyboardState.IsKeyDown(Keys.F3);
             _diceRollingSystem.DebugShowColliders = _global.ShowDebugOverlays;
 
-            if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState))
-            {
-                // Soft reset the game
-                SoftResetGame();
-            }
-            if (KeyPressed(Keys.F6, currentKeyboardState, _previousKeyboardState))
-            {
-                var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-                if (choiceMenu != null)
-                {
-                    var choiceGenerator = new ChoiceGenerator();
-                    var choices = choiceGenerator.GenerateSpellChoices(1, _random.Next(2, 4)).Cast<object>().ToList();
-                    choiceMenu.Show(choices, () => _sceneManager.HideModal());
-                    _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
-                }
-            }
-            if (KeyPressed(Keys.F7, currentKeyboardState, _previousKeyboardState))
-            {
-                var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-                if (choiceMenu != null)
-                {
-                    var choiceGenerator = new ChoiceGenerator();
-                    var choices = choiceGenerator.GenerateAbilityChoices(1, _random.Next(2, 4)).Cast<object>().ToList();
-                    choiceMenu.Show(choices, () => _sceneManager.HideModal());
-                    _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
-                }
-            }
-            if (KeyPressed(Keys.F8, currentKeyboardState, _previousKeyboardState))
-            {
-                var choiceMenu = _sceneManager.GetScene(GameSceneState.ChoiceMenu) as ChoiceMenuScene;
-                if (choiceMenu != null)
-                {
-                    var itemChoices = new List<object>();
-                    var allItems = BattleDataCache.Consumables.Values.ToList();
-                    if (allItems.Any())
-                    {
-                        int count = Math.Min(_random.Next(2, 4), allItems.Count);
-                        var randomItems = allItems.OrderBy(x => _random.Next()).Take(count);
-                        itemChoices.AddRange(randomItems);
-                    }
-                    choiceMenu.Show(itemChoices, () => _sceneManager.HideModal());
-                    _sceneManager.ShowModal(GameSceneState.ChoiceMenu);
-                }
-            }
-            if (KeyPressed(Keys.F9, currentKeyboardState, _previousKeyboardState))
-            {
-                BattleDebugHelper.RunDamageCalculationTestSuite();
-            }
-            if (KeyPressed(Keys.F12, currentKeyboardState, _previousKeyboardState))
-            {
-                _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
-            }
+            // Debug Shortcuts
+            if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState)) SoftResetGame();
+            if (KeyPressed(Keys.F9, currentKeyboardState, _previousKeyboardState)) BattleDebugHelper.RunDamageCalculationTestSuite();
+            if (KeyPressed(Keys.F12, currentKeyboardState, _previousKeyboardState)) _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
 
             _previousKeyboardState = currentKeyboardState;
 
-            // Handle delayed saving of custom resolutions
             if (_isCustomResolutionSavePending)
             {
                 _customResolutionSaveTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -577,52 +429,45 @@ namespace ProjectVagabond
                 }
             }
 
-            // This ensures physics calculations are stable and not dependent on the frame rate.
-            // We multiply by the simulation speed to "fast forward" the physics time.
+            // --- PHYSICS UPDATE ---
+            // Since IsFixedTimeStep is false, ElapsedGameTime is the REAL delta time.
+            // We accumulate this real time and step physics at a fixed rate.
             float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Cap huge delta times (e.g. after dragging window) to prevent spiral of death
+            if (elapsedSeconds > 0.1f) elapsedSeconds = 0.1f;
+
             _physicsTimeAccumulator += elapsedSeconds * _global.DiceSimulationSpeedMultiplier;
 
             while (_physicsTimeAccumulator >= Global.FIXED_PHYSICS_TIMESTEP)
             {
-                // Run a single, fixed-step physics update for any relevant systems.
                 _diceRollingSystem.PhysicsStep(Global.FIXED_PHYSICS_TIMESTEP);
                 _particleSystemManager.Update(Global.FIXED_PHYSICS_TIMESTEP);
-
                 _physicsTimeAccumulator -= Global.FIXED_PHYSICS_TIMESTEP;
             }
 
-            // The loading screen now acts as a modal state that can be triggered at any time.
             if (_loadingScreen.IsActive)
             {
                 _loadingScreen.Update(gameTime);
-                _sceneManager.Update(gameTime); // Allow scene manager to update its transition state
-                                                // The dice system might be warming up, so it needs updates.
-                if (!_isGameLoaded)
-                {
-                    _diceRollingSystem.Update(gameTime);
-                }
-                return; // Block all other game updates
+                _sceneManager.Update(gameTime);
+                if (!_isGameLoaded) _diceRollingSystem.Update(gameTime);
+                return;
             }
 
-            // The debug console is the next highest priority modal state.
             if (_debugConsole.IsVisible)
             {
                 UIInputManager.Update(gameTime);
-
                 _debugConsole.Update(gameTime);
-                _hapticsManager.Update(gameTime); // Allow haptics to continue for feedback
+                _hapticsManager.Update(gameTime);
                 base.Update(gameTime);
-                return; // Block all other game updates
+                return;
             }
 
-
-            // --- Frame-Rate Dependent Updates ---
             _sceneManager.Update(gameTime);
-            _diceRollingSystem.Update(gameTime); // Update dice visuals and game logic every frame.
+            _diceRollingSystem.Update(gameTime);
             _animationManager.Update(gameTime);
             _cursorManager.Update(gameTime);
 
-            // These systems handle game logic and should be paused.
             if (!_gameState.IsPaused)
             {
                 if (_sceneManager.CurrentActiveScene is GameMapScene)
@@ -633,7 +478,6 @@ namespace ProjectVagabond
             }
 
             _hapticsManager.Update(gameTime);
-
             base.Update(gameTime);
         }
 
@@ -650,68 +494,43 @@ namespace ProjectVagabond
                 return;
             }
 
-            // --- Phase 1: Render the game world (scene, particles, etc.) to its render target ---
             if (_sceneManager.CurrentActiveScene?.GetType() != typeof(TransitionScene))
             {
                 GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
                 GraphicsDevice.Clear(Color.Transparent);
-
-                Matrix virtualSpaceTransform = Matrix.Identity;
-
-                _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, virtualSpaceTransform);
+                _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, Matrix.Identity);
             }
 
-            // --- Phase 1.5: Render the dice system to its own render target. ---
             var diceRenderTarget = _diceRollingSystem.Draw(_defaultFont);
 
-            // --- Phase 2: Composite everything onto the full-screen render target ---
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
             GraphicsDevice.Clear(_global.GameBg);
 
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             if (!_sceneManager.IsLoadingBetweenScenes && !_sceneManager.IsHoldingBlack)
             {
-                // Draw the main game scene first
-                // _finalRenderRectangle is calculated in OnResize based on integer scaling.
-                // This ensures the 320x180 scene is drawn at exactly 1x, 2x, 3x, etc.
                 _spriteBatch.Draw(_sceneRenderTarget, _finalRenderRectangle, Color.White);
-
-                // Draw the dice system on top of the game scene if it's active
-                if (diceRenderTarget != null)
-                {
-                    // The dice are rendered to a full virtual-size texture, so we draw it
-                    // into the same letterboxed rectangle as the main scene.
-                    _spriteBatch.Draw(diceRenderTarget, _finalRenderRectangle, Color.White);
-                }
+                if (diceRenderTarget != null) _spriteBatch.Draw(diceRenderTarget, _finalRenderRectangle, Color.White);
             }
             _spriteBatch.End();
 
             Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
             _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, screenScaleMatrix);
 
-            // Draw the custom cursor onto the composite target so it gets post-processing effects.
-            // This pass uses the special invert blend state and NO transformation matrix, so it works in screen space.
-            // It is drawn AFTER FullscreenUI to ensure it appears on top of elements like the settings icon.
             _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp);
             _cursorManager.Draw(_spriteBatch, Mouse.GetState().Position.ToVector2(), _finalScale);
             _spriteBatch.End();
 
-            // --- Phase 3: Render the final composite to the screen with the CRT shader ---
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(_global.GameBg);
 
             Matrix shakeMatrix = _hapticsManager.GetHapticsMatrix();
-
-            // FIX: Round the translation components of the shake matrix to the nearest integer.
-            // This prevents sub-pixel rendering of the upscaled image, which causes oblong pixels.
             shakeMatrix.M41 = MathF.Round(shakeMatrix.M41);
             shakeMatrix.M42 = MathF.Round(shakeMatrix.M42);
 
             _spriteBatch.Begin(SpriteSortMode.Immediate, BlendState.Opaque, SamplerState.PointClamp, null, null, null, shakeMatrix);
 
-            bool applyCrtEffect = _crtEffect != null;
-
-            if (applyCrtEffect)
+            if (_crtEffect != null)
             {
                 _crtEffect.Parameters["Time"]?.SetValue((float)gameTime.TotalGameTime.TotalSeconds);
                 _crtEffect.Parameters["ScreenResolution"]?.SetValue(new Vector2(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));
@@ -731,87 +550,56 @@ namespace ProjectVagabond
                     flashColor = _flashColor;
                 }
 
-                float maxFlashOpacity = 0.25f;
                 _crtEffect.Parameters["FlashColor"]?.SetValue(flashColor.ToVector3());
-                _crtEffect.Parameters["FlashIntensity"]?.SetValue(flashIntensity * maxFlashOpacity);
+                _crtEffect.Parameters["FlashIntensity"]?.SetValue(flashIntensity * 0.25f);
 
-                // Calculate glitch intensity (fades from 1 to 0)
                 float glitchIntensity = 0f;
-                if (_glitchTimer > 0 && _glitchDuration > 0)
-                {
-                    glitchIntensity = Easing.EaseOutCubic(_glitchTimer / _glitchDuration);
-                }
+                if (_glitchTimer > 0 && _glitchDuration > 0) glitchIntensity = Easing.EaseOutCubic(_glitchTimer / _glitchDuration);
                 _crtEffect.Parameters["ImpactGlitchIntensity"]?.SetValue(glitchIntensity);
 
                 _crtEffect.CurrentTechnique.Passes[0].Apply();
             }
 
-            // FIX: Draw the composite target at its native size to avoid stretching if BackBuffer differs slightly.
-            // We center it on the screen.
             int backBufferWidth = GraphicsDevice.PresentationParameters.BackBufferWidth;
             int backBufferHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
-
             int targetWidth = _finalCompositeTarget.Width;
             int targetHeight = _finalCompositeTarget.Height;
-
-            // Calculate centered destination rect
             int drawX = (backBufferWidth - targetWidth) / 2;
             int drawY = (backBufferHeight - targetHeight) / 2;
 
-            var destRect = new Rectangle(drawX, drawY, targetWidth, targetHeight);
-
-            _spriteBatch.Draw(_finalCompositeTarget, destRect, Color.White);
+            _spriteBatch.Draw(_finalCompositeTarget, new Rectangle(drawX, drawY, targetWidth, targetHeight), Color.White);
             _spriteBatch.End();
 
-            // --- Phase 4: Draw UI elements that should NOT have the shader applied ---
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
-
-            if (_debugConsole.IsVisible)
-            {
-                _debugConsole.Draw(_spriteBatch, _defaultFont, gameTime);
-            }
+            if (_debugConsole.IsVisible) _debugConsole.Draw(_spriteBatch, _defaultFont, gameTime);
 
             if (_defaultFont != null)
             {
                 string versionText = $"v{Global.GAME_VERSION}";
-                float padding = 5f;
                 var screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
-                var versionPosition = new Vector2(padding, screenHeight - _defaultFont.LineHeight - padding);
-                _spriteBatch.DrawStringSnapped(_defaultFont, versionText, versionPosition, _global.Palette_DarkGray);
+                _spriteBatch.DrawStringSnapped(_defaultFont, versionText, new Vector2(5f, screenHeight - _defaultFont.LineHeight - 5f), _global.Palette_DarkGray);
             }
             _spriteBatch.End();
 
-            // Draw the debug mouse dot last, in virtual space, on top of everything.
             if (_drawMouseDebugDot)
             {
                 _spriteBatch.Begin(blendState: BlendState.AlphaBlend, samplerState: SamplerState.PointClamp, transformMatrix: Matrix.Invert(_mouseTransformMatrix));
                 var virtualMousePos = TransformMouse(Mouse.GetState().Position);
                 _spriteBatch.Draw(_pixel, virtualMousePos, Color.Red);
-
                 var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-                string coordText = $"({virtualMousePos.X}, {virtualMousePos.Y})";
-                Vector2 textPos = virtualMousePos + new Vector2(3, -secondaryFont.LineHeight / 2);
-                _spriteBatch.DrawStringSnapped(secondaryFont, coordText, textPos, Color.Red);
-
+                _spriteBatch.DrawStringSnapped(secondaryFont, $"({virtualMousePos.X}, {virtualMousePos.Y})", virtualMousePos + new Vector2(3, -secondaryFont.LineHeight / 2), Color.Red);
                 _spriteBatch.End();
             }
 
             base.Draw(gameTime);
         }
 
-
-        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-
-        /// <summary>
-        /// Recalculates the rendering scale and position when the window is resized.
-        /// </summary>
         public void OnResize(object sender, EventArgs e)
         {
             if (GraphicsDevice == null) return;
 
             var newResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
-
             if (newResolution != _previousResolution)
             {
                 EventBus.Publish(new GameEvents.UIThemeOrResolutionChanged());
@@ -819,25 +607,15 @@ namespace ProjectVagabond
             }
 
             bool isStandard = SettingsManager.GetResolutions().Any(r => r.Value == newResolution);
-
             if (!isStandard)
             {
                 _isCustomResolutionSavePending = true;
                 _customResolutionSaveTimer = 0.5f;
             }
-            else
-            {
-                _isCustomResolutionSavePending = false;
-            }
+            else _isCustomResolutionSavePending = false;
 
-            // Update the settings object with the new actual resolution from the window
             _settings.Resolution = newResolution;
-
-            // If the settings scene is active, tell it to refresh its state to show the new resolution
-            if (_sceneManager.CurrentActiveScene is SettingsScene settingsScene)
-            {
-                settingsScene.RefreshUIFromSettings();
-            }
+            if (_sceneManager.CurrentActiveScene is SettingsScene settingsScene) settingsScene.RefreshUIFromSettings();
 
             var screenWidth = GraphicsDevice.PresentationParameters.BackBufferWidth;
             var screenHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
@@ -845,10 +623,7 @@ namespace ProjectVagabond
             float scaleX = (float)screenWidth / Global.VIRTUAL_WIDTH;
             float scaleY = (float)screenHeight / Global.VIRTUAL_HEIGHT;
 
-            if (screenWidth < Global.VIRTUAL_WIDTH || screenHeight < Global.VIRTUAL_HEIGHT)
-            {
-                _finalScale = Math.Min(scaleX, scaleY);
-            }
+            if (screenWidth < Global.VIRTUAL_WIDTH || screenHeight < Global.VIRTUAL_HEIGHT) _finalScale = Math.Min(scaleX, scaleY);
             else
             {
                 int integerScale = (int)Math.Min(scaleX, scaleY);
@@ -858,28 +633,16 @@ namespace ProjectVagabond
 
             int destWidth = (int)(Global.VIRTUAL_WIDTH * _finalScale);
             int destHeight = (int)(Global.VIRTUAL_HEIGHT * _finalScale);
-
             int destX = (screenWidth - destWidth) / 2;
             int destY = (screenHeight - destHeight) / 2;
 
             _finalRenderRectangle = new Rectangle(destX, destY, destWidth, destHeight);
-
             _mouseTransformMatrix = Matrix.CreateTranslation(-destX, -destY, 0) * Matrix.CreateScale(1.0f / _finalScale);
 
-            // Recreate the full-screen render target to match the new window size
             _finalCompositeTarget?.Dispose();
-            _finalCompositeTarget = new RenderTarget2D(
-                GraphicsDevice,
-                Window.ClientBounds.Width,
-                Window.ClientBounds.Height,
-                false,
-                GraphicsDevice.PresentationParameters.BackBufferFormat,
-                DepthFormat.Depth24);
+            _finalCompositeTarget = new RenderTarget2D(GraphicsDevice, Window.ClientBounds.Width, Window.ClientBounds.Height, false, GraphicsDevice.PresentationParameters.BackBufferFormat, DepthFormat.Depth24);
         }
 
-        /// <summary>
-        /// Transforms mouse coordinates from screen space to 'virtual' game space.
-        /// </summary>
         public static Vector2 TransformMouse(Point screenPoint)
         {
             var coreInstance = ServiceLocator.Get<Core>();
@@ -887,9 +650,6 @@ namespace ProjectVagabond
             return new Vector2(MathF.Round(transformed.X), MathF.Round(transformed.Y));
         }
 
-        /// <summary>
-        /// Transforms coordinates from 'virtual' game space to screen space.
-        /// </summary>
         public static Point TransformVirtualToScreen(Point virtualPoint)
         {
             var coreInstance = ServiceLocator.Get<Core>();
@@ -898,28 +658,17 @@ namespace ProjectVagabond
             return new Point((int)screenVector.X, (int)screenVector.Y);
         }
 
-        /// <summary>
-        /// Returns a Rectangle in virtual coordinates that represents the actual visible area of the window.
-        /// </summary>
         public Rectangle GetActualScreenVirtualBounds()
         {
-            // Get the top-left and bottom-right corners of the actual screen in virtual coordinates.
             Vector2 topLeftVirtual = TransformMouse(new Point(0, 0));
             Vector2 bottomRightVirtual = TransformMouse(new Point(GraphicsDevice.PresentationParameters.BackBufferWidth, GraphicsDevice.PresentationParameters.BackBufferHeight));
-
-            return new Rectangle(
-                (int)topLeftVirtual.X,
-                (int)topLeftVirtual.Y,
-                (int)(bottomRightVirtual.X - topLeftVirtual.X),
-                (int)(bottomRightVirtual.Y - topLeftVirtual.Y)
-            );
+            return new Rectangle((int)topLeftVirtual.X, (int)topLeftVirtual.Y, (int)(bottomRightVirtual.X - topLeftVirtual.X), (int)(bottomRightVirtual.Y - topLeftVirtual.Y));
         }
 
         public void ExitApplication() => Exit();
 
         private void SoftResetGame()
         {
-            // 1. Stop/reset all active managers and systems
             _diceRollingSystem.ClearRoll();
             _actionExecutionSystem.HandleInterruption();
             _particleSystemManager.ClearAllEmitters();
@@ -928,15 +677,11 @@ namespace ProjectVagabond
             _loadingScreen.Clear();
             _debugConsole.ClearHistory();
             _progressionManager.ClearCurrentSplitMap();
-
-            // 2. Completely reset the entity-component-system state
             var entityManager = ServiceLocator.Get<EntityManager>();
             var componentStore = ServiceLocator.Get<ComponentStore>();
             entityManager.Clear();
             componentStore.Clear();
             _gameState.Reset();
-
-            // 3. Transition back to the main menu
             _sceneManager.ChangeScene(GameSceneState.MainMenu);
         }
 
