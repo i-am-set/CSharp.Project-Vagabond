@@ -252,6 +252,9 @@ namespace ProjectVagabond
 
             // Phase 4: Final Setup
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
+
+            // Apply settings once at startup. 
+            // IMPORTANT: Do NOT re-apply these in Update(), as setting TargetElapsedTime resets the game timer accumulator.
             _settings.ApplyGraphicsSettings(_graphics, this);
             _settings.ApplyGameSettings();
 
@@ -429,17 +432,6 @@ namespace ProjectVagabond
             {
                 return;
             }
-
-            if (_settings.IsFrameLimiterEnabled)
-            {
-                IsFixedTimeStep = true;
-                TargetElapsedTime = TimeSpan.FromSeconds(1.0 / _settings.TargetFramerate);
-            }
-            else
-            {
-                IsFixedTimeStep = false;
-            }
-            _graphics.SynchronizeWithVerticalRetrace = _settings.IsVsync;
 
             // Update the flash and glitch timers
             if (_flashTimer > 0)

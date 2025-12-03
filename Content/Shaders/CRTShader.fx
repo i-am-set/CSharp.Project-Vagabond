@@ -22,9 +22,10 @@ uniform float ImpactGlitchIntensity;
 #define ENABLE_IMPACT_GLITCH
 #define ENABLE_SCANLINES
 #define ENABLE_WOBBLE
+#define ENABLE_DITHERING
 
 // --- Effect Intensity Values ---
-static const float VIGNETTE_INTENSITY = 0.35;
+static const float VIGNETTE_INTENSITY = 0.45;
 static const float CHROMATIC_ABERRATION_AMOUNT = 10.0;
 static const float CONTRAST_AMOUNT = 1.1;
 // --- Scanline Parameters ---
@@ -113,6 +114,18 @@ float4 MainPS(PixelShaderInput input) : COLOR
     color.rgb = pow(color.rgb, 1.0 / Gamma);
 
     color.rgb = lerp(color.rgb, FlashColor, FlashIntensity);
+
+#ifdef ENABLE_DITHERING
+    // Generate noise based on screen position to break up color bands.
+    // We use the screen resolution to ensure the noise is per-pixel.
+    float noise = rand(input.TexCoord * ScreenResolution);
+    
+    // Scale the noise to be very subtle (1/255 is the smallest color step in 8-bit color).
+    // We subtract 0.5 to center the noise around 0.
+    float dither = (noise - 0.5) * (1.0 / 255.0);
+    
+    color.rgb += dither;
+#endif
 
 	return color;
 }
