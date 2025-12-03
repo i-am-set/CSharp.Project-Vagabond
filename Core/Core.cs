@@ -22,28 +22,41 @@ using System.Threading;
 
 namespace ProjectVagabond
 {
+    /// <summary>
+    /// The main game class. Acts as the central hub for the game loop (Update/Draw),
+    /// dependency injection (ServiceLocator), and global state management.
+    /// </summary>
     public class Core : Game
     {
-        // Graphics and Content
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        // GRAPHICS & CONTENT RESOURCES
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
         private BitmapFont _defaultFont;
         private BitmapFont _secondaryFont;
         private Texture2D _pixel;
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        // RENDERING STATE & POST-PROCESSING
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         private Rectangle _finalRenderRectangle;
         private Matrix _mouseTransformMatrix;
         private Point _previousResolution;
         private float _finalScale = 1f;
-        // --- Post-Processing Members ---
+
         private RenderTarget2D _sceneRenderTarget;
         private RenderTarget2D _finalCompositeTarget;
         private Effect _crtEffect;
+        private BlendState _cursorInvertBlendState;
+
+        // Visual FX Timers
         private float _flashTimer;
         private float _flashDuration;
         private Color _flashColor;
         private float _glitchTimer;
         private float _glitchDuration;
-        private BlendState _cursorInvertBlendState;
+
         private class ScreenFlashState
         {
             public float Timer;
@@ -58,12 +71,24 @@ namespace ProjectVagabond
         }
         private ScreenFlashState _screenFlashState;
 
-
+        /// <summary>
+        /// The matrix used to transform mouse coordinates from screen space to virtual game space.
+        /// </summary>
         public Matrix MouseTransformMatrix => _mouseTransformMatrix;
+
+        /// <summary>
+        /// The secondary, smaller pixel font used for UI elements.
+        /// </summary>
         public BitmapFont SecondaryFont => _secondaryFont;
+
+        /// <summary>
+        /// The current integer scaling factor of the game window.
+        /// </summary>
         public float FinalScale => _finalScale;
 
-        // Managers & Systems
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        // MANAGERS & SYSTEMS
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         private Global _global;
         private GameSettings _settings;
         private SceneManager _sceneManager;
@@ -84,34 +109,44 @@ namespace ProjectVagabond
         private ProgressionManager _progressionManager;
         private CursorManager _cursorManager;
 
-        // Input State
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        // GAME LOOP STATE
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+
+        // Input
         private KeyboardState _previousKeyboardState;
         private bool _drawMouseDebugDot = false;
 
-        // Physics Timestep
+        // Physics
         private float _physicsTimeAccumulator = 0f;
 
-        // Loading State
+        // Loading
         private bool _isGameLoaded = false;
 
-        // Custom Resolution Save State
+        // Settings
         private float _customResolutionSaveTimer = 0f;
         private bool _isCustomResolutionSavePending = false;
         private readonly Random _random = new Random();
 
-        // --- Manual Frame Limiter State ---
+        // Manual Frame Limiter
         private Stopwatch _frameStopwatch;
         private TimeSpan _targetElapsedTimeSpan;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
-        // NATIVE METHODS FOR TIMER RESOLUTION
+        // NATIVE METHODS (WINDOWS TIMER RESOLUTION FIX)
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        // These imports allow us to set the Windows timer resolution to 1ms.
+        // Without this, Thread.Sleep is inaccurate (~15ms), causing stutter in Windowed mode.
         [DllImport("winmm.dll", EntryPoint = "timeBeginPeriod")]
         private static extern uint TimeBeginPeriod(uint uMilliseconds);
 
         [DllImport("winmm.dll", EntryPoint = "timeEndPeriod")]
         private static extern uint TimeEndPeriod(uint uMilliseconds);
 
+        /// <summary>
+        /// Attempts to set the OS timer resolution to 1ms for high-precision sleep.
+        /// Only runs on Windows.
+        /// </summary>
         private void SetHighPrecisionTimer()
         {
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
@@ -121,17 +156,20 @@ namespace ProjectVagabond
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        // INITIALIZATION
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         public Core()
         {
             // --- CRASH SAFETY HOOK ---
+            // Catch unhandled exceptions before the app dies to log them to file.
             AppDomain.CurrentDomain.UnhandledException += (sender, args) =>
             {
                 if (args.ExceptionObject is Exception ex)
                 {
                     GameLogger.Log(LogSeverity.Critical, $"UNHANDLED EXCEPTION: {ex.Message}");
                     GameLogger.Log(LogSeverity.Critical, ex.StackTrace);
-                    GameLogger.Close();
+                    GameLogger.Close(); // Flush to disk
                 }
             };
 
@@ -140,6 +178,7 @@ namespace ProjectVagabond
 
             IsMouseVisible = false;
 
+            // Ensure we use HiDef profile for best shader/performance support
             _graphics.GraphicsProfile = GraphicsProfile.HiDef;
             _graphics.PreferredBackBufferWidth = Global.VIRTUAL_WIDTH;
             _graphics.PreferredBackBufferHeight = Global.VIRTUAL_HEIGHT;
@@ -147,17 +186,18 @@ namespace ProjectVagabond
             Window.ClientSizeChanged += OnResize;
 
             // CRITICAL FIX: Disable MonoGame's built-in fixed step.
-            // We will handle timing manually to prevent windowed mode stutter.
+            // We handle timing manually in Update() to prevent windowed mode stutter caused by DWM desync.
             IsFixedTimeStep = false;
-            _graphics.SynchronizeWithVerticalRetrace = false; // We will manage this via settings
+            _graphics.SynchronizeWithVerticalRetrace = false; // Managed via GameSettings
         }
 
         protected override void Initialize()
         {
+            // Phase 0: System-Level Init
             ConsoleRedirection.Initialize();
             SetHighPrecisionTimer();
 
-            // Initialize Frame Limiter
+            // Initialize Frame Limiter Stopwatch
             _frameStopwatch = new Stopwatch();
             _frameStopwatch.Start();
 
@@ -174,6 +214,7 @@ namespace ProjectVagabond
             // Phase 2: GraphicsDevice Registration
             ServiceLocator.Register<GraphicsDevice>(GraphicsDevice);
 
+            // Initialize the virtual resolution render target (320x180)
             _sceneRenderTarget = new RenderTarget2D(
                 GraphicsDevice,
                 Global.VIRTUAL_WIDTH,
@@ -182,7 +223,8 @@ namespace ProjectVagabond
                 GraphicsDevice.PresentationParameters.BackBufferFormat,
                 DepthFormat.Depth24);
 
-            // Phase 3: Instantiate and Register Managers
+            // Phase 3: Instantiate and Register Managers & Systems
+            // Order matters here for dependencies.
             var entityManager = new EntityManager();
             ServiceLocator.Register<EntityManager>(entityManager);
 
@@ -222,6 +264,7 @@ namespace ProjectVagabond
             _particleSystemManager = new ParticleSystemManager();
             ServiceLocator.Register<ParticleSystemManager>(_particleSystemManager);
 
+            // Register Dice Sub-Systems
             ServiceLocator.Register<DicePhysicsController>(new DicePhysicsController());
             ServiceLocator.Register<DiceSceneRenderer>(new DiceSceneRenderer());
             ServiceLocator.Register<DiceAnimationController>(new DiceAnimationController());
@@ -278,6 +321,8 @@ namespace ProjectVagabond
             // Phase 4: Final Setup
             GraphicsDevice.SamplerStates[0] = SamplerState.PointClamp;
 
+            // Apply settings once at startup. 
+            // IMPORTANT: Do NOT re-apply these in Update(), as setting TargetElapsedTime resets the game timer accumulator.
             _settings.ApplyGraphicsSettings(_graphics, this);
             _settings.ApplyGameSettings();
 
@@ -299,6 +344,7 @@ namespace ProjectVagabond
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
 
+            // Initialize the full-screen composite render target
             _finalCompositeTarget = new RenderTarget2D(
                 GraphicsDevice,
                 Window.ClientBounds.Width,
@@ -307,6 +353,7 @@ namespace ProjectVagabond
                 GraphicsDevice.PresentationParameters.BackBufferFormat,
                 DepthFormat.Depth24);
 
+            // Initialize the custom blend state for the inverted cursor
             _cursorInvertBlendState = new BlendState
             {
                 ColorBlendFunction = BlendFunction.Add,
@@ -322,7 +369,10 @@ namespace ProjectVagabond
 
         protected override void OnExiting(object sender, ExitingEventArgs args)
         {
+            // Ensure logs are flushed when closing normally
             GameLogger.Close();
+
+            // Reset timer resolution on exit to be a good citizen
             if (Environment.OSVersion.Platform == PlatformID.Win32NT)
             {
                 try { TimeEndPeriod(1); } catch { }
@@ -335,35 +385,79 @@ namespace ProjectVagabond
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             ServiceLocator.Register<SpriteBatch>(_spriteBatch);
 
-            try { _crtEffect = Content.Load<Effect>("Shaders/CRTShader"); }
-            catch (Exception ex) { Debug.WriteLine($"[FATAL ERROR] Could not load CRT Shader: {ex.Message}"); _crtEffect = null; }
+            // Load the CRT shader
+            try
+            {
+                _crtEffect = Content.Load<Effect>("Shaders/CRTShader");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[FATAL ERROR] Could not load CRT Shader: {ex.Message}");
+                _crtEffect = null;
+            }
 
-            try { _defaultFont = Content.Load<BitmapFont>("Fonts/Px437_IBM_BIOS"); ServiceLocator.Register<BitmapFont>(_defaultFont); }
-            catch { throw new Exception("Please add a BitmapFont to your 'Content/Fonts' folder"); }
+            try
+            {
+                _defaultFont = Content.Load<BitmapFont>("Fonts/Px437_IBM_BIOS");
+                ServiceLocator.Register<BitmapFont>(_defaultFont);
+            }
+            catch
+            {
+                throw new Exception("Please add a BitmapFont to your 'Content/Fonts' folder");
+            }
 
-            try { _secondaryFont = Content.Load<BitmapFont>("Fonts/5x5_pixel"); }
-            catch { Debug.WriteLine("[WARNING] Could not load secondary font 'Fonts/5x5_pixel'. Using default font as fallback."); _secondaryFont = _defaultFont; }
+            try
+            {
+                _secondaryFont = Content.Load<BitmapFont>("Fonts/5x5_pixel");
+            }
+            catch
+            {
+                Debug.WriteLine("[WARNING] Could not load secondary font 'Fonts/5x5_pixel'. Using default font as fallback.");
+                _secondaryFont = _defaultFont;
+            }
 
+            // Load essential assets
             _spriteManager.LoadEssentialContent();
             _backgroundManager.LoadContent();
             BattleDataCache.LoadData(Content);
             _progressionManager.LoadSplits();
             _diceRollingSystem.Initialize(GraphicsDevice, Content);
+
+            // Start at Main Menu
             _sceneManager.ChangeScene(GameSceneState.MainMenu);
         }
 
+        /// <summary>
+        /// Sets the flag indicating whether the main game assets have been loaded.
+        /// </summary>
         public void SetGameLoaded(bool isLoaded) => _isGameLoaded = isLoaded;
+
+        /// <summary>
+        /// Triggers a full-screen color flash that fades out over the specified duration.
+        /// </summary>
         public void TriggerFullscreenFlash(Color color, float duration) { _flashColor = color; _flashDuration = duration; _flashTimer = duration; }
+
+        /// <summary>
+        /// Triggers a sequence of full-screen color flashes.
+        /// </summary>
         public void TriggerScreenFlashSequence(Color color) { _screenFlashState = new ScreenFlashState { Timer = 0f, FlashesRemaining = ScreenFlashState.TOTAL_FLASHES, IsCurrentlyWhite = true, FlashColor = color }; }
+
+        /// <summary>
+        /// Triggers a full-screen glitch effect that fades out over the specified duration.
+        /// </summary>
         public void TriggerFullscreenGlitch(float duration) { _glitchDuration = duration; _glitchTimer = duration; }
+
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
+        // MAIN GAME LOOP
+        // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
 
         protected override void Update(GameTime gameTime)
         {
             // --- MANUAL FRAME LIMITER ---
             // This replaces MonoGame's IsFixedTimeStep to prevent windowed mode stutter.
+            // We calculate the target time per frame and sleep the thread manually.
             if (_settings.IsFrameLimiterEnabled)
             {
-                // Calculate how much time we *should* have spent to hit the target FPS
                 _targetElapsedTimeSpan = TimeSpan.FromSeconds(1.0 / _settings.TargetFramerate);
 
                 // If we are running faster than the target, sleep off the difference
@@ -383,7 +477,7 @@ namespace ProjectVagabond
 
             if (!IsActive) return;
 
-            // Update timers
+            // Update visual FX timers
             if (_flashTimer > 0) _flashTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_glitchTimer > 0) _glitchTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             if (_screenFlashState != null)
@@ -417,6 +511,7 @@ namespace ProjectVagabond
 
             _previousKeyboardState = currentKeyboardState;
 
+            // Handle delayed saving of custom resolutions
             if (_isCustomResolutionSavePending)
             {
                 _customResolutionSaveTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -431,10 +526,10 @@ namespace ProjectVagabond
 
             // --- PHYSICS UPDATE ---
             // Since IsFixedTimeStep is false, ElapsedGameTime is the REAL delta time.
-            // We accumulate this real time and step physics at a fixed rate.
+            // We accumulate this real time and step physics at a fixed rate (60hz) to ensure deterministic behavior.
             float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-            // Cap huge delta times (e.g. after dragging window) to prevent spiral of death
+            // Cap huge delta times (e.g. after dragging window) to prevent "spiral of death"
             if (elapsedSeconds > 0.1f) elapsedSeconds = 0.1f;
 
             _physicsTimeAccumulator += elapsedSeconds * _global.DiceSimulationSpeedMultiplier;
@@ -446,6 +541,7 @@ namespace ProjectVagabond
                 _physicsTimeAccumulator -= Global.FIXED_PHYSICS_TIMESTEP;
             }
 
+            // --- MODAL UPDATES ---
             if (_loadingScreen.IsActive)
             {
                 _loadingScreen.Update(gameTime);
@@ -463,6 +559,7 @@ namespace ProjectVagabond
                 return;
             }
 
+            // --- STANDARD GAME UPDATE ---
             _sceneManager.Update(gameTime);
             _diceRollingSystem.Update(gameTime);
             _animationManager.Update(gameTime);
@@ -483,6 +580,7 @@ namespace ProjectVagabond
 
         protected override void Draw(GameTime gameTime)
         {
+            // 1. Loading Screen (Exclusive Draw)
             if (_loadingScreen.IsActive)
             {
                 GraphicsDevice.Clear(Color.Black);
@@ -494,6 +592,7 @@ namespace ProjectVagabond
                 return;
             }
 
+            // 2. Render Game Scene to Virtual Target
             if (_sceneManager.CurrentActiveScene?.GetType() != typeof(TransitionScene))
             {
                 GraphicsDevice.SetRenderTarget(_sceneRenderTarget);
@@ -501,8 +600,10 @@ namespace ProjectVagabond
                 _sceneManager.Draw(_spriteBatch, _defaultFont, gameTime, Matrix.Identity);
             }
 
+            // 3. Render Dice to Virtual Target (Overlay)
             var diceRenderTarget = _diceRollingSystem.Draw(_defaultFont);
 
+            // 4. Composite to Fullscreen Target (Letterboxing)
             GraphicsDevice.SetRenderTarget(_finalCompositeTarget);
             GraphicsDevice.Clear(_global.GameBg);
 
@@ -514,13 +615,16 @@ namespace ProjectVagabond
             }
             _spriteBatch.End();
 
+            // 5. Draw Fullscreen UI (Settings, etc.)
             Matrix screenScaleMatrix = Matrix.Invert(_mouseTransformMatrix);
             _sceneManager.CurrentActiveScene?.DrawFullscreenUI(_spriteBatch, _defaultFont, gameTime, screenScaleMatrix);
 
+            // 6. Draw Custom Cursor (Inverted Blend)
             _spriteBatch.Begin(blendState: _cursorInvertBlendState, samplerState: SamplerState.PointClamp);
             _cursorManager.Draw(_spriteBatch, Mouse.GetState().Position.ToVector2(), _finalScale);
             _spriteBatch.End();
 
+            // 7. Final Render to Backbuffer (Apply CRT Shader)
             GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(_global.GameBg);
 
@@ -560,6 +664,7 @@ namespace ProjectVagabond
                 _crtEffect.CurrentTechnique.Passes[0].Apply();
             }
 
+            // Draw the composite target centered on screen
             int backBufferWidth = GraphicsDevice.PresentationParameters.BackBufferWidth;
             int backBufferHeight = GraphicsDevice.PresentationParameters.BackBufferHeight;
             int targetWidth = _finalCompositeTarget.Width;
@@ -570,6 +675,7 @@ namespace ProjectVagabond
             _spriteBatch.Draw(_finalCompositeTarget, new Rectangle(drawX, drawY, targetWidth, targetHeight), Color.White);
             _spriteBatch.End();
 
+            // 8. Draw Debug Overlays (No Shader)
             _spriteBatch.Begin(samplerState: SamplerState.PointClamp);
             _sceneManager.DrawOverlay(_spriteBatch, _defaultFont, gameTime);
             if (_debugConsole.IsVisible) _debugConsole.Draw(_spriteBatch, _defaultFont, gameTime);
@@ -595,6 +701,9 @@ namespace ProjectVagabond
             base.Draw(gameTime);
         }
 
+        /// <summary>
+        /// Recalculates the rendering scale and position when the window is resized.
+        /// </summary>
         public void OnResize(object sender, EventArgs e)
         {
             if (GraphicsDevice == null) return;
