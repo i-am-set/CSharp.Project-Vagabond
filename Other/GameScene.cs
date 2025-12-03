@@ -3,7 +3,20 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
+using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace ProjectVagabond.Scenes
 {
@@ -19,7 +32,8 @@ namespace ProjectVagabond.Scenes
         AnimationEditor,
         Battle,
         ChoiceMenu,
-        Split
+        Split,
+        GameOver // Added GameOver state
     }
 
     /// <summary>
@@ -199,3 +213,5 @@ namespace ProjectVagabond.Scenes
         protected bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
     }
 }
+#nullable restore
+﻿

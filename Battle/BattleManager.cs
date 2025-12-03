@@ -46,7 +46,9 @@ namespace ProjectVagabond.Battle
 
         private QueuedAction? _currentMultiHitAction;
         private int _multiHitCountRemaining;
-        private int _totalHitsForNarration;
+        private int _totalHitsForNarration; // The intended number of hits
+        private int _actualHitsDelivered;   // The actual number of hits landed (stops if target dies)
+        private bool _multiHitIsCritical;
         private List<DamageCalculator.DamageResult> _multiHitAggregatedDamageResults;
         private List<BattleCombatant> _multiHitAggregatedFinalTargets;
 
@@ -144,6 +146,13 @@ namespace ProjectVagabond.Battle
         {
             if (_currentPhase == BattlePhase.BattleOver) return;
             if (!CanAdvance) return;
+
+            // Explicitly handle multi-hit continuation
+            if (_currentMultiHitAction != null)
+            {
+                ProcessHit();
+                return;
+            }
 
             switch (_currentPhase)
             {
@@ -314,27 +323,10 @@ namespace ProjectVagabond.Battle
             }
             else if (action.ChosenMove != null)
             {
-                // Check if animation exists. If not, skip straight to processing.
-                if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
-                {
-                    _actionPendingAnimation = action;
-                    _currentPhase = BattlePhase.AnimatingMove;
-                    var targets = ResolveTargets(action);
-
-                    MoveData animMove = action.ChosenMove;
-
-                    if (!action.Actor.IsPlayerControlled && action.ChosenMove.Target != TargetType.Self)
-                    {
-                        animMove = action.ChosenMove.Clone();
-                        animMove.IsAnimationCentralized = true;
-                    }
-
-                    EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = animMove, Targets = targets });
-                }
-                else
-                {
-                    ProcessMoveAction(action);
-                }
+                // FIX: Removed the animation trigger block here.
+                // We now rely entirely on ProcessMoveAction -> ProcessHit to trigger the animation.
+                // This prevents the "double play" bug where the animation played once for casting and once for impact.
+                ProcessMoveAction(action);
             }
         }
 
@@ -375,6 +367,23 @@ namespace ProjectVagabond.Battle
                 action.SpellbookEntry.TimesUsed++;
             }
 
+            // --- CRIT CALCULATION (Once per move) ---
+            _multiHitIsCritical = false;
+            double critChance = BattleConstants.CRITICAL_HIT_CHANCE;
+            foreach (var relic in action.Actor.ActiveRelics)
+            {
+                if (relic.Effects.TryGetValue("CritChanceBonus", out var value) && EffectParser.TryParseFloat(value, out float bonus))
+                {
+                    critChance += bonus / 100.0;
+                }
+            }
+            if (_random.NextDouble() < critChance)
+            {
+                _multiHitIsCritical = true;
+            }
+
+            _actualHitsDelivered = 0; // Reset actual hit counter
+
             if (action.ChosenMove.Effects.TryGetValue("MultiHit", out var multiHitValue) && EffectParser.TryParseIntArray(multiHitValue, out int[] hitParams) && hitParams.Length == 2)
             {
                 _currentMultiHitAction = action;
@@ -387,6 +396,7 @@ namespace ProjectVagabond.Battle
             {
                 _currentMultiHitAction = action;
                 _multiHitCountRemaining = 1;
+                _totalHitsForNarration = 1; // Explicitly set to 1 for single-hit moves
                 _multiHitAggregatedDamageResults = new List<DamageCalculator.DamageResult>();
                 _multiHitAggregatedFinalTargets = new List<BattleCombatant>();
             }
@@ -404,19 +414,33 @@ namespace ProjectVagabond.Battle
 
                 if (targetsForThisHit.Any())
                 {
+                    _actualHitsDelivered++; // Count this as a valid hit attempt
+
                     var damageResultsForThisHit = new List<DamageCalculator.DamageResult>();
                     float multiTargetModifier = (targetsForThisHit.Count > 1) ? BattleConstants.MULTI_TARGET_MODIFIER : 1.0f;
 
                     foreach (var target in targetsForThisHit)
                     {
                         var moveInstance = HandlePreDamageEffects(action.ChosenMove, target);
-                        var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier);
+                        var result = DamageCalculator.CalculateDamage(action, target, moveInstance, multiTargetModifier, _multiHitIsCritical);
                         target.ApplyDamage(result.DamageAmount);
                         SecondaryEffectSystem.ProcessPrimaryEffects(action, target);
                         damageResultsForThisHit.Add(result);
                         _multiHitAggregatedFinalTargets.Add(target);
                     }
                     _multiHitAggregatedDamageResults.AddRange(damageResultsForThisHit);
+
+                    // Trigger animation for EVERY hit
+                    if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
+                    {
+                        MoveData animMove = action.ChosenMove;
+                        if (!action.Actor.IsPlayerControlled && action.ChosenMove.Target != TargetType.Self)
+                        {
+                            animMove = action.ChosenMove.Clone();
+                            animMove.IsAnimationCentralized = true;
+                        }
+                        EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = animMove, Targets = targetsForThisHit });
+                    }
 
                     EventBus.Publish(new GameEvents.BattleActionExecuted
                     {
@@ -425,6 +449,17 @@ namespace ProjectVagabond.Battle
                         Targets = targetsForThisHit,
                         DamageResults = damageResultsForThisHit
                     });
+
+                    // Check if we should stop early (e.g. target died)
+                    if (targetsForThisHit.All(t => t.IsDefeated))
+                    {
+                        _multiHitCountRemaining = 0;
+                    }
+                }
+                else
+                {
+                    // No valid targets (e.g. target died in previous hit), stop sequence
+                    _multiHitCountRemaining = 0;
                 }
 
                 CanAdvance = false;
@@ -464,7 +499,7 @@ namespace ProjectVagabond.Battle
                     actor.IsMomentumActive = false;
                 }
 
-
+                // Only show "Hit X Times" if it was INTENDED to be a multi-hit move (defined in JSON)
                 if (_totalHitsForNarration > 1)
                 {
                     int criticalHitCount = _multiHitAggregatedDamageResults.Count(r => r.WasCritical);
@@ -472,7 +507,7 @@ namespace ProjectVagabond.Battle
                     {
                         Actor = _currentMultiHitAction.Actor,
                         ChosenMove = _currentMultiHitAction.ChosenMove,
-                        HitCount = _totalHitsForNarration,
+                        HitCount = _actualHitsDelivered, // Use actual hits delivered
                         CriticalHitCount = criticalHitCount
                     });
                 }

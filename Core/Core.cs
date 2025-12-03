@@ -340,6 +340,7 @@ namespace ProjectVagabond
             _sceneManager.AddScene(GameSceneState.Battle, new BattleScene());
             _sceneManager.AddScene(GameSceneState.ChoiceMenu, new ChoiceMenuScene());
             _sceneManager.AddScene(GameSceneState.Split, new SplitMapScene());
+            _sceneManager.AddScene(GameSceneState.GameOver, new GameOverScene()); // Register GameOverScene
 
             _previousResolution = new Point(Window.ClientBounds.Width, Window.ClientBounds.Height);
             OnResize(null, null);
@@ -447,6 +448,27 @@ namespace ProjectVagabond
         /// </summary>
         public void TriggerFullscreenGlitch(float duration) { _glitchDuration = duration; _glitchTimer = duration; }
 
+        /// <summary>
+        /// Resets the game state completely, clearing all entities, components, and progression.
+        /// Used for returning to the Main Menu or restarting a run.
+        /// </summary>
+        public void ResetGame()
+        {
+            _diceRollingSystem.ClearRoll();
+            _actionExecutionSystem.HandleInterruption();
+            _particleSystemManager.ClearAllEmitters();
+            _hapticsManager.StopAll();
+            _tooltipManager.Hide();
+            _loadingScreen.Clear();
+            _debugConsole.ClearHistory();
+            _progressionManager.ClearCurrentSplitMap();
+            var entityManager = ServiceLocator.Get<EntityManager>();
+            var componentStore = ServiceLocator.Get<ComponentStore>();
+            entityManager.Clear();
+            componentStore.Clear();
+            _gameState.Reset();
+        }
+
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // MAIN GAME LOOP
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
@@ -505,7 +527,11 @@ namespace ProjectVagabond
             _diceRollingSystem.DebugShowColliders = _global.ShowDebugOverlays;
 
             // Debug Shortcuts
-            if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState)) SoftResetGame();
+            if (KeyPressed(Keys.F5, currentKeyboardState, _previousKeyboardState))
+            {
+                ResetGame();
+                _sceneManager.ChangeScene(GameSceneState.MainMenu);
+            }
             if (KeyPressed(Keys.F9, currentKeyboardState, _previousKeyboardState)) BattleDebugHelper.RunDamageCalculationTestSuite();
             if (KeyPressed(Keys.F12, currentKeyboardState, _previousKeyboardState)) _sceneManager.ChangeScene(GameSceneState.AnimationEditor);
 
@@ -775,24 +801,6 @@ namespace ProjectVagabond
         }
 
         public void ExitApplication() => Exit();
-
-        private void SoftResetGame()
-        {
-            _diceRollingSystem.ClearRoll();
-            _actionExecutionSystem.HandleInterruption();
-            _particleSystemManager.ClearAllEmitters();
-            _hapticsManager.StopAll();
-            _tooltipManager.Hide();
-            _loadingScreen.Clear();
-            _debugConsole.ClearHistory();
-            _progressionManager.ClearCurrentSplitMap();
-            var entityManager = ServiceLocator.Get<EntityManager>();
-            var componentStore = ServiceLocator.Get<ComponentStore>();
-            entityManager.Clear();
-            componentStore.Clear();
-            _gameState.Reset();
-            _sceneManager.ChangeScene(GameSceneState.MainMenu);
-        }
 
         private bool KeyPressed(Keys key, KeyboardState current, KeyboardState previous) => current.IsKeyDown(key) && !previous.IsKeyDown(key);
     }

@@ -23,7 +23,7 @@ namespace ProjectVagabond.Scenes
     public class BattleScene : GameScene
     {
         // --- Tuning ---
-        private const float MULTI_HIT_DELAY = 0.1f; // The delay in seconds between each hit of a multi-hit move.
+        private const float MULTI_HIT_DELAY = 0.05f; // Reduced from 0.1f for faster barrage
 
         // Core Battle Logic
         private BattleManager _battleManager;
@@ -300,12 +300,23 @@ namespace ProjectVagabond.Scenes
                     }
                     else
                     {
-                        _endOfBattleTimer += dt;
-                        if (_endOfBattleTimer >= END_OF_BATTLE_DELAY)
+                        // Player Lost - Trigger Game Over
+                        string killer = "Unknown Causes";
+                        if (_currentActor != null && !_currentActor.IsPlayerControlled)
                         {
-                            SplitMapScene.PlayerWonLastBattle = false;
-                            _sceneManager.ChangeScene(BattleSetup.ReturnSceneState);
+                            killer = _currentActor.Name;
                         }
+                        else if (_currentActor != null && _currentActor.IsPlayerControlled)
+                        {
+                            killer = "Recoil"; // Or self-inflicted
+                        }
+                        else
+                        {
+                            killer = "Status Effects"; // Likely poison/burn at end of turn
+                        }
+
+                        _gameState.LastRunKiller = killer;
+                        _sceneManager.ChangeScene(GameSceneState.GameOver);
                     }
                 }
                 base.Update(gameTime);
@@ -349,8 +360,12 @@ namespace ProjectVagabond.Scenes
             bool animBusy = _animationManager.IsAnimating;
             bool moveAnimBusy = _moveAnimationManager.IsAnimating;
             bool pendingBusy = _pendingAnimations.Any();
+            bool isMultiHitActive = _battleManager.IsProcessingMultiHit;
 
-            bool canAdvance = !uiBusy && !animBusy && !moveAnimBusy && !pendingBusy;
+            // FIX: If multi-hit is active, we IGNORE uiBusy. This allows the hits to keep processing
+            // even if the "Player uses Fury Swipes!" text is still on screen.
+            // We still respect animation busy flags so we don't overlap animations too crazily.
+            bool canAdvance = (!uiBusy || isMultiHitActive) && !animBusy && !moveAnimBusy && !pendingBusy;
 
             // Handle Multi-Hit Delay
             if (_isWaitingForMultiHitDelay && canAdvance)
@@ -632,7 +647,10 @@ namespace ProjectVagabond.Scenes
 
         private void OnMultiHitActionCompleted(GameEvents.MultiHitActionCompleted e)
         {
-            _uiManager.ShowNarration($"Hit {e.HitCount} times!");
+            // FIX: Handle singular/plural grammar for hit count
+            string timeStr = e.HitCount == 1 ? "TIME" : "TIMES";
+            _uiManager.ShowNarration($"HIT {e.HitCount} {timeStr}!");
+
             if (e.CriticalHitCount > 0)
             {
                 if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a critical hit!");
@@ -683,6 +701,8 @@ namespace ProjectVagabond.Scenes
                 if (result.WasCritical)
                 {
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().Palette_Yellow);
+                    // FIX: Don't show "Critical Hit" narration for individual hits in a multi-hit sequence.
+                    // The BattleManager will show a summary at the end.
                     if (!isMultiHit) _uiManager.ShowNarration($"A critical hit on {target.Name}!");
                 }
 

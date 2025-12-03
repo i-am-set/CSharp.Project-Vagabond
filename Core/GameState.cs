@@ -1,12 +1,24 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Dice;
+using ProjectVagabond.Particles;
 using ProjectVagabond.Progression;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
+using ProjectVagabond.Utils;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 
 namespace ProjectVagabond
 {
@@ -60,6 +72,9 @@ namespace ProjectVagabond
 
         public HashSet<Point> ExploredCells { get; private set; } = new HashSet<Point>();
         private const int FOG_OF_WAR_RADIUS = 40;
+
+        // --- NEW: Death Tracking ---
+        public string LastRunKiller { get; set; } = "Unknown";
 
         public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, ChunkManager chunkManager, Global global, SpriteManager spriteManager)
         {
@@ -189,6 +204,7 @@ namespace ProjectVagabond
             _isExecutingActions = false;
             _isPaused = false;
             IsPausedByConsole = false;
+            LastRunKiller = "Unknown";
         }
 
         // ... [Rest of the class remains the same] ...
@@ -474,3 +490,4 @@ namespace ProjectVagabond
         }
     }
 }
+﻿

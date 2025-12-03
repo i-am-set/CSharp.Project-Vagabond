@@ -62,7 +62,7 @@ namespace ProjectVagabond.Battle
             return (int)Math.Round(movePower);
         }
 
-        public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f)
+        public static DamageResult CalculateDamage(QueuedAction action, BattleCombatant target, MoveData move, float multiTargetModifier = 1.0f, bool? overrideCrit = null)
         {
             var attacker = action.Actor;
             var result = new DamageResult
@@ -243,17 +243,31 @@ namespace ProjectVagabond.Battle
 
             if (!result.WasGraze)
             {
-                double critChance = BattleConstants.CRITICAL_HIT_CHANCE;
-                foreach (var relic in attacker.ActiveRelics)
+                bool isCrit = false;
+
+                if (overrideCrit.HasValue)
                 {
-                    if (relic.Effects.TryGetValue("CritChanceBonus", out var value) && EffectParser.TryParseFloat(value, out float bonus))
+                    isCrit = overrideCrit.Value;
+                }
+                else
+                {
+                    double critChance = BattleConstants.CRITICAL_HIT_CHANCE;
+                    foreach (var relic in attacker.ActiveRelics)
                     {
-                        critChance += bonus / 100.0;
+                        if (relic.Effects.TryGetValue("CritChanceBonus", out var value) && EffectParser.TryParseFloat(value, out float bonus))
+                        {
+                            critChance += bonus / 100.0;
+                        }
+                    }
+
+                    if (target.HasStatusEffect(StatusEffectType.Root)) critChance *= 2.0;
+                    if (_random.NextDouble() < critChance)
+                    {
+                        isCrit = true;
                     }
                 }
 
-                if (target.HasStatusEffect(StatusEffectType.Root)) critChance *= 2.0;
-                if (_random.NextDouble() < critChance)
+                if (isCrit)
                 {
                     result.WasCritical = true;
                     finalDamage *= BattleConstants.CRITICAL_HIT_MULTIPLIER;
