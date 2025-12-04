@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -34,7 +33,6 @@ namespace ProjectVagabond.Scenes
         private float _inputDelay = 0.5f; // Longer delay to prevent accidental skips
         private float _currentInputDelay = 0f;
 
-        private string _killerName = "";
         private string _gameOverText = "GAME OVER";
 
         public GameOverScene()
@@ -53,7 +51,7 @@ namespace ProjectVagabond.Scenes
         public override void Initialize()
         {
             base.Initialize();
-            InitializeUI();
+            // Removed InitializeUI() from here. Fonts are not loaded yet.
         }
 
         private void InitializeUI()
@@ -61,16 +59,23 @@ namespace ProjectVagabond.Scenes
             _buttons.Clear();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
 
-            const int buttonWidth = 100;
-            const int buttonHeight = 20;
+            const int buttonPaddingX = 10;
+            const int buttonPaddingY = 4;
             const int buttonSpacing = 5;
-            int startY = Global.VIRTUAL_HEIGHT / 2 + 20;
-            int centerX = (Global.VIRTUAL_WIDTH - buttonWidth) / 2;
+
+            // Layout Calculation
+            int buttonStartY = (Global.VIRTUAL_HEIGHT / 2) + 10;
 
             // --- TRY AGAIN Button ---
+            string text1 = "TRY AGAIN";
+            Vector2 size1 = secondaryFont.MeasureString(text1);
+            int w1 = (int)size1.X + buttonPaddingX * 2;
+            int h1 = (int)size1.Y + buttonPaddingY * 2;
+            int x1 = (Global.VIRTUAL_WIDTH - w1) / 2;
+
             var tryAgainButton = new Button(
-                new Rectangle(centerX, startY, buttonWidth, buttonHeight),
-                "TRY AGAIN",
+                new Rectangle(x1, buttonStartY, w1, h1),
+                text1,
                 font: secondaryFont
             )
             {
@@ -80,9 +85,16 @@ namespace ProjectVagabond.Scenes
             _buttons.Add(tryAgainButton);
 
             // --- MAIN MENU Button ---
+            string text2 = "MAIN MENU";
+            Vector2 size2 = secondaryFont.MeasureString(text2);
+            int w2 = (int)size2.X + buttonPaddingX * 2;
+            int h2 = (int)size2.Y + buttonPaddingY * 2;
+            int x2 = (Global.VIRTUAL_WIDTH - w2) / 2;
+            int y2 = buttonStartY + h1 + buttonSpacing;
+
             var menuButton = new Button(
-                new Rectangle(centerX, startY + buttonHeight + buttonSpacing, buttonWidth, buttonHeight),
-                "MAIN MENU",
+                new Rectangle(x2, y2, w2, h2),
+                text2,
                 font: secondaryFont
             )
             {
@@ -95,8 +107,11 @@ namespace ProjectVagabond.Scenes
         public override void Enter()
         {
             base.Enter();
+
+            // Initialize UI here to ensure fonts are loaded
+            InitializeUI();
+
             _currentInputDelay = _inputDelay;
-            _killerName = _gameState.LastRunKiller;
 
             // Reset button states
             foreach (var button in _buttons)
@@ -233,26 +248,37 @@ namespace ProjectVagabond.Scenes
             // Draw "GAME OVER"
             string title = _gameOverText;
             Vector2 titleSize = font.MeasureString(title);
+
+            // Bobbing Animation
+            float time = (float)gameTime.TotalGameTime.TotalSeconds;
+            float bobOffset = MathF.Sin(time * 4f) > 0 ? -1f : 0f;
+
             Vector2 titlePos = new Vector2(
                 (Global.VIRTUAL_WIDTH - titleSize.X) / 2,
-                Global.VIRTUAL_HEIGHT / 3 - titleSize.Y
+                (Global.VIRTUAL_HEIGHT / 2) - titleSize.Y - 15 + bobOffset
             );
             spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_Red);
-
-            // Draw "Slain by..."
-            string killerText = $"SLAIN BY {_killerName.ToUpper()}";
-            Vector2 killerSize = secondaryFont.MeasureString(killerText);
-            Vector2 killerPos = new Vector2(
-                (Global.VIRTUAL_WIDTH - killerSize.X) / 2,
-                titlePos.Y + titleSize.Y + 10
-            );
-            spriteBatch.DrawStringSnapped(secondaryFont, killerText, killerPos, _global.Palette_Gray);
 
             // Draw Buttons
             for (int i = 0; i < _buttons.Count; i++)
             {
                 bool forceHover = (i == _selectedButtonIndex) && _sceneManager.LastInputDevice == InputDevice.Keyboard;
-                _buttons[i].Draw(spriteBatch, font, gameTime, transform, forceHover);
+                // Force secondary font
+                _buttons[i].Draw(spriteBatch, secondaryFont, gameTime, transform, forceHover);
+            }
+
+            // --- DEBUG DRAWING (F1) ---
+            if (_global.ShowSplitMapGrid)
+            {
+                // Title Bounds
+                var titleRect = new Rectangle((int)titlePos.X, (int)titlePos.Y, (int)titleSize.X, (int)titleSize.Y);
+                spriteBatch.DrawSnapped(pixel, titleRect, Color.Magenta * 0.5f);
+
+                // Button Bounds
+                foreach (var button in _buttons)
+                {
+                    spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Cyan * 0.5f);
+                }
             }
         }
 
@@ -263,5 +289,3 @@ namespace ProjectVagabond.Scenes
         }
     }
 }
-#nullable restore
-﻿
