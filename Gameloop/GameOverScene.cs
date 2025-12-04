@@ -266,7 +266,7 @@ namespace ProjectVagabond.Scenes
 
             // Bobbing Animation
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
-            float bobOffset = MathF.Sin(time * 4f) > 0 ? -1f : 0f;
+            float bobOffset = MathF.Sin(time * 4f) > 0 ? -1f : 0f; 
 
             // Position text at 1/3 height
             Vector2 titlePos = new Vector2(

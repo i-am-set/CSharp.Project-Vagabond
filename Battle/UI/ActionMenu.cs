@@ -73,13 +73,6 @@ namespace ProjectVagabond.Battle.UI
         private const int EXTRA_SCROLL_SPACES = 1;
         private static readonly RasterizerState _clipRasterizerState = new RasterizerState { ScissorTestEnable = true };
 
-        private Queue<ImageButton> _actionButtonsToAnimate = new Queue<ImageButton>();
-        private float _actionButtonAnimationDelayTimer = 0f;
-        private const float ACTION_BUTTON_SEQUENTIAL_ANIMATION_DELAY = 0.05f;
-
-        private Queue<TextOverImageButton> _secondaryButtonsToAnimate = new Queue<TextOverImageButton>();
-        private float _secondaryButtonAnimationDelayTimer = 0f;
-
         // Spam Click Prevention State
         private readonly Queue<float> _clickTimestamps = new Queue<float>();
         private bool _isSpamming = false;
@@ -130,17 +123,16 @@ namespace ProjectVagabond.Battle.UI
             if (_buttonsInitialized) return;
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
-            var actionSheet = spriteManager.ActionButtonsSpriteSheet;
-            var rects = spriteManager.ActionButtonSourceRects;
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
             var secondaryButtonBg = spriteManager.ActionButtonTemplateSecondarySprite;
             var actionIconsSheet = spriteManager.ActionIconsSpriteSheet;
             var actionIconRects = spriteManager.ActionIconSourceRects;
 
-            // Main Menu Buttons
-            var actButton = new ImageButton(Rectangle.Empty, actionSheet, rects[0], rects[1], null, function: "Act", startVisible: false, debugColor: new Color(100, 0, 0, 150));
-            var itemButton = new ImageButton(Rectangle.Empty, actionSheet, rects[2], rects[3], null, function: "Item", startVisible: false, debugColor: new Color(0, 100, 0, 150));
-            var fleeButton = new ImageButton(Rectangle.Empty, actionSheet, rects[4], rects[5], null, function: "Flee", startVisible: false, debugColor: new Color(0, 0, 100, 150));
+            // Main Menu Buttons - Converted to standard Buttons for 128x12 layout
+            // Disabled hover sway, set custom hover text color to White, and moved text up 1 pixel
+            var actButton = new Button(Rectangle.Empty, "ACT", function: "Act", font: secondaryFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = new Vector2(0, -1) };
+            var itemButton = new Button(Rectangle.Empty, "ITEM", function: "Item", font: secondaryFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = new Vector2(0, -1) };
+            var runButton = new Button(Rectangle.Empty, "RUN", function: "Flee", font: secondaryFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = new Vector2(0, -1) };
 
             actButton.OnClick += () => {
                 if (_isSpamming) { actButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
@@ -150,14 +142,14 @@ namespace ProjectVagabond.Battle.UI
                 if (_isSpamming) { itemButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
                 OnItemMenuRequested?.Invoke();
             };
-            fleeButton.OnClick += () => {
-                if (_isSpamming) { fleeButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
+            runButton.OnClick += () => {
+                if (_isSpamming) { runButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
                 OnFleeRequested?.Invoke();
             };
 
             _actionButtons.Add(actButton);
             _actionButtons.Add(itemButton);
-            _actionButtons.Add(fleeButton);
+            _actionButtons.Add(runButton);
 
             // Secondary Action Buttons
             var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: Color.White)
@@ -265,15 +257,9 @@ namespace ProjectVagabond.Battle.UI
             if (newState == MenuState.Main)
             {
                 OnMainMenuOpened?.Invoke();
-                _actionButtonsToAnimate.Clear();
-                _actionButtonAnimationDelayTimer = 0f;
                 foreach (var button in _actionButtons)
                 {
-                    if (button is ImageButton imageButton)
-                    {
-                        imageButton.HideForAnimation();
-                        _actionButtonsToAnimate.Enqueue(imageButton);
-                    }
+                    button.ResetAnimationState();
                 }
             }
             else if (newState == MenuState.Moves)
@@ -560,17 +546,6 @@ namespace ProjectVagabond.Battle.UI
             UpdateLayout();
             UpdateSpamDetection(gameTime, currentMouseState);
 
-            if (_actionButtonsToAnimate.Any())
-            {
-                _actionButtonAnimationDelayTimer += dt;
-                if (_actionButtonAnimationDelayTimer >= ACTION_BUTTON_SEQUENTIAL_ANIMATION_DELAY)
-                {
-                    _actionButtonAnimationDelayTimer = 0f;
-                    var buttonToAnimate = _actionButtonsToAnimate.Dequeue();
-                    buttonToAnimate.TriggerAppearAnimation();
-                }
-            }
-
             HoveredButton = null;
 
             switch (_currentState)
@@ -738,29 +713,35 @@ namespace ProjectVagabond.Battle.UI
             {
                 case MenuState.Main:
                     {
-                        const int buttonWidth = 96;
-                        const int buttonHeight = 43;
-                        const int buttonSpacing = 5;
+                        const int buttonWidth = 128;
+                        const int buttonHeight = 12;
+                        const int buttonSpacing = 0; // No gap
 
-                        int totalWidth = (buttonWidth * _actionButtons.Count) + (buttonSpacing * (_actionButtons.Count - 1));
-                        int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
-
+                        int totalHeight = (buttonHeight * _actionButtons.Count) + (buttonSpacing * (_actionButtons.Count - 1));
                         int availableHeight = Global.VIRTUAL_HEIGHT - dividerY;
-                        int startY = dividerY + (availableHeight - buttonHeight) / 2 - 4;
 
-                        int currentX = startX;
+                        // Moved up 3 pixels (-3)
+                        int startY = dividerY + (availableHeight - totalHeight) / 2 - 3;
+
+                        // Moved left 80 pixels (-80)
+                        int startX = (Global.VIRTUAL_WIDTH - buttonWidth) / 2 - 80;
+
+                        int currentY = startY;
                         foreach (var button in _actionButtons)
                         {
-                            button.Bounds = new Rectangle(currentX, startY, buttonWidth, buttonHeight);
-                            if (button is ImageButton imageButton)
-                            {
-                                imageButton.Draw(spriteBatch, font, gameTime, transform, false);
-                            }
-                            else
-                            {
-                                button.Draw(spriteBatch, font, gameTime, transform);
-                            }
-                            currentX += buttonWidth + buttonSpacing;
+                            button.Bounds = new Rectangle(startX, currentY, buttonWidth, buttonHeight);
+
+                            // Draw manual border for the button (Inset by 1 pixel)
+                            var borderColor = button.IsHovered ? _global.ButtonHoverColor : _global.Palette_DarkerGray;
+                            var borderRect = new Rectangle(button.Bounds.X + 1, button.Bounds.Y + 1, button.Bounds.Width - 2, button.Bounds.Height - 2);
+
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Top, borderRect.Width, 1), borderColor); // Top
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Bottom - 1, borderRect.Width, 1), borderColor); // Bottom
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Top, 1, borderRect.Height), borderColor); // Left
+                            spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Right - 1, borderRect.Top, 1, borderRect.Height), borderColor); // Right
+
+                            button.Draw(spriteBatch, font, gameTime, transform);
+                            currentY += buttonHeight + buttonSpacing;
                         }
                         break;
                     }
@@ -1010,7 +991,7 @@ namespace ProjectVagabond.Battle.UI
                 {
                     var placeholderFillColor = Color.Transparent; // Changed from Black to Transparent
                     spriteBatch.DrawSnapped(pixel, visualBounds, placeholderFillColor);
-                    var placeholderBorderColor = _global.Palette_DarkGray;
+                    var placeholderBorderColor = _global.Palette_DarkerGray;
 
                     const int dashLength = 1;
                     const int gapLength = 3;
@@ -1028,7 +1009,7 @@ namespace ProjectVagabond.Battle.UI
                 }
                 else
                 {
-                    var buttonBorderColor = _global.Palette_DarkGray;
+                    var buttonBorderColor = _global.Palette_DarkerGray;
                     if (_player != null && _player.Stats.CurrentMana < button.Move.ManaCost)
                     {
                         buttonBorderColor = Color.Transparent;
@@ -1041,7 +1022,7 @@ namespace ProjectVagabond.Battle.UI
                     if (button == _hoveredMoveButton && button.IsEnabled)
                     {
                         var hoverBgRect = new Rectangle(visualBounds.X + 1, visualBounds.Y + 1, visualBounds.Width - 2, visualBounds.Height - 2);
-                        spriteBatch.DrawSnapped(pixel, hoverBgRect, _global.Palette_DarkGray);
+                        spriteBatch.DrawSnapped(pixel, hoverBgRect, _global.Palette_DarkerGray);
                     }
 
                     var originalBounds = button.Bounds;
