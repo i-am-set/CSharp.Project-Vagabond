@@ -27,7 +27,6 @@ namespace ProjectVagabond
         // UI Sprite Sheets
         public Texture2D ActionButtonsSpriteSheet { get; private set; }
         public Texture2D ActionButtonTemplateSpriteSheet { get; private set; }
-        public Texture2D ActionButtonTemplateSecondarySprite { get; private set; }
         public Texture2D ActionMovesBackgroundSprite { get; private set; }
         public Texture2D ActionTooltipBackgroundSprite { get; private set; }
         public Texture2D ElementIconsSpriteSheet { get; private set; }
@@ -237,9 +236,6 @@ namespace ProjectVagabond
 
             try { ActionButtonTemplateSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_template_spritesheet"); }
             catch { ActionButtonTemplateSpriteSheet = _textureFactory.CreateColoredTexture(1099, 17, Color.Magenta); }
-
-            try { ActionButtonTemplateSecondarySprite = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/ui_action_button_template_secondary"); }
-            catch { ActionButtonTemplateSecondarySprite = _textureFactory.CreateColoredTexture(60, 13, Color.Magenta); }
 
             try
             {

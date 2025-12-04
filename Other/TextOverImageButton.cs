@@ -8,12 +8,14 @@ using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.UI
 {
     public class TextOverImageButton : Button
     {
-        private readonly Texture2D _backgroundTexture;
+        private readonly Texture2D? _backgroundTexture;
         public Texture2D? IconTexture { get; set; }
         public Rectangle? IconSourceRect { get; set; }
 
@@ -28,7 +30,7 @@ namespace ProjectVagabond.UI
         private float _appearTimer = 0f;
         private const float APPEAR_DURATION = 0.25f;
 
-        public TextOverImageButton(Rectangle bounds, string text, Texture2D backgroundTexture, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0, bool enableHoverSway = true, BitmapFont? font = null, Texture2D? iconTexture = null, Rectangle? iconSourceRect = null, bool startVisible = true)
+        public TextOverImageButton(Rectangle bounds, string text, Texture2D? backgroundTexture, string? function = null, Color? customDefaultTextColor = null, Color? customHoverTextColor = null, Color? customDisabledTextColor = null, bool alignLeft = false, float overflowScrollSpeed = 0, bool enableHoverSway = true, BitmapFont? font = null, Texture2D? iconTexture = null, Rectangle? iconSourceRect = null, bool startVisible = true)
             : base(bounds, text, function, customDefaultTextColor, customHoverTextColor, customDisabledTextColor, alignLeft, overflowScrollSpeed, enableHoverSway, font)
         {
             _backgroundTexture = backgroundTexture;
@@ -157,8 +159,11 @@ namespace ProjectVagabond.UI
                 iconColor = Color.Lerp(iconColor, flashTint.Value, flashAmount);
             }
 
-            // 4. Draw background with animation offset
-            spriteBatch.DrawSnapped(_backgroundTexture, animatedBounds, backgroundTintColor);
+            // 4. Draw background with animation offset (if texture exists)
+            if (_backgroundTexture != null)
+            {
+                spriteBatch.DrawSnapped(_backgroundTexture, animatedBounds, backgroundTintColor);
+            }
 
             // 4b. Draw Border if enabled and activated
             // Drawn AFTER background to ensure it's visible on top

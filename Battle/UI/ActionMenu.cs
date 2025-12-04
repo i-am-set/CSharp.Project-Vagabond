@@ -124,7 +124,6 @@ namespace ProjectVagabond.Battle.UI
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
-            var secondaryButtonBg = spriteManager.ActionButtonTemplateSecondarySprite;
             var actionIconsSheet = spriteManager.ActionIconsSpriteSheet;
             var actionIconRects = spriteManager.ActionIconSourceRects;
 
@@ -152,11 +151,12 @@ namespace ProjectVagabond.Battle.UI
             _actionButtons.Add(runButton);
 
             // Secondary Action Buttons
-            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: Color.White)
+            // Pass null for background texture to make it transparent
+            var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: Color.White)
             {
                 HasRightClickHint = true,
                 TintBackgroundOnHover = false,
-                DrawBorderOnHover = true,
+                DrawBorderOnHover = false, // We draw borders manually
                 HoverBorderColor = _global.Palette_Red
             };
             strikeButton.OnClick += () => {
@@ -167,11 +167,11 @@ namespace ProjectVagabond.Battle.UI
             };
             _secondaryActionButtons.Add(strikeButton);
 
-            var attuneButton = new TextOverImageButton(Rectangle.Empty, "ATTUNE", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[3], enableHoverSway: false, customHoverTextColor: Color.White)
+            var attuneButton = new TextOverImageButton(Rectangle.Empty, "ATTUNE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[3], enableHoverSway: false, customHoverTextColor: Color.White)
             {
                 HasRightClickHint = true,
                 TintBackgroundOnHover = false,
-                DrawBorderOnHover = true,
+                DrawBorderOnHover = false, // We draw borders manually
                 HoverBorderColor = _global.Palette_Red
             };
             attuneButton.OnClick += () => {
@@ -182,11 +182,11 @@ namespace ProjectVagabond.Battle.UI
             };
             _secondaryActionButtons.Add(attuneButton);
 
-            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", secondaryButtonBg, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2], enableHoverSway: false, customHoverTextColor: Color.White)
+            var stallButton = new TextOverImageButton(Rectangle.Empty, "STALL", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[2], enableHoverSway: false, customHoverTextColor: Color.White)
             {
                 HasRightClickHint = true,
                 TintBackgroundOnHover = false,
-                DrawBorderOnHover = true,
+                DrawBorderOnHover = false, // We draw borders manually
                 HoverBorderColor = _global.Palette_Red
             };
             stallButton.OnClick += () => {
@@ -1042,6 +1042,19 @@ namespace ProjectVagabond.Battle.UI
             for (int i = 0; i < _secondaryActionButtons.Count; i++)
             {
                 var button = _secondaryActionButtons[i];
+
+                // --- MANUAL BORDER DRAWING FOR SECONDARY BUTTONS ---
+                var borderColor = button.IsHovered ? _global.ButtonHoverColor : _global.Palette_DarkerGray;
+                // 1 pixel in from normal border. Normal border is usually the bounds edges.
+                // So inset by 1.
+                var buttonBorderRect = new Rectangle(button.Bounds.X + 1, button.Bounds.Y + 1, button.Bounds.Width - 2, button.Bounds.Height - 2);
+
+                // Draw lines
+                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Left, buttonBorderRect.Top, buttonBorderRect.Width, 1), borderColor); // Top
+                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Left, buttonBorderRect.Bottom - 1, buttonBorderRect.Width, 1), borderColor); // Bottom
+                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Left, buttonBorderRect.Top, 1, buttonBorderRect.Height), borderColor); // Left
+                spriteBatch.DrawSnapped(pixel, new Rectangle(buttonBorderRect.Right - 1, buttonBorderRect.Top, 1, buttonBorderRect.Height), borderColor); // Right
+
                 button.Draw(spriteBatch, font, gameTime, transform, false, null, null, button.Text == "ATTUNE" ? attunePulseColor : null);
             }
 
