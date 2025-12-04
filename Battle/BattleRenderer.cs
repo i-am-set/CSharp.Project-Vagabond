@@ -51,8 +51,8 @@ namespace ProjectVagabond.Battle.UI
         // Attacker Animation
         private readonly Dictionary<string, float> _attackAnimTimers = new();
         private string? _lastAttackerId;
-        private const float ATTACK_BOB_DURATION = 0.4f;
-        private const float ATTACK_BOB_AMOUNT = 4f;
+        private const float ATTACK_BOB_DURATION = 0.25f;
+        private const float ATTACK_BOB_AMOUNT = 12f;
 
         // Layout Constants
         private const int DIVIDER_Y = 123;
@@ -304,7 +304,7 @@ namespace ProjectVagabond.Battle.UI
             float heartCenterY = playerHudY - font.LineHeight - 2 - (heartHeight / 2f);
             float spriteCenterX = startX + (barWidth / 2f);
 
-            // Store visual center for animations
+            // Store STATIC visual center for animations/targeting (so they don't bob with the sprite)
             _combatantVisualCenters[player.CombatantID] = new Vector2(spriteCenterX, heartCenterY);
             if (player.BattleSlot == 0) PlayerSpritePosition = new Vector2(spriteCenterX, heartCenterY); // Legacy compat
 
@@ -318,16 +318,20 @@ namespace ProjectVagabond.Battle.UI
 
             bool isHighlighted = isSelectable && shouldGrayOutUnselectable && !isTargetingPhase;
 
+            // Calculate Attack Bob (Jump UP for players)
+            float yBobOffset = CalculateAttackBobOffset(player.CombatantID, isPlayer: true);
+
             // Draw the sprite (Heart for Leader, Archetype for Ally)
             if (player.BattleSlot == 0)
             {
-                _playerCombatSprite.SetPosition(new Vector2(spriteCenterX - 16, heartCenterY - 16)); // Adjust for top-left origin
+                // Pass the center position directly. The PlayerCombatSprite class handles the origin offset internally.
+                _playerCombatSprite.SetPosition(new Vector2(spriteCenterX, heartCenterY + yBobOffset));
                 _playerCombatSprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor);
             }
             else
             {
                 // Draw Ally Sprite (Archetype)
-                DrawAllySprite(spriteBatch, player, new Vector2(spriteCenterX, heartCenterY), playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor, animationManager);
+                DrawAllySprite(spriteBatch, player, new Vector2(spriteCenterX, heartCenterY + yBobOffset), playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor, animationManager);
             }
 
             // --- Draw HUD ---
@@ -622,22 +626,21 @@ namespace ProjectVagabond.Battle.UI
                 var arrowRect = arrowRects[4]; // Right arrow
                 float swayOffset = MathF.Round(MathF.Sin((float)gameTime.TotalGameTime.TotalSeconds * 4f) * 1.5f);
 
-                // Position to the left of the sprite/heart
-                var arrowPos = new Vector2(targetPos.X - 24 + swayOffset, targetPos.Y - arrowRect.Height / 2);
+                // Calculate Bob Offset for Player (Jump Up)
+                float yBobOffset = CalculateAttackBobOffset(currentActor.CombatantID, isPlayer: true);
+
+                // Position to the left of the sprite/heart, following the jump
+                var arrowPos = new Vector2(targetPos.X - 24 + swayOffset, targetPos.Y - arrowRect.Height / 2 + yBobOffset);
                 spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
             }
             else
             {
                 var arrowRect = arrowRects[6]; // Down arrow
-                float yBobOffset = 0;
-                if (_attackAnimTimers.TryGetValue(currentActor.CombatantID, out float animTimer))
-                {
-                    float progress = Math.Clamp(animTimer / ATTACK_BOB_DURATION, 0f, 1f);
-                    if (progress < 0.5f) yBobOffset = Easing.EaseInCubic(progress * 2f) * ATTACK_BOB_AMOUNT;
-                    else yBobOffset = (1.0f - Easing.EaseOutCubic((progress - 0.5f) * 2f)) * ATTACK_BOB_AMOUNT;
-                }
 
-                // Position above the enemy sprite
+                // Calculate Bob Offset for Enemy (Jump Down)
+                float yBobOffset = CalculateAttackBobOffset(currentActor.CombatantID, isPlayer: false);
+
+                // Position above the enemy sprite, following the jump
                 float topY = GetEnemySpriteStaticTopY(currentActor, targetPos.Y - 32);
                 var arrowPos = new Vector2(targetPos.X - arrowRect.Width / 2, topY - arrowRect.Height - 1 + yBobOffset);
                 spriteBatch.DrawSnapped(arrowSheet, arrowPos, arrowRect, Color.White);
@@ -646,22 +649,19 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha)
         {
-            float yBobOffset = 0;
-            if (_attackAnimTimers.TryGetValue(combatant.CombatantID, out float animTimer))
-            {
-                float progress = Math.Clamp(animTimer / ATTACK_BOB_DURATION, 0f, 1f);
-                if (progress < 0.5f) yBobOffset = Easing.EaseInCubic(progress * 2f) * ATTACK_BOB_AMOUNT;
-                else yBobOffset = (1.0f - Easing.EaseOutCubic((progress - 0.5f) * 2f)) * ATTACK_BOB_AMOUNT;
-            }
+            // Calculate Attack Bob (Jump DOWN for enemies)
+            float yBobOffset = CalculateAttackBobOffset(combatant.CombatantID, isPlayer: false);
 
             var pixel = ServiceLocator.Get<Texture2D>();
             bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
             int spritePartSize = isMajor ? 96 : 64;
 
-            var spriteRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), (int)yBobOffset, spritePartSize, spritePartSize);
+            // Calculate STATIC center for targeting/damage numbers
+            var staticRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), 0, spritePartSize, spritePartSize);
+            _combatantVisualCenters[combatant.CombatantID] = staticRect.Center.ToVector2();
 
-            // Store visual center
-            _combatantVisualCenters[combatant.CombatantID] = spriteRect.Center.ToVector2();
+            // Calculate DYNAMIC rect for drawing the sprite
+            var spriteRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), (int)yBobOffset, spritePartSize, spritePartSize);
 
             Color tintColor = Color.White * combatant.VisualAlpha;
             Color outlineColor = _global.Palette_DarkGray * combatant.VisualAlpha;
@@ -784,32 +784,6 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawEnemyHealthBar(SpriteBatch spriteBatch, BattleCombatant combatant, Vector2 centerPosition, BattleAnimationManager animationManager)
-        {
-            var pixel = ServiceLocator.Get<Texture2D>();
-            const int barWidth = 40;
-            const int barHeight = 2;
-            var barRect = new Rectangle(
-                (int)(centerPosition.X - barWidth / 2f),
-                (int)(centerPosition.Y + 2),
-                barWidth,
-                barHeight
-            );
-
-            float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
-            var hpFgRect = new Rectangle(barRect.X, barRect.Y, (int)(barRect.Width * hpPercent), barRect.Height);
-
-            spriteBatch.DrawSnapped(pixel, barRect, _global.Palette_DarkGray);
-            spriteBatch.DrawSnapped(pixel, hpFgRect, _global.Palette_LightGreen);
-
-            // Animation Overlay
-            var hpAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
-            if (hpAnim != null)
-            {
-                DrawBarAnimationOverlay(spriteBatch, barRect, combatant.Stats.MaxHP, hpAnim);
-            }
-        }
-
         private void DrawBarAnimationOverlay(SpriteBatch spriteBatch, Rectangle bgRect, float maxResource, BattleAnimationManager.ResourceBarAnimationState anim)
         {
             var pixel = ServiceLocator.Get<Texture2D>();
@@ -867,6 +841,32 @@ namespace ProjectVagabond.Battle.UI
                 float alpha = 1.0f - easedProgress;
 
                 spriteBatch.DrawSnapped(pixel, ghostRect, ghostColor * alpha * 0.75f);
+            }
+        }
+
+        private void DrawEnemyHealthBar(SpriteBatch spriteBatch, BattleCombatant combatant, Vector2 centerPosition, BattleAnimationManager animationManager)
+        {
+            var pixel = ServiceLocator.Get<Texture2D>();
+            const int barWidth = 40;
+            const int barHeight = 2;
+            var barRect = new Rectangle(
+                (int)(centerPosition.X - barWidth / 2f),
+                (int)(centerPosition.Y + 2),
+                barWidth,
+                barHeight
+            );
+
+            float hpPercent = combatant.Stats.MaxHP > 0 ? Math.Clamp(combatant.VisualHP / combatant.Stats.MaxHP, 0f, 1f) : 0f;
+            var hpFgRect = new Rectangle(barRect.X, barRect.Y, (int)(barRect.Width * hpPercent), barRect.Height);
+
+            spriteBatch.DrawSnapped(pixel, barRect, _global.Palette_DarkGray);
+            spriteBatch.DrawSnapped(pixel, hpFgRect, _global.Palette_LightGreen);
+
+            // Animation Overlay
+            var hpAnim = animationManager.GetResourceBarAnimation(combatant.CombatantID, BattleAnimationManager.ResourceBarAnimationState.BarResourceType.HP);
+            if (hpAnim != null)
+            {
+                DrawBarAnimationOverlay(spriteBatch, barRect, combatant.Stats.MaxHP, hpAnim);
             }
         }
 
@@ -1047,6 +1047,27 @@ namespace ProjectVagabond.Battle.UI
                 y = (bounds.Bottom - 1) - (distance - (topEdgeLength + rightEdgeLength + bottomEdgeLength));
             }
             return new Vector2(x, y);
+        }
+
+        private float CalculateAttackBobOffset(string combatantId, bool isPlayer)
+        {
+            if (_attackAnimTimers.TryGetValue(combatantId, out float animTimer))
+            {
+                float progress = Math.Clamp(animTimer / ATTACK_BOB_DURATION, 0f, 1f);
+                float bobValue;
+
+                // Jump Phase (0 -> 1)
+                if (progress < 0.5f)
+                    bobValue = Easing.EaseInCubic(progress * 2f);
+                // Return Phase (1 -> 0)
+                else
+                    bobValue = 1.0f - Easing.EaseOutCubic((progress - 0.5f) * 2f);
+
+                // Player: Up (-), Enemy: Down (+)
+                float direction = isPlayer ? -1f : 1f;
+                return bobValue * ATTACK_BOB_AMOUNT * direction;
+            }
+            return 0f;
         }
     }
 }

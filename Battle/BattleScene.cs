@@ -223,6 +223,8 @@ namespace ProjectVagabond.Scenes
             var leaderCombatant = BattleCombatantFactory.CreateFromEntity(playerEntityId, "player_leader");
             if (leaderCombatant != null)
             {
+                // FIX: Explicitly set the name from the PlayerState leader
+                leaderCombatant.Name = gameState.PlayerState.Leader.Name;
                 leaderCombatant.BattleSlot = 0; // Active Left
                 playerParty.Add(leaderCombatant);
             }
