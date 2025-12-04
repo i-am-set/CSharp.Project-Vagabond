@@ -1,0 +1,41 @@
+[
+  {
+    "MemberID": "Oakley",
+    "Name": "Oakley",
+    "ArchetypeId": "player",
+    "Description": "A wandering vagabond seeking fortune.",
+    "MaxHP": 120,
+    "MaxMana": 100,
+    "Strength": 12,
+    "Intelligence": 8,
+    "Tenacity": 10,
+    "Agility": 12,
+    "DefensiveElementIDs": [ 101 ],
+    "DefaultStrikeMoveID": "ClawRake",
+    "StartingSpells": [ "CinderSpark", "VampiricBite" ],
+    "StartingActions": [ "ShoulderBash" ],
+    "StartingEquipment": {
+      "IronSword": 1,
+      "LeatherTunic": 1
+    }
+  },
+  {
+    "MemberID": "Sylas",
+    "Name": "Sylas",
+    "ArchetypeId": "wanderer",
+    "Description": "A hedge mage with a quick temper.",
+    "MaxHP": 90,
+    "MaxMana": 150,
+    "Strength": 6,
+    "Intelligence": 15,
+    "Tenacity": 8,
+    "Agility": 14,
+    "DefensiveElementIDs": [ 101 ],
+    "DefaultStrikeMoveID": "EtherDart",
+    "StartingSpells": [ "EtherDart", "Pyrosphere" ],
+    "StartingActions": [ "Dodge" ],
+    "StartingEquipment": {
+      "ArchMageRobes": 1
+    }
+  }
+]

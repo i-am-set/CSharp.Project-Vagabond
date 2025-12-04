@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Utils;
@@ -59,6 +60,8 @@ namespace ProjectVagabond.Battle.UI
         public class HealBounceAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.1f; }
         public class HealFlashAnimationState { public string CombatantID; public float Timer; public const float Duration = 0.5f; }
         public class PoisonEffectAnimationState { public string CombatantID; public float Timer; public const float Duration = 1.5f; }
+
+        // Made public so BattleRenderer can read the state
         public class ResourceBarAnimationState
         {
             public enum BarResourceType { HP, Mana }
@@ -480,6 +483,12 @@ namespace ProjectVagabond.Battle.UI
             return _activePoisonEffectAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
+        // NEW: Expose animation state for renderer
+        public ResourceBarAnimationState? GetResourceBarAnimation(string combatantId, ResourceBarAnimationState.BarResourceType type)
+        {
+            return _activeBarAnimations.FirstOrDefault(a => a.CombatantID == combatantId && a.ResourceType == type);
+        }
+
         public void Update(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
         {
             UpdateIndicatorQueue(gameTime);
@@ -847,129 +856,8 @@ namespace ProjectVagabond.Battle.UI
 
         public void DrawResourceBarAnimations(SpriteBatch spriteBatch, IEnumerable<BattleCombatant> allCombatants)
         {
-            var pixel = ServiceLocator.Get<Texture2D>();
-            var spriteManager = ServiceLocator.Get<SpriteManager>();
-
-            foreach (var anim in _activeBarAnimations)
-            {
-                var combatant = allCombatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
-                if (combatant == null) continue;
-
-                Rectangle barRect;
-                float maxResource;
-
-                if (combatant.IsPlayerControlled)
-                {
-                    const int barWidth = 60;
-                    const int barPaddingX = 10;
-                    const int hpBarY = DIVIDER_Y - 9;
-                    const int manaBarY = hpBarY + 3;
-                    float startX = Global.VIRTUAL_WIDTH - barPaddingX - barWidth - 245;
-
-                    if (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
-                    {
-                        barRect = new Rectangle((int)startX, hpBarY, barWidth, 2);
-                        maxResource = combatant.Stats.MaxHP;
-                    }
-                    else // Mana
-                    {
-                        barRect = new Rectangle((int)startX, manaBarY, barWidth, 2);
-                        maxResource = combatant.Stats.MaxMana;
-                    }
-                }
-                else // Enemy
-                {
-                    if (anim.ResourceType != ResourceBarAnimationState.BarResourceType.HP) continue; // Enemies only have HP bars
-
-                    var enemies = allCombatants.Where(c => !c.IsPlayerControlled).ToList();
-                    int enemyIndex = enemies.FindIndex(e => e.CombatantID == combatant.CombatantID);
-                    if (enemyIndex == -1) continue;
-
-                    // Replicate layout logic from BattleRenderer
-                    bool isMajor = spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
-                    int spritePartSize = isMajor ? 96 : 64;
-
-                    const int enemyAreaPadding = 40;
-                    int availableWidth = Global.VIRTUAL_WIDTH - (enemyAreaPadding * 2);
-                    int slotWidth = availableWidth / enemies.Count;
-                    var slotCenterX = enemyAreaPadding + (enemyIndex * slotWidth) + (slotWidth / 2);
-
-                    float hudY = spritePartSize + 12;
-                    var hudCenterPosition = new Vector2(slotCenterX, hudY);
-
-                    const int barWidth = 40;
-                    const int barHeight = 2;
-                    barRect = new Rectangle((int)(hudCenterPosition.X - barWidth / 2f), (int)(hudCenterPosition.Y + 2), barWidth, barHeight);
-                    maxResource = combatant.Stats.MaxHP;
-                }
-
-                if (maxResource <= 0) continue;
-
-                // --- Shared Drawing Logic ---
-                if (anim.AnimationType == ResourceBarAnimationState.BarAnimationType.Loss)
-                {
-                    float percentBefore = anim.ValueBefore / maxResource;
-                    float percentAfter = anim.ValueAfter / maxResource;
-
-                    // Calculate pixel widths and positions using truncation (casting to int) to perfectly match
-                    // the way the main health bar is rendered in BattleRenderer. This prevents 1-pixel gaps
-                    // caused by rounding inconsistencies between the two drawing routines.
-                    int widthBefore = (int)(barRect.Width * percentBefore);
-                    int widthAfter = (int)(barRect.Width * percentAfter);
-
-                    int previewStartX = barRect.X + widthAfter;
-                    int previewWidth = widthBefore - widthAfter;
-                    var previewRect = new Rectangle(previewStartX, barRect.Y, previewWidth, barRect.Height);
-
-
-                    switch (anim.CurrentLossPhase)
-                    {
-                        case ResourceBarAnimationState.LossPhase.Preview:
-                            Color previewColor = (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
-                                ? _global.Palette_Red
-                                : Color.White;
-                            spriteBatch.DrawSnapped(pixel, previewRect, previewColor);
-                            break;
-                        case ResourceBarAnimationState.LossPhase.FlashBlack:
-                            spriteBatch.DrawSnapped(pixel, previewRect, Color.Black);
-                            break;
-                        case ResourceBarAnimationState.LossPhase.FlashWhite:
-                            spriteBatch.DrawSnapped(pixel, previewRect, Color.White);
-                            break;
-                        case ResourceBarAnimationState.LossPhase.Shrink:
-                            float progress = anim.Timer / ResourceBarAnimationState.SHRINK_DURATION;
-                            float easedProgress = Easing.EaseOutCubic(progress);
-                            int shrinkingWidth = (int)(previewWidth * (1.0f - easedProgress));
-                            var shrinkingRect = new Rectangle(previewRect.X, previewRect.Y, shrinkingWidth, previewRect.Height);
-
-                            Color shrinkColor = (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP)
-                                ? _global.Palette_Red
-                                : _global.Palette_White;
-
-                            spriteBatch.DrawSnapped(pixel, shrinkingRect, shrinkColor);
-                            break;
-                    }
-                }
-                else // Recovery
-                {
-                    float progress = anim.Timer / ResourceBarAnimationState.GHOST_FILL_DURATION;
-                    float easedProgress = Easing.EaseOutCubic(progress);
-
-                    float percentBefore = anim.ValueBefore / maxResource;
-                    float percentAfter = anim.ValueAfter / maxResource;
-
-                    float currentFillPercent = MathHelper.Lerp(percentBefore, percentAfter, easedProgress);
-
-                    int ghostStartX = (int)(barRect.X + barRect.Width * percentBefore);
-                    int ghostWidth = (int)(barRect.Width * (currentFillPercent - percentBefore));
-                    var ghostRect = new Rectangle(ghostStartX, barRect.Y, ghostWidth, barRect.Height);
-
-                    Color ghostColor = (anim.ResourceType == ResourceBarAnimationState.BarResourceType.HP) ? _global.Palette_LightGreen : _global.Palette_LightBlue;
-                    float alpha = 1.0f - easedProgress; // Fade out as it fills
-
-                    spriteBatch.DrawSnapped(pixel, ghostRect, ghostColor * alpha * 0.75f);
-                }
-            }
+            // This method is now empty because drawing is handled by BattleRenderer.
+            // It is kept to satisfy the interface if needed, or can be removed if no longer called.
         }
 
         public void DrawDamageIndicators(SpriteBatch spriteBatch, BitmapFont font)

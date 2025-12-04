@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xna.Framework.Content;
+using ProjectVagabond.Battle;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,13 +15,14 @@ namespace ProjectVagabond.Battle
     {
         public static Dictionary<int, ElementDefinition> Elements { get; private set; }
         public static Dictionary<int, Dictionary<int, float>> InteractionMatrix { get; private set; }
-        // Dictionaries now use Case-Insensitive Comparers
         public static Dictionary<string, MoveData> Moves { get; private set; }
         public static Dictionary<string, ConsumableItemData> Consumables { get; private set; }
         public static Dictionary<string, RelicData> Relics { get; private set; }
         public static Dictionary<string, WeaponData> Weapons { get; private set; }
         public static Dictionary<string, ArmorData> Armors { get; private set; }
-        public static Dictionary<string, MiscItemData> MiscItems { get; private set; } // <--- Added
+        public static Dictionary<string, MiscItemData> MiscItems { get; private set; }
+        // NEW: Party Members
+        public static Dictionary<string, PartyMemberData> PartyMembers { get; private set; }
 
         public static void LoadData(ContentManager content)
         {
@@ -35,11 +37,9 @@ namespace ProjectVagabond.Battle
             // --- ELEMENTS ---
             string elementsPath = Path.Combine(content.RootDirectory, "Data", "Elements.json");
             if (!File.Exists(elementsPath)) throw new FileNotFoundException($"Could not find Elements.json at {elementsPath}");
-
             string elementsJson = File.ReadAllText(elementsPath);
             var elementList = JsonSerializer.Deserialize<List<ElementDefinition>>(elementsJson, jsonOptions);
             Elements = elementList.ToDictionary(e => e.ElementID, e => e);
-            Debug.WriteLine($"[BattleDataCache] Successfully loaded {Elements.Count} element definitions.");
 
             // --- INTERACTION MATRIX ---
             LoadInteractionMatrix(content);
@@ -47,127 +47,81 @@ namespace ProjectVagabond.Battle
             // --- MOVES ---
             string movesPath = Path.Combine(content.RootDirectory, "Data", "Moves.json");
             if (!File.Exists(movesPath)) throw new FileNotFoundException($"Could not find Moves.json at {movesPath}");
-
             string movesJson = File.ReadAllText(movesPath);
             var moveList = JsonSerializer.Deserialize<List<MoveData>>(movesJson, jsonOptions);
             Moves = moveList.ToDictionary(m => m.MoveID, m => m, StringComparer.OrdinalIgnoreCase);
-            ValidateWordLengths(Moves.Values.Select(m => m.MoveName), "Move", 11);
-            Debug.WriteLine($"[BattleDataCache] Successfully loaded {Moves.Count} move definitions.");
 
             // --- CONSUMABLES ---
             string consumablesPath = Path.Combine(content.RootDirectory, "Data", "Items", "Consumables.json");
-            if (!File.Exists(consumablesPath)) throw new FileNotFoundException($"Could not find Consumables.json at {consumablesPath}");
-
-            string consumablesJson = File.ReadAllText(consumablesPath);
-            var consumableList = JsonSerializer.Deserialize<List<ConsumableItemData>>(consumablesJson, jsonOptions);
-            Consumables = consumableList.ToDictionary(c => c.ItemID, c => c, StringComparer.OrdinalIgnoreCase);
-            ValidateWordLengths(Consumables.Values.Select(c => c.ItemName), "Consumable", 11);
-            Debug.WriteLine($"[BattleDataCache] Successfully loaded {Consumables.Count} consumable item definitions.");
+            if (File.Exists(consumablesPath))
+            {
+                string consumablesJson = File.ReadAllText(consumablesPath);
+                var consumableList = JsonSerializer.Deserialize<List<ConsumableItemData>>(consumablesJson, jsonOptions);
+                Consumables = consumableList.ToDictionary(c => c.ItemID, c => c, StringComparer.OrdinalIgnoreCase);
+            }
+            else Consumables = new Dictionary<string, ConsumableItemData>();
 
             // --- RELICS ---
             string relicsPath = Path.Combine(content.RootDirectory, "Data", "Items", "Relics.json");
-            if (!File.Exists(relicsPath)) throw new FileNotFoundException($"Could not find Relics.json at {relicsPath}");
-
-            string relicsJson = File.ReadAllText(relicsPath);
-            var relicList = JsonSerializer.Deserialize<List<RelicData>>(relicsJson, jsonOptions);
-            Relics = relicList.ToDictionary(a => a.RelicID, a => a, StringComparer.OrdinalIgnoreCase);
-            ValidateWordLengths(Relics.Values.Select(a => a.RelicName), "Relic", 11);
-            ValidateWordLengths(Relics.Values.Select(a => a.AbilityName), "Ability", 14);
-
-            Debug.WriteLine($"[BattleDataCache] Successfully loaded {Relics.Count} relic definitions.");
+            if (File.Exists(relicsPath))
+            {
+                string relicsJson = File.ReadAllText(relicsPath);
+                var relicList = JsonSerializer.Deserialize<List<RelicData>>(relicsJson, jsonOptions);
+                Relics = relicList.ToDictionary(a => a.RelicID, a => a, StringComparer.OrdinalIgnoreCase);
+            }
+            else Relics = new Dictionary<string, RelicData>();
 
             // --- WEAPONS ---
             string weaponsPath = Path.Combine(content.RootDirectory, "Data", "Items", "Weapons.json");
-            if (!File.Exists(weaponsPath))
-            {
-                Debug.WriteLine($"[BattleDataCache] WARNING: Weapons.json not found at {weaponsPath}. Creating empty dictionary.");
-                Weapons = new Dictionary<string, WeaponData>(StringComparer.OrdinalIgnoreCase);
-            }
-            else
+            if (File.Exists(weaponsPath))
             {
                 string weaponsJson = File.ReadAllText(weaponsPath);
                 var weaponList = JsonSerializer.Deserialize<List<WeaponData>>(weaponsJson, jsonOptions);
                 Weapons = weaponList.ToDictionary(w => w.WeaponID, w => w, StringComparer.OrdinalIgnoreCase);
-                ValidateWordLengths(Weapons.Values.Select(w => w.WeaponName), "Weapon", 11);
-
-                foreach (var weapon in Weapons.Values)
-                {
-                    if (!Moves.ContainsKey(weapon.MoveID))
-                    {
-                        Debug.WriteLine($"[BattleDataCache] [ERROR] Weapon '{weapon.WeaponName}' references missing MoveID '{weapon.MoveID}'.");
-                    }
-                }
-                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Weapons.Count} weapon definitions.");
             }
+            else Weapons = new Dictionary<string, WeaponData>();
 
             // --- ARMOR ---
             string armorPath = Path.Combine(content.RootDirectory, "Data", "Items", "Armor.json");
-            if (!File.Exists(armorPath))
-            {
-                Debug.WriteLine($"[BattleDataCache] WARNING: Armor.json not found at {armorPath}. Creating empty dictionary.");
-                Armors = new Dictionary<string, ArmorData>(StringComparer.OrdinalIgnoreCase);
-            }
-            else
+            if (File.Exists(armorPath))
             {
                 string armorJson = File.ReadAllText(armorPath);
                 var armorList = JsonSerializer.Deserialize<List<ArmorData>>(armorJson, jsonOptions);
                 Armors = armorList.ToDictionary(a => a.ArmorID, a => a, StringComparer.OrdinalIgnoreCase);
-                ValidateWordLengths(Armors.Values.Select(a => a.ArmorName), "Armor", 11);
-
-                foreach (var armor in Armors.Values)
-                {
-                    if (armor.StatModifiers == null || armor.StatModifiers.Count == 0)
-                    {
-                        Debug.WriteLine($"[BattleDataCache] [ERROR] Armor '{armor.ArmorName}' (ID: {armor.ArmorID}) has no StatModifiers. All armor must modify stats.");
-                    }
-                }
-                Debug.WriteLine($"[BattleDataCache] Successfully loaded {Armors.Count} armor definitions.");
             }
+            else Armors = new Dictionary<string, ArmorData>();
 
-            // --- MISC ITEMS --- (New Section)
+            // --- MISC ITEMS ---
             string miscPath = Path.Combine(content.RootDirectory, "Data", "Items", "Misc.json");
-            if (!File.Exists(miscPath))
-            {
-                // Non-critical, just create empty dict
-                MiscItems = new Dictionary<string, MiscItemData>(StringComparer.OrdinalIgnoreCase);
-            }
-            else
+            if (File.Exists(miscPath))
             {
                 string miscJson = File.ReadAllText(miscPath);
                 var miscList = JsonSerializer.Deserialize<List<MiscItemData>>(miscJson, jsonOptions);
                 MiscItems = miscList.ToDictionary(m => m.ItemID, m => m, StringComparer.OrdinalIgnoreCase);
-                ValidateWordLengths(MiscItems.Values.Select(m => m.ItemName), "Misc", 11);
-                Debug.WriteLine($"[BattleDataCache] Successfully loaded {MiscItems.Count} misc item definitions.");
             }
-        }
+            else MiscItems = new Dictionary<string, MiscItemData>();
 
-        private static void ValidateWordLengths(IEnumerable<string> names, string dataType, int maxWordLength)
-        {
-            foreach (var name in names)
+            // --- PARTY MEMBERS (NEW) ---
+            string partyPath = Path.Combine(content.RootDirectory, "Data", "PartyMembers.json");
+            if (File.Exists(partyPath))
             {
-                if (string.IsNullOrEmpty(name)) continue;
-
-                var words = name.Split(' ');
-                foreach (var word in words)
-                {
-                    if (word.Length > maxWordLength)
-                    {
-                        Debug.WriteLine($"[BattleDataCache] [VALIDATION ERROR] {dataType} name '{name}' contains a word ('{word}') that is longer than the maximum of {maxWordLength} characters. This may cause UI overflow.");
-                    }
-                }
+                string partyJson = File.ReadAllText(partyPath);
+                var partyList = JsonSerializer.Deserialize<List<PartyMemberData>>(partyJson, jsonOptions);
+                PartyMembers = partyList.ToDictionary(p => p.MemberID, p => p, StringComparer.OrdinalIgnoreCase);
+                Debug.WriteLine($"[BattleDataCache] Loaded {PartyMembers.Count} party member templates.");
+            }
+            else
+            {
+                Debug.WriteLine("[BattleDataCache] WARNING: PartyMembers.json not found.");
+                PartyMembers = new Dictionary<string, PartyMemberData>();
             }
         }
 
         private static void LoadInteractionMatrix(ContentManager content)
         {
             InteractionMatrix = new Dictionary<int, Dictionary<int, float>>();
-
             string matrixPath = Path.Combine(content.RootDirectory, "Data", "ElementalInteractionMatrix.csv");
-
-            if (!File.Exists(matrixPath))
-            {
-                throw new FileNotFoundException($"[BattleDataCache] CSV file not found at '{matrixPath}'.");
-            }
+            if (!File.Exists(matrixPath)) return;
 
             var lines = File.ReadAllLines(matrixPath);
             if (lines.Length < 2) return;
@@ -182,24 +136,19 @@ namespace ProjectVagabond.Battle
                     break;
                 }
             }
-
             if (headerRowIndex == -1) return;
 
             var header = lines[headerRowIndex].Split(',');
             var defendingElementIds = new List<int>();
             for (int i = 2; i < header.Length; i++)
             {
-                if (int.TryParse(header[i].Trim(), out int id))
-                {
-                    defendingElementIds.Add(id);
-                }
+                if (int.TryParse(header[i].Trim(), out int id)) defendingElementIds.Add(id);
             }
 
             for (int i = headerRowIndex + 1; i < lines.Length; i++)
             {
                 var values = lines[i].Split(',');
                 if (values.Length < 3) continue;
-
                 if (int.TryParse(values[1].Trim(), out int attackingId))
                 {
                     var rowMatrix = new Dictionary<int, float>();
@@ -218,7 +167,6 @@ namespace ProjectVagabond.Battle
                     InteractionMatrix[attackingId] = rowMatrix;
                 }
             }
-            Debug.WriteLine($"[BattleDataCache] Successfully loaded elemental interaction matrix with {InteractionMatrix.Count} attacking types.");
         }
     }
 }

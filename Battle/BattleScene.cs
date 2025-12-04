@@ -16,15 +16,12 @@ using System.Linq;
 
 namespace ProjectVagabond.Scenes
 {
-    /// <summary>
-    /// A scene dedicated to managing and rendering a turn-based battle.
-    /// Acts as a conductor for specialized manager classes.
-    /// </summary>
     public class BattleScene : GameScene
     {
         // --- Tuning ---
-        private const float MULTI_HIT_DELAY = 0.25f; // Increased to 0.2f for better pacing
-                                                     // Core Battle Logic
+        private const float MULTI_HIT_DELAY = 0.25f;
+
+        // Core Battle Logic
         private BattleManager _battleManager;
 
         // Specialized Managers
@@ -62,7 +59,7 @@ namespace ProjectVagabond.Scenes
 
         // --- FAILSAFE / WATCHDOG STATE ---
         private float _watchdogTimer = 0f;
-        private const float WATCHDOG_TIMEOUT = 4.0f; // If no state change in 4 seconds, force advance.
+        private const float WATCHDOG_TIMEOUT = 4.0f;
         private BattleManager.BattlePhase _lastFramePhase;
         private bool _wasUiBusyLastFrame;
         private bool _wasAnimatingLastFrame;
@@ -144,7 +141,7 @@ namespace ProjectVagabond.Scenes
             UnsubscribeFromEvents();
             CleanupEntities();
             CleanupPlayerState();
-            ServiceLocator.Unregister<BattleManager>(); // Unregister on exit
+            ServiceLocator.Unregister<BattleManager>();
         }
 
         private void SubscribeToEvents()
@@ -217,14 +214,37 @@ namespace ProjectVagabond.Scenes
         private void SetupBattle()
         {
             var gameState = ServiceLocator.Get<GameState>();
-            int playerEntityId = gameState.PlayerEntityId;
-            var playerCombatant = BattleCombatantFactory.CreateFromEntity(playerEntityId, "player_1");
-            var playerParty = new List<BattleCombatant> { playerCombatant };
 
+            // --- 1. Setup Player Party ---
+            var playerParty = new List<BattleCombatant>();
+
+            // The main character (Entity) is always Slot 0
+            int playerEntityId = gameState.PlayerEntityId;
+            var leaderCombatant = BattleCombatantFactory.CreateFromEntity(playerEntityId, "player_leader");
+            if (leaderCombatant != null)
+            {
+                leaderCombatant.BattleSlot = 0; // Active Left
+                playerParty.Add(leaderCombatant);
+            }
+
+            // Add other party members from PlayerState
+            // We skip index 0 because that's the leader we just added via Entity
+            for (int i = 1; i < gameState.PlayerState.Party.Count; i++)
+            {
+                var member = gameState.PlayerState.Party[i];
+                var memberCombatant = CreateCombatantFromPartyMember(member, $"player_ally_{i}");
+
+                // Assign Slot: 1 is Active Right, 2+ are Bench
+                memberCombatant.BattleSlot = i;
+                playerParty.Add(memberCombatant);
+            }
+
+            // --- 2. Setup Enemy Party ---
             var enemyParty = new List<BattleCombatant>();
             var enemyArchetypesToSpawn = BattleSetup.EnemyArchetypes ?? new List<string> { "wanderer" };
 
-            int enemyCount = Math.Min(enemyArchetypesToSpawn.Count, 5);
+            // Spawn all enemies requested (up to 4 max for the team)
+            int enemyCount = Math.Min(enemyArchetypesToSpawn.Count, 4);
             for (int i = 0; i < enemyCount; i++)
             {
                 string archetypeId = enemyArchetypesToSpawn[i];
@@ -234,6 +254,8 @@ namespace ProjectVagabond.Scenes
                     var enemyCombatant = BattleCombatantFactory.CreateFromEntity(newEnemyId, $"enemy_{i + 1}");
                     if (enemyCombatant != null)
                     {
+                        // Assign Slot: 0/1 Active, 2+ Bench
+                        enemyCombatant.BattleSlot = i;
                         enemyParty.Add(enemyCombatant);
                         _enemyEntityIds.Add(newEnemyId);
                     }
@@ -241,7 +263,7 @@ namespace ProjectVagabond.Scenes
             }
             BattleSetup.EnemyArchetypes = null;
 
-            if (playerCombatant == null || !enemyParty.Any())
+            if (!playerParty.Any() || !enemyParty.Any())
             {
                 Debug.WriteLine("[BattleScene] [FATAL] Failed to create one or more combatants. Aborting.");
                 _battleManager = null;
@@ -251,6 +273,52 @@ namespace ProjectVagabond.Scenes
             _battleManager = new BattleManager(playerParty, enemyParty);
             ServiceLocator.Register<BattleManager>(_battleManager);
             _previousBattlePhase = _battleManager.CurrentPhase;
+        }
+
+        private BattleCombatant CreateCombatantFromPartyMember(PartyMember member, string id)
+        {
+            var combatant = new BattleCombatant
+            {
+                CombatantID = id,
+                Name = member.Name,
+                ArchetypeId = member.ArchetypeId,
+                IsPlayerControlled = true,
+                Stats = new CombatantStats
+                {
+                    Level = member.Level,
+                    MaxHP = member.MaxHP,
+                    CurrentHP = member.CurrentHP,
+                    MaxMana = member.MaxMana,
+                    CurrentMana = member.CurrentMana,
+                    Strength = member.Strength,
+                    Intelligence = member.Intelligence,
+                    Tenacity = member.Tenacity,
+                    Agility = member.Agility
+                },
+                DefensiveElementIDs = new List<int>(member.DefensiveElementIDs),
+                DefaultStrikeMoveID = member.DefaultStrikeMoveID,
+                EquippedSpells = member.EquippedSpells
+            };
+
+            // FIX: Initialize VisualHP to match CurrentHP so the bar isn't empty at start
+            combatant.VisualHP = combatant.Stats.CurrentHP;
+
+            // Load Relics
+            foreach (var relicId in member.EquippedRelics)
+            {
+                if (!string.IsNullOrEmpty(relicId) && BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
+                {
+                    combatant.ActiveRelics.Add(relicData);
+                }
+            }
+
+            // Load Weapon/Armor Passives
+            if (!string.IsNullOrEmpty(member.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var weapon))
+            {
+                combatant.DefaultStrikeMoveID = weapon.MoveID;
+            }
+
+            return combatant;
         }
 
         private void CleanupEntities()
@@ -267,7 +335,21 @@ namespace ProjectVagabond.Scenes
             }
         }
 
-        private void CleanupPlayerState() { }
+        private void CleanupPlayerState()
+        {
+            if (_battleManager != null)
+            {
+                foreach (var combatant in _battleManager.AllCombatants.Where(c => c.IsPlayerControlled))
+                {
+                    if (combatant.BattleSlot == 0)
+                    {
+                        _gameState.PlayerState.Leader.CurrentHP = combatant.Stats.CurrentHP;
+                        _gameState.PlayerState.Leader.CurrentMana = combatant.Stats.CurrentMana;
+                    }
+                    // Note: Allies should also be synced back to their PartyMember objects here in a full implementation
+                }
+            }
+        }
 
         public override void Update(GameTime gameTime)
         {
@@ -287,7 +369,6 @@ namespace ProjectVagabond.Scenes
                 {
                     _sceneManager.ChangeScene(GameSceneState.GameOver);
                 }
-                // Skip normal updates while fading out
                 return;
             }
 
@@ -318,22 +399,12 @@ namespace ProjectVagabond.Scenes
                     }
                     else
                     {
-                        // Player Lost - Trigger Fade Out
                         if (!_isFadingOutOnDeath)
                         {
                             string killer = "Unknown Causes";
-                            if (_currentActor != null && !_currentActor.IsPlayerControlled)
-                            {
-                                killer = _currentActor.Name;
-                            }
-                            else if (_currentActor != null && _currentActor.IsPlayerControlled)
-                            {
-                                killer = "Recoil"; // Or self-inflicted
-                            }
-                            else
-                            {
-                                killer = "Status Effects"; // Likely poison/burn at end of turn
-                            }
+                            if (_currentActor != null && !_currentActor.IsPlayerControlled) killer = _currentActor.Name;
+                            else if (_currentActor != null && _currentActor.IsPlayerControlled) killer = "Recoil";
+                            else killer = "Status Effects";
 
                             _gameState.LastRunKiller = killer;
                             _isFadingOutOnDeath = true;
@@ -346,27 +417,21 @@ namespace ProjectVagabond.Scenes
             }
 
             // --- 3. Animation Skipping Logic ---
-            // If the user clicks while animations are playing, skip them.
             bool isAnimating = _animationManager.IsAnimating || _moveAnimationManager.IsAnimating;
             bool clickDetected = UIInputManager.CanProcessMouseClick() &&
                                  currentMouseState.LeftButton == ButtonState.Released &&
                                  previousMouseState.LeftButton == ButtonState.Pressed;
 
-            // FIX: Prevent skipping if a move animation is playing or a multi-hit sequence is active.
             bool isAttackAnimationPlaying = _moveAnimationManager.IsAnimating || _battleManager.IsProcessingMultiHit;
 
             if (isAnimating && clickDetected && !isAttackAnimationPlaying)
             {
-                // Skip other visual flair (health bars, etc.)
                 _animationManager.SkipAllHealthAnimations(_battleManager.AllCombatants);
                 _animationManager.SkipAllBarAnimations();
-
-                // Consume the click so it doesn't trigger UI buttons in the same frame
                 UIInputManager.ConsumeMouseClick();
             }
 
             // --- 4. Process Pending Animations ---
-            // Only process one pending animation per frame, and only if UI isn't busy.
             if (!_uiManager.IsBusy && !_animationManager.IsAnimating && _pendingAnimations.Any())
             {
                 var nextAnimation = _pendingAnimations.Dequeue();
@@ -384,18 +449,13 @@ namespace ProjectVagabond.Scenes
 
             if (isMultiHitActive)
             {
-                // FIX: If multi-hit is active, we IGNORE uiBusy.
-                // This allows the hits to keep processing even if the "Player uses Fury Swipes!" text is still on screen.
-                // We also ignore moveAnimBusy to allow overlapping animations.
                 canAdvance = !pendingBusy;
             }
             else
             {
-                // Normal turn logic: Wait for everything to finish.
                 canAdvance = !uiBusy && !animBusy && !moveAnimBusy && !pendingBusy;
             }
 
-            // Handle Multi-Hit Delay
             if (_isWaitingForMultiHitDelay && canAdvance)
             {
                 if (_multiHitDelayTimer <= 0) _multiHitDelayTimer = MULTI_HIT_DELAY;
@@ -406,12 +466,10 @@ namespace ProjectVagabond.Scenes
             }
 
             // --- 6. WATCHDOG FAILSAFE ---
-            // Detect if the state has been stagnant for too long.
             bool stateChanged = _battleManager.CurrentPhase != _lastFramePhase ||
                                 uiBusy != _wasUiBusyLastFrame ||
                                 animBusy != _wasAnimatingLastFrame;
 
-            // Don't tick watchdog if we are simply waiting for the user to read narration
             if (!stateChanged && !canAdvance && !_isBattleOver && !_uiManager.IsWaitingForInput)
             {
                 _watchdogTimer += dt;
@@ -424,24 +482,17 @@ namespace ProjectVagabond.Scenes
             if (_watchdogTimer > WATCHDOG_TIMEOUT)
             {
                 Debug.WriteLine($"[BATTLE WATCHDOG] Softlock detected! Force advancing state.");
-                Debug.WriteLine($"Phase: {_battleManager.CurrentPhase} | UI: {uiBusy} | Anim: {animBusy} | MoveAnim: {moveAnimBusy} | Pending: {pendingBusy}");
-
-                // Force clear all locks
                 _uiManager.ForceClearNarration();
                 _animationManager.ForceClearAll();
                 _moveAnimationManager.SkipAll();
                 _pendingAnimations.Clear();
                 _isWaitingForMultiHitDelay = false;
-
-                // Force the battle manager to try and move on
                 _battleManager.ForceAdvance();
-
                 EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[warning]Combat stalled. Watchdog forced advance." });
                 _watchdogTimer = 0f;
                 canAdvance = true;
             }
 
-            // Update tracking vars for next frame
             _lastFramePhase = _battleManager.CurrentPhase;
             _wasUiBusyLastFrame = uiBusy;
             _wasAnimatingLastFrame = animBusy;
@@ -474,7 +525,6 @@ namespace ProjectVagabond.Scenes
             }
 
             // --- 10. Failsafe for Move Animation Completion ---
-            // If we are in AnimatingMove phase but no animation is actually playing, force completion.
             if (_battleManager.CurrentPhase == BattleManager.BattlePhase.AnimatingMove && !_moveAnimationManager.IsAnimating)
             {
                 EventBus.Publish(new GameEvents.MoveAnimationCompleted());
@@ -549,15 +599,12 @@ namespace ProjectVagabond.Scenes
                 _currentActor = null;
             }
 
-            if (newPhase == BattleManager.BattlePhase.ActionSelection)
+            if (newPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || newPhase == BattleManager.BattlePhase.ActionSelection_Slot2)
             {
-                if (!_battleManager.IsPlayerTurnSkipped)
+                var actingCombatant = _battleManager.CurrentActingCombatant;
+                if (actingCombatant != null)
                 {
-                    var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
-                    if (player != null)
-                    {
-                        _uiManager.ShowActionMenu(player, _battleManager.AllCombatants.ToList());
-                    }
+                    _uiManager.ShowActionMenu(actingCombatant, _battleManager.AllCombatants.ToList());
                 }
             }
             else
@@ -635,12 +682,12 @@ namespace ProjectVagabond.Scenes
         #region Event Handlers
         private void OnPlayerMoveSelected(MoveData move, MoveEntry entry, BattleCombatant target)
         {
-            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+            var player = _battleManager.CurrentActingCombatant;
             if (player != null)
             {
                 var action = _battleManager.CreateActionFromMove(player, move, target);
                 action.SpellbookEntry = entry;
-                _battleManager.SetPlayerAction(action);
+                _battleManager.SubmitAction(action);
             }
         }
 
@@ -651,12 +698,12 @@ namespace ProjectVagabond.Scenes
 
         private void OnPlayerItemSelected(ConsumableItemData item, BattleCombatant target)
         {
-            var player = _battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled);
+            var player = _battleManager.CurrentActingCombatant;
             if (player == null) return;
 
             if (target == null)
             {
-                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
+                var enemies = _battleManager.AllCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField).ToList();
                 switch (item.Target)
                 {
                     case TargetType.Self:
@@ -666,7 +713,7 @@ namespace ProjectVagabond.Scenes
             }
 
             var action = new QueuedAction { Actor = player, ChosenItem = item, Target = target, Priority = item.Priority, ActorAgility = player.Stats.Agility, Type = QueuedActionType.Item };
-            _battleManager.SetPlayerAction(action);
+            _battleManager.SubmitAction(action);
             _uiManager.HideAllMenus();
         }
 
@@ -685,7 +732,6 @@ namespace ProjectVagabond.Scenes
 
         private void OnMultiHitActionCompleted(GameEvents.MultiHitActionCompleted e)
         {
-            // FIX: Handle singular/plural grammar for hit count
             string timeStr = e.HitCount == 1 ? "TIME" : "TIMES";
             _uiManager.ShowNarration($"HIT {e.HitCount} {timeStr}!");
 
@@ -739,8 +785,6 @@ namespace ProjectVagabond.Scenes
                 if (result.WasCritical)
                 {
                     _animationManager.StartDamageIndicator(target.CombatantID, "CRITICAL HIT", hudPosition, ServiceLocator.Get<Global>().Palette_Yellow);
-                    // FIX: Don't show "Critical Hit" narration for individual hits in a multi-hit sequence.
-                    // The BattleManager will show a summary at the end.
                     if (!isMultiHit) _uiManager.ShowNarration($"A critical hit on {target.Name}!");
                 }
 

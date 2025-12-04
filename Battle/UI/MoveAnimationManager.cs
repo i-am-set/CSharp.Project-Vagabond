@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using ProjectVagabond.Utils;
@@ -42,7 +43,6 @@ namespace ProjectVagabond.Battle.UI
             catch (Exception ex)
             {
                 Debug.WriteLine($"[MoveAnimationManager] ERROR: Could not load animation sprite sheet '{animationName}'. {ex.Message}");
-                // Cache null for the failed animation to prevent repeated load attempts.
                 _animationCache[animationName] = null;
                 return null;
             }
@@ -60,21 +60,17 @@ namespace ProjectVagabond.Battle.UI
 
             var animationData = GetAnimationData(move.AnimationSpriteSheet);
 
-            // If the primary animation failed, try to get the fallback.
             if (animationData == null)
             {
                 animationData = GetAnimationData("debug_null_animation");
-                if (animationData == null)
-                {
-                    // If even the fallback fails, there's nothing to play.
-                    return;
-                }
+                if (animationData == null) return;
             }
 
             if (move.IsAnimationCentralized)
             {
-                // Centralized animations are anchored to the player's heart sprite.
-                var position = renderer.PlayerSpritePosition;
+                // FIX: Centralized animations now anchor to the center of the screen,
+                // rather than relying on a specific player slot which might be empty.
+                var position = new Vector2(Global.VIRTUAL_WIDTH / 2f, Global.VIRTUAL_HEIGHT / 2f);
                 var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed);
                 _activeAnimations.Add(instance);
             }
@@ -84,8 +80,9 @@ namespace ProjectVagabond.Battle.UI
                 {
                     if (target.IsDefeated) continue;
 
+                    // FIX: Always ask the renderer for the specific target's position.
+                    // This ensures animations play over the correct slot (0 or 1).
                     var position = renderer.GetCombatantVisualCenterPosition(target, ServiceLocator.Get<BattleManager>().AllCombatants);
-
 
                     var instance = new MoveAnimationInstance(animationData, position, move.AnimationSpeed);
                     _activeAnimations.Add(instance);
@@ -125,3 +122,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+#nullable restore

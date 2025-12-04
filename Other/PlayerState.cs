@@ -1,141 +1,136 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
-using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond
 {
-    /// <summary>
-    /// Holds all dynamic, persistent data for the player character.
-    /// This acts as the single source of truth for the player's state.
-    /// </summary>
     public class PlayerState
     {
-        // Persistent Stats
-        public int Level { get; set; }
-        public int MaxHP { get; set; }
-        public int CurrentHP { get; set; } // Added to fix CS1061
-        public int MaxMana { get; set; } = 100;
-        public int CurrentMana { get; set; } // Added for consistency
-        public int Strength { get; set; }
-        public int Intelligence { get; set; }
-        public int Tenacity { get; set; }
-        public int Agility { get; set; }
-        public List<int> DefensiveElementIDs { get; set; } = new List<int>();
-        public string DefaultStrikeMoveID { get; set; }
-        // Visual Customization
-        public int PortraitIndex { get; set; } = 0;
+        // --- PARTY SYSTEM ---
+        public List<PartyMember> Party { get; set; } = new List<PartyMember>();
 
-        // --- INVENTORIES ---
-        // String ID -> Quantity
+        // Helper to get the main character (Avatar)
+        public PartyMember Leader => Party.Count > 0 ? Party[0] : null;
+
+        // --- SHARED INVENTORY (Team Shared) ---
         public Dictionary<string, int> Weapons { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> Armors { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> Relics { get; set; } = new Dictionary<string, int>();
         public Dictionary<string, int> Consumables { get; set; } = new Dictionary<string, int>();
-        public Dictionary<string, int> MiscItems { get; set; } = new Dictionary<string, int>(); // <--- Added
+        public Dictionary<string, int> MiscItems { get; set; } = new Dictionary<string, int>();
 
-        // --- MOVES ---
-        /// <summary>
-        /// Stores infinite list of acquired Spells.
-        /// </summary>
-        public List<MoveEntry> Spells { get; set; } = new List<MoveEntry>();
+        // --- LEGACY ACCESSORS (Redirect to Leader for backward compatibility) ---
+        public int Level { get => Leader?.Level ?? 1; set { if (Leader != null) Leader.Level = value; } }
+        public int MaxHP { get => Leader?.MaxHP ?? 100; set { if (Leader != null) Leader.MaxHP = value; } }
+        public int CurrentHP { get => Leader?.CurrentHP ?? 100; set { if (Leader != null) Leader.CurrentHP = value; } }
+        public int MaxMana { get => Leader?.MaxMana ?? 100; set { if (Leader != null) Leader.MaxMana = value; } }
+        public int CurrentMana { get => Leader?.CurrentMana ?? 100; set { if (Leader != null) Leader.CurrentMana = value; } }
+        public int Strength { get => Leader?.Strength ?? 10; set { if (Leader != null) Leader.Strength = value; } }
+        public int Intelligence { get => Leader?.Intelligence ?? 10; set { if (Leader != null) Leader.Intelligence = value; } }
+        public int Tenacity { get => Leader?.Tenacity ?? 10; set { if (Leader != null) Leader.Tenacity = value; } }
+        public int Agility { get => Leader?.Agility ?? 10; set { if (Leader != null) Leader.Agility = value; } }
+        public List<int> DefensiveElementIDs { get => Leader?.DefensiveElementIDs ?? new List<int>(); set { if (Leader != null) Leader.DefensiveElementIDs = value; } }
+        public string DefaultStrikeMoveID { get => Leader?.DefaultStrikeMoveID ?? ""; set { if (Leader != null) Leader.DefaultStrikeMoveID = value; } }
+        public int PortraitIndex { get => Leader?.PortraitIndex ?? 0; set { if (Leader != null) Leader.PortraitIndex = value; } }
 
-        /// <summary>
-        /// Stores infinite list of acquired Actions.
-        /// </summary>
-        public List<MoveEntry> Actions { get; set; } = new List<MoveEntry>();
+        public string? EquippedWeaponId { get => Leader?.EquippedWeaponId; set { if (Leader != null) Leader.EquippedWeaponId = value; } }
+        public string? EquippedArmorId { get => Leader?.EquippedArmorId; set { if (Leader != null) Leader.EquippedArmorId = value; } }
+        public string?[] EquippedRelics { get => Leader?.EquippedRelics ?? new string?[3]; set { if (Leader != null) Leader.EquippedRelics = value; } }
+        public MoveEntry?[] EquippedSpells { get => Leader?.EquippedSpells ?? new MoveEntry?[4]; set { if (Leader != null) Leader.EquippedSpells = value; } }
+        public List<MoveEntry> Spells { get => Leader?.Spells ?? new List<MoveEntry>(); set { if (Leader != null) Leader.Spells = value; } }
+        public List<MoveEntry> Actions { get => Leader?.Actions ?? new List<MoveEntry>(); set { if (Leader != null) Leader.Actions = value; } }
 
-        // --- EQUIPMENT ---
-        public string? EquippedWeaponId { get; set; }
-        public string? EquippedArmorId { get; set; }
-
-        /// <summary>
-        /// The player's 3 active relic slots. Only these provide passive abilities in combat.
-        /// </summary>
-        public string?[] EquippedRelics { get; set; } = new string?[3];
-
-        /// <summary>
-        /// The player's 4 active combat move slots (Spells only).
-        /// </summary>
-        public MoveEntry?[] EquippedSpells { get; set; } = new MoveEntry?[4];
-
-        /// <summary>
-        /// Helper to get the raw base stat without modifiers.
-        /// </summary>
-        public int GetBaseStat(string statName)
+        public PlayerState()
         {
+            // Ensure there is always at least one member (the leader)
+            Party.Add(new PartyMember { Name = "Player" });
+        }
+
+        // --- PARTY MANAGEMENT ---
+
+        /// <summary>
+        /// Attempts to add a new member to the party.
+        /// Checks for duplicates and party size limits.
+        /// </summary>
+        /// <param name="member">The member to add.</param>
+        /// <returns>True if added successfully, False otherwise.</returns>
+        public bool AddPartyMember(PartyMember member)
+        {
+            if (Party.Count >= 4)
+            {
+                Debug.WriteLine("[error] Error: Cannot add member. Party is full (Max 4).");
+                return false;
+            }
+
+            // Check for duplicate by Name (assuming Name is unique for party members)
+            if (Party.Any(m => m.Name.Equals(member.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                Debug.WriteLine($"[error] Error: Cannot add member. '{member.Name}' is already in the party.");
+                return false;
+            }
+
+            Party.Add(member);
+            return true;
+        }
+
+        // --- STAT CALCULATIONS ---
+
+        // Overload for backward compatibility (defaults to Leader)
+        public int GetBaseStat(string statName) => GetBaseStat(Leader, statName);
+
+        public int GetBaseStat(PartyMember member, string statName)
+        {
+            if (member == null) return 0;
             switch (statName.ToLowerInvariant())
             {
-                case "strength": return Strength;
-                case "intelligence": return Intelligence;
-                case "tenacity": return Tenacity;
-                case "agility": return Agility;
-                case "maxhp": return MaxHP;
-                case "maxmana": return MaxMana;
-                case "level": return Level;
+                case "strength": return member.Strength;
+                case "intelligence": return member.Intelligence;
+                case "tenacity": return member.Tenacity;
+                case "agility": return member.Agility;
+                case "maxhp": return member.MaxHP;
+                case "maxmana": return member.MaxMana;
+                case "level": return member.Level;
                 default: return 0;
             }
         }
 
-        /// <summary>
-        /// Calculates the effective value of a stat by adding bonuses from equipped relics, weapons, AND armor to the base value.
-        /// Enforces a minimum value of 1.
-        /// </summary>
-        /// <param name="statName">The name of the stat (e.g., "Strength", "MaxHP"). Case-insensitive.</param>
-        /// <returns>The total effective value.</returns>
-        public int GetEffectiveStat(string statName)
+        // Overload for backward compatibility (defaults to Leader)
+        public int GetEffectiveStat(string statName) => GetEffectiveStat(Leader, statName);
+
+        public int GetEffectiveStat(PartyMember member, string statName)
         {
-            int baseValue = GetBaseStat(statName);
+            if (member == null) return 0;
+            int baseValue = GetBaseStat(member, statName);
             int bonus = 0;
 
             // 1. Relic Bonuses
-            foreach (var relicId in EquippedRelics)
+            foreach (var relicId in member.EquippedRelics)
             {
                 if (!string.IsNullOrEmpty(relicId) && BattleDataCache.Relics.TryGetValue(relicId, out var relic))
                 {
-                    if (relic.StatModifiers.TryGetValue(statName, out int mod))
-                    {
-                        bonus += mod;
-                    }
+                    if (relic.StatModifiers.TryGetValue(statName, out int mod)) bonus += mod;
                 }
             }
 
             // 2. Weapon Bonuses
-            if (!string.IsNullOrEmpty(EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(EquippedWeaponId, out var weapon))
+            if (!string.IsNullOrEmpty(member.EquippedWeaponId) && BattleDataCache.Weapons.TryGetValue(member.EquippedWeaponId, out var weapon))
             {
-                if (weapon.StatModifiers.TryGetValue(statName, out int mod))
-                {
-                    bonus += mod;
-                }
+                if (weapon.StatModifiers.TryGetValue(statName, out int mod)) bonus += mod;
             }
 
             // 3. Armor Bonuses
-            if (!string.IsNullOrEmpty(EquippedArmorId) && BattleDataCache.Armors.TryGetValue(EquippedArmorId, out var armor))
+            if (!string.IsNullOrEmpty(member.EquippedArmorId) && BattleDataCache.Armors.TryGetValue(member.EquippedArmorId, out var armor))
             {
-                if (armor.StatModifiers.TryGetValue(statName, out int mod))
-                {
-                    bonus += mod;
-                }
+                if (armor.StatModifiers.TryGetValue(statName, out int mod)) bonus += mod;
             }
 
-            // Ensure stats don't drop below 1
             return Math.Max(1, baseValue + bonus);
         }
 
-        // --- WEAPON MANAGEMENT ---
+        // --- INVENTORY MANAGEMENT (Shared) ---
         public void AddWeapon(string weaponId, int quantity = 1)
         {
             if (Weapons.ContainsKey(weaponId)) Weapons[weaponId] += quantity;
@@ -149,12 +144,15 @@ namespace ProjectVagabond
                 Weapons[weaponId] = Math.Max(0, current - quantity);
                 if (Weapons[weaponId] == 0) Weapons.Remove(weaponId);
 
-                if (EquippedWeaponId == weaponId && Weapons.GetValueOrDefault(weaponId) == 0)
-                    EquippedWeaponId = null;
+                // Check unequip for ALL party members
+                foreach (var member in Party)
+                {
+                    if (member.EquippedWeaponId == weaponId && Weapons.GetValueOrDefault(weaponId) == 0)
+                        member.EquippedWeaponId = null;
+                }
             }
         }
 
-        // --- ARMOR MANAGEMENT ---
         public void AddArmor(string armorId, int quantity = 1)
         {
             if (Armors.ContainsKey(armorId)) Armors[armorId] += quantity;
@@ -168,12 +166,14 @@ namespace ProjectVagabond
                 Armors[armorId] = Math.Max(0, current - quantity);
                 if (Armors[armorId] == 0) Armors.Remove(armorId);
 
-                if (EquippedArmorId == armorId && Armors.GetValueOrDefault(armorId) == 0)
-                    EquippedArmorId = null;
+                foreach (var member in Party)
+                {
+                    if (member.EquippedArmorId == armorId && Armors.GetValueOrDefault(armorId) == 0)
+                        member.EquippedArmorId = null;
+                }
             }
         }
 
-        // --- RELIC MANAGEMENT ---
         public void AddRelic(string relicId, int quantity = 1)
         {
             if (Relics.ContainsKey(relicId)) Relics[relicId] += quantity;
@@ -186,18 +186,9 @@ namespace ProjectVagabond
             {
                 Relics[relicId] = Math.Max(0, current - quantity);
                 if (Relics[relicId] == 0) Relics.Remove(relicId);
-
-                if (!Relics.ContainsKey(relicId))
-                {
-                    for (int i = 0; i < EquippedRelics.Length; i++)
-                    {
-                        if (EquippedRelics[i] == relicId) EquippedRelics[i] = null;
-                    }
-                }
             }
         }
 
-        // --- CONSUMABLE MANAGEMENT ---
         public void AddConsumable(string itemId, int quantity = 1)
         {
             if (Consumables.ContainsKey(itemId)) Consumables[itemId] += quantity;
@@ -215,7 +206,6 @@ namespace ProjectVagabond
             return false;
         }
 
-        // --- MISC MANAGEMENT ---
         public void AddMiscItem(string itemId, int quantity = 1)
         {
             if (MiscItems.ContainsKey(itemId)) MiscItems[itemId] += quantity;
@@ -233,50 +223,41 @@ namespace ProjectVagabond
             return false;
         }
 
-        // --- MOVE MANAGEMENT ---
-        public void AddMove(string moveId)
+        // --- MOVE MANAGEMENT (Target specific member) ---
+        public void AddMove(string moveId, PartyMember member = null)
         {
-            if (!BattleDataCache.Moves.TryGetValue(moveId, out var moveData)) return;
+            var target = member ?? Leader;
+            if (target == null || !BattleDataCache.Moves.TryGetValue(moveId, out var moveData)) return;
 
             if (moveData.MoveType == MoveType.Spell)
             {
-                if (!Spells.Any(m => m.MoveID == moveId))
-                {
-                    Spells.Add(new MoveEntry(moveId, 0));
-                }
+                if (!target.Spells.Any(m => m.MoveID == moveId)) target.Spells.Add(new MoveEntry(moveId, 0));
             }
             else if (moveData.MoveType == MoveType.Action)
             {
-                if (!Actions.Any(m => m.MoveID == moveId))
-                {
-                    Actions.Add(new MoveEntry(moveId, 0));
-                }
+                if (!target.Actions.Any(m => m.MoveID == moveId)) target.Actions.Add(new MoveEntry(moveId, 0));
             }
         }
 
-        public void RemoveMove(string moveId)
+        public void RemoveMove(string moveId, PartyMember member = null)
         {
-            // Try removing from Spells
-            var spellIndex = Spells.FindIndex(m => m.MoveID == moveId);
+            var target = member ?? Leader;
+            if (target == null) return;
+
+            var spellIndex = target.Spells.FindIndex(m => m.MoveID == moveId);
             if (spellIndex != -1)
             {
-                var entry = Spells[spellIndex];
-                Spells.RemoveAt(spellIndex);
-
-                // Unequip if equipped
-                for (int i = 0; i < EquippedSpells.Length; i++)
+                var entry = target.Spells[spellIndex];
+                target.Spells.RemoveAt(spellIndex);
+                for (int i = 0; i < target.EquippedSpells.Length; i++)
                 {
-                    if (EquippedSpells[i] == entry) EquippedSpells[i] = null;
+                    if (target.EquippedSpells[i] == entry) target.EquippedSpells[i] = null;
                 }
                 return;
             }
 
-            // Try removing from Actions
-            var actionIndex = Actions.FindIndex(m => m.MoveID == moveId);
-            if (actionIndex != -1)
-            {
-                Actions.RemoveAt(actionIndex);
-            }
+            var actionIndex = target.Actions.FindIndex(m => m.MoveID == moveId);
+            if (actionIndex != -1) target.Actions.RemoveAt(actionIndex);
         }
     }
 }

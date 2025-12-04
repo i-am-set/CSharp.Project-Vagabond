@@ -20,7 +20,8 @@ namespace ProjectVagabond.Battle
     {
         Move,
         Item,
-        Charging
+        Charging,
+        Switch // New type for VGC switching
     }
 
     public class QueuedAction
@@ -35,7 +36,13 @@ namespace ProjectVagabond.Battle
         public MoveEntry? SpellbookEntry { get; set; }
 
         public ConsumableItemData? ChosenItem { get; set; }
+
+        /// <summary>
+        /// For Moves/Items: The target of the action.
+        /// For Switch: The benched combatant to swap in.
+        /// </summary>
         public BattleCombatant? Target { get; set; }
+
         public int Priority { get; set; }
         public int ActorAgility { get; set; }
         public bool IsLastActionInRound { get; set; } = false;

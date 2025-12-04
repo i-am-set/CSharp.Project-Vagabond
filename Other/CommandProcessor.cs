@@ -36,6 +36,9 @@ namespace ProjectVagabond
             {
                 var sb = new StringBuilder();
                 sb.AppendLine("[palette_yellow]Available Commands:[/]");
+                sb.AppendLine("  [palette_teal]Party[/]");
+                sb.AppendLine("    addmember <id>      - Adds a party member (max 4).");
+                sb.AppendLine();
                 sb.AppendLine("  [palette_teal]Inventory & Items[/]");
                 sb.AppendLine("    inventory           - Shows all inventories (inc. spells/actions).");
                 sb.AppendLine("    giveweapon <id> [n] - Adds weapon(s).");
@@ -69,6 +72,58 @@ namespace ProjectVagabond
             }, "help - Shows this help message.");
 
             _commands["clear"] = new Command("clear", (args) => ServiceLocator.Get<Utils.DebugConsole>().ClearHistory(), "clear - Clears history.");
+
+            // --- PARTY COMMANDS ---
+            _commands["addmember"] = new Command("addmember", (args) =>
+            {
+                _gameState ??= ServiceLocator.Get<GameState>();
+                if (_gameState.PlayerState == null) return;
+                if (args.Length < 2) { EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Usage: addmember <MemberID>" }); return; }
+
+                string memberId = args[1];
+
+                var newMember = PartyMemberFactory.CreateMember(memberId);
+                if (newMember != null)
+                {
+                    // Attempt to add using PlayerState logic (checks for duplicates and capacity)
+                    if (_gameState.PlayerState.AddPartyMember(newMember))
+                    {
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[palette_teal]Added {newMember.Name} to the party!" });
+
+                        // Add starting equipment to shared inventory ONLY if member was successfully added
+                        if (BattleDataCache.PartyMembers.TryGetValue(memberId, out var data))
+                        {
+                            foreach (var kvp in data.StartingEquipment)
+                            {
+                                if (BattleDataCache.Weapons.ContainsKey(kvp.Key)) _gameState.PlayerState.AddWeapon(kvp.Key, kvp.Value);
+                                else if (BattleDataCache.Armors.ContainsKey(kvp.Key)) _gameState.PlayerState.AddArmor(kvp.Key, kvp.Value);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Provide specific feedback based on why it failed
+                        if (_gameState.PlayerState.Party.Any(m => m.Name.Equals(newMember.Name, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Member '{newMember.Name}' is already in the party." });
+                        }
+                        else if (_gameState.PlayerState.Party.Count >= 4)
+                        {
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Party is full (Max 4)." });
+                        }
+                        else
+                        {
+                            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Failed to add member." });
+                        }
+                    }
+                }
+                else
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"[error]Member ID '{memberId}' not found." });
+                }
+
+            }, "addmember <id> - Adds a party member.",
+            (args) => args.Length == 0 ? BattleDataCache.PartyMembers.Keys.ToList() : new List<string>());
 
             // --- INVENTORY COMMANDS ---
             _commands["inventory"] = new Command("inventory", (args) => HandleShowInventory(), "inventory - Shows all items and moves.");

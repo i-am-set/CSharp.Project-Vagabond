@@ -1,19 +1,9 @@
 ﻿using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond;
 using ProjectVagabond.Battle;
-using ProjectVagabond.Battle.UI;
-using ProjectVagabond.Progression;
-using ProjectVagabond.Scenes;
-using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -26,8 +16,13 @@ namespace ProjectVagabond.Battle
         public CombatantStats Stats { get; set; }
         public float VisualHP { get; set; }
         public float VisualAlpha { get; set; } = 1.0f;
-        public float VisualSilhouetteAmount { get; set; } = 0f; // 0 = Normal, 1 = Full Silhouette
-        public Color? VisualSilhouetteColorOverride { get; set; } = null; // If null, defaults to DarkGray
+        public float VisualSilhouetteAmount { get; set; } = 0f;
+        public Color? VisualSilhouetteColorOverride { get; set; } = null;
+
+        // --- VGC SLOT SYSTEM ---
+        // 0 = Left Active, 1 = Right Active, 2+ = Bench
+        public int BattleSlot { get; set; } = -1;
+        public bool IsActiveOnField => BattleSlot == 0 || BattleSlot == 1;
 
         public List<MoveData> AvailableMoves
         {
@@ -174,7 +169,7 @@ namespace ProjectVagabond.Battle
                 {
                     var battleManager = ServiceLocator.Get<BattleManager>();
                     bool hpCondition = (float)Stats.CurrentHP / Stats.MaxHP * 100f < p[0];
-                    int enemyCount = battleManager.AllCombatants.Count(c => c.IsPlayerControlled != this.IsPlayerControlled && !c.IsDefeated);
+                    int enemyCount = battleManager.AllCombatants.Count(c => c.IsPlayerControlled != this.IsPlayerControlled && !c.IsDefeated && c.IsActiveOnField);
                     bool enemyCountCondition = enemyCount >= p[1];
 
                     if (hpCondition || enemyCountCondition)

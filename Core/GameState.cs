@@ -2,6 +2,7 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond;
 using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
@@ -73,7 +74,6 @@ namespace ProjectVagabond
         public HashSet<Point> ExploredCells { get; private set; } = new HashSet<Point>();
         private const int FOG_OF_WAR_RADIUS = 40;
 
-        // --- NEW: Death Tracking ---
         public string LastRunKiller { get; set; } = "Unknown";
 
         public GameState(NoiseMapManager noiseManager, ComponentStore componentStore, ChunkManager chunkManager, Global global, SpriteManager spriteManager)
@@ -95,93 +95,45 @@ namespace ProjectVagabond
 
         public void InitializeWorld()
         {
-            PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0));
-
+            // 1. Create PlayerState container
             PlayerState = new PlayerState();
-            var baseStats = _componentStore.GetComponent<PlayerBaseStatsComponent>(PlayerEntityId);
-            if (baseStats != null)
+            PlayerState.Party.Clear(); // Remove default dummy
+
+            // 2. Create "Oakley" (The Main Character)
+            var oakley = PartyMemberFactory.CreateMember("Oakley");
+            if (oakley == null)
             {
-                PlayerState.Level = 1;
-                PlayerState.MaxHP = baseStats.MaxHP;
-                PlayerState.MaxMana = baseStats.MaxMana;
-                PlayerState.Strength = baseStats.Strength;
-                PlayerState.Intelligence = baseStats.Intelligence;
-                PlayerState.Tenacity = baseStats.Tenacity;
-                PlayerState.Agility = baseStats.Agility;
-                PlayerState.DefensiveElementIDs = new List<int>(baseStats.DefensiveElementIDs);
-                PlayerState.DefaultStrikeMoveID = baseStats.DefaultStrikeMoveID;
+                throw new Exception("CRITICAL: Could not load 'Oakley' from PartyMembers.json");
+            }
+            PlayerState.Party.Add(oakley);
 
-                // Initialize Move Inventories
-                PlayerState.Spells = new List<MoveEntry>();
-                PlayerState.Actions = new List<MoveEntry>();
-
-                // --- VALIDATION & PARSING ---
-
-                // Validate and Parse Starting Moves
-                foreach (string rawMoveId in baseStats.StartingMoveIDs)
+            // 3. Add Oakley's starting gear to the shared inventory
+            if (BattleDataCache.PartyMembers.TryGetValue("Oakley", out var oakleyData))
+            {
+                foreach (var kvp in oakleyData.StartingEquipment)
                 {
-                    if (string.IsNullOrEmpty(rawMoveId)) continue;
-                    string moveId = rawMoveId.Trim();
-
-                    if (!BattleDataCache.Moves.TryGetValue(moveId, out var moveData))
-                    {
-                        throw new Exception($"[DATA ERROR] Player starting move '{moveId}' defined in player.json was not found in Moves.json.");
-                    }
-
-                    if (moveData.MoveType == MoveType.Spell)
-                    {
-                        PlayerState.Spells.Add(new MoveEntry(moveData.MoveID, 0)); // Use ID from cache to ensure casing
-                    }
-                    else if (moveData.MoveType == MoveType.Action)
-                    {
-                        PlayerState.Actions.Add(new MoveEntry(moveData.MoveID, 0));
-                    }
+                    if (BattleDataCache.Weapons.ContainsKey(kvp.Key)) PlayerState.AddWeapon(kvp.Key, kvp.Value);
+                    else if (BattleDataCache.Armors.ContainsKey(kvp.Key)) PlayerState.AddArmor(kvp.Key, kvp.Value);
                 }
-
-                // Validate and Parse Starting Relics
-                foreach (var kvp in baseStats.StartingRelics)
-                {
-                    string relicId = kvp.Key.Trim();
-                    if (!BattleDataCache.Relics.TryGetValue(relicId, out var relicData))
-                    {
-                        throw new Exception($"[DATA ERROR] Player starting relic '{relicId}' defined in player.json was not found in Relics.json.");
-                    }
-                    PlayerState.AddRelic(relicData.RelicID, kvp.Value); // Use ID from cache
-                }
-
-                // Validate and Parse Starting Consumables
-                foreach (var kvp in baseStats.StartingConsumables)
-                {
-                    string itemId = kvp.Key.Trim();
-                    if (!BattleDataCache.Consumables.TryGetValue(itemId, out var itemData))
-                    {
-                        throw new Exception($"[DATA ERROR] Player starting consumable '{itemId}' defined in player.json was not found in Consumables.json.");
-                    }
-                    PlayerState.AddConsumable(itemData.ItemID, kvp.Value); // Use ID from cache
-                }
-
-                // Parse Starting Weapons (Validation logic would go here if Weapons.json existed)
-                foreach (var kvp in baseStats.StartingWeapons) PlayerState.AddWeapon(kvp.Key.Trim(), kvp.Value);
-
-                // Parse Starting Armor (Validation logic would go here if Armor.json existed)
-                foreach (var kvp in baseStats.StartingArmor) PlayerState.AddArmor(kvp.Key.Trim(), kvp.Value);
             }
 
-            // Create and add the live CombatantStatsComponent
+            // 4. Spawn the Entity in the world
+            PlayerEntityId = Spawner.Spawn("player", worldPosition: new Vector2(0, 0));
+
+            // 5. Sync Entity Components with Oakley's Stats
             var liveStats = new CombatantStatsComponent
             {
-                Level = PlayerState.Level,
-                MaxHP = PlayerState.MaxHP,
-                CurrentHP = PlayerState.MaxHP,
-                MaxMana = PlayerState.MaxMana,
-                CurrentMana = PlayerState.MaxMana,
-                Strength = PlayerState.Strength,
-                Intelligence = PlayerState.Intelligence,
-                Tenacity = PlayerState.Tenacity,
-                Agility = PlayerState.Agility,
-                DefensiveElementIDs = new List<int>(PlayerState.DefensiveElementIDs),
-                // Combine known spells and actions for the component, just in case
-                AvailableMoveIDs = PlayerState.Spells.Select(m => m.MoveID).Concat(PlayerState.Actions.Select(m => m.MoveID)).ToList()
+                Level = oakley.Level,
+                MaxHP = oakley.MaxHP,
+                CurrentHP = oakley.MaxHP,
+                MaxMana = oakley.MaxMana,
+                CurrentMana = oakley.MaxMana,
+                Strength = oakley.Strength,
+                Intelligence = oakley.Intelligence,
+                Tenacity = oakley.Tenacity,
+                Agility = oakley.Agility,
+                DefensiveElementIDs = new List<int>(oakley.DefensiveElementIDs),
+                AvailableMoveIDs = oakley.Spells.Select(m => m.MoveID).Concat(oakley.Actions.Select(m => m.MoveID)).ToList()
             };
             _componentStore.AddComponent(PlayerEntityId, liveStats);
 
@@ -207,7 +159,6 @@ namespace ProjectVagabond
             LastRunKiller = "Unknown";
         }
 
-        // ... [Rest of the class remains the same] ...
         public void UpdateExploration(Vector2 centerPosition)
         {
             int radius = FOG_OF_WAR_RADIUS;
@@ -490,4 +441,3 @@ namespace ProjectVagabond
         }
     }
 }
-﻿
