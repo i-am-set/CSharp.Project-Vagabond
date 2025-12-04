@@ -18,6 +18,7 @@ namespace ProjectVagabond.Battle.UI
     {
         public event Action<MoveData, MoveEntry, BattleCombatant>? OnMoveSelected;
         public event Action? OnItemMenuRequested;
+        public event Action? OnSwitchMenuRequested;
         public event Action? OnMovesMenuOpened;
         public event Action? OnMainMenuOpened;
         public event Action? OnFleeRequested;
@@ -90,7 +91,7 @@ namespace ProjectVagabond.Battle.UI
         private bool _shouldAttuneButtonPulse = false;
 
         // --- Moves Menu Layout Constants ---
-        private const int MOVE_BUTTON_WIDTH = 118; // Reduced from 128
+        private const int MOVE_BUTTON_WIDTH = 118;
         private const int MOVE_BUTTON_HEIGHT = 9;
         private const int MOVE_ROW_SPACING = 1;
         private const int MOVE_ROWS = 4;
@@ -124,14 +125,17 @@ namespace ProjectVagabond.Battle.UI
 
             var spriteManager = ServiceLocator.Get<SpriteManager>();
             var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+            var defaultFont = ServiceLocator.Get<BitmapFont>(); // Use Default Font for Main Buttons
             var actionIconsSheet = spriteManager.ActionIconsSpriteSheet;
             var actionIconRects = spriteManager.ActionIconSourceRects;
 
             // Main Menu Buttons - Converted to standard Buttons for 128x12 layout
-            // Disabled hover sway, set custom hover text color to White, and moved text up 1 pixel
-            var actButton = new Button(Rectangle.Empty, "ACT", function: "Act", font: secondaryFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = new Vector2(0, -1) };
-            var itemButton = new Button(Rectangle.Empty, "ITEM", function: "Item", font: secondaryFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = new Vector2(0, -1) };
-            var runButton = new Button(Rectangle.Empty, "RUN", function: "Flee", font: secondaryFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = new Vector2(0, -1) };
+            // Disabled hover sway, set custom hover text color to White.
+            // TextRenderOffset set to Zero to move text up 1 pixel.
+            // Font set to defaultFont.
+            var actButton = new Button(Rectangle.Empty, "ACT", function: "Act", font: defaultFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = Vector2.Zero };
+            var itemButton = new Button(Rectangle.Empty, "ITEM", function: "Item", font: defaultFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = Vector2.Zero };
+            var switchButton = new Button(Rectangle.Empty, "SWITCH", function: "Switch", font: defaultFont, enableHoverSway: false) { CustomHoverTextColor = Color.White, TextRenderOffset = Vector2.Zero };
 
             actButton.OnClick += () => {
                 if (_isSpamming) { actButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
@@ -141,22 +145,23 @@ namespace ProjectVagabond.Battle.UI
                 if (_isSpamming) { itemButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
                 OnItemMenuRequested?.Invoke();
             };
-            runButton.OnClick += () => {
-                if (_isSpamming) { runButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
-                OnFleeRequested?.Invoke();
+
+            // Switch Logic
+            switchButton.OnClick += () => {
+                if (_isSpamming) { switchButton.TriggerShake(); EventBus.Publish(new GameEvents.AlertPublished { Message = "Spam Prevention" }); return; }
+                OnSwitchMenuRequested?.Invoke();
             };
 
             _actionButtons.Add(actButton);
             _actionButtons.Add(itemButton);
-            _actionButtons.Add(runButton);
+            _actionButtons.Add(switchButton);
 
-            // Secondary Action Buttons
-            // Pass null for background texture to make it transparent
+            // Secondary Action Buttons (Strike, Attune, Stall) - Keep Secondary Font
             var strikeButton = new TextOverImageButton(Rectangle.Empty, "STRIKE", null, font: secondaryFont, iconTexture: actionIconsSheet, iconSourceRect: actionIconRects[0], enableHoverSway: false, customHoverTextColor: Color.White)
             {
                 HasRightClickHint = true,
                 TintBackgroundOnHover = false,
-                DrawBorderOnHover = false, // We draw borders manually
+                DrawBorderOnHover = false,
                 HoverBorderColor = _global.Palette_Red
             };
             strikeButton.OnClick += () => {
@@ -171,7 +176,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 HasRightClickHint = true,
                 TintBackgroundOnHover = false,
-                DrawBorderOnHover = false, // We draw borders manually
+                DrawBorderOnHover = false,
                 HoverBorderColor = _global.Palette_Red
             };
             attuneButton.OnClick += () => {
@@ -186,7 +191,7 @@ namespace ProjectVagabond.Battle.UI
             {
                 HasRightClickHint = true,
                 TintBackgroundOnHover = false,
-                DrawBorderOnHover = false, // We draw borders manually
+                DrawBorderOnHover = false,
                 HoverBorderColor = _global.Palette_Red
             };
             stallButton.OnClick += () => {
@@ -552,6 +557,19 @@ namespace ProjectVagabond.Battle.UI
             {
                 case MenuState.Main:
                     bool isAnyActionHovered = false;
+
+                    // Update Switch Button Enable State
+                    if (_allCombatants != null)
+                    {
+                        // Check if there are any player-controlled combatants on the bench (Slot >= 2)
+                        bool hasBench = _allCombatants.Any(c => c.IsPlayerControlled && !c.IsDefeated && c.BattleSlot >= 2);
+                        // The Switch button is the 3rd button (index 2)
+                        if (_actionButtons.Count > 2)
+                        {
+                            _actionButtons[2].IsEnabled = hasBench;
+                        }
+                    }
+
                     foreach (var button in _actionButtons)
                     {
                         button.Update(currentMouseState);
@@ -714,7 +732,7 @@ namespace ProjectVagabond.Battle.UI
                 case MenuState.Main:
                     {
                         const int buttonWidth = 128;
-                        const int buttonHeight = 12;
+                        const int buttonHeight = 14; // Increased from 13
                         const int buttonSpacing = 0; // No gap
 
                         int totalHeight = (buttonHeight * _actionButtons.Count) + (buttonSpacing * (_actionButtons.Count - 1));
@@ -733,6 +751,8 @@ namespace ProjectVagabond.Battle.UI
 
                             // Draw manual border for the button (Inset by 1 pixel)
                             var borderColor = button.IsHovered ? _global.ButtonHoverColor : _global.Palette_DarkerGray;
+                            if (!button.IsEnabled) borderColor = _global.Palette_DarkerGray; // Ensure disabled buttons don't glow
+
                             var borderRect = new Rectangle(button.Bounds.X + 1, button.Bounds.Y + 1, button.Bounds.Width - 2, button.Bounds.Height - 2);
 
                             spriteBatch.DrawSnapped(pixel, new Rectangle(borderRect.Left, borderRect.Top, borderRect.Width, 1), borderColor); // Top

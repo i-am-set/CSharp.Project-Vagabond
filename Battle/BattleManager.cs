@@ -1,5 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
+using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
@@ -202,6 +208,16 @@ namespace ProjectVagabond.Battle
             _currentPhase = BattlePhase.ActionResolution;
         }
 
+        public List<BattleCombatant> GetReservedBenchMembers()
+        {
+            var reserved = new List<BattleCombatant>();
+            if (_pendingSlot1Action != null && _pendingSlot1Action.Type == QueuedActionType.Switch && _pendingSlot1Action.Target != null)
+            {
+                reserved.Add(_pendingSlot1Action.Target);
+            }
+            return reserved;
+        }
+
         public void Update()
         {
             if (_currentPhase == BattlePhase.BattleOver) return;
@@ -319,7 +335,14 @@ namespace ProjectVagabond.Battle
             }
 
             _actionToExecute = nextAction;
-            EventBus.Publish(new GameEvents.ActionDeclared { Actor = _actionToExecute.Actor, Move = _actionToExecute.ChosenMove, Item = _actionToExecute.ChosenItem });
+            EventBus.Publish(new GameEvents.ActionDeclared
+            {
+                Actor = _actionToExecute.Actor,
+                Move = _actionToExecute.ChosenMove,
+                Item = _actionToExecute.ChosenItem,
+                Target = _actionToExecute.Target,
+                Type = _actionToExecute.Type
+            });
             CanAdvance = false;
         }
 
@@ -366,8 +389,6 @@ namespace ProjectVagabond.Battle
 
             actor.BattleSlot = newSlot;
             target.BattleSlot = oldSlot;
-
-            EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{actor.Name} switches with {target.Name}!" });
 
             // Trigger OnEnter abilities for the new unit
             HandleOnEnterAbilities(target);

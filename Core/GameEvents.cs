@@ -4,10 +4,13 @@ using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Scenes;
+using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace ProjectVagabond
@@ -93,8 +96,10 @@ namespace ProjectVagabond
         public struct ActionDeclared
         {
             public BattleCombatant Actor { get; set; }
-            public MoveData Move { get; set; }
-            public ConsumableItemData Item { get; set; }
+            public MoveData? Move { get; set; }
+            public ConsumableItemData? Item { get; set; }
+            public BattleCombatant? Target { get; set; }
+            public QueuedActionType Type { get; set; }
         }
 
         /// <summary>

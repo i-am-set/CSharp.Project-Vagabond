@@ -64,6 +64,7 @@ namespace ProjectVagabond
                 sb.AppendLine("    clear               - Clears console.");
                 sb.AppendLine("    exit                - Exits game.");
                 sb.AppendLine("    debugcombat         - Starts a random forest combat (SplitMap only).");
+                sb.AppendLine("    combatrun           - Flees from combat if active.");
 
                 foreach (var line in sb.ToString().Split(new[] { Environment.NewLine }, StringSplitOptions.None))
                 {
@@ -228,6 +229,20 @@ namespace ProjectVagabond
                     EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Command only available in Split Map Scene." });
                 }
             }, "debugcombat - Starts a random forest encounter (SplitMap only).");
+
+            _commands["combatrun"] = new Command("combatrun", (args) =>
+            {
+                var sceneManager = ServiceLocator.Get<SceneManager>();
+                if (sceneManager.CurrentActiveScene is BattleScene battleScene)
+                {
+                    battleScene.TriggerFlee();
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "Attempting to flee..." });
+                }
+                else
+                {
+                    EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = "[error]Not in combat." });
+                }
+            }, "combatrun - Flees from combat if active.");
 
             _commands["exit"] = new Command("exit", (args) => ServiceLocator.Get<Core>().ExitApplication(), "exit");
         }

@@ -37,5 +37,25 @@
     "StartingEquipment": {
       "ArchMageRobes": 1
     }
+  },
+  {
+    "MemberID": "Luna",
+    "Name": "Luna",
+    "ArchetypeId": "wanderer",
+    "Description": "A silent hunter who strikes from the shadows.",
+    "MaxHP": 85,
+    "MaxMana": 110,
+    "Strength": 14,
+    "Intelligence": 10,
+    "Tenacity": 6,
+    "Agility": 18,
+    "DefensiveElementIDs": [ 101 ],
+    "DefaultStrikeMoveID": "VenomJab",
+    "StartingSpells": [ "VenomJab", "SwiftStrike" ],
+    "StartingActions": [ "Dodge" ],
+    "StartingEquipment": {
+      "PoisonDagger": 1,
+      "LeatherTunic": 1
+    }
   }
 ]

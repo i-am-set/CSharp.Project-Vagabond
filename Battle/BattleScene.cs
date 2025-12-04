@@ -163,6 +163,7 @@ namespace ProjectVagabond.Scenes
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
+            _uiManager.OnSwitchActionSelected += OnPlayerSwitchSelected; // Subscribe
             _uiManager.OnFleeRequested += FleeBattle;
             _inputHandler.OnMoveTargetSelected += OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected += OnPlayerItemSelected;
@@ -188,6 +189,7 @@ namespace ProjectVagabond.Scenes
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
+            _uiManager.OnSwitchActionSelected -= OnPlayerSwitchSelected; // Unsubscribe
             _uiManager.OnFleeRequested -= FleeBattle;
             _inputHandler.OnMoveTargetSelected -= OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected -= OnPlayerItemSelected;
@@ -681,6 +683,12 @@ namespace ProjectVagabond.Scenes
             spriteBatch.End();
         }
 
+        // Public method to trigger flee logic
+        public void TriggerFlee()
+        {
+            FleeBattle();
+        }
+
         #region Event Handlers
         private void OnPlayerMoveSelected(MoveData move, MoveEntry entry, BattleCombatant target)
         {
@@ -719,12 +727,37 @@ namespace ProjectVagabond.Scenes
             _uiManager.HideAllMenus();
         }
 
+        private void OnPlayerSwitchSelected(BattleCombatant targetMember)
+        {
+            var player = _battleManager.CurrentActingCombatant;
+            if (player == null) return;
+
+            var action = new QueuedAction
+            {
+                Actor = player,
+                Target = targetMember,
+                Priority = 6, // High priority for switching
+                ActorAgility = player.Stats.Agility,
+                Type = QueuedActionType.Switch
+            };
+            _battleManager.SubmitAction(action);
+            _uiManager.HideAllMenus();
+        }
+
         private void OnActionDeclared(GameEvents.ActionDeclared e)
         {
             _actionJustDeclared = true;
             _currentActor = e.Actor;
-            string actionName = e.Item != null ? e.Item.ItemName : e.Move.MoveName;
-            _uiManager.ShowNarration($"{e.Actor.Name} uses {actionName}!");
+
+            if (e.Type == QueuedActionType.Switch)
+            {
+                _uiManager.ShowNarration($"{e.Actor.Name} switches to {e.Target?.Name}!");
+            }
+            else
+            {
+                string actionName = e.Item != null ? e.Item.ItemName : (e.Move != null ? e.Move.MoveName : "Unknown Action");
+                _uiManager.ShowNarration($"{e.Actor.Name} uses {actionName}!");
+            }
         }
 
         private void OnMoveAnimationTriggered(GameEvents.MoveAnimationTriggered e)

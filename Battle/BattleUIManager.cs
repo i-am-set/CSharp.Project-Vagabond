@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -15,18 +14,20 @@ using System.Text;
 
 namespace ProjectVagabond.Battle.UI
 {
-    public enum BattleUIState { Default, Targeting, ItemTargeting }
-    public enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item }
+    public enum BattleUIState { Default, Targeting, ItemTargeting, Switch } // Added Switch
+    public enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item, Switch } // Added Switch
     public class HoverHighlightState { public MoveData? CurrentMove; public List<BattleCombatant> Targets = new List<BattleCombatant>(); public float Timer = 0f; public const float SingleTargetFlashOnDuration = 0.4f; public const float SingleTargetFlashOffDuration = 0.2f; public const float MultiTargetFlashOnDuration = 0.4f; public const float MultiTargetFlashOffDuration = 0.4f; }
     public class BattleUIManager
     {
         public event Action<MoveData, MoveEntry, BattleCombatant>? OnMoveSelected;
         public event Action<ConsumableItemData, BattleCombatant>? OnItemSelected;
+        public event Action<BattleCombatant>? OnSwitchActionSelected; // New Event
         public event Action? OnFleeRequested;
 
         private readonly BattleNarrator _battleNarrator;
         private readonly ActionMenu _actionMenu;
         private readonly ItemMenu _itemMenu;
+        private readonly SwitchMenu _switchMenu; // New Menu
         private readonly Button _itemTargetingBackButton;
         private readonly Global _global;
 
@@ -73,6 +74,7 @@ namespace ProjectVagabond.Battle.UI
             _battleNarrator = new BattleNarrator(_narratorBounds);
             _actionMenu = new ActionMenu();
             _itemMenu = new ItemMenu();
+            _switchMenu = new SwitchMenu(); // Initialize
 
             // Initialize with correct style
             _itemTargetingBackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
@@ -84,12 +86,25 @@ namespace ProjectVagabond.Battle.UI
 
             _actionMenu.OnMoveSelected += HandlePlayerMoveSelected;
             _actionMenu.OnItemMenuRequested += OnItemMenuRequested;
+            _actionMenu.OnSwitchMenuRequested += OnSwitchMenuRequested; // Wire up
             _actionMenu.OnMovesMenuOpened += () => SubMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened += () => SubMenuState = BattleSubMenuState.ActionRoot;
             _actionMenu.OnFleeRequested += () => OnFleeRequested?.Invoke();
+
             _itemMenu.OnBack += OnItemMenuBack;
             _itemMenu.OnItemConfirmed += HandlePlayerItemSelected;
             _itemMenu.OnItemTargetingRequested += OnItemTargetingRequested;
+
+            _switchMenu.OnMemberSelected += (target) => OnSwitchActionSelected?.Invoke(target);
+            _switchMenu.OnBack += () => {
+                SubMenuState = BattleSubMenuState.ActionRoot;
+                _switchMenu.Hide();
+                var player = ServiceLocator.Get<BattleManager>().AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+                if (player != null)
+                {
+                    _actionMenu.Show(player, ServiceLocator.Get<BattleManager>().AllCombatants.ToList());
+                }
+            };
         }
 
         public void Reset()
@@ -112,6 +127,7 @@ namespace ProjectVagabond.Battle.UI
             SubMenuState = BattleSubMenuState.ActionRoot;
             _actionMenu.Show(player, allCombatants);
             _itemMenu.Hide();
+            _switchMenu.Hide();
         }
 
         public void HideAllMenus()
@@ -121,6 +137,7 @@ namespace ProjectVagabond.Battle.UI
             _actionMenu.Hide();
             _actionMenu.SetState(ActionMenu.MenuState.Main);
             _itemMenu.Hide();
+            _switchMenu.Hide();
         }
 
         public void ShowNarration(string message)
@@ -140,6 +157,16 @@ namespace ProjectVagabond.Battle.UI
             {
                 OnItemMenuBack();
             }
+            else if (SubMenuState == BattleSubMenuState.Switch)
+            {
+                SubMenuState = BattleSubMenuState.ActionRoot;
+                _switchMenu.Hide();
+                var player = ServiceLocator.Get<BattleManager>().AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+                if (player != null)
+                {
+                    _actionMenu.Show(player, ServiceLocator.Get<BattleManager>().AllCombatants.ToList());
+                }
+            }
             else
             {
                 _actionMenu.GoBack();
@@ -158,6 +185,10 @@ namespace ProjectVagabond.Battle.UI
             if (SubMenuState == BattleSubMenuState.Item)
             {
                 _itemMenu.Update(currentMouseState, gameTime);
+            }
+            else if (SubMenuState == BattleSubMenuState.Switch)
+            {
+                _switchMenu.Update(currentMouseState);
             }
 
             if (UIState == BattleUIState.ItemTargeting)
@@ -188,6 +219,10 @@ namespace ProjectVagabond.Battle.UI
             if (SubMenuState == BattleSubMenuState.Item)
             {
                 _itemMenu.Draw(spriteBatch, font, gameTime, transform);
+            }
+            else if (SubMenuState == BattleSubMenuState.Switch)
+            {
+                _switchMenu.Draw(spriteBatch, font, gameTime);
             }
             else
             {
@@ -391,6 +426,15 @@ namespace ProjectVagabond.Battle.UI
             SubMenuState = BattleSubMenuState.Item;
             _actionMenu.Hide();
             _itemMenu.Show(ServiceLocator.Get<BattleManager>().AllCombatants.ToList());
+        }
+
+        private void OnSwitchMenuRequested()
+        {
+            SubMenuState = BattleSubMenuState.Switch;
+            _actionMenu.Hide();
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var reserved = battleManager.GetReservedBenchMembers();
+            _switchMenu.Show(battleManager.AllCombatants.ToList(), reserved);
         }
 
         private void OnItemTargetingRequested(ConsumableItemData item)

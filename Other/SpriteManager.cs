@@ -40,6 +40,7 @@ namespace ProjectVagabond
         public Texture2D BattleBorderAction { get; private set; }
         public Texture2D BattleBorderItem { get; private set; }
         public Texture2D BattleBorderTarget { get; private set; }
+        public Texture2D BattleBorderSwitch { get; private set; } // New Border
 
         // Player Portraits
         public Texture2D PlayerPortraitsSpriteSheet { get; private set; }
@@ -274,6 +275,9 @@ namespace ProjectVagabond
 
             try { BattleBorderTarget = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_target"); }
             catch { BattleBorderTarget = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+
+            try { BattleBorderSwitch = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_switch"); }
+            catch { BattleBorderSwitch = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
 
             // Load Mouse Prompt Sprites
             try { MousePromptBlank = _core.Content.Load<Texture2D>("Sprites/UI/KeyPrompts/mouse/ui_mouse_blank"); }
