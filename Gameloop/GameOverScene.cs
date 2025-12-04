@@ -26,7 +26,6 @@ namespace ProjectVagabond.Scenes
         private readonly GameState _gameState;
         private readonly Global _global;
         private readonly SpriteManager _spriteManager;
-
         private readonly List<Button> _buttons = new();
         private int _selectedButtonIndex = -1;
 
@@ -34,6 +33,9 @@ namespace ProjectVagabond.Scenes
         private float _currentInputDelay = 0f;
 
         private string _gameOverText = "GAME OVER";
+
+        // Fade In State
+        private float _fadeInTimer = 0f;
 
         public GameOverScene()
         {
@@ -61,10 +63,11 @@ namespace ProjectVagabond.Scenes
 
             const int buttonPaddingX = 10;
             const int buttonPaddingY = 4;
-            const int buttonSpacing = 5;
+            const int buttonSpacing = 0; // No gap as requested
 
-            // Layout Calculation
-            int buttonStartY = (Global.VIRTUAL_HEIGHT / 2) + 10;
+            // --- Layout Calculation ---
+            // Text at roughly 1/3 down the screen
+            int textY = Global.VIRTUAL_HEIGHT / 3;
 
             // --- TRY AGAIN Button ---
             string text1 = "TRY AGAIN";
@@ -72,6 +75,9 @@ namespace ProjectVagabond.Scenes
             int w1 = (int)size1.X + buttonPaddingX * 2;
             int h1 = (int)size1.Y + buttonPaddingY * 2;
             int x1 = (Global.VIRTUAL_WIDTH - w1) / 2;
+
+            // Position buttons below text with some padding
+            int buttonStartY = textY + 20;
 
             var tryAgainButton = new Button(
                 new Rectangle(x1, buttonStartY, w1, h1),
@@ -112,6 +118,7 @@ namespace ProjectVagabond.Scenes
             InitializeUI();
 
             _currentInputDelay = _inputDelay;
+            _fadeInTimer = 0f; // Start fade in
 
             // Reset button states
             foreach (var button in _buttons)
@@ -142,14 +149,14 @@ namespace ProjectVagabond.Scenes
 
             // Re-run initialization tasks
             var loadingTasks = new List<LoadingTask>
+        {
+            new GenericTask("Initializing world...", () =>
             {
-                new GenericTask("Initializing world...", () =>
-                {
-                    gameState.InitializeWorld();
-                    gameState.InitializeRenderableEntities();
-                }),
-                new DiceWarmupTask()
-            };
+                gameState.InitializeWorld();
+                gameState.InitializeRenderableEntities();
+            }),
+            new DiceWarmupTask()
+        };
 
             loadingScreen.Clear();
             foreach (var task in loadingTasks)
@@ -176,9 +183,17 @@ namespace ProjectVagabond.Scenes
         {
             base.Update(gameTime);
 
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // Update Fade In
+            if (_fadeInTimer < Global.UniversalSlowFadeDuration)
+            {
+                _fadeInTimer += dt;
+            }
+
             if (_currentInputDelay > 0)
             {
-                _currentInputDelay -= (float)gameTime.ElapsedGameTime.TotalSeconds;
+                _currentInputDelay -= dt;
                 return; // Block input during delay
             }
 
@@ -253,9 +268,10 @@ namespace ProjectVagabond.Scenes
             float time = (float)gameTime.TotalGameTime.TotalSeconds;
             float bobOffset = MathF.Sin(time * 4f) > 0 ? -1f : 0f;
 
+            // Position text at 1/3 height
             Vector2 titlePos = new Vector2(
                 (Global.VIRTUAL_WIDTH - titleSize.X) / 2,
-                (Global.VIRTUAL_HEIGHT / 2) - titleSize.Y - 15 + bobOffset
+                (Global.VIRTUAL_HEIGHT / 3) - (titleSize.Y / 2) + bobOffset
             );
             spriteBatch.DrawStringSnapped(font, title, titlePos, _global.Palette_Red);
 
@@ -279,6 +295,19 @@ namespace ProjectVagabond.Scenes
                 {
                     spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Cyan * 0.5f);
                 }
+            }
+        }
+
+        public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            // Draw Fade In Overlay
+            if (_fadeInTimer < Global.UniversalSlowFadeDuration)
+            {
+                float alpha = 1.0f - Math.Clamp(_fadeInTimer / Global.UniversalSlowFadeDuration, 0f, 1f);
+                var pixel = ServiceLocator.Get<Texture2D>();
+                var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+                var screenBounds = new Rectangle(0, 0, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height);
+                spriteBatch.Draw(pixel, screenBounds, Color.Black * alpha);
             }
         }
 

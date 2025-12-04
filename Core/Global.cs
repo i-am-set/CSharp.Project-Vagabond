@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using MonoGame.Extended;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
 using ProjectVagabond.Battle;
@@ -50,7 +51,6 @@ namespace ProjectVagabond
             TerminalDarkGray = Palette_DarkGray;
             InputCaratColor = Color.Khaki;
             AlertColor = Color.Red;
-
             // Initialize Stat Colors
             StatColor_Strength = Color.Crimson;
             StatColor_Intelligence = Color.Magenta;
@@ -76,47 +76,47 @@ namespace ProjectVagabond
 
             // Initialize Color Mappings
             ElementColors = new Dictionary<int, Color>
-            {
-                { 1, Palette_White },      // Neutral
-                { 2, Palette_Red },        // Fire
-                { 3, Palette_LightBlue },  // Water
-                { 4, Palette_Pink },       // Arcane
-                { 5, Palette_Orange },     // Earth
-                { 6, Palette_Gray },       // Metal
-                { 7, Palette_LightPurple },// Toxic
-                { 8, Palette_Teal },       // Wind
-                { 9, Palette_DarkPurple }, // Void
-                { 10, Palette_LightYellow },// Light
-                { 11, Palette_Yellow},     // Electric
-                { 12, Palette_LightBlue }, // Ice
-                { 13, Palette_LightGreen } // Nature
-            };
+        {
+            { 1, Palette_White },      // Neutral
+            { 2, Palette_Red },        // Fire
+            { 3, Palette_LightBlue },  // Water
+            { 4, Palette_Pink },       // Arcane
+            { 5, Palette_Orange },     // Earth
+            { 6, Palette_Gray },       // Metal
+            { 7, Palette_LightPurple },// Toxic
+            { 8, Palette_Teal },       // Wind
+            { 9, Palette_DarkPurple }, // Void
+            { 10, Palette_LightYellow },// Light
+            { 11, Palette_Yellow},     // Electric
+            { 12, Palette_LightBlue }, // Ice
+            { 13, Palette_LightGreen } // Nature
+        };
 
             RarityColors = new Dictionary<int, Color>
-            {
-                { -1, Palette_Gray },      // Basic/Action
-                { 0, Color.White },        // Common
-                { 1, Color.Lime },         // Uncommon
-                { 2, Color.DeepSkyBlue },  // Rare
-                { 3, Color.DarkOrchid },   // Epic
-                { 4, Color.Red },          // Mythic
-                { 5, Color.Yellow }        // Legendary
-            };
+        {
+            { -1, Palette_Gray },      // Basic/Action
+            { 0, Color.White },        // Common
+            { 1, Color.Lime },         // Uncommon
+            { 2, Color.DeepSkyBlue },  // Rare
+            { 3, Color.DarkOrchid },   // Epic
+            { 4, Color.Red },          // Mythic
+            { 5, Color.Yellow }        // Legendary
+        };
 
             StatusEffectColors = new Dictionary<StatusEffectType, Color>
-            {
-                { StatusEffectType.Poison, Palette_LightPurple },
-                { StatusEffectType.Stun, Palette_Yellow },
-                { StatusEffectType.Regen, Palette_LightGreen },
-                { StatusEffectType.Dodging, Palette_LightBlue },
-                { StatusEffectType.Burn, Palette_Red },
-                { StatusEffectType.Freeze, Palette_DarkBlue },
-                { StatusEffectType.Blind, Palette_LightGray },
-                { StatusEffectType.Confuse, Palette_Pink },
-                { StatusEffectType.Silence, Palette_LightGray },
-                { StatusEffectType.Fear, Palette_DarkPurple },
-                { StatusEffectType.Root, Palette_Orange }
-            };
+        {
+            { StatusEffectType.Poison, Palette_LightPurple },
+            { StatusEffectType.Stun, Palette_Yellow },
+            { StatusEffectType.Regen, Palette_LightGreen },
+            { StatusEffectType.Dodging, Palette_LightBlue },
+            { StatusEffectType.Burn, Palette_Red },
+            { StatusEffectType.Freeze, Palette_DarkBlue },
+            { StatusEffectType.Blind, Palette_LightGray },
+            { StatusEffectType.Confuse, Palette_Pink },
+            { StatusEffectType.Silence, Palette_LightGray },
+            { StatusEffectType.Fear, Palette_DarkPurple },
+            { StatusEffectType.Root, Palette_Orange }
+        };
         }
 
         public static Global Instance => _instance;
@@ -177,6 +177,9 @@ namespace ProjectVagabond
         public const int COMBAT_TURN_DURATION_SECONDS = 5;
         public const float COMBAT_ACTION_DELAY_SECONDS = 0.5f;
         public const float VISUAL_SPEED_MULTIPLIER = 0.8f;
+
+        // Transition Settings
+        public const float UniversalSlowFadeDuration = 3.0f;
 
         // ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- //
         // INSTANCE VARIABLES

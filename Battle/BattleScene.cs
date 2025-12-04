@@ -24,8 +24,7 @@ namespace ProjectVagabond.Scenes
     {
         // --- Tuning ---
         private const float MULTI_HIT_DELAY = 0.25f; // Increased to 0.2f for better pacing
-
-        // Core Battle Logic
+                                                     // Core Battle Logic
         private BattleManager _battleManager;
 
         // Specialized Managers
@@ -67,6 +66,10 @@ namespace ProjectVagabond.Scenes
         private BattleManager.BattlePhase _lastFramePhase;
         private bool _wasUiBusyLastFrame;
         private bool _wasAnimatingLastFrame;
+
+        // --- DEATH TRANSITION STATE ---
+        private bool _isFadingOutOnDeath = false;
+        private float _deathFadeTimer = 0f;
 
         public BattleAnimationManager AnimationManager => _animationManager;
 
@@ -119,6 +122,8 @@ namespace ProjectVagabond.Scenes
             _pendingAnimations.Clear();
             _rewardScreenShown = false;
             _actionJustDeclared = false;
+            _isFadingOutOnDeath = false;
+            _deathFadeTimer = 0f;
 
             // Reset Watchdog
             _watchdogTimer = 0f;
@@ -272,9 +277,22 @@ namespace ProjectVagabond.Scenes
                 return;
             }
 
+            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+            // --- DEATH FADE LOGIC ---
+            if (_isFadingOutOnDeath)
+            {
+                _deathFadeTimer += dt;
+                if (_deathFadeTimer >= Global.UniversalSlowFadeDuration)
+                {
+                    _sceneManager.ChangeScene(GameSceneState.GameOver);
+                }
+                // Skip normal updates while fading out
+                return;
+            }
+
             var currentKeyboardState = Keyboard.GetState();
             var currentMouseState = Mouse.GetState();
-            float dt = (float)gameTime.ElapsedGameTime.TotalSeconds;
 
             // --- 1. Update Sub-Systems ---
             _animationManager.Update(gameTime, _battleManager.AllCombatants);
@@ -300,23 +318,27 @@ namespace ProjectVagabond.Scenes
                     }
                     else
                     {
-                        // Player Lost - Trigger Game Over
-                        string killer = "Unknown Causes";
-                        if (_currentActor != null && !_currentActor.IsPlayerControlled)
+                        // Player Lost - Trigger Fade Out
+                        if (!_isFadingOutOnDeath)
                         {
-                            killer = _currentActor.Name;
-                        }
-                        else if (_currentActor != null && _currentActor.IsPlayerControlled)
-                        {
-                            killer = "Recoil"; // Or self-inflicted
-                        }
-                        else
-                        {
-                            killer = "Status Effects"; // Likely poison/burn at end of turn
-                        }
+                            string killer = "Unknown Causes";
+                            if (_currentActor != null && !_currentActor.IsPlayerControlled)
+                            {
+                                killer = _currentActor.Name;
+                            }
+                            else if (_currentActor != null && _currentActor.IsPlayerControlled)
+                            {
+                                killer = "Recoil"; // Or self-inflicted
+                            }
+                            else
+                            {
+                                killer = "Status Effects"; // Likely poison/burn at end of turn
+                            }
 
-                        _gameState.LastRunKiller = killer;
-                        _sceneManager.ChangeScene(GameSceneState.GameOver);
+                            _gameState.LastRunKiller = killer;
+                            _isFadingOutOnDeath = true;
+                            _deathFadeTimer = 0f;
+                        }
                     }
                 }
                 base.Update(gameTime);
@@ -580,6 +602,18 @@ namespace ProjectVagabond.Scenes
             _animationManager.DrawDamageIndicators(spriteBatch, secondaryFont);
         }
 
+        public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
+        {
+            if (_isFadingOutOnDeath)
+            {
+                float alpha = Math.Clamp(_deathFadeTimer / Global.UniversalSlowFadeDuration, 0f, 1f);
+                var pixel = ServiceLocator.Get<Texture2D>();
+                var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+                var screenBounds = new Rectangle(0, 0, graphicsDevice.Viewport.Width, graphicsDevice.Viewport.Height);
+                spriteBatch.Draw(pixel, screenBounds, Color.Black * alpha);
+            }
+        }
+
         public override void DrawFullscreenUI(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime, Matrix transform)
         {
             spriteBatch.Begin(samplerState: SamplerState.PointClamp);
@@ -597,8 +631,6 @@ namespace ProjectVagabond.Scenes
             }
             spriteBatch.End();
         }
-
-        public override void DrawOverlay(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime) { }
 
         #region Event Handlers
         private void OnPlayerMoveSelected(MoveData move, MoveEntry entry, BattleCombatant target)
