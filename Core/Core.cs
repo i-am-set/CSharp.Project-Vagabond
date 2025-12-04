@@ -375,6 +375,10 @@ namespace ProjectVagabond
 
                 if (widthRatio >= 0.8f || heightRatio >= 0.8f)
                 {
+                    // Update resolution to match native monitor size before maximizing
+                    _settings.Resolution = new Point(displayMode.Width, displayMode.Height);
+                    _settings.ApplyGraphicsSettings(_graphics, this);
+
                     MaximizeWindow();
                     // Set a flag to check the actual window size after a few frames
                     // to sync the resolution settings with the maximized window size.
