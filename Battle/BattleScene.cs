@@ -245,31 +245,45 @@ namespace ProjectVagabond.Scenes
 
             // --- 2. Setup Enemy Party ---
             var enemyParty = new List<BattleCombatant>();
-            var enemyArchetypesToSpawn = BattleSetup.EnemyArchetypes ?? new List<string> { "golem" }; // Default to golem if null
+            // FIX: Default to empty list instead of Golem if null.
+            var enemyArchetypesToSpawn = BattleSetup.EnemyArchetypes ?? new List<string>();
 
             // Spawn all enemies requested (up to 4 max for the team)
             int enemyCount = Math.Min(enemyArchetypesToSpawn.Count, 4);
             for (int i = 0; i < enemyCount; i++)
             {
                 string archetypeId = enemyArchetypesToSpawn[i];
+                if (string.IsNullOrEmpty(archetypeId)) continue; // Skip null/empty strings
+
                 int newEnemyId = Spawner.Spawn(archetypeId, new Vector2(-1, -1));
                 if (newEnemyId != -1)
                 {
                     var enemyCombatant = BattleCombatantFactory.CreateFromEntity(newEnemyId, $"enemy_{i + 1}");
                     if (enemyCombatant != null)
                     {
-                        // Assign Slot: 0/1 Active, 2+ Bench
-                        enemyCombatant.BattleSlot = i;
+                        // FIX: Assign Slot based on current count, not loop index 'i'.
+                        // This ensures that if an enemy fails to spawn, we don't leave a gap in the slots.
+                        enemyCombatant.BattleSlot = enemyParty.Count;
                         enemyParty.Add(enemyCombatant);
                         _enemyEntityIds.Add(newEnemyId);
                     }
+                    else
+                    {
+                        Debug.WriteLine($"[BattleScene] [WARNING] Failed to create combatant for enemy archetype '{archetypeId}'. Skipping.");
+                    }
+                }
+                else
+                {
+                    Debug.WriteLine($"[BattleScene] [WARNING] Failed to spawn enemy entity for archetype '{archetypeId}'. Skipping.");
                 }
             }
             BattleSetup.EnemyArchetypes = null;
 
-            if (!playerParty.Any() || !enemyParty.Any())
+            // FIX: Only abort if PLAYER party is empty.
+            // If enemy party is empty, we proceed. The BattleManager will detect 0 enemies and trigger victory immediately.
+            if (!playerParty.Any())
             {
-                Debug.WriteLine("[BattleScene] [FATAL] Failed to create one or more combatants. Aborting.");
+                Debug.WriteLine("[BattleScene] [FATAL] Player party is empty. Aborting battle.");
                 _battleManager = null;
                 return;
             }
@@ -627,7 +641,6 @@ namespace ProjectVagabond.Scenes
             _renderer.DrawOverlay(spriteBatch, font);
             _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
             _animationManager.DrawAbilityIndicators(spriteBatch, font);
-            // Removed the call to DrawResourceBarAnimations as it was empty and causing a crash
             _alertManager.Draw(spriteBatch);
             spriteBatch.End();
         }
