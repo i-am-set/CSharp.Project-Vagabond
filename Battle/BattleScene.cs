@@ -245,7 +245,7 @@ namespace ProjectVagabond.Scenes
 
             // --- 2. Setup Enemy Party ---
             var enemyParty = new List<BattleCombatant>();
-            var enemyArchetypesToSpawn = BattleSetup.EnemyArchetypes ?? new List<string> { "wanderer" };
+            var enemyArchetypesToSpawn = BattleSetup.EnemyArchetypes ?? new List<string> { "golem" }; // Default to golem if null
 
             // Spawn all enemies requested (up to 4 max for the team)
             int enemyCount = Math.Min(enemyArchetypesToSpawn.Count, 4);
@@ -285,7 +285,7 @@ namespace ProjectVagabond.Scenes
             {
                 CombatantID = id,
                 Name = member.Name,
-                ArchetypeId = member.ArchetypeId,
+                ArchetypeId = "player", // Hardcoded as requested
                 IsPlayerControlled = true,
                 Stats = new CombatantStats
                 {
@@ -627,7 +627,7 @@ namespace ProjectVagabond.Scenes
             _renderer.DrawOverlay(spriteBatch, font);
             _tooltipManager.Draw(spriteBatch, ServiceLocator.Get<Core>().SecondaryFont);
             _animationManager.DrawAbilityIndicators(spriteBatch, font);
-            _animationManager.DrawResourceBarAnimations(spriteBatch, _battleManager.AllCombatants);
+            // Removed the call to DrawResourceBarAnimations as it was empty and causing a crash
             _alertManager.Draw(spriteBatch);
             spriteBatch.End();
         }

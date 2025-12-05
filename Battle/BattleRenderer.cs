@@ -366,15 +366,26 @@ namespace ProjectVagabond.Battle.UI
 
         private void DrawAllySprite(SpriteBatch spriteBatch, BattleCombatant ally, Vector2 centerPos, Color? tint, bool isHighlighted, float pulseAlpha, bool isSilhouetted, Color? silhouetteColor, BattleAnimationManager animationManager)
         {
-            var texture = _spriteManager.GetEnemySprite(ally.ArchetypeId); // Reuse enemy sprite logic for allies
+            // FIX: If the archetype is "player", use the PlayerHeartSpriteSheet instead of looking up an enemy sprite.
+            Texture2D texture;
+            if (ally.ArchetypeId == "player")
+            {
+                texture = _spriteManager.PlayerHeartSpriteSheet;
+            }
+            else
+            {
+                texture = _spriteManager.GetEnemySprite(ally.ArchetypeId);
+            }
+
             if (texture == null) return;
 
             var hitFlashState = animationManager.GetHitFlashState(ally.CombatantID);
             Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
             bool isFlashingWhite = hitFlashState != null && hitFlashState.IsCurrentlyWhite;
 
-            // Simple draw for now, assume 64x64 frame 0
-            int frameSize = 64;
+            // Simple draw for now, assume 32x32 frame 0 for player heart, or 64x64 for others if needed.
+            // Since we are using the heart sheet for "player" archetype, we assume 32x32.
+            int frameSize = (ally.ArchetypeId == "player") ? 32 : 64;
             var sourceRect = new Rectangle(0, 0, frameSize, frameSize);
             var origin = new Vector2(frameSize / 2f, frameSize / 2f);
             var drawPos = centerPos + shakeOffset;
@@ -385,7 +396,10 @@ namespace ProjectVagabond.Battle.UI
                 drawColor = silhouetteColor ?? Color.Gray;
             }
 
-            spriteBatch.DrawSnapped(texture, drawPos, sourceRect, drawColor, 0f, origin, 0.5f, SpriteEffects.FlipHorizontally, 0.5f); // Flip to face right
+            // If it's the player heart, we don't flip it. If it's an enemy sprite reused as an ally, we flip it.
+            SpriteEffects effects = (ally.ArchetypeId == "player") ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
+
+            spriteBatch.DrawSnapped(texture, drawPos, sourceRect, drawColor, 0f, origin, 1f, effects, 0.5f);
 
             if (isHighlighted)
             {

@@ -2,7 +2,6 @@
   {
     "MemberID": "Oakley",
     "Name": "Oakley",
-    "ArchetypeId": "player",
     "Description": "A wandering vagabond seeking fortune.",
     "MaxHP": 120,
     "MaxMana": 100,
@@ -22,7 +21,6 @@
   {
     "MemberID": "Sylas",
     "Name": "Sylas",
-    "ArchetypeId": "wanderer",
     "Description": "A hedge mage with a quick temper.",
     "MaxHP": 90,
     "MaxMana": 150,
@@ -41,7 +39,6 @@
   {
     "MemberID": "Luna",
     "Name": "Luna",
-    "ArchetypeId": "wanderer",
     "Description": "A silent hunter who strikes from the shadows.",
     "MaxHP": 85,
     "MaxMana": 110,

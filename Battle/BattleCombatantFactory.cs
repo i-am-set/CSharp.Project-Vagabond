@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using ProjectVagabond;
+using ProjectVagabond.Battle;
 
 namespace ProjectVagabond.Battle
 {

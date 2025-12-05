@@ -2,6 +2,8 @@
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -10,7 +12,10 @@ using ProjectVagabond.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text.Json;
 
 namespace ProjectVagabond.Scenes
 {
@@ -102,7 +107,8 @@ namespace ProjectVagabond.Scenes
                 var loadingTasks = new List<LoadingTask>
                 {
                     new GenericTask("Loading game assets...", () => spriteManager.LoadGameContent()),
-                    new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Data/Archetypes")),
+                    // FIX: Point directly to the file to avoid directory confusion
+                    new GenericTask("Loading archetypes...", () => archetypeManager.LoadArchetypes("Content/Data/Archetypes.json")),
                     new GenericTask("Initializing world...", () =>
                     {
                         gameState.InitializeWorld();

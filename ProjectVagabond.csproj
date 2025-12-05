@@ -34,7 +34,6 @@
 		<PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
 	</ItemGroup>
 	<ItemGroup>
-		<Folder Include="Content\Data\Archetypes\" />
 		<Folder Include="Content\Data\Events\" />
 		<Folder Include="Content\Data\Splits\" />
 		<Folder Include="Content\Models\" />

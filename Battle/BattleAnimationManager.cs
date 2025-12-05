@@ -854,12 +854,6 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void DrawResourceBarAnimations(SpriteBatch spriteBatch, IEnumerable<BattleCombatant> allCombatants)
-        {
-            // This method is now empty because drawing is handled by BattleRenderer.
-            // It is kept to satisfy the interface if needed, or can be removed if no longer called.
-        }
-
         public void DrawDamageIndicators(SpriteBatch spriteBatch, BitmapFont font)
         {
             // Two-pass rendering: text first, then numbers on top.

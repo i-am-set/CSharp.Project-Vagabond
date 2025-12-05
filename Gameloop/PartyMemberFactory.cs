@@ -19,7 +19,7 @@ namespace ProjectVagabond
             var member = new PartyMember
             {
                 Name = data.Name,
-                ArchetypeId = data.ArchetypeId,
+                // ArchetypeId is no longer set here. It defaults to "player" logic in BattleScene.
                 Level = 1,
                 MaxHP = data.MaxHP,
                 CurrentHP = data.MaxHP,
@@ -58,9 +58,6 @@ namespace ProjectVagabond
             }
 
             // Handle Equipment (Weapons/Armor)
-            // Note: This factory creates the member, but adding the items to the SHARED inventory
-            // must be done by the caller (GameState) to ensure they exist in the pool.
-            // However, we can set the *Equipped* ID here.
             foreach (var kvp in data.StartingEquipment)
             {
                 string itemId = kvp.Key;

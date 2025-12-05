@@ -3,6 +3,8 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
 using ProjectVagabond;
+using ProjectVagabond.Battle;
+using ProjectVagabond.Battle.UI;
 using ProjectVagabond.Dice;
 using ProjectVagabond.Particles;
 using ProjectVagabond.Scenes;
@@ -54,17 +56,23 @@ namespace ProjectVagabond
         /// <param name="filePath">The path to the Archetypes.json file.</param>
         public void LoadArchetypes(string filePath)
         {
-            // Adjust path if directory was passed instead of file
+            // Robust path handling:
+            // 1. If it's a directory, look for Archetypes.json inside.
+            // 2. If it's a file path, use it directly.
+            // 3. If it doesn't exist, try appending .json if missing.
+
+            string finalPath = filePath;
+
             if (Directory.Exists(filePath))
             {
-                filePath = Path.Combine(filePath, "Archetypes.json");
+                finalPath = Path.Combine(filePath, "Archetypes.json");
             }
-            else if (!filePath.EndsWith(".json"))
+            else if (!File.Exists(filePath) && !filePath.EndsWith(".json"))
             {
-                filePath = Path.Combine(filePath, "Archetypes.json");
+                finalPath = filePath + ".json";
             }
 
-            if (File.Exists(filePath))
+            if (File.Exists(finalPath))
             {
                 var jsonOptions = new JsonSerializerOptions
                 {
@@ -73,7 +81,7 @@ namespace ProjectVagabond
 
                 try
                 {
-                    string jsonContent = File.ReadAllText(filePath);
+                    string jsonContent = File.ReadAllText(finalPath);
                     var archetypeList = JsonSerializer.Deserialize<List<Archetype>>(jsonContent, jsonOptions);
 
                     if (archetypeList != null)
@@ -127,16 +135,17 @@ namespace ProjectVagabond
                                 _archetypes[template.Id] = template;
                             }
                         }
+                        Debug.WriteLine($"[ArchetypeManager] Successfully loaded {_archetypes.Count} archetypes from {finalPath}.");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"[ERROR] Failed to load or parse archetypes file {filePath}: {ex.Message}");
+                    Console.WriteLine($"[ERROR] Failed to load or parse archetypes file {finalPath}: {ex.Message}");
                 }
             }
             else
             {
-                Console.WriteLine($"[WARNING] Archetypes file not found at {filePath}.");
+                Console.WriteLine($"[WARNING] Archetypes file not found at {finalPath} (Original input: {filePath}).");
             }
 
             // --- FAILSAFE ---
