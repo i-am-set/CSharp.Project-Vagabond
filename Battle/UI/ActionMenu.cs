@@ -521,9 +521,9 @@ namespace ProjectVagabond.Battle.UI
 
                         int rowStep = MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING;
                         button.Bounds = new Rectangle(
-                            moveGridStartX,
+                            moveGridStartX - 2, // Shifted left by 2
                             moveGridStartY + i * rowStep,
-                            MOVE_BUTTON_WIDTH,
+                            MOVE_BUTTON_WIDTH + 2, // Widened by 2
                             rowStep
                         );
                     }
@@ -761,8 +761,9 @@ namespace ProjectVagabond.Battle.UI
                             button.Bounds = new Rectangle(startX, currentY, buttonWidth, buttonHeight);
 
                             // Draw manual border for the button (Inset by 1 pixel)
-                            var borderColor = button.IsHovered ? _global.ButtonHoverColor : _global.Palette_DarkerGray;
-                            if (!button.IsEnabled) borderColor = _global.Palette_DarkerGray; // Ensure disabled buttons don't glow
+                            Color borderColor = _global.Palette_Gray; // Default enabled
+                            if (!button.IsEnabled) borderColor = _global.Palette_DarkestGray;
+                            else if (button.IsHovered) borderColor = _global.ButtonHoverColor;
 
                             var borderRect = new Rectangle(button.Bounds.X + 1, button.Bounds.Y + 1, button.Bounds.Width - 2, button.Bounds.Height - 2);
 
