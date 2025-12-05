@@ -744,8 +744,16 @@ namespace ProjectVagabond.Battle.UI
                         // Moved up 3 pixels (-3)
                         int startY = dividerY + (availableHeight - totalHeight) / 2 - 3;
 
-                        // Moved left 80 pixels (-80)
-                        int startX = (Global.VIRTUAL_WIDTH - buttonWidth) / 2 - 80;
+                        // --- DYNAMIC BUTTON POSITIONING ---
+                        // Default (Slot 0): Left side (-80 offset)
+                        // Slot 1: Right side (+80 offset)
+                        int xOffset = -80;
+                        if (_player != null && _player.BattleSlot == 1)
+                        {
+                            xOffset = 80;
+                        }
+
+                        int startX = (Global.VIRTUAL_WIDTH - buttonWidth) / 2 + xOffset;
 
                         int currentY = startY;
                         foreach (var button in _actionButtons)

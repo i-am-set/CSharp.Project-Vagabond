@@ -26,7 +26,10 @@ namespace ProjectVagabond.Battle.UI
         private readonly Global _global;
         private readonly Core _core;
         private readonly TooltipManager _tooltipManager;
-        private readonly PlayerCombatSprite _playerCombatSprite;
+
+        // Sprite Management
+        private readonly Dictionary<string, PlayerCombatSprite> _playerSprites = new Dictionary<string, PlayerCombatSprite>();
+
         private readonly Color _turnInactiveTintColor;
 
         // State
@@ -66,7 +69,6 @@ namespace ProjectVagabond.Battle.UI
             _global = ServiceLocator.Get<Global>();
             _core = ServiceLocator.Get<Core>();
             _tooltipManager = ServiceLocator.Get<TooltipManager>();
-            _playerCombatSprite = new PlayerCombatSprite();
             _turnInactiveTintColor = Color.Lerp(Color.White, _global.ButtonDisableColor, 0.5f);
         }
 
@@ -80,6 +82,7 @@ namespace ProjectVagabond.Battle.UI
             _enemyAnimationIntervals.Clear();
             _attackAnimTimers.Clear();
             _combatantVisualCenters.Clear();
+            _playerSprites.Clear();
             _lastAttackerId = null;
         }
 
@@ -89,7 +92,11 @@ namespace ProjectVagabond.Battle.UI
         {
             UpdateEnemyAnimations(gameTime, combatants);
             UpdateStatusIconTooltips(combatants);
-            _playerCombatSprite.Update(gameTime);
+
+            foreach (var sprite in _playerSprites.Values)
+            {
+                sprite.Update(gameTime);
+            }
         }
 
         private void UpdateStatusIconTooltips(IEnumerable<BattleCombatant> allCombatants)
@@ -321,18 +328,16 @@ namespace ProjectVagabond.Battle.UI
             // Calculate Attack Bob (Jump UP for players)
             float yBobOffset = CalculateAttackBobOffset(player.CombatantID, isPlayer: true);
 
-            // Draw the sprite (Heart for Leader, Archetype for Ally)
-            if (player.BattleSlot == 0)
+            // Get or Create Sprite Instance
+            if (!_playerSprites.TryGetValue(player.CombatantID, out var sprite))
             {
-                // Pass the center position directly. The PlayerCombatSprite class handles the origin offset internally.
-                _playerCombatSprite.SetPosition(new Vector2(spriteCenterX, heartCenterY + yBobOffset));
-                _playerCombatSprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor);
+                sprite = new PlayerCombatSprite(player.ArchetypeId);
+                _playerSprites[player.CombatantID] = sprite;
             }
-            else
-            {
-                // Draw Ally Sprite (Archetype)
-                DrawAllySprite(spriteBatch, player, new Vector2(spriteCenterX, heartCenterY + yBobOffset), playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor, animationManager);
-            }
+
+            // Draw the sprite
+            sprite.SetPosition(new Vector2(spriteCenterX, heartCenterY + yBobOffset));
+            sprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor);
 
             // --- Draw HUD ---
             if (!isSilhouetted)
@@ -361,53 +366,6 @@ namespace ProjectVagabond.Battle.UI
                     Combatant = player,
                     Bounds = new Rectangle((int)startX, playerHudY - 40, barWidth, 50) // Approx bounds
                 });
-            }
-        }
-
-        private void DrawAllySprite(SpriteBatch spriteBatch, BattleCombatant ally, Vector2 centerPos, Color? tint, bool isHighlighted, float pulseAlpha, bool isSilhouetted, Color? silhouetteColor, BattleAnimationManager animationManager)
-        {
-            // FIX: If the archetype is "player", use the PlayerHeartSpriteSheet instead of looking up an enemy sprite.
-            Texture2D texture;
-            if (ally.ArchetypeId == "player")
-            {
-                texture = _spriteManager.PlayerHeartSpriteSheet;
-            }
-            else
-            {
-                texture = _spriteManager.GetEnemySprite(ally.ArchetypeId);
-            }
-
-            if (texture == null) return;
-
-            var hitFlashState = animationManager.GetHitFlashState(ally.CombatantID);
-            Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
-            bool isFlashingWhite = hitFlashState != null && hitFlashState.IsCurrentlyWhite;
-
-            // Simple draw for now, assume 32x32 frame 0 for player heart, or 64x64 for others if needed.
-            // Since we are using the heart sheet for "player" archetype, we assume 32x32.
-            int frameSize = (ally.ArchetypeId == "player") ? 32 : 64;
-            var sourceRect = new Rectangle(0, 0, frameSize, frameSize);
-            var origin = new Vector2(frameSize / 2f, frameSize / 2f);
-            var drawPos = centerPos + shakeOffset;
-
-            Color drawColor = tint ?? Color.White;
-            if (isSilhouetted)
-            {
-                drawColor = silhouetteColor ?? Color.Gray;
-            }
-
-            // If it's the player heart, we don't flip it. If it's an enemy sprite reused as an ally, we flip it.
-            SpriteEffects effects = (ally.ArchetypeId == "player") ? SpriteEffects.None : SpriteEffects.FlipHorizontally;
-
-            spriteBatch.DrawSnapped(texture, drawPos, sourceRect, drawColor, 0f, origin, 1f, effects, 0.5f);
-
-            if (isHighlighted)
-            {
-                // Draw outline/glow logic here if needed
-            }
-            if (isFlashingWhite)
-            {
-                // Draw white flash logic here if needed
             }
         }
 
