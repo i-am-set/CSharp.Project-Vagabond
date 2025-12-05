@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#nullable enable
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -242,21 +243,17 @@ namespace ProjectVagabond.Battle.UI
         {
             if (!IsBusy) return;
 
-            var pixel = ServiceLocator.Get<Texture2D>();
+            // Removed background and border drawing logic.
+            // The border is now handled by the BattleBorderCombat sprite in the main UI layer.
+
             const int padding = 5;
+            // Use the bounds directly for text positioning
             var panelBounds = new Rectangle(
                 _bounds.X + padding,
                 _bounds.Y + padding,
                 _bounds.Width - padding * 2,
                 _bounds.Height - padding * 2
             );
-
-            // Draw panel background and border
-            spriteBatch.DrawSnapped(pixel, panelBounds, _global.TerminalBg * 0.9f);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Top), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Bottom), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Left, panelBounds.Top), new Vector2(panelBounds.Left, panelBounds.Bottom), _global.Palette_White);
-            spriteBatch.DrawLineSnapped(new Vector2(panelBounds.Right, panelBounds.Top), new Vector2(panelBounds.Right, panelBounds.Bottom), _global.Palette_White);
 
             // Draw text
             if (_displayLines.Any())

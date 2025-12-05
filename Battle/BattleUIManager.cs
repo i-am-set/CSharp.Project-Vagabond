@@ -65,9 +65,14 @@ namespace ProjectVagabond.Battle.UI
         public BattleUIManager()
         {
             _global = ServiceLocator.Get<Global>();
-            const int narratorWidth = 314;
-            const int narratorHeight = 50;
-            int narratorX = (Global.VIRTUAL_WIDTH - narratorWidth) / 2;
+
+            // Adjusted Narrator Bounds
+            // Original Width: 314. Reduced by 7 (4 left, 3 right) -> 307.
+            // Original X: (320 - 314) / 2 = 3.
+            // New X: 3 + 4 = 7.
+            const int narratorWidth = 307;
+            const int narratorHeight = 51; // Increased by 1 pixel
+            int narratorX = 7;
             const int narratorY = 123;
             _narratorBounds = new Rectangle(narratorX, narratorY, narratorWidth, narratorHeight);
 

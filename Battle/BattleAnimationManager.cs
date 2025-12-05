@@ -961,11 +961,11 @@ namespace ProjectVagabond.Battle.UI
                     if (right > Global.VIRTUAL_WIDTH - screenPadding) basePosition.X -= (right - (Global.VIRTUAL_WIDTH - screenPadding));
 
                     Vector2 currentPos = basePosition;
-                    spriteBatch.DrawStringOutlinedSnapped(activeFont, prefixText, currentPos, prefixColor * alpha, Color.Black * alpha);
+                    spriteBatch.DrawStringOutlinedSnapped(activeFont, prefixText, currentPos, prefixColor * alpha, _global.Palette_Black * alpha);
                     currentPos.X += prefixSize.X;
-                    spriteBatch.DrawStringOutlinedSnapped(activeFont, statText, currentPos, statColor * alpha, Color.Black * alpha);
+                    spriteBatch.DrawStringOutlinedSnapped(activeFont, statText, currentPos, statColor * alpha, _global.Palette_Black * alpha);
                     currentPos.X += statSize.X;
-                    spriteBatch.DrawStringOutlinedSnapped(activeFont, suffixText, currentPos, suffixColor * alpha, Color.Black * alpha);
+                    spriteBatch.DrawStringOutlinedSnapped(activeFont, suffixText, currentPos, suffixColor * alpha, _global.Palette_Black * alpha);
                 }
                 else
                 {
@@ -978,7 +978,7 @@ namespace ProjectVagabond.Battle.UI
                     if (left < screenPadding) textPosition.X += (screenPadding - left);
                     if (right > Global.VIRTUAL_WIDTH - screenPadding) textPosition.X -= (right - (Global.VIRTUAL_WIDTH - screenPadding));
 
-                    spriteBatch.DrawStringOutlinedSnapped(activeFont, indicator.PrimaryText, textPosition, drawColor * alpha, Color.Black * alpha);
+                    spriteBatch.DrawStringOutlinedSnapped(activeFont, indicator.PrimaryText, textPosition, drawColor * alpha, _global.Palette_Black * alpha);
                 }
             }
         }
@@ -1079,4 +1079,4 @@ namespace ProjectVagabond.Battle.UI
             }
         }
     }
-}
+} 

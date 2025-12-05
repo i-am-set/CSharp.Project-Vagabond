@@ -37,7 +37,8 @@ namespace ProjectVagabond
 
         // Battle Borders
         public Texture2D BattleBorderMain { get; private set; }
-        public Texture2D BattleBorderMain2 { get; private set; } // New Border for Slot 2
+        public Texture2D BattleBorderMain2 { get; private set; }
+        public Texture2D BattleBorderCombat { get; private set; } // New Combat Border
         public Texture2D BattleBorderAction { get; private set; }
         public Texture2D BattleBorderItem { get; private set; }
         public Texture2D BattleBorderTarget { get; private set; }
@@ -270,6 +271,9 @@ namespace ProjectVagabond
 
             try { BattleBorderMain2 = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_main_2"); }
             catch { BattleBorderMain2 = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
+
+            try { BattleBorderCombat = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_combat"); }
+            catch { BattleBorderCombat = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }
 
             try { BattleBorderAction = _core.Content.Load<Texture2D>("Sprites/UI/BattleUI/battle_border_action"); }
             catch { BattleBorderAction = _textureFactory.CreateColoredTexture(320, 180, Color.Magenta); }

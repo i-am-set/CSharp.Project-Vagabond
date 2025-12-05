@@ -91,7 +91,7 @@ namespace ProjectVagabond.Battle.UI
         private bool _shouldAttuneButtonPulse = false;
 
         // --- Moves Menu Layout Constants ---
-        private const int MOVE_BUTTON_WIDTH = 118;
+        private const int MOVE_BUTTON_WIDTH = 116;
         private const int MOVE_BUTTON_HEIGHT = 9;
         private const int MOVE_ROW_SPACING = 1;
         private const int MOVE_ROWS = 4;
@@ -507,13 +507,29 @@ namespace ProjectVagabond.Battle.UI
                     const int secRowSpacing = 0;
                     const int secRows = 3;
                     const int secBlockHeight = secRows * (secButtonHeight + secRowSpacing) - secRowSpacing;
-                    const int borderWidth = 120;
-                    const int layoutGap = 2;
-                    int moveGridStartY = 128; // Moved down 4px (was 124)
-                    int moveGridStartX = 75; // Shifted right by 10
-                    int secGridStartX = moveGridStartX - layoutGap - secButtonWidth;
+                    const int infoPanelWidth = 120;
+                    const int gap = 0;
+
+                    // Calculate total width of the three columns
+                    int totalWidth = secButtonWidth + gap + MOVE_BUTTON_WIDTH + gap + infoPanelWidth;
+
+                    // Center the entire block on screen
+                    int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
+
+                    // Column 1: Secondary Actions (Left)
+                    int secGridStartX = startX;
+                    int moveGridStartY = 128; // Fixed Y as requested
                     int secGridStartY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (secBlockHeight / 2);
 
+                    for (int i = 0; i < _secondaryActionButtons.Count; i++)
+                    {
+                        var button = _secondaryActionButtons[i];
+                        int yPos = secGridStartY + i * (secButtonHeight + secRowSpacing);
+                        button.Bounds = new Rectangle(secGridStartX, yPos, secButtonWidth, secButtonHeight);
+                    }
+
+                    // Column 2: Move Buttons (Center)
+                    int moveGridStartX = secGridStartX + secButtonWidth + gap;
                     for (int i = 0; i < _moveButtons.Length; i++)
                     {
                         var button = _moveButtons[i];
@@ -521,17 +537,11 @@ namespace ProjectVagabond.Battle.UI
 
                         int rowStep = MOVE_BUTTON_HEIGHT + MOVE_ROW_SPACING;
                         button.Bounds = new Rectangle(
-                            moveGridStartX - 2, // Shifted left by 2
+                            moveGridStartX,
                             moveGridStartY + i * rowStep,
-                            MOVE_BUTTON_WIDTH + 2, // Widened by 2
+                            MOVE_BUTTON_WIDTH,
                             rowStep
                         );
-                    }
-                    for (int i = 0; i < _secondaryActionButtons.Count; i++)
-                    {
-                        var button = _secondaryActionButtons[i];
-                        int yPos = secGridStartY + i * (secButtonHeight + secRowSpacing);
-                        button.Bounds = new Rectangle(secGridStartX, yPos, secButtonWidth, secButtonHeight);
                     }
                     break;
             }
@@ -711,7 +721,12 @@ namespace ProjectVagabond.Battle.UI
             var bgRect = new Rectangle(0, dividerY, Global.VIRTUAL_WIDTH, Global.VIRTUAL_HEIGHT - dividerY);
             spriteBatch.DrawSnapped(pixel, bgRect, bgColor);
 
-            if (!_isVisible) return;
+            if (!_isVisible)
+            {
+                // Draw the combat border when the menu is hidden (e.g. during narration/animations)
+                spriteBatch.DrawSnapped(spriteManager.BattleBorderCombat, Vector2.Zero, Color.White);
+                return;
+            }
 
             // Draw the specific border based on state
             if (_currentState == MenuState.Main)
@@ -990,13 +1005,25 @@ namespace ProjectVagabond.Battle.UI
 
             const int borderWidth = 120;
             const int borderHeight = 37;
-            const int layoutGap = 2;
+            const int layoutGap = 5; // Increased gap for spacing
 
             int moveGridStartY = 128;
-            int moveGridStartX = 73;
+
+            // Calculate total width of the three columns
+            int totalWidth = secButtonWidth + layoutGap + MOVE_BUTTON_WIDTH + layoutGap + borderWidth;
+
+            // Center the entire block on screen
+            int startX = (Global.VIRTUAL_WIDTH - totalWidth) / 2;
+
+            // Column 1: Secondary Actions (Left)
+            int secGridStartX = startX;
+
+            // Column 2: Move Buttons (Center)
+            int moveGridStartX = secGridStartX + secButtonWidth + layoutGap;
+
+            // Column 3: Info Panel (Right)
             int borderX = moveGridStartX + MOVE_BUTTON_WIDTH + layoutGap;
             int borderY = moveGridStartY + (MOVE_BLOCK_HEIGHT / 2) - (borderHeight / 2);
-
 
             var borderRect = new Rectangle(borderX, borderY, borderWidth, borderHeight);
             _moveInfoPanelBounds = borderRect; // Store for debug

@@ -2522,6 +2522,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BattleUI/battle_border_action.png;Sprites/UI/BattleUI/battle_border_action
 
+#begin Sprites/UI/BattleUI/battle_border_combat.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BattleUI/battle_border_combat.png;Sprites/UI/BattleUI/battle_border_combat
+
 #begin Sprites/UI/BattleUI/battle_border_item.png
 /importer:TextureImporter
 /processor:TextureProcessor

@@ -185,8 +185,9 @@ namespace ProjectVagabond.Battle.UI
 
                 const int iconSize = 9;
                 const int iconPadding = 4;
+                // Shift content 1 pixel to the right
                 var iconRect = new Rectangle(
-                    animatedBounds.X + iconPadding,
+                    animatedBounds.X + iconPadding + 1,
                     animatedBounds.Y + (animatedBounds.Height - iconSize) / 2,
                     iconSize,
                     iconSize
