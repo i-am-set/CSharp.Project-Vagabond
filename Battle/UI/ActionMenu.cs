@@ -358,33 +358,15 @@ namespace ProjectVagabond.Battle.UI
                     break;
 
                 case TargetType.None:
-                case TargetType.Every:
-                case TargetType.EveryAll:
                     OnMoveSelected?.Invoke(move, entry, null);
                     break;
 
                 case TargetType.Single:
-                    var enemies = _allTargets.Where(c => !c.IsDefeated).ToList();
-                    if (enemies.Count == 1)
-                    {
-                        OnMoveSelected?.Invoke(move, entry, enemies[0]);
-                    }
-                    else
-                    {
-                        SetState(MenuState.Targeting);
-                    }
-                    break;
-
                 case TargetType.SingleAll:
-                    var allValidTargets = _allCombatants.Where(c => !c.IsDefeated).ToList();
-                    if (allValidTargets.Count == 1)
-                    {
-                        OnMoveSelected?.Invoke(move, entry, allValidTargets[0]);
-                    }
-                    else
-                    {
-                        SetState(MenuState.Targeting);
-                    }
+                case TargetType.Every:
+                case TargetType.EveryAll:
+                    // Always go to targeting menu to confirm target(s)
+                    SetState(MenuState.Targeting);
                     break;
             }
         }

@@ -192,14 +192,16 @@ namespace ProjectVagabond.Battle.UI
                 var targetType = uiManager.TargetTypeForSelection;
                 if (targetType.HasValue)
                 {
-                    if (targetType == TargetType.Single || targetType == TargetType.SingleAll)
+                    // Updated to include Every/EveryAll
+                    if (targetType == TargetType.Single || targetType == TargetType.SingleAll ||
+                        targetType == TargetType.Every || targetType == TargetType.EveryAll)
                     {
                         foreach (var c in allCombatants)
                         {
                             if (!c.IsDefeated && c.IsActiveOnField)
                             {
-                                if (targetType == TargetType.Single && !c.IsPlayerControlled) selectableTargets.Add(c);
-                                else if (targetType == TargetType.SingleAll) selectableTargets.Add(c);
+                                if ((targetType == TargetType.Single || targetType == TargetType.Every) && !c.IsPlayerControlled) selectableTargets.Add(c);
+                                else if (targetType == TargetType.SingleAll || targetType == TargetType.EveryAll) selectableTargets.Add(c);
                             }
                         }
                     }

@@ -137,27 +137,11 @@ namespace ProjectVagabond.Battle.UI
             switch (item.Target)
             {
                 case TargetType.Single:
-                    var enemies = _allCombatants.Where(c => !c.IsPlayerControlled && !c.IsDefeated).ToList();
-                    if (enemies.Count > 1)
-                    {
-                        OnItemTargetingRequested?.Invoke(item);
-                    }
-                    else
-                    {
-                        OnItemConfirmed?.Invoke(item);
-                    }
-                    break;
-
                 case TargetType.SingleAll:
-                    var allTargets = _allCombatants.Where(c => !c.IsDefeated).ToList();
-                    if (allTargets.Count > 1)
-                    {
-                        OnItemTargetingRequested?.Invoke(item);
-                    }
-                    else
-                    {
-                        OnItemConfirmed?.Invoke(item);
-                    }
+                case TargetType.Every:
+                case TargetType.EveryAll:
+                    // Always request targeting for these types
+                    OnItemTargetingRequested?.Invoke(item);
                     break;
 
                 default:

@@ -163,7 +163,7 @@ namespace ProjectVagabond.Scenes
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
             _uiManager.OnItemSelected += OnPlayerItemSelected;
-            _uiManager.OnSwitchActionSelected += OnPlayerSwitchSelected; // Subscribe
+            _uiManager.OnSwitchActionSelected += OnPlayerSwitchSelected;
             _uiManager.OnFleeRequested += FleeBattle;
             _inputHandler.OnMoveTargetSelected += OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected += OnPlayerItemSelected;
@@ -189,7 +189,7 @@ namespace ProjectVagabond.Scenes
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
             _uiManager.OnItemSelected -= OnPlayerItemSelected;
-            _uiManager.OnSwitchActionSelected -= OnPlayerSwitchSelected; // Unsubscribe
+            _uiManager.OnSwitchActionSelected -= OnPlayerSwitchSelected;
             _uiManager.OnFleeRequested -= FleeBattle;
             _inputHandler.OnMoveTargetSelected -= OnPlayerMoveTargetSelected;
             _inputHandler.OnItemTargetSelected -= OnPlayerItemSelected;
@@ -225,14 +225,12 @@ namespace ProjectVagabond.Scenes
             var leaderCombatant = BattleCombatantFactory.CreateFromEntity(playerEntityId, "player_leader");
             if (leaderCombatant != null)
             {
-                // FIX: Explicitly set the name from the PlayerState leader
                 leaderCombatant.Name = gameState.PlayerState.Leader.Name;
                 leaderCombatant.BattleSlot = 0; // Active Left
                 playerParty.Add(leaderCombatant);
             }
 
             // Add other party members from PlayerState
-            // We skip index 0 because that's the leader we just added via Entity
             for (int i = 1; i < gameState.PlayerState.Party.Count; i++)
             {
                 var member = gameState.PlayerState.Party[i];
@@ -245,7 +243,6 @@ namespace ProjectVagabond.Scenes
 
             // --- 2. Setup Enemy Party ---
             var enemyParty = new List<BattleCombatant>();
-            // FIX: Default to empty list instead of Golem if null.
             var enemyArchetypesToSpawn = BattleSetup.EnemyArchetypes ?? new List<string>();
 
             // Spawn all enemies requested (up to 4 max for the team)
@@ -253,7 +250,7 @@ namespace ProjectVagabond.Scenes
             for (int i = 0; i < enemyCount; i++)
             {
                 string archetypeId = enemyArchetypesToSpawn[i];
-                if (string.IsNullOrEmpty(archetypeId)) continue; // Skip null/empty strings
+                if (string.IsNullOrEmpty(archetypeId)) continue;
 
                 int newEnemyId = Spawner.Spawn(archetypeId, new Vector2(-1, -1));
                 if (newEnemyId != -1)
@@ -261,8 +258,6 @@ namespace ProjectVagabond.Scenes
                     var enemyCombatant = BattleCombatantFactory.CreateFromEntity(newEnemyId, $"enemy_{i + 1}");
                     if (enemyCombatant != null)
                     {
-                        // FIX: Assign Slot based on current count, not loop index 'i'.
-                        // This ensures that if an enemy fails to spawn, we don't leave a gap in the slots.
                         enemyCombatant.BattleSlot = enemyParty.Count;
                         enemyParty.Add(enemyCombatant);
                         _enemyEntityIds.Add(newEnemyId);
@@ -279,8 +274,6 @@ namespace ProjectVagabond.Scenes
             }
             BattleSetup.EnemyArchetypes = null;
 
-            // FIX: Only abort if PLAYER party is empty.
-            // If enemy party is empty, we proceed. The BattleManager will detect 0 enemies and trigger victory immediately.
             if (!playerParty.Any())
             {
                 Debug.WriteLine("[BattleScene] [FATAL] Player party is empty. Aborting battle.");
@@ -318,7 +311,6 @@ namespace ProjectVagabond.Scenes
                 EquippedSpells = member.EquippedSpells
             };
 
-            // FIX: Initialize VisualHP to match CurrentHP so the bar isn't empty at start
             combatant.VisualHP = combatant.Stats.CurrentHP;
 
             // Load Relics
@@ -364,7 +356,6 @@ namespace ProjectVagabond.Scenes
                         _gameState.PlayerState.Leader.CurrentHP = combatant.Stats.CurrentHP;
                         _gameState.PlayerState.Leader.CurrentMana = combatant.Stats.CurrentMana;
                     }
-                    // Note: Allies should also be synced back to their PartyMember objects here in a full implementation
                 }
             }
         }

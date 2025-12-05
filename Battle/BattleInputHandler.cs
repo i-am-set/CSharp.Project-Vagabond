@@ -45,6 +45,12 @@ namespace ProjectVagabond.Battle.UI
 
             if (uiManager.UIState == BattleUIState.Targeting || uiManager.UIState == BattleUIState.ItemTargeting)
             {
+                // Right Click to Go Back
+                if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
+                {
+                    OnBackRequested?.Invoke();
+                }
+
                 var currentTargets = renderer.GetCurrentTargets();
                 _hoveredTargetIndex = -1;
                 for (int i = 0; i < currentTargets.Count; i++)

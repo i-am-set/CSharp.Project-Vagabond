@@ -14,20 +14,20 @@ using System.Text;
 
 namespace ProjectVagabond.Battle.UI
 {
-    public enum BattleUIState { Default, Targeting, ItemTargeting, Switch } // Added Switch
-    public enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item, Switch } // Added Switch
+    public enum BattleUIState { Default, Targeting, ItemTargeting, Switch }
+    public enum BattleSubMenuState { None, ActionRoot, ActionMoves, Item, Switch }
     public class HoverHighlightState { public MoveData? CurrentMove; public List<BattleCombatant> Targets = new List<BattleCombatant>(); public float Timer = 0f; public const float SingleTargetFlashOnDuration = 0.4f; public const float SingleTargetFlashOffDuration = 0.2f; public const float MultiTargetFlashOnDuration = 0.4f; public const float MultiTargetFlashOffDuration = 0.4f; }
     public class BattleUIManager
     {
         public event Action<MoveData, MoveEntry, BattleCombatant>? OnMoveSelected;
         public event Action<ConsumableItemData, BattleCombatant>? OnItemSelected;
-        public event Action<BattleCombatant>? OnSwitchActionSelected; // New Event
+        public event Action<BattleCombatant>? OnSwitchActionSelected;
         public event Action? OnFleeRequested;
 
         private readonly BattleNarrator _battleNarrator;
         private readonly ActionMenu _actionMenu;
         private readonly ItemMenu _itemMenu;
-        private readonly SwitchMenu _switchMenu; // New Menu
+        private readonly SwitchMenu _switchMenu;
         private readonly Button _itemTargetingBackButton;
         private readonly Global _global;
 
@@ -66,12 +66,8 @@ namespace ProjectVagabond.Battle.UI
         {
             _global = ServiceLocator.Get<Global>();
 
-            // Adjusted Narrator Bounds
-            // Original Width: 314. Reduced by 7 (4 left, 3 right) -> 307.
-            // Original X: (320 - 314) / 2 = 3.
-            // New X: 3 + 4 = 7.
             const int narratorWidth = 307;
-            const int narratorHeight = 51; // Increased by 1 pixel
+            const int narratorHeight = 51;
             int narratorX = 7;
             const int narratorY = 123;
             _narratorBounds = new Rectangle(narratorX, narratorY, narratorWidth, narratorHeight);
@@ -79,9 +75,8 @@ namespace ProjectVagabond.Battle.UI
             _battleNarrator = new BattleNarrator(_narratorBounds);
             _actionMenu = new ActionMenu();
             _itemMenu = new ItemMenu();
-            _switchMenu = new SwitchMenu(); // Initialize
+            _switchMenu = new SwitchMenu();
 
-            // Initialize with correct style
             _itemTargetingBackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
             _itemTargetingBackButton.OnClick += () =>
             {
@@ -91,7 +86,7 @@ namespace ProjectVagabond.Battle.UI
 
             _actionMenu.OnMoveSelected += HandlePlayerMoveSelected;
             _actionMenu.OnItemMenuRequested += OnItemMenuRequested;
-            _actionMenu.OnSwitchMenuRequested += OnSwitchMenuRequested; // Wire up
+            _actionMenu.OnSwitchMenuRequested += OnSwitchMenuRequested;
             _actionMenu.OnMovesMenuOpened += () => SubMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened += () => SubMenuState = BattleSubMenuState.ActionRoot;
             _actionMenu.OnFleeRequested += () => OnFleeRequested?.Invoke();
@@ -287,14 +282,12 @@ namespace ProjectVagabond.Battle.UI
                 if (_lastHoveredButton != null)
                 {
                     _promptTextures.Clear();
-                    // Use MousePromptBlank instead of MousePromptDisabled to avoid darkening
                     _promptTextures.Add(spriteManager.MousePromptBlank);
                     _promptTextureIndex = 0;
                     _lastHoveredButton = null;
                 }
                 else if (!_promptTextures.Any())
                 {
-                    // Use MousePromptBlank instead of MousePromptDisabled to avoid darkening
                     _promptTextures.Add(spriteManager.MousePromptBlank);
                 }
                 return;
