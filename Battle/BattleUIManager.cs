@@ -124,6 +124,10 @@ namespace ProjectVagabond.Battle.UI
 
         public void ShowActionMenu(BattleCombatant player, List<BattleCombatant> allCombatants)
         {
+            // Clear any lingering narration text immediately before showing the menu.
+            // This ensures the text persists during the transition frames but vanishes instantly when the menu appears.
+            ForceClearNarration();
+
             SubMenuState = BattleSubMenuState.ActionRoot;
             _actionMenu.Show(player, allCombatants);
             _itemMenu.Hide();

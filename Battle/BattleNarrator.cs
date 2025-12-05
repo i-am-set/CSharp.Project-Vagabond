@@ -117,6 +117,9 @@ namespace ProjectVagabond.Battle.UI
             {
                 _currentSegment = "";
                 _isWaitingForInput = false;
+                // Note: We do NOT clear _displayLines here. 
+                // This allows the text to persist on screen even after IsBusy becomes false,
+                // preventing the "blank frame" glitch during transitions.
             }
         }
 
@@ -241,10 +244,9 @@ namespace ProjectVagabond.Battle.UI
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
         {
-            if (!IsBusy) return;
-
-            // Removed background and border drawing logic.
-            // The border is now handled by the BattleBorderCombat sprite in the main UI layer.
+            // Changed from checking IsBusy to checking if there is content to draw.
+            // This allows the text to persist while the BattleManager transitions phases.
+            if (_displayLines.Count == 0) return;
 
             const int padding = 5;
             // Use the bounds directly for text positioning
