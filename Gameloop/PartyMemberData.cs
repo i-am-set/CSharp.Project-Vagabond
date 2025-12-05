@@ -6,7 +6,6 @@ namespace ProjectVagabond.Battle
     {
         public string MemberID { get; set; }
         public string Name { get; set; }
-        public string ArchetypeId { get; set; } // For sprite lookups
         public string Description { get; set; }
 
         // Base Stats

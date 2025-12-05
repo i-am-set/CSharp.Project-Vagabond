@@ -6,7 +6,6 @@ namespace ProjectVagabond
     public class PartyMember
     {
         public string Name { get; set; }
-        public string ArchetypeId { get; set; }
 
         // Stats
         public int Level { get; set; }

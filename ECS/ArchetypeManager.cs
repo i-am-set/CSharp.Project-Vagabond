@@ -21,8 +21,7 @@ namespace ProjectVagabond
 {
     /// <summary>
     /// A manager responsible for loading, storing, and providing
-    /// access to all entity archetypes from JSON files. This class is
-    /// registered with the ServiceLocator.
+    /// access to all entity archetypes from a single JSON file.
     /// </summary>
     public class ArchetypeManager
     {
@@ -49,117 +48,111 @@ namespace ProjectVagabond
         }
 
         /// <summary>
-        /// Loads all .json files from a specified directory, "bakes" them
+        /// Loads the master Archetypes.json file, "bakes" the definitions
         /// into ArchetypeTemplate objects, and stores them for later use.
-        /// This process uses reflection and should only be done at load time.
         /// </summary>
-        /// <param name="directoryPath">The path to the directory containing archetype JSON files.</param>
-        public void LoadArchetypes(string directoryPath)
+        /// <param name="filePath">The path to the Archetypes.json file.</param>
+        public void LoadArchetypes(string filePath)
         {
-            if (Directory.Exists(directoryPath))
+            // Adjust path if directory was passed instead of file
+            if (Directory.Exists(filePath))
+            {
+                filePath = Path.Combine(filePath, "Archetypes.json");
+            }
+            else if (!filePath.EndsWith(".json"))
+            {
+                filePath = Path.Combine(filePath, "Archetypes.json");
+            }
+
+            if (File.Exists(filePath))
             {
                 var jsonOptions = new JsonSerializerOptions
                 {
                     PropertyNameCaseInsensitive = true,
                 };
 
-                string[] archetypeFiles = Directory.GetFiles(directoryPath, "*.json", SearchOption.AllDirectories);
-
-                foreach (var file in archetypeFiles)
+                try
                 {
-                    try
+                    string jsonContent = File.ReadAllText(filePath);
+                    var archetypeList = JsonSerializer.Deserialize<List<Archetype>>(jsonContent, jsonOptions);
+
+                    if (archetypeList != null)
                     {
-                        string jsonContent = File.ReadAllText(file);
-                        var archetypeDto = JsonSerializer.Deserialize<Archetype>(jsonContent, jsonOptions);
-
-                        if (archetypeDto != null && !string.IsNullOrEmpty(archetypeDto.Id))
+                        foreach (var archetypeDto in archetypeList)
                         {
-                            var templateComponents = new List<IComponent>();
-
-                            // Add the ArchetypeIdComponent to the template so it gets cloned with the rest.
-                            templateComponents.Add(new ArchetypeIdComponent { ArchetypeId = archetypeDto.Id });
-
-                            // Process components from the JSON file using reflection.
-                            foreach (var componentDef in archetypeDto.Components)
+                            if (!string.IsNullOrEmpty(archetypeDto.Id))
                             {
-                                string typeName = componentDef["Type"].ToString();
-                                Type componentType = Type.GetType(typeName, throwOnError: true);
-                                object componentInstance = Activator.CreateInstance(componentType);
+                                var templateComponents = new List<IComponent>();
 
-                                if (componentDef.TryGetValue("Properties", out object props) && props is JsonElement propertiesElement)
-                                {
-                                    PopulateComponentProperties(componentInstance, propertiesElement);
-                                }
+                                // Add the ArchetypeIdComponent to the template so it gets cloned with the rest.
+                                templateComponents.Add(new ArchetypeIdComponent { ArchetypeId = archetypeDto.Id });
 
-                                if (componentInstance is IInitializableComponent initializable)
+                                // Process components from the JSON file using reflection.
+                                foreach (var componentDef in archetypeDto.Components)
                                 {
-                                    initializable.Initialize();
-                                }
+                                    string typeName = componentDef["Type"].ToString();
+                                    Type componentType = Type.GetType(typeName, throwOnError: true);
+                                    object componentInstance = Activator.CreateInstance(componentType);
 
-                                if (componentInstance is ICloneableComponent cloneableComponent)
-                                {
-                                    templateComponents.Add(cloneableComponent);
-                                }
-                                else if (componentInstance is IComponent)
-                                {
-                                    // For non-cloneable components, we still need to add them if they are part of the archetype.
-                                    // The Spawner will need to handle creating new instances for these.
-                                    // For now, we assume most stateful components are cloneable.
-                                    // A simple solution is to just add the instance, but this means all entities share it.
-                                    // A better solution is to store the Type and properties and reconstruct it in the spawner.
-                                    // For this project's scope, we will enforce ICloneableComponent for stateful components.
-                                    // Let's check if it's a simple marker component (no properties).
-                                    bool hasProperties = componentDef.ContainsKey("Properties");
-                                    if (!hasProperties)
+                                    if (componentDef.TryGetValue("Properties", out object props) && props is JsonElement propertiesElement)
                                     {
-                                        templateComponents.Add((IComponent)componentInstance);
+                                        PopulateComponentProperties(componentInstance, propertiesElement);
                                     }
-                                    else
+
+                                    if (componentInstance is IInitializableComponent initializable)
                                     {
-                                        Console.WriteLine($"[WARNING] Stateful component '{componentType.Name}' in archetype '{archetypeDto.Id}' does not implement ICloneableComponent and will not be added to spawned entities correctly.");
+                                        initializable.Initialize();
+                                    }
+
+                                    if (componentInstance is ICloneableComponent cloneableComponent)
+                                    {
+                                        templateComponents.Add(cloneableComponent);
+                                    }
+                                    else if (componentInstance is IComponent)
+                                    {
+                                        bool hasProperties = componentDef.ContainsKey("Properties");
+                                        if (!hasProperties)
+                                        {
+                                            templateComponents.Add((IComponent)componentInstance);
+                                        }
+                                        else
+                                        {
+                                            Console.WriteLine($"[WARNING] Stateful component '{componentType.Name}' in archetype '{archetypeDto.Id}' does not implement ICloneableComponent and will not be added to spawned entities correctly.");
+                                        }
                                     }
                                 }
+
+                                // Create and store the final baked template.
+                                var template = new ArchetypeTemplate(archetypeDto.Id, archetypeDto.Name, templateComponents);
+                                _archetypes[template.Id] = template;
                             }
-
-                            // Create and store the final baked template.
-                            var template = new ArchetypeTemplate(archetypeDto.Id, archetypeDto.Name, templateComponents);
-                            _archetypes[template.Id] = template;
                         }
-                        else
-                        {
-                            Console.WriteLine($"[WARNING] Could not load archetype from {file}. Invalid format or missing ID.");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[ERROR] Failed to load or parse archetype file {file}: {ex.Message}");
                     }
                 }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[ERROR] Failed to load or parse archetypes file {filePath}: {ex.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[WARNING] Archetypes file not found at {filePath}.");
             }
 
             // --- FAILSAFE ---
-            // The player archetype is essential for the game to run. If it's not loaded, create a default one.
             if (!_archetypes.ContainsKey("player"))
             {
-                Debug.WriteLine("[ArchetypeManager] [CRITICAL FAILURE] 'player.json' not found or failed to load. Creating a failsafe player archetype. Please ensure the file exists and its 'Copy to Output Directory' property is set to 'Copy if newer'.");
+                Debug.WriteLine("[ArchetypeManager] [CRITICAL FAILURE] 'player' archetype not found. Creating failsafe.");
                 CreateFailsafePlayerArchetype();
             }
         }
 
-        /// <summary>
-        /// Retrieves a loaded and baked archetype template by its unique ID.
-        /// </summary>
-        /// <param name="id">The ID of the archetype template to retrieve.</param>
-        /// <returns>The ArchetypeTemplate object, or null if not found.</returns>
         public ArchetypeTemplate GetArchetypeTemplate(string id)
         {
             _archetypes.TryGetValue(id, out var archetype);
             return archetype;
         }
 
-        /// <summary>
-        /// Uses reflection to set properties on a component instance from JSON data.
-        /// </summary>
         private static void PopulateComponentProperties(object component, JsonElement properties)
         {
             foreach (JsonProperty property in properties.EnumerateObject())
@@ -175,19 +168,12 @@ namespace ProjectVagabond
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"[ArchetypeManager] [CRITICAL FAILURE] Could not set property '{property.Name}' on component '{component.GetType().Name}'. Reason: {ex.Message}. Check the JSON definition.");
+                        Debug.WriteLine($"[ArchetypeManager] [CRITICAL FAILURE] Could not set property '{property.Name}' on component '{component.GetType().Name}'. Reason: {ex.Message}.");
                     }
-                }
-                else
-                {
-                    Debug.WriteLine($"[ArchetypeManager] [WARNING] Property '{property.Name}' not found or cannot be written to on component '{component.GetType().Name}'.");
                 }
             }
         }
 
-        /// <summary>
-        /// Converts a JsonElement to the target C# type.
-        /// </summary>
         private static object ConvertJsonElement(JsonElement element, Type targetType)
         {
             switch (element.ValueKind)
@@ -198,7 +184,6 @@ namespace ProjectVagabond
                     {
                         return Enum.Parse(targetType, stringValue, true);
                     }
-                    // Handle special string-to-color conversion for RenderableComponent
                     if (targetType == typeof(Color))
                     {
                         var globalInstance = ServiceLocator.Get<Global>();
@@ -207,7 +192,6 @@ namespace ProjectVagabond
                         {
                             return colorProp.GetValue(globalInstance);
                         }
-                        // Fallback to standard MonoGame colors
                         var mgColorProp = typeof(Color).GetProperty(stringValue, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
                         if (mgColorProp != null)
                         {
@@ -223,15 +207,11 @@ namespace ProjectVagabond
                     if (targetType == typeof(decimal)) return element.GetDecimal();
                     break;
 
-                case JsonValueKind.True:
-                    return true;
-
-                case JsonValueKind.False:
-                    return false;
+                case JsonValueKind.True: return true;
+                case JsonValueKind.False: return false;
 
                 case JsonValueKind.Object:
                 case JsonValueKind.Array:
-                    // Use the built-in deserializer to handle complex objects and arrays.
                     var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                     return JsonSerializer.Deserialize(element.GetRawText(), targetType, options);
             }
