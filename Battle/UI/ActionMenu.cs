@@ -716,7 +716,10 @@ namespace ProjectVagabond.Battle.UI
             // Draw the specific border based on state
             if (_currentState == MenuState.Main)
             {
-                spriteBatch.DrawSnapped(spriteManager.BattleBorderMain, Vector2.Zero, Color.White);
+                // --- DYNAMIC BORDER SELECTION ---
+                // If the acting player is in Slot 1 (the second slot), use the alternate border.
+                var border = (_player != null && _player.BattleSlot == 1) ? spriteManager.BattleBorderMain2 : spriteManager.BattleBorderMain;
+                spriteBatch.DrawSnapped(border, Vector2.Zero, Color.White);
             }
             else if (_currentState == MenuState.Targeting)
             {
