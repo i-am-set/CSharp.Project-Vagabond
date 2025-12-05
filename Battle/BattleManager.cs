@@ -26,6 +26,7 @@ namespace ProjectVagabond.Battle
             SecondaryEffectResolution,
             CheckForDefeat,
             EndOfTurn,
+            Reinforcement, // NEW: Phase for bringing in benched enemies
             BattleOver
         }
 
@@ -57,6 +58,10 @@ namespace ProjectVagabond.Battle
         // VGC State
         private QueuedAction? _pendingSlot1Action; // Holds the action for slot 1 while selecting slot 2
         public BattleCombatant? CurrentActingCombatant { get; private set; }
+
+        // Reinforcement State
+        private int _reinforcementSlotIndex = 0;
+        private bool _reinforcementAnnounced = false;
 
         public BattlePhase CurrentPhase => _currentPhase;
         public IEnumerable<BattleCombatant> AllCombatants => _allCombatants;
@@ -108,6 +113,12 @@ namespace ProjectVagabond.Battle
             }
             else if (_currentPhase == BattlePhase.CheckForDefeat || _currentPhase == BattlePhase.EndOfTurn)
             {
+                RoundNumber++;
+                _currentPhase = BattlePhase.StartOfTurn;
+            }
+            else if (_currentPhase == BattlePhase.Reinforcement)
+            {
+                // If stuck in reinforcement, skip to start of turn
                 RoundNumber++;
                 _currentPhase = BattlePhase.StartOfTurn;
             }
@@ -239,6 +250,7 @@ namespace ProjectVagabond.Battle
                 case BattlePhase.SecondaryEffectResolution: HandleSecondaryEffectResolution(); break;
                 case BattlePhase.CheckForDefeat: HandleCheckForDefeat(); break;
                 case BattlePhase.EndOfTurn: HandleEndOfTurn(); break;
+                case BattlePhase.Reinforcement: HandleReinforcements(); break;
             }
         }
 
@@ -487,8 +499,6 @@ namespace ProjectVagabond.Battle
                     if (!string.IsNullOrEmpty(action.ChosenMove.AnimationSpriteSheet))
                     {
                         MoveData animMove = action.ChosenMove;
-                        // FIX: Removed the forced centralization logic here.
-                        // Animations will now respect the target's position unless the move itself is inherently centralized.
                         EventBus.Publish(new GameEvents.MoveAnimationTriggered { Move = animMove, Targets = targetsForThisHit });
                     }
 
@@ -654,17 +664,9 @@ namespace ProjectVagabond.Battle
                 combatant.IsDying = false;
                 combatant.IsRemovalProcessed = true;
 
-                // Auto-Replacement Logic for Enemies
-                if (!combatant.IsPlayerControlled)
-                {
-                    var benchedEnemy = _enemyParty.FirstOrDefault(c => !c.IsActiveOnField && !c.IsDefeated);
-                    if (benchedEnemy != null)
-                    {
-                        benchedEnemy.BattleSlot = combatant.BattleSlot; // Take the slot
-                        combatant.BattleSlot = -1; // Move dead to void
-                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{benchedEnemy.Name} enters the battle!" });
-                    }
-                }
+                // Mark slot as empty (move to void)
+                // We do NOT fill the slot here anymore. That happens in Reinforcement phase.
+                combatant.BattleSlot = -1;
             }
 
             var newlyDefeated = _allCombatants.FirstOrDefault(c => c.IsDefeated && !c.IsDying && !c.IsRemovalProcessed);
@@ -698,8 +700,10 @@ namespace ProjectVagabond.Battle
             }
             else
             {
-                RoundNumber++;
-                _currentPhase = BattlePhase.StartOfTurn;
+                // Instead of going to StartOfTurn, we go to Reinforcement to fill empty slots
+                _currentPhase = BattlePhase.Reinforcement;
+                _reinforcementSlotIndex = 0;
+                _reinforcementAnnounced = false;
             }
         }
 
@@ -748,6 +752,57 @@ namespace ProjectVagabond.Battle
             }
 
             _currentPhase = BattlePhase.CheckForDefeat;
+        }
+
+        private void HandleReinforcements()
+        {
+            // Check slots 0 and 1 sequentially
+            if (_reinforcementSlotIndex > 1)
+            {
+                RoundNumber++;
+                _currentPhase = BattlePhase.StartOfTurn;
+                return;
+            }
+
+            // Check if the current slot is empty
+            bool isSlotOccupied = _enemyParty.Any(c => c.BattleSlot == _reinforcementSlotIndex && !c.IsDefeated);
+
+            if (!isSlotOccupied)
+            {
+                // Check if there is a benched enemy available
+                // Benched enemies have slot >= 2 or -1 if they were just moved to void
+                var benchedEnemy = _enemyParty.FirstOrDefault(c => c.BattleSlot >= 2 && !c.IsDefeated);
+
+                if (benchedEnemy != null)
+                {
+                    if (!_reinforcementAnnounced)
+                    {
+                        // Step 1: Announce via blocking narration
+                        EventBus.Publish(new GameEvents.ReinforcementApproaching());
+                        _reinforcementAnnounced = true;
+                        // We return here. The BattleScene will see the UI is busy (displaying text)
+                        // and pause the BattleManager updates until the user clicks.
+                        return;
+                    }
+                    else
+                    {
+                        // Step 2: Spawn (Only happens after UI clears and Update resumes)
+                        benchedEnemy.BattleSlot = _reinforcementSlotIndex;
+                        EventBus.Publish(new GameEvents.TerminalMessagePublished { Message = $"{benchedEnemy.Name} enters the battle!" });
+                        EventBus.Publish(new GameEvents.CombatantSpawned { Combatant = benchedEnemy });
+                        HandleOnEnterAbilities(benchedEnemy);
+
+                        // Reset for next slot
+                        _reinforcementAnnounced = false;
+                        _reinforcementSlotIndex++;
+                        return;
+                    }
+                }
+            }
+
+            // If slot is occupied OR no benched enemies, move to next slot
+            _reinforcementSlotIndex++;
+            _reinforcementAnnounced = false;
         }
 
         private void HandleOnEnterAbilities(BattleCombatant specificCombatant = null)

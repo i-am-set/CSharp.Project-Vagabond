@@ -280,5 +280,20 @@ namespace ProjectVagabond
         /// Published by the BattleScene when a move animation has finished playing (or was skipped).
         /// </summary>
         public struct MoveAnimationCompleted { }
+
+        /// <summary>
+        /// Published when enemy reinforcements are about to enter the battle.
+        /// This triggers a blocking narration message.
+        /// </summary>
+        public struct ReinforcementApproaching { }
+
+        /// <summary>
+        /// Published when a combatant physically enters the battlefield (e.g. from reinforcements).
+        /// Triggers the visual entrance animation.
+        /// </summary>
+        public struct CombatantSpawned
+        {
+            public BattleCombatant Combatant { get; set; }
+        }
     }
 }

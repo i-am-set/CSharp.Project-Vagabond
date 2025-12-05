@@ -1,5 +1,4 @@
-﻿#nullable enable
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
@@ -626,6 +625,37 @@ namespace ProjectVagabond.Battle.UI
             // Calculate Attack Bob (Jump DOWN for enemies)
             float yBobOffset = CalculateAttackBobOffset(combatant.CombatantID, isPlayer: false);
 
+            // --- SPAWN ANIMATION LOGIC ---
+            var spawnAnim = animationManager.GetSpawnAnimationState(combatant.CombatantID);
+            float spawnYOffset = 0f;
+            float spawnAlpha = 1.0f;
+            float spawnSilhouetteAmount = 0f;
+            Color? spawnSilhouetteColor = null;
+
+            if (spawnAnim != null)
+            {
+                if (spawnAnim.CurrentPhase == BattleAnimationManager.SpawnAnimationState.Phase.Flash)
+                {
+                    // Flash Phase: Toggle silhouette, hide normal sprite
+                    int flashCycle = (int)(spawnAnim.Timer / BattleAnimationManager.SpawnAnimationState.FLASH_INTERVAL);
+                    bool isVisible = flashCycle % 2 == 0;
+                    spawnAlpha = 0f; // Hide base sprite
+                    spawnSilhouetteAmount = 1.0f;
+                    spawnSilhouetteColor = isVisible ? Color.White : Color.Transparent;
+                    spawnYOffset = -BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT; // Start high
+                }
+                else if (spawnAnim.CurrentPhase == BattleAnimationManager.SpawnAnimationState.Phase.FadeIn)
+                {
+                    // Fade Phase: Fade in, drop down
+                    float progress = Math.Clamp(spawnAnim.Timer / BattleAnimationManager.SpawnAnimationState.FADE_DURATION, 0f, 1f);
+                    float easedProgress = Easing.EaseOutQuad(progress);
+                    spawnAlpha = easedProgress;
+                    // Use EaseOutCubic for a smooth, floaty descent
+                    spawnYOffset = MathHelper.Lerp(-BattleAnimationManager.SpawnAnimationState.DROP_HEIGHT, 0f, Easing.EaseOutCubic(progress));
+                    spawnSilhouetteAmount = 0f;
+                }
+            }
+
             var pixel = ServiceLocator.Get<Texture2D>();
             bool isMajor = _spriteManager.IsMajorEnemySprite(combatant.ArchetypeId);
             int spritePartSize = isMajor ? 96 : 64;
@@ -634,32 +664,36 @@ namespace ProjectVagabond.Battle.UI
             var staticRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), 0, spritePartSize, spritePartSize);
             _combatantVisualCenters[combatant.CombatantID] = staticRect.Center.ToVector2();
 
-            // Calculate DYNAMIC rect for drawing the sprite
-            var spriteRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), (int)yBobOffset, spritePartSize, spritePartSize);
+            // Calculate DYNAMIC rect for drawing the sprite (includes bob and spawn drop)
+            var spriteRect = new Rectangle((int)(slotCenter.X - spritePartSize / 2f), (int)(yBobOffset + spawnYOffset), spritePartSize, spritePartSize);
 
-            Color tintColor = Color.White * combatant.VisualAlpha;
-            Color outlineColor = _global.Palette_DarkGray * combatant.VisualAlpha;
+            // Apply spawn alpha override if active
+            float finalAlpha = combatant.VisualAlpha * spawnAlpha;
+            Color tintColor = Color.White * finalAlpha;
+            Color outlineColor = _global.Palette_DarkGray * finalAlpha;
 
             bool isCurrentActor = (currentActor != null && combatant.CombatantID == currentActor.CombatantID);
             bool isTurnInProgress = (currentActor != null);
 
             if (isTurnInProgress && !isCurrentActor)
             {
-                tintColor = _turnInactiveTintColor * combatant.VisualAlpha;
-                outlineColor = _turnInactiveTintColor * combatant.VisualAlpha * 0.5f;
+                tintColor = _turnInactiveTintColor * finalAlpha;
+                outlineColor = _turnInactiveTintColor * finalAlpha * 0.5f;
             }
 
             bool isSelectable = selectableTargets.Contains(combatant);
-            float silhouetteFactor = combatant.VisualSilhouetteAmount;
-            Color silhouetteColor = combatant.VisualSilhouetteColorOverride ?? _global.Palette_DarkGray;
 
-            if (shouldGrayOutUnselectable && !isSelectable)
+            // Apply spawn silhouette overrides if active
+            float silhouetteFactor = spawnAnim != null ? spawnSilhouetteAmount : combatant.VisualSilhouetteAmount;
+            Color silhouetteColor = spawnAnim != null ? (spawnSilhouetteColor ?? _global.Palette_DarkGray) : (combatant.VisualSilhouetteColorOverride ?? _global.Palette_DarkGray);
+
+            if (shouldGrayOutUnselectable && !isSelectable && spawnAnim == null)
             {
                 silhouetteFactor = 1.0f;
             }
-            else if (isSelectable && shouldGrayOutUnselectable && !isTargetingPhase)
+            else if (isSelectable && shouldGrayOutUnselectable && !isTargetingPhase && spawnAnim == null)
             {
-                outlineColor = Color.Yellow * combatant.VisualAlpha;
+                outlineColor = Color.Yellow * finalAlpha;
             }
 
             Texture2D enemySprite = _spriteManager.GetEnemySprite(combatant.ArchetypeId);
@@ -709,14 +743,14 @@ namespace ProjectVagabond.Battle.UI
 
                         if (silhouetteFactor >= 1.0f && enemySilhouette != null)
                         {
-                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * combatant.VisualAlpha);
+                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * finalAlpha);
                         }
                         else
                         {
                             spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
                             if (silhouetteFactor > 0f && enemySilhouette != null)
                             {
-                                spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * silhouetteFactor * combatant.VisualAlpha);
+                                spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * silhouetteFactor * finalAlpha);
                             }
                         }
 
@@ -734,7 +768,7 @@ namespace ProjectVagabond.Battle.UI
             }
             else
             {
-                spriteBatch.DrawSnapped(pixel, spriteRect, _global.Palette_Pink * combatant.VisualAlpha);
+                spriteBatch.DrawSnapped(pixel, spriteRect, _global.Palette_Pink * finalAlpha);
             }
 
             DrawEnemyStatusIcons(spriteBatch, combatant, spriteRect);
@@ -750,7 +784,7 @@ namespace ProjectVagabond.Battle.UI
                 Color nameColor = tintColor;
                 if (hoverHighlightState.Targets.Contains(combatant))
                 {
-                    nameColor = _global.Palette_Yellow * combatant.VisualAlpha;
+                    nameColor = _global.Palette_Yellow * finalAlpha;
                 }
                 spriteBatch.DrawStringSnapped(nameFont, combatant.Name, namePos, nameColor);
 

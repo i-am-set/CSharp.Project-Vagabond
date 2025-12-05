@@ -35,6 +35,20 @@ namespace ProjectVagabond.Battle.UI
             public const float FADE_DURATION = 0.25f;
         }
 
+        public class SpawnAnimationState
+        {
+            public string CombatantID;
+            public float Timer;
+            public enum Phase { Flash, FadeIn }
+            public Phase CurrentPhase;
+
+            // Tuning
+            public const float FLASH_DURATION = 0.4f; // Total time for flashing
+            public const float FLASH_INTERVAL = 0.1f; // Time per flash toggle
+            public const float FADE_DURATION = 0.6f; // Slightly slower for a floaty feel
+            public const float DROP_HEIGHT = 10f; // Reduced height for a subtle float down
+        }
+
         public class HitFlashAnimationState
         {
             public string CombatantID;
@@ -130,6 +144,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly List<HealthAnimationState> _activeHealthAnimations = new List<HealthAnimationState>();
         private readonly List<AlphaAnimationState> _activeAlphaAnimations = new List<AlphaAnimationState>();
         private readonly List<DeathAnimationState> _activeDeathAnimations = new List<DeathAnimationState>();
+        private readonly List<SpawnAnimationState> _activeSpawnAnimations = new List<SpawnAnimationState>();
         private readonly List<HitFlashAnimationState> _activeHitFlashAnimations = new List<HitFlashAnimationState>();
         private readonly List<HealBounceAnimationState> _activeHealBounceAnimations = new List<HealBounceAnimationState>();
         private readonly List<HealFlashAnimationState> _activeHealFlashAnimations = new List<HealFlashAnimationState>();
@@ -149,7 +164,7 @@ namespace ProjectVagabond.Battle.UI
         // Layout Constants mirrored from BattleRenderer for pixel-perfect alignment
         private const int DIVIDER_Y = 123;
 
-        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any();
+        public bool IsAnimating => _activeHealthAnimations.Any() || _activeAlphaAnimations.Any() || _activeDeathAnimations.Any() || _activeSpawnAnimations.Any() || _activeHealBounceAnimations.Any() || _activeHealFlashAnimations.Any() || _activePoisonEffectAnimations.Any() || _activeBarAnimations.Any() || _activeHitFlashAnimations.Any();
 
         public BattleAnimationManager()
         {
@@ -166,6 +181,7 @@ namespace ProjectVagabond.Battle.UI
             _activeHealthAnimations.Clear();
             _activeAlphaAnimations.Clear();
             _activeDeathAnimations.Clear();
+            _activeSpawnAnimations.Clear();
             _activeHitFlashAnimations.Clear();
             _activeHealBounceAnimations.Clear();
             _activeHealFlashAnimations.Clear();
@@ -269,6 +285,17 @@ namespace ProjectVagabond.Battle.UI
                 CombatantID = combatantId,
                 Timer = 0f,
                 CurrentPhase = DeathAnimationState.Phase.FlashWhite1
+            });
+        }
+
+        public void StartSpawnAnimation(string combatantId)
+        {
+            _activeSpawnAnimations.RemoveAll(a => a.CombatantID == combatantId);
+            _activeSpawnAnimations.Add(new SpawnAnimationState
+            {
+                CombatantID = combatantId,
+                Timer = 0f,
+                CurrentPhase = SpawnAnimationState.Phase.Flash
             });
         }
 
@@ -483,6 +510,11 @@ namespace ProjectVagabond.Battle.UI
             return _activePoisonEffectAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
         }
 
+        public SpawnAnimationState GetSpawnAnimationState(string combatantId)
+        {
+            return _activeSpawnAnimations.FirstOrDefault(a => a.CombatantID == combatantId);
+        }
+
         // NEW: Expose animation state for renderer
         public ResourceBarAnimationState? GetResourceBarAnimation(string combatantId, ResourceBarAnimationState.BarResourceType type)
         {
@@ -495,6 +527,7 @@ namespace ProjectVagabond.Battle.UI
             UpdateHealthAnimations(gameTime, combatants);
             UpdateAlphaAnimations(gameTime, combatants);
             UpdateDeathAnimations(gameTime, combatants);
+            UpdateSpawnAnimations(gameTime, combatants);
             UpdateHitFlashAnimations(gameTime);
             UpdateHealAnimations(gameTime);
             UpdatePoisonEffectAnimations(gameTime);
@@ -676,6 +709,56 @@ namespace ProjectVagabond.Battle.UI
                             _activeDeathAnimations.RemoveAt(i);
                         }
                         break;
+                }
+            }
+        }
+
+        private void UpdateSpawnAnimations(GameTime gameTime, IEnumerable<BattleCombatant> combatants)
+        {
+            float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            for (int i = _activeSpawnAnimations.Count - 1; i >= 0; i--)
+            {
+                var anim = _activeSpawnAnimations[i];
+                var combatant = combatants.FirstOrDefault(c => c.CombatantID == anim.CombatantID);
+                if (combatant == null)
+                {
+                    _activeSpawnAnimations.RemoveAt(i);
+                    continue;
+                }
+
+                anim.Timer += deltaTime;
+
+                if (anim.CurrentPhase == SpawnAnimationState.Phase.Flash)
+                {
+                    // Flash logic: Toggle silhouette on/off
+                    int flashCycle = (int)(anim.Timer / SpawnAnimationState.FLASH_INTERVAL);
+                    bool isVisible = flashCycle % 2 == 0;
+
+                    combatant.VisualAlpha = 0f; // Hide normal sprite
+                    combatant.VisualSilhouetteAmount = 1.0f;
+                    combatant.VisualSilhouetteColorOverride = isVisible ? Color.White : Color.Transparent;
+
+                    if (anim.Timer >= SpawnAnimationState.FLASH_DURATION)
+                    {
+                        anim.Timer = 0f;
+                        anim.CurrentPhase = SpawnAnimationState.Phase.FadeIn;
+                    }
+                }
+                else if (anim.CurrentPhase == SpawnAnimationState.Phase.FadeIn)
+                {
+                    // Fade Phase: Fade in, drop down
+                    float progress = Math.Clamp(anim.Timer / SpawnAnimationState.FADE_DURATION, 0f, 1f);
+                    float easedProgress = Easing.EaseOutQuad(progress);
+
+                    combatant.VisualAlpha = easedProgress;
+                    combatant.VisualSilhouetteAmount = 0f; // Disable silhouette
+                    combatant.VisualSilhouetteColorOverride = null;
+
+                    if (anim.Timer >= SpawnAnimationState.FADE_DURATION)
+                    {
+                        combatant.VisualAlpha = 1.0f;
+                        _activeSpawnAnimations.RemoveAt(i);
+                    }
                 }
             }
         }
@@ -1079,4 +1162,4 @@ namespace ProjectVagabond.Battle.UI
             }
         }
     }
-} 
+}
