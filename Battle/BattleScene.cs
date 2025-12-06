@@ -160,7 +160,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Subscribe<GameEvents.AlertPublished>(OnAlertPublished);
             EventBus.Subscribe<GameEvents.CombatantStatStageChanged>(OnCombatantStatStageChanged);
             EventBus.Subscribe<GameEvents.MoveAnimationTriggered>(OnMoveAnimationTriggered);
-            EventBus.Subscribe<GameEvents.ReinforcementApproaching>(OnReinforcementApproaching);
+            EventBus.Subscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
             EventBus.Subscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
 
             _uiManager.OnMoveSelected += OnPlayerMoveSelected;
@@ -188,7 +188,7 @@ namespace ProjectVagabond.Scenes
             EventBus.Unsubscribe<GameEvents.AlertPublished>(OnAlertPublished);
             EventBus.Unsubscribe<GameEvents.CombatantStatStageChanged>(OnCombatantStatStageChanged);
             EventBus.Unsubscribe<GameEvents.MoveAnimationTriggered>(OnMoveAnimationTriggered);
-            EventBus.Unsubscribe<GameEvents.ReinforcementApproaching>(OnReinforcementApproaching);
+            EventBus.Unsubscribe<GameEvents.NextEnemyApproaches>(OnNextEnemyApproaches);
             EventBus.Unsubscribe<GameEvents.CombatantSpawned>(OnCombatantSpawned);
 
             _uiManager.OnMoveSelected -= OnPlayerMoveSelected;
@@ -955,9 +955,9 @@ namespace ProjectVagabond.Scenes
             _animationManager.StartStatStageIndicator(e.Target.CombatantID, prefixText, statText, suffixText, changeColor, statColor, changeColor, hudPosition);
         }
 
-        private void OnReinforcementApproaching(GameEvents.ReinforcementApproaching e)
+        private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e)
         {
-            _uiManager.ShowNarration("Reinforcements approaching!");
+            _uiManager.ShowNarration("Another enemy approaches!");
         }
 
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)

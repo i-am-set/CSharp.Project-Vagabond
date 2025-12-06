@@ -285,7 +285,7 @@ namespace ProjectVagabond
         /// Published when enemy reinforcements are about to enter the battle.
         /// This triggers a blocking narration message.
         /// </summary>
-        public struct ReinforcementApproaching { }
+        public struct NextEnemyApproaches { }
 
         /// <summary>
         /// Published when a combatant physically enters the battlefield (e.g. from reinforcements).

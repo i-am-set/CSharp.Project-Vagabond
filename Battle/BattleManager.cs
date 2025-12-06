@@ -794,7 +794,7 @@ namespace ProjectVagabond.Battle
                     if (!_reinforcementAnnounced)
                     {
                         // Step 1: Announce via blocking narration
-                        EventBus.Publish(new GameEvents.ReinforcementApproaching());
+                        EventBus.Publish(new GameEvents.NextEnemyApproaches());
                         _reinforcementAnnounced = true;
                         // We return here. The BattleScene will see the UI is busy (displaying text)
                         // and pause the BattleManager updates until the user clicks.
