@@ -22,6 +22,7 @@ namespace ProjectVagabond.Battle.UI
         public event Action? OnMovesMenuOpened;
         public event Action? OnMainMenuOpened;
         public event Action? OnFleeRequested;
+        public event Action? OnSlot2BackRequested;
 
         private bool _isVisible;
         private BattleCombatant? _player;
@@ -31,6 +32,7 @@ namespace ProjectVagabond.Battle.UI
         private readonly MoveButton?[] _moveButtons = new MoveButton?[4];
         private List<Button> _secondaryActionButtons = new List<Button>();
         private Button _backButton;
+        private Button _slot2BackButton;
         private readonly Global _global;
 
         public enum MenuState { Main, Moves, Targeting, Tooltip }
@@ -204,6 +206,11 @@ namespace ProjectVagabond.Battle.UI
 
             _backButton.Font = secondaryFont;
 
+            // Initialize Slot 2 Back Button
+            _slot2BackButton = new Button(Rectangle.Empty, "BACK", enableHoverSway: false) { CustomDefaultTextColor = _global.Palette_Gray };
+            _slot2BackButton.OnClick += () => OnSlot2BackRequested?.Invoke();
+            _slot2BackButton.Font = secondaryFont;
+
             _buttonsInitialized = true;
         }
 
@@ -232,6 +239,7 @@ namespace ProjectVagabond.Battle.UI
                 button.ResetAnimationState();
             }
             _backButton.ResetAnimationState();
+            _slot2BackButton?.ResetAnimationState();
         }
 
         public void Show(BattleCombatant player, List<BattleCombatant> allCombatants)
@@ -572,6 +580,18 @@ namespace ProjectVagabond.Battle.UI
                         }
                     }
 
+                    // Update Slot 2 Back Button
+                    if (_player != null && _player.BattleSlot == 1)
+                    {
+                        _slot2BackButton.Update(currentMouseState);
+                        if (_slot2BackButton.IsHovered) HoveredButton = _slot2BackButton;
+
+                        if (currentMouseState.RightButton == ButtonState.Pressed && _previousMouseState.RightButton == ButtonState.Released)
+                        {
+                            OnSlot2BackRequested?.Invoke();
+                        }
+                    }
+
                     if (isAnyActionHovered)
                     {
                         SharedSwayTimer += dt;
@@ -772,6 +792,25 @@ namespace ProjectVagabond.Battle.UI
                             button.Draw(spriteBatch, font, gameTime, transform);
                             currentY += buttonHeight + buttonSpacing;
                         }
+
+                        // NEW: Draw Back Button for Slot 2
+                        if (_player != null && _player.BattleSlot == 1)
+                        {
+                            var secondaryFont = ServiceLocator.Get<Core>().SecondaryFont;
+                            // Ensure font is set
+                            if (_slot2BackButton.Font == null) _slot2BackButton.Font = secondaryFont;
+
+                            int backButtonHeight = 9; // Reduced from 15
+                            int backButtonY = 168;    // Moved down from 165
+
+                            var backSize = secondaryFont.MeasureString(_slot2BackButton.Text);
+                            int backWidth = (int)backSize.Width + 16;
+                            // Center relative to the button column
+                            int backX = startX + (buttonWidth - backWidth) / 2 + 2; // Added +2 pixels
+
+                            _slot2BackButton.Bounds = new Rectangle(backX, backButtonY, backWidth, backButtonHeight);
+                            _slot2BackButton.Draw(spriteBatch, font, gameTime, transform);
+                        }
                         break;
                     }
                 case MenuState.Moves:
@@ -837,6 +876,11 @@ namespace ProjectVagabond.Battle.UI
                     foreach (var button in _actionButtons)
                     {
                         spriteBatch.DrawSnapped(pixel, button.Bounds, Color.Green * 0.5f);
+                    }
+                    // NEW: Debug for Slot 2 Back Button
+                    if (_player != null && _player.BattleSlot == 1)
+                    {
+                        spriteBatch.DrawSnapped(pixel, _slot2BackButton.Bounds, Color.Red * 0.5f);
                     }
                 }
 

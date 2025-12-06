@@ -90,6 +90,7 @@ namespace ProjectVagabond.Battle.UI
             _actionMenu.OnMovesMenuOpened += () => SubMenuState = BattleSubMenuState.ActionMoves;
             _actionMenu.OnMainMenuOpened += () => SubMenuState = BattleSubMenuState.ActionRoot;
             _actionMenu.OnFleeRequested += () => OnFleeRequested?.Invoke();
+            _actionMenu.OnSlot2BackRequested += () => ServiceLocator.Get<BattleManager>().CancelSlot2Selection();
 
             _itemMenu.OnBack += OnItemMenuBack;
             _itemMenu.OnItemConfirmed += HandlePlayerItemSelected;

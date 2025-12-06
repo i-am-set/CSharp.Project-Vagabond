@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace ProjectVagabond.Battle
 {
@@ -170,6 +171,21 @@ namespace ProjectVagabond.Battle
                 if (_pendingSlot1Action != null) AddActionToQueue(_pendingSlot1Action);
                 AddActionToQueue(action);
                 FinalizeTurnSelection();
+            }
+        }
+
+        public void CancelSlot2Selection()
+        {
+            if (_currentPhase == BattlePhase.ActionSelection_Slot2)
+            {
+                _pendingSlot1Action = null;
+                // Find Slot 0 player
+                var slot1 = _playerParty.FirstOrDefault(c => c.BattleSlot == 0 && !c.IsDefeated);
+                if (slot1 != null)
+                {
+                    CurrentActingCombatant = slot1;
+                    _currentPhase = BattlePhase.ActionSelection_Slot1;
+                }
             }
         }
 
