@@ -100,10 +100,13 @@ namespace ProjectVagabond.Battle.UI
             _switchMenu.OnBack += () => {
                 SubMenuState = BattleSubMenuState.ActionRoot;
                 _switchMenu.Hide();
-                var player = ServiceLocator.Get<BattleManager>().AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var player = battleManager.CurrentActingCombatant ?? battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+
                 if (player != null)
                 {
-                    _actionMenu.Show(player, ServiceLocator.Get<BattleManager>().AllCombatants.ToList());
+                    _actionMenu.Show(player, battleManager.AllCombatants.ToList());
                 }
             };
         }
@@ -166,10 +169,13 @@ namespace ProjectVagabond.Battle.UI
             {
                 SubMenuState = BattleSubMenuState.ActionRoot;
                 _switchMenu.Hide();
-                var player = ServiceLocator.Get<BattleManager>().AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                var player = battleManager.CurrentActingCombatant ?? battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+
                 if (player != null)
                 {
-                    _actionMenu.Show(player, ServiceLocator.Get<BattleManager>().AllCombatants.ToList());
+                    _actionMenu.Show(player, battleManager.AllCombatants.ToList());
                 }
             }
             else
@@ -452,10 +458,13 @@ namespace ProjectVagabond.Battle.UI
         {
             SubMenuState = BattleSubMenuState.ActionRoot;
             _itemMenu.Hide();
-            var player = ServiceLocator.Get<BattleManager>().AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+
+            var battleManager = ServiceLocator.Get<BattleManager>();
+            var player = battleManager.CurrentActingCombatant ?? battleManager.AllCombatants.FirstOrDefault(c => c.IsPlayerControlled && !c.IsDefeated);
+
             if (player != null)
             {
-                _actionMenu.Show(player, ServiceLocator.Get<BattleManager>().AllCombatants.ToList());
+                _actionMenu.Show(player, battleManager.AllCombatants.ToList());
             }
         }
 

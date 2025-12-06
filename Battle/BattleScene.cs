@@ -764,7 +764,7 @@ namespace ProjectVagabond.Scenes
             else
             {
                 string actionName = e.Item != null ? e.Item.ItemName : (e.Move != null ? e.Move.MoveName : "Unknown Action");
-                _uiManager.ShowNarration($"{e.Actor.Name} uses {actionName}!");
+                _uiManager.ShowNarration($"{e.Actor.Name} USED\n{actionName}!");
             }
         }
 

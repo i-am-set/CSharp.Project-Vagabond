@@ -40,6 +40,7 @@ namespace ProjectVagabond.Battle.UI
         // Tuning constants
         private const float TYPEWRITER_SPEED = 0.01f; // Seconds per character
         private const float AUTO_ADVANCE_SECONDS = 5.0f; // Seconds to wait for input
+        private const int LINE_SPACING = 3; // Extra vertical pixels between lines
 
         /// <summary>
         /// If true, the narrator will automatically advance after a delay.
@@ -79,7 +80,8 @@ namespace ProjectVagabond.Battle.UI
             _font = font;
             const int padding = 5;
             _wrapWidth = _bounds.Width - (padding * 4);
-            _maxVisibleLines = Math.Min(7, (_bounds.Height - (padding * 2)) / _font.LineHeight);
+            // Adjust max lines calculation to account for extra line spacing
+            _maxVisibleLines = Math.Min(7, (_bounds.Height - (padding * 2)) / (_font.LineHeight + LINE_SPACING));
 
             string upperMessage = message.ToUpper();
 
@@ -104,7 +106,9 @@ namespace ProjectVagabond.Battle.UI
             if (_messageQueue.Count > 0)
             {
                 _currentSegment = _messageQueue.Dequeue();
-                _words = _currentSegment.Split(' ').ToList();
+                // Handle explicit newlines by padding them so Split picks them up as words
+                string processedSegment = _currentSegment.Replace("\n", " \n ");
+                _words = processedSegment.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
                 _displayLines.Clear();
                 _displayLines.Add(new StringBuilder());
                 _wordIndex = 0;
@@ -131,6 +135,17 @@ namespace ProjectVagabond.Battle.UI
 
             foreach (var word in _words)
             {
+                if (word == "\n")
+                {
+                    currentLine = new StringBuilder();
+                    _displayLines.Add(currentLine);
+                    if (_displayLines.Count > _maxVisibleLines)
+                    {
+                        _displayLines.RemoveAt(0);
+                    }
+                    continue;
+                }
+
                 var potentialText = (currentLine.Length > 0 ? currentLine.ToString() + " " : "") + word;
                 if (_font.MeasureString(potentialText).Width > _wrapWidth)
                 {
@@ -201,6 +216,21 @@ namespace ProjectVagabond.Battle.UI
                         if (_wordIndex < _words.Count)
                         {
                             var word = _words[_wordIndex];
+
+                            // Handle Newline Token
+                            if (word == "\n")
+                            {
+                                _displayLines.Add(new StringBuilder());
+                                if (_displayLines.Count > _maxVisibleLines)
+                                {
+                                    _displayLines.RemoveAt(0);
+                                }
+                                _wordIndex++;
+                                _charInWordIndex = 0;
+                                // Skip to next update cycle to process next word
+                                return;
+                            }
+
                             if (_charInWordIndex == 0) // Start of a new word, check for wrapping
                             {
                                 var currentLine = _displayLines.Last();
@@ -262,7 +292,8 @@ namespace ProjectVagabond.Battle.UI
             {
                 for (int i = 0; i < _displayLines.Count; i++)
                 {
-                    var textPosition = new Vector2(panelBounds.X + padding, panelBounds.Y + padding - 2 + (i * font.LineHeight));
+                    // Apply extra line spacing here
+                    var textPosition = new Vector2(panelBounds.X + padding, panelBounds.Y + padding - 2 + (i * (font.LineHeight + LINE_SPACING)));
                     spriteBatch.DrawStringSnapped(font, _displayLines[i].ToString(), textPosition, _global.Palette_BrightWhite);
                 }
             }
@@ -304,3 +335,4 @@ namespace ProjectVagabond.Battle.UI
         }
     }
 }
+#nullable restore
