@@ -309,7 +309,8 @@ namespace ProjectVagabond.Battle.UI
             // --- Draw Sprite ---
             // Calculate sprite position relative to HUD
             const int heartHeight = 32;
-            float heartCenterY = playerHudY - font.LineHeight - 2 - (heartHeight / 2f);
+            // Moved down by 10 pixels as requested
+            float heartCenterY = playerHudY - font.LineHeight - 2 - (heartHeight / 2f) + 10;
             float spriteCenterX = startX + (barWidth / 2f);
 
             // Store STATIC visual center for animations/targeting (so they don't bob with the sprite)
@@ -345,14 +346,43 @@ namespace ProjectVagabond.Battle.UI
             {
                 Color nameColor = Color.White;
                 if (isTurnInProgress && player != currentActor) nameColor = _turnInactiveTintColor;
+
+                // --- Name Dimming Logic ---
+                var battleManager = ServiceLocator.Get<BattleManager>();
+                bool isSelectionPhase = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2;
+                var selectingActor = battleManager.CurrentActingCombatant;
+
+                // If we are in a selection phase, and this player is NOT the one selecting, dim their name.
+                if (isSelectionPhase && selectingActor != null && player != selectingActor)
+                {
+                    nameColor = _global.Palette_Gray;
+                }
+
                 if (hoverHighlightState.Targets.Contains(player)) nameColor = _global.Palette_Yellow;
 
-                // Name Position
+                // --- Name Position Logic ---
                 Vector2 nameSize = font.MeasureString(player.Name);
-                Vector2 namePos = new Vector2(startX + (barWidth - nameSize.X) / 2f, playerHudY - font.LineHeight - 2);
+                float nameX;
+                const int centerPadding = 10; // Space from the exact center line
+
+                // Align text vertically with the bars (approximate center of bar stack)
+                float nameY = playerHudY - 2;
+
+                if (isRightSide)
+                {
+                    // Slot 1: Name is on the LEFT of the RIGHT half (against center)
+                    nameX = (Global.VIRTUAL_WIDTH / 2) + centerPadding;
+                }
+                else
+                {
+                    // Slot 0: Name is on the RIGHT of the LEFT half (against center)
+                    nameX = (Global.VIRTUAL_WIDTH / 2) - nameSize.X - centerPadding;
+                }
+
+                Vector2 namePos = new Vector2(nameX, nameY);
                 spriteBatch.DrawStringSnapped(font, player.Name, namePos, nameColor);
 
-                // Resource Bars
+                // Resource Bars (Keep existing logic for position)
                 DrawPlayerResourceBars(spriteBatch, player, new Vector2(startX, playerHudY), barWidth, uiManager, animationManager);
             }
 
