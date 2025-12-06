@@ -347,26 +347,36 @@ namespace ProjectVagabond.Battle.UI
                 Color nameColor = Color.White;
                 if (isTurnInProgress && player != currentActor) nameColor = _turnInactiveTintColor;
 
-                // --- Name Dimming Logic ---
+                // --- Name Dimming & Font Logic ---
                 var battleManager = ServiceLocator.Get<BattleManager>();
                 bool isSelectionPhase = battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot1 || battleManager.CurrentPhase == BattleManager.BattlePhase.ActionSelection_Slot2;
                 var selectingActor = battleManager.CurrentActingCombatant;
 
-                // If we are in a selection phase, and this player is NOT the one selecting, dim their name.
+                BitmapFont nameFontToUse = font;
+
+                // If we are in a selection phase, and this player is NOT the one selecting, dim their name and use small font.
                 if (isSelectionPhase && selectingActor != null && player != selectingActor)
                 {
                     nameColor = _global.Palette_Gray;
+                    nameFontToUse = secondaryFont;
                 }
 
                 if (hoverHighlightState.Targets.Contains(player)) nameColor = _global.Palette_Yellow;
 
                 // --- Name Position Logic ---
-                Vector2 nameSize = font.MeasureString(player.Name);
+                Vector2 nameSize = nameFontToUse.MeasureString(player.Name);
                 float nameX;
                 const int centerPadding = 10; // Space from the exact center line
 
                 // Align text vertically with the bars (approximate center of bar stack)
                 float nameY = playerHudY - 2;
+
+                // Center smaller font vertically relative to where the large font would be
+                if (nameFontToUse == secondaryFont)
+                {
+                    float heightDiff = font.LineHeight - secondaryFont.LineHeight;
+                    nameY += heightDiff / 2f;
+                }
 
                 if (isRightSide)
                 {
@@ -380,7 +390,7 @@ namespace ProjectVagabond.Battle.UI
                 }
 
                 Vector2 namePos = new Vector2(nameX, nameY);
-                spriteBatch.DrawStringSnapped(font, player.Name, namePos, nameColor);
+                spriteBatch.DrawStringSnapped(nameFontToUse, player.Name, namePos, nameColor);
 
                 // Resource Bars (Keep existing logic for position)
                 DrawPlayerResourceBars(spriteBatch, player, new Vector2(startX, playerHudY), barWidth, uiManager, animationManager);
