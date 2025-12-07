@@ -774,7 +774,7 @@ namespace ProjectVagabond.Scenes
                     typeTag = "cItem";
                 }
 
-                _uiManager.ShowNarration($"{e.Actor.Name} USED [{typeTag}]{actionName}[/]!");
+                _uiManager.ShowNarration($"{e.Actor.Name} USED\n[{typeTag}]{actionName}[/]!");
             }
         }
 
@@ -790,8 +790,8 @@ namespace ProjectVagabond.Scenes
 
             if (e.CriticalHitCount > 0)
             {
-                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a [cCrit]CRITICAL HIT[/]!");
-                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount} [cCrit]CRITICAL HITS[/]!");
+                if (e.CriticalHitCount == 1) _uiManager.ShowNarration("Landed a\n[cCrit]CRITICAL HIT[/]!");
+                else _uiManager.ShowNarration($"Landed {e.CriticalHitCount}\n[cCrit]CRITICAL HITS[/]!");
             }
             _isWaitingForMultiHitDelay = false;
             _multiHitDelayTimer = 0f;
@@ -854,7 +854,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantHealed(GameEvents.CombatantHealed e)
         {
-            _uiManager.ShowNarration($"{e.Target.Name} recovered {e.HealAmount} HP!");
+            _uiManager.ShowNarration($"{e.Target.Name} recovered\n{e.HealAmount} HP!");
             _animationManager.StartHealthRecoveryAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
             _animationManager.StartHealthAnimation(e.Target.CombatantID, e.VisualHPBefore, e.Target.Stats.CurrentHP);
             _animationManager.StartHealBounceAnimation(e.Target.CombatantID);
@@ -865,7 +865,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnCombatantManaRestored(GameEvents.CombatantManaRestored e)
         {
-            _uiManager.ShowNarration($"{e.Target.Name} restored {e.AmountRestored} Mana!");
+            _uiManager.ShowNarration($"{e.Target.Name} restored\n{e.AmountRestored} Mana!");
             _animationManager.StartManaRecoveryAnimation(e.Target.CombatantID, e.ManaBefore, e.ManaAfter);
         }
 
@@ -882,7 +882,7 @@ namespace ProjectVagabond.Scenes
                 _hapticsManager.TriggerShake(magnitude: 10.0f, duration: 0.75f, frequency: 120f);
             }
 
-            if (e.SourceAbility != null) _uiManager.ShowNarration($"{e.Actor.Name} was hurt by {e.SourceAbility.AbilityName}!");
+            if (e.SourceAbility != null) _uiManager.ShowNarration($"{e.Actor.Name} was hurt by\n{e.SourceAbility.AbilityName}!");
             else _uiManager.ShowNarration($"{e.Actor.Name} is damaged by recoil!");
 
             _animationManager.StartHealthLossAnimation(e.Actor.CombatantID, e.Actor.VisualHP, e.Actor.Stats.CurrentHP);
@@ -903,7 +903,7 @@ namespace ProjectVagabond.Scenes
         private void OnActionFailed(GameEvents.ActionFailed e)
         {
             _currentActor = e.Actor;
-            if (e.Reason.StartsWith("charging")) _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason}!");
+            if (e.Reason.StartsWith("charging")) _uiManager.ShowNarration($"{e.Actor.Name} is\n{e.Reason}!");
             else _uiManager.ShowNarration($"{e.Actor.Name} is {e.Reason} and cannot move!");
         }
 
@@ -918,7 +918,7 @@ namespace ProjectVagabond.Scenes
                 }
 
                 string effectName = e.EffectType == StatusEffectType.Burn ? "the burn" : e.EffectType.ToString();
-                _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage from [cStatus]{effectName}[/]!");
+                _uiManager.ShowNarration($"{e.Combatant.Name} takes {e.Damage} damage\nfrom [cStatus]{effectName}[/]!");
 
                 _animationManager.StartHealthLossAnimation(e.Combatant.CombatantID, e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
                 _animationManager.StartHealthAnimation(e.Combatant.CombatantID, (int)e.Combatant.VisualHP, e.Combatant.Stats.CurrentHP);
@@ -967,7 +967,7 @@ namespace ProjectVagabond.Scenes
 
         private void OnNextEnemyApproaches(GameEvents.NextEnemyApproaches e)
         {
-            _uiManager.ShowNarration("Another [cEnemy]ENEMY[/] approaches!");
+            _uiManager.ShowNarration("Another [cEnemy]ENEMY[/] approaches...");
         }
 
         private void OnCombatantSpawned(GameEvents.CombatantSpawned e)
