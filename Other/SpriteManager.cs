@@ -114,6 +114,7 @@ namespace ProjectVagabond
         public Texture2D SpellbookClosedSprite { get; private set; }
         public Texture2D PlayerHeartSpriteSheet { get; private set; }
         public Texture2D PlayerHeartSpriteSheetSilhouette { get; private set; }
+        public Texture2D ShadowBlobSprite { get; private set; }
 
         // Split Map Node Sprites
         public Texture2D SplitNodeStart { get; private set; }
@@ -227,6 +228,9 @@ namespace ProjectVagabond
 
             try { _softParticleSprite = _textureFactory.CreateSoftCircleParticleTexture(); }
             catch { _softParticleSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Red); }
+
+            try { ShadowBlobSprite = _textureFactory.CreateSoftShadowTexture(); }
+            catch { ShadowBlobSprite = _textureFactory.CreateColoredTexture(16, 16, Color.Black); }
 
             try { ArrowIconSpriteSheet = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/arrow_icon_spritesheet"); }
             catch { ArrowIconSpriteSheet = _textureFactory.CreateColoredTexture(48, 48, Color.Magenta); }

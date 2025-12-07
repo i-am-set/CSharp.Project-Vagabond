@@ -344,6 +344,45 @@ namespace ProjectVagabond
             return texture;
         }
 
+        public Texture2D CreateSoftShadowTexture()
+        {
+            var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
+            var global = ServiceLocator.Get<Global>();
+
+            const int size = 128;
+            var texture = new Texture2D(graphicsDevice, size, size);
+            var colorData = new Color[size * size];
+            float radius = size / 2f;
+            var center = new Vector2(radius - 0.5f, radius - 0.5f);
+
+            Color innerColor = global.Palette_DarkestGray;
+            Color outerColor = global.Palette_Black;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float distance = Vector2.Distance(center, new Vector2(x, y));
+                    float normalizedDist = distance / radius;
+
+                    if (normalizedDist >= 1f)
+                    {
+                        colorData[y * size + x] = outerColor;
+                    }
+                    else
+                    {
+                        // Quadratic falloff for a nice "fuzzy" look
+                        // t goes from 0 (center) to 1 (edge)
+                        float t = normalizedDist * normalizedDist;
+                        colorData[y * size + x] = Color.Lerp(innerColor, outerColor, t);
+                    }
+                }
+            }
+
+            texture.SetData(colorData);
+            return texture;
+        }
+
         public Texture2D CreateEnemyPlaceholderTexture()
         {
             var graphicsDevice = ServiceLocator.Get<GraphicsDevice>();
