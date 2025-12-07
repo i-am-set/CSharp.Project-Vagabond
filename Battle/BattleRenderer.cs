@@ -795,7 +795,6 @@ namespace ProjectVagabond.Battle.UI
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X - 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X + 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X, (int)baseDrawPosition.Y - 1, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
-                            spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X, (int)baseDrawPosition.Y + 1, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
                         }
                     }
 
