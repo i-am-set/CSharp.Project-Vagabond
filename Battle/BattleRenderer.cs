@@ -62,6 +62,13 @@ namespace ProjectVagabond.Battle.UI
         private const float PLAYER_INDICATOR_BOB_SPEED = 0.75f;
         private const float TITLE_INDICATOR_BOB_SPEED = PLAYER_INDICATOR_BOB_SPEED / 2f;
 
+        // --- Targeting Indicator Animation Tuning ---
+        // Note: Rotation and Scale tuning variables are no longer used, but kept in Global for compatibility if needed later.
+        // We only use Position Strength (Offset) and Speed now.
+
+        // Noise generator for organic sway
+        private static readonly SeededPerlin _swayNoise = new SeededPerlin(9999);
+
         public BattleRenderer()
         {
             _spriteManager = ServiceLocator.Get<SpriteManager>();
@@ -213,7 +220,7 @@ namespace ProjectVagabond.Battle.UI
 
 
             // --- Draw Enemy HUDs ---
-            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState, pulseAlpha);
+            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState, pulseAlpha, gameTime);
 
             // --- Draw Player HUDs (Slots 0 & 1) ---
             foreach (var playerCombatant in players)
@@ -246,7 +253,7 @@ namespace ProjectVagabond.Battle.UI
         {
         }
 
-        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha)
+        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime)
         {
             if (!enemies.Any()) return;
 
@@ -261,7 +268,7 @@ namespace ProjectVagabond.Battle.UI
                 int slotIndex = enemy.BattleSlot;
                 var slotCenter = new Vector2(enemyAreaPadding + (slotIndex * slotWidth) + (slotWidth / 2), 0);
 
-                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, hoverHighlightState, pulseAlpha);
+                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, hoverHighlightState, pulseAlpha, gameTime);
 
                 if (selectableTargets.Contains(enemy))
                 {
@@ -325,7 +332,6 @@ namespace ProjectVagabond.Battle.UI
                 playerSpriteTint = _turnInactiveTintColor;
             }
 
-            // Highlight logic: Active if selectable and graying out is active (targeting or hover)
             bool isHighlighted = isSelectable && shouldGrayOutUnselectable;
 
             // Calculate Attack Bob (Jump UP for players)
@@ -340,7 +346,7 @@ namespace ProjectVagabond.Battle.UI
 
             // Draw the sprite
             sprite.SetPosition(new Vector2(spriteCenterX, heartCenterY + yBobOffset));
-            sprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor);
+            sprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor, gameTime);
 
             // --- Draw HUD ---
             if (!isSilhouetted)
@@ -661,7 +667,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha)
+        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime)
         {
             // Calculate Attack Bob (Jump DOWN for enemies)
             float yBobOffset = CalculateAttackBobOffset(combatant.CombatantID, isPlayer: false);
@@ -833,6 +839,44 @@ namespace ProjectVagabond.Battle.UI
                         if (isFlashingWhite && enemySilhouette != null)
                         {
                             spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, Color.White * 0.8f);
+                        }
+                    }
+
+                    // --- Indicator Pass ---
+                    if (isHighlighted)
+                    {
+                        var indicator = _spriteManager.TargetingIndicatorSprite;
+                        if (indicator != null)
+                        {
+                            // Calculate Visual Center Offset
+                            Vector2 visualCenterOffset = _spriteManager.GetVisualCenterOffset(combatant.ArchetypeId);
+
+                            // Base center of the sprite rect
+                            Vector2 spriteCenter = new Vector2(spriteRect.Center.X, spriteRect.Center.Y);
+
+                            // Apply visual center offset
+                            // X is geometric center, Y is visual center (center of mass)
+                            Vector2 targetCenter = new Vector2(spriteCenter.X, spriteCenter.Y + visualCenterOffset.Y);
+
+                            // Apply Animation Math (Perlin Noise)
+                            float t = (float)gameTime.TotalGameTime.TotalSeconds * _global.TargetIndicatorNoiseSpeed;
+                            int seed = combatant.CombatantID.GetHashCode();
+
+                            // Noise lookups (offsets ensure different axes don't sync)
+                            float nX = _swayNoise.Noise(t, seed);
+                            float nY = _swayNoise.Noise(t, seed + 100);
+
+                            float swayX = nX * _global.TargetIndicatorOffsetX;
+                            float swayY = nY * _global.TargetIndicatorOffsetY;
+
+                            // Removed rotation and scale noise as requested
+                            float rotation = 0f;
+                            float scale = 1.0f;
+
+                            Vector2 animatedPos = targetCenter + new Vector2(swayX, swayY) + shakeOffset;
+                            Vector2 origin = new Vector2(indicator.Width / 2f, indicator.Height / 2f);
+
+                            spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, origin, scale, SpriteEffects.None, 0f);
                         }
                     }
                 }

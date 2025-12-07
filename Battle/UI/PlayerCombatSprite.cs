@@ -32,6 +32,9 @@ namespace ProjectVagabond.Battle.UI
         private int _frameHeight;
         private const float FRAME_DURATION = 0.2f; // ~5 FPS
 
+        // Noise generator for organic sway
+        private static readonly SeededPerlin _swayNoise = new SeededPerlin(8888);
+
         public PlayerCombatSprite(string archetypeId)
         {
             _archetypeId = archetypeId;
@@ -90,7 +93,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null)
+        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null)
         {
             Initialize();
             if (_texture == null || combatant == null) return;
@@ -125,6 +128,41 @@ namespace ProjectVagabond.Battle.UI
                 if (_archetypeId != "player") effects = SpriteEffects.FlipHorizontally;
 
                 spriteBatch.Draw(_silhouette, mainRect, sourceRectangle, Color.Yellow, 0f, Vector2.Zero, effects, 0.5f);
+
+                // Draw Indicator
+                var indicator = ServiceLocator.Get<SpriteManager>().TargetingIndicatorSprite;
+                if (indicator != null && gameTime != null)
+                {
+                    // Calculate Visual Center Offset
+                    Vector2 visualCenterOffset = ServiceLocator.Get<SpriteManager>().GetVisualCenterOffset(_archetypeId);
+
+                    // Base center of the sprite rect
+                    Vector2 spriteCenter = new Vector2(mainRect.Center.X, mainRect.Center.Y);
+
+                    // Apply visual center offset
+                    // X is geometric center, Y is visual center (center of mass)
+                    Vector2 targetCenter = new Vector2(spriteCenter.X, spriteCenter.Y + visualCenterOffset.Y);
+
+                    // Apply Animation Math (Perlin Noise)
+                    float t = (float)gameTime.TotalGameTime.TotalSeconds * global.TargetIndicatorNoiseSpeed;
+                    int seed = combatant.CombatantID.GetHashCode();
+
+                    // Noise lookups (offsets ensure different axes don't sync)
+                    float nX = _swayNoise.Noise(t, seed);
+                    float nY = _swayNoise.Noise(t, seed + 100);
+
+                    float swayX = nX * global.TargetIndicatorOffsetX;
+                    float swayY = nY * global.TargetIndicatorOffsetY;
+
+                    // Removed rotation and scale noise as requested
+                    float rotation = 0f;
+                    float scale = 1.0f;
+
+                    Vector2 animatedPos = targetCenter + new Vector2(swayX, swayY) + shakeOffset;
+                    Vector2 origin = new Vector2(indicator.Width / 2f, indicator.Height / 2f);
+
+                    spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, origin, scale, SpriteEffects.None, 0f);
+                }
                 return;
             }
 

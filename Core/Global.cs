@@ -646,6 +646,14 @@ namespace ProjectVagabond
         /// </summary>
         public float DiceDebugAxisLineSize { get; set; } = 0.5f;
 
+        // --- Target Indicator Settings ---
+        public float TargetIndicatorNoiseSpeed { get; set; } = 0.5f;
+        public float TargetIndicatorOffsetX { get; set; } = 6.0f;
+        public float TargetIndicatorOffsetY { get; set; } = 6.0f;
+        public float TargetIndicatorRotationRange { get; set; } = 0f; // Radians
+        public float TargetIndicatorScaleMin { get; set; } = 1.0f;
+        public float TargetIndicatorScaleMax { get; set; } = 1.0f;
+
         public Color GetNarrationColor(string tag)
         {
             switch (tag.ToLowerInvariant())

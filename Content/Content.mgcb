@@ -2450,6 +2450,18 @@
 /processorParam:TextureFormat=Color
 /build:Sprites/UI/BasicIcons/StatusEffects/tenacityup_status_icon.png;Sprites/UI/BasicIcons/StatusEffects/tenacityup_status_icon
 
+#begin Sprites/UI/BasicIcons/targeting_indicator.png
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:Sprites/UI/BasicIcons/targeting_indicator.png;Sprites/UI/BasicIcons/targeting_indicator
+
 #begin Sprites/UI/BasicIcons/ui_action_icons_spritesheet_9x9.png
 /importer:TextureImporter
 /processor:TextureProcessor

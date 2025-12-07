@@ -77,6 +77,10 @@ namespace ProjectVagabond
         private readonly Dictionary<string, int[]> _enemySpriteLeftPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteRightPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, int[]> _enemySpriteBottomPixelOffsets = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
+
+        // Cache for visual center offsets
+        private readonly Dictionary<string, Vector2> _visualCenterOffsets = new Dictionary<string, Vector2>(StringComparer.OrdinalIgnoreCase);
+
         private readonly Dictionary<StatusEffectType, Texture2D> _statusEffectIcons = new Dictionary<StatusEffectType, Texture2D>();
 
         // General Item/Relic Sprite Cache
@@ -167,6 +171,7 @@ namespace ProjectVagabond
         public Texture2D InventoryScrollArrowsSprite { get; private set; }
         public Texture2D InventoryEmptySlotSprite { get; private set; }
         public Texture2D InventorySlotEquipIconSprite { get; private set; }
+        public Texture2D TargetingIndicatorSprite { get; private set; }
 
 
         // Mouse Prompt Sprites
@@ -414,6 +419,8 @@ namespace ProjectVagabond
             catch { InventoryEmptySlotSprite = _textureFactory.CreateColoredTexture(16, 16, Color.DarkGray); }
             try { InventorySlotEquipIconSprite = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_slot_equip_icon"); }
             catch { InventorySlotEquipIconSprite = _textureFactory.CreateColoredTexture(64, 32, Color.Magenta); }
+            try { TargetingIndicatorSprite = _core.Content.Load<Texture2D>("Sprites/UI/BasicIcons/targeting_indicator"); }
+            catch { TargetingIndicatorSprite = _textureFactory.CreateColoredTexture(32, 32, Color.Red); }
 
             // Load Health Bar Sprites
             try { InventoryPlayerHealthBarEmpty = _core.Content.Load<Texture2D>("Sprites/UI/Inventory/inventory_player_health_bar_empty"); }
@@ -657,7 +664,8 @@ namespace ProjectVagabond
             // If a sprite was loaded (either major or normal)
             var silhouette = CreateSilhouette(sprite);
             _enemySprites[archetypeId] = (sprite, silhouette, isMajor);
-            PreCalculateSpriteBounds(sprite, archetypeId);
+            int partSize = isMajor ? 96 : 64;
+            PreCalculateSpriteBounds(sprite, archetypeId, partSize);
             return sprite;
         }
 
@@ -909,11 +917,8 @@ namespace ProjectVagabond
             return offsets;
         }
 
-        private void PreCalculateSpriteBounds(Texture2D sprite, string archetypeId)
+        private void PreCalculateSpriteBounds(Texture2D sprite, string archetypeId, int partSize)
         {
-            bool isMajor = _enemySprites[archetypeId].IsMajor;
-            int partSize = isMajor ? 96 : 64;
-
             int numParts = sprite.Width / partSize;
             var topOffsets = new int[numParts];
             var leftOffsets = new int[numParts];
@@ -948,6 +953,40 @@ namespace ProjectVagabond
             _enemySpriteLeftPixelOffsets[archetypeId] = leftOffsets;
             _enemySpriteRightPixelOffsets[archetypeId] = rightOffsets;
             _enemySpriteBottomPixelOffsets[archetypeId] = bottomOffsets;
+
+            // --- NEW: Calculate Visual Center Offset (Union) ---
+            if (numParts > 0)
+            {
+                int globalMinY = int.MaxValue;
+                int globalMaxY = int.MinValue;
+
+                for (int i = 0; i < numParts; i++)
+                {
+                    if (topOffsets[i] != int.MaxValue && topOffsets[i] < globalMinY) globalMinY = topOffsets[i];
+                    if (bottomOffsets[i] != -1 && bottomOffsets[i] > globalMaxY) globalMaxY = bottomOffsets[i];
+                }
+
+                if (globalMinY != int.MaxValue && globalMaxY != int.MinValue)
+                {
+                    float centerY = (globalMinY + globalMaxY) / 2f;
+                    float frameCenterY = partSize / 2f;
+                    // X is 0 (Geometric Center), Y is Visual Center
+                    _visualCenterOffsets[archetypeId] = new Vector2(0, centerY - frameCenterY);
+                }
+                else
+                {
+                    _visualCenterOffsets[archetypeId] = Vector2.Zero;
+                }
+            }
+        }
+
+        public Vector2 GetVisualCenterOffset(string archetypeId)
+        {
+            if (_visualCenterOffsets.TryGetValue(archetypeId, out var offset))
+            {
+                return offset;
+            }
+            return Vector2.Zero;
         }
 
         public Texture2D GetStatusEffectIcon(StatusEffectType effectType)
@@ -1053,6 +1092,7 @@ namespace ProjectVagabond
             {
                 PlayerHeartSpriteSheet = _core.Content.Load<Texture2D>("Sprites/Player/player_heart_spritesheet");
                 PlayerHeartSpriteSheetSilhouette = CreateSilhouette(PlayerHeartSpriteSheet);
+                PreCalculateSpriteBounds(PlayerHeartSpriteSheet, "player", 32);
             }
             catch
             {
