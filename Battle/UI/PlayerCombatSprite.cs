@@ -117,8 +117,19 @@ namespace ProjectVagabond.Battle.UI
                 return;
             }
 
+            // NEW: Highlight Mode (Full Yellow Silhouette)
+            if (isHighlighted && _silhouette != null)
+            {
+                var mainRect = new Rectangle(topLeftPosition.X, topLeftPosition.Y, _frameWidth, _frameHeight);
+                SpriteEffects effects = SpriteEffects.None;
+                if (_archetypeId != "player") effects = SpriteEffects.FlipHorizontally;
+
+                spriteBatch.Draw(_silhouette, mainRect, sourceRectangle, Color.Yellow, 0f, Vector2.Zero, effects, 0.5f);
+                return;
+            }
+
             Color mainColor = tintColorOverride ?? Color.White;
-            Color outlineColor = isHighlighted ? Color.Yellow : (tintColorOverride ?? global.Palette_DarkGray);
+            Color outlineColor = tintColorOverride ?? global.Palette_DarkGray;
 
             // --- Draw Outline ---
             if (_silhouette != null)
@@ -147,26 +158,19 @@ namespace ProjectVagabond.Battle.UI
             // If the sprite is an enemy sprite reused, it faces left by default.
             // So we flip it to face right.
             // The Player Heart faces right by default.
-            SpriteEffects effects = SpriteEffects.None;
+            SpriteEffects spriteEffects = SpriteEffects.None;
             if (_archetypeId != "player")
             {
-                effects = SpriteEffects.FlipHorizontally;
+                spriteEffects = SpriteEffects.FlipHorizontally;
             }
 
-            spriteBatch.Draw(_texture, mainRectDraw, sourceRectangle, mainColor, 0f, Vector2.Zero, effects, 0.5f);
-
-            // --- Draw Highlight Overlay ---
-            if (isHighlighted && _silhouette != null)
-            {
-                spriteBatch.Draw(_silhouette, mainRectDraw, sourceRectangle, Color.Yellow * pulseAlpha, 0f, Vector2.Zero, effects, 0.505f);
-            }
+            spriteBatch.Draw(_texture, mainRectDraw, sourceRectangle, mainColor, 0f, Vector2.Zero, spriteEffects, 0.5f);
 
             // --- Draw Flash Overlay ---
             if (isFlashingWhite && _silhouette != null)
             {
-                spriteBatch.Draw(_silhouette, mainRectDraw, sourceRectangle, Color.White * 0.8f, 0f, Vector2.Zero, effects, 0.51f);
+                spriteBatch.Draw(_silhouette, mainRectDraw, sourceRectangle, Color.White * 0.8f, 0f, Vector2.Zero, spriteEffects, 0.51f);
             }
         }
     }
 }
-#nullable restore

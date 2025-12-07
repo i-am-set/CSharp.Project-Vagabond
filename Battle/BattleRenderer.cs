@@ -325,7 +325,8 @@ namespace ProjectVagabond.Battle.UI
                 playerSpriteTint = _turnInactiveTintColor;
             }
 
-            bool isHighlighted = isSelectable && shouldGrayOutUnselectable && !isTargetingPhase;
+            // Highlight logic: Active if selectable and graying out is active (targeting or hover)
+            bool isHighlighted = isSelectable && shouldGrayOutUnselectable;
 
             // Calculate Attack Bob (Jump UP for players)
             float yBobOffset = CalculateAttackBobOffset(player.CombatantID, isPlayer: true);
@@ -727,6 +728,9 @@ namespace ProjectVagabond.Battle.UI
             float silhouetteFactor = spawnAnim != null ? spawnSilhouetteAmount : combatant.VisualSilhouetteAmount;
             Color silhouetteColor = spawnAnim != null ? (spawnSilhouetteColor ?? _global.Palette_DarkGray) : (combatant.VisualSilhouetteColorOverride ?? _global.Palette_DarkGray);
 
+            // Highlight logic: Active if selectable and graying out is active (targeting or hover)
+            bool isHighlighted = isSelectable && shouldGrayOutUnselectable;
+
             if (shouldGrayOutUnselectable && !isSelectable && spawnAnim == null)
             {
                 silhouetteFactor = 1.0f;
@@ -784,7 +788,8 @@ namespace ProjectVagabond.Battle.UI
                     Vector2 shakeOffset = hitFlashState?.ShakeOffset ?? Vector2.Zero;
 
                     // --- Outline Pass ---
-                    if (enemySilhouette != null && silhouetteFactor < 1.0f)
+                    // Only draw outline if NOT highlighted (since highlight will be the full shape)
+                    if (enemySilhouette != null && silhouetteFactor < 1.0f && !isHighlighted)
                     {
                         for (int i = 0; i < numParts; i++)
                         {
@@ -795,6 +800,7 @@ namespace ProjectVagabond.Battle.UI
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X - 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X + 1, (int)baseDrawPosition.Y, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
                             spriteBatch.DrawSnapped(enemySilhouette, new Rectangle((int)baseDrawPosition.X, (int)baseDrawPosition.Y - 1, spriteRect.Width, spriteRect.Height), sourceRect, outlineColor);
+                            // Removed bottom outline
                         }
                     }
 
@@ -810,6 +816,11 @@ namespace ProjectVagabond.Battle.UI
                         {
                             spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * finalAlpha);
                         }
+                        else if (isHighlighted && enemySilhouette != null)
+                        {
+                            // Highlighted - Full Yellow
+                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, Color.Yellow * finalAlpha);
+                        }
                         else
                         {
                             spriteBatch.DrawSnapped(enemySprite, drawRect, sourceRect, tintColor);
@@ -817,11 +828,6 @@ namespace ProjectVagabond.Battle.UI
                             {
                                 spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, silhouetteColor * silhouetteFactor * finalAlpha);
                             }
-                        }
-
-                        if (isSelectable && shouldGrayOutUnselectable && !isTargetingPhase)
-                        {
-                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, Color.Yellow * pulseAlpha);
                         }
 
                         if (isFlashingWhite && enemySilhouette != null)
