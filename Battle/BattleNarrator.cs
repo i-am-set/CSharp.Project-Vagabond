@@ -3,61 +3,72 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using MonoGame.Extended.BitmapFonts;
-using ProjectVagabond.Battle;
 using ProjectVagabond.Battle.UI;
 using ProjectVagabond.UI;
 using ProjectVagabond.Utils;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace ProjectVagabond.Battle.UI
 {
     public class BattleNarrator
     {
+        // --- Internal Data Structures ---
+        private enum TokenType { Word, Space, Newline }
+
+        private class NarratorToken
+        {
+            public string Text;
+            public Color Color;
+            public TokenType Type;
+            public float Width;
+            public int Length => Text.Length;
+
+            public NarratorToken(string text, Color color, TokenType type, float width)
+            {
+                Text = text;
+                Color = color;
+                Type = type;
+                Width = width;
+            }
+        }
+
+        // --- Dependencies & State ---
         private readonly Global _global;
         private readonly Rectangle _bounds;
         private readonly Queue<string> _messageQueue = new Queue<string>();
 
-        private string _currentSegment = "";
-        private List<ColoredText> _words = new List<ColoredText>();
-        private int _wordIndex;
-        private int _charInWordIndex;
+        // Parsing & Display Data
+        private List<NarratorToken> _allTokens = new List<NarratorToken>();
+        private readonly List<List<NarratorToken>> _displayLines = new List<List<NarratorToken>>();
 
-        private readonly List<List<ColoredText>> _displayLines = new List<List<ColoredText>>();
-        private float _wrapWidth;
-        private int _maxVisibleLines;
-        private BitmapFont _font;
-
+        // Typewriter State
+        private int _currentTokenIndex;
+        private int _currentCharIndex;
         private float _typewriterTimer;
         private float _timeoutTimer;
         private bool _isWaitingForInput;
+        private bool _isFinishedTyping;
 
-        // Input state
+        // Layout
+        private float _wrapWidth;
+        private int _maxVisibleLines;
+        private BitmapFont? _font;
+
+        // Input State
         private MouseState _previousMouseState;
         private KeyboardState _previousKeyboardState;
 
-        // Tuning constants
-        private const float TYPEWRITER_SPEED = 0.01f; // Seconds per character
-        private const float AUTO_ADVANCE_SECONDS = 5.0f; // Seconds to wait for input
-        private const int LINE_SPACING = 3; // Extra vertical pixels between lines
+        // --- Tuning ---
+        private const float TYPEWRITER_SPEED = 0.01f;
+        private const float AUTO_ADVANCE_SECONDS = 5.0f;
+        private const int LINE_SPACING = 3;
+        private const int SPACE_WIDTH = 5; // Fixed 5px width for spaces
 
-        /// <summary>
-        /// If true, the narrator will automatically advance after a delay.
-        /// If false, it waits indefinitely for user input.
-        /// Defaults to false.
-        /// </summary>
         public bool IsAutoProgressEnabled { get; set; } = false;
-
-        public bool IsBusy => _messageQueue.Count > 0 || !string.IsNullOrEmpty(_currentSegment);
-
-        /// <summary>
-        /// Returns true if the narrator has finished typing the current segment and is waiting for the user to proceed.
-        /// </summary>
+        public bool IsBusy => _messageQueue.Count > 0 || _allTokens.Count > 0;
         public bool IsWaitingForInput => _isWaitingForInput;
 
         public BattleNarrator(Rectangle bounds)
@@ -71,10 +82,10 @@ namespace ProjectVagabond.Battle.UI
         public void ForceClear()
         {
             _messageQueue.Clear();
-            _currentSegment = "";
-            _words.Clear();
+            _allTokens.Clear();
             _displayLines.Clear();
             _isWaitingForInput = false;
+            _isFinishedTyping = true;
         }
 
         public void Show(string message, BitmapFont font)
@@ -84,13 +95,9 @@ namespace ProjectVagabond.Battle.UI
             _font = font;
             const int padding = 5;
             _wrapWidth = _bounds.Width - (padding * 4);
-            // Adjust max lines calculation to account for extra line spacing
             _maxVisibleLines = Math.Min(7, (_bounds.Height - (padding * 2)) / (_font.LineHeight + LINE_SPACING));
 
-            // Note: We do NOT uppercase here anymore, as it might mess with case-sensitive tags if any exist (though our tags are lowercase).
-            // We will uppercase the text content during parsing.
-
-            _messageQueue.Clear();
+            // Split by pipe for multiple segments, but don't parse yet
             var segments = message.Split('|');
             foreach (var segment in segments)
             {
@@ -100,7 +107,7 @@ namespace ProjectVagabond.Battle.UI
                 }
             }
 
-            if (_messageQueue.Count > 0)
+            if (_messageQueue.Count > 0 && _allTokens.Count == 0)
             {
                 ProcessNextSegment();
             }
@@ -110,114 +117,179 @@ namespace ProjectVagabond.Battle.UI
         {
             if (_messageQueue.Count > 0)
             {
-                _currentSegment = _messageQueue.Dequeue();
+                string rawMessage = _messageQueue.Dequeue();
+                ParseMessage(rawMessage);
 
-                // Parse the segment into colored words
-                _words = ParseMessageToWords(_currentSegment);
-
-                _displayLines.Clear();
-                _displayLines.Add(new List<ColoredText>());
-                _wordIndex = 0;
-                _charInWordIndex = 0;
+                // Reset Typewriter
+                _currentTokenIndex = 0;
+                _currentCharIndex = 0;
                 _typewriterTimer = 0f;
                 _timeoutTimer = AUTO_ADVANCE_SECONDS;
                 _isWaitingForInput = false;
+                _isFinishedTyping = false;
+
+                // Prepare first line
+                _displayLines.Clear();
+                _displayLines.Add(new List<NarratorToken>());
             }
             else
             {
-                _currentSegment = "";
+                _allTokens.Clear();
                 _isWaitingForInput = false;
+                _isFinishedTyping = true;
             }
         }
 
-        private List<ColoredText> ParseMessageToWords(string message)
+        /// <summary>
+        /// High-performance, single-pass parser with Color Stack support.
+        /// </summary>
+        private void ParseMessage(string message)
         {
-            var words = new List<ColoredText>();
-            var parts = Regex.Split(message, @"(\[.*?\])");
-            Color currentColor = _global.Palette_BrightWhite;
+            _allTokens.Clear();
+            var colorStack = new Stack<Color>();
+            colorStack.Push(_global.Palette_BrightWhite); // Default color
 
-            foreach (var part in parts)
+            StringBuilder currentWord = new StringBuilder();
+
+            for (int i = 0; i < message.Length; i++)
             {
-                if (string.IsNullOrEmpty(part)) continue;
+                char c = message[i];
 
-                if (part.StartsWith("[") && part.EndsWith("]"))
+                if (c == '[')
                 {
-                    string tagContent = part.Substring(1, part.Length - 2);
-                    if (tagContent == "/")
+                    // 1. Flush existing word
+                    if (currentWord.Length > 0)
                     {
-                        currentColor = _global.Palette_BrightWhite;
+                        FlushWord(currentWord, colorStack.Peek());
+                    }
+
+                    // 2. Parse Tag
+                    int closingBracketIndex = message.IndexOf(']', i);
+                    if (closingBracketIndex != -1)
+                    {
+                        string tagContent = message.Substring(i + 1, closingBracketIndex - i - 1);
+
+                        if (tagContent == "/")
+                        {
+                            // Pop color, but never pop the base default color
+                            if (colorStack.Count > 1) colorStack.Pop();
+                        }
+                        else
+                        {
+                            // Push new color
+                            colorStack.Push(_global.GetNarrationColor(tagContent));
+                        }
+
+                        i = closingBracketIndex; // Advance index
+                        continue;
                     }
                     else
                     {
-                        currentColor = _global.GetNarrationColor(tagContent);
+                        // Malformed tag, treat as literal
+                        currentWord.Append(c);
                     }
+                }
+                else if (c == ' ')
+                {
+                    // 1. Flush existing word
+                    if (currentWord.Length > 0)
+                    {
+                        FlushWord(currentWord, colorStack.Peek());
+                    }
+
+                    // 2. Add Space Token
+                    _allTokens.Add(new NarratorToken(" ", Color.Transparent, TokenType.Space, SPACE_WIDTH));
+                }
+                else if (c == '\n')
+                {
+                    // 1. Flush existing word
+                    if (currentWord.Length > 0)
+                    {
+                        FlushWord(currentWord, colorStack.Peek());
+                    }
+
+                    // 2. Add Newline Token
+                    _allTokens.Add(new NarratorToken("\n", Color.Transparent, TokenType.Newline, 0));
                 }
                 else
                 {
-                    // Handle explicit newlines by replacing them with a special token or splitting
-                    string processedPart = part.Replace("\n", " \n ");
-                    var rawWords = processedPart.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                    foreach (var rawWord in rawWords)
-                    {
-                        words.Add(new ColoredText(rawWord.ToUpper(), currentColor));
-                    }
+                    // Accumulate character
+                    currentWord.Append(c);
                 }
             }
-            return words;
+
+            // Flush remaining word
+            if (currentWord.Length > 0)
+            {
+                FlushWord(currentWord, colorStack.Peek());
+            }
+        }
+
+        private void FlushWord(StringBuilder sb, Color color)
+        {
+            string text = sb.ToString().ToUpper(); // Enforce uppercase style
+            float width = _font!.MeasureString(text).Width;
+            _allTokens.Add(new NarratorToken(text, color, TokenType.Word, width));
+            sb.Clear();
         }
 
         private void FinishCurrentSegmentInstantly()
         {
+            // Re-calculate all lines instantly
             _displayLines.Clear();
-            var currentLine = new List<ColoredText>();
+            var currentLine = new List<NarratorToken>();
             _displayLines.Add(currentLine);
-
             float currentLineWidth = 0f;
-            float spaceWidth = _font.MeasureString(" ").Width;
 
-            foreach (var wordObj in _words)
+            foreach (var token in _allTokens)
             {
-                string wordText = wordObj.Text;
-
-                if (wordText == "\n")
-                {
-                    currentLine = new List<ColoredText>();
-                    _displayLines.Add(currentLine);
-                    currentLineWidth = 0f;
-                    if (_displayLines.Count > _maxVisibleLines) _displayLines.RemoveAt(0);
-                    continue;
-                }
-
-                float wordWidth = _font.MeasureString(wordText).Width;
-                float potentialWidth = currentLineWidth + (currentLine.Count > 0 ? spaceWidth : 0) + wordWidth;
-
-                if (potentialWidth > _wrapWidth)
-                {
-                    currentLine = new List<ColoredText>();
-                    _displayLines.Add(currentLine);
-                    currentLineWidth = 0f;
-                    if (_displayLines.Count > _maxVisibleLines) _displayLines.RemoveAt(0);
-                }
-
-                if (currentLine.Count > 0)
-                {
-                    // Append space to the previous word if it exists, or add a space word?
-                    // Simpler: Just add a space to the current word's text if it's not the start of line
-                    // But we can't modify the source _words.
-                    // We will add a separate space entry or handle it in draw.
-                    // Let's append a space to the previous entry in the line for simplicity in this instant finish logic.
-                    var last = currentLine.Last();
-                    last.Text += " ";
-                    currentLineWidth += spaceWidth;
-                }
-
-                currentLine.Add(new ColoredText(wordText, wordObj.Color));
-                currentLineWidth += wordWidth;
+                ProcessTokenLayout(token, ref currentLine, ref currentLineWidth);
             }
 
+            _isFinishedTyping = true;
             _isWaitingForInput = true;
             _timeoutTimer = AUTO_ADVANCE_SECONDS;
+        }
+
+        private void ProcessTokenLayout(NarratorToken token, ref List<NarratorToken> currentLine, ref float currentLineWidth)
+        {
+            if (token.Type == TokenType.Newline)
+            {
+                currentLine = new List<NarratorToken>();
+                _displayLines.Add(currentLine);
+                currentLineWidth = 0f;
+                CheckMaxLines();
+                return;
+            }
+
+            // Check wrapping
+            // If it's a space, we generally allow it at the end of a line, but if it pushes us over, 
+            // we might wrap. However, standard behavior is usually to wrap WORDS, not spaces.
+            // For simplicity: If adding this token exceeds width, wrap.
+            // Exception: If the line is empty, we must add it (to prevent infinite loops on huge words).
+
+            if (currentLineWidth + token.Width > _wrapWidth && currentLine.Count > 0)
+            {
+                // If the token causing the wrap is a Space, just ignore it (eat trailing space)
+                if (token.Type == TokenType.Space) return;
+
+                currentLine = new List<NarratorToken>();
+                _displayLines.Add(currentLine);
+                currentLineWidth = 0f;
+                CheckMaxLines();
+            }
+
+            // Add token
+            currentLine.Add(token);
+            currentLineWidth += token.Width;
+        }
+
+        private void CheckMaxLines()
+        {
+            if (_displayLines.Count > _maxVisibleLines)
+            {
+                _displayLines.RemoveAt(0);
+            }
         }
 
         public void Update(GameTime gameTime)
@@ -249,7 +321,7 @@ namespace ProjectVagabond.Battle.UI
                     ProcessNextSegment();
                 }
             }
-            else // Typing out text
+            else // Typing
             {
                 if (advance)
                 {
@@ -259,80 +331,95 @@ namespace ProjectVagabond.Battle.UI
                 else
                 {
                     _typewriterTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
-                    if (_typewriterTimer >= TYPEWRITER_SPEED)
+
+                    // Process as many characters as needed based on elapsed time
+                    while (_typewriterTimer >= TYPEWRITER_SPEED && !_isFinishedTyping)
                     {
-                        _typewriterTimer = 0f;
-                        if (_wordIndex < _words.Count)
-                        {
-                            var wordObj = _words[_wordIndex];
-                            string wordText = wordObj.Text;
-
-                            // Handle Newline Token
-                            if (wordText == "\n")
-                            {
-                                _displayLines.Add(new List<ColoredText>());
-                                if (_displayLines.Count > _maxVisibleLines)
-                                {
-                                    _displayLines.RemoveAt(0);
-                                }
-                                _wordIndex++;
-                                _charInWordIndex = 0;
-                                return;
-                            }
-
-                            // Start of a new word: Check wrapping
-                            if (_charInWordIndex == 0)
-                            {
-                                var currentLine = _displayLines.Last();
-                                float currentLineWidth = 0f;
-                                foreach (var segment in currentLine) currentLineWidth += _font.MeasureString(segment.Text).Width;
-
-                                float spaceWidth = _font.MeasureString(" ").Width;
-                                float wordWidth = _font.MeasureString(wordText).Width;
-                                float potentialWidth = currentLineWidth + (currentLine.Count > 0 ? spaceWidth : 0) + wordWidth;
-
-                                if (potentialWidth > _wrapWidth)
-                                {
-                                    _displayLines.Add(new List<ColoredText>());
-                                    if (_displayLines.Count > _maxVisibleLines)
-                                    {
-                                        _displayLines.RemoveAt(0);
-                                    }
-                                }
-                                else if (currentLine.Count > 0)
-                                {
-                                    // Add space to the previous word in the line
-                                    currentLine.Last().Text += " ";
-                                }
-
-                                // Add the new word container to the line
-                                _displayLines.Last().Add(new ColoredText("", wordObj.Color));
-                            }
-
-                            // Append character
-                            var lineToAppendTo = _displayLines.Last();
-                            var wordToAppendTo = lineToAppendTo.Last();
-                            wordToAppendTo.Text += wordText[_charInWordIndex];
-
-                            _charInWordIndex++;
-
-                            if (_charInWordIndex >= wordText.Length)
-                            {
-                                _wordIndex++;
-                                _charInWordIndex = 0;
-                            }
-                        }
-                        else
-                        {
-                            _isWaitingForInput = true;
-                            _timeoutTimer = AUTO_ADVANCE_SECONDS;
-                        }
+                        _typewriterTimer -= TYPEWRITER_SPEED;
+                        AdvanceTypewriter();
                     }
                 }
             }
 
             _previousMouseState = mouseState;
             _previousKeyboardState = keyboardState;
+        }
+
+        private void AdvanceTypewriter()
+        {
+            if (_currentTokenIndex >= _allTokens.Count)
+            {
+                _isFinishedTyping = true;
+                _isWaitingForInput = true;
+                _timeoutTimer = AUTO_ADVANCE_SECONDS;
+                return;
+            }
+
+            var token = _allTokens[_currentTokenIndex];
+
+            // If we are starting a new token, we need to add it to the layout
+            if (_currentCharIndex == 0)
+            {
+                // Get the current line and width state
+                var currentLine = _displayLines.Last();
+                float currentLineWidth = 0f;
+                foreach (var t in currentLine) currentLineWidth += t.Width;
+
+                // Determine if this token needs to wrap
+                // We create a "Partial" token for the layout, but we check the FULL width for wrapping
+                if (token.Type == TokenType.Newline)
+                {
+                    _displayLines.Add(new List<NarratorToken>());
+                    CheckMaxLines();
+                    _currentTokenIndex++;
+                    return; // Done with this token
+                }
+
+                if (currentLineWidth + token.Width > _wrapWidth && currentLine.Count > 0)
+                {
+                    if (token.Type != TokenType.Space)
+                    {
+                        _displayLines.Add(new List<NarratorToken>());
+                        CheckMaxLines();
+                    }
+                    else
+                    {
+                        // Skip space at end of line
+                        _currentTokenIndex++;
+                        return;
+                    }
+                }
+
+                // Add a placeholder token to the display list that we will "fill up"
+                // For spaces, we just add them fully immediately
+                if (token.Type == TokenType.Space)
+                {
+                    _displayLines.Last().Add(token);
+                    _currentTokenIndex++;
+                    return;
+                }
+                else
+                {
+                    // Add an empty clone of the token to the display line
+                    _displayLines.Last().Add(new NarratorToken("", token.Color, token.Type, 0f));
+                }
+            }
+
+            // Append next character to the last token in the display list
+            var displayLine = _displayLines.Last();
+            var displayToken = displayLine.Last();
+
+            displayToken.Text += token.Text[_currentCharIndex];
+            // Update width for correct layout calculations next frame
+            displayToken.Width = _font!.MeasureString(displayToken.Text).Width;
+
+            _currentCharIndex++;
+
+            if (_currentCharIndex >= token.Length)
+            {
+                _currentTokenIndex++;
+                _currentCharIndex = 0;
+            }
         }
 
         public void Draw(SpriteBatch spriteBatch, BitmapFont font, GameTime gameTime)
@@ -348,19 +435,20 @@ namespace ProjectVagabond.Battle.UI
             );
 
             // Draw text
-            if (_displayLines.Any())
+            for (int i = 0; i < _displayLines.Count; i++)
             {
-                for (int i = 0; i < _displayLines.Count; i++)
-                {
-                    var line = _displayLines[i];
-                    float currentX = panelBounds.X + padding;
-                    float currentY = panelBounds.Y + padding - 2 + (i * (font.LineHeight + LINE_SPACING));
+                var line = _displayLines[i];
+                float currentX = panelBounds.X + padding;
+                float currentY = panelBounds.Y + padding - 2 + (i * (font.LineHeight + LINE_SPACING));
 
-                    foreach (var segment in line)
+                foreach (var token in line)
+                {
+                    if (token.Type == TokenType.Word)
                     {
-                        spriteBatch.DrawStringSnapped(font, segment.Text, new Vector2(currentX, currentY), segment.Color);
-                        currentX += font.MeasureString(segment.Text).Width;
+                        spriteBatch.DrawStringSnapped(font, token.Text, new Vector2(currentX, currentY), token.Color);
                     }
+                    // Spaces just advance X, they don't draw
+                    currentX += token.Width;
                 }
             }
 
