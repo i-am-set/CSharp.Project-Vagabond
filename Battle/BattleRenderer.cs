@@ -176,6 +176,12 @@ namespace ProjectVagabond.Battle.UI
             }
             foreach (var id in idsToRemove) _attackAnimTimers.Remove(id);
 
+            // --- Capture Hovered Combatant from InputHandler BEFORE clearing targets ---
+            BattleCombatant? hoveredCombatant = null;
+            if (inputHandler.HoveredTargetIndex >= 0 && inputHandler.HoveredTargetIndex < _currentTargets.Count)
+            {
+                hoveredCombatant = _currentTargets[inputHandler.HoveredTargetIndex].Combatant;
+            }
 
             _currentTargets.Clear();
             _playerStatusIcons.Clear(); // Clear and rebuild every frame for multiple players
@@ -227,8 +233,35 @@ namespace ProjectVagabond.Battle.UI
 
             // --- Calculate Silhouette Colors for Cycling/Blinking ---
             var silhouetteColors = new Dictionary<string, Color>();
-            if (selectableTargets.Any() && activeTargetType.HasValue)
+
+            if (isTargetingPhase)
             {
+                // --- TARGETING MENU LOGIC ---
+                // 1. Default all valid targets to Red (Idle)
+                foreach (var target in selectableTargets)
+                {
+                    silhouetteColors[target.CombatantID] = _global.Palette_Red;
+                }
+
+                // 2. If hovering a valid target, turn it (or all if multi) Yellow (Active)
+                if (hoveredCombatant != null && selectableTargets.Contains(hoveredCombatant))
+                {
+                    bool isMultiTarget = activeTargetType == TargetType.Every || activeTargetType == TargetType.EveryAll;
+                    if (isMultiTarget)
+                    {
+                        foreach (var target in selectableTargets) silhouetteColors[target.CombatantID] = Color.Yellow;
+                    }
+                    else
+                    {
+                        silhouetteColors[hoveredCombatant.CombatantID] = Color.Yellow;
+                    }
+                }
+
+                _targetingTimer = 0f; // Reset timer so preview cycle restarts cleanly if we exit targeting
+            }
+            else if (selectableTargets.Any() && activeTargetType.HasValue)
+            {
+                // --- MOVE PREVIEW LOGIC (Cycling/Blinking) ---
                 _targetingTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
                 // Sort targets for stable cycling order
@@ -243,8 +276,9 @@ namespace ProjectVagabond.Battle.UI
                 if (isMultiTarget)
                 {
                     // Blink all in sync
-                    bool isRed = (_targetingTimer % _global.TargetingMultiBlinkSpeed) < (_global.TargetingMultiBlinkSpeed / 2f);
-                    Color color = isRed ? _global.Palette_Red : Color.Yellow;
+                    // Flash Yellow (Active) then Red (Idle)
+                    bool isFlash = (_targetingTimer % _global.TargetingMultiBlinkSpeed) < (_global.TargetingMultiBlinkSpeed / 2f);
+                    Color color = isFlash ? Color.Yellow : _global.Palette_Red;
                     foreach (var target in sortedTargets)
                     {
                         silhouetteColors[target.CombatantID] = color;
@@ -256,10 +290,18 @@ namespace ProjectVagabond.Battle.UI
                     int count = sortedTargets.Count;
                     if (count > 0)
                     {
-                        int activeIndex = (int)(_targetingTimer / _global.TargetingSingleCycleSpeed) % count;
+                        // Wrap the timer to prevent overflow and ensure clean cycling
+                        float cycleDuration = count * _global.TargetingSingleCycleSpeed;
+                        float currentCycleTime = _targetingTimer % cycleDuration;
+
+                        int activeIndex = (int)(currentCycleTime / _global.TargetingSingleCycleSpeed);
+                        // Clamp just in case of float imprecision at the very end of the cycle
+                        activeIndex = Math.Clamp(activeIndex, 0, count - 1);
+
                         for (int i = 0; i < count; i++)
                         {
-                            silhouetteColors[sortedTargets[i].CombatantID] = (i == activeIndex) ? _global.Palette_Red : Color.Yellow;
+                            // Active index gets Yellow (Flash), others get Red (Idle)
+                            silhouetteColors[sortedTargets[i].CombatantID] = (i == activeIndex) ? Color.Yellow : _global.Palette_Red;
                         }
                     }
                 }
@@ -970,7 +1012,11 @@ namespace ProjectVagabond.Battle.UI
                             Vector2 animatedPos = targetCenter + new Vector2(swayX, swayY) + shakeOffset;
                             Vector2 origin = new Vector2(indicator.Width / 2f, indicator.Height / 2f);
 
-                            spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, origin, scale, SpriteEffects.None, 0f);
+                            // Only draw indicator if the highlight color is Yellow (Flash state)
+                            if (highlightColor == Color.Yellow)
+                            {
+                                spriteBatch.DrawSnapped(indicator, animatedPos, null, Color.White, rotation, origin, scale, SpriteEffects.None, 0f);
+                            }
                         }
                     }
                 }
@@ -1153,11 +1199,14 @@ namespace ProjectVagabond.Battle.UI
                         timers[i] = 0f;
                         intervals[i] = (float)(_random.NextDouble() * (ENEMY_ANIM_MAX_INTERVAL - ENEMY_ANIM_MIN_INTERVAL) + ENEMY_ANIM_MIN_INTERVAL);
 
+                        // Incremental movement logic
+                        Vector2 pos = currentOffsets[i];
+
                         // New Logic Here
-                        if (currentOffsets[i] != Vector2.Zero)
+                        if (pos != Vector2.Zero)
                         {
                             // If currently at a cardinal offset, return to center
-                            currentOffsets[i] = Vector2.Zero;
+                            pos = Vector2.Zero;
                         }
                         else
                         {
@@ -1165,12 +1214,13 @@ namespace ProjectVagabond.Battle.UI
                             int direction = _random.Next(4);
                             switch (direction)
                             {
-                                case 0: currentOffsets[i] = new Vector2(0, -1); break; // Up
-                                case 1: currentOffsets[i] = new Vector2(0, 1); break;  // Down
-                                case 2: currentOffsets[i] = new Vector2(-1, 0); break; // Left
-                                case 3: currentOffsets[i] = new Vector2(1, 0); break;  // Right
+                                case 0: pos = new Vector2(0, -1); break; // Up
+                                case 1: pos = new Vector2(0, 1); break;  // Down
+                                case 2: pos = new Vector2(-1, 0); break; // Left
+                                case 3: pos = new Vector2(1, 0); break;  // Right
                             }
                         }
+                        currentOffsets[i] = pos;
                     }
                 }
             }
