@@ -275,13 +275,21 @@ namespace ProjectVagabond.Battle.UI
 
                 if (isMultiTarget)
                 {
-                    // Blink all in sync
-                    // Flash Yellow (Active) then Red (Idle)
-                    bool isFlash = (_targetingTimer % _global.TargetingMultiBlinkSpeed) < (_global.TargetingMultiBlinkSpeed / 2f);
-                    Color color = isFlash ? Color.Yellow : _global.Palette_Red;
-                    foreach (var target in sortedTargets)
+                    // If there is only 1 target, treat it as solid yellow (no flash)
+                    if (sortedTargets.Count == 1)
                     {
-                        silhouetteColors[target.CombatantID] = color;
+                        silhouetteColors[sortedTargets[0].CombatantID] = Color.Yellow;
+                    }
+                    else
+                    {
+                        // Blink all in sync
+                        // Flash Yellow (Active) then Red (Idle)
+                        bool isFlash = (_targetingTimer % _global.TargetingMultiBlinkSpeed) < (_global.TargetingMultiBlinkSpeed / 2f);
+                        Color color = isFlash ? Color.Yellow : _global.Palette_Red;
+                        foreach (var target in sortedTargets)
+                        {
+                            silhouetteColors[target.CombatantID] = color;
+                        }
                     }
                 }
                 else // Single Target (Single or SingleAll)
