@@ -93,7 +93,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null)
+        public void Draw(SpriteBatch spriteBatch, BattleAnimationManager animationManager, BattleCombatant combatant, Color? tintColorOverride = null, bool isHighlighted = false, float pulseAlpha = 1f, bool asSilhouette = false, Color? silhouetteColor = null, GameTime? gameTime = null, Color? highlightColor = null)
         {
             Initialize();
             if (_texture == null || combatant == null) return;
@@ -127,7 +127,9 @@ namespace ProjectVagabond.Battle.UI
                 SpriteEffects effects = SpriteEffects.None;
                 if (_archetypeId != "player") effects = SpriteEffects.FlipHorizontally;
 
-                spriteBatch.Draw(_silhouette, mainRect, sourceRectangle, Color.Yellow, 0f, Vector2.Zero, effects, 0.5f);
+                // Use specific highlight color if provided, else default to Yellow
+                Color hColor = highlightColor ?? Color.Yellow;
+                spriteBatch.Draw(_silhouette, mainRect, sourceRectangle, hColor, 0f, Vector2.Zero, effects, 0.5f);
 
                 // Draw Indicator
                 var indicator = ServiceLocator.Get<SpriteManager>().TargetingIndicatorSprite;
@@ -145,7 +147,10 @@ namespace ProjectVagabond.Battle.UI
 
                     // Apply Animation Math (Perlin Noise)
                     float t = (float)gameTime.TotalGameTime.TotalSeconds * global.TargetIndicatorNoiseSpeed;
-                    int seed = combatant.CombatantID.GetHashCode();
+
+                    // FIX: Scramble the seed significantly to ensure different targets have independent movement
+                    // Using a large prime multiplier ensures that even sequential IDs (enemy_1, enemy_2) have vastly different seeds.
+                    int seed = (combatant.CombatantID.GetHashCode() + 1000) * 93821;
 
                     // Noise lookups (offsets ensure different axes don't sync)
                     float nX = _swayNoise.Noise(t, seed);

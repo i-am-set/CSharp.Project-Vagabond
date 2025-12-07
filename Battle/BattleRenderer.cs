@@ -69,6 +69,9 @@ namespace ProjectVagabond.Battle.UI
         // Noise generator for organic sway
         private static readonly SeededPerlin _swayNoise = new SeededPerlin(9999);
 
+        // Targeting Cycle State
+        private float _targetingTimer = 0f;
+
         public BattleRenderer()
         {
             _spriteManager = ServiceLocator.Get<SpriteManager>();
@@ -90,6 +93,7 @@ namespace ProjectVagabond.Battle.UI
             _combatantVisualCenters.Clear();
             _playerSprites.Clear();
             _lastAttackerId = null;
+            _targetingTimer = 0f;
         }
 
         public List<TargetInfo> GetCurrentTargets() => _currentTargets;
@@ -193,21 +197,23 @@ namespace ProjectVagabond.Battle.UI
                 shouldGrayOutUnselectable = true;
             }
 
+            TargetType? activeTargetType = null;
+
             if (isTargetingPhase)
             {
-                var targetType = uiManager.TargetTypeForSelection;
-                if (targetType.HasValue)
+                activeTargetType = uiManager.TargetTypeForSelection;
+                if (activeTargetType.HasValue)
                 {
                     // Updated to include Every/EveryAll
-                    if (targetType == TargetType.Single || targetType == TargetType.SingleAll ||
-                        targetType == TargetType.Every || targetType == TargetType.EveryAll)
+                    if (activeTargetType == TargetType.Single || activeTargetType == TargetType.SingleAll ||
+                        activeTargetType == TargetType.Every || activeTargetType == TargetType.EveryAll)
                     {
                         foreach (var c in allCombatants)
                         {
                             if (!c.IsDefeated && c.IsActiveOnField)
                             {
-                                if ((targetType == TargetType.Single || targetType == TargetType.Every) && !c.IsPlayerControlled) selectableTargets.Add(c);
-                                else if (targetType == TargetType.SingleAll || targetType == TargetType.EveryAll) selectableTargets.Add(c);
+                                if ((activeTargetType == TargetType.Single || activeTargetType == TargetType.Every) && !c.IsPlayerControlled) selectableTargets.Add(c);
+                                else if (activeTargetType == TargetType.SingleAll || activeTargetType == TargetType.EveryAll) selectableTargets.Add(c);
                             }
                         }
                     }
@@ -216,16 +222,61 @@ namespace ProjectVagabond.Battle.UI
             else if (isHoveringMoveWithTargets)
             {
                 foreach (var target in uiManager.HoverHighlightState.Targets) selectableTargets.Add(target);
+                activeTargetType = hoveredMove?.Target;
+            }
+
+            // --- Calculate Silhouette Colors for Cycling/Blinking ---
+            var silhouetteColors = new Dictionary<string, Color>();
+            if (selectableTargets.Any() && activeTargetType.HasValue)
+            {
+                _targetingTimer += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+                // Sort targets for stable cycling order
+                var sortedTargets = allCombatants
+                    .Where(c => selectableTargets.Contains(c))
+                    .OrderBy(c => c.IsPlayerControlled ? 0 : 1) // Players first
+                    .ThenBy(c => c.BattleSlot) // Then by slot
+                    .ToList();
+
+                bool isMultiTarget = activeTargetType == TargetType.Every || activeTargetType == TargetType.EveryAll;
+
+                if (isMultiTarget)
+                {
+                    // Blink all in sync
+                    bool isRed = (_targetingTimer % _global.TargetingMultiBlinkSpeed) < (_global.TargetingMultiBlinkSpeed / 2f);
+                    Color color = isRed ? _global.Palette_Red : Color.Yellow;
+                    foreach (var target in sortedTargets)
+                    {
+                        silhouetteColors[target.CombatantID] = color;
+                    }
+                }
+                else // Single Target (Single or SingleAll)
+                {
+                    // Cycle through targets one by one
+                    int count = sortedTargets.Count;
+                    if (count > 0)
+                    {
+                        int activeIndex = (int)(_targetingTimer / _global.TargetingSingleCycleSpeed) % count;
+                        for (int i = 0; i < count; i++)
+                        {
+                            silhouetteColors[sortedTargets[i].CombatantID] = (i == activeIndex) ? _global.Palette_Red : Color.Yellow;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                _targetingTimer = 0f;
             }
 
 
             // --- Draw Enemy HUDs ---
-            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState, pulseAlpha, gameTime);
+            DrawEnemyHuds(spriteBatch, font, secondaryFont, enemies, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, uiManager.HoverHighlightState, pulseAlpha, gameTime, silhouetteColors);
 
             // --- Draw Player HUDs (Slots 0 & 1) ---
             foreach (var playerCombatant in players)
             {
-                DrawPlayerHud(spriteBatch, font, secondaryFont, playerCombatant, currentActor, gameTime, animationManager, uiManager, uiManager.HoverHighlightState, shouldGrayOutUnselectable, selectableTargets, isTargetingPhase, pulseAlpha);
+                DrawPlayerHud(spriteBatch, font, secondaryFont, playerCombatant, currentActor, gameTime, animationManager, uiManager, uiManager.HoverHighlightState, shouldGrayOutUnselectable, selectableTargets, isTargetingPhase, pulseAlpha, silhouetteColors);
             }
 
             // --- Draw UI Title ---
@@ -253,7 +304,7 @@ namespace ProjectVagabond.Battle.UI
         {
         }
 
-        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime)
+        private void DrawEnemyHuds(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, List<BattleCombatant> enemies, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Dictionary<string, Color> silhouetteColors)
         {
             if (!enemies.Any()) return;
 
@@ -268,7 +319,13 @@ namespace ProjectVagabond.Battle.UI
                 int slotIndex = enemy.BattleSlot;
                 var slotCenter = new Vector2(enemyAreaPadding + (slotIndex * slotWidth) + (slotWidth / 2), 0);
 
-                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, hoverHighlightState, pulseAlpha, gameTime);
+                Color? highlightColor = null;
+                if (silhouetteColors.TryGetValue(enemy.CombatantID, out var color))
+                {
+                    highlightColor = color;
+                }
+
+                DrawCombatantHud(spriteBatch, nameFont, statsFont, enemy, slotCenter, currentActor, isTargetingPhase, shouldGrayOutUnselectable, selectableTargets, animationManager, hoverHighlightState, pulseAlpha, gameTime, highlightColor);
 
                 if (selectableTargets.Contains(enemy))
                 {
@@ -286,7 +343,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, BattleCombatant currentActor, GameTime gameTime, BattleAnimationManager animationManager, BattleUIManager uiManager, HoverHighlightState hoverHighlightState, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, bool isTargetingPhase, float pulseAlpha)
+        private void DrawPlayerHud(SpriteBatch spriteBatch, BitmapFont font, BitmapFont secondaryFont, BattleCombatant player, BattleCombatant currentActor, GameTime gameTime, BattleAnimationManager animationManager, BattleUIManager uiManager, HoverHighlightState hoverHighlightState, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, bool isTargetingPhase, float pulseAlpha, Dictionary<string, Color> silhouetteColors)
         {
             if (player == null) return;
 
@@ -333,6 +390,11 @@ namespace ProjectVagabond.Battle.UI
             }
 
             bool isHighlighted = isSelectable && shouldGrayOutUnselectable;
+            Color? highlightColor = null;
+            if (isHighlighted && silhouetteColors.TryGetValue(player.CombatantID, out var color))
+            {
+                highlightColor = color;
+            }
 
             // Calculate Attack Bob (Jump UP for players)
             float yBobOffset = CalculateAttackBobOffset(player.CombatantID, isPlayer: true);
@@ -346,7 +408,7 @@ namespace ProjectVagabond.Battle.UI
 
             // Draw the sprite
             sprite.SetPosition(new Vector2(spriteCenterX, heartCenterY + yBobOffset));
-            sprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor, gameTime);
+            sprite.Draw(spriteBatch, animationManager, player, playerSpriteTint, isHighlighted, pulseAlpha, isSilhouetted, silhouetteColor, gameTime, highlightColor);
 
             // --- Draw HUD ---
             if (!isSilhouetted)
@@ -607,7 +669,8 @@ namespace ProjectVagabond.Battle.UI
 
                         // Calculate independent bobbing
                         // Use hash code to offset the sine wave phase
-                        float phaseOffset = (Math.Abs(target.CombatantID.GetHashCode()) % 100) * 0.13f;
+                        // FIX: Scramble the seed to ensure different targets have independent movement
+                        float phaseOffset = ((Math.Abs(target.CombatantID.GetHashCode()) * 12345) % 100) * 0.13f;
                         float uniqueBobOffset = (MathF.Sin((sharedBobbingTimer + phaseOffset) * 4f) > 0) ? -1f : 0f;
 
                         DrawTargetIndicator(spriteBatch, font, secondaryFont, allCombatants, target, sourceRect, flashColor, uniqueBobOffset);
@@ -689,7 +752,7 @@ namespace ProjectVagabond.Battle.UI
             }
         }
 
-        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime)
+        private void DrawCombatantHud(SpriteBatch spriteBatch, BitmapFont nameFont, BitmapFont statsFont, BattleCombatant combatant, Vector2 slotCenter, BattleCombatant currentActor, bool isTargetingPhase, bool shouldGrayOutUnselectable, HashSet<BattleCombatant> selectableTargets, BattleAnimationManager animationManager, HoverHighlightState hoverHighlightState, float pulseAlpha, GameTime gameTime, Color? highlightColor)
         {
             // Calculate Attack Bob (Jump DOWN for enemies)
             float yBobOffset = CalculateAttackBobOffset(combatant.CombatantID, isPlayer: false);
@@ -765,7 +828,8 @@ namespace ProjectVagabond.Battle.UI
             }
             else if (isSelectable && shouldGrayOutUnselectable && !isTargetingPhase && spawnAnim == null)
             {
-                outlineColor = Color.Yellow * finalAlpha;
+                // Default hover highlight if no specific color provided
+                if (highlightColor == null) outlineColor = Color.Yellow * finalAlpha;
             }
 
             // --- DRAW SHADOW ---
@@ -805,7 +869,12 @@ namespace ProjectVagabond.Battle.UI
                     _enemySpritePartOffsets[combatant.CombatantID] = new Vector2[numParts];
                     _enemyAnimationTimers[combatant.CombatantID] = new float[numParts];
                     var intervals = new float[numParts];
-                    for (int i = 0; i < numParts; i++) { intervals[i] = (float)(_random.NextDouble() * (ENEMY_ANIM_MAX_INTERVAL - ENEMY_ANIM_MIN_INTERVAL) + ENEMY_ANIM_MIN_INTERVAL); }
+                    for (int i = 0; i < numParts; i++)
+                    {
+                        intervals[i] = (float)(_random.NextDouble() * (ENEMY_ANIM_MAX_INTERVAL - ENEMY_ANIM_MIN_INTERVAL) + ENEMY_ANIM_MIN_INTERVAL);
+                        // Initialize timers randomly to desync multiple enemies
+                        _enemyAnimationTimers[combatant.CombatantID][i] = (float)_random.NextDouble();
+                    }
                     _enemyAnimationIntervals[combatant.CombatantID] = intervals;
                 }
 
@@ -846,8 +915,9 @@ namespace ProjectVagabond.Battle.UI
                         }
                         else if (isHighlighted && enemySilhouette != null)
                         {
-                            // Highlighted - Full Yellow
-                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, Color.Yellow * finalAlpha);
+                            // Highlighted - Use specific color if provided, else Yellow
+                            Color hColor = highlightColor ?? Color.Yellow;
+                            spriteBatch.DrawSnapped(enemySilhouette, drawRect, sourceRect, hColor * finalAlpha);
                         }
                         else
                         {
@@ -882,7 +952,9 @@ namespace ProjectVagabond.Battle.UI
 
                             // Apply Animation Math (Perlin Noise)
                             float t = (float)gameTime.TotalGameTime.TotalSeconds * _global.TargetIndicatorNoiseSpeed;
-                            int seed = combatant.CombatantID.GetHashCode();
+
+                            // FIX: Scramble the seed significantly to ensure different targets have independent movement
+                            int seed = (combatant.CombatantID.GetHashCode() + 1000) * 93821;
 
                             // Noise lookups (offsets ensure different axes don't sync)
                             float nX = _swayNoise.Noise(t, seed);
@@ -1069,6 +1141,10 @@ namespace ProjectVagabond.Battle.UI
                 var timers = _enemyAnimationTimers[id];
                 var intervals = _enemyAnimationIntervals[id];
                 var currentOffsets = _enemySpritePartOffsets[id];
+
+                // FIX: Explicitly ground the base (index 0)
+                currentOffsets[0] = Vector2.Zero;
+
                 for (int i = 1; i < currentOffsets.Length; i++)
                 {
                     timers[i] += deltaTime;
@@ -1076,7 +1152,25 @@ namespace ProjectVagabond.Battle.UI
                     {
                         timers[i] = 0f;
                         intervals[i] = (float)(_random.NextDouble() * (ENEMY_ANIM_MAX_INTERVAL - ENEMY_ANIM_MIN_INTERVAL) + ENEMY_ANIM_MIN_INTERVAL);
-                        currentOffsets[i] = new Vector2(_random.Next(-1, 1), _random.Next(-1, 1));
+
+                        // New Logic Here
+                        if (currentOffsets[i] != Vector2.Zero)
+                        {
+                            // If currently at a cardinal offset, return to center
+                            currentOffsets[i] = Vector2.Zero;
+                        }
+                        else
+                        {
+                            // If at center, move to a random cardinal direction
+                            int direction = _random.Next(4);
+                            switch (direction)
+                            {
+                                case 0: currentOffsets[i] = new Vector2(0, -1); break; // Up
+                                case 1: currentOffsets[i] = new Vector2(0, 1); break;  // Down
+                                case 2: currentOffsets[i] = new Vector2(-1, 0); break; // Left
+                                case 3: currentOffsets[i] = new Vector2(1, 0); break;  // Right
+                            }
+                        }
                     }
                 }
             }
